@@ -14,6 +14,7 @@ namespace MagicSunday\Memories;
 use DateTimeImmutable;
 use MagicSunday\Memories\Model\MediaItem;
 use MagicSunday\Memories\Model\Memory;
+use MagicSunday\Memories\Service\LocationService;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Throwable;
@@ -32,6 +33,19 @@ use function sprintf;
  */
 class MemoryGenerator
 {
+    /**
+     * @var LocationService
+     */
+    private LocationService $locationService;
+
+    /**
+     * Constructor.
+     */
+    public function __construct()
+    {
+        $this->locationService = new LocationService();
+    }
+
     /**
      * Scan directory for media files.
      *
@@ -136,18 +150,21 @@ class MemoryGenerator
     {
         $start = $cluster[0]->createdAt;
         $end   = end($cluster)->createdAt;
-
         $title = $this->formatTitle($start, $end);
 
-        // Optional: Ort ergänzen (aktuell nur Lat/Lon-Mittelwert)
+        // Ortsangabe
         $latitudes  = array_filter(array_map(fn($i) => $i->latitude, $cluster));
         $longitudes = array_filter(array_map(fn($i) => $i->longitude, $cluster));
 
         if ($latitudes !== [] && $longitudes !== []) {
             $avgLat = array_sum($latitudes) / count($latitudes);
             $avgLon = array_sum($longitudes) / count($longitudes);
-            $title .= sprintf(' (%.2f, %.2f)', $avgLat, $avgLon);
-            // Später: Reverse-Geocoding für echten Ortsnamen
+
+            $placeName = $this->locationService->reverseGeocode($avgLat, $avgLon);
+
+            if ($placeName) {
+                $title = $placeName . ' – ' . $title;
+            }
         }
 
         return new Memory($title, $start, $end, $cluster);
