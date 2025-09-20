@@ -1,0 +1,19 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to method get\(\) on an unknown class MagicSunday\\Memories\\DependencyContainer\.$#'
+			identifier: class.notFound
+			count: 1
+			path: ../src/Memories.php
+
+		-
+			message: '#^Call to method set\(\) on an unknown class MagicSunday\\Memories\\DependencyContainer\.$#'
+			identifier: class.notFound
+			count: 1
+			path: ../src/Memories.php
+
+		-
+			message: '#^Instantiated class MagicSunday\\Memories\\DependencyContainer not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: ../src/Memories.php

@@ -1,0 +1,20 @@
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false
+
+    _instanceof:
+        Symfony\Component\Console\Command\Command:
+            tags: ['command']
+
+    # Makes classes in src/ available to be used as services.
+    # This creates a service per class whose id is the fully qualified class name.
+    MagicSunday\Memories\:
+        resource: '../src/'
+        exclude: ['../src/{Memories,Dependencies,Constants}.php', '../src/Model/']
+
+    MagicSunday\Memories\Application:
+        public: true
+        arguments:
+            $commands: !tagged command

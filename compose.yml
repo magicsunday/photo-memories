@@ -1,0 +1,12 @@
+services:
+    builder:
+        build:
+            context: .build/docker
+            dockerfile: Dockerfile
+            args:
+                USERID: ${USERID}
+                GROUPID: ${GROUPID}
+        volumes:
+            - ./:/memories
+        working_dir: /memories
+        user: "memories"

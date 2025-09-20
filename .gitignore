@@ -1,0 +1,37 @@
+# PHPStorm
+.idea
+
+# OSX
+.DS_Store
+
+# Composer
+vendor/
+bin/
+logs/
+log/
+composer.lock
+
+# Build stuff
+.build/*.cache
+
+# Cache
+.build/cache
+.php-cs-fixer.cache
+.phplint.cache
+.phpunit.result.cache
+.phpunit.cache
+
+# Custom
+/bin/*
+/spc
+memories.phar
+/var/
+memories
+memories.md5
+.env
+images/
+
+# Coverage reports
+coverage-report/
+coverage-report-xdebug/
+phpunit-*.xml
