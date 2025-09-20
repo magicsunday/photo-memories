@@ -21,6 +21,7 @@ use Throwable;
 use function count;
 use function function_exists;
 use function in_array;
+use function sprintf;
 
 /**
  * Class MemoryGenerator.
@@ -83,7 +84,7 @@ class MemoryGenerator
      *
      * @return Memory[]
      */
-    public function buildMemories(array $items, int $gapDays = 18): array
+    public function buildMemories(array $items, int $gapDays = 18, float $gapKm = 50.0): array
     {
         if ($items === []) {
             return [];
@@ -94,18 +95,31 @@ class MemoryGenerator
         $memories = [];
         $cluster  = [$items[0]];
         $last     = $items[0]->createdAt;
+        $lastLat  = $items[0]->latitude;
+        $lastLon  = $items[0]->longitude;
         $counter  = count($items);
 
         for ($i = 1; $i < $counter; ++$i) {
-            $diff = $last->diff($items[$i]->createdAt)->days;
-            if ($diff <= $gapDays) {
-                $cluster[] = $items[$i];
-            } else {
-                $memories[] = $this->makeMemory($cluster);
-                $cluster    = [$items[$i]];
+            $item = $items[$i];
+
+            $diffDays = $last->diff($item->createdAt)->days;
+
+            $samePlace = true;
+            if ($lastLat !== null && $lastLon !== null && $item->latitude !== null && $item->longitude !== null) {
+                $distKm = $this->distanceKm($lastLat, $lastLon, $item->latitude, $item->longitude);
+                $samePlace = ($distKm <= $gapKm);
             }
 
-            $last = $items[$i]->createdAt;
+            if ($diffDays <= $gapDays && $samePlace) {
+                $cluster[] = $item;
+            } else {
+                $memories[] = $this->makeMemory($cluster);
+                $cluster    = [$item];
+            }
+
+            $last    = $item->createdAt;
+            $lastLat = $item->latitude;
+            $lastLon = $item->longitude;
         }
 
         $memories[] = $this->makeMemory($cluster);
@@ -122,7 +136,19 @@ class MemoryGenerator
     {
         $start = $cluster[0]->createdAt;
         $end   = end($cluster)->createdAt;
+
         $title = $this->formatTitle($start, $end);
+
+        // Optional: Ort ergänzen (aktuell nur Lat/Lon-Mittelwert)
+        $latitudes  = array_filter(array_map(fn($i) => $i->latitude, $cluster));
+        $longitudes = array_filter(array_map(fn($i) => $i->longitude, $cluster));
+
+        if ($latitudes !== [] && $longitudes !== []) {
+            $avgLat = array_sum($latitudes) / count($latitudes);
+            $avgLon = array_sum($longitudes) / count($longitudes);
+            $title .= sprintf(' (%.2f, %.2f)', $avgLat, $avgLon);
+            // Später: Reverse-Geocoding für echten Ortsnamen
+        }
 
         return new Memory($title, $start, $end, $cluster);
     }
@@ -233,5 +259,21 @@ class MemoryGenerator
         }
 
         return (float) $parts[0] / (float) $parts[1];
+    }
+
+    private function distanceKm(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371; // km
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2)
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2))
+            * sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 }
