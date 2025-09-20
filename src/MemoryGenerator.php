@@ -41,9 +41,9 @@ class MemoryGenerator
     /**
      * Constructor.
      */
-    public function __construct()
+    public function __construct(?LocationService $locationService = null)
     {
-        $this->locationService = new LocationService();
+        $this->locationService = $locationService ?? new LocationService();
     }
 
     /**
