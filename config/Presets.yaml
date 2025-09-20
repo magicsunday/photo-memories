@@ -1,0 +1,72 @@
+placeCategories:
+    beach:
+        - "Mallorca"
+        - "Ibiza"
+        - "Malibu"
+        - "Santorini"
+    mountains:
+        - "Alps"
+        - "Rockies"
+        - "Himalaya"
+    city:
+        - "Paris"
+        - "Rome"
+        - "Berlin"
+        - "New York"
+
+presets:
+    - name: "Winter Alps"
+      priority: 100
+      minDays: 3
+      maxDays: null
+      season: "Winter"
+      placeHint: "Alps"
+      template: "Ski trip in the Alps"
+
+    - name: "Vacation with category"
+      priority: 80
+      minDays: 7
+      maxDays: null
+      season: null
+      placeHint: null
+      template: "{category} vacation in {place}"
+
+    - name: "Vacation generic"
+      priority: 70
+      minDays: 7
+      maxDays: null
+      season: null
+      placeHint: null
+      template: "Vacation in {place}"
+
+    - name: "Weekend"
+      priority: 60
+      minDays: null
+      maxDays: 3
+      season: null
+      placeHint: null
+      template: "Weekend in {place}"
+
+    - name: "City trip"
+      priority: 50
+      minDays: null
+      maxDays: 6
+      season: null
+      placeHint: null
+      template: "City trip to {place}"
+
+    - name: "Seasonal with place"
+      priority: 40
+      minDays: null
+      maxDays: null
+      season: null
+      placeHint: null
+      template: "{season} in {place}"
+
+    - name: "Seasonal without place"
+      priority: 10
+      minDays: null
+      maxDays: null
+      season: null
+      placeHint: null
+      template: "{season} memories"

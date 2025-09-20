@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
-use MagicSunday\Memories\MemoryGenerator;
+use MagicSunday\Memories\Generator\MemoryGenerator;
 use MagicSunday\Memories\Model\MediaItem;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -82,7 +82,7 @@ class GenerateMemoriesCommand extends Command
             return Command::FAILURE;
         }
 
-        $gen = new MemoryGenerator();
+        $gen = new MemoryGenerator(__DIR__ . '/../config/Presets.yaml');
         $output->writeln(
             sprintf('📸 Scanne Medien in: %s ...', $srcDir));
         $items = $gen->scanDirectory($srcDir);

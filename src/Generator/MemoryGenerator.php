@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories;
+namespace MagicSunday\Memories\Generator;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Model\MediaItem;
@@ -39,11 +39,17 @@ class MemoryGenerator
     private LocationService $locationService;
 
     /**
+     * @var PresetTitleGenerator
+     */
+    private PresetTitleGenerator $presetTitleGenerator;
+
+    /**
      * Constructor.
      */
-    public function __construct(?LocationService $locationService = null)
+    public function __construct(string $presetConfigFile)
     {
-        $this->locationService = $locationService ?? new LocationService();
+        $this->locationService = new LocationService();
+        $this->presetTitleGenerator = new PresetTitleGenerator($presetConfigFile);
     }
 
     /**
@@ -151,7 +157,7 @@ class MemoryGenerator
         $start = $cluster[0]->createdAt;
         $end   = end($cluster)->createdAt;
 
-        // Ortsangabe aus Cluster
+        // Determine place
         $latitudes  = array_filter(array_map(fn($i) => $i->latitude, $cluster));
         $longitudes = array_filter(array_map(fn($i) => $i->longitude, $cluster));
 
@@ -162,10 +168,10 @@ class MemoryGenerator
             $placeName = $this->locationService->reverseGeocode($avgLat, $avgLon);
         }
 
-        // Erst versuchen emotionalen Titel
-        $title = $this->formatEmotionalTitle($placeName, $start, $end);
+        // 1) Try emotional/preset title
+        $title = $this->presetTitleGenerator->generate($start, $end, $placeName);
 
-        // Fallback: smarter Titel
+        // 2) Fallback: smart title
         if (!$title) {
             $title = $this->formatSmartTitle($placeName, $start, $end);
         }
@@ -195,38 +201,6 @@ class MemoryGenerator
         }
 
         return $timeStr;
-    }
-
-    private function formatEmotionalTitle(?string $placeName, DateTimeImmutable $start, DateTimeImmutable $end): ?string
-    {
-        $days = $start->diff($end)->days + 1;
-        $month = (int)$start->format('n'); // 1=Jan, 12=Dez
-
-        // Saison bestimmen
-        $season = match ($month) {
-            12, 1, 2 => 'Winter',
-            3, 4, 5 => 'Frühling',
-            6, 7, 8 => 'Sommer',
-            9, 10, 11 => 'Herbst',
-        };
-
-        // 1) Wochenenden
-        if ($days <= 3 && $placeName) {
-            return "Wochenende in $placeName";
-        }
-
-        // 2) Urlaub (≥ 7 Tage)
-        if ($days >= 7 && $placeName) {
-            return "Urlaub in $placeName";
-        }
-
-        // 3) Saison + Ort
-        if ($placeName) {
-            return "$season in $placeName";
-        }
-
-        // 4) Saison ohne Ort
-        return "$season Erinnerungen";
     }
 
     private function guessDate(string $path): DateTimeImmutable
