@@ -150,33 +150,45 @@ class MemoryGenerator
     {
         $start = $cluster[0]->createdAt;
         $end   = end($cluster)->createdAt;
-        $title = $this->formatTitle($start, $end);
 
-        // Ortsangabe
+        // Ortsangabe aus Cluster
         $latitudes  = array_filter(array_map(fn($i) => $i->latitude, $cluster));
         $longitudes = array_filter(array_map(fn($i) => $i->longitude, $cluster));
 
+        $placeName = null;
         if ($latitudes !== [] && $longitudes !== []) {
             $avgLat = array_sum($latitudes) / count($latitudes);
             $avgLon = array_sum($longitudes) / count($longitudes);
-
             $placeName = $this->locationService->reverseGeocode($avgLat, $avgLon);
-
-            if ($placeName) {
-                $title = $placeName . ' – ' . $title;
-            }
         }
+
+        $title = $this->formatSmartTitle($placeName, $start, $end);
 
         return new Memory($title, $start, $end, $cluster);
     }
 
-    private function formatTitle(DateTimeImmutable $start, DateTimeImmutable $end): string
+    private function formatSmartTitle(?string $placeName, DateTimeImmutable $start, DateTimeImmutable $end): string
     {
+        // === Zeitformat ===
         if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
-            return $start->format('d. M Y');
+            $timeStr = $start->format('d. F Y');
+        } elseif ($start->format('Y-m') === $end->format('Y-m')) {
+            // gleicher Monat
+            $timeStr = $start->format('d.') . '–' . $end->format('d. F Y');
+        } elseif ($start->format('Y') === $end->format('Y')) {
+            // gleiches Jahr
+            $timeStr = $start->format('d. F') . ' – ' . $end->format('d. F Y');
+        } else {
+            // unterschiedliches Jahr
+            $timeStr = $start->format('M Y') . ' – ' . $end->format('M Y');
         }
 
-        return $start->format('d. M Y') . ' – ' . $end->format('d. M Y');
+        // === Zusammensetzen ===
+        if ($placeName) {
+            return $placeName . ' – ' . $timeStr;
+        }
+
+        return $timeStr;
     }
 
     private function guessDate(string $path): DateTimeImmutable
