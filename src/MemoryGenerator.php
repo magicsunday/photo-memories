@@ -162,7 +162,13 @@ class MemoryGenerator
             $placeName = $this->locationService->reverseGeocode($avgLat, $avgLon);
         }
 
-        $title = $this->formatSmartTitle($placeName, $start, $end);
+        // Erst versuchen emotionalen Titel
+        $title = $this->formatEmotionalTitle($placeName, $start, $end);
+
+        // Fallback: smarter Titel
+        if (!$title) {
+            $title = $this->formatSmartTitle($placeName, $start, $end);
+        }
 
         return new Memory($title, $start, $end, $cluster);
     }
@@ -189,6 +195,38 @@ class MemoryGenerator
         }
 
         return $timeStr;
+    }
+
+    private function formatEmotionalTitle(?string $placeName, DateTimeImmutable $start, DateTimeImmutable $end): ?string
+    {
+        $days = $start->diff($end)->days + 1;
+        $month = (int)$start->format('n'); // 1=Jan, 12=Dez
+
+        // Saison bestimmen
+        $season = match ($month) {
+            12, 1, 2 => 'Winter',
+            3, 4, 5 => 'Frühling',
+            6, 7, 8 => 'Sommer',
+            9, 10, 11 => 'Herbst',
+        };
+
+        // 1) Wochenenden
+        if ($days <= 3 && $placeName) {
+            return "Wochenende in $placeName";
+        }
+
+        // 2) Urlaub (≥ 7 Tage)
+        if ($days >= 7 && $placeName) {
+            return "Urlaub in $placeName";
+        }
+
+        // 3) Saison + Ort
+        if ($placeName) {
+            return "$season in $placeName";
+        }
+
+        // 4) Saison ohne Ort
+        return "$season Erinnerungen";
     }
 
     private function guessDate(string $path): DateTimeImmutable
