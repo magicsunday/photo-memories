@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Generator;
 use DateTimeImmutable;
 use MagicSunday\Memories\Model\MediaItem;
 use MagicSunday\Memories\Model\Memory;
+use MagicSunday\Memories\Service\GeocodingService;
 use MagicSunday\Memories\Service\LocationService;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -22,7 +23,6 @@ use Throwable;
 use function count;
 use function function_exists;
 use function in_array;
-use function sprintf;
 
 /**
  * Class MemoryGenerator.
@@ -34,21 +34,21 @@ use function sprintf;
 class MemoryGenerator
 {
     /**
-     * @var LocationService
+     * @var GeocodingService
      */
-    private LocationService $locationService;
+    private readonly ?GeocodingService $geocodingService;
 
     /**
      * @var PresetTitleGenerator
      */
-    private PresetTitleGenerator $presetTitleGenerator;
+    private readonly PresetTitleGenerator $presetTitleGenerator;
 
     /**
      * Constructor.
      */
     public function __construct(string $presetConfigFile)
     {
-        $this->locationService = new LocationService();
+        $this->geocodingService     = new GeocodingService(new LocationService());
         $this->presetTitleGenerator = new PresetTitleGenerator($presetConfigFile);
     }
 
@@ -126,7 +126,7 @@ class MemoryGenerator
 
             $samePlace = true;
             if ($lastLat !== null && $lastLon !== null && $item->latitude !== null && $item->longitude !== null) {
-                $distKm = $this->distanceKm($lastLat, $lastLon, $item->latitude, $item->longitude);
+                $distKm    = $this->distanceKm($lastLat, $lastLon, $item->latitude, $item->longitude);
                 $samePlace = ($distKm <= $gapKm);
             }
 
@@ -157,50 +157,96 @@ class MemoryGenerator
         $start = $cluster[0]->createdAt;
         $end   = end($cluster)->createdAt;
 
-        // Determine place
-        $latitudes  = array_filter(array_map(fn($i) => $i->latitude, $cluster));
-        $longitudes = array_filter(array_map(fn($i) => $i->longitude, $cluster));
+        // Determine representative coordinates for the cluster
+        [$lat, $lon] = $this->guessClusterCoordinates($cluster);
 
-        $placeName = null;
-        if ($latitudes !== [] && $longitudes !== []) {
-            $avgLat = array_sum($latitudes) / count($latitudes);
-            $avgLon = array_sum($longitudes) / count($longitudes);
-            $placeName = $this->locationService->reverseGeocode($avgLat, $avgLon);
+        $city    = null;
+        $country = null;
+
+        // Resolve location using GeocodingService if available
+        if ($this->geocodingService instanceof GeocodingService && $lat !== null && $lon !== null) {
+            $place = $this->geocodingService->reverseGeocode($lat, $lon);
+
+            if ($place !== null) {
+                $city    = $place['city'] ?? null;
+                $country = $place['country'] ?? null;
+            }
         }
 
-        // 1) Try emotional/preset title
-        $title = $this->presetTitleGenerator->generate($start, $end, $placeName);
+        // Try to generate smart title
+        $title = $this->formatSmartTitle($start, $end, $cluster, $city, $country);
 
-        // 2) Fallback: smart title
-        if (!$title) {
-            $title = $this->formatSmartTitle($placeName, $start, $end);
+        // Fallback to simple date-based title
+        if ($title === null) {
+            $title = $this->formatDateTitle($start, $end);
         }
 
-        return new Memory($title, $start, $end, $cluster);
+        $memory          = new Memory($title, $start, $end, $cluster);
+        $memory->city    = $city;
+        $memory->country = $country;
+
+        return $memory;
     }
 
-    private function formatSmartTitle(?string $placeName, DateTimeImmutable $start, DateTimeImmutable $end): string
+    /**
+     * Guess representative coordinates for a cluster.
+     * Strategy: take first item with GPS data, otherwise null.
+     *
+     * @param MediaItem[] $cluster
+     *
+     * @return array{float|null,float|null}
+     */
+    private function guessClusterCoordinates(array $cluster): array
     {
-        // === Zeitformat ===
+        foreach ($cluster as $item) {
+            if ($item->latitude !== null && $item->longitude !== null) {
+                return [$item->latitude, $item->longitude];
+            }
+        }
+
+        return [null, null];
+    }
+
+    /**
+     * Format a simple date-based fallback title.
+     */
+    private function formatDateTitle(DateTimeImmutable $start, DateTimeImmutable $end): string
+    {
         if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
-            $timeStr = $start->format('d. F Y');
-        } elseif ($start->format('Y-m') === $end->format('Y-m')) {
-            // gleicher Monat
-            $timeStr = $start->format('d.') . '–' . $end->format('d. F Y');
-        } elseif ($start->format('Y') === $end->format('Y')) {
-            // gleiches Jahr
-            $timeStr = $start->format('d. F') . ' – ' . $end->format('d. F Y');
-        } else {
-            // unterschiedliches Jahr
-            $timeStr = $start->format('M Y') . ' – ' . $end->format('M Y');
+            return $start->format('d. M Y');
         }
 
-        // === Zusammensetzen ===
-        if ($placeName) {
-            return $placeName . ' – ' . $timeStr;
-        }
+        return $start->format('d. M Y') . ' – ' . $end->format('d. M Y');
+    }
 
-        return $timeStr;
+    /**
+     * Try to generate a smart title for a memory cluster.
+     * Falls back to null if no preset matches.
+     *
+     * @param DateTimeImmutable $start
+     * @param DateTimeImmutable $end
+     * @param MediaItem[]       $cluster
+     * @param string|null       $city
+     * @param string|null       $country
+     *
+     * @return string|null
+     */
+    private function formatSmartTitle(
+        DateTimeImmutable $start,
+        DateTimeImmutable $end,
+        array $cluster,
+        ?string $city,
+        ?string $country,
+    ): ?string {
+        //        if ($this->presetTitleGenerator === null) {
+        //            return null;
+        //        }
+
+        $memoryPreview          = new Memory('', $start, $end, $cluster);
+        $memoryPreview->city    = $city;
+        $memoryPreview->country = $country;
+
+        return $this->presetTitleGenerator->generate($memoryPreview);
     }
 
     private function guessDate(string $path): DateTimeImmutable

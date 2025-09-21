@@ -33,6 +33,10 @@ class Memory
 
     public ?MediaItem $cover = null;
 
+    public ?string $city = null;
+
+    public ?string $country = null;
+
     /**
      * Constructor.
      *

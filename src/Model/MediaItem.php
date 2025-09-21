@@ -24,9 +24,9 @@ class MediaItem
 {
     public string $path;
 
+    // "image" oder "video"
     public string $type;
 
-    // "image" oder "video"
     public float $score;
 
     public DateTimeImmutable $createdAt;

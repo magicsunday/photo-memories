@@ -12,144 +12,92 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service;
 
 use PDO;
-use PDOException;
+use RuntimeException;
 
-use function dirname;
-use function is_array;
-use function sprintf;
-
-class LocationService implements LocationServiceInterface
+class LocationService
 {
+    private readonly string $cacheDir;
+
     private PDO $pdo;
-    private string $endpoint = 'https://nominatim.openstreetmap.org/reverse';
+
+    public function __construct(?string $customCacheDir = null)
+    {
+        // Determine cache directory
+        $this->cacheDir = $customCacheDir
+            ?? getenv('MEMORIES_CACHE_DIR')
+            ?: sys_get_temp_dir() . '/memories-cache';
+
+        $this->initializeCacheDir();
+        $this->initializeDatabase();
+    }
 
     /**
-     * Constructor.
-     *
-     * @param string $dbFile
+     * Ensure cache directory exists and is writable.
      */
-    public function __construct(string $dbFile = __DIR__ . '/../../cache/locations.sqlite')
+    private function initializeCacheDir(): void
     {
-        $dir = dirname($dbFile);
-
-        if (!is_dir($dir)
-            && !mkdir($dir, 0777, true)
-            && !is_dir($dir)
-        ) {
-            throw new \RuntimeException(
-                sprintf(
-                    'Directory "%s" was not created',
-                    $dir
-                )
-            );
+        if (!is_dir($this->cacheDir) && (!mkdir($this->cacheDir, 0777, true) && !is_dir($this->cacheDir))) {
+            throw new RuntimeException('Failed to create cache directory: ' . $this->cacheDir);
         }
+
+        if (!is_writable($this->cacheDir)) {
+            throw new RuntimeException('Cache directory is not writable: ' . $this->cacheDir);
+        }
+    }
+
+    /**
+     * Initialize SQLite database in cache directory.
+     */
+    private function initializeDatabase(): void
+    {
+        $dbFile = $this->cacheDir . '/location-cache.sqlite';
 
         $this->pdo = new PDO('sqlite:' . $dbFile);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $this->initSchema();
-    }
-
-    private function initSchema(): void
-    {
-        $this->pdo->exec(
-            'CREATE TABLE IF NOT EXISTS locations (
-                lat_rounded REAL NOT NULL,
-                lon_rounded REAL NOT NULL,
-                place TEXT NOT NULL,
-                PRIMARY KEY (lat_rounded, lon_rounded)
-            )'
-        );
+        // Create schema if missing
+        $this->pdo->exec('
+            CREATE TABLE IF NOT EXISTS geocache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                query TEXT UNIQUE NOT NULL,
+                result TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+        ');
     }
 
     /**
-     * Liefert einen Ortstitel (z. B. "Rom, Italien") für Koordinaten.
+     * Save geocoding result to cache.
      */
-    public function reverseGeocode(float $lat, float $lon): ?string
+    public function cacheResult(string $query, string $result): void
     {
-        $latRounded = round($lat, 3);
-        $lonRounded = round($lon, 3);
+        $stmt = $this->pdo->prepare('
+            INSERT INTO geocache (query, result, created_at)
+            VALUES (:query, :result, :created_at)
+            ON CONFLICT(query) DO UPDATE SET
+                result = excluded.result,
+                created_at = excluded.created_at
+        ');
 
-        // 1. Versuch: Cache-Lookup
-        $stmt = $this->pdo->prepare('SELECT place FROM locations WHERE lat_rounded = :lat AND lon_rounded = :lon');
-        $stmt->execute([':lat' => $latRounded, ':lon' => $lonRounded]);
+        $stmt->execute([
+            ':query'      => $query,
+            ':result'     => $result,
+            ':created_at' => time(),
+        ]);
+    }
+
+    /**
+     * Load cached result for a query.
+     */
+    public function getCachedResult(string $query): ?string
+    {
+        $stmt = $this->pdo->prepare('
+            SELECT result FROM geocache WHERE query = :query
+        ');
+        $stmt->execute([':query' => $query]);
+
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($row) {
-            return $row['place'];
-        }
-
-        // 2. API-Aufruf
-        $placeName = $this->queryNominatim($lat, $lon);
-
-        if ($placeName) {
-            $this->insertCache($latRounded, $lonRounded, $placeName);
-        }
-
-        return $placeName;
-    }
-
-    private function insertCache(float $lat, float $lon, string $place): void
-    {
-        try {
-            $stmt = $this->pdo->prepare(
-                'INSERT OR REPLACE INTO locations (lat_rounded, lon_rounded, place) VALUES (:lat, :lon, :place)'
-            );
-            $stmt->execute([':lat' => $lat, ':lon' => $lon, ':place' => $place]);
-        } catch (PDOException $e) {
-            // Ignorieren, wenn DB Probleme macht
-        }
-    }
-
-    private function queryNominatim(float $lat, float $lon): ?string
-    {
-        $url = sprintf(
-            '%s?lat=%F&lon=%F&format=jsonv2',
-            $this->endpoint,
-            $lat,
-            $lon
-        );
-
-        $opts = [
-            'http' => [
-                'method'  => 'GET',
-                'header'  => [
-                    'User-Agent: photo-memories-cli/1.0 (your-email@example.com)',
-                ],
-                'timeout' => 5,
-            ],
-        ];
-
-        $context  = stream_context_create($opts);
-        $response = @file_get_contents($url, false, $context);
-
-        if ($response === false) {
-            return null;
-        }
-
-        $data = json_decode(
-            $response,
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-
-        if (!is_array($data) || empty($data['address'])) {
-            return null;
-        }
-
-        $address = $data['address'];
-        $city    = $address['city'] ?? $address['town'] ?? $address['village'] ?? null;
-        $country = $address['country'] ?? null;
-
-        if ($city && $country) {
-            return $city . ', ' . $country;
-        }
-
-        if ($country) {
-            return $country;
-        }
-
-        return null;
+        return $row['result'] ?? null;
     }
 }

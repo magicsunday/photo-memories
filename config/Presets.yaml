@@ -1,72 +1,66 @@
 placeCategories:
     beach:
-        - "Mallorca"
-        - "Ibiza"
-        - "Malibu"
-        - "Santorini"
+        - beach
+        - coast
+        - bay
+        - riviera
     mountains:
-        - "Alps"
-        - "Rockies"
-        - "Himalaya"
+        - alps
+        - dolomites
+        - himalaya
+        - rockies
     city:
-        - "Paris"
-        - "Rome"
-        - "Berlin"
-        - "New York"
+        - berlin
+        - paris
+        - london
+        - new york
+    nature:
+        - forest
+        - park
+        - lake
+        - national park
 
 presets:
-    - name: "Winter Alps"
+    # --- Season + City ---
+    - name: "Spring City Trip"
       priority: 100
-      minDays: 3
-      maxDays: null
+      season: "Spring"
+      placeHint: "city"
+      template: "Spring in {city}"
+
+    - name: "Summer City Trip"
+      priority: 100
+      season: "Summer"
+      placeHint: "city"
+      template: "Summer days in {city}"
+
+    # --- Country fallback ---
+    - name: "Winter in Country"
+      priority: 90
       season: "Winter"
-      placeHint: "Alps"
-      template: "Ski trip in the Alps"
+      template: "Winter in {country}"
 
-    - name: "Vacation with category"
+    - name: "Summer in Country"
+      priority: 90
+      season: "Summer"
+      template: "Summer in {country}"
+
+    # --- Category based ---
+    - name: "Beach Vacation"
       priority: 80
-      minDays: 7
-      maxDays: null
-      season: null
-      placeHint: null
-      template: "{category} vacation in {place}"
+      placeHint: "beach"
+      template: "Relaxing days at the {category}"
 
-    - name: "Vacation generic"
-      priority: 70
-      minDays: 7
-      maxDays: null
-      season: null
-      placeHint: null
-      template: "Vacation in {place}"
+    - name: "Mountain Adventure"
+      priority: 80
+      placeHint: "mountains"
+      template: "Adventure in the {category}"
 
-    - name: "Weekend"
-      priority: 60
-      minDays: null
-      maxDays: 3
-      season: null
-      placeHint: null
-      template: "Weekend in {place}"
-
-    - name: "City trip"
-      priority: 50
-      minDays: null
-      maxDays: 6
-      season: null
-      placeHint: null
-      template: "City trip to {place}"
-
-    - name: "Seasonal with place"
-      priority: 40
-      minDays: null
-      maxDays: null
-      season: null
-      placeHint: null
-      template: "{season} in {place}"
-
-    - name: "Seasonal without place"
+    # --- General fallback ---
+    - name: "Seasonal Memory"
       priority: 10
-      minDays: null
-      maxDays: null
-      season: null
-      placeHint: null
       template: "{season} memories"
+
+    - name: "Default Memory"
+      priority: 0
+      template: "My Photo Memories"

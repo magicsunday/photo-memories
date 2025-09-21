@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Generator;
 
-use DateTimeImmutable;
+use MagicSunday\Memories\Model\Memory;
 use MagicSunday\Memories\Rules\PresetRule;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
@@ -20,12 +20,13 @@ class PresetTitleGenerator
 {
     /** @var PresetRule[] */
     private array $rules = [];
+
     private array $categories = [];
 
     public function __construct(string $configFile)
     {
         if (!file_exists($configFile)) {
-            throw new RuntimeException("Preset config file not found: " . $configFile);
+            throw new RuntimeException('Preset config file not found: ' . $configFile);
         }
 
         $data = Yaml::parseFile($configFile);
@@ -47,19 +48,22 @@ class PresetTitleGenerator
         }
 
         // Sort rules by priority (desc)
-        usort($this->rules, fn($a, $b) => $b->priority <=> $a->priority);
+        usort($this->rules, fn ($a, $b): int => $b->priority <=> $a->priority);
     }
 
+    /**
+     * Detect semantic category (beach, mountains, city, …).
+     */
     private function detectCategory(?string $placeName): ?string
     {
-        if (!$placeName) {
+        if ($placeName === null || $placeName === '' || $placeName === '0') {
             return null;
         }
 
         foreach ($this->categories as $category => $keywords) {
             foreach ($keywords as $keyword) {
-                if (stripos($placeName, $keyword) !== false) {
-                    return ucfirst($category);
+                if (stripos($placeName, (string) $keyword) !== false) {
+                    return ucfirst((string) $category);
                 }
             }
         }
@@ -67,9 +71,18 @@ class PresetTitleGenerator
         return null;
     }
 
-    public function generate(DateTimeImmutable $start, DateTimeImmutable $end, ?string $placeName): ?string
+    /**
+     * Generate a smart title for a memory.
+     */
+    public function generate(Memory $memory): ?string
     {
-        $month = (int)$start->format('n');
+        $start = $memory->start;
+        $end   = $memory->end;
+
+        // Use city if available, otherwise fall back to country
+        $placeName = $memory->city ?? $memory->country ?? null;
+
+        $month  = (int) $start->format('n');
         $season = match ($month) {
             12, 1, 2 => 'Winter',
             3, 4, 5 => 'Frühling',

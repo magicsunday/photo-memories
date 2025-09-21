@@ -16,11 +16,17 @@ use DateTimeImmutable;
 class PresetRule
 {
     public string $name;
+
     public int $priority;
+
     public ?int $minDays;
+
     public ?int $maxDays;
+
     public ?string $season;
+
     public ?string $placeHint;
+
     public string $template;
 
     public function __construct(
@@ -30,15 +36,15 @@ class PresetRule
         ?int $maxDays,
         ?string $season,
         ?string $placeHint,
-        string $template
+        string $template,
     ) {
-        $this->name = $name;
-        $this->priority = $priority;
-        $this->minDays = $minDays;
-        $this->maxDays = $maxDays;
-        $this->season = $season;
+        $this->name      = $name;
+        $this->priority  = $priority;
+        $this->minDays   = $minDays;
+        $this->maxDays   = $maxDays;
+        $this->season    = $season;
         $this->placeHint = $placeHint;
-        $this->template = $template;
+        $this->template  = $template;
     }
 
     /**
@@ -48,7 +54,7 @@ class PresetRule
         DateTimeImmutable $start,
         DateTimeImmutable $end,
         ?string $placeName,
-        string $season
+        string $season,
     ): bool {
         $days = $start->diff($end)->days + 1;
 
@@ -64,10 +70,8 @@ class PresetRule
             return false;
         }
 
-        if ($this->placeHint !== null && $placeName !== null) {
-            if (stripos($placeName, $this->placeHint) === false) {
-                return false;
-            }
+        if ($this->placeHint !== null && $placeName !== null && stripos($placeName, $this->placeHint) === false) {
+            return false;
         }
 
         return true;
@@ -79,9 +83,13 @@ class PresetRule
     public function render(string $season, ?string $placeName, ?string $category): string
     {
         $title = $this->template;
+
         $title = str_replace('{season}', $season, $title);
         $title = str_replace('{place}', $placeName ?? '', $title);
         $title = str_replace('{category}', $category ?? 'Travel', $title);
+        $title = str_replace('{city}', $placeName ?? '', $title);
+        $title = str_replace('{country}', $placeName ?? '', $title);
+
         return trim($title);
     }
 }

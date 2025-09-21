@@ -24,6 +24,8 @@ RUN apt-get update && \
     patchelf \
     pkg-config \
     re2c \
+    sqlite3 \
+    libsqlite3-dev \
     sudo \
     unzip \
     zlib1g-dev
