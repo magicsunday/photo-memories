@@ -1,0 +1,24 @@
+# config/services/memories.yaml (oder zentrale services.yaml)
+parameters:
+    memories.feed.min_score: 0.35
+    memories.feed.min_members: 4
+    memories.feed.max_per_day: 6
+    memories.feed.max_total: 60
+
+services:
+    MagicSunday\Memories\Service\Feed\CoverPickerInterface:
+        alias: MagicSunday\Memories\Service\Feed\DefaultCoverPicker
+
+    MagicSunday\Memories\Service\Feed\DefaultCoverPicker: ~
+
+    MagicSunday\Memories\Repository\MediaRepository: ~
+
+    MagicSunday\Memories\Service\Feed\MemoryFeedBuilder:
+        arguments:
+            $minScore: '%memories.feed.min_score%'
+            $minMembers: '%memories.feed.min_members%'
+            $maxPerDay: '%memories.feed.max_per_day%'
+            $maxTotal: '%memories.feed.max_total%'
+
+    MagicSunday\Memories\Service\Feed\FeedBuilderInterface:
+        alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder

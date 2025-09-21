@@ -1,0 +1,70 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Service\Clusterer\Title;
+
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Symfony\Component\Yaml\Yaml;
+
+/**
+ * Loads i18n-able title templates per algorithm from YAML.
+ * YAML structure:
+ *  de:
+ *    time_similarity:
+ *      title: "Schnappschüsse"
+ *      subtitle: "{{ date_range }}"
+ *    weekend_trip:
+ *      title: "Wochenendtrip nach {{ city }}"
+ *      subtitle: "{{ start_date }} – {{ end_date }}"
+ */
+final class TitleTemplateProvider
+{
+    /** @var array<string, array<string, array{title:string,subtitle?:string}>> */
+    private array $templates = [];
+
+    public function __construct(
+        private readonly string $configPath,
+        private readonly string $locale = 'de'
+    ) {
+        $this->load();
+    }
+
+    private function load(): void
+    {
+        if (!\is_file($this->configPath)) {
+            throw new \RuntimeException('Title-templates YAML missing: '.$this->configPath);
+        }
+        /** @var array<string,mixed> $data */
+        $data = Yaml::parseFile($this->configPath) ?? [];
+        if (!\is_array($data)) {
+            $data = [];
+        }
+        // Normalize to [locale][algorithm] = ['title'=>..., 'subtitle'=>...]
+        foreach ($data as $loc => $algos) {
+            if (!\is_array($algos)) {
+                continue;
+            }
+            foreach ($algos as $algo => $tpl) {
+                if (\is_array($tpl) && isset($tpl['title']) && \is_string($tpl['title'])) {
+                    $this->templates[$loc][$algo] = [
+                        'title'    => (string) $tpl['title'],
+                        'subtitle' => isset($tpl['subtitle']) && \is_string($tpl['subtitle']) ? $tpl['subtitle'] : '',
+                    ];
+                }
+            }
+        }
+    }
+
+    /** @return array{title:string,subtitle:string}|null */
+    public function find(string $algorithm, ?string $locale = null): ?array
+    {
+        $loc = $locale ?? $this->locale;
+        $hit = $this->templates[$loc][$algorithm] ?? null;
+        if ($hit !== null) {
+            return ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''];
+        }
+        // Fallback: try default locale „de“
+        $hit = $this->templates['de'][$algorithm] ?? null;
+        return $hit !== null ? ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''] : null;
+    }
+}

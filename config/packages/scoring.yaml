@@ -1,0 +1,30 @@
+services:
+    MagicSunday\Memories\Service\Clusterer\Scoring\GermanHolidayResolver: ~
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\Scoring\GermanHolidayResolver
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic:
+        arguments:
+            $gridStepDeg: 0.5
+            $phashPrefixNibbles: 4
+            $weights:
+                place:   0.35
+                time:    0.25
+                device:  0.20
+                content: 0.20
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer:
+        arguments:
+            $qualityBaselineMegapixels: 12.0
+            $minValidYear: '%memories.score.min_valid_year%'
+            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
+            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
+            # optional: Gewichte überschreiben
+            # $weights:
+            #   quality: 0.30
+            #   people:  0.20
+            #   density: 0.15
+            #   novelty: 0.10
+            #   holiday: 0.10
+            #   recency: 0.15

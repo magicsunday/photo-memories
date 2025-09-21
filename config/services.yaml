@@ -1,0 +1,215 @@
+# config/services.yaml
+imports:
+    - { resource: 'packages/*.yaml' }
+
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        public: false
+
+    # Makes classes in src/ available to be used as services.
+    # This creates a service per class whose id is the fully qualified class name.
+    MagicSunday\Memories\:
+        resource: '../src/*'
+        exclude:
+            - '../src/{Memories,Dependencies}.php'
+            - '../src/Entity/'
+
+    _instanceof:
+        Symfony\Component\Console\Command\Command:
+            tags: ['command']
+
+    MagicSunday\Memories\Application:
+        public: true
+        arguments:
+            $commands: !tagged command
+
+    ########################################
+    # Doctrine EntityManager (ORM 3.5+)
+    ########################################
+    MagicSunday\Memories\Doctrine\EntityManagerFactory: ~
+
+    # Doctrine EntityManager service and alias for autowiring
+    Doctrine\ORM\EntityManagerInterface:
+        factory: ['@MagicSunday\Memories\Doctrine\EntityManagerFactory', 'create']
+        public: true
+
+    Doctrine\ORM\EntityManager:
+        alias: Doctrine\ORM\EntityManagerInterface
+
+    ########################################
+    # Thumbnail Service
+    ########################################
+    MagicSunday\Memories\Service\Thumbnail\ThumbnailService:
+        arguments:
+            $thumbnailDir: '%env(string:MEMORIES_THUMBNAIL_DIR)%'
+            $sizes: '%memories.thumbnail_sizes%'
+
+    MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface:
+        alias: MagicSunday\Memories\Service\Thumbnail\ThumbnailService
+
+    ########################################
+    # Metadata Extractors & Enricher
+    ########################################
+    MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor:
+        arguments:
+            $readExifForVideos: false
+
+    MagicSunday\Memories\Service\Metadata\XmpIptcExtractor: ~
+
+    MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor: ~
+
+    MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor: ~
+
+    MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher:
+        arguments:
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $cellDegrees: 0.01
+
+    MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher: ~
+
+    MagicSunday\Memories\Service\Metadata\DaypartEnricher: ~
+
+    MagicSunday\Memories\Service\Metadata\SolarEnricher:
+        arguments:
+            $goldenMinutes: 60
+
+    MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor:
+        arguments:
+            $sampleSize: 320
+
+    MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor:
+        arguments:
+            $ffprobePath: '%env(string:FFPROBE_PATH)%'
+            $slowMoFpsThreshold: 100.0
+
+    MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor:
+        arguments:
+            $dctSampleSize: '%memories.hash.dct_sample%'
+            $lowFreqSize: '%memories.hash.lowfreq%'
+
+    MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor:
+        arguments:
+            $extractors:
+                - '@MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\XmpIptcExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
+                - '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
+                - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
+                - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
+                - '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
+
+    MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface:
+        alias: MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor
+
+    ########################################
+    # Clustering
+    ########################################
+
+    MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator
+
+    MagicSunday\Memories\Service\Clusterer\HybridClusterer:
+        arguments:
+            $strategies: !tagged_iterator 'memories.cluster_strategy'
+
+    MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService: ~
+
+    MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService:
+        arguments:
+            $keepOrder:
+                - 'long_trip'
+                - 'road_trip'
+                - 'transit_travel_day'
+                - 'weekend_trip'
+                - 'camping_trip'
+                - 'significant_place'
+                - 'first_visit_place'
+                - 'location_similarity'
+                - 'person_cohort'
+                - 'holiday_event'
+                - 'new_year_eve'
+                - 'sports_event'
+                - 'festival_summer'
+                - 'nightlife_event'
+                - 'cityscape_night'
+                - 'hike_adventure'
+                - 'zoo_aquarium'
+                - 'kids_birthday_party'
+                - 'cross_dimension'
+                - 'on_this_day_over_years'
+                - 'one_year_ago'
+                - 'anniversary'
+                - 'weekend_getaways_over_years'
+                - 'beach_over_years'
+                - 'camping_over_years'
+                - 'snow_vacation_over_years'
+                - 'museum_over_years'
+                - 'zoo_aquarium_over_years'
+                - 'season_over_years'
+                - 'this_month_over_years'
+                - 'year_in_review'
+                - 'monthly_highlights'
+                - 'season'
+                - 'golden_hour'
+                - 'sunny_day'
+                - 'snow_day'
+                - 'rainy_day'
+                - 'day_album'
+                - 'dining_out'
+                - 'morning_coffee'
+                - 'time_similarity'
+                - 'pet_moments'
+                - 'photo_motif'
+                - 'panorama'
+                - 'panorama_over_years'
+                - 'portrait_orientation'
+                - 'video_stories'
+                - 'at_home_weekend'
+                - 'at_home_weekday'
+                - 'device_similarity'
+                - 'phash_similarity'
+                - 'burst'
+            $overlapMergeThreshold: 0.50
+            $overlapDropThreshold: 0.70
+            $perMediaCap: 2
+            $minScore: 0.0
+            $minSize: 3
+            $annotateOnly:
+                - 'phash_similarity'
+                - 'burst'
+            $minUniqueShare:
+                photo_motif: 0.25
+                device_similarity: 0.40
+                panorama: 0.25
+                portrait_orientation: 0.25
+                video_stories: 0.25
+            $requireValidTime: true
+            $minValidYear: 1990
+
+    MagicSunday\Memories\Service\Weather\NullWeatherHintProvider: ~
+
+    MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface:
+        alias: MagicSunday\Memories\Service\Weather\NullWeatherHintProvider
+
+    # Feeds
+    MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
+    MagicSunday\Memories\Service\Feed\HtmlFeedRenderer: ~
+
+    # Title
+    MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
+        arguments:
+            $configPath: '%kernel.project_dir%/config/templates/titles.yaml'
+            $locale: 'de'
+
+    MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator:
+        arguments:
+            $provider: '@MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider'
+
+    MagicSunday\Memories\Support\ClusterEntityToDraftMapper: ~

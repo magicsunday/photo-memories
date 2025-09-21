@@ -1,0 +1,47 @@
+parameters:
+    memories.geocoding.nominatim.base_url: '%env(string:NOMINATIM_BASE_URL)%'
+    memories.geocoding.nominatim.email:    '%env(string:NOMINATIM_EMAIL)%'
+    memories.geocoding.nominatim.user_agent: 'Rueckblick/1.0'
+    memories.geocoding.nominatim.zoom: 14
+    memories.geocoding.delay_ms: 1200
+
+services:
+    # Einfach: Interface direkt per Factory bereitstellen (kein 'http_client' Alias nötig)
+    Symfony\Contracts\HttpClient\HttpClientInterface:
+        factory: ['Symfony\Component\HttpClient\HttpClient', 'create']
+        arguments:
+            - {
+                headers: {
+                    'User-Agent': '%memories.geocoding.nominatim.user_agent% (%memories.geocoding.nominatim.email%)',
+                    'Accept': 'application/json'
+                },
+              # optional: Timeout/Verify/Base-URI etc.
+                max_redirects: 5,
+                timeout: 10.0
+            }
+
+    MagicSunday\Memories\Service\Geocoding\NominatimReverseGeocoder:
+        arguments:
+            $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $baseUrl: '%memories.geocoding.nominatim.base_url%'
+            $userAgent: '%memories.geocoding.nominatim.user_agent%'
+            $contactEmail: '%memories.geocoding.nominatim.email%'
+            $zoom: '%memories.geocoding.nominatim.zoom%'
+
+    MagicSunday\Memories\Service\Geocoding\ReverseGeocoderInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\NominatimReverseGeocoder
+
+    MagicSunday\Memories\Service\Geocoding\LocationCellIndex: ~
+
+    MagicSunday\Memories\Service\Geocoding\LocationResolver:
+        arguments:
+            $cellDeg: 0.01
+
+    MagicSunday\Memories\Service\Geocoding\MediaLocationLinker:
+        arguments:
+            $cellDeg: 0.01
+
+    MagicSunday\Memories\Command\GeocodeCommand:
+        arguments:
+            $delayMs: '%memories.geocoding.delay_ms%'
+        tags: ['console.command']

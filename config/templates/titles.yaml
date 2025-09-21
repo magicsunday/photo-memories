@@ -1,0 +1,174 @@
+de:
+    # Zeit & Basis-Gruppierungen
+    time_similarity:
+        title: "Schnappschüsse"
+        subtitle: "{{ date_range }}"
+    day_album:
+        title: "Ein Tag in {{ city }}"
+        subtitle: "{{ date_range }}"
+    monthly_highlights:
+        title: "Monatshighlights"
+        subtitle: "{{ date_range }}"
+    year_in_review:
+        title: "{{ year }} im Rückblick"
+        subtitle: "Deine Highlights"
+    this_month_over_years:
+        title: "Dieser Monat – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    on_this_day_over_years:
+        title: "An diesem Tag"
+        subtitle: "Durch die Jahre"
+    one_year_ago:
+        title: "Heute vor einem Jahr"
+        subtitle: "{{ date_range }}"
+
+    # Orte & Reisen
+    location_similarity:
+        title: "Unterwegs in {{ city }}"
+        subtitle: "{{ date_range }}"
+    weekend_trip:
+        title: "Wochenendtrip nach {{ city }}"
+        subtitle: "{{ start_date }} – {{ end_date }}"
+    weekend_getaways_over_years:
+        title: "Wochenenden – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    road_trip:
+        title: "Roadtrip"
+        subtitle: "{{ date_range }}"
+    long_trip:
+        title: "Große Reise"
+        subtitle: "{{ start_date }} – {{ end_date }}"
+    transit_travel_day:
+        title: "Reisetag"
+        subtitle: "{{ date_range }}"
+    significant_place:
+        title: "Besonderer Ort: {{ place }}"
+        subtitle: "{{ date_range }}"
+    first_visit_place:
+        title: "Erstes Mal in {{ place }}"
+        subtitle: "{{ date_range }}"
+
+    # Zuhause
+    at_home_weekday:
+        title: "Alltag zuhause"
+        subtitle: "{{ date_range }}"
+    at_home_weekend:
+        title: "Zuhause am Wochenende"
+        subtitle: "{{ date_range }}"
+
+    # Natur & Jahreszeiten
+    season:
+        title: "{{ season }}"
+        subtitle: "{{ date_range }}"
+    season_over_years:
+        title: "Immer wieder {{ season }}"
+        subtitle: "Durch die Jahre"
+    sunny_day:
+        title: "Sonniger Tag"
+        subtitle: "{{ date_range }}"
+    rainy_day:
+        title: "Regentag"
+        subtitle: "{{ date_range }}"
+    snow_day:
+        title: "Schneetag"
+        subtitle: "{{ date_range }}"
+    snow_vacation_over_years:
+        title: "Winterurlaub – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    beach_over_years:
+        title: "Am Strand – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    hike_adventure:
+        title: "Wanderung"
+        subtitle: "{{ date_range }}"
+    camping_trip:
+        title: "Campingtrip"
+        subtitle: "{{ date_range }}"
+    camping_over_years:
+        title: "Camping – durch die Jahre"
+        subtitle: "{{ date_range }}"
+
+    # Stadt & Events
+    cityscape_night:
+        title: "Stadt bei Nacht"
+        subtitle: "{{ date_range }}"
+    nightlife_event:
+        title: "Abend in der Stadt"
+        subtitle: "{{ date_range }}"
+    festival_summer:
+        title: "Sommerfestival"
+        subtitle: "{{ date_range }}"
+    sports_event:
+        title: "{{ sport }}-Tag"
+        subtitle: "{{ date_range }}"
+    dining_out:
+        title: "Essen gehen"
+        subtitle: "{{ date_range }}"
+    museum_over_years:
+        title: "Museum – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    zoo_aquarium:
+        title: "Zoo & Aquarium"
+        subtitle: "{{ date_range }}"
+    zoo_aquarium_over_years:
+        title: "Zoo & Aquarium – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    holiday_event:
+        title: "Feiertag: {{ holiday_name }}"
+        subtitle: "{{ date_range }}"
+    new_year_eve:
+        title: "Silvester"
+        subtitle: "{{ date_range }}"
+
+    # Zeitfenster & Licht
+    morning_coffee:
+        title: "Morgens"
+        subtitle: "{{ date_range }}"
+    golden_hour:
+        title: "Goldene Stunde"
+        subtitle: "{{ date_range }}"
+
+    # Personen & Tiere
+    person_cohort:
+        title: "Mit Freunden & Familie"
+        subtitle: "{{ date_range }}"
+    kids_birthday_party:
+        title: "Kindergeburtstag"
+        subtitle: "{{ date_range }}"
+    pet_moments:
+        title: "Tiermomente"
+        subtitle: "{{ date_range }}"
+    anniversary:
+        title: "Jahrestag"
+        subtitle: "{{ date_range }}"
+
+    # Motive & Medienformate
+    photo_motif:
+        title: "{{ motif_label }}"
+        subtitle: "{{ date_range }}"
+    panorama:
+        title: "Panoramen"
+        subtitle: "{{ date_range }}"
+    panorama_over_years:
+        title: "Panoramen – durch die Jahre"
+        subtitle: "{{ date_range }}"
+    portrait_orientation:
+        title: "Porträts"
+        subtitle: "{{ date_range }}"
+    video_stories:
+        title: "Videomomente"
+        subtitle: "{{ date_range }}"
+
+    # Ähnlichkeit/Clustering-Algorithmen
+    burst:
+        title: "Serienaufnahmen"
+        subtitle: "{{ date_range }}"
+    device_similarity:
+        title: "Mit {{ device }}"
+        subtitle: "{{ date_range }}"
+    phash_similarity:
+        title: "Ähnliche Motive"
+        subtitle: "{{ date_range }}"
+    cross_dimension:
+        title: "Für dich"
+        subtitle: "{{ date_range }}"

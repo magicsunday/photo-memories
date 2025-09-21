@@ -1,0 +1,146 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Service\Feed;
+
+use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Feed\MemoryFeedItem;
+use MagicSunday\Memories\Repository\MediaRepository;
+use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
+
+/**
+ * iOS-like feed selection:
+ * - filter by min score and min members
+ * - sort by score desc
+ * - limit per calendar day
+ * - simple diversity by (place, algorithm)
+ * - pick cover by heuristic
+ */
+final class MemoryFeedBuilder implements FeedBuilderInterface
+{
+    public function __construct(
+        private readonly TitleGeneratorInterface $titleGen,
+        private readonly CoverPickerInterface $coverPicker,
+        private readonly MediaRepository $mediaRepo,
+        private readonly float $minScore = 0.35,
+        private readonly int $minMembers = 4,
+        private readonly int $maxPerDay = 6,
+        private readonly int $maxTotal = 60
+    ) {
+    }
+
+    public function build(array $clusters): array
+    {
+        // 1) filter
+        $filtered = [];
+        foreach ($clusters as $c) {
+            $score = (float) ($c->getParams()['score'] ?? 0.0);
+            $members = $c->getMembers();
+            if ($score < $this->minScore) {
+                continue;
+            }
+            if (\count($members) < $this->minMembers) {
+                continue;
+            }
+            $filtered[] = $c;
+        }
+
+        if ($filtered === []) {
+            return [];
+        }
+
+        // 2) sort high → low score
+        \usort($filtered, static function (ClusterDraft $a, ClusterDraft $b): int {
+            $sa = (float) ($a->getParams()['score'] ?? 0.0);
+            $sb = (float) ($b->getParams()['score'] ?? 0.0);
+            return $sa < $sb ? 1 : -1;
+        });
+
+        // 3) day caps + simple diversity
+        /** @var array<string,int> $dayCount */
+        $dayCount = [];
+        /** @var array<string,int> $seenPlace */
+        $seenPlace = [];
+        /** @var array<string,int> $seenAlg */
+        $seenAlg = [];
+
+        $result = [];
+
+        foreach ($filtered as $c) {
+            if (\count($result) >= $this->maxTotal) {
+                break;
+            }
+
+            $dayKey = $this->dayKey($c);
+            if ($dayKey === null) {
+                continue;
+            }
+            $cap = (int) ($dayCount[$dayKey] ?? 0);
+            if ($cap >= $this->maxPerDay) {
+                continue;
+            }
+
+            $place = $c->getParams()['place'] ?? null;
+            $alg   = $c->getAlgorithm();
+
+            // simple diversity: limit repeats
+            if (\is_string($place)) {
+                $key = \sprintf('%s|%s', $dayKey, $place);
+                if (($seenPlace[$key] ?? 0) >= 2) { // max 2 per place/day
+                    continue;
+                }
+            }
+            $algKey = \sprintf('%s|%s', $dayKey, $alg);
+            if (($seenAlg[$algKey] ?? 0) >= 2) { // max 2 per algo/day
+                continue;
+            }
+
+            // 4) resolve Media + pick cover
+            $members = $this->mediaRepo->findByIds($c->getMembers());
+            if ($members === []) {
+                continue;
+            }
+            $cover = $this->coverPicker->pickCover($members, $c->getParams());
+            $coverId = $cover?->getId();
+
+            // 5) titles
+            $title = $this->titleGen->makeTitle($c);
+            $subtitle = $this->titleGen->makeSubtitle($c);
+
+            $result[] = new MemoryFeedItem(
+                algorithm: $alg,
+                title: $title,
+                subtitle: $subtitle,
+                coverMediaId: $coverId,
+                memberIds: $c->getMembers(),
+                score: (float) ($c->getParams()['score'] ?? 0.0),
+                params: $c->getParams()
+            );
+
+            $dayCount[$dayKey] = $cap + 1;
+            if (\is_string($place)) {
+                $seenPlace[\sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[\sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
+            }
+            $seenAlg[$algKey] = ($seenAlg[$algKey] ?? 0) + 1;
+        }
+
+        return $result;
+    }
+
+    private function dayKey(ClusterDraft $c): ?string
+    {
+        $tr = $c->getParams()['time_range'] ?? null;
+        if (!\is_array($tr) || !isset($tr['to'])) {
+            return null;
+        }
+        $to = (int) $tr['to'];
+        if ($to <= 0) {
+            return null;
+        }
+        $d = (new DateTimeImmutable("@{$to}"))->setTimezone(new \DateTimeZone('Europe/Berlin'));
+        return $d->format('Y-m-d');
+    }
+}

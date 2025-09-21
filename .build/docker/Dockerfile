@@ -16,16 +16,20 @@ RUN apt-get update && \
     ffmpeg \
     flex \
     git \
-    libonig-dev \
-    libssl-dev \
+    imagemagick \
+    libavif-dev \
+    libc6-dev \
+    libfreetype-dev \
+    libheif-dev \
+    libjpeg-dev \
+    libpng-dev \
     libtool \
-    libxml2-dev \
+    libwebp-dev \
+    libxml2 \
     libzip-dev \
+    openssl \
     patchelf \
-    pkg-config \
     re2c \
-    sqlite3 \
-    libsqlite3-dev \
     sudo \
     unzip \
     zlib1g-dev

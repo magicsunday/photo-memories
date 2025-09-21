@@ -9,8 +9,7 @@
 
 declare(strict_types=1);
 
-try
-{
+try {
     $pharFile = "memories.phar";
     $binName  = "memories";
 
@@ -39,8 +38,6 @@ try
     chmod($pharFile, 0755);
 
     echo "$pharFile successfully created" . PHP_EOL;
-}
-catch (Exception $e)
-{
+} catch (Exception $e) {
     echo $e->getMessage();
 }
