@@ -20,6 +20,8 @@ abstract class AbstractGroupedClusterStrategy implements ClusterStrategyInterfac
      */
     final public function cluster(array $items): array
     {
+        $this->beforeGrouping();
+
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
@@ -53,6 +55,11 @@ abstract class AbstractGroupedClusterStrategy implements ClusterStrategyInterfac
         }
 
         return $drafts;
+    }
+
+    protected function beforeGrouping(): void
+    {
+        // Default no-op hook for subclasses that need to prepare per-run context.
     }
 
     protected function shouldConsider(Media $media): bool

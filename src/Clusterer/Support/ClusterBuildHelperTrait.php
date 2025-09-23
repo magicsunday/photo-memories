@@ -218,6 +218,29 @@ trait ClusterBuildHelperTrait
         return $runs;
     }
 
+    /**
+     * Collects distinct formatted date parts from the given members.
+     *
+     * @param list<Media> $members
+     * @return array<string, bool>
+     */
+    protected function uniqueDateParts(array $members, string $format, ?DateTimeZone $timezone = null): array
+    {
+        $distinct = [];
+
+        foreach ($members as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $local = $timezone !== null ? $takenAt->setTimezone($timezone) : $takenAt;
+            $distinct[$local->format($format)] = true;
+        }
+
+        return $distinct;
+    }
+
     private function isNextDay(string $a, string $b): bool
     {
         $ta = \strtotime($a . ' 00:00:00');

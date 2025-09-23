@@ -5,8 +5,8 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -14,14 +14,20 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Example: Feb-14 across 2014..2025 within a +/- window of days.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 66])]
-final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterface
+final class OnThisDayOverYearsClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezoneObject;
+
+    private int $anchorMonth = 1;
+    private int $anchorDay = 1;
+
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly int $windowDays = 0,   // 0 = exact same month/day, 1..3 = tolerant
-        private readonly int $minYears   = 3,
-        private readonly int $minItems   = 12
+        private readonly int $minYears = 3,
+        private readonly int $minItems = 12
     ) {
+        $this->timezoneObject = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -29,54 +35,53 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         return 'on_this_day_over_years';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function beforeGrouping(): void
     {
-        $now = new DateTimeImmutable('now', new DateTimeZone($this->timezone));
-        $anchorMonth = (int) $now->format('n');
-        $anchorDay   = (int) $now->format('j');
+        $now = new DateTimeImmutable('now', $this->timezoneObject);
+        $this->anchorMonth = (int) $now->format('n');
+        $this->anchorDay = (int) $now->format('j');
+    }
 
-        /** @var list<Media> $picked */
-        $picked = [];
-        /** @var array<int,bool> $years */
-        $years = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($now->getTimezone());
-            $y = (int) $local->format('Y');
-            $mdDist = $this->monthDayDistance($anchorMonth, $anchorDay, (int) $local->format('n'), (int) $local->format('j'));
-            if ($mdDist <= $this->windowDays) {
-                $picked[] = $m;
-                $years[$y] = true;
-            }
+    protected function groupKey(Media $media): ?string
+    {
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        if (\count($picked) < $this->minItems || \count($years) < $this->minYears) {
-            return [];
+        $local = $takenAt->setTimezone($this->timezoneObject);
+        $monthDistance = $this->monthDayDistance(
+            $this->anchorMonth,
+            $this->anchorDay,
+            (int) $local->format('n'),
+            (int) $local->format('j')
+        );
+
+        if ($monthDistance > $this->windowDays) {
+            return null;
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        return 'current_day';
+    }
 
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
+        }
+
+        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezoneObject);
+        if (\count($yearsMap) < $this->minYears) {
+            return null;
+        }
+
+        $years = \array_map('intval', \array_keys($yearsMap));
 
         return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                    'years'      => \array_values(\array_keys($years)),
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
+            'years' => $years,
         ];
     }
 

@@ -5,24 +5,27 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Aggregates all items from the current month across different years.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 178])]
-final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
+final class ThisMonthOverYearsClusterStrategy extends AbstractGroupedClusterStrategy
 {
-    use ClusterBuildHelperTrait;
+    private readonly DateTimeZone $timezoneObject;
+
+    private int $currentMonth = 1;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly int $minYears = 3,
         private readonly int $minItems = 24,
         private readonly int $minDistinctDays = 8
     ) {
+        $this->timezoneObject = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -30,48 +33,49 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
         return 'this_month_over_years';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function beforeGrouping(): void
     {
-        $tz   = new DateTimeZone($this->timezone);
-        $now  = new DateTimeImmutable('now', $tz);
-        $mon  = (int) $now->format('n');
+        $now = new DateTimeImmutable('now', $this->timezoneObject);
+        $this->currentMonth = (int) $now->format('n');
+    }
 
-        /** @var list<Media> $picked */
-        $picked = [];
-        /** @var array<int,bool> $years */
-        $years = [];
-        /** @var array<string,bool> $days */
-        $days = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            if ((int) $local->format('n') !== $mon) {
-                continue;
-            }
-            $picked[] = $m;
-            $years[(int) $local->format('Y')] = true;
-            $days[$local->format('Y-m-d')]    = true;
+    protected function groupKey(Media $media): ?string
+    {
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        if (\count($picked) < $this->minItems || \count($years) < $this->minYears || \count($days) < $this->minDistinctDays) {
-            return [];
+        $local = $takenAt->setTimezone($this->timezoneObject);
+        if ((int) $local->format('n') !== $this->currentMonth) {
+            return null;
         }
 
-        return $this->buildOverYearsDrafts(
-            $picked,
-            $years,
-            $this->minYears,
-            $this->minItems,
-            $this->name(),
-            ['month' => $mon]
-        );
+        return 'current_month';
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
+        }
+
+        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezoneObject);
+        if (\count($yearsMap) < $this->minYears) {
+            return null;
+        }
+
+        $daysMap = $this->uniqueDateParts($members, 'Y-m-d', $this->timezoneObject);
+        if (\count($daysMap) < $this->minDistinctDays) {
+            return null;
+        }
+
+        return [
+            'month' => $this->currentMonth,
+            'years' => \array_map('intval', \array_keys($yearsMap)),
+        ];
     }
 }
