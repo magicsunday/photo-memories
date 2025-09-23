@@ -3,11 +3,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateInterval;
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,7 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Simple exact-date grouping; minimal dependencies.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 79])]
-final class HolidayEventClusterStrategy implements ClusterStrategyInterface
+final class HolidayEventClusterStrategy extends AbstractGroupedClusterStrategy
 {
     public function __construct(
         private readonly int $minItems = 8
@@ -27,53 +26,35 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
         return 'holiday_event';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        /** @var array<string, list<Media>> $groups */
-        $groups = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $name = Calendar::germanFederalHolidayName($t);
-            if ($name === null) {
-                continue;
-            }
-            $key = $t->format('Y') . ':' . $name . ':' . $t->format('Y-m-d');
-            $groups[$key] ??= [];
-            $groups[$key][] = $m;
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
-
-        foreach ($groups as $key => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
-
-            [$yearStr, $name,] = \explode(':', $key, 3);
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'year'       => (int) $yearStr,
-                    'holiday'    => 1.0,
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
-            );
+        $name = Calendar::germanFederalHolidayName($takenAt);
+        if ($name === null) {
+            return null;
         }
 
-        return $out;
+        return $takenAt->format('Y') . ':' . $name . ':' . $takenAt->format('Y-m-d');
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
+        }
+
+        [$yearStr, ,] = \explode(':', $key, 3);
+
+        return [
+            'year' => (int) $yearStr,
+            'holiday' => 1.0,
+        ];
     }
 }

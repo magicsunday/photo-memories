@@ -5,20 +5,23 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups photos by local calendar day. Produces compact "Day Tour" clusters.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 53])]
-final class DayAlbumClusterStrategy implements ClusterStrategyInterface
+final class DayAlbumClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly int $minItems = 8
     ) {
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -26,50 +29,27 @@ final class DayAlbumClusterStrategy implements ClusterStrategyInterface
         return 'day_album';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        /** @var array<string, list<Media>> $byDay */
-        $byDay = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
-            $byDay[$key] ??= [];
-            $byDay[$key][] = $m;
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+    }
 
-        foreach ($byDay as $key => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
-
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'year'       => (int) \substr($key, 0, 4),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
-            );
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
         }
 
-        return $out;
+        return [
+            'year' => (int) \substr($key, 0, 4),
+        ];
     }
 }

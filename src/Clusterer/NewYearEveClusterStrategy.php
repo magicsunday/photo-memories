@@ -5,23 +5,26 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds New Year's Eve clusters (local night around Dec 31 → Jan 1).
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 79])]
-final class NewYearEveClusterStrategy implements ClusterStrategyInterface
+final class NewYearEveClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         /** Hours considered NYE party window (local, 24h). */
         private readonly int $startHour = 20,
         private readonly int $endHour = 2,
         private readonly int $minItems = 6
     ) {
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -29,58 +32,38 @@ final class NewYearEveClusterStrategy implements ClusterStrategyInterface
         return 'new_year_eve';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        /** @var array<int, list<Media>> $byYear */
-        $byYear = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $y = (int) $local->format('Y');
-            $md = $local->format('m-d');
-            $h  = (int) $local->format('G');
-
-            $isNYEWindow = ($md === '12-31' && $h >= $this->startHour)
-                || ($md === '01-01' && $h <= $this->endHour);
-
-            if ($isNYEWindow) {
-                $byYear[$y] ??= [];
-                $byYear[$y][] = $m;
-            }
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        $local = $takenAt->setTimezone($this->timezone);
+        $monthDay = $local->format('m-d');
+        $hour = (int) $local->format('G');
 
-        foreach ($byYear as $y => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
-            \usort($list, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
+        $inWindow = ($monthDay === '12-31' && $hour >= $this->startHour)
+            || ($monthDay === '01-01' && $hour <= $this->endHour);
 
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'year'       => $y,
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                members: \array_map(static fn(Media $m): int => $m->getId(), $list)
-            );
+        if (!$inWindow) {
+            return null;
         }
 
-        return $out;
+        return $local->format('Y');
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
+        }
+
+        return [
+            'year' => (int) $key,
+        ];
     }
 }

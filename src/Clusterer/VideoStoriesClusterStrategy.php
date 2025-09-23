@@ -5,20 +5,23 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Collects videos into day-based stories (local time).
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 41])]
-final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
+final class VideoStoriesClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly int $minItems = 2
     ) {
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -26,54 +29,32 @@ final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
         return 'video_stories';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function shouldConsider(Media $media): bool
     {
-        $tz = new DateTimeZone($this->timezone);
+        $mime = $media->getMime();
 
-        /** @var array<string, list<Media>> $byDay */
-        $byDay = [];
+        return !\is_string($mime) || \str_starts_with($mime, 'video/');
+    }
 
-        foreach ($items as $m) {
-            $mime = $m->getMime();
-            if (!\is_string($mime) || \strpos($mime, 'video/') !== 0) {
-                continue;
-            }
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
-            $byDay[$key] ??= [];
-            $byDay[$key][] = $m;
+    protected function groupKey(Media $media): ?string
+    {
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+    }
 
-        foreach ($byDay as $day => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
-            \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
-            );
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
         }
 
-        return $out;
+        return [];
     }
 }

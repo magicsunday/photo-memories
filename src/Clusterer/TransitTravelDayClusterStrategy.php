@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -13,13 +14,16 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Marks "travel days" by summing GPS path distance within the day.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 87])]
-final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
+final class TransitTravelDayClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly float $minTravelKm = 60.0,
         private readonly int $minGpsSamples = 5
     ) {
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -27,70 +31,48 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
         return 'transit_travel_day';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        $tz = new DateTimeZone($this->timezone);
+        $takenAt = $media->getTakenAt();
+        $lat = $media->getGpsLat();
+        $lon = $media->getGpsLon();
 
-        /** @var array<string, list<Media>> $byDay */
-        $byDay = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            if ($m->getGpsLat() === null || $m->getGpsLon() === null) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
-            $byDay[$key] ??= [];
-            $byDay[$key][] = $m;
+        if (!$takenAt instanceof DateTimeImmutable || $lat === null || $lon === null) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+    }
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minGpsSamples) {
-                continue;
-            }
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-            $distKm = 0.0;
-            for ($i = 1, $n = \count($list); $i < $n; $i++) {
-                $p = $list[$i - 1];
-                $q = $list[$i];
-                $distKm += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
-                    ) / 1000.0;
-            }
-
-            if ($distKm < $this->minTravelKm) {
-                continue;
-            }
-
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'distance_km' => $distKm,
-                    'time_range'  => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
-            );
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minGpsSamples) {
+            return null;
         }
 
-        return $out;
+        \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+
+        $distanceKm = 0.0;
+        for ($i = 1, $n = \count($members); $i < $n; $i++) {
+            $prev = $members[$i - 1];
+            $curr = $members[$i];
+            $distanceKm += MediaMath::haversineDistanceInMeters(
+                (float) $prev->getGpsLat(),
+                (float) $prev->getGpsLon(),
+                (float) $curr->getGpsLat(),
+                (float) $curr->getGpsLon()
+            ) / 1000.0;
+        }
+
+        if ($distanceKm < $this->minTravelKm) {
+            return null;
+        }
+
+        return [
+            'distance_km' => $distanceKm,
+        ];
     }
 }

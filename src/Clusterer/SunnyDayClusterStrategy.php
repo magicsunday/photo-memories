@@ -5,9 +5,9 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,15 +15,18 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Priority: use sun_prob; fallback to 1 - cloud_cover; fallback to 1 - rain_prob.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 56])]
-final class SunnyDayClusterStrategy implements ClusterStrategyInterface
+final class SunnyDayClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
         private readonly WeatherHintProviderInterface $weather,
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly float $minAvgSunScore = 0.65, // 0..1
         private readonly int $minItemsPerDay = 6,
         private readonly int $minHintsPerDay = 3
     ) {
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -31,93 +34,65 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
         return 'sunny_day';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        /** @var array<string, list<Media>> $byDay */
-        $byDay = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
-            $byDay[$key] ??= [];
-            $byDay[$key][] = $m;
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        if ($byDay === []) {
-            return [];
+        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItemsPerDay) {
+            return null;
         }
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        $sum = 0.0;
+        $count = 0;
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minItemsPerDay) {
+        foreach ($members as $media) {
+            $hint = $this->weather->getHint($media);
+            if ($hint === null) {
                 continue;
             }
 
-            $sum = 0.0;
-            $n   = 0;
-
-            foreach ($list as $m) {
-                $hint = $this->weather->getHint($m);
-                if ($hint === null) {
-                    continue;
-                }
-
-                // Prefer explicit sun_prob
-                if (\array_key_exists('sun_prob', $hint)) {
-                    $p = (float) $hint['sun_prob'];
-                } elseif (\array_key_exists('cloud_cover', $hint)) {
-                    // 0..1 cloud cover => sunshine proxy
-                    $p = 1.0 - (float) $hint['cloud_cover'];
-                } elseif (\array_key_exists('rain_prob', $hint)) {
-                    // conservative proxy from rain probability
-                    $p = \max(0.0, 1.0 - (float) $hint['rain_prob']);
-                } else {
-                    continue;
-                }
-
-                // clamp to [0..1]
-                if ($p < 0.0) { $p = 0.0; }
-                if ($p > 1.0) { $p = 1.0; }
-
-                $sum += $p;
-                $n++;
-            }
-
-            if ($n < $this->minHintsPerDay) {
+            if (\array_key_exists('sun_prob', $hint)) {
+                $score = (float) $hint['sun_prob'];
+            } elseif (\array_key_exists('cloud_cover', $hint)) {
+                $score = 1.0 - (float) $hint['cloud_cover'];
+            } elseif (\array_key_exists('rain_prob', $hint)) {
+                $score = \max(0.0, 1.0 - (float) $hint['rain_prob']);
+            } else {
                 continue;
             }
 
-            $avg = $sum / (float) $n;
-            if ($avg < $this->minAvgSunScore) {
-                continue;
+            if ($score < 0.0) {
+                $score = 0.0;
+            } elseif ($score > 1.0) {
+                $score = 1.0;
             }
 
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'sun_score'  => $avg,
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
-            );
+            $sum += $score;
+            $count++;
         }
 
-        return $out;
+        if ($count < $this->minHintsPerDay) {
+            return null;
+        }
+
+        $average = $sum / (float) $count;
+        if ($average < $this->minAvgSunScore) {
+            return null;
+        }
+
+        return [
+            'sun_score' => $average,
+        ];
     }
 }
