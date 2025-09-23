@@ -58,9 +58,12 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
             static fn (Media $a, Media $b): int => $a->getTakenAt()->getTimestamp() <=> $b->getTakenAt()->getTimestamp()
         );
 
+        $this->onSessionReset();
+
         $drafts = [];
         $buffer = [];
         $lastTimestamp = null;
+        $lastMedia = null;
 
         foreach ($candidates as $media) {
             $ts = $media->getTakenAt()?->getTimestamp();
@@ -68,12 +71,19 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
                 continue;
             }
 
-            if ($lastTimestamp !== null && ($ts - $lastTimestamp) > $this->sessionGapSeconds) {
-                $this->flushBuffer($buffer, $drafts);
+            if ($lastMedia !== null && $lastTimestamp !== null) {
+                $gap = $ts - $lastTimestamp;
+                if ($gap > $this->sessionGapSeconds || $this->shouldSplitSession($lastMedia, $media, $gap)) {
+                    $this->flushBuffer($buffer, $drafts);
+                    $lastMedia = null;
+                    $lastTimestamp = null;
+                }
             }
 
             $buffer[] = $media;
+            $this->onMediaAppended($media);
             $lastTimestamp = $ts;
+            $lastMedia = $media;
         }
 
         $this->flushBuffer($buffer, $drafts);
@@ -93,6 +103,7 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
 
         if (\count($buffer) < $this->minItems) {
             $buffer = [];
+            $this->onSessionReset();
             return;
         }
 
@@ -102,6 +113,7 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
         }
 
         $buffer = [];
+        $this->onSessionReset();
     }
 
     /**
@@ -151,6 +163,21 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
     protected function minItems(): int
     {
         return $this->minItems;
+    }
+
+    protected function shouldSplitSession(Media $previous, Media $current, int $gapSeconds): bool
+    {
+        return false;
+    }
+
+    protected function onMediaAppended(Media $media): void
+    {
+        // default no-op
+    }
+
+    protected function onSessionReset(): void
+    {
+        // default no-op
     }
 
     /**

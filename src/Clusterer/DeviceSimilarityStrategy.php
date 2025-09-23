@@ -4,16 +4,14 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 30])]
-final class DeviceSimilarityStrategy implements ClusterStrategyInterface
+final class DeviceSimilarityStrategy extends AbstractGroupedClusterStrategy
 {
-    use ClusterBuildHelperTrait;
-
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly int $minItems = 5,
@@ -25,46 +23,30 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
         return 'device_similarity';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function groupKey(Media $media): ?string
     {
-        /** @var array<string, list<Media>> $groups */
-        $groups = [];
+        $date = $media->getTakenAt() instanceof DateTimeImmutable
+            ? $media->getTakenAt()->format('Y-m-d')
+            : 'ohne-datum';
 
-        foreach ($items as $m) {
-            $date   = $m->getTakenAt() instanceof DateTimeImmutable ? $m->getTakenAt()->format('Y-m-d') : 'ohne-datum';
-            $device = $m->getCameraModel() ?? 'unbekannt';
-            $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
+        $device = $media->getCameraModel() ?? 'unbekannt';
+        $locKey = $this->locHelper->localityKeyForMedia($media) ?? 'noloc';
 
-            $key = $device.'|'.$date.'|'.$locKey;
-            $groups[$key] = $groups[$key] ?? [];
-            $groups[$key][] = $m;
+        return $device . '|' . $date . '|' . $locKey;
+    }
+
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
         }
 
-        $drafts = [];
-        foreach ($groups as $group) {
-            if (\count($group) < $this->minItems) {
-                continue;
-            }
-            $label = $this->locHelper->majorityLabel($group);
-            $params = [
-                'time_range' => $this->computeTimeRange($group),
-            ];
-            if ($label !== null) {
-                $params['place'] = $label;
-            }
+        $label = $this->locHelper->majorityLabel($members);
 
-            $drafts[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: $params,
-                centroid: $this->computeCentroid($group),
-                members: $this->toMemberIds($group)
-            );
+        if ($label === null) {
+            return [];
         }
 
-        return $drafts;
+        return ['place' => $label];
     }
 }

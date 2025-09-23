@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -13,13 +13,15 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Typical for bursts/series shots.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 95])]
-final class BurstClusterStrategy implements ClusterStrategyInterface
+final class BurstClusterStrategy extends AbstractTimeGapClusterStrategy
 {
     public function __construct(
-        private readonly int $maxGapSeconds = 90,
+        int $maxGapSeconds = 90,
         private readonly float $maxMoveMeters = 50.0,
-        private readonly int $minItems = 3
+        int $minItems = 3,
+        string $timezone = 'UTC'
     ) {
+        parent::__construct($timezone, $maxGapSeconds, $minItems);
     }
 
     public function name(): string
@@ -27,80 +29,19 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
         return 'burst';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function shouldSplitSession(Media $previous, Media $current, int $gapSeconds): bool
     {
-        $n = \count($items);
-        if ($n < $this->minItems) {
-            return [];
+        $lat1 = $previous->getGpsLat();
+        $lon1 = $previous->getGpsLon();
+        $lat2 = $current->getGpsLat();
+        $lon2 = $current->getGpsLon();
+
+        if ($lat1 === null || $lon1 === null || $lat2 === null || $lon2 === null) {
+            return false;
         }
 
-        \usort($items, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt() ?? new DateTimeImmutable('@0')) <=> ($b->getTakenAt() ?? new DateTimeImmutable('@0'))
-        );
+        $distance = MediaMath::haversineDistanceInMeters($lat1, $lon1, $lat2, $lon2);
 
-        $clusters = [];
-        $current  = [];
-
-        foreach ($items as $i => $media) {
-            if ($i === 0) {
-                $current[] = $media;
-                continue;
-            }
-
-            $prev = $items[$i - 1];
-
-            $timeOk = MediaMath::secondsBetween(
-                    $media->getTakenAt() ?? new DateTimeImmutable('@0'),
-                    $prev->getTakenAt() ?? new DateTimeImmutable('@0')
-                ) <= $this->maxGapSeconds;
-
-            $distOk = true;
-            $lat1 = $prev->getGpsLat();
-            $lon1 = $prev->getGpsLon();
-            $lat2 = $media->getGpsLat();
-            $lon2 = $media->getGpsLon();
-
-            if ($lat1 !== null && $lon1 !== null && $lat2 !== null && $lon2 !== null) {
-                $distOk = MediaMath::haversineDistanceInMeters($lat1, $lon1, $lat2, $lon2) <= $this->maxMoveMeters;
-            }
-
-            if ($timeOk && $distOk) {
-                $current[] = $media;
-                continue;
-            }
-
-            if (\count($current) >= $this->minItems) {
-                $clusters[] = $this->makeDraft($current);
-            }
-
-            $current = [$media];
-        }
-
-        if (\count($current) >= $this->minItems) {
-            $clusters[] = $this->makeDraft($current);
-        }
-
-        return $clusters;
-    }
-
-    /**
-     * @param list<Media> $members
-     */
-    private function makeDraft(array $members): ClusterDraft
-    {
-        $centroid = MediaMath::centroid($members);
-
-        return new ClusterDraft(
-            algorithm: $this->name(),
-            params: [
-                'time_range' => MediaMath::timeRange($members),
-            ],
-            centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: \array_map(static fn (Media $m): int => $m->getId(), $members)
-        );
+        return $distance > $this->maxMoveMeters;
     }
 }

@@ -6,8 +6,8 @@ namespace MagicSunday\Memories\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -16,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 65])]
 final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $windowDays = 3,
@@ -57,19 +59,8 @@ final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
-
         return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
+            $this->buildClusterDraft($this->name(), $picked, []),
         ];
     }
 }
