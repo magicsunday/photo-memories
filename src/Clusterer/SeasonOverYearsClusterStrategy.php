@@ -5,7 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
 final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
     public function __construct(
         private readonly int $minYears = 3,
         private readonly int $minItems = 30
@@ -67,19 +69,13 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
                 continue;
             }
 
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
-
-            $out[] = new ClusterDraft(
+            $out[] = $this->buildClusterDraft(
                 algorithm: $this->name(),
+                members: $list,
                 params: [
-                    'label'      => $season . ' im Laufe der Jahre',
-                    'years'      => \array_values(\array_keys($years)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                    'label' => $season . ' im Laufe der Jahre',
+                    'years' => \array_values(\array_keys($years)),
+                ]
             );
         }
 

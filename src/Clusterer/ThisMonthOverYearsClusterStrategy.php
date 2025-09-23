@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 178])]
 final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minYears = 3,
@@ -63,22 +65,13 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'month'      => $mon,
-                    'years'      => \array_values(\array_keys($years)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
-        ];
+        return $this->buildOverYearsDrafts(
+            $picked,
+            $years,
+            $this->minYears,
+            $this->minItems,
+            $this->name(),
+            ['month' => $mon]
+        );
     }
 }

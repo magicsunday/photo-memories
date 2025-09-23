@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 61])]
 final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minNights = 1,
@@ -44,67 +46,18 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<int, array<string, list<Media>>> $byYearDay */
-        $byYearDay = [];
+        $byYearDay = $this->buildYearDayIndex($items, $tz);
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $y = (int) $local->format('Y');
-            $d = $local->format('Y-m-d');
-            $byYearDay[$y] ??= [];
-            $byYearDay[$y][$d] ??= [];
-            $byYearDay[$y][$d][] = $m;
-        }
-
-        /** @var list<Media> $membersAllYears */
         $membersAllYears = [];
-        /** @var array<int,bool> $yearsPicked */
-        $yearsPicked = [];
+        $yearsPicked     = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            // sort days
-            $days = \array_keys($daysMap);
-            \sort($days, \SORT_STRING);
+            $runs = $this->buildConsecutiveRuns($daysMap);
 
-            // pack days into consecutive runs
-            /** @var list<array{days:list<string>, items:list<Media>}> $runs */
-            $runs = [];
-            /** @var list<string> $runDays */
-            $runDays = [];
-            /** @var list<Media> $runItems */
-            $runItems = [];
-            $prev = null;
-
-            $flush = function () use (&$runs, &$runDays, &$runItems): void {
-                if (\count($runDays) > 0) {
-                    $runs[] = ['days' => $runDays, 'items' => $runItems];
-                }
-                $runDays = [];
-                $runItems = [];
-            };
-
-            foreach ($days as $d) {
-                if ($prev !== null && !$this->isNextDay($prev, $d)) {
-                    $flush();
-                }
-                $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
-                    $runItems[] = $m;
-                }
-                $prev = $d;
-            }
-            $flush();
-
-            // evaluate runs: keep only those that (a) include a weekend, (b) 1..3 nights, (c) have enough items per day
-            /** @var list<array{days:list<string>, items:list<Media>}> $candidates */
             $candidates = [];
 
-            foreach ($runs as $r) {
-                $nDays = \count($r['days']);
+            foreach ($runs as $run) {
+                $nDays = \count($run['days']);
                 if ($nDays < 2) {
                     continue;
                 }
@@ -112,29 +65,27 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 if ($nights < $this->minNights || $nights > $this->maxNights) {
                     continue;
                 }
-                // must include weekend day (Sat/Sun)
-                if (!$this->containsWeekendDay($r['days'])) {
+                if (!$this->containsWeekendDay($run['days'])) {
                     continue;
                 }
-                // each day must have enough items
+
                 $ok = true;
-                foreach ($r['days'] as $d) {
-                    if (\count($daysMap[$d]) < $this->minItemsPerDay) {
+                foreach ($run['days'] as $day) {
+                    if (\count($daysMap[$day]) < $this->minItemsPerDay) {
                         $ok = false;
                         break;
                     }
                 }
-                if (!$ok) {
-                    continue;
+
+                if ($ok) {
+                    $candidates[] = $run;
                 }
-                $candidates[] = $r;
             }
 
             if ($candidates === []) {
                 continue;
             }
 
-            // pick best candidate: by items count (desc), tie-breaker by span (more nights), then by latest
             \usort($candidates, function (array $a, array $b): int {
                 $na = \count($a['items']);
                 $nb = \count($b['items']);
@@ -146,46 +97,23 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
-                return \strcmp($a['days'][0], $b['days'][0]); // earlier first
+                return \strcmp($a['days'][0], $b['days'][0]);
             });
 
             $best = $candidates[0];
-            foreach ($best['items'] as $m) {
-                $membersAllYears[] = $m;
+            foreach ($best['items'] as $media) {
+                $membersAllYears[] = $media;
             }
             $yearsPicked[$year] = true;
         }
 
-        if (\count($yearsPicked) < $this->minYears || \count($membersAllYears) < $this->minItemsTotal) {
-            return [];
-        }
-
-        \usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-        $centroid = MediaMath::centroid($membersAllYears);
-        $time     = MediaMath::timeRange($membersAllYears);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'years'      => \array_values(\array_keys($yearsPicked)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
-            ),
-        ];
-    }
-
-    private function isNextDay(string $a, string $b): bool
-    {
-        $ta = \strtotime($a . ' 00:00:00');
-        $tb = \strtotime($b . ' 00:00:00');
-        if ($ta === false || $tb === false) {
-            return false;
-        }
-        return ($tb - $ta) === 86400;
+        return $this->buildOverYearsDrafts(
+            $membersAllYears,
+            $yearsPicked,
+            $this->minYears,
+            $this->minItemsTotal,
+            $this->name()
+        );
     }
 
     /**
