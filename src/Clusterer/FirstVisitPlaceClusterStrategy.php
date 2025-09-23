@@ -5,27 +5,35 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\AbstractGeoCellClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Detects the earliest visit session per geogrid cell (first time at this place).
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 83])]
-final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
+final class FirstVisitPlaceClusterStrategy extends AbstractGeoCellClusterStrategy
 {
+    private readonly DateTimeZone $timezone;
+
     public function __construct(
-        private readonly float $gridDegrees = 0.01, // ~1.1 km in lat
-        private readonly string $timezone = 'Europe/Berlin',
+        float $gridDegrees = 0.01,
+        string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 4,
-        private readonly int $minNights = 0,  // 0..3 (0 means single day ok)
+        private readonly int $minNights = 0,
         private readonly int $maxNights = 3,
         private readonly int $minItemsTotal = 8
     ) {
-        if ($this->maxNights < $this->minNights) {
-            throw new \InvalidArgumentException('maxNights must be >= minNights.');
+        if ($maxNights < $minNights) {
+            throw new InvalidArgumentException('maxNights must be >= minNights.');
         }
+
+        parent::__construct($gridDegrees);
+
+        $this->timezone = new DateTimeZone($timezone);
     }
 
     public function name(): string
@@ -33,130 +41,117 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         return 'first_visit_place';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function shouldConsider(Media $media): bool
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        /** @var array<string, array<string, list<Media>>> $cellDayMap */
-        $cellDayMap = [];
-
-        foreach ($items as $m) {
-            $t   = $m->getTakenAt();
-            $lat = $m->getGpsLat();
-            $lon = $m->getGpsLon();
-            if (!$t instanceof DateTimeImmutable || $lat === null || $lon === null) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $day = $local->format('Y-m-d');
-            $cell = $this->cellKey((float)$lat, (float)$lon);
-            $cellDayMap[$cell] ??= [];
-            $cellDayMap[$cell][$day] ??= [];
-            $cellDayMap[$cell][$day][] = $m;
-        }
-
-        /** @var list<ClusterDraft> $out */
-        $out = [];
-
-        foreach ($cellDayMap as $cell => $daysMap) {
-            $days = \array_keys($daysMap);
-            \sort($days, \SORT_STRING);
-
-            // find earliest run satisfying constraints
-            /** @var list<string> $runDays */
-            $runDays = [];
-            $prev = null;
-
-            $flush = function () use (&$runDays, &$out, $daysMap, $cell): void {
-                if (\count($runDays) === 0) {
-                    return;
-                }
-                /** @var list<Media> $members */
-                $members = [];
-                foreach ($runDays as $d) {
-                    foreach ($daysMap[$d] as $m) {
-                        $members[] = $m;
-                    }
-                }
-                if (\count($members) < $this->minItemsTotal) {
-                    $runDays = [];
-                    return;
-                }
-                \usort($members, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-                $centroid = MediaMath::centroid($members);
-                $time     = MediaMath::timeRange($members);
-
-                $out[] = new ClusterDraft(
-                    algorithm: 'first_visit_place',
-                    params: [
-                        'grid_cell'  => $cell,
-                        'time_range' => $time,
-                    ],
-                    centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                    members: \array_map(static fn(Media $m): int => $m->getId(), $members)
-                );
-
-                $runDays = [];
-            };
-
-            /** iterate and pick the first qualifying run */
-            $haveFirst = false;
-            foreach ($days as $d) {
-                // day must meet per-day min items
-                if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                    // break potential run
-                    if ($haveFirst === false) {
-                        $runDays = [];
-                        $prev = null;
-                    }
-                    continue;
-                }
-                // consecutive day logic
-                if ($prev !== null && !$this->isNextDay($prev, $d)) {
-                    // check previous run
-                    $nights = \max(0, \count($runDays) - 1);
-                    if ($nights >= $this->minNights && $nights <= $this->maxNights) {
-                        $flush();
-                        $haveFirst = true;
-                        break; // only earliest session per cell
-                    }
-                    $runDays = [];
-                }
-
-                $runDays[] = $d;
-                $prev = $d;
-            }
-
-            if ($haveFirst === false && \count($runDays) > 0) {
-                $nights = \max(0, \count($runDays) - 1);
-                if ($nights >= $this->minNights && $nights <= $this->maxNights) {
-                    $flush();
-                }
-            }
-        }
-
-        return $out;
+        return $media->getTakenAt() instanceof DateTimeImmutable;
     }
 
-    private function cellKey(float $lat, float $lon): string
+    /**
+     * @param list<Media> $members
+     * @return list<ClusterDraft>
+     */
+    protected function clustersForCell(string $cell, array $members): array
     {
-        $gd = $this->gridDegrees;
-        $rlat = $gd * \floor($lat / $gd);
-        $rlon = $gd * \floor($lon / $gd);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        /** @var array<string, list<Media>> $byDay */
+        $byDay = [];
+
+        foreach ($members as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $day = $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+            $byDay[$day] ??= [];
+            $byDay[$day][] = $media;
+        }
+
+        if ($byDay === []) {
+            return [];
+        }
+
+        \ksort($byDay, \SORT_STRING);
+
+        /** @var list<string> $runDays */
+        $runDays = [];
+        $prevDay = null;
+
+        foreach ($byDay as $day => $list) {
+            if (\count($list) < $this->minItemsPerDay) {
+                $draft = $this->finalizeRun($cell, $runDays, $byDay);
+                if ($draft !== null) {
+                    return [$draft];
+                }
+
+                $runDays = [];
+                $prevDay = null;
+                continue;
+            }
+
+            if ($prevDay !== null && !$this->isNextDay($prevDay, $day)) {
+                $draft = $this->finalizeRun($cell, $runDays, $byDay);
+                if ($draft !== null) {
+                    return [$draft];
+                }
+
+                $runDays = [];
+            }
+
+            $runDays[] = $day;
+            $prevDay = $day;
+        }
+
+        $draft = $this->finalizeRun($cell, $runDays, $byDay);
+
+        return $draft !== null ? [$draft] : [];
+    }
+
+    /**
+     * @param list<string> $runDays
+     * @param array<string, list<Media>> $byDay
+     */
+    private function finalizeRun(string $cell, array $runDays, array $byDay): ?ClusterDraft
+    {
+        if ($runDays === []) {
+            return null;
+        }
+
+        $nights = \max(0, \count($runDays) - 1);
+        if ($nights < $this->minNights || $nights > $this->maxNights) {
+            return null;
+        }
+
+        /** @var list<Media> $members */
+        $members = [];
+        foreach ($runDays as $day) {
+            foreach ($byDay[$day] as $media) {
+                $members[] = $media;
+            }
+        }
+
+        if (\count($members) < $this->minItemsTotal) {
+            return null;
+        }
+
+        return $this->buildClusterDraft(
+            $this->name(),
+            $members,
+            [
+                'grid_cell' => $cell,
+                'nights'    => $nights,
+            ]
+        );
     }
 
     private function isNextDay(string $a, string $b): bool
     {
         $ta = \strtotime($a . ' 00:00:00');
         $tb = \strtotime($b . ' 00:00:00');
+
         if ($ta === false || $tb === false) {
             return false;
         }
+
         return ($tb - $ta) === 86400;
     }
 }
