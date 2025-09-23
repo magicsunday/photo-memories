@@ -3,29 +3,25 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\AbstractKeywordBestDayOverYearsStrategy;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Picks best museum day per year and aggregates over years.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
-final class MuseumOverYearsClusterStrategy implements ClusterStrategyInterface
+final class MuseumOverYearsClusterStrategy extends AbstractKeywordBestDayOverYearsStrategy
 {
-    use ClusterBuildHelperTrait;
-
     /** @var list<string> */
     private const KEYWORDS = ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibit', 'exhibition', 'kunsthalle'];
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerDay = 5,
-        private readonly int $minYears = 3,
-        private readonly int $minItemsTotal = 18
+        string $timezone = 'Europe/Berlin',
+        int $minItemsPerDay = 5,
+        int $minYears = 3,
+        int $minItemsTotal = 18
     ) {
+        parent::__construct($timezone, $minItemsPerDay, $minYears, $minItemsTotal);
     }
 
     public function name(): string
@@ -34,27 +30,10 @@ final class MuseumOverYearsClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
+     * @return list<string>
      */
-    public function cluster(array $items): array
+    protected function keywords(): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        $byYearDay = $this->buildYearDayIndex(
-            $items,
-            $tz,
-            fn (Media $media, DateTimeImmutable $local): bool => $this->mediaPathContains($media, self::KEYWORDS)
-        );
-
-        $best = $this->pickBestDayPerYear($byYearDay, $this->minItemsPerDay);
-
-        return $this->buildOverYearsDrafts(
-            $best['members'],
-            $best['years'],
-            $this->minYears,
-            $this->minItemsTotal,
-            $this->name()
-        );
+        return self::KEYWORDS;
     }
 }
