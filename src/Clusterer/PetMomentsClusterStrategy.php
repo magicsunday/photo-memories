@@ -3,20 +3,31 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Heuristic pet moments based on path keywords; grouped into time sessions.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 49])]
-final class PetMomentsClusterStrategy implements ClusterStrategyInterface
+final class PetMomentsClusterStrategy extends AbstractTimeGapClusterStrategy
 {
+    /** @var list<string> */
+    private const KEYWORDS = [
+        'dog', 'dogs', 'hund', 'hunde', 'welpe', 'puppy',
+        'cat', 'cats', 'katze', 'kater', 'kitten',
+        'hamster', 'kaninchen', 'bunny', 'rabbit',
+        'meerschwein', 'guinea', 'pony', 'pferd',
+        'haustier', 'pet', 'tierpark', 'zoo',
+    ];
+
     public function __construct(
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItems = 6
+        int $sessionGapSeconds = 2 * 3600,
+        int $minItems = 6
     ) {
+        parent::__construct('UTC', $sessionGapSeconds, $minItems);
     }
 
     public function name(): string
@@ -24,85 +35,8 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
         return 'pet_moments';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
     {
-        /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $path = \strtolower($m->getPath());
-            if ($this->looksLikePet($path)) {
-                $cand[] = $m;
-            }
-        }
-        if (\count($cand) < $this->minItems) {
-            return [];
-        }
-
-        \usort($cand, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
-        );
-
-        /** @var list<ClusterDraft> $out */
-        $out = [];
-        /** @var list<Media> $buf */
-        $buf = [];
-        $last = null;
-
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
-            }
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
-            $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-            $time = MediaMath::timeRange($buf);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
-            );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
-                continue;
-            }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $last = $ts;
-        }
-        $flush();
-
-        return $out;
-    }
-
-    private function looksLikePet(string $pathLower): bool
-    {
-        /** @var list<string> $kw */
-        $kw = [
-            'dog', 'dogs', 'hund', 'hunde', 'welpe', 'puppy',
-            'cat', 'cats', 'katze', 'kater', 'kitten',
-            'hamster', 'kaninchen', 'bunny', 'rabbit',
-            'meerschwein', 'guinea', 'pony', 'pferd',
-            'haustier', 'pet', 'tierpark', 'zoo',
-        ];
-        foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
-                return true;
-            }
-        }
-        return false;
+        return $this->mediaMatchesKeywords($media, self::KEYWORDS);
     }
 }

@@ -1,0 +1,195 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Clusterer\Support;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\MediaMath;
+
+/**
+ * Shared base for session-based clustering strategies that rely on time gaps between media items.
+ */
+abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterface
+{
+    use ClusterBuildHelperTrait;
+
+    private readonly DateTimeZone $timezone;
+
+    public function __construct(
+        string $timezone,
+        private readonly int $sessionGapSeconds,
+        private readonly int $minItems
+    ) {
+        $this->timezone = new DateTimeZone($timezone);
+    }
+
+    /**
+     * @param list<Media> $items
+     * @return list<ClusterDraft>
+     */
+    final public function cluster(array $items): array
+    {
+        $candidates = [];
+
+        foreach ($items as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $local = $takenAt->setTimezone($this->timezone);
+            if (!$this->shouldConsider($media, $local)) {
+                continue;
+            }
+
+            $candidates[] = $media;
+        }
+
+        if (\count($candidates) < $this->minItems) {
+            return [];
+        }
+
+        \usort(
+            $candidates,
+            static fn (Media $a, Media $b): int => $a->getTakenAt()->getTimestamp() <=> $b->getTakenAt()->getTimestamp()
+        );
+
+        $drafts = [];
+        $buffer = [];
+        $lastTimestamp = null;
+
+        foreach ($candidates as $media) {
+            $ts = $media->getTakenAt()?->getTimestamp();
+            if ($ts === null) {
+                continue;
+            }
+
+            if ($lastTimestamp !== null && ($ts - $lastTimestamp) > $this->sessionGapSeconds) {
+                $this->flushBuffer($buffer, $drafts);
+            }
+
+            $buffer[] = $media;
+            $lastTimestamp = $ts;
+        }
+
+        $this->flushBuffer($buffer, $drafts);
+
+        return $drafts;
+    }
+
+    /**
+     * @param list<Media> $buffer
+     * @param list<ClusterDraft> $drafts
+     */
+    private function flushBuffer(array &$buffer, array &$drafts): void
+    {
+        if ($buffer === []) {
+            return;
+        }
+
+        if (\count($buffer) < $this->minItems) {
+            $buffer = [];
+            return;
+        }
+
+        $draft = $this->buildSessionDraft($buffer);
+        if ($draft !== null) {
+            $drafts[] = $draft;
+        }
+
+        $buffer = [];
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    private function buildSessionDraft(array $members): ?ClusterDraft
+    {
+        if (!$this->isSessionValid($members)) {
+            return null;
+        }
+
+        $params = $this->sessionParams($members);
+        $params['time_range'] ??= $this->computeTimeRange($members);
+
+        return $this->buildClusterDraft($this->name(), $members, $params);
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function isSessionValid(array $members): bool
+    {
+        return \count($members) >= $this->minItems;
+    }
+
+    /**
+     * @param list<Media> $members
+     * @return array<string, mixed>
+     */
+    protected function sessionParams(array $members): array
+    {
+        return [];
+    }
+
+    abstract protected function shouldConsider(Media $media, DateTimeImmutable $local): bool;
+
+    protected function timezone(): DateTimeZone
+    {
+        return $this->timezone;
+    }
+
+    protected function sessionGapSeconds(): int
+    {
+        return $this->sessionGapSeconds;
+    }
+
+    protected function minItems(): int
+    {
+        return $this->minItems;
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function allWithinRadius(array $members, float $radiusMeters): bool
+    {
+        $withGps = \array_values(\array_filter(
+            $members,
+            static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
+        ));
+
+        if ($withGps === []) {
+            return true;
+        }
+
+        $centroid = MediaMath::centroid($withGps);
+
+        foreach ($withGps as $media) {
+            $distance = MediaMath::haversineDistanceInMeters(
+                (float) $centroid['lat'],
+                (float) $centroid['lon'],
+                (float) $media->getGpsLat(),
+                (float) $media->getGpsLon()
+            );
+
+            if ($distance > $radiusMeters) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<string> $keywords
+     */
+    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
+    {
+        return $this->mediaPathContains($media, $keywords);
+    }
+}
