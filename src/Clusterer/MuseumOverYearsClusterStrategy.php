@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
 final class MuseumOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
+    /** @var list<string> */
+    private const KEYWORDS = ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibit', 'exhibition', 'kunsthalle'];
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 5,
@@ -36,77 +41,20 @@ final class MuseumOverYearsClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<int, array<string, list<Media>>> $byYearDay */
-        $byYearDay = [];
+        $byYearDay = $this->buildYearDayIndex(
+            $items,
+            $tz,
+            fn (Media $media, DateTimeImmutable $local): bool => $this->mediaPathContains($media, self::KEYWORDS)
+        );
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            $path = \strtolower($m->getPath());
-            if (!$t instanceof DateTimeImmutable || !$this->looksMuseum($path)) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            $y = (int) $local->format('Y');
-            $d = $local->format('Y-m-d');
-            $byYearDay[$y] ??= [];
-            $byYearDay[$y][$d] ??= [];
-            $byYearDay[$y][$d][] = $m;
-        }
+        $best = $this->pickBestDayPerYear($byYearDay, $this->minItemsPerDay);
 
-        /** @var list<Media> $picked */
-        $picked = [];
-        /** @var array<int,bool> $years */
-        $years = [];
-
-        foreach ($byYearDay as $year => $days) {
-            $bestDay = null;
-            $bestCnt = 0;
-            foreach ($days as $d => $list) {
-                $c = \count($list);
-                if ($c >= $this->minItemsPerDay && $c > $bestCnt) {
-                    $bestCnt = $c;
-                    $bestDay = $d;
-                }
-            }
-            if ($bestDay === null) {
-                continue;
-            }
-            foreach ($days[$bestDay] as $m) {
-                $picked[] = $m;
-            }
-            $years[$year] = true;
-        }
-
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
-            return [];
-        }
-
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'years'      => \array_values(\array_keys($years)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
-        ];
-    }
-
-    private function looksMuseum(string $pathLower): bool
-    {
-        /** @var list<string> $kw */
-        $kw = ['museum', 'galerie', 'gallery', 'ausstellung', 'exhibit', 'exhibition', 'kunsthalle'];
-        foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
-                return true;
-            }
-        }
-        return false;
+        return $this->buildOverYearsDrafts(
+            $best['members'],
+            $best['years'],
+            $this->minYears,
+            $this->minItemsTotal,
+            $this->name()
+        );
     }
 }

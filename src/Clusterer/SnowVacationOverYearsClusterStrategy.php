@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 63])]
 final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
+    /** @var list<string> */
+    private const KEYWORDS = ['schnee', 'snow', 'ski', 'langlauf', 'skitour', 'snowboard', 'piste', 'gondel', 'lift', 'alpen', 'hütte', 'huette'];
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 4,
@@ -41,78 +46,42 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<int, array<string, list<Media>>> $byYearDay */
-        $byYearDay = [];
+        $byYearDay = $this->buildYearDayIndex(
+            $items,
+            $tz,
+            function (Media $media, DateTimeImmutable $local): bool {
+                if (!$this->mediaPathContains($media, self::KEYWORDS)) {
+                    return false;
+                }
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            $path = \strtolower($m->getPath());
-            if (!$t instanceof DateTimeImmutable || !$this->looksSnow($path)) {
-                continue;
+                $month = (int) $local->format('n');
+                return $month === 12 || $month <= 2;
             }
-            $mon = (int) $t->setTimezone($tz)->format('n');
-            $winter = ($mon === 12 || $mon <= 2);
-            if ($winter === false) {
-                continue;
-            }
-            $y = (int) $t->format('Y');
-            $d = $t->setTimezone($tz)->format('Y-m-d');
-            $byYearDay[$y] ??= [];
-            $byYearDay[$y][$d] ??= [];
-            $byYearDay[$y][$d][] = $m;
-        }
+        );
 
-        /** @var list<Media> $membersAllYears */
         $membersAllYears = [];
-        /** @var array<int,bool> $yearsPicked */
-        $yearsPicked = [];
+        $yearsPicked     = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $days = \array_keys($daysMap);
-            \sort($days, \SORT_STRING);
+            $runs = $this->buildConsecutiveRuns($daysMap);
 
-            /** @var list<array{days:list<string>, items:list<Media>}> $runs */
-            $runs = [];
-            $runDays = [];
-            $runItems = [];
-            $prev = null;
-
-            $flushRun = function () use (&$runs, &$runDays, &$runItems): void {
-                if (\count($runDays) > 0) {
-                    $runs[] = ['days' => $runDays, 'items' => $runItems];
-                }
-                $runDays = [];
-                $runItems = [];
-            };
-
-            foreach ($days as $d) {
-                if ($prev !== null && !$this->isNextDay($prev, $d)) {
-                    $flushRun();
-                }
-                $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
-                    $runItems[] = $m;
-                }
-                $prev = $d;
-            }
-            $flushRun();
-
-            /** filter runs by nights range & per-day min items */
             $candidates = [];
-            foreach ($runs as $r) {
-                $nights = \count($r['days']) - 1;
+            foreach ($runs as $run) {
+                $nights = \count($run['days']) - 1;
                 if ($nights < $this->minNights || $nights > $this->maxNights) {
                     continue;
                 }
+
                 $ok = true;
-                foreach ($r['days'] as $d) {
-                    if (\count($daysMap[$d]) < $this->minItemsPerDay) {
+                foreach ($run['days'] as $day) {
+                    if (\count($daysMap[$day]) < $this->minItemsPerDay) {
                         $ok = false;
                         break;
                     }
                 }
+
                 if ($ok) {
-                    $candidates[] = $r;
+                    $candidates[] = $run;
                 }
             }
 
@@ -135,52 +104,18 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
             });
 
             $best = $candidates[0];
-            foreach ($best['items'] as $m) {
-                $membersAllYears[] = $m;
+            foreach ($best['items'] as $media) {
+                $membersAllYears[] = $media;
             }
             $yearsPicked[$year] = true;
         }
 
-        if (\count($yearsPicked) < $this->minYears || \count($membersAllYears) < $this->minItemsTotal) {
-            return [];
-        }
-
-        \usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-        $centroid = MediaMath::centroid($membersAllYears);
-        $time     = MediaMath::timeRange($membersAllYears);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'years'      => \array_values(\array_keys($yearsPicked)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
-            ),
-        ];
-    }
-
-    private function isNextDay(string $a, string $b): bool
-    {
-        $ta = \strtotime($a . ' 00:00:00');
-        $tb = \strtotime($b . ' 00:00:00');
-        if ($ta === false || $tb === false) {
-            return false;
-        }
-        return ($tb - $ta) === 86400;
-    }
-
-    private function looksSnow(string $pathLower): bool
-    {
-        /** @var list<string> $kw */
-        $kw = ['schnee', 'snow', 'ski', 'langlauf', 'skitour', 'snowboard', 'piste', 'gondel', 'lift', 'alpen', 'hütte', 'huette'];
-        foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
-                return true;
-            }
-        }
-        return false;
+        return $this->buildOverYearsDrafts(
+            $membersAllYears,
+            $yearsPicked,
+            $this->minYears,
+            $this->minItemsTotal,
+            $this->name()
+        );
     }
 }

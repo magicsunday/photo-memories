@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -13,6 +13,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 46])]
 final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
     public function __construct(
         private readonly float $minAspect = 2.4,
         private readonly int $perYearMin = 3,
@@ -51,38 +53,25 @@ final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
             $byYear[$y][] = $m;
         }
 
-        /** @var list<Media> $picked */
         $picked = [];
-        /** @var array<int,bool> $years */
-        $years = [];
+        $years  = [];
 
-        foreach ($byYear as $y => $list) {
-            if (\count($list) >= $this->perYearMin) {
-                foreach ($list as $m) {
-                    $picked[] = $m;
-                }
-                $years[$y] = true;
+        foreach ($byYear as $year => $list) {
+            if (\count($list) < $this->perYearMin) {
+                continue;
             }
+            foreach ($list as $media) {
+                $picked[] = $media;
+            }
+            $years[$year] = true;
         }
 
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
-            return [];
-        }
-
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'years'      => \array_values(\array_keys($years)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
-        ];
+        return $this->buildOverYearsDrafts(
+            $picked,
+            $years,
+            $this->minYears,
+            $this->minItemsTotal,
+            $this->name()
+        );
     }
 }

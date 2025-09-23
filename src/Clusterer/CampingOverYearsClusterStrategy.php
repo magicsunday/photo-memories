@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +15,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 63])]
 final class CampingOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
+
+    /** @var list<string> */
+    private const KEYWORDS = ['camping', 'zelt', 'zelten', 'wohnmobil', 'caravan', 'wohnwagen', 'campground', 'camp site', 'campsite', 'stellplatz'];
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 3,
@@ -41,71 +46,35 @@ final class CampingOverYearsClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<int, array<string, list<Media>>> $byYearDay */
-        $byYearDay = [];
+        $byYearDay = $this->buildYearDayIndex(
+            $items,
+            $tz,
+            fn (Media $media, DateTimeImmutable $local): bool => $this->mediaPathContains($media, self::KEYWORDS)
+        );
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            $path = \strtolower($m->getPath());
-            if (!$t instanceof DateTimeImmutable || !$this->looksCamping($path)) {
-                continue;
-            }
-            $y = (int) $t->format('Y');
-            $d = $t->setTimezone($tz)->format('Y-m-d');
-            $byYearDay[$y] ??= [];
-            $byYearDay[$y][$d] ??= [];
-            $byYearDay[$y][$d][] = $m;
-        }
-
-        /** @var list<Media> $picked */
         $picked = [];
-        /** @var array<int,bool> $years */
-        $years = [];
+        $years  = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $days = \array_keys($daysMap);
-            \sort($days, \SORT_STRING);
-
-            /** @var list<array{days:list<string>, items:list<Media>}> $runs */
-            $runs = [];
-            $runDays = [];
-            $runItems = [];
-            $prev = null;
-
-            $flushRun = function () use (&$runs, &$runDays, &$runItems): void {
-                if (\count($runDays) > 0) {
-                    $runs[] = ['days' => $runDays, 'items' => $runItems];
+            foreach ($daysMap as $day => $list) {
+                if (\count($list) < $this->minItemsPerDay) {
+                    unset($daysMap[$day]);
                 }
-                $runDays = [];
-                $runItems = [];
-            };
-
-            foreach ($days as $d) {
-                if ($prev !== null && !$this->isNextDay($prev, $d)) {
-                    $flushRun();
-                }
-                if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                    // break run if too sparse
-                    $flushRun();
-                    $prev = null;
-                    continue;
-                }
-                $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
-                    $runItems[] = $m;
-                }
-                $prev = $d;
             }
-            $flushRun();
 
-            /** filter by nights and pick best */
+            if ($daysMap === []) {
+                continue;
+            }
+
+            $runs = $this->buildConsecutiveRuns($daysMap);
+
             $candidates = [];
-            foreach ($runs as $r) {
-                $nights = \count($r['days']) - 1;
+            foreach ($runs as $run) {
+                $nights = \count($run['days']) - 1;
                 if ($nights < $this->minNights || $nights > $this->maxNights) {
                     continue;
                 }
-                $candidates[] = $r;
+                $candidates[] = $run;
             }
 
             if ($candidates === []) {
@@ -127,52 +96,18 @@ final class CampingOverYearsClusterStrategy implements ClusterStrategyInterface
             });
 
             $best = $candidates[0];
-            foreach ($best['items'] as $m) {
-                $picked[] = $m;
+            foreach ($best['items'] as $media) {
+                $picked[] = $media;
             }
             $years[$year] = true;
         }
 
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
-            return [];
-        }
-
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
-
-        return [
-            new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'years'      => \array_values(\array_keys($years)),
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
-            ),
-        ];
-    }
-
-    private function isNextDay(string $a, string $b): bool
-    {
-        $ta = \strtotime($a . ' 00:00:00');
-        $tb = \strtotime($b . ' 00:00:00');
-        if ($ta === false || $tb === false) {
-            return false;
-        }
-        return ($tb - $ta) === 86400;
-    }
-
-    private function looksCamping(string $pathLower): bool
-    {
-        /** @var list<string> $kw */
-        $kw = ['camping', 'zelt', 'zelten', 'wohnmobil', 'caravan', 'wohnwagen', 'campground', 'camp site', 'campsite', 'stellplatz'];
-        foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
-                return true;
-            }
-        }
-        return false;
+        return $this->buildOverYearsDrafts(
+            $picked,
+            $years,
+            $this->minYears,
+            $this->minItemsTotal,
+            $this->name()
+        );
     }
 }
