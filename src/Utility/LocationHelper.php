@@ -52,14 +52,10 @@ final class LocationHelper
         }
 
         $city   = $loc->getCity();
-        $suburb = $loc->getSuburb();
         $county = $loc->getCounty();
         $state  = $loc->getState();
         $country= $loc->getCountry();
 
-        if ($suburb !== null && $city !== null) {
-            return $suburb.', '.$city;
-        }
         if ($city !== null) {
             return $city;
         }
