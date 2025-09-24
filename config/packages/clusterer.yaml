@@ -19,29 +19,17 @@ services:
             $maxHamming: 6
             $minItems: 2
 
+    # --- Composition & session heuristics ---
     MagicSunday\Memories\Clusterer\BurstClusterStrategy:
         arguments:
             $maxGapSeconds: 90
             $maxMoveMeters: 50.0
             $minItems: 3
 
-    MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy:
-        arguments:
-            $minAwayKm: 80.0
-            $minNights: 1
-
-    MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy: ~
-
-    MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy:
-        arguments:
-            $minPersons: 2
-            $minItems: 5
-            $windowDays: 14
-
     MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy:
         arguments:
             $sessionGapSeconds: 172800   # 48h
-            $minItems: 6
+            $minItems: 10
 
     MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy:
         arguments:
@@ -49,32 +37,42 @@ services:
             $radiusMeters: 150.0
             $minItems: 6
 
-    MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy:
+    MagicSunday\Memories\Clusterer\PanoramaClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
-            $timeGapSeconds: 10800       # 3h
-            $radiusMeters: 300.0
-            $minItems: 5
+            $minAspect: 2.4
+            $sessionGapSeconds: 10800   # 3h
+            $minItems: 3
+
+    MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy:
+        arguments:
+            $minAspect: 2.4
+            $perYearMin: 3
+            $minYears: 3
+            $minItemsTotal: 15
+
+    MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy:
+        arguments:
+            $minPortraitRatio: 1.2
+            $sessionGapSeconds: 7200      # 2h
+            $minItems: 4
 
     MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
             $minItems: 2
 
-    MagicSunday\Memories\Clusterer\SeasonClusterStrategy:
+    # --- Daily life & home rituals ---
+    MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy:
         arguments:
-            $minItems: 20
-
-    MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy:
-        arguments:
+            $timezone: 'Europe/Berlin'
             $minItems: 8
 
-    MagicSunday\Memories\Clusterer\LongTripClusterStrategy:
+    MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy:
         arguments:
-            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
-            $minAwayKm: 150.0
-            $minNights: 3
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 5400      # 1.5h
+            $radiusMeters: 200.0
+            $minItems: 3
 
     MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy:
         arguments:
@@ -84,12 +82,6 @@ services:
             $minHomeShare: 0.7
             $minItemsPerDay: 4
             $minItemsTotal: 6
-            $timezone: 'Europe/Berlin'
-
-    MagicSunday\Memories\Clusterer\RainyDayClusterStrategy:
-        arguments:
-            $minAvgRainProb: 0.6
-            $minItemsPerDay: 6
             $timezone: 'Europe/Berlin'
 
     MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy:
@@ -102,19 +94,73 @@ services:
             $minItemsTotal: 8
             $timezone: 'Europe/Berlin'
 
-    MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy:
+    MagicSunday\Memories\Clusterer\DiningOutClusterStrategy:
         arguments:
-            $minAvgSunScore: 0.65
-            $minItemsPerDay: 6
-            $minHintsPerDay: 3
             $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 7200   # 2h
+            $radiusMeters: 250.0
+            $minItems: 4
 
-    MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy:
+    # --- Social celebrations & people ---
+    MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy: ~
+
+    MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy:
+        arguments:
+            $minPersons: 2
+            $minItems: 5
+            $windowDays: 14
+
+    MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minYears: 3
-            $minItems: 24
-            $minDistinctDays: 8
+            $sessionGapSeconds: 10800     # 3h
+            $radiusMeters: 250.0
+            $minItems: 6
+
+    MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy:
+        arguments:
+            $sessionGapSeconds: 7200   # 2h
+            $minItems: 10
+
+    MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy:
+        arguments:
+            $minItems: 8
+
+    # --- Special outings & events ---
+    MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $timeGapSeconds: 10800       # 3h
+            $radiusMeters: 300.0
+            $minItems: 5
+
+    MagicSunday\Memories\Clusterer\SportsEventClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 10800     # 3h
+            $radiusMeters: 500.0
+            $minItems: 6
+            $preferWeekend: true
+
+    MagicSunday\Memories\Clusterer\FestivalSummerClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 10800     # 3h
+            $radiusMeters: 600.0
+            $minItems: 10
+
+    MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $startHour: 20
+            $endHour: 2
+            $minItems: 6
+
+    # --- Travel & outdoor adventures ---
+    MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy:
+        arguments:
+            $minAwayKm: 80.0
+            $minNights: 1
 
     MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy:
         arguments:
@@ -125,22 +171,12 @@ services:
             $minYears: 3
             $minItemsTotal: 24
 
-    MagicSunday\Memories\Clusterer\PanoramaClusterStrategy:
+    MagicSunday\Memories\Clusterer\LongTripClusterStrategy:
         arguments:
-            $minAspect: 2.4
-            $sessionGapSeconds: 10800   # 3h
-            $minItems: 3
-
-    MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $minItems: 40
-            $minDistinctDays: 10
-
-    MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy:
-        arguments:
-            $sessionGapSeconds: 7200   # 2h
-            $minItems: 6
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $minAwayKm: 150.0
+            $minNights: 3
 
     MagicSunday\Memories\Clusterer\RoadTripClusterStrategy:
         arguments:
@@ -150,111 +186,12 @@ services:
             $minNights: 3
             $minItemsTotal: 40
 
-    MagicSunday\Memories\Clusterer\DiningOutClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 7200   # 2h
-            $radiusMeters: 250.0
-            $minItems: 4
-
-    MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $startHour: 20
-            $endHour: 2
-            $minItems: 6
-
-    MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy:
-        arguments:
-            $gridDegrees: 0.01
-            $timezone: 'Europe/Berlin'
-            $minItemsPerDay: 4
-            $minNights: 0
-            $maxNights: 3
-            $minItemsTotal: 8
-
-    MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 7200      # 2h
-            $radiusMeters: 350.0
-            $minItems: 5
-
-    MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 5400      # 1.5h
-            $radiusMeters: 200.0
-            $minItems: 3
-
-    MagicSunday\Memories\Clusterer\SportsEventClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 10800     # 3h
-            $radiusMeters: 500.0
-            $minItems: 5
-            $preferWeekend: true
-
-    MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy:
-        arguments:
-            $minPortraitRatio: 1.2
-            $sessionGapSeconds: 7200      # 2h
-            $minItems: 4
-
-    MagicSunday\Memories\Clusterer\BeachOverYearsClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $minItemsPerDay: 6
-            $minYears: 3
-            $minItemsTotal: 24
-
-    MagicSunday\Memories\Clusterer\SnowDayClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 7200      # 2h
-            $minItems: 6
-
-    MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 10800     # 3h
-            $radiusMeters: 250.0
-            $minItems: 6
-
-    MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $minItemsPerDay: 5
-            $minYears: 3
-            $minItemsTotal: 18
-
-    MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy:
-        arguments:
-            $minAspect: 2.4
-            $perYearMin: 3
-            $minYears: 3
-            $minItemsTotal: 15
-
     MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy:
         arguments:
             $sessionGapSeconds: 10800     # 3h
             $minDistanceKm: 6.0
             $minItems: 6
             $minItemsNoGps: 12
-
-    MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 7200      # 2h
-            $radiusMeters: 400.0
-            $minItems: 5
-
-    MagicSunday\Memories\Clusterer\FestivalSummerClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 10800     # 3h
-            $radiusMeters: 600.0
-            $minItems: 8
 
     MagicSunday\Memories\Clusterer\CampingTripClusterStrategy:
         arguments:
@@ -263,15 +200,6 @@ services:
             $minNights: 2
             $maxNights: 14
             $minItemsTotal: 20
-
-    MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $minItemsPerDay: 4
-            $minNights: 3
-            $maxNights: 14
-            $minYears: 3
-            $minItemsTotal: 30
 
     MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy:
         arguments:
@@ -282,9 +210,143 @@ services:
             $minYears: 3
             $minItemsTotal: 24
 
+    MagicSunday\Memories\Clusterer\BeachOverYearsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minItemsPerDay: 6
+            $minYears: 3
+            $minItemsTotal: 24
+
+    MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minItemsPerDay: 4
+            $minNights: 3
+            $maxNights: 14
+            $minYears: 3
+            $minItemsTotal: 30
+
+    MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minTravelKm: 60.0
+            $minGpsSamples: 5
+
+    # --- Place-based explorations ---
+    MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy:
+        arguments:
+            $gridDegrees: 0.01
+            $timezone: 'Europe/Berlin'
+            $minItemsPerDay: 4
+            $minNights: 0
+            $maxNights: 3
+            $minItemsTotal: 8
+
+    MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy:
+        arguments:
+            $gridDegrees: 0.01
+            $minVisitDays: 3
+            $minItemsTotal: 20
+
+    MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 7200      # 2h
+            $radiusMeters: 350.0
+            $minItems: 5
+
+    MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 7200      # 2h
+            $radiusMeters: 400.0
+            $minItems: 5
+
     MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
             $minItemsPerDay: 5
             $minYears: 3
             $minItemsTotal: 18
+
+    MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minItemsPerDay: 5
+            $minYears: 3
+            $minItemsTotal: 18
+
+    # --- Weather & seasonal highlights ---
+    MagicSunday\Memories\Clusterer\SeasonClusterStrategy:
+        arguments:
+            $minItems: 20
+
+    MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy:
+        arguments:
+            $minYears: 3
+            $minItems: 30
+
+    MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy:
+        arguments:
+            $minAvgSunScore: 0.65
+            $minItemsPerDay: 6
+            $minHintsPerDay: 3
+            $timezone: 'Europe/Berlin'
+
+    MagicSunday\Memories\Clusterer\RainyDayClusterStrategy:
+        arguments:
+            $minAvgRainProb: 0.6
+            $minItemsPerDay: 6
+            $timezone: 'Europe/Berlin'
+
+    MagicSunday\Memories\Clusterer\SnowDayClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $sessionGapSeconds: 7200      # 2h
+            $minItems: 6
+
+    MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $morningHours:
+                - 6
+                - 7
+                - 8
+            $eveningHours:
+                - 18
+                - 19
+                - 20
+            $sessionGapSeconds: 5400
+            $minItems: 5
+
+    # --- Temporal retrospectives ---
+    MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minYears: 3
+            $minItems: 24
+            $minDistinctDays: 8
+
+    MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $windowDays: 0
+            $minYears: 3
+            $minItems: 12
+
+    MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $windowDays: 3
+            $minItems: 8
+
+    MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy:
+        arguments:
+            $minItems: 150
+            $minDistinctMonths: 5
+
+    MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minItems: 40
+            $minDistinctDays: 10
