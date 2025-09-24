@@ -23,6 +23,12 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
  */
 final class ClusterConsolidationService
 {
+    /** @var array<string,int> */
+    private array $priorityMap = [];
+
+    /** @var array<string,bool> */
+    private array $annotateOnlySet = [];
+
     /**
      * @param float        $minScore               Minimum score to keep a cluster.
      * @param int          $minSize                Minimum members to keep a cluster.
@@ -49,6 +55,15 @@ final class ClusterConsolidationService
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
             throw new \InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
+        }
+
+        $base = \count($this->keepOrder);
+        for ($p = 0; $p < $base; $p++) {
+            $this->priorityMap[$this->keepOrder[$p]] = $base - $p;
+        }
+
+        foreach ($this->annotateOnly as $alg) {
+            $this->annotateOnlySet[$alg] = true;
         }
     }
 
@@ -139,7 +154,7 @@ final class ClusterConsolidationService
         }
 
         if (\count($dedup) <= 1) {
-            return $this->applyCap($dedup);
+            return $this->applyCap($dedup, $normDedup);
         }
 
         // ---- 3) Dominance selection by keepOrder
@@ -159,11 +174,9 @@ final class ClusterConsolidationService
         // Global selection set (indices into $dedup)
         /** @var list<int> $selected */
         $selected = [];
-        /** @var array<int,bool> $selectedSet */
-        $selectedSet = [];
 
         // Utility: sort comparator inside same algorithm
-        $cmp = function (int $ia, int $ib) use ($dedup): int {
+        $cmp = function (int $ia, int $ib) use ($dedup, $normDedup): int {
             $a = $dedup[$ia];
             $b = $dedup[$ib];
             $sa = $this->scoreOf($a);
@@ -171,29 +184,30 @@ final class ClusterConsolidationService
             if ($sa !== $sb) {
                 return $sa < $sb ? 1 : -1;
             }
-            $na = \count($this->normalizeMembers($a->getMembers()));
-            $nb = \count($this->normalizeMembers($b->getMembers()));
+            $na = \count($normDedup[$ia]);
+            $nb = \count($normDedup[$ib]);
             if ($na !== $nb) {
                 return $na < $nb ? 1 : -1;
             }
             return 0;
         };
 
-        // Build priority map from keepOrder (earlier => higher)
-        /** @var array<string,int> $priority */
-        $priority = [];
-        $base = \count($this->keepOrder);
-        for ($p = 0; $p < $base; $p++) {
-            $priority[$this->keepOrder[$p]] = $base - $p;
-        }
-
         // Iterate algorithms in keepOrder, then any remaining
         /** @var list<string> $algOrder */
         $algOrder = $this->keepOrder;
+
+        /** @var array<string,bool> $algSeen */
+        $algSeen = [];
+        foreach ($algOrder as $alg) {
+            $algSeen[$alg] = true;
+        }
+
         foreach (\array_keys($byAlg) as $alg) {
-            if (!\in_array($alg, $algOrder, true)) {
-                $algOrder[] = $alg;
+            if (isset($algSeen[$alg])) {
+                continue;
             }
+            $algOrder[] = $alg;
+            $algSeen[$alg] = true;
         }
 
         // Greedy selection
@@ -229,7 +243,6 @@ final class ClusterConsolidationService
                 }
 
                 $selected[] = $cand;
-                $selectedSet[$cand] = true;
             }
         }
 
@@ -253,8 +266,7 @@ final class ClusterConsolidationService
         $memberUse = [];
         for ($t = 0, $n = \count($afterDominance); $t < $n; $t++) {
             $alg = $afterDominance[$t]->getAlgorithm();
-            // Only count "non-annotation" algorithms as covered baseline
-            if (\in_array($alg, $this->annotateOnly, true)) {
+            if ($this->isAnnotateOnly($alg)) {
                 continue;
             }
             foreach ($normAfterDominance[$t] as $mid) {
@@ -264,21 +276,26 @@ final class ClusterConsolidationService
 
         /** @var list<ClusterDraft> $passAnnot */
         $passAnnot = [];
-        for ($t = 0, $n = \count($afterDominance); $t < $n; $t++) {
-            $alg = $afterDominance[$t]->getAlgorithm();
+        /** @var list<list<int>> $normPassAnnot */
+        $normPassAnnot = [];
 
-            if (!\in_array($alg, $this->annotateOnly, true)) {
-                $passAnnot[] = $afterDominance[$t];
+        for ($t = 0, $n = \count($afterDominance); $t < $n; $t++) {
+            $cluster = $afterDominance[$t];
+            $members = $normAfterDominance[$t];
+            $alg = $cluster->getAlgorithm();
+
+            if (!$this->isAnnotateOnly($alg)) {
+                $passAnnot[] = $cluster;
+                $normPassAnnot[] = $members;
                 continue;
             }
 
-            $members = $normAfterDominance[$t];
-            $unique = 0;
-            $size   = \count($members);
+            $size = \count($members);
             if ($size === 0) {
                 continue;
             }
 
+            $unique = 0;
             foreach ($members as $mid) {
                 $covered = (int) ($memberUse[$mid] ?? 0);
                 if ($covered === 0) {
@@ -290,12 +307,16 @@ final class ClusterConsolidationService
             $minShare = (float) ($this->minUniqueShare[$alg] ?? 0.0);
 
             if ($share >= $minShare) {
-                $passAnnot[] = $afterDominance[$t];
+                $passAnnot[] = $cluster;
+                $normPassAnnot[] = $members;
+                foreach ($members as $mid) {
+                    $memberUse[$mid] = ($memberUse[$mid] ?? 0) + 1;
+                }
             }
         }
 
         // ---- 5) Per-media cap
-        return $this->applyCap($passAnnot);
+        return $this->applyCap($passAnnot, $normPassAnnot);
     }
 
     /**
@@ -304,35 +325,34 @@ final class ClusterConsolidationService
      * @param list<ClusterDraft> $drafts
      * @return list<ClusterDraft>
      */
-    private function applyCap(array $drafts): array
+    private function applyCap(array $drafts, array $normMembers = []): array
     {
         if ($this->perMediaCap <= 0 || $drafts === []) {
             return $drafts;
         }
 
-        // Build priority map from keepOrder
-        /** @var array<string,int> $priority */
-        $priority = [];
-        $base = \count($this->keepOrder);
-        for ($p = 0; $p < $base; $p++) {
-            $priority[$this->keepOrder[$p]] = $base - $p;
+        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int}> $items */
+        $items = [];
+        foreach ($drafts as $idx => $draft) {
+            $members = $normMembers[$idx] ?? $this->normalizeMembers($draft->getMembers());
+            $items[] = [
+                'draft' => $draft,
+                'members' => $members,
+                'score' => $this->scoreOf($draft),
+                'priority' => (int) ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
+                'size' => \count($members),
+            ];
         }
 
-        \usort($drafts, function (ClusterDraft $a, ClusterDraft $b) use ($priority): int {
-            $sa = $this->scoreOf($a);
-            $sb = $this->scoreOf($b);
-            if ($sa !== $sb) {
-                return $sa < $sb ? 1 : -1;
+        \usort($items, static function (array $a, array $b): int {
+            if ($a['score'] !== $b['score']) {
+                return $a['score'] < $b['score'] ? 1 : -1;
             }
-            $pa = (int) ($priority[$a->getAlgorithm()] ?? 0);
-            $pb = (int) ($priority[$b->getAlgorithm()] ?? 0);
-            if ($pa !== $pb) {
-                return $pa < $pb ? 1 : -1;
+            if ($a['priority'] !== $b['priority']) {
+                return $a['priority'] < $b['priority'] ? 1 : -1;
             }
-            $na = \count($this->normalizeMembers($a->getMembers()));
-            $nb = \count($this->normalizeMembers($b->getMembers()));
-            if ($na !== $nb) {
-                return $na < $nb ? 1 : -1;
+            if ($a['size'] !== $b['size']) {
+                return $a['size'] < $b['size'] ? 1 : -1;
             }
             return 0;
         });
@@ -342,8 +362,8 @@ final class ClusterConsolidationService
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($drafts as $d) {
-            $members = $this->normalizeMembers($d->getMembers());
+        foreach ($items as $item) {
+            $members = $item['members'];
             $ok = true;
 
             foreach ($members as $mid) {
@@ -358,7 +378,7 @@ final class ClusterConsolidationService
                 foreach ($members as $mid) {
                     $assign[$mid] = ($assign[$mid] ?? 0) + 1;
                 }
-                $out[] = $d;
+                $out[] = $item['draft'];
             }
         }
 
@@ -414,6 +434,11 @@ final class ClusterConsolidationService
         return \sha1(\implode(',', $members));
     }
 
+    private function isAnnotateOnly(string $algorithm): bool
+    {
+        return isset($this->annotateOnlySet[$algorithm]);
+    }
+
     private function scoreOf(ClusterDraft $d): float
     {
         // Prefer explicit score param
@@ -452,16 +477,9 @@ final class ClusterConsolidationService
             return $sa > $sb;
         }
 
-        // priority from keepOrder
-        /** @var array<string,int> $priority */
-        $priority = [];
-        $base = \count($this->keepOrder);
-        for ($p = 0; $p < $base; $p++) {
-            $priority[$this->keepOrder[$p]] = $base - $p;
-        }
+        $pa = (int) ($this->priorityMap[$a->getAlgorithm()] ?? 0);
+        $pb = (int) ($this->priorityMap[$b->getAlgorithm()] ?? 0);
 
-        $pa = (int) ($priority[$a->getAlgorithm()] ?? 0);
-        $pb = (int) ($priority[$b->getAlgorithm()] ?? 0);
         if ($pa !== $pb) {
             return $pa > $pb;
         }
