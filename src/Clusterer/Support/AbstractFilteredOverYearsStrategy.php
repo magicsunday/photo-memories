@@ -33,38 +33,30 @@ abstract class AbstractFilteredOverYearsStrategy implements ClusterStrategyInter
      */
     final public function cluster(array $items): array
     {
-        /** @var array<int, list<Media>> $byYear */
-        $byYear = [];
+        $byYearDay = $this->buildYearDayIndex(
+            $items,
+            $this->timezone(),
+            fn (Media $media, DateTimeImmutable $local): bool => $this->shouldInclude($media, $local)
+        );
 
-        foreach ($items as $media) {
-            $takenAt = $media->getTakenAt();
-            if (!$takenAt instanceof DateTimeImmutable) {
-                continue;
-            }
-
-            $local = $takenAt->setTimezone($this->timezone);
-            if (!$this->shouldInclude($media, $local)) {
-                continue;
-            }
-
-            $year = (int) $local->format('Y');
-            $byYear[$year] ??= [];
-            $byYear[$year][] = $media;
-        }
-
-        if ($byYear === []) {
+        if ($byYearDay === []) {
             return [];
         }
 
         $members = [];
         $years = [];
 
-        foreach ($byYear as $year => $list) {
-            if (!$this->isYearEligible($year, $list)) {
+        foreach ($byYearDay as $year => $days) {
+            $yearMembers = $this->flattenDayMembers($days);
+            if ($yearMembers === []) {
                 continue;
             }
 
-            $normalized = $this->normalizeYearMembers($year, $list);
+            if (!$this->isYearEligible($year, $yearMembers)) {
+                continue;
+            }
+
+            $normalized = $this->normalizeYearMembers($year, $yearMembers);
             if ($normalized === []) {
                 continue;
             }

@@ -219,6 +219,25 @@ trait ClusterBuildHelperTrait
     }
 
     /**
+     * Flattens a day-to-media map into a sequential list of media entries.
+     *
+     * @param array<string, list<Media>> $daysMap
+     * @return list<Media>
+     */
+    private function flattenDayMembers(array $daysMap): array
+    {
+        $members = [];
+
+        foreach ($daysMap as $list) {
+            foreach ($list as $media) {
+                $members[] = $media;
+            }
+        }
+
+        return $members;
+    }
+
+    /**
      * Collects distinct formatted date parts from the given members.
      *
      * @param list<Media> $members
@@ -252,6 +271,16 @@ trait ClusterBuildHelperTrait
     }
 
     /**
+     * Checks whether the media path contains any of the provided keywords.
+     *
+     * @param list<string> $keywords
+     */
+    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
+    {
+        return $this->pathContainsKeyword(\strtolower($media->getPath()), $keywords);
+    }
+
+    /**
      * @param list<string> $keywords
      */
     private function pathContainsKeyword(string $pathLower, array $keywords): bool
@@ -263,13 +292,5 @@ trait ClusterBuildHelperTrait
         }
 
         return false;
-    }
-
-    /**
-     * @param list<string> $keywords
-     */
-    private function mediaPathContains(Media $media, array $keywords): bool
-    {
-        return $this->pathContainsKeyword(\strtolower($media->getPath()), $keywords);
     }
 }

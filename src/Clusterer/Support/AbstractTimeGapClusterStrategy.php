@@ -248,11 +248,4 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
         return true;
     }
 
-    /**
-     * @param list<string> $keywords
-     */
-    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
-    {
-        return $this->mediaPathContains($media, $keywords);
-    }
 }

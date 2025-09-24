@@ -163,14 +163,6 @@ abstract class AbstractConsecutiveRunOverYearsStrategy implements ClusterStrateg
     }
 
     /**
-     * @param list<string> $keywords
-     */
-    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
-    {
-        return $this->mediaPathContains($media, $keywords);
-    }
-
-    /**
      * @param list<string> $days
      */
     protected function containsWeekendDay(array $days): bool

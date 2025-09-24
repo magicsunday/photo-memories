@@ -213,11 +213,4 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
         return $this->maxNights;
     }
 
-    /**
-     * @param list<string> $keywords
-     */
-    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
-    {
-        return $this->mediaPathContains($media, $keywords);
-    }
 }

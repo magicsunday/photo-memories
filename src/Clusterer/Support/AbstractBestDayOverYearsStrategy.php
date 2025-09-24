@@ -85,11 +85,4 @@ abstract class AbstractBestDayOverYearsStrategy implements ClusterStrategyInterf
         return $this->minItemsTotal;
     }
 
-    /**
-     * @param list<string> $keywords
-     */
-    protected function mediaMatchesKeywords(Media $media, array $keywords): bool
-    {
-        return $this->mediaPathContains($media, $keywords);
-    }
 }
