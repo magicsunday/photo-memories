@@ -59,17 +59,17 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
             $byDay[$key][] = $m;
         }
 
-        /** @var array<string, bool> $isAway */
-        $isAway = [];
         /** @var array<string, list<Media>> $usableDayItems */
         $usableDayItems = [];
+        /** @var array<string, float> $dayDistance */
+        $dayDistance = [];
 
         foreach ($byDay as $day => $list) {
             if (\count($list) < $this->minItemsPerDay) {
                 continue;
             }
             $gps = \array_values(\array_filter($list, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
-            if ($gps === []) {
+            if (\count($gps) < $this->minItemsPerDay) {
                 continue;
             }
             $centroid = MediaMath::centroid($gps);
@@ -79,9 +79,10 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
                     (float) $this->homeLat,
                     (float) $this->homeLon
                 ) / 1000.0;
-            $isAway[$day] = $dist >= $this->minAwayKm;
-            if ($isAway[$day] === true) {
+
+            if ($dist >= $this->minAwayKm) {
                 $usableDayItems[$day] = $list;
+                $dayDistance[$day] = $dist;
             }
         }
 
@@ -98,16 +99,22 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $run */
         $run = [];
 
-        $flush = function () use (&$run, &$out, $usableDayItems): void {
-            if (\count($run) < 2) {
+        $flush = function () use (&$run, &$out, $usableDayItems, $dayDistance): void {
+            $runSize = \count($run);
+            if ($runSize < 2) {
                 $run = [];
                 return;
             }
             /** @var list<Media> $all */
             $all = [];
+            /** @var list<Media> $gpsMembers */
+            $gpsMembers = [];
             foreach ($run as $d) {
                 foreach ($usableDayItems[$d] as $m) {
                     $all[] = $m;
+                    if ($m->getGpsLat() !== null && $m->getGpsLon() !== null) {
+                        $gpsMembers[] = $m;
+                    }
                 }
             }
             $nights = \max(0, \count($run) - 1);
@@ -115,14 +122,29 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
                 $run = [];
                 return;
             }
-            $centroid = MediaMath::centroid($all);
+
+            if ($gpsMembers === []) {
+                $run = [];
+                return;
+            }
+            $centroid = MediaMath::centroid($gpsMembers);
             $time     = MediaMath::timeRange($all);
+
+            $totalDistanceKm = 0.0;
+            foreach ($run as $day) {
+                $totalDistanceKm += $dayDistance[$day] ?? 0.0;
+            }
+            $averageDistanceKm = $runSize > 0 ? $totalDistanceKm / $runSize : 0.0;
+            if ($averageDistanceKm < $this->minAwayKm) {
+                $run = [];
+                return;
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: 'long_trip',
                 params: [
                     'nights'      => $nights,
-                    'distance_km' => $this->minAwayKm,
+                    'distance_km' => $averageDistanceKm,
                     'time_range'  => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
