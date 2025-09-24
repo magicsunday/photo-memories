@@ -3,10 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
-use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Clusterer\Support\AbstractWeatherDayClusterStrategy;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -15,18 +12,16 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Priority: use sun_prob; fallback to 1 - cloud_cover; fallback to 1 - rain_prob.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 56])]
-final class SunnyDayClusterStrategy extends AbstractGroupedClusterStrategy
+final class SunnyDayClusterStrategy extends AbstractWeatherDayClusterStrategy
 {
-    private readonly DateTimeZone $timezone;
-
     public function __construct(
-        private readonly WeatherHintProviderInterface $weather,
+        WeatherHintProviderInterface $weather,
         string $timezone = 'Europe/Berlin',
         private readonly float $minAvgSunScore = 0.65, // 0..1
         private readonly int $minItemsPerDay = 6,
         private readonly int $minHintsPerDay = 3
     ) {
-        $this->timezone = new DateTimeZone($timezone);
+        parent::__construct($weather, $timezone);
     }
 
     public function name(): string
@@ -34,65 +29,42 @@ final class SunnyDayClusterStrategy extends AbstractGroupedClusterStrategy
         return 'sunny_day';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function scoreFromHint(array $hint): ?float
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
+        if (\array_key_exists('sun_prob', $hint)) {
+            return (float) $hint['sun_prob'];
         }
 
-        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+        if (\array_key_exists('cloud_cover', $hint)) {
+            return 1.0 - (float) $hint['cloud_cover'];
+        }
+
+        if (\array_key_exists('rain_prob', $hint)) {
+            return 1.0 - (float) $hint['rain_prob'];
+        }
+
+        return null;
     }
 
-    /**
-     * @param list<Media> $members
-     */
-    protected function groupParams(string $key, array $members): ?array
+    protected function passesAverageThreshold(float $average): bool
     {
-        if (\count($members) < $this->minItemsPerDay) {
-            return null;
-        }
+        return $average >= $this->minAvgSunScore;
+    }
 
-        $sum = 0.0;
-        $count = 0;
-
-        foreach ($members as $media) {
-            $hint = $this->weather->getHint($media);
-            if ($hint === null) {
-                continue;
-            }
-
-            if (\array_key_exists('sun_prob', $hint)) {
-                $score = (float) $hint['sun_prob'];
-            } elseif (\array_key_exists('cloud_cover', $hint)) {
-                $score = 1.0 - (float) $hint['cloud_cover'];
-            } elseif (\array_key_exists('rain_prob', $hint)) {
-                $score = \max(0.0, 1.0 - (float) $hint['rain_prob']);
-            } else {
-                continue;
-            }
-
-            if ($score < 0.0) {
-                $score = 0.0;
-            } elseif ($score > 1.0) {
-                $score = 1.0;
-            }
-
-            $sum += $score;
-            $count++;
-        }
-
-        if ($count < $this->minHintsPerDay) {
-            return null;
-        }
-
-        $average = $sum / (float) $count;
-        if ($average < $this->minAvgSunScore) {
-            return null;
-        }
-
+    protected function buildParams(float $average, int $count): array
+    {
         return [
             'sun_score' => $average,
         ];
+    }
+
+    protected function minItemsPerDay(): int
+    {
+        return $this->minItemsPerDay;
+    }
+
+    protected function minHintsPerDay(): int
+    {
+        return $this->minHintsPerDay;
     }
 }
