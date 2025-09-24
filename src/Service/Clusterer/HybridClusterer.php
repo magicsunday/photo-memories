@@ -39,7 +39,7 @@ final class HybridClusterer
         $strategies = $this->getStrategies();
         $total      = \count($strategies);
 
-        $drafts = [];
+        $drafts = [[]];
         $idx    = 0;
 
         foreach ($strategies as $s) {
@@ -52,14 +52,15 @@ final class HybridClusterer
             $res = $s->cluster($items);
 
             if ($res !== []) {
-                /** @var list<ClusterDraft> $drafts */
-                $drafts = \array_merge($drafts, $res);
+                $drafts[] = $res;
             }
 
             if ($onDone !== null) {
                 $onDone($s->name(), $idx, $total);
             }
         }
+
+        $drafts = \array_merge(...$drafts);
 
         if ($drafts === []) {
             return [];
