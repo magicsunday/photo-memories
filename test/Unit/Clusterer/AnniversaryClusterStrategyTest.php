@@ -20,7 +20,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
     {
         $strategy = new AnniversaryClusterStrategy(new LocationHelper());
 
-        $location = $this->createLocation(city: 'Berlin', suburb: 'Mitte');
+        $location = $this->createLocation(city: 'Berlin');
         $mediaItems = [
             $this->createMedia(
                 id: 10,
@@ -58,7 +58,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2022-05-10 08:30:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $cluster->getParams()['time_range']);
-        self::assertSame('Mitte, Berlin', $cluster->getParams()['place']);
+        self::assertSame('Berlin', $cluster->getParams()['place']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.52, $centroid['lat'], 0.0005);
@@ -70,7 +70,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
     {
         $strategy = new AnniversaryClusterStrategy(new LocationHelper());
 
-        $location = $this->createLocation(city: 'Hamburg', suburb: null);
+        $location = $this->createLocation(city: 'Hamburg');
         $mediaItems = [
             $this->createMedia(
                 id: 20,
@@ -110,19 +110,18 @@ final class AnniversaryClusterStrategyTest extends TestCase
         return $media;
     }
 
-    private function createLocation(string $city, ?string $suburb): Location
+    private function createLocation(string $city): Location
     {
         $location = new Location(
             provider: 'osm',
             providerPlaceId: 'place-'.$city,
-            displayName: $suburb !== null ? $suburb.', '.$city : $city,
+            displayName: $city,
             lat: 0.0,
             lon: 0.0,
             cell: 'cell-'.$city,
         );
 
         $location->setCity($city);
-        $location->setSuburb($suburb);
         $location->setCountry('Germany');
 
         return $location;
