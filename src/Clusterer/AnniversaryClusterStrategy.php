@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -12,6 +13,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 64])]
 final class AnniversaryClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    use PlaceLabelHelperTrait;
+
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly int $minItems = 3
@@ -42,13 +45,6 @@ final class AnniversaryClusterStrategy extends AbstractGroupedClusterStrategy
             return null;
         }
 
-        $label = $this->locHelper->majorityLabel($members);
-
-        $params = [];
-        if ($label !== null) {
-            $params['place'] = $label;
-        }
-
-        return $params;
+        return $this->withMajorityPlace($members);
     }
 }

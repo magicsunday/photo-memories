@@ -3,23 +3,37 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 81])]
-final class LocationSimilarityStrategy implements ClusterStrategyInterface
+final class LocationSimilarityStrategy extends AbstractTimeGapClusterStrategy
 {
-    use ClusterBuildHelperTrait;
+    use PlaceLabelHelperTrait;
+
+    private const GROUP_GPS = '__gps__';
+    private const LOCALITY_PREFIX = 'locality:';
+
+    private ?float $anchorLat = null;
+    private ?float $anchorLon = null;
+    private ?int $firstTimestamp = null;
+    private readonly int $maxSpanSeconds;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly float $radiusMeters = 150.0,
-        private readonly int $minItems = 5,
-        private readonly int $maxSpanHours = 24,
+        int $minItems = 5,
+        int $maxSpanHours = 24,
+        string $timezone = 'UTC',
     ) {
+        $this->maxSpanSeconds = $maxSpanHours * 3600;
+
+        parent::__construct($timezone, \PHP_INT_MAX, $minItems);
     }
 
     public function name(): string
@@ -27,121 +41,120 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         return 'location_similarity';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
     {
-        /** @var array<string, list<Media>> $byLocality */
-        $byLocality = [];
-        /** @var list<Media> $noLocality */
-        $noLocality = [];
-
-        foreach ($items as $m) {
-            $key = $this->locHelper->localityKeyForMedia($m);
-            if ($key !== null) {
-                $byLocality[$key] = $byLocality[$key] ?? [];
-                $byLocality[$key][] = $m;
-            } else {
-                $noLocality[] = $m;
-            }
-        }
-
-        $drafts = [];
-
-        foreach ($byLocality as $key => $group) {
-            if (\count($group) < $this->minItems) {
-                continue;
-            }
-            $label = $this->locHelper->majorityLabel($group);
-            $params = [
-                'place_key'  => $key,
-                'time_range' => $this->computeTimeRange($group),
-            ];
-            if ($label !== null) {
-                $params['place'] = $label;
-            }
-
-            $drafts[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: $params,
-                centroid: $this->computeCentroid($group),
-                members: $this->toMemberIds($group)
-            );
-        }
-
-        // Fallback: räumlich + Zeitfenster
-        foreach ($this->spatialWindows($noLocality) as $bucket) {
-            if (\count($bucket) < $this->minItems) {
-                continue;
-            }
-            $params = [
-                'time_range' => $this->computeTimeRange($bucket),
-            ];
-            $drafts[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: $params,
-                centroid: $this->computeCentroid($bucket),
-                members: $this->toMemberIds($bucket)
-            );
-        }
-
-        return $drafts;
+        return true;
     }
 
-    /** @param list<Media> $items @return list<list<Media>> */
-    private function spatialWindows(array $items): array
+    protected function groupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $gps = \array_values(\array_filter(
-            $items,
-            static fn(Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
-        ));
+        $locality = $this->locHelper->localityKeyForMedia($media);
+        if ($locality !== null) {
+            return self::LOCALITY_PREFIX . $locality;
+        }
 
-        \usort(
-            $gps,
-            static fn(Media $a, Media $b): int =>
-                ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        if ($media->getGpsLat() !== null && $media->getGpsLon() !== null) {
+            return self::GROUP_GPS;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<Media> $members
+     * @return array<string, mixed>
+     */
+    protected function sessionParams(array $members): array
+    {
+        $groupKey = $this->currentGroupKey();
+
+        if ($groupKey !== null && $this->isLocalityGroup($groupKey)) {
+            $params = ['place_key' => $this->localityFromGroup($groupKey)];
+
+            return $this->withMajorityPlace($members, $params);
+        }
+
+        return $this->withMajorityPlace($members);
+    }
+
+    protected function shouldSplitSession(Media $previous, Media $current, int $gapSeconds): bool
+    {
+        if (!$this->isGpsGroup($this->currentGroupKey())) {
+            return false;
+        }
+
+        if ($gapSeconds > $this->maxSpanSeconds) {
+            return true;
+        }
+
+        $currentTimestamp = $current->getTakenAt()?->getTimestamp();
+        if ($this->firstTimestamp !== null && $currentTimestamp !== null) {
+            if (($currentTimestamp - $this->firstTimestamp) > $this->maxSpanSeconds) {
+                return true;
+            }
+        }
+
+        $lat = $current->getGpsLat();
+        $lon = $current->getGpsLon();
+
+        if ($lat === null || $lon === null || $this->anchorLat === null || $this->anchorLon === null) {
+            return false;
+        }
+
+        $distance = MediaMath::haversineDistanceInMeters(
+            $this->anchorLat,
+            $this->anchorLon,
+            (float) $lat,
+            (float) $lon
         );
 
-        $out = [];
-        /** @var list<Media> $bucket */
-        $bucket = [];
-        $start = null;
+        return $distance > $this->radiusMeters;
+    }
 
-        foreach ($gps as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp() ?? 0;
+    protected function onMediaAppended(Media $media): void
+    {
+        if (!$this->isGpsGroup($this->currentGroupKey())) {
+            return;
+        }
 
-            if ($bucket === []) {
-                $bucket = [$m];
-                $start  = $ts;
-                continue;
-            }
-
-            $anchor = $bucket[0];
-            $dist = MediaMath::haversineDistanceInMeters(
-                (float) $anchor->getGpsLat(),
-                (float) $anchor->getGpsLon(),
-                (float) $m->getGpsLat(),
-                (float) $m->getGpsLon()
-            );
-            $spanOk = $start !== null ? ($ts - $start) <= $this->maxSpanHours * 3600 : true;
-
-            if ($dist <= $this->radiusMeters && $spanOk) {
-                $bucket[] = $m;
-            } else {
-                if (\count($bucket) > 0) {
-                    $out[] = $bucket;
-                }
-                $bucket = [$m];
-                $start  = $ts;
+        if ($this->firstTimestamp === null) {
+            $takenAt = $media->getTakenAt();
+            if ($takenAt instanceof DateTimeImmutable) {
+                $this->firstTimestamp = $takenAt->getTimestamp();
             }
         }
 
-        if ($bucket !== []) {
-            $out[] = $bucket;
-        }
+        if ($this->anchorLat === null || $this->anchorLon === null) {
+            $lat = $media->getGpsLat();
+            $lon = $media->getGpsLon();
 
-        return $out;
+            if ($lat !== null && $lon !== null) {
+                $this->anchorLat = (float) $lat;
+                $this->anchorLon = (float) $lon;
+            }
+        }
+    }
+
+    protected function onSessionReset(): void
+    {
+        $this->anchorLat = null;
+        $this->anchorLon = null;
+        $this->firstTimestamp = null;
+    }
+
+    private function isGpsGroup(?string $groupKey): bool
+    {
+        return $groupKey === self::GROUP_GPS;
+    }
+
+    private function isLocalityGroup(string $groupKey): bool
+    {
+        return \str_starts_with($groupKey, self::LOCALITY_PREFIX);
+    }
+
+    private function localityFromGroup(string $groupKey): string
+    {
+        return \substr($groupKey, \strlen(self::LOCALITY_PREFIX));
     }
 }
+

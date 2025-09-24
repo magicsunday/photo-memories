@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -12,6 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 final class PhashSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use PlaceLabelHelperTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
@@ -58,20 +60,9 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
                 if (\count($comp) < $this->minItems) {
                     continue;
                 }
-                $params = [
-                    'time_range' => $this->computeTimeRange($comp),
-                ];
-                $place = $this->locHelper->majorityLabel($comp);
-                if ($place !== null) {
-                    $params['place'] = $place;
-                }
+                $params = $this->withMajorityPlace($comp);
 
-                $drafts[] = new ClusterDraft(
-                    algorithm: $this->name(),
-                    params: $params,
-                    centroid: $this->computeCentroid($comp),
-                    members: $this->toMemberIds($comp)
-                );
+                $drafts[] = $this->buildClusterDraft($this->name(), $comp, $params);
             }
         }
 

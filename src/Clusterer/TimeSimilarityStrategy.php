@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -12,6 +13,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 50])]
 final class TimeSimilarityStrategy extends AbstractTimeGapClusterStrategy
 {
+    use PlaceLabelHelperTrait;
+
     private ?string $lastLocalityKey = null;
 
     public function __construct(
@@ -67,13 +70,7 @@ final class TimeSimilarityStrategy extends AbstractTimeGapClusterStrategy
 
     protected function sessionParams(array $members): array
     {
-        $params = [];
-        $label = $this->locHelper->majorityLabel($members);
-        if ($label !== null) {
-            $params['place'] = $label;
-        }
-
-        return $params;
+        return $this->withMajorityPlace($members);
     }
 
     private function resolveLocalityKey(Media $media): ?string

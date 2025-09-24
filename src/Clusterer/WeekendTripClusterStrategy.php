@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractConsecutiveRunClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -18,6 +19,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 85])]
 final class WeekendTripClusterStrategy extends AbstractConsecutiveRunClusterStrategy
 {
+    use PlaceLabelHelperTrait;
+
     private ?float $lastRunDistanceKm = null;
 
     public function __construct(
@@ -67,13 +70,7 @@ final class WeekendTripClusterStrategy extends AbstractConsecutiveRunClusterStra
      */
     protected function runParams(array $run, array $daysMap, int $nights, array $members, string $groupKey): array
     {
-        $params = ['nights' => $nights];
-
-        $label = $this->locHelper->majorityLabel($members);
-        if ($label !== null) {
-            $params['place'] = $label;
-        }
-
+        $params = $this->withMajorityPlace($members, ['nights' => $nights]);
         $distance = $this->lastRunDistanceKm ?? $this->distanceFromHomeKm($members);
         if ($distance !== null) {
             $params['distance_km'] = $distance;
