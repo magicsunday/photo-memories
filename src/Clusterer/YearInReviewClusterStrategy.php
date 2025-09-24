@@ -6,12 +6,10 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds one macro cluster per year if enough items exist.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 60])]
 final class YearInReviewClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

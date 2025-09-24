@@ -7,13 +7,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Collects all photos taken around today's month/day across different years.
  * Example: Feb-14 across 2014..2025 within a +/- window of days.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 66])]
 final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

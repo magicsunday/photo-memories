@@ -9,14 +9,12 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Detects short weekend trips (Fri afternoon to Sun/Monday),
  * sufficiently far from a configured home location.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 85])]
 final class WeekendTripClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;

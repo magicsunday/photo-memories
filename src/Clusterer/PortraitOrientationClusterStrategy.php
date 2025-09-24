@@ -5,12 +5,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Portrait-oriented photos grouped into time sessions (no face detection).
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 45])]
 final class PortraitOrientationClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

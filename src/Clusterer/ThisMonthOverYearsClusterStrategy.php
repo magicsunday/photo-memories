@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Aggregates all items from the current month across different years.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 178])]
 final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

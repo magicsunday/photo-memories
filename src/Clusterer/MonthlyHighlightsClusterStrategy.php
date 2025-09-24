@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds a highlight memory for each (year, month) with sufficient coverage.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 59])]
 final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

@@ -6,13 +6,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups media by meteorological seasons per year (DE).
  * Winter is Dec–Feb (December assigned to next year).
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 58])]
 final class SeasonClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

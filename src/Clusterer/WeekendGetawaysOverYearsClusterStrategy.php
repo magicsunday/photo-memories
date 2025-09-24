@@ -8,12 +8,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 61])]
 final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;

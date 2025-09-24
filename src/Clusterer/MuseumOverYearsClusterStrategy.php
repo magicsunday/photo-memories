@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\KeywordBestDayOverYearsStrategy;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Picks best museum day per year and aggregates over years.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
 final class MuseumOverYearsClusterStrategy extends KeywordBestDayOverYearsStrategy
 {
     public function __construct(

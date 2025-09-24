@@ -6,9 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 100])]
 final class PhashSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;

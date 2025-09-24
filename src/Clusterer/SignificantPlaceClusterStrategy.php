@@ -7,13 +7,11 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Aggregates recurring places using a coarse geogrid (lat/lon rounding).
  * Creates one cluster per significant place with enough distinct visit days.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 82])]
 final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

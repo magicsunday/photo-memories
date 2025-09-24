@@ -8,12 +8,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Detects multi-day road trips based on daily traveled distance (from GPS track).
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 88])]
 final class RoadTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;

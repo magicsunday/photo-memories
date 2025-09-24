@@ -8,12 +8,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Detects multi-night trips away from home based on per-day centroids and distance threshold.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 90])]
 final class LongTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;

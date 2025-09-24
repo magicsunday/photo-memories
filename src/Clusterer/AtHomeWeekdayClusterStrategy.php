@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\AbstractAtHomeClusterStrategy;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Clusters home-based weekday sessions (Mon–Fri) when most photos are within a home radius.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 43])]
 final class AtHomeWeekdayClusterStrategy extends AbstractAtHomeClusterStrategy
 {
     public function __construct(

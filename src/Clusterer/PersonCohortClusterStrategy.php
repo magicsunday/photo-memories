@@ -5,13 +5,11 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
  * Requires Media to expose person tags via getPersonIds() -> list<int>.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 80])]
 final class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

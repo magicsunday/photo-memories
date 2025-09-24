@@ -6,7 +6,6 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Heuristic photo motif clustering based on path/camera hints.
@@ -23,7 +22,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  *  - Schnee & Winter      → snow_winter
  *  - Action & Outdoor     → action_outdoor
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 48])]
 final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

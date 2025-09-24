@@ -5,12 +5,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Heuristic pet moments based on path keywords; grouped into time sessions.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 49])]
 final class PetMomentsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

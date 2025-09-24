@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Collects videos into day-based stories (local time).
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 41])]
 final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

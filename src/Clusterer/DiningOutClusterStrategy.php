@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Detects dining-out moments based on evening hours and food/venue keywords; spatially compact sessions.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 52])]
 final class DiningOutClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

@@ -5,12 +5,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups hiking/adventure sessions based on keywords; validates by traveled distance if GPS is available.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 74])]
 final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(
