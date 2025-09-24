@@ -20,6 +20,18 @@ abstract class AbstractTimezoneAwareGroupedClusterStrategy extends AbstractGroup
         $this->timezone = new DateTimeZone($timezone);
     }
 
+    final protected function groupKey(Media $media): ?string
+    {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
+            return null;
+        }
+
+        return $this->localGroupKey($media, $local);
+    }
+
+    abstract protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string;
+
     protected function timezone(): DateTimeZone
     {
         return $this->timezone;
@@ -37,5 +49,14 @@ abstract class AbstractTimezoneAwareGroupedClusterStrategy extends AbstractGroup
         $takenAt = $this->takenAt($media);
 
         return $takenAt?->setTimezone($this->timezone);
+    }
+
+    /**
+     * @param list<Media> $members
+     * @return array<string, bool>
+     */
+    protected function uniqueLocalDateParts(array $members, string $format): array
+    {
+        return $this->uniqueDateParts($members, $format, $this->timezone);
     }
 }

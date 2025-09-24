@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -27,10 +28,9 @@ final class TransitTravelDayClusterStrategy extends AbstractTimezoneAwareGrouped
         return 'transit_travel_day';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null || $media->getGpsLat() === null || $media->getGpsLon() === null) {
+        if ($media->getGpsLat() === null || $media->getGpsLon() === null) {
             return null;
         }
 

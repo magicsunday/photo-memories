@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -28,12 +29,8 @@ final class NewYearEveClusterStrategy extends AbstractTimezoneAwareGroupedCluste
         return 'new_year_eve';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
         $monthDay = $local->format('m-d');
         $hour = (int) $local->format('G');
 

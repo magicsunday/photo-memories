@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 
@@ -18,13 +19,8 @@ abstract class AbstractWeatherDayClusterStrategy extends AbstractTimezoneAwareGr
         parent::__construct($timezone);
     }
 
-    final protected function groupKey(Media $media): ?string
+    final protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
-
         return $local->format('Y-m-d');
     }
 

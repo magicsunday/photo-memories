@@ -36,12 +36,8 @@ final class ThisMonthOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
         $this->currentMonth = (int) $now->format('n');
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
         if ((int) $local->format('n') !== $this->currentMonth) {
             return null;
         }
@@ -58,12 +54,12 @@ final class ThisMonthOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
             return null;
         }
 
-        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezone());
+        $yearsMap = $this->uniqueLocalDateParts($members, 'Y');
         if (\count($yearsMap) < $this->minYears) {
             return null;
         }
 
-        $daysMap = $this->uniqueDateParts($members, 'Y-m-d', $this->timezone());
+        $daysMap = $this->uniqueLocalDateParts($members, 'Y-m-d');
         if (\count($daysMap) < $this->minDistinctDays) {
             return null;
         }

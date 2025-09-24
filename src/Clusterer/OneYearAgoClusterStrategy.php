@@ -42,12 +42,8 @@ final class OneYearAgoClusterStrategy extends AbstractTimezoneAwareGroupedCluste
         $this->windowEnd = $anchor->modify('+' . $this->windowDays . ' days');
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
         if ($local < $this->windowStart || $local > $this->windowEnd) {
             return null;
         }

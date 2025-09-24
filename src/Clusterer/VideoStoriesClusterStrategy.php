@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -32,13 +33,8 @@ final class VideoStoriesClusterStrategy extends AbstractTimezoneAwareGroupedClus
         return !\is_string($mime) || \str_starts_with($mime, 'video/');
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
-
         return $local->format('Y-m-d');
     }
 

@@ -39,12 +39,8 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
         $this->anchorDay = (int) $now->format('j');
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $local = $this->localTakenAt($media);
-        if ($local === null) {
-            return null;
-        }
         $monthDistance = $this->monthDayDistance(
             $this->anchorMonth,
             $this->anchorDay,
@@ -68,7 +64,7 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
             return null;
         }
 
-        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezone());
+        $yearsMap = $this->uniqueLocalDateParts($members, 'Y');
         if (\count($yearsMap) < $this->minYears) {
             return null;
         }
