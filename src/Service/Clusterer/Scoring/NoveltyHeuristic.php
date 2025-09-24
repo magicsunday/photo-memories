@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
@@ -206,12 +208,31 @@ final class NoveltyHeuristic
             }
 
             // Use up to 7 representative days across the range to stay cheap
-            $spanDays = (int) \max(1, \floor(($to - $from) / 86400.0));
-            $steps    = \min(7, \max(1, $spanDays));
-            for ($i = 0; $i < $steps; $i++) {
-                $ts = $from + (int) \round($i * ($to - $from) / \max(1, $steps - 1));
-                $d  = (int) \date('z', $ts) + 1;
-                $out[] = $d;
+            $utc      = new DateTimeZone('UTC');
+            $startDay = (new DateTimeImmutable('@' . $from))->setTimezone($utc)->setTime(0, 0);
+            $endDay   = (new DateTimeImmutable('@' . $to))->setTimezone($utc)->setTime(0, 0);
+
+            if ($endDay->getTimestamp() < $startDay->getTimestamp()) {
+                [$startDay, $endDay] = [$endDay, $startDay];
+            }
+
+            $span = $startDay->diff($endDay);
+            $uniqueDayCount = ($span->days ?? 0) + 1;
+
+            if ($uniqueDayCount <= 7) {
+                for ($d = $startDay; $d <= $endDay; $d = $d->modify('+1 day')) {
+                    $out[] = (int) $d->format('z') + 1;
+                }
+            } else {
+                $steps   = 7;
+                $fromTs  = $startDay->getTimestamp();
+                $toTs    = $endDay->getTimestamp();
+                $denom   = \max(1, $steps - 1);
+
+                for ($i = 0; $i < $steps; $i++) {
+                    $ts = $fromTs + (int) \round($i * ($toTs - $fromTs) / $denom);
+                    $out[] = (int) (new DateTimeImmutable('@' . $ts))->setTimezone($utc)->format('z') + 1;
+                }
             }
 
             return \array_values(\array_unique($out, \SORT_NUMERIC));
