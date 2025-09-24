@@ -3,16 +3,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
-use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Heuristic pet moments based on path keywords; grouped into time sessions.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 49])]
-final class PetMomentsClusterStrategy extends AbstractTimeGapClusterStrategy
+final class PetMomentsClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = [
@@ -35,8 +33,8 @@ final class PetMomentsClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'pet_moments';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
     {
-        return $this->mediaMatchesKeywords($media, self::KEYWORDS);
+        return self::KEYWORDS;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Sports events based on keywords (stadium/match/club names) and weekend bias.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 78])]
-final class SportsEventClusterStrategy extends AbstractTimeGapClusterStrategy
+final class SportsEventClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = [
@@ -39,12 +39,13 @@ final class SportsEventClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'sports_event';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
     {
-        if (!$this->mediaMatchesKeywords($media, self::KEYWORDS)) {
-            return false;
-        }
+        return self::KEYWORDS;
+    }
 
+    protected function passesContextFilters(Media $media, DateTimeImmutable $local): bool
+    {
         if (!$this->preferWeekend) {
             return true;
         }
@@ -58,12 +59,8 @@ final class SportsEventClusterStrategy extends AbstractTimeGapClusterStrategy
         return true;
     }
 
-    /**
-     * @param list<Media> $members
-     */
-    protected function isSessionValid(array $members): bool
+    protected function sessionRadiusMeters(): ?float
     {
-        return parent::isSessionValid($members)
-            && $this->allWithinRadius($members, $this->radiusMeters);
+        return $this->radiusMeters;
     }
 }

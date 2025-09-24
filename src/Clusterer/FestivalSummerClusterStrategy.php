@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Outdoor festival/open-air sessions in summer months.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 77])]
-final class FestivalSummerClusterStrategy extends AbstractTimeGapClusterStrategy
+final class FestivalSummerClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = [
@@ -35,7 +35,12 @@ final class FestivalSummerClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'festival_summer';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
+    {
+        return self::KEYWORDS;
+    }
+
+    protected function passesContextFilters(Media $media, DateTimeImmutable $local): bool
     {
         $month = (int) $local->format('n');
         if ($month < 6 || $month > 9) {
@@ -43,19 +48,12 @@ final class FestivalSummerClusterStrategy extends AbstractTimeGapClusterStrategy
         }
 
         $hour = (int) $local->format('G');
-        if ($hour > 2 && $hour < 14) {
-            return false;
-        }
 
-        return $this->mediaMatchesKeywords($media, self::KEYWORDS);
+        return $hour <= 2 || $hour >= 14;
     }
 
-    /**
-     * @param list<Media> $members
-     */
-    protected function isSessionValid(array $members): bool
+    protected function sessionRadiusMeters(): ?float
     {
-        return parent::isSessionValid($members)
-            && $this->allWithinRadius($members, $this->radiusMeters);
+        return $this->radiusMeters;
     }
 }

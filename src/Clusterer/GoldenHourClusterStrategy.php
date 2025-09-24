@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Heuristic "Golden Hour" clusters around morning/evening hours.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 57])]
-final class GoldenHourClusterStrategy extends AbstractTimeGapClusterStrategy
+final class GoldenHourClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /**
      * @param list<int> $morningHours
@@ -33,7 +33,7 @@ final class GoldenHourClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'golden_hour';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function passesContextFilters(Media $media, DateTimeImmutable $local): bool
     {
         $hour = (int) $local->format('G');
 

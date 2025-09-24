@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Builds "Snow Day" clusters using winter months and snow/ski keywords.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 55])]
-final class SnowDayClusterStrategy extends AbstractTimeGapClusterStrategy
+final class SnowDayClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = ['schnee', 'snow', 'ski', 'langlauf', 'skitour', 'snowboard', 'piste', 'eiszapfen'];
@@ -30,11 +30,15 @@ final class SnowDayClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'snow_day';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
+    {
+        return self::KEYWORDS;
+    }
+
+    protected function passesContextFilters(Media $media, DateTimeImmutable $local): bool
     {
         $month = (int) $local->format('n');
-        $isWinter = $month === 12 || $month <= 2;
 
-        return $isWinter && $this->mediaMatchesKeywords($media, self::KEYWORDS);
+        return $month === 12 || $month <= 2;
     }
 }

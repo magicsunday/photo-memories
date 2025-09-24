@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -13,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Groups hiking/adventure sessions based on keywords; validates by traveled distance if GPS is available.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 74])]
-final class HikeAdventureClusterStrategy extends AbstractTimeGapClusterStrategy
+final class HikeAdventureClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = [
@@ -35,9 +34,9 @@ final class HikeAdventureClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'hike_adventure';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
     {
-        return $this->mediaMatchesKeywords($media, self::KEYWORDS);
+        return self::KEYWORDS;
     }
 
     /**

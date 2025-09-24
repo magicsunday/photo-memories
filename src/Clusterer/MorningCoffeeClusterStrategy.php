@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractFilteredTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Morning café/breakfast moments based on time and keywords, spatially compact.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 51])]
-final class MorningCoffeeClusterStrategy extends AbstractTimeGapClusterStrategy
+final class MorningCoffeeClusterStrategy extends AbstractFilteredTimeGapClusterStrategy
 {
     /** @var list<string> */
     private const KEYWORDS = [
@@ -34,22 +34,20 @@ final class MorningCoffeeClusterStrategy extends AbstractTimeGapClusterStrategy
         return 'morning_coffee';
     }
 
-    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    protected function keywords(): array
     {
-        $hour = (int) $local->format('G');
-        if ($hour < 7 || $hour > 10) {
-            return false;
-        }
-
-        return $this->mediaMatchesKeywords($media, self::KEYWORDS);
+        return self::KEYWORDS;
     }
 
-    /**
-     * @param list<Media> $members
-     */
-    protected function isSessionValid(array $members): bool
+    protected function passesContextFilters(Media $media, DateTimeImmutable $local): bool
     {
-        return parent::isSessionValid($members)
-            && $this->allWithinRadius($members, $this->radiusMeters);
+        $hour = (int) $local->format('G');
+
+        return $hour >= 7 && $hour <= 10;
+    }
+
+    protected function sessionRadiusMeters(): ?float
+    {
+        return $this->radiusMeters;
     }
 }
