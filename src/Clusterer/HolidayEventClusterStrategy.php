@@ -64,10 +64,11 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'year'       => (int) $yearStr,
-                    'holiday'    => 1.0,
-                    'time_range' => $time,
+                params   : [
+                    'year'         => (int)$yearStr,
+                    'holiday'      => 1.0,
+                    'holiday_name' => $name,
+                    'time_range'   => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: \array_map(static fn (Media $m): int => $m->getId(), $members)

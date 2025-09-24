@@ -6,7 +6,6 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\GeoMath;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -81,7 +80,7 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
                     (float) $m->getGpsLon()
                 );
 
-                if ($dist > 300.0) {
+                if ($dist > $this->radiusMeters) {
                     $ok = false;
                     break;
                 }

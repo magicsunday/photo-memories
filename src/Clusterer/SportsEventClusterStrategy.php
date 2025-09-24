@@ -52,7 +52,7 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
             if ($this->preferWeekend) {
                 $dow = (int) $t->setTimezone($tz)->format('N'); // 1..7
                 if ($dow !== 6 && $dow !== 7) {
-                    // still allow, but you could continue; here we keep it lenient
+                    continue;
                 }
             }
             $cand[] = $m;
