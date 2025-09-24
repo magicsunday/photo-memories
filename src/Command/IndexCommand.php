@@ -106,7 +106,7 @@ final class IndexCommand extends Command
         $progress = null;
         if ($noProgress === false) {
             $progress = new ProgressBar($output, $total);
-            $progress->setFormat('%current%/%max% [%bar%] %percent:3s%% | Datei: %filename%');
+            $progress->setFormat('%current%/%max% [%bar%] %percent:3s%% | Dauer: %elapsed:6s% | ETA: %estimated:-6s% | Datei: %filename%');
             $progress->setMessage('', 'filename');
             $progress->start();
         }
