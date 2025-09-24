@@ -49,15 +49,7 @@ final class MonthlyHighlightsClusterStrategy extends AbstractGroupedClusterStrat
             return null;
         }
 
-        /** @var array<string,bool> $days */
-        $days = [];
-        foreach ($members as $media) {
-            $takenAt = $media->getTakenAt();
-            if ($takenAt instanceof DateTimeImmutable) {
-                $days[$takenAt->setTimezone($this->timezone)->format('Y-m-d')] = true;
-            }
-        }
-
+        $days = $this->uniqueDateParts($members, 'Y-m-d', $this->timezone);
         if (\count($days) < $this->minDistinctDays) {
             return null;
         }

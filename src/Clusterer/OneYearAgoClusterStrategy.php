@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -14,15 +14,22 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Builds a memory around the same date last year within a +/- window.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 65])]
-final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
+final class OneYearAgoClusterStrategy extends AbstractGroupedClusterStrategy
 {
-    use ClusterBuildHelperTrait;
+    private readonly DateTimeZone $timezoneObject;
+
+    private DateTimeImmutable $windowStart;
+
+    private DateTimeImmutable $windowEnd;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        string $timezone = 'Europe/Berlin',
         private readonly int $windowDays = 3,
-        private readonly int $minItems   = 8
+        private readonly int $minItems = 8
     ) {
+        $this->timezoneObject = new DateTimeZone($timezone);
+        $this->windowStart = new DateTimeImmutable('@0');
+        $this->windowEnd = new DateTimeImmutable('@0');
     }
 
     public function name(): string
@@ -30,37 +37,38 @@ final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
         return 'one_year_ago';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function beforeGrouping(): void
     {
-        $tz = new DateTimeZone($this->timezone);
-        $now = new DateTimeImmutable('now', $tz);
-        $anchorStart = $now->sub(new DateInterval('P1Y'))->modify('-' . $this->windowDays . ' days');
-        $anchorEnd   = $now->sub(new DateInterval('P1Y'))->modify('+' . $this->windowDays . ' days');
+        $now = new DateTimeImmutable('now', $this->timezoneObject);
+        $anchor = $now->sub(new DateInterval('P1Y'));
+        $this->windowStart = $anchor->modify('-' . $this->windowDays . ' days');
+        $this->windowEnd = $anchor->modify('+' . $this->windowDays . ' days');
+    }
 
-        /** @var list<Media> $picked */
-        $picked = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $local = $t->setTimezone($tz);
-            if ($local >= $anchorStart && $local <= $anchorEnd) {
-                $picked[] = $m;
-            }
+    protected function groupKey(Media $media): ?string
+    {
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
         }
 
-        if (\count($picked) < $this->minItems) {
-            return [];
+        $local = $takenAt->setTimezone($this->timezoneObject);
+        if ($local < $this->windowStart || $local > $this->windowEnd) {
+            return null;
         }
 
-        return [
-            $this->buildClusterDraft($this->name(), $picked, []),
-        ];
+        return 'one_year_ago';
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function groupParams(string $key, array $members): ?array
+    {
+        if (\count($members) < $this->minItems) {
+            return null;
+        }
+
+        return [];
     }
 }
