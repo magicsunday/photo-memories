@@ -15,7 +15,7 @@ class Location
     #[ORM\Id]
     #[ORM\Column(type: Types::BIGINT)]
     #[ORM\GeneratedValue]
-    private int $id;
+    private ?int $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 32)]
     private string $provider;
@@ -89,22 +89,13 @@ class Location
     }
 
     /**
-     * @return int
+     * Managed entities have an ID; new (unflushed) entities return null.
+     *
+     * @return int|null
      */
-    public function getId(): int
+    public function getId(): ?int
     {
         return $this->id;
-    }
-
-    /**
-     * @param int $id
-     *
-     * @return Location
-     */
-    public function setId(int $id): Location
-    {
-        $this->id = $id;
-        return $this;
     }
 
     /**
@@ -116,33 +107,11 @@ class Location
     }
 
     /**
-     * @param string $provider
-     *
-     * @return Location
-     */
-    public function setProvider(string $provider): Location
-    {
-        $this->provider = $provider;
-        return $this;
-    }
-
-    /**
      * @return string
      */
     public function getProviderPlaceId(): string
     {
         return $this->providerPlaceId;
-    }
-
-    /**
-     * @param string $providerPlaceId
-     *
-     * @return Location
-     */
-    public function setProviderPlaceId(string $providerPlaceId): Location
-    {
-        $this->providerPlaceId = $providerPlaceId;
-        return $this;
     }
 
     /**
@@ -154,17 +123,6 @@ class Location
     }
 
     /**
-     * @param float $lat
-     *
-     * @return Location
-     */
-    public function setLat(float $lat): Location
-    {
-        $this->lat = $lat;
-        return $this;
-    }
-
-    /**
      * @return float
      */
     public function getLon(): float
@@ -173,33 +131,11 @@ class Location
     }
 
     /**
-     * @param float $lon
-     *
-     * @return Location
-     */
-    public function setLon(float $lon): Location
-    {
-        $this->lon = $lon;
-        return $this;
-    }
-
-    /**
      * @return string
      */
     public function getCell(): string
     {
         return $this->cell;
-    }
-
-    /**
-     * @param string $cell
-     *
-     * @return Location
-     */
-    public function setCell(string $cell): Location
-    {
-        $this->cell = $cell;
-        return $this;
     }
 
     /**

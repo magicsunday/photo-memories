@@ -30,16 +30,18 @@ final class LocationResolver
         // 0) In-memory cache first (fast path inside one run/batch)
         if (isset($this->cacheByKey[$key])) {
             $loc = $this->cacheByKey[$key];
-            // If detached but has an id, re-attach (managed instance)
-            if (!$this->em->contains($loc) && $loc->getId() > 0) {
+            $id  = $loc->getId();
+
+            if (!$this->em->contains($loc) && $id !== null && $id > 0) {
                 /** @var Location|null $managed */
-                $managed = $this->em->find(Location::class, $loc->getId());
+                $managed = $this->em->find(Location::class, $id);
+
                 if ($managed instanceof Location) {
                     $this->cacheByKey[$key] = $managed;
                     return $managed;
                 }
-                // fall back to cached (new/unflushed) instance
             }
+
             return $loc;
         }
 

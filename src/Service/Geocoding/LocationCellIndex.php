@@ -50,11 +50,20 @@ final class LocationCellIndex
         if ($id === null || $id <= 0) {
             // fallback: first location for this cell (uses DB index on cell)
             /** @var Location|null $loc */
-            $loc = $this->em->getRepository(Location::class)->findOneBy(['cell' => $cell]);
+            $loc = $this->em
+                ->getRepository(Location::class)
+                ->findOneBy(['cell' => $cell]);
+
             if ($loc instanceof Location) {
-                $this->cellToId[$cell] = $loc->getId();
+                $id = $loc->getId();
+
+                if ($id !== null) {
+                    $this->cellToId[$cell] = $id;
+                }
+
                 return $loc;
             }
+
             return null;
         }
 
@@ -75,7 +84,8 @@ final class LocationCellIndex
     public function remember(string $cell, Location $loc): void
     {
         $id = $loc->getId() ?? 0;
-        if ($id > 0) {
+
+        if ($id !== null && $id > 0) {
             $this->cellToId[$cell] = $id;
         }
     }
