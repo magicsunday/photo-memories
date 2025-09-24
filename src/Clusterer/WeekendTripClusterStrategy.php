@@ -3,9 +3,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateInterval;
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\AbstractConsecutiveRunClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -17,17 +16,21 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * sufficiently far from a configured home location.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 85])]
-final class WeekendTripClusterStrategy implements ClusterStrategyInterface
+final class WeekendTripClusterStrategy extends AbstractConsecutiveRunClusterStrategy
 {
-    use ClusterBuildHelperTrait;
+    private ?float $lastRunDistanceKm = null;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
         #[Autowire(env: 'MEMORIES_HOME_LAT')] private readonly ?float $homeLat,
         #[Autowire(env: 'MEMORIES_HOME_LON')] private readonly ?float $homeLon,
         private readonly float $minAwayKm = 80.0,
-        private readonly int $minNights = 1,
+        int $minNights = 1,
+        string $timezone = 'Europe/Berlin',
+        int $minItemsPerDay = 1,
+        int $minItemsTotal = 3
     ) {
+        parent::__construct($timezone, $minItemsPerDay, $minItemsTotal, $minNights);
     }
 
     public function name(): string
@@ -35,122 +38,75 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         return 'weekend_trip';
     }
 
+    protected function groupKey(Media $media, DateTimeImmutable $local): ?string
+    {
+        return $this->locHelper->localityKeyForMedia($media);
+    }
+
     /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
+     * @param array{days:list<string>, items:list<Media>} $run
+     * @param array<string, list<Media>> $daysMap
+     * @param list<Media> $members
      */
-    public function cluster(array $items): array
+    protected function isRunValid(array $run, array $daysMap, int $nights, array $members, string $groupKey): bool
     {
-        $withTs = \array_values(\array_filter(
-            $items,
-            static fn(Media $m): bool => $m->getTakenAt() instanceof DateTimeImmutable
-        ));
+        $this->lastRunDistanceKm = $this->distanceFromHomeKm($members);
 
-        \usort(
-            $withTs,
-            static fn(Media $a, Media $b): int =>
-                ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
-        );
-
-        $drafts = [];
-        /** @var list<Media> $bucket */
-        $bucket = [];
-
-        foreach ($withTs as $m) {
-            if ($bucket === []) {
-                $bucket[] = $m;
-                continue;
-            }
-            $same = $this->locHelper->sameLocality($bucket[0], $m);
-            if ($same) {
-                $bucket[] = $m;
-            } else {
-                $d = $this->makeTripDraftOrNull($bucket);
-                if ($d !== null) {
-                    $drafts[] = $d;
-                }
-                $bucket = [$m];
-            }
-        }
-        if ($bucket !== []) {
-            $d = $this->makeTripDraftOrNull($bucket);
-            if ($d !== null) {
-                $drafts[] = $d;
-            }
+        if ($this->lastRunDistanceKm !== null && $this->lastRunDistanceKm < $this->minAwayKm) {
+            return false;
         }
 
-        return $drafts;
+        return true;
     }
 
-    /** @param list<Media> $bucket */
-    private function makeTripDraftOrNull(array $bucket): ?ClusterDraft
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     * @param array<string, list<Media>> $daysMap
+     * @param list<Media> $members
+     * @return array<string, mixed>
+     */
+    protected function runParams(array $run, array $daysMap, int $nights, array $members, string $groupKey): array
     {
-        // mind. 3 Fotos, mind. minNights
-        if (\count($bucket) < 3) {
-            return null;
+        $params = ['nights' => $nights];
+
+        $label = $this->locHelper->majorityLabel($members);
+        if ($label !== null) {
+            $params['place'] = $label;
         }
 
-        $nights = $this->estimateNights($bucket);
-        if ($nights < $this->minNights) {
-            return null;
+        $distance = $this->lastRunDistanceKm ?? $this->distanceFromHomeKm($members);
+        if ($distance !== null) {
+            $params['distance_km'] = $distance;
         }
 
-        // weit genug von "Home" weg?
-        $distanceKm = $this->distanceFromHomeKm($bucket);
-        if ($distanceKm !== null && $distanceKm < $this->minAwayKm) {
-            return null;
-        }
-
-        $label = $this->locHelper->majorityLabel($bucket) ?? 'Ausflug';
-        $params = [
-            'place' => $label,
-            'nights'      => $nights,
-            'time_range'  => $this->computeTimeRange($bucket),
-        ];
-        if ($distanceKm !== null) {
-            $params['distance_km'] = $distanceKm;
-        }
-
-        return new ClusterDraft(
-            algorithm: $this->name(),
-            params: $params,
-            centroid: $this->computeCentroid($bucket),
-            members: $this->toMemberIds($bucket)
-        );
+        return $params;
     }
 
-    /** @param list<Media> $bucket */
-    private function estimateNights(array $bucket): int
-    {
-        /** @var array<string,bool> $days */
-        $days = [];
-        foreach ($bucket as $m) {
-            $t = $m->getTakenAt();
-            if ($t instanceof DateTimeImmutable) {
-                $days[$t->format('Y-m-d')] = true;
-            }
-        }
-        $unique = \count($days);
-        return $unique > 0 ? \max(0, $unique - 1) : 0;
-    }
-
-    /** @param list<Media> $bucket */
-    private function distanceFromHomeKm(array $bucket): ?float
+    /**
+     * @param list<Media> $members
+     */
+    private function distanceFromHomeKm(array $members): ?float
     {
         if ($this->homeLat === null || $this->homeLon === null) {
             return null;
         }
-        foreach ($bucket as $m) {
-            if ($m->getGpsLat() !== null && $m->getGpsLon() !== null) {
-                $mtrs = MediaMath::haversineDistanceInMeters(
-                    $this->homeLat,
-                    $this->homeLon,
-                    (float) $m->getGpsLat(),
-                    (float) $m->getGpsLon()
-                );
-                return $mtrs / 1000.0;
+
+        foreach ($members as $media) {
+            $lat = $media->getGpsLat();
+            $lon = $media->getGpsLon();
+
+            if ($lat === null || $lon === null) {
+                continue;
             }
+
+            return MediaMath::haversineDistanceInMeters(
+                (float) $this->homeLat,
+                (float) $this->homeLon,
+                (float) $lat,
+                (float) $lon
+            ) / 1000.0;
         }
+
         return null;
     }
 }
