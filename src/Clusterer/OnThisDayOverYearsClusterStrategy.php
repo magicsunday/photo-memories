@@ -32,6 +32,14 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
         return 'on_this_day_over_years';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function beforeGrouping(): void
     {
         $now = new DateTimeImmutable('now', $this->timezone());
@@ -60,10 +68,6 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractTimezoneAwareGroup
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         $yearsMap = $this->uniqueLocalDateParts($members, 'Y');
         if (\count($yearsMap) < $this->minYears) {
             return null;

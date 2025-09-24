@@ -27,6 +27,14 @@ final class MonthlyHighlightsClusterStrategy extends AbstractTimezoneAwareGroupe
         return 'monthly_highlights';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $local->format('Y-m');
@@ -37,10 +45,6 @@ final class MonthlyHighlightsClusterStrategy extends AbstractTimezoneAwareGroupe
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         $days = $this->uniqueLocalDateParts($members, 'Y-m-d');
         if (\count($days) < $this->minDistinctDays) {
             return null;

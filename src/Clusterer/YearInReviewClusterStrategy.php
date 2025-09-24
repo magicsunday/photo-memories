@@ -27,6 +27,14 @@ final class YearInReviewClusterStrategy extends AbstractTimezoneAwareGroupedClus
         return 'year_in_review';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $local->format('Y');
@@ -37,10 +45,6 @@ final class YearInReviewClusterStrategy extends AbstractTimezoneAwareGroupedClus
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         $monthsMap = $this->uniqueLocalDateParts($members, 'n');
         if (\count($monthsMap) < $this->minDistinctMonths) {
             return null;

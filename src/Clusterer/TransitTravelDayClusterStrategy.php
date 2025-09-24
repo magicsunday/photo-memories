@@ -28,6 +28,14 @@ final class TransitTravelDayClusterStrategy extends AbstractTimezoneAwareGrouped
         return 'transit_travel_day';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minGpsSamples;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         if ($media->getGpsLat() === null || $media->getGpsLon() === null) {
@@ -42,10 +50,6 @@ final class TransitTravelDayClusterStrategy extends AbstractTimezoneAwareGrouped
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minGpsSamples) {
-            return null;
-        }
-
         \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         $distanceKm = 0.0;

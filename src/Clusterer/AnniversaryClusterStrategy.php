@@ -28,6 +28,14 @@ final class AnniversaryClusterStrategy extends AbstractTimezoneAwareGroupedClust
         return 'anniversary';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $local->format('m-d');
@@ -38,10 +46,6 @@ final class AnniversaryClusterStrategy extends AbstractTimezoneAwareGroupedClust
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         return $this->withMajorityPlace($members);
     }
 }

@@ -19,6 +19,14 @@ abstract class AbstractWeatherDayClusterStrategy extends AbstractTimezoneAwareGr
         parent::__construct($timezone);
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItemsPerDay();
+    }
+
     final protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $local->format('Y-m-d');
@@ -29,10 +37,6 @@ abstract class AbstractWeatherDayClusterStrategy extends AbstractTimezoneAwareGr
      */
     final protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItemsPerDay()) {
-            return null;
-        }
-
         $sum = 0.0;
         $count = 0;
 

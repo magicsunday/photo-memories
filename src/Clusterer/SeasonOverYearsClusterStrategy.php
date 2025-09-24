@@ -31,6 +31,14 @@ final class SeasonOverYearsClusterStrategy extends AbstractTimezoneAwareGroupedC
         return 'season_over_years';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $this->seasonInfo($local)['season'];
@@ -41,10 +49,6 @@ final class SeasonOverYearsClusterStrategy extends AbstractTimezoneAwareGroupedC
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         $yearsMap = $this->uniqueLocalDateParts($members, 'Y');
         if (\count($yearsMap) < $this->minYears) {
             return null;

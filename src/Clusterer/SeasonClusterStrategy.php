@@ -30,6 +30,14 @@ final class SeasonClusterStrategy extends AbstractTimezoneAwareGroupedClusterStr
         return 'season';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         $info = $this->seasonInfo($local);
@@ -42,10 +50,6 @@ final class SeasonClusterStrategy extends AbstractTimezoneAwareGroupedClusterStr
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         [$yearStr, $season] = \explode(':', $key, 2);
 
         return [

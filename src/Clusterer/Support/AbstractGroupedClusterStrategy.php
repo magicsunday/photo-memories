@@ -46,6 +46,11 @@ abstract class AbstractGroupedClusterStrategy implements ClusterStrategyInterfac
         $drafts = [];
 
         foreach ($groups as $key => $members) {
+            $minSize = $this->minimumGroupSize($key, $members);
+            if ($minSize > 0 && \count($members) < $minSize) {
+                continue;
+            }
+
             $params = $this->groupParams($key, $members);
             if ($params === null) {
                 continue;
@@ -65,6 +70,14 @@ abstract class AbstractGroupedClusterStrategy implements ClusterStrategyInterfac
     protected function shouldConsider(Media $media): bool
     {
         return true;
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return 0;
     }
 
     abstract protected function groupKey(Media $media): ?string;

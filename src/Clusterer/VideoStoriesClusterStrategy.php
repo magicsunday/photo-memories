@@ -26,6 +26,14 @@ final class VideoStoriesClusterStrategy extends AbstractTimezoneAwareGroupedClus
         return 'video_stories';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function shouldConsider(Media $media): bool
     {
         $mime = $media->getMime();
@@ -43,10 +51,6 @@ final class VideoStoriesClusterStrategy extends AbstractTimezoneAwareGroupedClus
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         return [];
     }
 }

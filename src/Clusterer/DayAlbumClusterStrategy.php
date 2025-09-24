@@ -26,6 +26,14 @@ final class DayAlbumClusterStrategy extends AbstractTimezoneAwareGroupedClusterS
         return 'day_album';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         return $local->format('Y-m-d');
@@ -36,10 +44,6 @@ final class DayAlbumClusterStrategy extends AbstractTimezoneAwareGroupedClusterS
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         return [
             'year' => (int) \substr($key, 0, 4),
         ];

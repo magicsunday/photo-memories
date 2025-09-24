@@ -26,6 +26,14 @@ final class DeviceSimilarityStrategy extends AbstractGroupedClusterStrategy
         return 'device_similarity';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function groupKey(Media $media): ?string
     {
         $date = $media->getTakenAt() instanceof DateTimeImmutable
@@ -40,10 +48,6 @@ final class DeviceSimilarityStrategy extends AbstractGroupedClusterStrategy
 
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         return $this->withMajorityPlace($members);
     }
 }

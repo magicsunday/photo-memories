@@ -28,6 +28,14 @@ final class HolidayEventClusterStrategy extends AbstractTimezoneAwareGroupedClus
         return 'holiday_event';
     }
 
+    /**
+     * @param list<Media> $members
+     */
+    protected function minimumGroupSize(string $key, array $members): int
+    {
+        return $this->minItems;
+    }
+
     protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
         $name = Calendar::germanFederalHolidayName($local);
@@ -43,10 +51,6 @@ final class HolidayEventClusterStrategy extends AbstractTimezoneAwareGroupedClus
      */
     protected function groupParams(string $key, array $members): ?array
     {
-        if (\count($members) < $this->minItems) {
-            return null;
-        }
-
         [$yearStr, ,] = \explode(':', $key, 3);
 
         return [
