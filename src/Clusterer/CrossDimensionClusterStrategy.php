@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\TimeGapSplitterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\GeoMath;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -16,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 68])]
 final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
 {
+    use TimeGapSplitterTrait;
+
     public function __construct(
         private readonly int $timeGapSeconds = 2 * 3600,   // 2h
         private readonly float $radiusMeters = 150.0,      // 150 m
@@ -48,26 +50,16 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
             return $a->getTakenAt() <=> $b->getTakenAt();
         });
 
+        $sessions = $this->splitIntoTimeGapSessions($withTime, $this->timeGapSeconds, $this->minItems);
+
         /** @var list<ClusterDraft> $out */
         $out = [];
-
-        /** @var list<Media> $buf */
-        $buf = [];
-        $lastTs = null;
-
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
-            }
-
-            // compute centroid from GPS-having items; if none, centroid (0,0)
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+        foreach ($sessions as $session) {
+            $gps = \array_values(\array_filter($session, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
             $centroid = $gps !== []
                 ? MediaMath::centroid($gps)
                 : ['lat' => 0.0, 'lon' => 0.0];
 
-            // Validate spatial compactness: max distance to centroid <= radius
             $ok = true;
             foreach ($gps as $m) {
                 $dist = MediaMath::haversineDistanceInMeters(
@@ -84,31 +76,17 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
             }
 
             if ($ok) {
-                $time = MediaMath::timeRange($buf);
+                $time = MediaMath::timeRange($session);
                 $out[] = new ClusterDraft(
-                    algorithm: 'cross_dimension',
+                    algorithm: $this->name(),
                     params: [
                         'time_range' => $time,
                     ],
                     centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                    members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                    members: \array_map(static fn (Media $m): int => $m->getId(), $session)
                 );
             }
-
-            $buf = [];
-        };
-
-        foreach ($withTime as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
-
-            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
-                $flush();
-            }
-
-            $buf[] = $m;
-            $lastTs = $ts;
         }
-        $flush();
 
         return $out;
     }

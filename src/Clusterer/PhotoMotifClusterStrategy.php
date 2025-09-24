@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\TimeGapSplitterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -26,6 +27,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 48])]
 final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
 {
+    use TimeGapSplitterTrait;
+
     public function __construct(
         private readonly int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
         private readonly int $minItems = 6
@@ -81,20 +84,13 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
 
             \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-            /** @var list<Media> $buf */
-            $buf = [];
-            $lastTs = null;
+            $sessions = $this->splitIntoTimeGapSessions($list, $this->sessionGapSeconds, $this->minItems);
 
-            $flush = function () use (&$buf, &$out, $key): void {
-                if (\count($buf) < $this->minItems) {
-                    $buf = [];
-                    return;
-                }
-
+            foreach ($sessions as $session) {
                 [$slug, $label] = \explode('|', $key, 2);
-                $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+                $gps = \array_values(\array_filter($session, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
                 $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-                $time = MediaMath::timeRange($buf);
+                $time = MediaMath::timeRange($session);
 
                 $out[] = new ClusterDraft(
                     algorithm: 'photo_motif',
@@ -104,21 +100,9 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
                         'time_range' => $time,
                     ],
                     centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                    members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                    members: \array_map(static fn (Media $m): int => $m->getId(), $session)
                 );
-
-                $buf = [];
-            };
-
-            foreach ($list as $m) {
-                $ts = (int) $m->getTakenAt()->getTimestamp();
-                if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
-                    $flush();
-                }
-                $buf[] = $m;
-                $lastTs = $ts;
             }
-            $flush();
         }
 
         return $out;

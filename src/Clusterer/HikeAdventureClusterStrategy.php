@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\TimeGapSplitterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -13,6 +14,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 74])]
 final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
 {
+    use TimeGapSplitterTrait;
+
     public function __construct(
         private readonly int $sessionGapSeconds = 3 * 3600,
         private readonly float $minDistanceKm = 6.0, // require at least ~6km if GPS is present
@@ -50,22 +53,13 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
             ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
+        $sessions = $this->splitIntoTimeGapSessions($cand, $this->sessionGapSeconds, $this->minItems);
+
         /** @var list<ClusterDraft> $out */
         $out = [];
-
-        /** @var list<Media> $buf */
-        $buf = [];
-        $last = null;
-
-        $flush = function () use (&$buf, &$out): void {
-            $n = \count($buf);
-            if ($n < $this->minItems) {
-                $buf = [];
-                return;
-            }
-
-            // If GPS available, require minimum traveled distance
-            $withGps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+        foreach ($sessions as $session) {
+            $n = \count($session);
+            $withGps = \array_values(\array_filter($session, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
 
             if ($withGps !== []) {
                 \usort($withGps, static fn (Media $a, Media $b): int =>
@@ -83,19 +77,14 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
                         ) / 1000.0;
                 }
                 if ($km < $this->minDistanceKm) {
-                    $buf = [];
-                    return;
+                    continue;
                 }
-            } else {
-                // No GPS: require more items to reduce false positives
-                if ($n < $this->minItemsNoGps) {
-                    $buf = [];
-                    return;
-                }
+            } elseif ($n < $this->minItemsNoGps) {
+                continue;
             }
 
-            $centroid = MediaMath::centroid($buf);
-            $time     = MediaMath::timeRange($buf);
+            $centroid = MediaMath::centroid($session);
+            $time     = MediaMath::timeRange($session);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -103,24 +92,9 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: \array_map(static fn (Media $m): int => $m->getId(), $session)
             );
-
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
-                continue;
-            }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $last = $ts;
         }
-        $flush();
 
         return $out;
     }

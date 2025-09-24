@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\TimeGapSplitterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 78])]
 final class SportsEventClusterStrategy implements ClusterStrategyInterface
 {
+    use TimeGapSplitterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 3 * 3600,
@@ -66,21 +69,14 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
             ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
+        $sessions = $this->splitIntoTimeGapSessions($cand, $this->sessionGapSeconds, $this->minItems);
+
         /** @var list<ClusterDraft> $out */
         $out = [];
-        /** @var list<Media> $buf */
-        $buf = [];
-        $last = null;
-
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
-            }
-            $gps = \array_values(\array_filter($buf, static fn(Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+        foreach ($sessions as $session) {
+            $gps = \array_values(\array_filter($session, static fn(Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
 
-            // compactness (stadium/arena)
             $ok = true;
             foreach ($gps as $m) {
                 $d = MediaMath::haversineDistanceInMeters(
@@ -93,11 +89,10 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
                 }
             }
             if ($ok === false) {
-                $buf = [];
-                return;
+                continue;
             }
 
-            $time = MediaMath::timeRange($buf);
+            $time = MediaMath::timeRange($session);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -105,23 +100,9 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                members: \array_map(static fn(Media $m): int => $m->getId(), $buf)
+                members: \array_map(static fn(Media $m): int => $m->getId(), $session)
             );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
-                continue;
-            }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $last = $ts;
         }
-        $flush();
 
         return $out;
     }

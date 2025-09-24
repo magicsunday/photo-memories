@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\TimeGapSplitterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 57])]
 final class GoldenHourClusterStrategy implements ClusterStrategyInterface
 {
+    use TimeGapSplitterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         /** Inclusive local hours considered golden-hour candidates. */
@@ -58,39 +61,23 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
 
         \usort($cand, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
+        $sessions = $this->splitIntoTimeGapSessions($cand, $this->sessionGapSeconds, $this->minItems);
+
         /** @var list<ClusterDraft> $out */
         $out = [];
-        /** @var list<Media> $buf */
-        $buf = [];
-        $lastTs = null;
+        foreach ($sessions as $session) {
+            $centroid = MediaMath::centroid($session);
+            $time     = MediaMath::timeRange($session);
 
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
-            }
-            $centroid = MediaMath::centroid($buf);
-            $time     = MediaMath::timeRange($buf);
             $out[] = new ClusterDraft(
-                algorithm: 'golden_hour',
+                algorithm: $this->name(),
                 params: [
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: \array_map(static fn (Media $m): int => $m->getId(), $session)
             );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
-            if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $lastTs = $ts;
         }
-        $flush();
 
         return $out;
     }
