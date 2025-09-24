@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 43])]
 final class AtHomeWeekdayClusterStrategy implements ClusterStrategyInterface
 {
+    use ConsecutiveDaysTrait;
+
     public function __construct(
         private readonly ?float $homeLat = null,
         private readonly ?float $homeLon = null,
@@ -159,15 +162,5 @@ final class AtHomeWeekdayClusterStrategy implements ClusterStrategyInterface
         $flush();
 
         return $out;
-    }
-
-    private function isNextDay(string $a, string $b): bool
-    {
-        $ta = \strtotime($a . ' 00:00:00');
-        $tb = \strtotime($b . ' 00:00:00');
-        if ($ta === false || $tb === false) {
-            return false;
-        }
-        return ($tb - $ta) === 86400;
     }
 }

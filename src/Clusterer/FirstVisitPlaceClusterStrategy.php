@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 83])]
 final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
 {
+    use ConsecutiveDaysTrait;
+
     public function __construct(
         private readonly float $gridDegrees = 0.01, // ~1.1 km in lat
         private readonly string $timezone = 'Europe/Berlin',
@@ -148,15 +151,5 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         $rlat = $gd * \floor($lat / $gd);
         $rlon = $gd * \floor($lon / $gd);
         return \sprintf('%.4f,%.4f', $rlat, $rlon);
-    }
-
-    private function isNextDay(string $a, string $b): bool
-    {
-        $ta = \strtotime($a . ' 00:00:00');
-        $tb = \strtotime($b . ' 00:00:00');
-        if ($ta === false || $tb === false) {
-            return false;
-        }
-        return ($tb - $ta) === 86400;
     }
 }
