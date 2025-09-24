@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
-use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
@@ -20,7 +19,6 @@ final class MediaLocationLinker
     public function __construct(
         private readonly ReverseGeocoderInterface $geocoder,
         private readonly LocationResolver $resolver,
-        private readonly EntityManagerInterface $em,
         private readonly LocationCellIndex $cellIndex,
         private readonly float $cellDeg = 0.01
     ) {

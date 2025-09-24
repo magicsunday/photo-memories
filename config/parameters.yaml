@@ -1,0 +1,103 @@
+########################################
+# Projekt-Parameter (zentral steuerbar)
+########################################
+parameters:
+    memories.index.image_ext: ['jpg','jpeg','jpe','jxl','avif','heic','heif','png','webp','gif','bmp','tiff','tif','cr2','cr3','nef','arw','rw2','raf','dng']
+    memories.index.video_ext: []
+#    memories.index.video_ext: ['mp4','m4v','mov','3gp','3g2','avi','mkv','webm']
+
+    # Hash Defaults
+    memories.hash.dct_sample: 32
+    memories.hash.lowfreq: 8
+
+    # Geocoding Defaults
+    memories.geocoding.nominatim.base_url: '%env(string:NOMINATIM_BASE_URL)%'
+    memories.geocoding.nominatim.email:    '%env(string:NOMINATIM_EMAIL)%'
+    memories.geocoding.nominatim.user_agent: 'Rueckblick/1.0'
+    memories.geocoding.nominatim.zoom: 14
+    memories.geocoding.delay_ms: 1200
+
+    # Thumbnail-Größen (px)
+    memories.thumbnail_sizes: [320, 1024]
+
+    # Consolidation Defaults
+    memories.cluster.consolidate.min_score: 0.30
+    memories.cluster.consolidate.min_size: 3
+    memories.cluster.consolidate.overlap_merge_threshold: 0.50
+    memories.cluster.consolidate.overlap_drop_threshold: 0.70
+    memories.cluster.consolidate.per_media_cap: 1
+    memories.cluster.consolidate.keep_order:
+        - 'long_trip'
+        - 'road_trip'
+        - 'transit_travel_day'
+        - 'weekend_trip'
+        - 'camping_trip'
+        - 'significant_place'
+        - 'first_visit_place'
+        - 'location_similarity'
+        - 'person_cohort'
+        - 'holiday_event'
+        - 'new_year_eve'
+        - 'sports_event'
+        - 'festival_summer'
+        - 'nightlife_event'
+        - 'cityscape_night'
+        - 'hike_adventure'
+        - 'zoo_aquarium'
+        - 'kids_birthday_party'
+        - 'cross_dimension'
+        - 'on_this_day_over_years'
+        - 'one_year_ago'
+        - 'anniversary'
+        - 'weekend_getaways_over_years'
+        - 'beach_over_years'
+        - 'camping_over_years'
+        - 'snow_vacation_over_years'
+        - 'museum_over_years'
+        - 'zoo_aquarium_over_years'
+        - 'season_over_years'
+        - 'this_month_over_years'
+        - 'year_in_review'
+        - 'monthly_highlights'
+        - 'season'
+        - 'golden_hour'
+        - 'sunny_day'
+        - 'snow_day'
+        - 'rainy_day'
+        - 'day_album'
+        - 'dining_out'
+        - 'morning_coffee'
+        - 'time_similarity'
+        - 'pet_moments'
+        - 'photo_motif'
+        - 'panorama'
+        - 'panorama_over_years'
+        - 'portrait_orientation'
+        - 'video_stories'
+        - 'at_home_weekend'
+        - 'at_home_weekday'
+        - 'device_similarity'
+        - 'phash_similarity'
+        - 'burst'
+    memories.cluster.consolidate.annotate_only:
+        - 'phash_similarity'
+        - 'burst'
+    memories.cluster.consolidate.min_unique_share:
+        photo_motif: 0.25
+        device_similarity: 0.40
+        panorama: 0.25
+        portrait_orientation: 0.25
+        video_stories: 0.25
+    memories.cluster.consolidate.require_valid_time: true
+    memories.cluster.consolidate.min_valid_year: 1990
+
+    # Scoring Defaults
+    memories.score.min_valid_year: 1995
+    memories.score.time_range.min_samples: 3
+    memories.score.time_range.min_coverage: 0.6
+
+    # Feed Defaults
+    memories.feed.min_score: 0.35
+    memories.feed.min_members: 4
+    memories.feed.max_per_day: 6
+    memories.feed.max_total: 60

@@ -24,11 +24,20 @@ final class CompositeClusterScorer
             'holiday' => 0.10,
             'recency' => 0.20,
         ],
+        /** @var array<string,float> $algorithmBoosts */
+        private readonly array $algorithmBoosts = [],
         private readonly float $qualityBaselineMegapixels = 12.0,
         private readonly int $minValidYear = 1990,
         private readonly int $timeRangeMinSamples = 3,
         private readonly float $timeRangeMinCoverage = 0.6
     ) {
+        foreach ($this->algorithmBoosts as $algorithm => $boost) {
+            if ($boost <= 0.0) {
+                throw new \InvalidArgumentException(
+                    \sprintf('Algorithm boost must be > 0.0, got %s => %f', (string) $algorithm, $boost)
+                );
+            }
+        }
     }
 
     /**
@@ -106,6 +115,13 @@ final class CompositeClusterScorer
                 $this->weights['novelty'] * $novelty +
                 $this->weights['holiday'] * $holiday +
                 $this->weights['recency'] * $recency;
+
+            $algorithm = $c->getAlgorithm();
+            $boost     = $this->algorithmBoosts[$algorithm] ?? 1.0;
+            if ($boost !== 1.0) {
+                $score *= $boost;
+                $c->setParam('score_algorithm_boost', $boost);
+            }
 
             $c->setParam('score', $score);
         }
