@@ -5,12 +5,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Aggregates panoramas across years; requires per-year minimum.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 46])]
 final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

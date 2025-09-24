@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Marks "travel days" by summing GPS path distance within the day.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 87])]
 final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

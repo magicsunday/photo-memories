@@ -5,12 +5,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Clusters panorama photos (very wide aspect ratio) into time sessions.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 47])]
 final class PanoramaClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

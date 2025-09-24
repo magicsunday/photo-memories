@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Heuristic "Golden Hour" clusters around morning/evening hours.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 57])]
 final class GoldenHourClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

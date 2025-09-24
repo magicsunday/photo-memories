@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Sports events based on keywords (stadium/match/club names) and weekend bias.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 78])]
 final class SportsEventClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

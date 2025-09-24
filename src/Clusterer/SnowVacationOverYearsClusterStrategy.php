@@ -8,12 +8,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Picks the best multi-day winter snow vacation per year and aggregates over years.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 63])]
 final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;

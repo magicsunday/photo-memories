@@ -6,13 +6,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Aggregates each season across multiple years into a memory
  * (e.g., "Sommer im Laufe der Jahre").
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
 final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

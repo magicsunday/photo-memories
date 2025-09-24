@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds New Year's Eve clusters (local night around Dec 31 → Jan 1).
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 79])]
 final class NewYearEveClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

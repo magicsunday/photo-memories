@@ -8,13 +8,11 @@ use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds "Sunny Day" clusters when weather hints indicate strong sunshine on a local day.
  * Priority: use sun_prob; fallback to 1 - cloud_cover; fallback to 1 - rain_prob.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 56])]
 final class SunnyDayClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

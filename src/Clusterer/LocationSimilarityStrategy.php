@@ -7,9 +7,7 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 81])]
 final class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;

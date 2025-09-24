@@ -6,13 +6,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups items captured within a short time & small spatial window.
  * Typical for bursts/series shots.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 95])]
 final class BurstClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Morning café/breakfast moments based on time and keywords, spatially compact.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 51])]
 final class MorningCoffeeClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

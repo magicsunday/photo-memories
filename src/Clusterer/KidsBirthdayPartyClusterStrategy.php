@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Detects kids' birthday parties based on keywords; compact time sessions.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 72])]
 final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * City night sessions: night hours & urban keywords, spatially compact.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 76])]
 final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

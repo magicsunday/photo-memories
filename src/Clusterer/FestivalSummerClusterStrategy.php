@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Outdoor festival/open-air sessions in summer months.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 77])]
 final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

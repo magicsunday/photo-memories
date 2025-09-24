@@ -8,13 +8,11 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds clusters for German (federal) holidays per year (no state-specific).
  * Simple exact-date grouping; minimal dependencies.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 79])]
 final class HolidayEventClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

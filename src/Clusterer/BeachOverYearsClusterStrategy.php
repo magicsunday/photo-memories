@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\KeywordBestDayOverYearsStrategy;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Picks the best "beach day" per year (based on filename keywords) and aggregates over years.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 63])]
 final class BeachOverYearsClusterStrategy extends KeywordBestDayOverYearsStrategy
 {
     public function __construct(

@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds "Snow Day" clusters using winter months and snow/ski keywords.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 55])]
 final class SnowDayClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

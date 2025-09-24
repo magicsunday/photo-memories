@@ -91,6 +91,60 @@ parameters:
     memories.cluster.consolidate.require_valid_time: true
     memories.cluster.consolidate.min_valid_year: 1990
 
+    # Cluster Strategy Priorities
+    memories.cluster.priority.anniversary_cluster_strategy: 64
+    memories.cluster.priority.at_home_weekday_cluster_strategy: 43
+    memories.cluster.priority.at_home_weekend_cluster_strategy: 44
+    memories.cluster.priority.beach_over_years_cluster_strategy: 63
+    memories.cluster.priority.burst_cluster_strategy: 95
+    memories.cluster.priority.camping_over_years_cluster_strategy: 63
+    memories.cluster.priority.camping_trip_cluster_strategy: 83
+    memories.cluster.priority.cityscape_night_cluster_strategy: 76
+    memories.cluster.priority.cross_dimension_cluster_strategy: 68
+    memories.cluster.priority.day_album_cluster_strategy: 53
+    memories.cluster.priority.device_similarity_strategy: 30
+    memories.cluster.priority.dining_out_cluster_strategy: 52
+    memories.cluster.priority.festival_summer_cluster_strategy: 77
+    memories.cluster.priority.first_visit_place_cluster_strategy: 83
+    memories.cluster.priority.golden_hour_cluster_strategy: 57
+    memories.cluster.priority.hike_adventure_cluster_strategy: 74
+    memories.cluster.priority.holiday_event_cluster_strategy: 79
+    memories.cluster.priority.kids_birthday_party_cluster_strategy: 72
+    memories.cluster.priority.location_similarity_strategy: 81
+    memories.cluster.priority.long_trip_cluster_strategy: 90
+    memories.cluster.priority.monthly_highlights_cluster_strategy: 59
+    memories.cluster.priority.morning_coffee_cluster_strategy: 51
+    memories.cluster.priority.museum_over_years_cluster_strategy: 62
+    memories.cluster.priority.new_year_eve_cluster_strategy: 79
+    memories.cluster.priority.nightlife_event_cluster_strategy: 75
+    memories.cluster.priority.on_this_day_over_years_cluster_strategy: 66
+    memories.cluster.priority.one_year_ago_cluster_strategy: 65
+    memories.cluster.priority.panorama_cluster_strategy: 47
+    memories.cluster.priority.panorama_over_years_cluster_strategy: 46
+    memories.cluster.priority.person_cohort_cluster_strategy: 80
+    memories.cluster.priority.pet_moments_cluster_strategy: 49
+    memories.cluster.priority.phash_similarity_strategy: 100
+    memories.cluster.priority.photo_motif_cluster_strategy: 48
+    memories.cluster.priority.portrait_orientation_cluster_strategy: 45
+    memories.cluster.priority.rainy_day_cluster_strategy: 54
+    memories.cluster.priority.road_trip_cluster_strategy: 88
+    memories.cluster.priority.season_cluster_strategy: 58
+    memories.cluster.priority.season_over_years_cluster_strategy: 62
+    memories.cluster.priority.significant_place_cluster_strategy: 82
+    memories.cluster.priority.snow_day_cluster_strategy: 55
+    memories.cluster.priority.snow_vacation_over_years_cluster_strategy: 63
+    memories.cluster.priority.sports_event_cluster_strategy: 78
+    memories.cluster.priority.sunny_day_cluster_strategy: 56
+    memories.cluster.priority.this_month_over_years_cluster_strategy: 178
+    memories.cluster.priority.time_similarity_strategy: 50
+    memories.cluster.priority.transit_travel_day_cluster_strategy: 87
+    memories.cluster.priority.video_stories_cluster_strategy: 41
+    memories.cluster.priority.weekend_getaways_over_years_cluster_strategy: 61
+    memories.cluster.priority.weekend_trip_cluster_strategy: 85
+    memories.cluster.priority.year_in_review_cluster_strategy: 60
+    memories.cluster.priority.zoo_aquarium_cluster_strategy: 73
+    memories.cluster.priority.zoo_aquarium_over_years_cluster_strategy: 62
+
     # Scoring Defaults
     memories.score.min_valid_year: 1995
     memories.score.time_range.min_samples: 3

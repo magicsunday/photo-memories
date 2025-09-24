@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups photos by local calendar day. Produces compact "Day Tour" clusters.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 53])]
 final class DayAlbumClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

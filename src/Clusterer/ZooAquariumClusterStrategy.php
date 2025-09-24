@@ -7,12 +7,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Clusters "Zoo & Aquarium" moments using filename/path keywords and compact time sessions.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 73])]
 final class ZooAquariumClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

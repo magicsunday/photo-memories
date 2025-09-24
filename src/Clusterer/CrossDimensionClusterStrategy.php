@@ -6,13 +6,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Clusters items that are both temporally and spatially close.
  * Sliding-session approach with time gap and radius constraints.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 68])]
 final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

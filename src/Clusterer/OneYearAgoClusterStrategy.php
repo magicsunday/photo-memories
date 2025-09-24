@@ -8,12 +8,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Builds a memory around the same date last year within a +/- window.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 65])]
 final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(

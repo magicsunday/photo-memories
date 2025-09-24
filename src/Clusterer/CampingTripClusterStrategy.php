@@ -8,12 +8,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Multi-day camping runs (consecutive days) using keywords.
  */
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 83])]
 final class CampingTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;

@@ -7,9 +7,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 64])]
 final class AnniversaryClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
