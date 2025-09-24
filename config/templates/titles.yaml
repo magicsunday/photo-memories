@@ -4,7 +4,7 @@ de:
         title: "Schnappschüsse"
         subtitle: "{{ date_range }}"
     day_album:
-        title: "Ein Tag in {{ city }}"
+        title: "Ein Tag in {{ place }}"
         subtitle: "{{ date_range }}"
     monthly_highlights:
         title: "Monatshighlights"
@@ -24,10 +24,10 @@ de:
 
     # Orte & Reisen
     location_similarity:
-        title: "Unterwegs in {{ city }}"
+        title: "Unterwegs in {{ place }}"
         subtitle: "{{ date_range }}"
     weekend_trip:
-        title: "Wochenendtrip nach {{ city }}"
+        title: "Wochenendtrip nach {{ place }}"
         subtitle: "{{ start_date }} – {{ end_date }}"
     weekend_getaways_over_years:
         title: "Wochenenden – durch die Jahre"

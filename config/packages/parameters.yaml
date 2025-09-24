@@ -13,11 +13,6 @@ parameters:
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
 
-    # Clustering Defaults
-    memories.cluster.time_gap_seconds: 21600     # 6h
-    memories.cluster.geo_radius_m: 150.0
-    memories.cluster.scene_min_similarity: 0.75
-
     # Consolidation Defaults
     memories.cluster.consolidate.min_score: 0.35      # je nach Scorer-Skala
     memories.cluster.consolidate.min_size: 4

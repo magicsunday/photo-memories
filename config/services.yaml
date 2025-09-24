@@ -178,8 +178,8 @@ services:
                 - 'burst'
             $overlapMergeThreshold: 0.50
             $overlapDropThreshold: 0.70
-            $perMediaCap: 2
-            $minScore: 0.0
+            $perMediaCap: 1
+            $minScore: 0.3
             $minSize: 3
             $annotateOnly:
                 - 'phash_similarity'
