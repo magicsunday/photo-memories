@@ -32,6 +32,7 @@ memories.md5
 images/
 
 # Coverage reports
+.coverage/
 coverage-report/
 coverage-report-xdebug/
 phpunit-*.xml
