@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -13,15 +11,13 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Collects videos into day-based stories (local time).
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 41])]
-final class VideoStoriesClusterStrategy extends AbstractGroupedClusterStrategy
+final class VideoStoriesClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezone;
-
     public function __construct(
         string $timezone = 'Europe/Berlin',
         private readonly int $minItems = 2
     ) {
-        $this->timezone = new DateTimeZone($timezone);
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -38,12 +34,12 @@ final class VideoStoriesClusterStrategy extends AbstractGroupedClusterStrategy
 
     protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
             return null;
         }
 
-        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+        return $local->format('Y-m-d');
     }
 
     /**

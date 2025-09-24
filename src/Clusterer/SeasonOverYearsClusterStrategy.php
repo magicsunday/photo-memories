@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\SeasonHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
 final class SeasonOverYearsClusterStrategy extends AbstractGroupedClusterStrategy
 {
+    use SeasonHelperTrait;
+
     public function __construct(
         private readonly int $minYears = 3,
         private readonly int $minItems = 30
@@ -33,14 +36,7 @@ final class SeasonOverYearsClusterStrategy extends AbstractGroupedClusterStrateg
             return null;
         }
 
-        $month = (int) $takenAt->format('n');
-
-        return match (true) {
-            $month >= 3 && $month <= 5  => 'Frühling',
-            $month >= 6 && $month <= 8  => 'Sommer',
-            $month >= 9 && $month <= 11 => 'Herbst',
-            default => 'Winter',
-        };
+        return $this->seasonInfo($takenAt)['season'];
     }
 
     /**

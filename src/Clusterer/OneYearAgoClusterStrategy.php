@@ -5,8 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -14,10 +13,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Builds a memory around the same date last year within a +/- window.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 65])]
-final class OneYearAgoClusterStrategy extends AbstractGroupedClusterStrategy
+final class OneYearAgoClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezoneObject;
-
     private DateTimeImmutable $windowStart;
 
     private DateTimeImmutable $windowEnd;
@@ -27,7 +24,7 @@ final class OneYearAgoClusterStrategy extends AbstractGroupedClusterStrategy
         private readonly int $windowDays = 3,
         private readonly int $minItems = 8
     ) {
-        $this->timezoneObject = new DateTimeZone($timezone);
+        parent::__construct($timezone);
         $this->windowStart = new DateTimeImmutable('@0');
         $this->windowEnd = new DateTimeImmutable('@0');
     }
@@ -39,7 +36,7 @@ final class OneYearAgoClusterStrategy extends AbstractGroupedClusterStrategy
 
     protected function beforeGrouping(): void
     {
-        $now = new DateTimeImmutable('now', $this->timezoneObject);
+        $now = new DateTimeImmutable('now', $this->timezone());
         $anchor = $now->sub(new DateInterval('P1Y'));
         $this->windowStart = $anchor->modify('-' . $this->windowDays . ' days');
         $this->windowEnd = $anchor->modify('+' . $this->windowDays . ' days');
@@ -47,12 +44,10 @@ final class OneYearAgoClusterStrategy extends AbstractGroupedClusterStrategy
 
     protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
             return null;
         }
-
-        $local = $takenAt->setTimezone($this->timezoneObject);
         if ($local < $this->windowStart || $local > $this->windowEnd) {
             return null;
         }

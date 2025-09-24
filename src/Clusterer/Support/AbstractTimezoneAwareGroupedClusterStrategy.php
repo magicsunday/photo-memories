@@ -1,0 +1,41 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Clusterer\Support;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use MagicSunday\Memories\Entity\Media;
+
+/**
+ * Adds reusable timezone handling helpers for grouped cluster strategies that
+ * need to work with local timestamps.
+ */
+abstract class AbstractTimezoneAwareGroupedClusterStrategy extends AbstractGroupedClusterStrategy
+{
+    private readonly DateTimeZone $timezone;
+
+    public function __construct(string $timezone = 'Europe/Berlin')
+    {
+        $this->timezone = new DateTimeZone($timezone);
+    }
+
+    protected function timezone(): DateTimeZone
+    {
+        return $this->timezone;
+    }
+
+    protected function takenAt(Media $media): ?DateTimeImmutable
+    {
+        $takenAt = $media->getTakenAt();
+
+        return $takenAt instanceof DateTimeImmutable ? $takenAt : null;
+    }
+
+    protected function localTakenAt(Media $media): ?DateTimeImmutable
+    {
+        $takenAt = $this->takenAt($media);
+
+        return $takenAt?->setTimezone($this->timezone);
+    }
+}

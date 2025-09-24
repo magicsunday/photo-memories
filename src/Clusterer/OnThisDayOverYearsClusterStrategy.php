@@ -4,8 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -14,10 +13,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Example: Feb-14 across 2014..2025 within a +/- window of days.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 66])]
-final class OnThisDayOverYearsClusterStrategy extends AbstractGroupedClusterStrategy
+final class OnThisDayOverYearsClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezoneObject;
-
     private int $anchorMonth = 1;
     private int $anchorDay = 1;
 
@@ -27,7 +24,7 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractGroupedClusterStra
         private readonly int $minYears = 3,
         private readonly int $minItems = 12
     ) {
-        $this->timezoneObject = new DateTimeZone($timezone);
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -37,19 +34,17 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractGroupedClusterStra
 
     protected function beforeGrouping(): void
     {
-        $now = new DateTimeImmutable('now', $this->timezoneObject);
+        $now = new DateTimeImmutable('now', $this->timezone());
         $this->anchorMonth = (int) $now->format('n');
         $this->anchorDay = (int) $now->format('j');
     }
 
     protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
             return null;
         }
-
-        $local = $takenAt->setTimezone($this->timezoneObject);
         $monthDistance = $this->monthDayDistance(
             $this->anchorMonth,
             $this->anchorDay,
@@ -73,7 +68,7 @@ final class OnThisDayOverYearsClusterStrategy extends AbstractGroupedClusterStra
             return null;
         }
 
-        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezoneObject);
+        $yearsMap = $this->uniqueDateParts($members, 'Y', $this->timezone());
         if (\count($yearsMap) < $this->minYears) {
             return null;
         }

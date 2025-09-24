@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -14,16 +12,14 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Marks "travel days" by summing GPS path distance within the day.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 87])]
-final class TransitTravelDayClusterStrategy extends AbstractGroupedClusterStrategy
+final class TransitTravelDayClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezone;
-
     public function __construct(
         string $timezone = 'Europe/Berlin',
         private readonly float $minTravelKm = 60.0,
         private readonly int $minGpsSamples = 5
     ) {
-        $this->timezone = new DateTimeZone($timezone);
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -33,15 +29,12 @@ final class TransitTravelDayClusterStrategy extends AbstractGroupedClusterStrate
 
     protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        $lat = $media->getGpsLat();
-        $lon = $media->getGpsLon();
-
-        if (!$takenAt instanceof DateTimeImmutable || $lat === null || $lon === null) {
+        $local = $this->localTakenAt($media);
+        if ($local === null || $media->getGpsLat() === null || $media->getGpsLon() === null) {
             return null;
         }
 
-        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+        return $local->format('Y-m-d');
     }
 
     /**

@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -13,15 +11,13 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Groups photos by local calendar day. Produces compact "Day Tour" clusters.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 53])]
-final class DayAlbumClusterStrategy extends AbstractGroupedClusterStrategy
+final class DayAlbumClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezone;
-
     public function __construct(
         string $timezone = 'Europe/Berlin',
         private readonly int $minItems = 8
     ) {
-        $this->timezone = new DateTimeZone($timezone);
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -31,12 +27,12 @@ final class DayAlbumClusterStrategy extends AbstractGroupedClusterStrategy
 
     protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
             return null;
         }
 
-        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+        return $local->format('Y-m-d');
     }
 
     /**

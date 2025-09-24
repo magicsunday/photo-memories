@@ -3,33 +3,29 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 
 /**
  * Shared base for single-day weather-based clustering strategies.
  */
-abstract class AbstractWeatherDayClusterStrategy extends AbstractGroupedClusterStrategy
+abstract class AbstractWeatherDayClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
-    private readonly DateTimeZone $timezone;
-
     public function __construct(
         protected readonly WeatherHintProviderInterface $weather,
         string $timezone = 'Europe/Berlin'
     ) {
-        $this->timezone = new DateTimeZone($timezone);
+        parent::__construct($timezone);
     }
 
     final protected function groupKey(Media $media): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
+        $local = $this->localTakenAt($media);
+        if ($local === null) {
             return null;
         }
 
-        return $takenAt->setTimezone($this->timezone)->format('Y-m-d');
+        return $local->format('Y-m-d');
     }
 
     /**
