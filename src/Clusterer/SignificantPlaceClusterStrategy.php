@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -16,6 +17,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 {
     public function __construct(
+        private readonly LocationHelper $locHelper,
         private readonly float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
         private readonly int $minVisitDays = 3,
         private readonly int $minItemsTotal = 20
@@ -68,13 +70,19 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
+            $params = [
+                'grid_cell'   => $cell,
+                'visit_days'  => \count($days),
+                'time_range'  => $time,
+            ];
+            $label = $this->locHelper->majorityLabel($list);
+            if ($label !== null) {
+                $params['place'] = $label;
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'grid_cell'   => $cell,
-                    'visit_days'  => \count($days),
-                    'time_range'  => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: \array_map(static fn (Media $m): int => $m->getId(), $list)
             );

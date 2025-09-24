@@ -110,7 +110,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'FirstVisitPlaceClusterStrategy' => [
             \MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy::class,
             'first_visit_place',
-            null,
+            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'GoldenHourClusterStrategy' => [
             \MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy::class,
@@ -241,7 +243,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'SignificantPlaceClusterStrategy' => [
             \MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy::class,
             'significant_place',
-            null,
+            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'SnowDayClusterStrategy' => [
             \MagicSunday\Memories\Clusterer\SnowDayClusterStrategy::class,

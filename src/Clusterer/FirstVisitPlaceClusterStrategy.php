@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -19,6 +20,7 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
     use ConsecutiveDaysTrait;
 
     public function __construct(
+        private readonly LocationHelper $locHelper,
         private readonly float $gridDegrees = 0.01, // ~1.1 km in lat
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 4,
@@ -90,15 +92,24 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                     return;
                 }
                 \usort($members, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+
                 $centroid = MediaMath::centroid($members);
                 $time     = MediaMath::timeRange($members);
 
+                $params = [
+                    'grid_cell'  => $cell,
+                    'time_range' => $time,
+                ];
+
+                $label = $this->locHelper->majorityLabel($members);
+
+                if ($label !== null) {
+                    $params['place'] = $label;
+                }
+
                 $out[] = new ClusterDraft(
                     algorithm: 'first_visit_place',
-                    params: [
-                        'grid_cell'  => $cell,
-                        'time_range' => $time,
-                    ],
+                    params: $params,
                     centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
                     members: \array_map(static fn(Media $m): int => $m->getId(), $members)
                 );
