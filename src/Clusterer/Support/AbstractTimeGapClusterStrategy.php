@@ -18,6 +18,7 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
     use ClusterBuildHelperTrait;
 
     private readonly DateTimeZone $timezone;
+    private ?string $currentGroupKey = null;
 
     public function __construct(
         string $timezone,
@@ -33,7 +34,10 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
      */
     final public function cluster(array $items): array
     {
-        $candidates = [];
+        $this->beforeGrouping();
+
+        /** @var array<string, list<Media>> $groups */
+        $groups = [];
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
@@ -46,47 +50,64 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
                 continue;
             }
 
-            $candidates[] = $media;
-        }
-
-        if (\count($candidates) < $this->minItems) {
-            return [];
-        }
-
-        \usort(
-            $candidates,
-            static fn (Media $a, Media $b): int => $a->getTakenAt()->getTimestamp() <=> $b->getTakenAt()->getTimestamp()
-        );
-
-        $this->onSessionReset();
-
-        $drafts = [];
-        $buffer = [];
-        $lastTimestamp = null;
-        $lastMedia = null;
-
-        foreach ($candidates as $media) {
-            $ts = $media->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
+            $groupKey = $this->groupKey($media, $local);
+            if ($groupKey === null) {
                 continue;
             }
 
-            if ($lastMedia !== null && $lastTimestamp !== null) {
-                $gap = $ts - $lastTimestamp;
-                if ($gap > $this->sessionGapSeconds || $this->shouldSplitSession($lastMedia, $media, $gap)) {
-                    $this->flushBuffer($buffer, $drafts);
-                    $lastMedia = null;
-                    $lastTimestamp = null;
-                }
-            }
-
-            $buffer[] = $media;
-            $this->onMediaAppended($media);
-            $lastTimestamp = $ts;
-            $lastMedia = $media;
+            $groups[$groupKey] ??= [];
+            $groups[$groupKey][] = $media;
         }
 
-        $this->flushBuffer($buffer, $drafts);
+        if ($groups === []) {
+            return [];
+        }
+
+        $drafts = [];
+
+        foreach ($groups as $key => $candidates) {
+            if (\count($candidates) < $this->minItems) {
+                continue;
+            }
+
+            \usort(
+                $candidates,
+                static fn (Media $a, Media $b): int => $a->getTakenAt()->getTimestamp() <=> $b->getTakenAt()->getTimestamp()
+            );
+
+            $this->currentGroupKey = $key;
+            $this->onSessionReset();
+
+            $buffer = [];
+            $lastTimestamp = null;
+            $lastMedia = null;
+
+            foreach ($candidates as $media) {
+                $ts = $media->getTakenAt()?->getTimestamp();
+                if ($ts === null) {
+                    continue;
+                }
+
+                if ($lastMedia !== null && $lastTimestamp !== null) {
+                    $gap = $ts - $lastTimestamp;
+                    if ($gap > $this->sessionGapSeconds || $this->shouldSplitSession($lastMedia, $media, $gap)) {
+                        $this->flushBuffer($buffer, $drafts);
+                        $lastMedia = null;
+                        $lastTimestamp = null;
+                    }
+                }
+
+                $buffer[] = $media;
+                $this->onMediaAppended($media);
+                $lastTimestamp = $ts;
+                $lastMedia = $media;
+            }
+
+            $this->flushBuffer($buffer, $drafts);
+            $this->onSessionReset();
+        }
+
+        $this->currentGroupKey = null;
 
         return $drafts;
     }
@@ -146,6 +167,21 @@ abstract class AbstractTimeGapClusterStrategy implements ClusterStrategyInterfac
     protected function sessionParams(array $members): array
     {
         return [];
+    }
+
+    protected function beforeGrouping(): void
+    {
+        // Default no-op.
+    }
+
+    protected function groupKey(Media $media, DateTimeImmutable $local): ?string
+    {
+        return '__default__';
+    }
+
+    protected function currentGroupKey(): ?string
+    {
+        return $this->currentGroupKey;
     }
 
     abstract protected function shouldConsider(Media $media, DateTimeImmutable $local): bool;

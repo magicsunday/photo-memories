@@ -39,9 +39,9 @@ final class LongTripClusterStrategy extends AbstractConsecutiveRunClusterStrateg
     /**
      * @param list<Media> $items
      */
-    protected function isDayEligible(string $day, array $items): bool
+    protected function isDayEligible(string $day, array $items, string $groupKey): bool
     {
-        if (!parent::isDayEligible($day, $items)) {
+        if (!parent::isDayEligible($day, $items, $groupKey)) {
             return false;
         }
 
@@ -71,7 +71,7 @@ final class LongTripClusterStrategy extends AbstractConsecutiveRunClusterStrateg
      * @param list<Media> $members
      * @return array<string, mixed>
      */
-    protected function runParams(array $run, array $daysMap, int $nights, array $members): array
+    protected function runParams(array $run, array $daysMap, int $nights, array $members, string $groupKey): array
     {
         return [
             'nights' => $nights,

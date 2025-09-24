@@ -18,6 +18,7 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
     use ClusterBuildHelperTrait;
 
     private readonly DateTimeZone $timezone;
+    private ?string $currentGroupKey = null;
 
     public function __construct(
         string $timezone,
@@ -43,51 +44,63 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
             return [];
         }
 
-        $daysMap = $this->buildDaysMap($items);
+        $this->beforeGrouping();
 
-        foreach ($daysMap as $day => $list) {
-            if (!$this->isDayEligible($day, $list)) {
-                unset($daysMap[$day]);
-            }
-        }
-
-        if ($daysMap === []) {
+        $grouped = $this->buildGroupedDaysMap($items);
+        if ($grouped === []) {
             return [];
         }
 
         $drafts = [];
-        $runs = $this->buildConsecutiveRuns($daysMap);
 
-        foreach ($runs as $run) {
-            $nights = \max(0, \count($run['days']) - 1);
-            if ($nights < $this->minNights || $nights > $this->maxNights) {
+        foreach ($grouped as $groupKey => $daysMap) {
+            foreach ($daysMap as $day => $list) {
+                if (!$this->isDayEligible($day, $list, $groupKey)) {
+                    unset($daysMap[$day]);
+                }
+            }
+
+            if ($daysMap === []) {
                 continue;
             }
 
-            $members = $run['items'];
-            if (\count($members) < $this->minItemsTotal) {
-                continue;
-            }
+            $this->currentGroupKey = $groupKey;
 
-            if (!$this->isRunValid($run, $daysMap, $nights, $members)) {
-                continue;
-            }
+            $runs = $this->buildRuns($daysMap, $groupKey);
 
-            $drafts[] = $this->buildClusterDraft(
-                $this->name(),
-                $members,
-                $this->runParams($run, $daysMap, $nights, $members)
-            );
+            foreach ($runs as $run) {
+                $nights = \max(0, \count($run['days']) - 1);
+                if ($nights < $this->minNights || $nights > $this->maxNights) {
+                    continue;
+                }
+
+                $members = $run['items'];
+                if (\count($members) < $this->minItemsTotal) {
+                    continue;
+                }
+
+                if (!$this->isRunValid($run, $daysMap, $nights, $members, $groupKey)) {
+                    continue;
+                }
+
+                $drafts[] = $this->buildClusterDraft(
+                    $this->name(),
+                    $members,
+                    $this->runParams($run, $daysMap, $nights, $members, $groupKey)
+                );
+            }
         }
+
+        $this->currentGroupKey = null;
 
         return $drafts;
     }
 
     /**
      * @param list<Media> $items
-     * @return array<string, list<Media>>
+     * @return array<string, array<string, list<Media>>>
      */
-    private function buildDaysMap(array $items): array
+    private function buildGroupedDaysMap(array $items): array
     {
         $map = [];
 
@@ -102,12 +115,23 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
                 continue;
             }
 
+            $groupKey = $this->groupKey($media, $local);
+            if ($groupKey === null) {
+                continue;
+            }
+
             $day = $local->format('Y-m-d');
-            $map[$day] ??= [];
-            $map[$day][] = $media;
+            $map[$groupKey] ??= [];
+            $map[$groupKey][$day] ??= [];
+            $map[$groupKey][$day][] = $media;
         }
 
         return $map;
+    }
+
+    protected function beforeGrouping(): void
+    {
+        // default no-op
     }
 
     protected function isEnabled(): bool
@@ -123,7 +147,7 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
     /**
      * @param list<Media> $items
      */
-    protected function isDayEligible(string $day, array $items): bool
+    protected function isDayEligible(string $day, array $items, string $groupKey): bool
     {
         return \count($items) >= $this->minItemsPerDay;
     }
@@ -133,7 +157,7 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
      * @param array<string, list<Media>> $daysMap
      * @param list<Media> $members
      */
-    protected function isRunValid(array $run, array $daysMap, int $nights, array $members): bool
+    protected function isRunValid(array $run, array $daysMap, int $nights, array $members, string $groupKey): bool
     {
         return true;
     }
@@ -144,9 +168,24 @@ abstract class AbstractConsecutiveRunClusterStrategy implements ClusterStrategyI
      * @param list<Media> $members
      * @return array<string, mixed>
      */
-    protected function runParams(array $run, array $daysMap, int $nights, array $members): array
+    protected function runParams(array $run, array $daysMap, int $nights, array $members, string $groupKey): array
     {
         return ['nights' => $nights];
+    }
+
+    protected function buildRuns(array $daysMap, string $groupKey): array
+    {
+        return $this->buildConsecutiveRuns($daysMap);
+    }
+
+    protected function groupKey(Media $media, DateTimeImmutable $local): ?string
+    {
+        return '__default__';
+    }
+
+    protected function currentGroupKey(): ?string
+    {
+        return $this->currentGroupKey;
     }
 
     protected function timezone(): DateTimeZone

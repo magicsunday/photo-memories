@@ -38,9 +38,9 @@ final class RoadTripClusterStrategy extends AbstractConsecutiveRunClusterStrateg
     /**
      * @param list<Media> $items
      */
-    protected function isDayEligible(string $day, array $items): bool
+    protected function isDayEligible(string $day, array $items, string $groupKey): bool
     {
-        if (!parent::isDayEligible($day, $items)) {
+        if (!parent::isDayEligible($day, $items, $groupKey)) {
             return false;
         }
 

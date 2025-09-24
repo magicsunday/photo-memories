@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimeGapClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -24,12 +24,17 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  *  - Action & Outdoor     → action_outdoor
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 48])]
-final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
+final class PhotoMotifClusterStrategy extends AbstractTimeGapClusterStrategy
 {
+    /** @var array<string, array{label: string, slug: string}> */
+    private array $motifMeta = [];
+
     public function __construct(
-        private readonly int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
-        private readonly int $minItems = 6
+        int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
+        int $minItems = 6,
+        string $timezone = 'UTC'
     ) {
+        parent::__construct($timezone, $sessionGapSeconds, $minItems);
     }
 
     public function name(): string
@@ -37,91 +42,44 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
         return 'photo_motif';
     }
 
-    /**
-     * @param list<Media> $items
-     * @return list<ClusterDraft>
-     */
-    public function cluster(array $items): array
+    protected function beforeGrouping(): void
     {
-        // Filter: need takenAt; images only (if mime present)
-        $pool = \array_values(\array_filter($items, static function (Media $m): bool {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                return false;
-            }
-            $mime = $m->getMime();
-            return $mime === null || \str_starts_with($mime, 'image/');
-        }));
+        $this->motifMeta = [];
+    }
 
-        if (\count($pool) < $this->minItems) {
+    protected function shouldConsider(Media $media, DateTimeImmutable $local): bool
+    {
+        $mime = $media->getMime();
+
+        return $media->getTakenAt() instanceof DateTimeImmutable
+            && ($mime === null || \str_starts_with($mime, 'image/'));
+    }
+
+    protected function groupKey(Media $media, DateTimeImmutable $local): ?string
+    {
+        $motif = $this->detectMotif($media);
+        if ($motif === null) {
+            return null;
+        }
+
+        $key = $motif['slug'] . '|' . $motif['label'];
+        $this->motifMeta[$key] = $motif;
+
+        return $key;
+    }
+
+    protected function sessionParams(array $members): array
+    {
+        $key = $this->currentGroupKey();
+
+        if ($key === null || !isset($this->motifMeta[$key])) {
             return [];
         }
 
-        // Assign motif per media
-        /** @var array<string, list<Media>> $byMotif */
-        $byMotif = [];
-        foreach ($pool as $m) {
-            $motif = $this->detectMotif($m);
-            if ($motif === null) {
-                continue;
-            }
-            $key = $motif['slug'] . '|' . $motif['label'];
-            $byMotif[$key] ??= [];
-            $byMotif[$key][] = $m;
-        }
-
-        /** @var list<ClusterDraft> $out */
-        $out = [];
-
-        // For each motif, form time sessions
-        foreach ($byMotif as $key => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
-
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-            /** @var list<Media> $buf */
-            $buf = [];
-            $lastTs = null;
-
-            $flush = function () use (&$buf, &$out, $key): void {
-                if (\count($buf) < $this->minItems) {
-                    $buf = [];
-                    return;
-                }
-
-                [$slug, $label] = \explode('|', $key, 2);
-                $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
-                $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-                $time = MediaMath::timeRange($buf);
-
-                $out[] = new ClusterDraft(
-                    algorithm: 'photo_motif',
-                    params: [
-                        'label'      => $label,
-                        'motif'      => $slug,
-                        'time_range' => $time,
-                    ],
-                    centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                    members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
-                );
-
-                $buf = [];
-            };
-
-            foreach ($list as $m) {
-                $ts = (int) $m->getTakenAt()->getTimestamp();
-                if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
-                    $flush();
-                }
-                $buf[] = $m;
-                $lastTs = $ts;
-            }
-            $flush();
-        }
-
-        return $out;
+        return [
+            'motif' => $this->motifMeta[$key]['slug'],
+            'label' => $this->motifMeta[$key]['label'],
+        ];
     }
 
     /**
