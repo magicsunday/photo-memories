@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\SeasonHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -14,13 +14,15 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Winter is Dec–Feb (December assigned to next year).
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 58])]
-final class SeasonClusterStrategy extends AbstractGroupedClusterStrategy
+final class SeasonClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
     use SeasonHelperTrait;
 
     public function __construct(
-        private readonly int $minItems = 20
+        private readonly int $minItems = 20,
+        string $timezone = 'Europe/Berlin'
     ) {
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -28,14 +30,9 @@ final class SeasonClusterStrategy extends AbstractGroupedClusterStrategy
         return 'season';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
-        }
-
-        $info = $this->seasonInfo($takenAt);
+        $info = $this->seasonInfo($local);
 
         return $info['seasonYear'] . ':' . $info['season'];
     }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -12,12 +12,14 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Builds one macro cluster per year if enough items exist.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 60])]
-final class YearInReviewClusterStrategy extends AbstractGroupedClusterStrategy
+final class YearInReviewClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
     public function __construct(
         private readonly int $minItems = 150,
-        private readonly int $minDistinctMonths = 5
+        private readonly int $minDistinctMonths = 5,
+        string $timezone = 'Europe/Berlin'
     ) {
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -25,14 +27,9 @@ final class YearInReviewClusterStrategy extends AbstractGroupedClusterStrategy
         return 'year_in_review';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
-        }
-
-        return $takenAt->format('Y');
+        return $local->format('Y');
     }
 
     /**
@@ -44,7 +41,7 @@ final class YearInReviewClusterStrategy extends AbstractGroupedClusterStrategy
             return null;
         }
 
-        $monthsMap = $this->uniqueDateParts($members, 'n');
+        $monthsMap = $this->uniqueLocalDateParts($members, 'n');
         if (\count($monthsMap) < $this->minDistinctMonths) {
             return null;
         }

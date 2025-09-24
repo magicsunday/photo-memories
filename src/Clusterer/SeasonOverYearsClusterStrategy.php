@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\SeasonHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -14,14 +14,16 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * (e.g., "Sommer im Laufe der Jahre").
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 62])]
-final class SeasonOverYearsClusterStrategy extends AbstractGroupedClusterStrategy
+final class SeasonOverYearsClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
     use SeasonHelperTrait;
 
     public function __construct(
         private readonly int $minYears = 3,
-        private readonly int $minItems = 30
+        private readonly int $minItems = 30,
+        string $timezone = 'Europe/Berlin'
     ) {
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -29,14 +31,9 @@ final class SeasonOverYearsClusterStrategy extends AbstractGroupedClusterStrateg
         return 'season_over_years';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
-        }
-
-        return $this->seasonInfo($takenAt)['season'];
+        return $this->seasonInfo($local)['season'];
     }
 
     /**
@@ -48,7 +45,7 @@ final class SeasonOverYearsClusterStrategy extends AbstractGroupedClusterStrateg
             return null;
         }
 
-        $yearsMap = $this->uniqueDateParts($members, 'Y');
+        $yearsMap = $this->uniqueLocalDateParts($members, 'Y');
         if (\count($yearsMap) < $this->minYears) {
             return null;
         }

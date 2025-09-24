@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -14,11 +14,13 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Simple exact-date grouping; minimal dependencies.
  */
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 79])]
-final class HolidayEventClusterStrategy extends AbstractGroupedClusterStrategy
+final class HolidayEventClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
     public function __construct(
-        private readonly int $minItems = 8
+        private readonly int $minItems = 8,
+        string $timezone = 'Europe/Berlin'
     ) {
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -26,19 +28,14 @@ final class HolidayEventClusterStrategy extends AbstractGroupedClusterStrategy
         return 'holiday_event';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
-        }
-
-        $name = Calendar::germanFederalHolidayName($takenAt);
+        $name = Calendar::germanFederalHolidayName($local);
         if ($name === null) {
             return null;
         }
 
-        return $takenAt->format('Y') . ':' . $name . ':' . $takenAt->format('Y-m-d');
+        return $local->format('Y') . ':' . $name . ':' . $local->format('Y-m-d');
     }
 
     /**

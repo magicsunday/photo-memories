@@ -4,21 +4,23 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Support\AbstractGroupedClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\AbstractTimezoneAwareGroupedClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\PlaceLabelHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('memories.cluster_strategy', attributes: ['priority' => 64])]
-final class AnniversaryClusterStrategy extends AbstractGroupedClusterStrategy
+final class AnniversaryClusterStrategy extends AbstractTimezoneAwareGroupedClusterStrategy
 {
     use PlaceLabelHelperTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
-        private readonly int $minItems = 3
+        private readonly int $minItems = 3,
+        string $timezone = 'Europe/Berlin'
     ) {
+        parent::__construct($timezone);
     }
 
     public function name(): string
@@ -26,14 +28,9 @@ final class AnniversaryClusterStrategy extends AbstractGroupedClusterStrategy
         return 'anniversary';
     }
 
-    protected function groupKey(Media $media): ?string
+    protected function localGroupKey(Media $media, DateTimeImmutable $local): ?string
     {
-        $takenAt = $media->getTakenAt();
-        if (!$takenAt instanceof DateTimeImmutable) {
-            return null;
-        }
-
-        return $takenAt->format('m-d');
+        return $local->format('m-d');
     }
 
     /**
