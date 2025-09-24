@@ -34,6 +34,9 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
+        /** @var array<string, string> $devices */
+        $devices = [];
+
         foreach ($items as $m) {
             $date   = $m->getTakenAt() instanceof DateTimeImmutable ? $m->getTakenAt()->format('Y-m-d') : 'ohne-datum';
             $device = $m->getCameraModel() ?? 'unbekannt';
@@ -42,16 +45,18 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
             $key = $device.'|'.$date.'|'.$locKey;
             $groups[$key] = $groups[$key] ?? [];
             $groups[$key][] = $m;
+            $devices[$key] = $device;
         }
 
         $drafts = [];
-        foreach ($groups as $group) {
+        foreach ($groups as $key => $group) {
             if (\count($group) < $this->minItems) {
                 continue;
             }
             $label = $this->locHelper->majorityLabel($group);
             $params = [
                 'time_range' => $this->computeTimeRange($group),
+                'device' => $devices[$key] ?? 'Unbekannt',
             ];
             if ($label !== null) {
                 $params['place'] = $label;
