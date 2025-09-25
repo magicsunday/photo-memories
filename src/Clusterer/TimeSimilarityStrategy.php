@@ -17,6 +17,12 @@ final class TimeSimilarityStrategy implements ClusterStrategyInterface
         private readonly int $maxGapSeconds = 21600,
         private readonly int $minItems = 5,
     ) {
+        if ($this->maxGapSeconds < 1) {
+            throw new \InvalidArgumentException('maxGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

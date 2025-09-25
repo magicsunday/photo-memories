@@ -17,6 +17,15 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItems   = 5,
         private readonly int $windowDays = 14
     ) {
+        if ($this->minPersons < 1) {
+            throw new \InvalidArgumentException('minPersons must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->windowDays < 0) {
+            throw new \InvalidArgumentException('windowDays must be >= 0.');
+        }
     }
 
     public function name(): string

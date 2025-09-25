@@ -16,6 +16,12 @@ final class YearInReviewClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItems = 150,
         private readonly int $minDistinctMonths = 5
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minDistinctMonths < 1 || $this->minDistinctMonths > 12) {
+            throw new \InvalidArgumentException('minDistinctMonths must be within 1..12.');
+        }
     }
 
     public function name(): string

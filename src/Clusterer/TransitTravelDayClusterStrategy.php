@@ -18,6 +18,12 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
         private readonly float $minTravelKm = 60.0,
         private readonly int $minGpsSamples = 5
     ) {
+        if ($this->minTravelKm <= 0.0) {
+            throw new \InvalidArgumentException('minTravelKm must be > 0.');
+        }
+        if ($this->minGpsSamples < 1) {
+            throw new \InvalidArgumentException('minGpsSamples must be >= 1.');
+        }
     }
 
     public function name(): string

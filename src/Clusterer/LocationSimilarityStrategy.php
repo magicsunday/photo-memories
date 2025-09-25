@@ -18,6 +18,15 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         private readonly int $minItems = 5,
         private readonly int $maxSpanHours = 24,
     ) {
+        if ($this->radiusMeters <= 0.0) {
+            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->maxSpanHours < 0) {
+            throw new \InvalidArgumentException('maxSpanHours must be >= 0.');
+        }
     }
 
     public function name(): string

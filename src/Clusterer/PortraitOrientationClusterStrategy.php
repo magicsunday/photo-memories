@@ -16,6 +16,15 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
         private readonly int $sessionGapSeconds = 2 * 3600,
         private readonly int $minItems = 4
     ) {
+        if ($this->minPortraitRatio <= 0.0) {
+            throw new \InvalidArgumentException('minPortraitRatio must be > 0.');
+        }
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

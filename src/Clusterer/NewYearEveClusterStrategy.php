@@ -20,6 +20,12 @@ final class NewYearEveClusterStrategy implements ClusterStrategyInterface
         private readonly int $endHour = 2,
         private readonly int $minItems = 6
     ) {
+        if ($this->startHour < 0 || $this->startHour > 23 || $this->endHour < 0 || $this->endHour > 23) {
+            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

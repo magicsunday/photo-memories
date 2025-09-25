@@ -24,8 +24,23 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
         private readonly int $minYears = 3,
         private readonly int $minItemsTotal = 30
     ) {
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+        if ($this->minNights < 1) {
+            throw new \InvalidArgumentException('minNights must be >= 1.');
+        }
+        if ($this->maxNights < 1) {
+            throw new \InvalidArgumentException('maxNights must be >= 1.');
+        }
         if ($this->maxNights < $this->minNights) {
             throw new \InvalidArgumentException('maxNights must be >= minNights.');
+        }
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 

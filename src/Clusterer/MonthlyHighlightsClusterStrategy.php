@@ -18,6 +18,12 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItems = 40,
         private readonly int $minDistinctDays = 10
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minDistinctDays < 1) {
+            throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
+        }
     }
 
     public function name(): string

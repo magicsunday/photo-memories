@@ -23,6 +23,18 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
         private readonly int $minNights = 3,       // => at least 4 days
         private readonly int $minItemsTotal = 40
     ) {
+        if ($this->minDailyKm <= 0.0) {
+            throw new \InvalidArgumentException('minDailyKm must be > 0.');
+        }
+        if ($this->minGpsSamplesPerDay < 1) {
+            throw new \InvalidArgumentException('minGpsSamplesPerDay must be >= 1.');
+        }
+        if ($this->minNights < 1) {
+            throw new \InvalidArgumentException('minNights must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
     }
 
     public function name(): string

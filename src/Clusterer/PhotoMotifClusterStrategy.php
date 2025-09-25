@@ -28,6 +28,12 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
         private readonly int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
         private readonly int $minItems = 6
     ) {
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

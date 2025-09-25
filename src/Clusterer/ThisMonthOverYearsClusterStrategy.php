@@ -19,6 +19,15 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
         private readonly int $minItems = 24,
         private readonly int $minDistinctDays = 8
     ) {
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minDistinctDays < 1) {
+            throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
+        }
     }
 
     public function name(): string

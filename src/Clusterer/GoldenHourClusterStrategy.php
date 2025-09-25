@@ -21,6 +21,22 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
         private readonly int $sessionGapSeconds = 90 * 60,
         private readonly int $minItems = 5
     ) {
+        if ($this->morningHours === [] || $this->eveningHours === []) {
+            throw new \InvalidArgumentException('Morning and evening hours must not be empty.');
+        }
+        foreach ([$this->morningHours, $this->eveningHours] as $hours) {
+            foreach ($hours as $hour) {
+                if (!\is_int($hour) || $hour < 0 || $hour > 23) {
+                    throw new \InvalidArgumentException('Hour values must be integers within 0..23.');
+                }
+            }
+        }
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

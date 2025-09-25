@@ -18,6 +18,9 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
     public function __construct(
         private readonly int $minItems = 8
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

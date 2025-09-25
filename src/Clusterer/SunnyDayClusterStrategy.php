@@ -22,6 +22,15 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItemsPerDay = 6,
         private readonly int $minHintsPerDay = 3
     ) {
+        if ($this->minAvgSunScore < 0.0 || $this->minAvgSunScore > 1.0) {
+            throw new \InvalidArgumentException('minAvgSunScore must be within 0..1.');
+        }
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+        if ($this->minHintsPerDay < 1) {
+            throw new \InvalidArgumentException('minHintsPerDay must be >= 1.');
+        }
     }
 
     public function name(): string

@@ -18,6 +18,15 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
         private readonly float $radiusMeters = 150.0,      // 150 m
         private readonly int $minItems = 6
     ) {
+        if ($this->timeGapSeconds < 1) {
+            throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
+        }
+        if ($this->radiusMeters <= 0.0) {
+            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

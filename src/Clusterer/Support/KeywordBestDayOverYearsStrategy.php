@@ -25,6 +25,18 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         private readonly int $minItemsTotal,
         private readonly array $keywords
     ) {
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
+        if ($this->keywords === []) {
+            throw new \InvalidArgumentException('keywords must not be empty.');
+        }
     }
 
     /**

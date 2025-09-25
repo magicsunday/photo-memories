@@ -20,6 +20,12 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
         private readonly float $minAvgRainProb = 0.6,  // 0..1
         private readonly int $minItemsPerDay = 6
     ) {
+        if ($this->minAvgRainProb < 0.0 || $this->minAvgRainProb > 1.0) {
+            throw new \InvalidArgumentException('minAvgRainProb must be within 0..1.');
+        }
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
     }
 
     public function name(): string
