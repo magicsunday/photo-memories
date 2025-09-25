@@ -105,6 +105,20 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
                 $params['place'] = $label;
             }
 
+            $poi = $this->locHelper->majorityPoiContext($list);
+            if ($poi !== null) {
+                $params['poi_label'] = $poi['label'];
+                if ($poi['categoryKey'] !== null) {
+                    $params['poi_category_key'] = $poi['categoryKey'];
+                }
+                if ($poi['categoryValue'] !== null) {
+                    $params['poi_category_value'] = $poi['categoryValue'];
+                }
+                if ($poi['tags'] !== []) {
+                    $params['poi_tags'] = $poi['tags'];
+                }
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,

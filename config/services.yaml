@@ -137,11 +137,26 @@ services:
     MagicSunday\Memories\Service\Geocoding\ReverseGeocoderInterface:
         alias: MagicSunday\Memories\Service\Geocoding\NominatimReverseGeocoder
 
+    MagicSunday\Memories\Service\Geocoding\OverpassClient:
+        arguments:
+            $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $baseUrl: '%memories.geocoding.overpass.base_url%'
+            $userAgent: '%memories.geocoding.nominatim.user_agent%'
+            $contactEmail: '%memories.geocoding.nominatim.email%'
+            $queryTimeout: '%memories.geocoding.overpass.timeout%'
+            $httpTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher:
+        arguments:
+            $radiusMeters: '%memories.geocoding.overpass.radius_m%'
+            $maxPois: '%memories.geocoding.overpass.max_pois%'
+
     MagicSunday\Memories\Service\Geocoding\LocationCellIndex: ~
 
     MagicSunday\Memories\Service\Geocoding\LocationResolver:
         arguments:
             $cellDeg: 0.01
+            $poiEnricher: '@MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher'
 
     MagicSunday\Memories\Service\Geocoding\MediaLocationLinker:
         arguments:
@@ -674,12 +689,13 @@ services:
     MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer:
         arguments:
             $weights:
-                quality: 0.22
-                people: 0.28
-                density: 0.12
-                novelty: 0.14
-                holiday: 0.08
-                recency: 0.16
+                quality: 0.20
+                people: 0.24
+                density: 0.11
+                novelty: 0.13
+                holiday: 0.07
+                recency: 0.15
+                poi: 0.10
             $algorithmBoosts:
                 long_trip: 1.30
                 road_trip: 1.25
@@ -733,6 +749,7 @@ services:
                 device_similarity: 0.82
                 phash_similarity: 0.55
                 burst: 0.55
+            $poiCategoryBoosts: '%memories.score.poi_category_boosts%'
             $qualityBaselineMegapixels: 12.0
             $minValidYear: '%memories.score.min_valid_year%'
             $timeRangeMinSamples: '%memories.score.time_range.min_samples%'

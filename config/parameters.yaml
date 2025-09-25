@@ -16,6 +16,10 @@ parameters:
     memories.geocoding.nominatim.user_agent: 'Rueckblick/1.0'
     memories.geocoding.nominatim.zoom: 14
     memories.geocoding.delay_ms: 1200
+    memories.geocoding.overpass.base_url: 'https://overpass-api.de/api'
+    memories.geocoding.overpass.timeout: 25
+    memories.geocoding.overpass.radius_m: 250
+    memories.geocoding.overpass.max_pois: 15
 
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
@@ -150,6 +154,20 @@ parameters:
     memories.score.min_valid_year: 1995
     memories.score.time_range.min_samples: 3
     memories.score.time_range.min_coverage: 0.6
+    memories.score.poi_category_boosts:
+        'tourism/*': 0.20
+        'tourism/museum': 0.30
+        'tourism/gallery': 0.22
+        'tourism/theme_park': 0.25
+        'leisure/park': 0.14
+        'leisure/playground': 0.12
+        'amenity/restaurant': 0.08
+        'amenity/cafe': 0.06
+        'historic/*': 0.18
+        'historic/castle': 0.22
+        'natural/beach': 0.20
+        'natural/viewpoint': 0.12
+        'shop/mall': 0.06
 
     # Feed Defaults
     memories.feed.min_score: 0.35

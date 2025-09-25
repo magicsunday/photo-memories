@@ -51,10 +51,18 @@ final class LocationHelper
             return null;
         }
 
-        $city   = $loc->getCity();
-        $county = $loc->getCounty();
-        $state  = $loc->getState();
-        $country= $loc->getCountry();
+        $poi = $this->primaryPoi($loc);
+        if ($poi !== null) {
+            $label = $poi['name'] ?? $poi['categoryValue'];
+            if ($label !== null) {
+                return $label;
+            }
+        }
+
+        $city    = $loc->getCity();
+        $county  = $loc->getCounty();
+        $state   = $loc->getState();
+        $country = $loc->getCountry();
 
         if ($city !== null) {
             return $city;
@@ -91,18 +99,27 @@ final class LocationHelper
      */
     public function majorityLabel(array $members): ?string
     {
+        $poiContext = $this->majorityPoiContext($members);
+        if ($poiContext !== null) {
+            return $poiContext['label'];
+        }
+
         /** @var array<string,int> $count */
         $count = [];
         foreach ($members as $m) {
             $label = $this->labelForMedia($m);
-            if ($label !== null) {
-                $count[$label] = ($count[$label] ?? 0) + 1;
+            if ($label === null) {
+                continue;
             }
+            $count[$label] = ($count[$label] ?? 0) + 1;
         }
+
         if ($count === []) {
             return null;
         }
+
         \arsort($count, \SORT_NUMERIC);
+
         return \array_key_first($count);
     }
 
@@ -114,5 +131,125 @@ final class LocationHelper
         $ka = $this->localityKeyForMedia($a);
         $kb = $this->localityKeyForMedia($b);
         return $ka !== null && $kb !== null && $ka === $kb;
+    }
+
+    /**
+     * Returns metadata about the dominant POI within a media collection.
+     *
+     * @param list<Media> $members
+     * @return array{label:string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     */
+    public function majorityPoiContext(array $members): ?array
+    {
+        /** @var array<string,array{label:string, categoryKey:?string, categoryValue:?string, tags:array<string,string>, count:int}> $counts */
+        $counts = [];
+
+        foreach ($members as $m) {
+            $loc = $m->getLocation();
+            if (!$loc instanceof Location) {
+                continue;
+            }
+
+            $poi = $this->primaryPoi($loc);
+            if ($poi === null) {
+                continue;
+            }
+
+            $label = $poi['name'] ?? $poi['categoryValue'];
+            if ($label === null) {
+                continue;
+            }
+
+            $catKey   = $poi['categoryKey'] ?? null;
+            $catValue = $poi['categoryValue'] ?? null;
+            $key = \strtolower($label.'|'.($catKey ?? '').'|'.($catValue ?? ''));
+
+            if (!isset($counts[$key])) {
+                $counts[$key] = [
+                    'label'        => $label,
+                    'categoryKey'  => $catKey,
+                    'categoryValue'=> $catValue,
+                    'tags'         => [],
+                    'count'        => 0,
+                ];
+            }
+
+            $counts[$key]['count']++;
+
+            foreach ($poi['tags'] as $tagKey => $tagValue) {
+                if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
+                    $counts[$key]['tags'][$tagKey] = $tagValue;
+                }
+            }
+        }
+
+        if ($counts === []) {
+            return null;
+        }
+
+        \uasort(
+            $counts,
+            static function (array $a, array $b): int {
+                $cmp = $b['count'] <=> $a['count'];
+                if ($cmp !== 0) {
+                    return $cmp;
+                }
+
+                return \strcmp($a['label'], $b['label']);
+            }
+        );
+
+        $top = \reset($counts);
+
+        return [
+            'label'        => $top['label'],
+            'categoryKey'  => $top['categoryKey'],
+            'categoryValue'=> $top['categoryValue'],
+            'tags'         => $top['tags'],
+        ];
+    }
+
+    /**
+     * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     */
+    private function primaryPoi(Location $loc): ?array
+    {
+        $pois = $loc->getPois();
+        if (!\is_array($pois) || $pois === []) {
+            return null;
+        }
+
+        foreach ($pois as $poi) {
+            if (!\is_array($poi)) {
+                continue;
+            }
+
+            $name          = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
+            $categoryKey   = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
+            $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
+
+            if ($name === null && $categoryValue === null) {
+                continue;
+            }
+
+            $tags = [];
+            $rawTags = $poi['tags'] ?? null;
+            if (\is_array($rawTags)) {
+                foreach ($rawTags as $tagKey => $tagValue) {
+                    if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
+                        $tags[$tagKey] = $tagValue;
+                    }
+                }
+            }
+
+            return [
+                'name'          => $name,
+                'categoryKey'   => $categoryKey,
+                'categoryValue' => $categoryValue,
+                'tags'          => $tags,
+            ];
+        }
+
+        return null;
     }
 }
