@@ -298,7 +298,9 @@ services:
     # --- Social celebrations & people ---
     MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy:
         arguments:
-            $minItems: 3
+            $minItems: 5
+            $minDistinctYears: 10
+            $maxClusters: 30
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.anniversary_cluster_strategy%' }
 

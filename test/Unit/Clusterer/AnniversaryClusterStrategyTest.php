@@ -93,6 +93,114 @@ final class AnniversaryClusterStrategyTest extends TestCase
         self::assertSame([], $clusters);
     }
 
+    #[Test]
+    public function enforcesMinimumDistinctYears(): void
+    {
+        $strategy = new AnniversaryClusterStrategy(new LocationHelper(), minItems: 3, minDistinctYears: 3);
+
+        $location = $this->createLocation(city: 'Munich');
+        $mediaItems = [
+            $this->createMedia(
+                id: 30,
+                takenAt: '2020-07-04 09:00:00',
+                lat: 48.1371,
+                lon: 11.5754,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 31,
+                takenAt: '2021-07-04 10:00:00',
+                lat: 48.1372,
+                lon: 11.5755,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 32,
+                takenAt: '2021-07-04 11:00:00',
+                lat: 48.1373,
+                lon: 11.5756,
+                location: $location,
+            ),
+        ];
+
+        self::assertSame([], $strategy->cluster($mediaItems));
+
+        $mediaItems[] = $this->createMedia(
+            id: 33,
+            takenAt: '2022-07-04 09:30:00',
+            lat: 48.1374,
+            lon: 11.5753,
+            location: $location,
+        );
+
+        $clusters = $strategy->cluster($mediaItems);
+        self::assertCount(1, $clusters);
+        self::assertSame([30, 31, 32, 33], $clusters[0]->getMembers());
+    }
+
+    #[Test]
+    public function limitsClustersToConfiguredMaximum(): void
+    {
+        $strategy = new AnniversaryClusterStrategy(new LocationHelper(), minItems: 3, minDistinctYears: 1, maxClusters: 1);
+
+        $location = $this->createLocation(city: 'Cologne');
+        $mediaItems = [
+            $this->createMedia(
+                id: 40,
+                takenAt: '2018-01-01 08:00:00',
+                lat: 50.9375,
+                lon: 6.9603,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 41,
+                takenAt: '2019-01-01 08:15:00',
+                lat: 50.9376,
+                lon: 6.9604,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 42,
+                takenAt: '2020-01-01 08:30:00',
+                lat: 50.9377,
+                lon: 6.9605,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 43,
+                takenAt: '2021-01-01 08:45:00',
+                lat: 50.9378,
+                lon: 6.9606,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 44,
+                takenAt: '2018-02-02 08:00:00',
+                lat: 50.9375,
+                lon: 6.9603,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 45,
+                takenAt: '2019-02-02 08:15:00',
+                lat: 50.9376,
+                lon: 6.9604,
+                location: $location,
+            ),
+            $this->createMedia(
+                id: 46,
+                takenAt: '2020-02-02 08:30:00',
+                lat: 50.9377,
+                lon: 6.9605,
+                location: $location,
+            ),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+        self::assertCount(1, $clusters);
+        self::assertSame([40, 41, 42, 43], $clusters[0]->getMembers());
+    }
+
     private function createMedia(int $id, string $takenAt, float $lat, float $lon, Location $location): Media
     {
         $media = new Media(

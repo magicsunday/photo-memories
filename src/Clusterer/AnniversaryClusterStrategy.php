@@ -7,7 +7,6 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * Groups media into anniversary clusters.
@@ -15,10 +14,12 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * The strategy scans all provided media and groups those that were taken on the
  * same calendar day, regardless of the year, so that it can highlight "on this
  * day" memories. Each qualifying day must contain at least the configured minimum
- * number of media items to form a cluster. For each resulting cluster the
- * strategy computes descriptive metadata such as a majority place label, a time
- * range, and the geographical centroid of all members using helper methods from
- * {@see ClusterBuildHelperTrait}.
+ * number of media items to form a cluster. Optional guards can demand a minimum
+ * amount of distinct years, and a configurable cap keeps only the most
+ * meaningful anniversaries based on a scoring model that favours recurring and
+ * media-rich days. For each resulting cluster the strategy computes descriptive
+ * metadata such as a majority place label, a time range, and the geographical
+ * centroid of all members using helper methods from {@see ClusterBuildHelperTrait}.
  */
 final class AnniversaryClusterStrategy implements ClusterStrategyInterface
 {
@@ -32,10 +33,20 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
      */
     public function __construct(
         private readonly LocationHelper $locHelper,
-        private readonly int $minItems = 3
+        private readonly int $minItems = 3,
+        private readonly int $minDistinctYears = 1,
+        private readonly int $maxClusters = 0
     ) {
         if ($this->minItems < 1) {
             throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+
+        if ($this->minDistinctYears < 1) {
+            throw new \InvalidArgumentException('minDistinctYears must be >= 1.');
+        }
+
+        if ($this->maxClusters < 0) {
+            throw new \InvalidArgumentException('maxClusters must be >= 0.');
         }
     }
 
@@ -74,12 +85,69 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
             }
         }
 
-        $drafts = [];
-        foreach ($byMonthDay as $group) {
-            if (\count($group) < $this->minItems) {
-                // Ignore sparse groups because they do not produce meaningful anniversary stories.
+        // Ignore sparse groups because they do not produce meaningful anniversary stories.
+        $filteredGroups = \array_filter(
+            $byMonthDay,
+            fn (array $group): bool => \count($group) >= $this->minItems
+        );
+
+        $scoredGroups = [];
+
+        foreach ($filteredGroups as $group) {
+            $years = [];
+            foreach ($group as $media) {
+                $takenAt = $media->getTakenAt();
+                if ($takenAt instanceof DateTimeImmutable) {
+                    $year = (int) $takenAt->format('Y');
+                    $years[$year] = ($years[$year] ?? 0) + 1;
+                }
+            }
+
+            $distinctYears = \count($years);
+            if ($distinctYears < $this->minDistinctYears) {
                 continue;
             }
+
+            $total = \count($group);
+            $spanYears = 0;
+            if ($distinctYears > 0) {
+                /** @var list<int> $yearKeys */
+                $yearKeys = array_keys($years);
+                $spanYears = max($yearKeys) - min($yearKeys) + 1;
+            }
+
+            $maxPerYear = $years === [] ? 0 : max($years);
+            $averagePerYear = $distinctYears === 0 ? 0.0 : $total / $distinctYears;
+
+            // Weight recurring anniversaries stronger than one-off bursts while still
+            // favouring days that contain many media overall.
+            $score = (int) round(
+                ($total * 5)
+                + ($distinctYears * 10)
+                + ($averagePerYear * 3)
+                + ($spanYears * 2)
+                + $maxPerYear
+            );
+
+            $scoredGroups[] = [
+                'group' => $group,
+                'score' => $score,
+            ];
+        }
+
+        usort(
+            $scoredGroups,
+            static fn (array $left, array $right): int => $right['score'] <=> $left['score']
+        );
+
+        if ($this->maxClusters > 0 && \count($scoredGroups) > $this->maxClusters) {
+            $scoredGroups = \array_slice($scoredGroups, 0, $this->maxClusters);
+        }
+
+        $drafts = [];
+        foreach ($scoredGroups as $entry) {
+            /** @var list<Media> $group */
+            $group = $entry['group'];
             $label = $this->locHelper->majorityLabel($group);
 
             $params = [
