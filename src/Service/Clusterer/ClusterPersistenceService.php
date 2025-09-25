@@ -141,4 +141,30 @@ final class ClusterPersistenceService
         }
         return $out;
     }
+
+    /**
+     * Remove all persisted clusters for the provided algorithm list.
+     *
+     * @param list<string> $algorithms
+     */
+    public function deleteByAlgorithms(array $algorithms): int
+    {
+        if ($algorithms === []) {
+            return 0;
+        }
+
+        $uniqueAlgorithms = \array_values(\array_unique($algorithms));
+
+        $q = $this->em->createQueryBuilder()
+            ->delete(Cluster::class, 'c')
+            ->where('c.algorithm IN (:algs)')
+            ->setParameter('algs', $uniqueAlgorithms)
+            ->getQuery();
+
+        $deleted = (int) $q->execute();
+
+        $this->em->clear();
+
+        return $deleted;
+    }
 }

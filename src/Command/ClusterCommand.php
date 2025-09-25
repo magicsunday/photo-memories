@@ -39,15 +39,17 @@ final class ClusterCommand extends Command
         $this
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur berechnen, nicht speichern')
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl Medien', null)
-            ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD)', null);
+            ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD)', null)
+            ->addOption('replace', null, InputOption::VALUE_NONE, 'Bestehende Cluster vor dem Speichern löschen');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io     = new SymfonyStyle($input, $output);
-        $dryRun = (bool) $input->getOption('dry-run');
-        $limit  = $input->getOption('limit');
-        $since  = $input->getOption('since');
+        $io       = new SymfonyStyle($input, $output);
+        $dryRun   = (bool) $input->getOption('dry-run');
+        $limit    = $input->getOption('limit');
+        $since    = $input->getOption('since');
+        $replace  = (bool) $input->getOption('replace');
 
         $io->title('🧠 Memories: Cluster erstellen');
 
@@ -193,6 +195,15 @@ final class ClusterCommand extends Command
         // 3) Persistieren
         $io->section($dryRun ? 'Persistieren (Trockenlauf)' : 'Persistieren');
 
+        if ($replace && !$dryRun) {
+            $algorithms = $this->collectAlgorithms($drafts);
+
+            if ($algorithms !== []) {
+                $deleted = $this->persistence->deleteByAlgorithms($algorithms);
+                $io->info(\sprintf('%d bestehende Cluster gelöscht.', $deleted));
+            }
+        }
+
         $persistSection = $output->section();
         $persistBar     = $this->makeBar($persistSection, \count($drafts), '💾 Speichern');
         $persistStart   = \microtime(true);
@@ -219,6 +230,22 @@ final class ClusterCommand extends Command
         $io->success(\sprintf('%d Cluster gespeichert.', $persisted));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<string>
+     */
+    private function collectAlgorithms(array $drafts): array
+    {
+        $algorithms = [];
+
+        foreach ($drafts as $draft) {
+            $algorithms[$draft->getAlgorithm()] = true;
+        }
+
+        return \array_keys($algorithms);
     }
 
     /**
