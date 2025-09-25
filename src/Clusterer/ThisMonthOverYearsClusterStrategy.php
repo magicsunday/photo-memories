@@ -45,26 +45,31 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
         $now  = new DateTimeImmutable('now', $tz);
         $mon  = (int) $now->format('n');
 
-        /** @var list<Media> $picked */
-        $picked = [];
-        /** @var array<int,bool> $years */
+        /** @var array<int, true> $years */
         $years = [];
-        /** @var array<string,bool> $days */
+        /** @var array<string, true> $days */
         $days = [];
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+        /** @var list<Media> $picked */
+        $picked = \array_values(\array_filter(
+            $items,
+            static function (Media $m) use ($tz, $mon, &$years, &$days): bool {
+                $takenAt = $m->getTakenAt();
+                if (!$takenAt instanceof DateTimeImmutable) {
+                    return false;
+                }
+
+                $local = $takenAt->setTimezone($tz);
+                if ((int) $local->format('n') !== $mon) {
+                    return false;
+                }
+
+                $years[(int) $local->format('Y')] = true;
+                $days[$local->format('Y-m-d')]    = true;
+
+                return true;
             }
-            $local = $t->setTimezone($tz);
-            if ((int) $local->format('n') !== $mon) {
-                continue;
-            }
-            $picked[] = $m;
-            $years[(int) $local->format('Y')] = true;
-            $days[$local->format('Y-m-d')]    = true;
-        }
+        ));
 
         if (\count($picked) < $this->minItems || \count($years) < $this->minYears || \count($days) < $this->minDistinctDays) {
             return [];

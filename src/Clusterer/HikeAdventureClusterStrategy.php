@@ -43,14 +43,11 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $t  = $m->getTakenAt();
-            $pl = \strtolower($m->getPath());
-            if ($t !== null && $this->looksHike($pl)) {
-                $cand[] = $m;
-            }
-        }
+        $cand = \array_values(\array_filter(
+            $items,
+            fn (Media $m): bool => $m->getTakenAt() !== null
+                && $this->looksHike(\strtolower($m->getPath()))
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

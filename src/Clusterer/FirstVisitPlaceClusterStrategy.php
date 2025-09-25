@@ -81,7 +81,16 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         $out = [];
 
         foreach ($cellDayMap as $cell => $daysMap) {
-            $days = \array_keys($daysMap);
+            $eligibleDaysMap = \array_filter(
+                $daysMap,
+                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+            );
+
+            if ($eligibleDaysMap === []) {
+                continue;
+            }
+
+            $days = \array_keys($eligibleDaysMap);
             \sort($days, \SORT_STRING);
 
             // find earliest run satisfying constraints
@@ -89,14 +98,14 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
             $runDays = [];
             $prev = null;
 
-            $flush = function () use (&$runDays, &$out, $daysMap, $cell): void {
+            $flush = function () use (&$runDays, &$out, $eligibleDaysMap, $cell): void {
                 if (\count($runDays) === 0) {
                     return;
                 }
                 /** @var list<Media> $members */
                 $members = [];
                 foreach ($runDays as $d) {
-                    foreach ($daysMap[$d] as $m) {
+                    foreach ($eligibleDaysMap[$d] as $m) {
                         $members[] = $m;
                     }
                 }
@@ -133,15 +142,6 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
             /** iterate and pick the first qualifying run */
             $haveFirst = false;
             foreach ($days as $d) {
-                // day must meet per-day min items
-                if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                    // break potential run
-                    if ($haveFirst === false) {
-                        $runDays = [];
-                        $prev = null;
-                    }
-                    continue;
-                }
                 // consecutive day logic
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     // check previous run

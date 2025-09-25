@@ -59,48 +59,63 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+        );
+
+        /** @var array<string, float> $avgRain */
+        $avgRain = [];
+        $rainyDays = \array_filter(
+            $eligibleDays,
+            function (array $list, string $day) use (&$avgRain): bool {
+                $sum = 0.0;
+                $n   = 0;
+
+                foreach ($list as $m) {
+                    $hint = $this->weather->getHint($m);
+                    if ($hint === null) {
+                        continue;
+                    }
+                    $p = (float) ($hint['rain_prob'] ?? 0.0);
+                    if ($p < 0.0) { $p = 0.0; }
+                    if ($p > 1.0) { $p = 1.0; }
+
+                    $sum += $p;
+                    $n++;
+                }
+
+                if ($n === 0) {
+                    return false;
+                }
+
+                $avg = $sum / (float) $n;
+                if ($avg < $this->minAvgRainProb) {
+                    return false;
+                }
+
+                $avgRain[$day] = $avg;
+
+                return true;
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        if ($rainyDays === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minItemsPerDay) {
-                continue;
-            }
-
-            $sum = 0.0;
-            $n   = 0;
-
-            foreach ($list as $m) {
-                $hint = $this->weather->getHint($m);
-                if ($hint === null) {
-                    continue;
-                }
-                $p = (float) ($hint['rain_prob'] ?? 0.0);
-                // Clamp just in case provider goes beyond [0..1]
-                if ($p < 0.0) { $p = 0.0; }
-                if ($p > 1.0) { $p = 1.0; }
-
-                $sum += $p;
-                $n++;
-            }
-
-            if ($n === 0) {
-                // no usable hints for that day
-                continue;
-            }
-
-            $avg = $sum / (float) $n;
-            if ($avg < $this->minAvgRainProb) {
-                continue;
-            }
-
+        foreach ($rainyDays as $day => $list) {
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'rain_prob'   => $avg,
+                    'rain_prob'   => $avgRain[$day],
                     'time_range'  => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],

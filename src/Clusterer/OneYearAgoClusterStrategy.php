@@ -44,18 +44,19 @@ final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
         $anchorEnd   = $now->sub(new DateInterval('P1Y'))->modify('+' . $this->windowDays . ' days');
 
         /** @var list<Media> $picked */
-        $picked = [];
+        $picked = \array_values(\array_filter(
+            $items,
+            static function (Media $m) use ($tz, $anchorStart, $anchorEnd): bool {
+                $takenAt = $m->getTakenAt();
+                if (!$takenAt instanceof DateTimeImmutable) {
+                    return false;
+                }
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+                $local = $takenAt->setTimezone($tz);
+
+                return $local >= $anchorStart && $local <= $anchorEnd;
             }
-            $local = $t->setTimezone($tz);
-            if ($local >= $anchorStart && $local <= $anchorEnd) {
-                $picked[] = $m;
-            }
-        }
+        ));
 
         if (\count($picked) < $this->minItems) {
             return [];

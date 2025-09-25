@@ -48,22 +48,36 @@ final class YearInReviewClusterStrategy implements ClusterStrategyInterface
             $byYear[$y][] = $m;
         }
 
+        $eligibleYears = \array_filter(
+            $byYear,
+            function (array $list): bool {
+                if (\count($list) < $this->minItems) {
+                    return false;
+                }
+
+                /** @var array<int,bool> $months */
+                $months = [];
+                foreach ($list as $m) {
+                    $months[(int) $m->getTakenAt()->format('n')] = true;
+                }
+
+                $count = \count($months);
+                if ($count < $this->minDistinctMonths) {
+                    return false;
+                }
+
+                return true;
+            }
+        );
+
+        if ($eligibleYears === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byYear as $year => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
-            /** @var array<int,bool> $months */
-            $months = [];
-            foreach ($list as $m) {
-                $months[(int) $m->getTakenAt()->format('n')] = true;
-            }
-            if (\count($months) < $this->minDistinctMonths) {
-                continue;
-            }
-
+        foreach ($eligibleYears as $year => $list) {
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 

@@ -39,21 +39,25 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $w = $m->getWidth();
-            $h = $m->getHeight();
-            if ($w === null || $h === null || $w <= 0 || $h <= 0) {
-                continue;
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m): bool {
+                $w = $m->getWidth();
+                $h = $m->getHeight();
+
+                if ($w === null || $h === null || $w <= 0 || $h <= 0) {
+                    return false;
+                }
+
+                if ($w <= $h) {
+                    return false;
+                }
+
+                $ratio = (float) $w / (float) $h;
+
+                return $ratio >= $this->minAspect;
             }
-            if ($w <= $h) {
-                continue; // require landscape panoramas
-            }
-            $ratio = (float) $w / (float) $h;
-            if ($ratio >= $this->minAspect) {
-                $cand[] = $m;
-            }
-        }
+        ));
         if (\count($cand) < $this->minItems) {
             return [];
         }

@@ -66,32 +66,44 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
             $byDay[$key][] = $m;
         }
 
-        /** @var array<string, list<Media>> $usableDayItems */
-        $usableDayItems = [];
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+        );
+
         /** @var array<string, float> $dayDistance */
         $dayDistance = [];
+        /** @var array<string, list<Media>> $usableDayItems */
+        $usableDayItems = \array_filter(
+            $eligibleDays,
+            function (array $list, string $day) use (&$dayDistance): bool {
+                $gps = \array_values(\array_filter(
+                    $list,
+                    static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
+                ));
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minItemsPerDay) {
-                continue;
-            }
-            $gps = \array_values(\array_filter($list, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
-            if (\count($gps) < $this->minItemsPerDay) {
-                continue;
-            }
-            $centroid = MediaMath::centroid($gps);
-            $dist = MediaMath::haversineDistanceInMeters(
-                    (float) $centroid['lat'],
-                    (float) $centroid['lon'],
-                    (float) $this->homeLat,
-                    (float) $this->homeLon
-                ) / 1000.0;
+                if (\count($gps) < $this->minItemsPerDay) {
+                    return false;
+                }
 
-            if ($dist >= $this->minAwayKm) {
-                $usableDayItems[$day] = $list;
+                $centroid = MediaMath::centroid($gps);
+                $dist = MediaMath::haversineDistanceInMeters(
+                        (float) $centroid['lat'],
+                        (float) $centroid['lon'],
+                        (float) $this->homeLat,
+                        (float) $this->homeLon
+                    ) / 1000.0;
+
+                if ($dist < $this->minAwayKm) {
+                    return false;
+                }
+
                 $dayDistance[$day] = $dist;
-            }
-        }
+
+                return true;
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
 
         if ($usableDayItems === []) {
             return [];

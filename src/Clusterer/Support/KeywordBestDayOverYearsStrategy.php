@@ -65,18 +65,36 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
             $byYearDay[$year][$day][] = $media;
         }
 
+        /** @var array<int, array<string, list<Media>>> $eligibleByYear */
+        $eligibleByYear = [];
+
+        foreach ($byYearDay as $year => $days) {
+            $eligibleDays = \array_filter(
+                $days,
+                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+            );
+
+            if ($eligibleDays !== []) {
+                $eligibleByYear[$year] = $eligibleDays;
+            }
+        }
+
+        if ($eligibleByYear === []) {
+            return [];
+        }
+
         /** @var list<Media> $picked */
         $picked = [];
         /** @var array<int,bool> $years */
         $years = [];
 
-        foreach ($byYearDay as $year => $days) {
+        foreach ($eligibleByYear as $year => $eligibleDays) {
             $bestDay = null;
             $bestCount = 0;
 
-            foreach ($days as $day => $list) {
+            foreach ($eligibleDays as $day => $list) {
                 $count = \count($list);
-                if ($count >= $this->minItemsPerDay && $count > $bestCount) {
+                if ($count > $bestCount) {
                     $bestCount = $count;
                     $bestDay = $day;
                 }
@@ -86,7 +104,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
                 continue;
             }
 
-            foreach ($days[$bestDay] as $media) {
+            foreach ($eligibleDays[$bestDay] as $media) {
                 $picked[] = $media;
             }
 

@@ -45,25 +45,29 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = [];
-
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            $path = \strtolower($m->getPath());
-            if (!$this->looksSporty($path)) {
-                continue;
-            }
-            if ($this->preferWeekend) {
-                $dow = (int) $t->setTimezone($tz)->format('N'); // 1..7
-                if ($dow !== 6 && $dow !== 7) {
-                    continue;
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                if (!$t instanceof DateTimeImmutable) {
+                    return false;
                 }
+
+                $path = \strtolower($m->getPath());
+                if (!$this->looksSporty($path)) {
+                    return false;
+                }
+
+                if ($this->preferWeekend) {
+                    $dow = (int) $t->setTimezone($tz)->format('N');
+                    if ($dow !== 6 && $dow !== 7) {
+                        return false;
+                    }
+                }
+
+                return true;
             }
-            $cand[] = $m;
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

@@ -49,11 +49,14 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
             $devices[$key] = $device;
         }
 
+        /** @var array<string, list<Media>> $eligibleGroups */
+        $eligibleGroups = \array_filter(
+            $groups,
+            fn (array $group): bool => \count($group) >= $this->minItems
+        );
+
         $drafts = [];
-        foreach ($groups as $key => $group) {
-            if (\count($group) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleGroups as $key => $group) {
             $label = $this->locHelper->majorityLabel($group);
             $params = [
                 'time_range' => $this->computeTimeRange($group),

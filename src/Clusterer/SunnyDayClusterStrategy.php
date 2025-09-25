@@ -64,60 +64,73 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+        );
+
+        /** @var array<string, float> $avgSun */
+        $avgSun = [];
+        $sunnyDays = \array_filter(
+            $eligibleDays,
+            function (array $list, string $day) use (&$avgSun): bool {
+                $sum = 0.0;
+                $n   = 0;
+
+                foreach ($list as $m) {
+                    $hint = $this->weather->getHint($m);
+                    if ($hint === null) {
+                        continue;
+                    }
+
+                    if (\array_key_exists('sun_prob', $hint)) {
+                        $p = (float) $hint['sun_prob'];
+                    } elseif (\array_key_exists('cloud_cover', $hint)) {
+                        $p = 1.0 - (float) $hint['cloud_cover'];
+                    } elseif (\array_key_exists('rain_prob', $hint)) {
+                        $p = \max(0.0, 1.0 - (float) $hint['rain_prob']);
+                    } else {
+                        continue;
+                    }
+
+                    if ($p < 0.0) { $p = 0.0; }
+                    if ($p > 1.0) { $p = 1.0; }
+
+                    $sum += $p;
+                    $n++;
+                }
+
+                if ($n < $this->minHintsPerDay) {
+                    return false;
+                }
+
+                $avg = $sum / (float) $n;
+                if ($avg < $this->minAvgSunScore) {
+                    return false;
+                }
+
+                $avgSun[$day] = $avg;
+
+                return true;
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        if ($sunnyDays === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minItemsPerDay) {
-                continue;
-            }
-
-            $sum = 0.0;
-            $n   = 0;
-
-            foreach ($list as $m) {
-                $hint = $this->weather->getHint($m);
-                if ($hint === null) {
-                    continue;
-                }
-
-                // Prefer explicit sun_prob
-                if (\array_key_exists('sun_prob', $hint)) {
-                    $p = (float) $hint['sun_prob'];
-                } elseif (\array_key_exists('cloud_cover', $hint)) {
-                    // 0..1 cloud cover => sunshine proxy
-                    $p = 1.0 - (float) $hint['cloud_cover'];
-                } elseif (\array_key_exists('rain_prob', $hint)) {
-                    // conservative proxy from rain probability
-                    $p = \max(0.0, 1.0 - (float) $hint['rain_prob']);
-                } else {
-                    continue;
-                }
-
-                // clamp to [0..1]
-                if ($p < 0.0) { $p = 0.0; }
-                if ($p > 1.0) { $p = 1.0; }
-
-                $sum += $p;
-                $n++;
-            }
-
-            if ($n < $this->minHintsPerDay) {
-                continue;
-            }
-
-            $avg = $sum / (float) $n;
-            if ($avg < $this->minAvgSunScore) {
-                continue;
-            }
-
+        foreach ($sunnyDays as $day => $list) {
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'sun_score'  => $avg,
+                    'sun_score'  => $avgSun[$day],
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],

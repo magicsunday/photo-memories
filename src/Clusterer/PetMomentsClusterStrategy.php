@@ -35,13 +35,10 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $path = \strtolower($m->getPath());
-            if ($this->looksLikePet($path)) {
-                $cand[] = $m;
-            }
-        }
+        $cand = \array_values(\array_filter(
+            $items,
+            fn (Media $m): bool => $this->looksLikePet(\strtolower($m->getPath()))
+        ));
         if (\count($cand) < $this->minItems) {
             return [];
         }

@@ -39,22 +39,26 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $w = $m->getWidth();
-            $h = $m->getHeight();
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($w === null || $h === null || $w <= 0 || $h <= 0 || $ts === null) {
-                continue;
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m): bool {
+                $w = $m->getWidth();
+                $h = $m->getHeight();
+                $ts = $m->getTakenAt()?->getTimestamp();
+
+                if ($w === null || $h === null || $w <= 0 || $h <= 0 || $ts === null) {
+                    return false;
+                }
+
+                if ($h <= $w) {
+                    return false;
+                }
+
+                $ratio = (float) $h / (float) $w;
+
+                return $ratio >= $this->minPortraitRatio;
             }
-            if ($h <= $w) {
-                continue;
-            }
-            $ratio = (float)$h / (float)$w;
-            if ($ratio >= $this->minPortraitRatio) {
-                $cand[] = $m;
-            }
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

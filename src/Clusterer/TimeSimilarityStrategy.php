@@ -47,7 +47,8 @@ final class TimeSimilarityStrategy implements ClusterStrategyInterface
                 ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
-        $drafts = [];
+        /** @var list<list<Media>> $buckets */
+        $buckets = [];
         /** @var list<Media> $bucket */
         $bucket = [];
         $prevTs  = null;
@@ -65,11 +66,9 @@ final class TimeSimilarityStrategy implements ClusterStrategyInterface
                 $split = true;
             }
 
-            if ($split) {
-                if (\count($bucket) >= $this->minItems) {
-                    $drafts[] = $this->makeDraft($bucket);
-                }
-                $bucket = [];
+            if ($split && $bucket !== []) {
+                $buckets[] = $bucket;
+                $bucket    = [];
             }
 
             $bucket[] = $m;
@@ -77,11 +76,19 @@ final class TimeSimilarityStrategy implements ClusterStrategyInterface
             $prevKey  = $key ?? $prevKey;
         }
 
-        if (\count($bucket) >= $this->minItems) {
-            $drafts[] = $this->makeDraft($bucket);
+        if ($bucket !== []) {
+            $buckets[] = $bucket;
         }
 
-        return $drafts;
+        $eligible = \array_values(\array_filter(
+            $buckets,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        ));
+
+        return \array_map(
+            fn (array $list): ClusterDraft => $this->makeDraft($list),
+            $eligible
+        );
     }
 
     /** @param list<Media> $bucket */

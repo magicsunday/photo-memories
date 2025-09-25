@@ -40,21 +40,25 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = [];
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                if (!$t instanceof DateTimeImmutable) {
+                    return false;
+                }
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+                $local = $t->setTimezone($tz);
+                $month = (int) $local->format('n');
+                if ($month !== 12 && $month > 2) {
+                    return false;
+                }
+
+                $path = \strtolower($m->getPath());
+
+                return $this->looksSnow($path);
             }
-            $local = $t->setTimezone($tz);
-            $month = (int) $local->format('n');
-            $winter = ($month === 12 || $month <= 2);
-            $path = \strtolower($m->getPath());
-            if ($winter && $this->looksSnow($path)) {
-                $cand[] = $m;
-            }
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

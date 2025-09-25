@@ -49,18 +49,26 @@ final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
             $byYear[$y][] = $m;
         }
 
+        /** @var array<int, list<Media>> $eligibleYears */
+        $eligibleYears = \array_filter(
+            $byYear,
+            fn (array $list): bool => \count($list) >= $this->perYearMin
+        );
+
+        if ($eligibleYears === []) {
+            return [];
+        }
+
         /** @var list<Media> $picked */
         $picked = [];
         /** @var array<int,bool> $years */
         $years = [];
 
-        foreach ($byYear as $y => $list) {
-            if (\count($list) >= $this->perYearMin) {
-                foreach ($list as $m) {
-                    $picked[] = $m;
-                }
-                $years[$y] = true;
+        foreach ($eligibleYears as $y => $list) {
+            foreach ($list as $m) {
+                $picked[] = $m;
             }
+            $years[$y] = true;
         }
 
         if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {

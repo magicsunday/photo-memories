@@ -84,7 +84,16 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
         $yearsPicked = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $days = \array_keys($daysMap);
+            $eligibleDaysMap = \array_filter(
+                $daysMap,
+                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+            );
+
+            if ($eligibleDaysMap === []) {
+                continue;
+            }
+
+            $days = \array_keys($eligibleDaysMap);
             \sort($days, \SORT_STRING);
 
             /** @var list<array{days:list<string>, items:list<Media>}> $runs */
@@ -106,7 +115,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
                     $flushRun();
                 }
                 $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
+                foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
                 $prev = $d;
@@ -120,16 +129,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
                 if ($nights < $this->minNights || $nights > $this->maxNights) {
                     continue;
                 }
-                $ok = true;
-                foreach ($r['days'] as $d) {
-                    if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                        $ok = false;
-                        break;
-                    }
-                }
-                if ($ok) {
-                    $candidates[] = $r;
-                }
+                $candidates[] = $r;
             }
 
             if ($candidates === []) {

@@ -54,26 +54,42 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
             return $a->getTakenAt() <=> $b->getTakenAt();
         });
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
-
+        /** @var list<list<Media>> $runs */
+        $runs = [];
         /** @var list<Media> $buf */
         $buf = [];
         $lastTs = null;
 
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
+        foreach ($withTime as $m) {
+            $ts = (int) $m->getTakenAt()->getTimestamp();
+
+            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds && $buf !== []) {
+                $runs[] = $buf;
+                $buf    = [];
             }
 
-            // compute centroid from GPS-having items; if none, centroid (0,0)
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            $buf[]  = $m;
+            $lastTs = $ts;
+        }
+
+        if ($buf !== []) {
+            $runs[] = $buf;
+        }
+
+        $eligibleRuns = \array_values(\array_filter(
+            $runs,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        ));
+
+        /** @var list<ClusterDraft> $out */
+        $out = [];
+
+        foreach ($eligibleRuns as $run) {
+            $gps = \array_values(\array_filter($run, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
             $centroid = $gps !== []
                 ? MediaMath::centroid($gps)
                 : ['lat' => 0.0, 'lon' => 0.0];
 
-            // Validate spatial compactness: max distance to centroid <= radius
             $ok = true;
             foreach ($gps as $m) {
                 $dist = MediaMath::haversineDistanceInMeters(
@@ -89,32 +105,20 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
                 }
             }
 
-            if ($ok) {
-                $time = MediaMath::timeRange($buf);
-                $out[] = new ClusterDraft(
-                    algorithm: 'cross_dimension',
-                    params: [
-                        'time_range' => $time,
-                    ],
-                    centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                    members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
-                );
+            if (!$ok) {
+                continue;
             }
 
-            $buf = [];
-        };
-
-        foreach ($withTime as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
-
-            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
-                $flush();
-            }
-
-            $buf[] = $m;
-            $lastTs = $ts;
+            $time = MediaMath::timeRange($run);
+            $out[] = new ClusterDraft(
+                algorithm: 'cross_dimension',
+                params: [
+                    'time_range' => $time,
+                ],
+                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+            );
         }
-        $flush();
 
         return $out;
     }

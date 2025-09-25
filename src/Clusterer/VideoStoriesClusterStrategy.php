@@ -53,13 +53,16 @@ final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
             $byDay[$key][] = $m;
         }
 
+        /** @var array<string, list<Media>> $eligibleDays */
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $members): bool => \count($members) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byDay as $day => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleDays as $day => $members) {
             \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
             $centroid = MediaMath::centroid($members);

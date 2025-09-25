@@ -112,11 +112,12 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $keepDays */
         $keepDays = [];
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minItemsPerDay) {
-                continue;
-            }
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+        );
 
+        foreach ($eligibleDays as $day => $list) {
             $within = [];
             foreach ($list as $media) {
                 $lat = $media->getGpsLat();
