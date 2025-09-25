@@ -17,8 +17,19 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 3 * 3600,
         private readonly float $radiusMeters = 250.0,
-        private readonly int $minItems = 6
+        private readonly int $minItems = 6,
+        private readonly int $minHour = 10,
+        private readonly int $maxHour = 21
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
+            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+        }
+        if ($this->minHour > $this->maxHour) {
+            throw new \InvalidArgumentException('minHour must be <= maxHour.');
+        }
     }
 
     public function name(): string
@@ -42,8 +53,8 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
             if (!$t instanceof DateTimeImmutable) {
                 continue;
             }
-            $h = (int) $t->setTimezone($tz)->format('G'); // prefer 10–21
-            if ($h < 10 || $h > 21) {
+            $h = (int) $t->setTimezone($tz)->format('G');
+            if ($h < $this->minHour || $h > $this->maxHour) {
                 continue;
             }
             $path = \strtolower($m->getPath());

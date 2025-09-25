@@ -40,7 +40,7 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
                 return false;
             }
             $local = $t->setTimezone($tz);
-            $h = (int) $local->format('G'); // 0..23
+            $h = (int) $local->format('G'); 
             return ($h >= 20) || ($h <= 4);
         }));
 

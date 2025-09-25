@@ -44,7 +44,7 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
             if (!$t instanceof DateTimeImmutable) {
                 continue;
             }
-            $h = (int) $t->setTimezone($tz)->format('G'); // 0..23
+            $h = (int) $t->setTimezone($tz)->format('G'); 
             if (\in_array($h, $this->morningHours, true) || \in_array($h, $this->eveningHours, true)) {
                 $cand[] = $m;
             }

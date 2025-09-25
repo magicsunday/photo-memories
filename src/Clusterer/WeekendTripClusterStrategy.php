@@ -25,7 +25,11 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         #[Autowire(env: 'MEMORIES_HOME_LON')] private readonly ?float $homeLon,
         private readonly float $minAwayKm = 80.0,
         private readonly int $minNights = 1,
+        private readonly int $minItems = 3,
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string
@@ -83,8 +87,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
     /** @param list<Media> $bucket */
     private function makeTripDraftOrNull(array $bucket): ?ClusterDraft
     {
-        // mind. 3 Fotos, mind. minNights
-        if (\count($bucket) < 3) {
+        if (\count($bucket) < $this->minItems) {
             return null;
         }
 

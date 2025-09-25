@@ -255,6 +255,8 @@ services:
             $sessionGapSeconds: 4800      # 1h20m keeps morning rituals tight
             $radiusMeters: 180.0
             $minItems: 3
+            $minHour: 7
+            $maxHour: 10
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.morning_coffee_cluster_strategy%' }
 
@@ -288,11 +290,15 @@ services:
             $sessionGapSeconds: 5400   # 1.5h
             $radiusMeters: 200.0
             $minItems: 4
+            $minHour: 17
+            $maxHour: 23
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.dining_out_cluster_strategy%' }
 
     # --- Social celebrations & people ---
     MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy:
+        arguments:
+            $minItems: 3
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.anniversary_cluster_strategy%' }
 
@@ -310,6 +316,8 @@ services:
             $sessionGapSeconds: 9600      # 2h40m keeps party blocks intact
             $radiusMeters: 230.0
             $minItems: 5
+            $minHour: 10
+            $maxHour: 21
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.kids_birthday_party_cluster_strategy%' }
 
@@ -352,6 +360,10 @@ services:
             $sessionGapSeconds: 9000     # 2.5h
             $radiusMeters: 480.0
             $minItems: 8
+            $startMonth: 6
+            $endMonth: 9
+            $afternoonStartHour: 14
+            $lateNightCutoffHour: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.festival_summer_cluster_strategy%' }
 
@@ -369,6 +381,7 @@ services:
         arguments:
             $minAwayKm: 75.0
             $minNights: 1
+            $minItems: 3
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.weekend_trip_cluster_strategy%' }
 
@@ -495,6 +508,8 @@ services:
             $sessionGapSeconds: 6600      # 1h50m keeps exhibits contiguous
             $radiusMeters: 260.0
             $minItems: 5
+            $minHour: 9
+            $maxHour: 20
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.zoo_aquarium_cluster_strategy%' }
 

@@ -17,8 +17,19 @@ final class MorningCoffeeClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 90 * 60,
         private readonly float $radiusMeters = 200.0,
-        private readonly int $minItems = 3
+        private readonly int $minItems = 3,
+        private readonly int $minHour = 7,
+        private readonly int $maxHour = 10
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
+            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+        }
+        if ($this->minHour > $this->maxHour) {
+            throw new \InvalidArgumentException('minHour must be <= maxHour.');
+        }
     }
 
     public function name(): string
@@ -41,8 +52,8 @@ final class MorningCoffeeClusterStrategy implements ClusterStrategyInterface
             if (!$t instanceof DateTimeImmutable) {
                 continue;
             }
-            $h = (int)$t->setTimezone($tz)->format('G'); // 0..23
-            if ($h < 7 || $h > 10) {
+            $h = (int)$t->setTimezone($tz)->format('G'); 
+            if ($h < $this->minHour || $h > $this->maxHour) {
                 continue;
             }
             $path = \strtolower($m->getPath());

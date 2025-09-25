@@ -17,8 +17,31 @@ final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 3 * 3600,
         private readonly float $radiusMeters = 600.0,
-        private readonly int $minItems = 8
+        private readonly int $minItems = 8,
+        private readonly int $startMonth = 6,
+        private readonly int $endMonth = 9,
+        private readonly int $afternoonStartHour = 14,
+        private readonly int $lateNightCutoffHour = 2
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        foreach ([$this->startMonth, $this->endMonth] as $month) {
+            if ($month < 1 || $month > 12) {
+                throw new \InvalidArgumentException('Months must be within 1..12.');
+            }
+        }
+        if ($this->startMonth > $this->endMonth) {
+            throw new \InvalidArgumentException('startMonth must be <= endMonth.');
+        }
+        foreach ([$this->afternoonStartHour, $this->lateNightCutoffHour] as $hour) {
+            if ($hour < 0 || $hour > 23) {
+                throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+            }
+        }
+        if ($this->afternoonStartHour <= $this->lateNightCutoffHour) {
+            throw new \InvalidArgumentException('afternoonStartHour must be greater than lateNightCutoffHour.');
+        }
     }
 
     public function name(): string
@@ -44,11 +67,11 @@ final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
             }
             $local = $t->setTimezone($tz);
             $mon = (int) $local->format('n');
-            if ($mon < 6 || $mon > 9) {
+            if ($mon < $this->startMonth || $mon > $this->endMonth) {
                 continue;
             }
             $h = (int) $local->format('G');
-            if ($h < 14 && $h > 2) {
+            if ($h > $this->lateNightCutoffHour && $h < $this->afternoonStartHour) {
                 continue;
             }
             $path = \strtolower($m->getPath());

@@ -17,8 +17,19 @@ final class ZooAquariumClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 2 * 3600,
         private readonly float $radiusMeters = 400.0,
-        private readonly int $minItems = 5
+        private readonly int $minItems = 5,
+        private readonly int $minHour = 9,
+        private readonly int $maxHour = 20
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
+            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+        }
+        if ($this->minHour > $this->maxHour) {
+            throw new \InvalidArgumentException('minHour must be <= maxHour.');
+        }
     }
 
     public function name(): string
@@ -41,9 +52,8 @@ final class ZooAquariumClusterStrategy implements ClusterStrategyInterface
             if (!$t instanceof DateTimeImmutable) {
                 continue;
             }
-            $local = $t->setTimezone($tz);
-            $h = (int) $local->format('G'); // prefer day/afternoon
-            if ($h < 9 || $h > 20) {
+            $h = (int) $t->setTimezone($tz)->format('G');
+            if ($h < $this->minHour || $h > $this->maxHour) {
                 continue;
             }
             $path = \strtolower($m->getPath());
