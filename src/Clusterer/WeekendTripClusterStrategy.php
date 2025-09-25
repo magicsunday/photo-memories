@@ -27,6 +27,12 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         private readonly int $minNights = 1,
         private readonly int $minItems = 3,
     ) {
+        if ($this->minAwayKm <= 0.0) {
+            throw new \InvalidArgumentException('minAwayKm must be > 0.');
+        }
+        if ($this->minNights < 0) {
+            throw new \InvalidArgumentException('minNights must be >= 0.');
+        }
         if ($this->minItems < 1) {
             throw new \InvalidArgumentException('minItems must be >= 1.');
         }

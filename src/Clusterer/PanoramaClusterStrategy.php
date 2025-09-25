@@ -16,6 +16,15 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
         private readonly int $sessionGapSeconds = 3 * 3600,
         private readonly int $minItems = 3
     ) {
+        if ($this->minAspect <= 0.0) {
+            throw new \InvalidArgumentException('minAspect must be > 0.');
+        }
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

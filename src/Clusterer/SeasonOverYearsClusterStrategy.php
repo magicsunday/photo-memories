@@ -17,6 +17,12 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
         private readonly int $minYears = 3,
         private readonly int $minItems = 30
     ) {
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

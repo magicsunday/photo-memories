@@ -18,6 +18,15 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
         private readonly float $maxMoveMeters = 50.0,
         private readonly int $minItems = 3
     ) {
+        if ($this->maxGapSeconds < 1) {
+            throw new \InvalidArgumentException('maxGapSeconds must be >= 1.');
+        }
+        if ($this->maxMoveMeters < 0.0) {
+            throw new \InvalidArgumentException('maxMoveMeters must be >= 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

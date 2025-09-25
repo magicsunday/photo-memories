@@ -36,12 +36,31 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItemsTotal,
         private readonly string $timezone,
     ) {
+        if ($this->algorithm === '') {
+            throw new \InvalidArgumentException('algorithm must not be empty.');
+        }
+        if ($this->homeRadiusMeters <= 0.0) {
+            throw new \InvalidArgumentException('homeRadiusMeters must be > 0.');
+        }
+        if ($this->minHomeShare < 0.0 || $this->minHomeShare > 1.0) {
+            throw new \InvalidArgumentException('minHomeShare must be within 0..1.');
+        }
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
         $lookup = [];
         foreach ($allowedWeekdays as $dow) {
             $dow = (int) $dow;
             if ($dow >= 1 && $dow <= 7) {
                 $lookup[$dow] = true;
             }
+        }
+
+        if ($lookup === []) {
+            throw new \InvalidArgumentException('allowedWeekdays must contain at least one weekday between 1 and 7.');
         }
 
         $this->allowedWeekdayLookup = $lookup;

@@ -19,6 +19,12 @@ final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
         private readonly int $windowDays = 3,
         private readonly int $minItems   = 8
     ) {
+        if ($this->windowDays < 0) {
+            throw new \InvalidArgumentException('windowDays must be >= 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

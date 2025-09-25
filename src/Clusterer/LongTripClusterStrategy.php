@@ -25,6 +25,15 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minItemsPerDay = 3
     ) {
+        if ($this->minAwayKm <= 0.0) {
+            throw new \InvalidArgumentException('minAwayKm must be > 0.');
+        }
+        if ($this->minNights < 1) {
+            throw new \InvalidArgumentException('minNights must be >= 1.');
+        }
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
     }
 
     public function name(): string

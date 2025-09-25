@@ -19,6 +19,15 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
         private readonly float $radiusMeters = 300.0,
         private readonly int $minItems = 5
     ) {
+        if ($this->timeGapSeconds < 1) {
+            throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
+        }
+        if ($this->radiusMeters <= 0.0) {
+            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

@@ -16,6 +16,9 @@ final class SeasonClusterStrategy implements ClusterStrategyInterface
     public function __construct(
         private readonly int $minItems = 20
     ) {
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

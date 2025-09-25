@@ -18,6 +18,12 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
         private readonly int $sessionGapSeconds = 2 * 3600,
         private readonly int $minItems = 6
     ) {
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

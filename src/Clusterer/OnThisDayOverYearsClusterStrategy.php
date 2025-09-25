@@ -20,6 +20,15 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         private readonly int $minYears   = 3,
         private readonly int $minItems   = 12
     ) {
+        if ($this->windowDays < 0) {
+            throw new \InvalidArgumentException('windowDays must be >= 0.');
+        }
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

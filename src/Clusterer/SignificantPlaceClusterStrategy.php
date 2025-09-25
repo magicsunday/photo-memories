@@ -20,6 +20,15 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
         private readonly int $minVisitDays = 3,
         private readonly int $minItemsTotal = 20
     ) {
+        if ($this->gridDegrees <= 0.0) {
+            throw new \InvalidArgumentException('gridDegrees must be > 0.');
+        }
+        if ($this->minVisitDays < 1) {
+            throw new \InvalidArgumentException('minVisitDays must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
     }
 
     public function name(): string

@@ -26,8 +26,23 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         private readonly int $maxNights = 3,
         private readonly int $minItemsTotal = 8
     ) {
+        if ($this->gridDegrees <= 0.0) {
+            throw new \InvalidArgumentException('gridDegrees must be > 0.');
+        }
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+        if ($this->minNights < 0) {
+            throw new \InvalidArgumentException('minNights must be >= 0.');
+        }
+        if ($this->maxNights < 0) {
+            throw new \InvalidArgumentException('maxNights must be >= 0.');
+        }
         if ($this->maxNights < $this->minNights) {
             throw new \InvalidArgumentException('maxNights must be >= minNights.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 

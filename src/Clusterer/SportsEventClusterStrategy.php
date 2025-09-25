@@ -20,6 +20,15 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItems = 5,
         private readonly bool $preferWeekend = true
     ) {
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->radiusMeters <= 0.0) {
+            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string

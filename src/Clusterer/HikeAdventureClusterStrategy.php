@@ -17,6 +17,18 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItems = 6,
         private readonly int $minItemsNoGps = 12 // stricter if no GPS available
     ) {
+        if ($this->sessionGapSeconds < 1) {
+            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+        }
+        if ($this->minDistanceKm <= 0.0) {
+            throw new \InvalidArgumentException('minDistanceKm must be > 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
+        if ($this->minItemsNoGps < 1) {
+            throw new \InvalidArgumentException('minItemsNoGps must be >= 1.');
+        }
     }
 
     public function name(): string

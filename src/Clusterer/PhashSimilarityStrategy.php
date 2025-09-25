@@ -16,6 +16,12 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
         private readonly int $maxHamming = 6,
         private readonly int $minItems = 2,
     ) {
+        if ($this->maxHamming < 0) {
+            throw new \InvalidArgumentException('maxHamming must be >= 0.');
+        }
+        if ($this->minItems < 1) {
+            throw new \InvalidArgumentException('minItems must be >= 1.');
+        }
     }
 
     public function name(): string
