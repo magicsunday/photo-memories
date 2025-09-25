@@ -75,12 +75,14 @@ final class FeedPreviewCommand extends Command
 
         $limit = \max(1, (int) $input->getOption('limit-clusters'));
 
+        $qb = $this->em->createQueryBuilder()
+            ->select('c')
+            ->from(ClusterEntity::class, 'c')
+            ->orderBy('c.createdAt', 'DESC')
+            ->setMaxResults($limit);
+
         /** @var list<ClusterEntity> $entities */
-        $entities = $this->em->createQuery(
-            'SELECT c FROM MagicSunday\Memories\Entity\Cluster c ORDER BY c.createdAt DESC'
-        )
-            ->setMaxResults($limit)
-            ->getResult();
+        $entities = $qb->getQuery()->getResult();
 
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');

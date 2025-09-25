@@ -22,7 +22,11 @@ final class LocationCellIndex
      */
     public function warmUpFromDb(?int $max = null): int
     {
-        $q = $this->em->createQuery('SELECT l.id, l.cell FROM '.Location::class.' l');
+        $qb = $this->em->createQueryBuilder()
+            ->select('l.id', 'l.cell')
+            ->from(Location::class, 'l');
+
+        $q = $qb->getQuery();
         if ($max !== null && $max > 0) {
             $q->setMaxResults($max);
         }

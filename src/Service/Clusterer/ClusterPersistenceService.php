@@ -124,13 +124,15 @@ final class ClusterPersistenceService
         /** @var list<string> $fpList */
         $fpList  = \array_keys($fps);
 
-        $q = $this->em->createQuery(
-            'SELECT c.algorithm AS alg, c.fingerprint AS fp
-               FROM ' . Cluster::class . ' c
-              WHERE c.algorithm IN (:algs) AND c.fingerprint IN (:fps)'
-        );
-        $q->setParameter('algs', $algList);
-        $q->setParameter('fps',  $fpList);
+        $qb = $this->em->createQueryBuilder()
+            ->select('c.algorithm AS alg', 'c.fingerprint AS fp')
+            ->from(Cluster::class, 'c')
+            ->where('c.algorithm IN (:algs)')
+            ->andWhere('c.fingerprint IN (:fps)')
+            ->setParameter('algs', $algList)
+            ->setParameter('fps', $fpList);
+
+        $q = $qb->getQuery();
 
         /** @var list<array{alg:string, fp:string}> $rows */
         $rows = $q->getResult();

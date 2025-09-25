@@ -80,12 +80,14 @@ final class FeedExportHtmlCommand extends Command
         $io->title('📰 HTML-Vorschau des Rückblick-Feeds');
 
         // 1) Load clusters from DB
+        $qb = $this->em->createQueryBuilder()
+            ->select('c')
+            ->from(ClusterEntity::class, 'c')
+            ->orderBy('c.createdAt', 'DESC')
+            ->setMaxResults($limitClusters);
+
         /** @var list<ClusterEntity> $entities */
-        $entities = $this->em->createQuery(
-            'SELECT c FROM MagicSunday\Memories\Entity\Cluster c ORDER BY c.createdAt DESC'
-        )
-            ->setMaxResults($limitClusters)
-            ->getResult();
+        $entities = $qb->getQuery()->getResult();
 
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');
