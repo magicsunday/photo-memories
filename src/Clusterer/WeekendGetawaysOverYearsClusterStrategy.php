@@ -79,8 +79,17 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
         $yearsPicked = [];
 
         foreach ($byYearDay as $year => $daysMap) {
+            $eligibleDaysMap = \array_filter(
+                $daysMap,
+                static fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+            );
+
+            if ($eligibleDaysMap === []) {
+                continue;
+            }
+
             // sort days
-            $days = \array_keys($daysMap);
+            $days = \array_keys($eligibleDaysMap);
             \sort($days, \SORT_STRING);
 
             // pack days into consecutive runs
@@ -105,14 +114,14 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                     $flush();
                 }
                 $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
+                foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
                 $prev = $d;
             }
             $flush();
 
-            // evaluate runs: keep only those that (a) include a weekend, (b) 1..3 nights, (c) have enough items per day
+            // evaluate runs: keep only those that (a) include a weekend and (b) span 1..3 nights
             /** @var list<array{days:list<string>, items:list<Media>}> $candidates */
             $candidates = [];
 
@@ -127,17 +136,6 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 }
                 // must include weekend day (Sat/Sun)
                 if (!$this->containsWeekendDay($r['days'])) {
-                    continue;
-                }
-                // each day must have enough items
-                $ok = true;
-                foreach ($r['days'] as $d) {
-                    if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                        $ok = false;
-                        break;
-                    }
-                }
-                if (!$ok) {
                     continue;
                 }
                 $candidates[] = $r;

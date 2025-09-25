@@ -55,9 +55,15 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
             $buckets[$bucketKey][] = $m;
         }
 
+        /** @var array<string, list<Media>> $eligibleBuckets */
+        $eligibleBuckets = \array_filter(
+            $buckets,
+            fn (array $group): bool => \count($group) >= $this->minItems
+        );
+
         // 3) Pro Bucket Komponenten nach Hamming-Distanz
         $drafts = [];
-        foreach ($buckets as $group) {
+        foreach ($eligibleBuckets as $group) {
             foreach ($this->components($group) as $comp) {
                 if (\count($comp) < $this->minItems) {
                     continue;

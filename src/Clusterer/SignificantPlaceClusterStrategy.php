@@ -57,29 +57,47 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
             $byCell[$cell][] = $m;
         }
 
+        /** @var array<string,int> $visitCounts */
+        $visitCounts = [];
+        $eligiblePlaces = \array_filter(
+            $byCell,
+            function (array $list, string $cell) use (&$visitCounts): bool {
+                if (\count($list) < $this->minItemsTotal) {
+                    return false;
+                }
+
+                /** @var array<string,bool> $days */
+                $days = [];
+                foreach ($list as $m) {
+                    $days[$m->getTakenAt()->format('Y-m-d')] = true;
+                }
+
+                $count = \count($days);
+                if ($count < $this->minVisitDays) {
+                    return false;
+                }
+
+                $visitCounts[$cell] = $count;
+
+                return true;
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        if ($eligiblePlaces === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byCell as $cell => $list) {
-            if (\count($list) < $this->minItemsTotal) {
-                continue;
-            }
-
-            /** @var array<string,bool> $days */
-            $days = [];
-            foreach ($list as $m) {
-                $days[$m->getTakenAt()->format('Y-m-d')] = true;
-            }
-            if (\count($days) < $this->minVisitDays) {
-                continue;
-            }
-
+        foreach ($eligiblePlaces as $cell => $list) {
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
             $params = [
                 'grid_cell'   => $cell,
-                'visit_days'  => \count($days),
+                'visit_days'  => $visitCounts[$cell] ?? 0,
                 'time_range'  => $time,
             ];
             $label = $this->locHelper->majorityLabel($list);

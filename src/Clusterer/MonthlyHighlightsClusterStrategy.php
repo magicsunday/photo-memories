@@ -53,22 +53,36 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
             $byYm[$ym][] = $m;
         }
 
+        $eligibleMonths = \array_filter(
+            $byYm,
+            function (array $list) use ($tz): bool {
+                if (\count($list) < $this->minItems) {
+                    return false;
+                }
+
+                /** @var array<string,bool> $days */
+                $days = [];
+                foreach ($list as $m) {
+                    $days[$m->getTakenAt()->setTimezone($tz)->format('Y-m-d')] = true;
+                }
+
+                $count = \count($days);
+                if ($count < $this->minDistinctDays) {
+                    return false;
+                }
+
+                return true;
+            }
+        );
+
+        if ($eligibleMonths === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byYm as $ym => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
-            /** @var array<string,bool> $days */
-            $days = [];
-            foreach ($list as $m) {
-                $days[$m->getTakenAt()->setTimezone($tz)->format('Y-m-d')] = true;
-            }
-            if (\count($days) < $this->minDistinctDays) {
-                continue;
-            }
-
+        foreach ($eligibleMonths as $ym => $list) {
             \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);

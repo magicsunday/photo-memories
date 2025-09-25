@@ -55,13 +55,15 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
             $groups[$season][] = $m;
         }
 
+        $eligibleSeasons = \array_filter(
+            $groups,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($groups as $season => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleSeasons as $season => $list) {
             /** @var array<int,bool> $years */
             $years = [];
             foreach ($list as $m) {

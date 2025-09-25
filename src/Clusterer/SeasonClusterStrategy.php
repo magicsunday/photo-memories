@@ -60,13 +60,16 @@ final class SeasonClusterStrategy implements ClusterStrategyInterface
             $groups[$key][] = $m;
         }
 
+        /** @var array<string, list<Media>> $eligibleGroups */
+        $eligibleGroups = \array_filter(
+            $groups,
+            fn (array $members): bool => \count($members) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($groups as $key => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleGroups as $key => $members) {
 
             [$yearStr, $season] = \explode(':', $key, 2);
             $yearInt = (int) $yearStr;

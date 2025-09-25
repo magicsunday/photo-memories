@@ -63,13 +63,15 @@ final class NewYearEveClusterStrategy implements ClusterStrategyInterface
             }
         }
 
+        $eligibleYears = \array_filter(
+            $byYear,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byYear as $y => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleYears as $y => $list) {
             \usort($list, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);

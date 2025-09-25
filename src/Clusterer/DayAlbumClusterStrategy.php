@@ -49,13 +49,16 @@ final class DayAlbumClusterStrategy implements ClusterStrategyInterface
             $byDay[$key][] = $m;
         }
 
+        /** @var array<string, list<Media>> $eligibleDays */
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $members): bool => \count($members) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byDay as $key => $members) {
-            if (\count($members) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleDays as $key => $members) {
 
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);

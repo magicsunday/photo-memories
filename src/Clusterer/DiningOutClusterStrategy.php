@@ -52,23 +52,24 @@ final class DiningOutClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = [];
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                if (!$t instanceof DateTimeImmutable) {
+                    return false;
+                }
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+                $h = (int) $t->setTimezone($tz)->format('G');
+                if ($h < $this->minHour || $h > $this->maxHour) {
+                    return false;
+                }
+
+                $path = \strtolower($m->getPath());
+
+                return $this->looksLikeDining($path);
             }
-            $h = (int) $t->setTimezone($tz)->format('G'); 
-            if ($h < $this->minHour || $h > $this->maxHour) {
-                continue;
-            }
-            $path = \strtolower($m->getPath());
-            if (!$this->looksLikeDining($path)) {
-                continue;
-            }
-            $cand[] = $m;
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

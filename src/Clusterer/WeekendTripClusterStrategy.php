@@ -60,7 +60,8 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
                 ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
-        $drafts = [];
+        /** @var list<list<Media>> $buckets */
+        $buckets = [];
         /** @var list<Media> $bucket */
         $bucket = [];
 
@@ -69,19 +70,27 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
                 $bucket[] = $m;
                 continue;
             }
-            $same = $this->locHelper->sameLocality($bucket[0], $m);
-            if ($same) {
+            if ($this->locHelper->sameLocality($bucket[0], $m)) {
                 $bucket[] = $m;
-            } else {
-                $d = $this->makeTripDraftOrNull($bucket);
-                if ($d !== null) {
-                    $drafts[] = $d;
-                }
-                $bucket = [$m];
+                continue;
             }
+
+            $buckets[] = $bucket;
+            $bucket    = [$m];
         }
+
         if ($bucket !== []) {
-            $d = $this->makeTripDraftOrNull($bucket);
+            $buckets[] = $bucket;
+        }
+
+        $eligible = \array_values(\array_filter(
+            $buckets,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        ));
+
+        $drafts = [];
+        foreach ($eligible as $trip) {
+            $d = $this->makeTripDraftOrNull($trip);
             if ($d !== null) {
                 $drafts[] = $d;
             }
@@ -93,10 +102,6 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
     /** @param list<Media> $bucket */
     private function makeTripDraftOrNull(array $bucket): ?ClusterDraft
     {
-        if (\count($bucket) < $this->minItems) {
-            return null;
-        }
-
         $nights = $this->estimateNights($bucket);
         if ($nights < $this->minNights) {
             return null;

@@ -79,7 +79,16 @@ final class CampingOverYearsClusterStrategy implements ClusterStrategyInterface
         $years = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $days = \array_keys($daysMap);
+            $eligibleDaysMap = \array_filter(
+                $daysMap,
+                static fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+            );
+
+            if ($eligibleDaysMap === []) {
+                continue;
+            }
+
+            $days = \array_keys($eligibleDaysMap);
             \sort($days, \SORT_STRING);
 
             /** @var list<array{days:list<string>, items:list<Media>}> $runs */
@@ -100,14 +109,8 @@ final class CampingOverYearsClusterStrategy implements ClusterStrategyInterface
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     $flushRun();
                 }
-                if (\count($daysMap[$d]) < $this->minItemsPerDay) {
-                    // break run if too sparse
-                    $flushRun();
-                    $prev = null;
-                    continue;
-                }
                 $runDays[] = $d;
-                foreach ($daysMap[$d] as $m) {
+                foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
                 $prev = $d;

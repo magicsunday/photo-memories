@@ -85,7 +85,6 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
             }
         }
 
-        // Ignore sparse groups because they do not produce meaningful anniversary stories.
         $filteredGroups = \array_filter(
             $byMonthDay,
             fn (array $group): bool => \count($group) >= $this->minItems

@@ -65,33 +65,39 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
             $byDay[$d][] = $m;
         }
 
-        /** @var list<string> $travelDays */
-        $travelDays = [];
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minGpsSamplesPerDay) {
-                continue;
-            }
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-            $km = 0.0;
-            for ($i = 1, $n = \count($list); $i < $n; $i++) {
-                $p = $list[$i - 1];
-                $q = $list[$i];
-                $km += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
-                    ) / 1000.0;
-            }
-            if ($km >= $this->minDailyKm) {
-                $travelDays[] = $day;
-            }
-        }
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minGpsSamplesPerDay
+        );
 
-        if ($travelDays === []) {
+        /** @var array<string, list<Media>> $travelDayLists */
+        $travelDayLists = \array_filter(
+            $eligibleDays,
+            function (array $list): bool {
+                $sorted = $list;
+                \usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+
+                $km = 0.0;
+                for ($i = 1, $n = \count($sorted); $i < $n; $i++) {
+                    $p = $sorted[$i - 1];
+                    $q = $sorted[$i];
+                    $km += MediaMath::haversineDistanceInMeters(
+                            (float) $p->getGpsLat(),
+                            (float) $p->getGpsLon(),
+                            (float) $q->getGpsLat(),
+                            (float) $q->getGpsLon()
+                        ) / 1000.0;
+                }
+
+                return $km >= $this->minDailyKm;
+            }
+        );
+
+        if ($travelDayLists === []) {
             return [];
         }
 
+        $travelDays = \array_keys($travelDayLists);
         \sort($travelDays, \SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
@@ -99,7 +105,7 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $run */
         $run = [];
 
-        $flush = function () use (&$run, &$out, $byDay): void {
+        $flush = function () use (&$run, &$out, $travelDayLists): void {
             if (\count($run) === 0) {
                 return;
             }
@@ -111,7 +117,7 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
             /** @var list<Media> $members */
             $members = [];
             foreach ($run as $d) {
-                foreach ($byDay[$d] as $m) {
+                foreach ($travelDayLists[$d] as $m) {
                     $members[] = $m;
                 }
             }

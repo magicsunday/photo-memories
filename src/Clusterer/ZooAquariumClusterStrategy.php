@@ -52,21 +52,24 @@ final class ZooAquariumClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = [];
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                if (!$t instanceof DateTimeImmutable) {
+                    return false;
+                }
+
+                $h = (int) $t->setTimezone($tz)->format('G');
+                if ($h < $this->minHour || $h > $this->maxHour) {
+                    return false;
+                }
+
+                $path = \strtolower($m->getPath());
+
+                return $this->looksZoo($path);
             }
-            $h = (int) $t->setTimezone($tz)->format('G');
-            if ($h < $this->minHour || $h > $this->maxHour) {
-                continue;
-            }
-            $path = \strtolower($m->getPath());
-            if ($this->looksZoo($path)) {
-                $cand[] = $m;
-            }
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

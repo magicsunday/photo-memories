@@ -56,38 +56,57 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
             $byDay[$key][] = $m;
         }
 
+        $eligibleDays = \array_filter(
+            $byDay,
+            fn (array $list): bool => \count($list) >= $this->minGpsSamples
+        );
+
+        /** @var array<string, float> $dayDistanceKm */
+        $dayDistanceKm = [];
+        $travelDays = \array_filter(
+            $eligibleDays,
+            function (array $list, string $day) use (&$dayDistanceKm): bool {
+                $sorted = $list;
+                \usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+
+                $distKm = 0.0;
+                for ($i = 1, $n = \count($sorted); $i < $n; $i++) {
+                    $p = $sorted[$i - 1];
+                    $q = $sorted[$i];
+                    $distKm += MediaMath::haversineDistanceInMeters(
+                            (float) $p->getGpsLat(),
+                            (float) $p->getGpsLon(),
+                            (float) $q->getGpsLat(),
+                            (float) $q->getGpsLon()
+                        ) / 1000.0;
+                }
+
+                if ($distKm < $this->minTravelKm) {
+                    return false;
+                }
+
+                $dayDistanceKm[$day] = $distKm;
+
+                return true;
+            },
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        if ($travelDays === []) {
+            return [];
+        }
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($byDay as $day => $list) {
-            if (\count($list) < $this->minGpsSamples) {
-                continue;
-            }
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-
-            $distKm = 0.0;
-            for ($i = 1, $n = \count($list); $i < $n; $i++) {
-                $p = $list[$i - 1];
-                $q = $list[$i];
-                $distKm += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
-                    ) / 1000.0;
-            }
-
-            if ($distKm < $this->minTravelKm) {
-                continue;
-            }
-
+        foreach ($travelDays as $day => $list) {
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'distance_km' => $distKm,
+                    'distance_km' => $dayDistanceKm[$day],
                     'time_range'  => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],

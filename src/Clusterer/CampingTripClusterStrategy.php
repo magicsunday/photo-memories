@@ -71,7 +71,16 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $days = \array_keys($byDay);
+        $eligibleDays = \array_filter(
+            $byDay,
+            static fn (array $list): bool => \count($list) >= $this->minItemsPerDay
+        );
+
+        if ($eligibleDays === []) {
+            return [];
+        }
+
+        $days = \array_keys($eligibleDays);
         \sort($days, \SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
@@ -80,7 +89,7 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
         $run = [];
         $prev = null;
 
-        $flush = function () use (&$run, &$out, $byDay): void {
+        $flush = function () use (&$run, &$out, $eligibleDays): void {
             if (\count($run) === 0) {
                 return;
             }
@@ -92,11 +101,7 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
             /** @var list<Media> $members */
             $members = [];
             foreach ($run as $d) {
-                if (\count($byDay[$d]) < $this->minItemsPerDay) {
-                    $members = [];
-                    break;
-                }
-                foreach ($byDay[$d] as $m) {
+                foreach ($eligibleDays[$d] as $m) {
                     $members[] = $m;
                 }
             }

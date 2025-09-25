@@ -55,12 +55,15 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
             }
         }
 
+        /** @var array<string, list<Media>> $eligibleLocalities */
+        $eligibleLocalities = \array_filter(
+            $byLocality,
+            fn (array $group): bool => \count($group) >= $this->minItems
+        );
+
         $drafts = [];
 
-        foreach ($byLocality as $key => $group) {
-            if (\count($group) < $this->minItems) {
-                continue;
-            }
+        foreach ($eligibleLocalities as $key => $group) {
             $label = $this->locHelper->majorityLabel($group);
             $params = [
                 'place_key'  => $key,
@@ -79,10 +82,15 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         }
 
         // Fallback: räumlich + Zeitfenster
-        foreach ($this->spatialWindows($noLocality) as $bucket) {
-            if (\count($bucket) < $this->minItems) {
-                continue;
-            }
+        /** @var list<list<Media>> $spatialBuckets */
+        $spatialBuckets = $this->spatialWindows($noLocality);
+        /** @var list<list<Media>> $eligibleBuckets */
+        $eligibleBuckets = \array_values(\array_filter(
+            $spatialBuckets,
+            fn (array $bucket): bool => \count($bucket) >= $this->minItems
+        ));
+
+        foreach ($eligibleBuckets as $bucket) {
             $params = [
                 'time_range' => $this->computeTimeRange($bucket),
             ];

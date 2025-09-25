@@ -49,7 +49,9 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
             ($a->getTakenAt() ?? new DateTimeImmutable('@0')) <=> ($b->getTakenAt() ?? new DateTimeImmutable('@0'))
         );
 
-        $clusters = [];
+        /** @var list<list<Media>> $sessions */
+        $sessions = [];
+        /** @var list<Media> $current */
         $current  = [];
 
         foreach ($items as $i => $media) {
@@ -80,18 +82,23 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
                 continue;
             }
 
-            if (\count($current) >= $this->minItems) {
-                $clusters[] = $this->makeDraft($current);
-            }
-
-            $current = [$media];
+            $sessions[] = $current;
+            $current     = [$media];
         }
 
-        if (\count($current) >= $this->minItems) {
-            $clusters[] = $this->makeDraft($current);
+        if ($current !== []) {
+            $sessions[] = $current;
         }
 
-        return $clusters;
+        $eligible = \array_values(\array_filter(
+            $sessions,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        ));
+
+        return \array_map(
+            fn (array $members): ClusterDraft => $this->makeDraft($members),
+            $eligible
+        );
     }
 
     /**

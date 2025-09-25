@@ -53,18 +53,20 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = [];
+        $cand = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                if (!$t instanceof DateTimeImmutable) {
+                    return false;
+                }
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+                $h = (int) $t->setTimezone($tz)->format('G');
+
+                return \in_array($h, $this->morningHours, true)
+                    || \in_array($h, $this->eveningHours, true);
             }
-            $h = (int) $t->setTimezone($tz)->format('G'); 
-            if (\in_array($h, $this->morningHours, true) || \in_array($h, $this->eveningHours, true)) {
-                $cand[] = $m;
-            }
-        }
+        ));
 
         if (\count($cand) < $this->minItems) {
             return [];

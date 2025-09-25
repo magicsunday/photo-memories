@@ -46,24 +46,32 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         $anchorMonth = (int) $now->format('n');
         $anchorDay   = (int) $now->format('j');
 
-        /** @var list<Media> $picked */
-        $picked = [];
-        /** @var array<int,bool> $years */
+        /** @var array<int, true> $years */
         $years = [];
+        $tz = $now->getTimezone();
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
+        /** @var list<Media> $picked */
+        $picked = \array_values(\array_filter(
+            $items,
+            function (Media $m) use ($tz, $anchorMonth, $anchorDay, &$years): bool {
+                $takenAt = $m->getTakenAt();
+                if (!$takenAt instanceof DateTimeImmutable) {
+                    return false;
+                }
+
+                $local = $takenAt->setTimezone($tz);
+                $month = (int) $local->format('n');
+                $day   = (int) $local->format('j');
+
+                if ($this->monthDayDistance($anchorMonth, $anchorDay, $month, $day) > $this->windowDays) {
+                    return false;
+                }
+
+                $years[(int) $local->format('Y')] = true;
+
+                return true;
             }
-            $local = $t->setTimezone($now->getTimezone());
-            $y = (int) $local->format('Y');
-            $mdDist = $this->monthDayDistance($anchorMonth, $anchorDay, (int) $local->format('n'), (int) $local->format('j'));
-            if ($mdDist <= $this->windowDays) {
-                $picked[] = $m;
-                $years[$y] = true;
-            }
-        }
+        ));
 
         if (\count($picked) < $this->minItems || \count($years) < $this->minYears) {
             return [];

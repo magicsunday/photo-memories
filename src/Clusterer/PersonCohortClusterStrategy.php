@@ -74,14 +74,30 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
             $buckets[$sig][$day][] = $m;
         }
 
-        if (\count($buckets) === 0) {
+        /** @var array<string, array<string, list<Media>>> $eligibleBuckets */
+        $eligibleBuckets = \array_filter(
+            $buckets,
+            function (array $byDay): bool {
+                $total = 0;
+                foreach ($byDay as $list) {
+                    $total += \count($list);
+                    if ($total >= $this->minItems) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        );
+
+        if ($eligibleBuckets === []) {
             return [];
         }
 
         $clusters = [];
 
         // Phase 2: merge consecutive days within window for each signature
-        foreach ($buckets as $sig => $byDay) {
+        foreach ($eligibleBuckets as $sig => $byDay) {
             \ksort($byDay);
 
             $current = [];

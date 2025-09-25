@@ -74,15 +74,16 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
             $byMotif[$key][] = $m;
         }
 
+        $eligibleMotifs = \array_filter(
+            $byMotif,
+            fn (array $list): bool => \count($list) >= $this->minItems
+        );
+
         /** @var list<ClusterDraft> $out */
         $out = [];
 
         // For each motif, form time sessions
-        foreach ($byMotif as $key => $list) {
-            if (\count($list) < $this->minItems) {
-                continue;
-            }
-
+        foreach ($eligibleMotifs as $key => $list) {
             \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
             /** @var list<Media> $buf */
