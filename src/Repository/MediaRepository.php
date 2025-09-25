@@ -23,10 +23,13 @@ final class MediaRepository
             return [];
         }
 
-        $q = $this->em->createQuery(
-            'SELECT m FROM MagicSunday\Memories\Entity\Media m WHERE m.id IN (:ids)'
-        );
-        $q->setParameter('ids', $ids);
+        $qb = $this->em->createQueryBuilder()
+            ->select('m')
+            ->from(Media::class, 'm')
+            ->where('m.id IN (:ids)')
+            ->setParameter('ids', $ids);
+
+        $q = $qb->getQuery();
 
         /** @var list<Media> $items */
         $items = $q->getResult();
