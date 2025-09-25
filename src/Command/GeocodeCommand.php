@@ -95,9 +95,15 @@ final class GeocodeCommand extends Command
             }
 
             // nur schlafen, wenn wirklich ein Netz-Call stattfand
-            if ($this->linker->consumeLastUsedNetwork() && $this->delayMs > 0) {
-                $netCalls++;
-                \usleep($this->delayMs * 1000);
+            $networkCalls = $this->linker->consumeLastNetworkCalls();
+            if ($networkCalls > 0) {
+                $netCalls += $networkCalls;
+
+                if ($this->delayMs > 0) {
+                    for ($i = 0; $i < $networkCalls; $i++) {
+                        \usleep($this->delayMs * 1000);
+                    }
+                }
             }
 
             $processed++;

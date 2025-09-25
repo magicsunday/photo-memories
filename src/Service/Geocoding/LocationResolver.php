@@ -17,14 +17,18 @@ final class LocationResolver
     /** @var array<string,Location> provider|placeId -> Location (may be managed or detached) */
     private array $cacheByKey = [];
 
+    private bool $lastUsedNetwork = false;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly float $cellDeg = 0.01 // ~1.1km
+        private readonly float $cellDeg = 0.01, // ~1.1km
+        private readonly ?LocationPoiEnricher $poiEnricher = null
     ) {
     }
 
     public function findOrCreate(GeocodeResult $g): Location
     {
+        $this->lastUsedNetwork = false;
         $key = $this->key($g->provider, $g->providerPlaceId);
 
         // 0) In-memory cache first (fast path inside one run/batch)
@@ -38,9 +42,11 @@ final class LocationResolver
 
                 if ($managed instanceof Location) {
                     $this->cacheByKey[$key] = $managed;
-                    return $managed;
+                    $loc = $managed;
                 }
             }
+
+            $this->maybeEnrich($loc, $g);
 
             return $loc;
         }
@@ -55,6 +61,8 @@ final class LocationResolver
         ]);
         if ($existing instanceof Location) {
             $this->cacheByKey[$key] = $existing;
+            $this->maybeEnrich($existing, $g);
+
             return $existing;
         }
 
@@ -66,6 +74,8 @@ final class LocationResolver
             if ($this->similar($cand, $g)) {
                 // absichtlich NICHT unter $key cachen (anderer providerPlaceId),
                 // damit wir keinen falschen „alias“ aufbauen.
+                $this->maybeEnrich($cand, $g);
+
                 return $cand;
             }
         }
@@ -93,11 +103,40 @@ final class LocationResolver
         $loc->setType($g->type);
         $loc->setBoundingBox($g->boundingBox);
 
+        $this->maybeEnrich($loc, $g);
+
         $this->em->persist($loc);
         $this->cacheByKey[$key] = $loc; // verhindert Doppel-Persist im selben Batch
 
         // flush außerhalb (Command)
         return $loc;
+    }
+
+    public function consumeLastUsedNetwork(): bool
+    {
+        $v = $this->lastUsedNetwork;
+        $this->lastUsedNetwork = false;
+
+        return $v;
+    }
+
+    /**
+     * Ensures that a previously stored Location eventually receives POI data.
+     *
+     * This is used when we re-use Locations from the cell cache/index without
+     * going through the full reverse-geocoding pipeline again.
+     */
+    public function ensurePois(Location $location): void
+    {
+        if ($location->getPois() !== null) {
+            return;
+        }
+
+        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
+            return;
+        }
+
+        $this->enrichWithGeocode($location, $this->geocodeFromLocation($location));
     }
 
     private function key(string $provider, string $providerPlaceId): string
@@ -121,5 +160,52 @@ final class LocationResolver
         if ($loc->getCity() !== null && $gc !== null && $loc->getCity() === $gc) { $score++; }
         if ($loc->getRoad() !== null && $g->road !== null && $loc->getRoad() === $g->road) { $score++; }
         return $score >= 2;
+    }
+
+    private function maybeEnrich(Location $location, GeocodeResult $geocode): void
+    {
+        $this->enrichWithGeocode($location, $geocode);
+    }
+
+    private function geocodeFromLocation(Location $location): GeocodeResult
+    {
+        return new GeocodeResult(
+            provider: $location->getProvider(),
+            providerPlaceId: $location->getProviderPlaceId(),
+            lat: $location->getLat(),
+            lon: $location->getLon(),
+            displayName: $location->getDisplayName(),
+            countryCode: $location->getCountryCode(),
+            country: $location->getCountry(),
+            state: $location->getState(),
+            county: $location->getCounty(),
+            city: $location->getCity(),
+            town: null,
+            village: null,
+            suburb: $location->getSuburb(),
+            neighbourhood: null,
+            postcode: $location->getPostcode(),
+            road: $location->getRoad(),
+            houseNumber: $location->getHouseNumber(),
+            boundingBox: $location->getBoundingBox(),
+            category: $location->getCategory(),
+            type: $location->getType()
+        );
+    }
+
+    private function enrichWithGeocode(Location $location, GeocodeResult $geocode): void
+    {
+        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
+            return;
+        }
+
+        if ($location->getPois() !== null) {
+            return;
+        }
+
+        $usedNetwork = $this->poiEnricher->enrich($location, $geocode);
+        if ($usedNetwork) {
+            $this->lastUsedNetwork = true;
+        }
     }
 }

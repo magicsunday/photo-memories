@@ -14,7 +14,7 @@ final class MediaLocationLinker
     /** @var array<string,Location> in-run cache: cell -> Location (managed) */
     private array $cellCache = [];
 
-    private bool $lastUsedNetwork = false;
+    private int $lastNetworkCalls = 0;
 
     public function __construct(
         private readonly ReverseGeocoderInterface $geocoder,
@@ -26,7 +26,7 @@ final class MediaLocationLinker
 
     public function link(Media $media, string $acceptLanguage = 'de'): ?Location
     {
-        $this->lastUsedNetwork = false;
+        $this->lastNetworkCalls = 0;
 
         $lat = $media->getGpsLat();
         $lon = $media->getGpsLon();
@@ -39,6 +39,7 @@ final class MediaLocationLinker
         // 1) in-run cache first
         if (isset($this->cellCache[$cell])) {
             $loc = $this->cellCache[$cell];
+            $this->ensurePois($loc);
             $media->setLocation($loc);
             return $loc;
         }
@@ -47,6 +48,7 @@ final class MediaLocationLinker
         $fromIndex = $this->cellIndex->findByCell($cell);
         if ($fromIndex instanceof Location) {
             $this->cellCache[$cell] = $fromIndex;
+            $this->ensurePois($fromIndex);
             $media->setLocation($fromIndex);
             return $fromIndex;
         }
@@ -57,19 +59,26 @@ final class MediaLocationLinker
             return null;
         }
 
+        $networkCalls = 1; // reverse geocoding uses one request
+
         $loc = $this->resolver->findOrCreate($result);
+        if ($this->resolver->consumeLastUsedNetwork()) {
+            $networkCalls++;
+        }
+
         $this->cellCache[$cell] = $loc;
         $this->cellIndex->remember($cell, $loc);
-        $this->lastUsedNetwork = true;
+        $this->lastNetworkCalls = $networkCalls;
 
         $media->setLocation($loc);
         return $loc;
     }
 
-    public function consumeLastUsedNetwork(): bool
+    public function consumeLastNetworkCalls(): int
     {
-        $v = $this->lastUsedNetwork;
-        $this->lastUsedNetwork = false;
+        $v = $this->lastNetworkCalls;
+        $this->lastNetworkCalls = 0;
+
         return $v;
     }
 
@@ -78,5 +87,14 @@ final class MediaLocationLinker
         $rlat = $deg * \floor($lat / $deg);
         $rlon = $deg * \floor($lon / $deg);
         return \sprintf('%.4f,%.4f', $rlat, $rlon);
+    }
+
+    private function ensurePois(Location $location): void
+    {
+        $this->resolver->ensurePois($location);
+
+        if ($this->resolver->consumeLastUsedNetwork()) {
+            $this->lastNetworkCalls++;
+        }
     }
 }

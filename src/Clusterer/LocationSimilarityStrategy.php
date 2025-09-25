@@ -73,6 +73,20 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
                 $params['place'] = $label;
             }
 
+            $poi = $this->locHelper->majorityPoiContext($group);
+            if ($poi !== null) {
+                $params['poi_label'] = $poi['label'];
+                if ($poi['categoryKey'] !== null) {
+                    $params['poi_category_key'] = $poi['categoryKey'];
+                }
+                if ($poi['categoryValue'] !== null) {
+                    $params['poi_category_value'] = $poi['categoryValue'];
+                }
+                if ($poi['tags'] !== []) {
+                    $params['poi_tags'] = $poi['tags'];
+                }
+            }
+
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
