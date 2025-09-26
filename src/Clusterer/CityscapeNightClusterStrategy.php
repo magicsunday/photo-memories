@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,11 +14,13 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 2 * 3600,
         private readonly float $radiusMeters = 350.0,
-        private readonly int $minItems = 5
+        private readonly int $minItemsPerRun = 5
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -25,8 +28,8 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
         if ($this->radiusMeters <= 0.0) {
             throw new \InvalidArgumentException('radiusMeters must be > 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -44,13 +47,11 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                if (!$t instanceof DateTimeImmutable) {
-                    return false;
-                }
+                \assert($t instanceof DateTimeImmutable);
 
                 $h = (int) $t->setTimezone($tz)->format('G');
                 if ($h < 20 && $h > 2) {
@@ -61,9 +62,9 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
 
                 return $this->looksUrban($path);
             }
-        ));
+        );
 
-        if (\count($cand) < $this->minItems) {
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -71,26 +72,46 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
             ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        /** @var list<list<Media>> $runs */
+        $runs = [];
         /** @var list<Media> $buf */
         $buf = [];
         $last = null;
 
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
+        foreach ($cand as $m) {
+            $ts = $m->getTakenAt()?->getTimestamp();
+            if ($ts === null) {
+                continue;
             }
-            $gps = \array_values(\array_filter($buf, static fn(Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
+                $runs[] = $buf;
+                $buf = [];
+            }
+            $buf[] = $m;
+            $last = $ts;
+        }
+
+        if ($buf !== []) {
+            $runs[] = $buf;
+        }
+
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
+
+        /** @var list<ClusterDraft> $out */
+        $out = [];
+
+        foreach ($eligibleRuns as $run) {
+            $gps = $this->filterGpsItems($run);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
 
             // spatial compactness if GPS exists
             $ok = true;
             foreach ($gps as $m) {
                 $d = MediaMath::haversineDistanceInMeters(
-                    (float)$centroid['lat'], (float)$centroid['lon'],
-                    (float)$m->getGpsLat(), (float)$m->getGpsLon()
+                    (float) $centroid['lat'],
+                    (float) $centroid['lon'],
+                    (float) $m->getGpsLat(),
+                    (float) $m->getGpsLon()
                 );
                 if ($d > $this->radiusMeters) {
                     $ok = false;
@@ -98,34 +119,19 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
                 }
             }
             if ($ok === false) {
-                $buf = [];
-                return;
+                continue;
             }
 
-            $time = MediaMath::timeRange($buf);
+            $time = MediaMath::timeRange($run);
             $out[] = new ClusterDraft(
                 algorithm: 'cityscape_night',
                 params: [
                     'time_range' => $time,
                 ],
-                centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                members: \array_map(static fn(Media $m): int => $m->getId(), $buf)
+                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
             );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
-                continue;
-            }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $last = $ts;
         }
-        $flush();
 
         return $out;
     }

@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,12 +14,14 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class DayAlbumClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItems = 8
+        private readonly int $minItemsPerDay = 8
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -35,14 +38,15 @@ final class DayAlbumClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
@@ -50,10 +54,7 @@ final class DayAlbumClusterStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleDays */
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $members): bool => \count($members) >= $this->minItems
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

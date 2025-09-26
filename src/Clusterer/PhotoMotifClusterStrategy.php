@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -24,15 +24,17 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
-        private readonly int $minItems = 6
+        private readonly int $minItemsPerMotif = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerMotif < 1) {
+            throw new \InvalidArgumentException('minItemsPerMotif must be >= 1.');
         }
     }
 
@@ -48,16 +50,16 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         // Filter: need takenAt; images only (if mime present)
-        $pool = \array_values(\array_filter($items, static function (Media $m): bool {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                return false;
-            }
-            $mime = $m->getMime();
-            return $mime === null || \str_starts_with($mime, 'image/');
-        }));
+        $pool = $this->filterTimestampedItemsBy(
+            $items,
+            static function (Media $m): bool {
+                $mime = $m->getMime();
 
-        if (\count($pool) < $this->minItems) {
+                return $mime === null || \str_starts_with($mime, 'image/');
+            }
+        );
+
+        if (\count($pool) < $this->minItemsPerMotif) {
             return [];
         }
 
@@ -74,10 +76,7 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
             $byMotif[$key][] = $m;
         }
 
-        $eligibleMotifs = \array_filter(
-            $byMotif,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        );
+        $eligibleMotifs = $this->filterGroupsByMinItems($byMotif, $this->minItemsPerMotif);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
@@ -91,13 +90,13 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
             $lastTs = null;
 
             $flush = function () use (&$buf, &$out, $key): void {
-                if (\count($buf) < $this->minItems) {
+                if (\count($buf) < $this->minItemsPerMotif) {
                     $buf = [];
                     return;
                 }
 
                 [$slug, $label] = \explode('|', $key, 2);
-                $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+                $gps = $this->filterGpsItems($buf);
                 $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
                 $time = MediaMath::timeRange($buf);
 

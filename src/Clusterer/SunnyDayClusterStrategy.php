@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -15,6 +16,8 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class SunnyDayClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly WeatherHintProviderInterface $weather,
         private readonly string $timezone = 'Europe/Berlin',
@@ -46,14 +49,15 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
@@ -64,14 +68,11 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, float> $avgSun */
         $avgSun = [];
-        $sunnyDays = \array_filter(
+        $sunnyDays = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$avgSun): bool {
                 $sum = 0.0;
@@ -112,8 +113,7 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
                 $avgSun[$day] = $avg;
 
                 return true;
-            },
-            ARRAY_FILTER_USE_BOTH
+            }
         );
 
         if ($sunnyDays === []) {

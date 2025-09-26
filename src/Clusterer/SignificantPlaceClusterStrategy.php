@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -14,6 +15,8 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
@@ -42,16 +45,17 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestampedGps */
+        $timestampedGps = $this->filterTimestampedGpsItems($items);
+
         /** @var array<string, list<Media>> $byCell */
         $byCell = [];
 
-        foreach ($items as $m) {
+        foreach ($timestampedGps as $m) {
             $lat = $m->getGpsLat();
             $lon = $m->getGpsLon();
             $t   = $m->getTakenAt();
-            if ($lat === null || $lon === null || !$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $cell = $this->cellKey((float) $lat, (float) $lon);
             $byCell[$cell] ??= [];
             $byCell[$cell][] = $m;
@@ -59,17 +63,17 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 
         /** @var array<string,int> $visitCounts */
         $visitCounts = [];
-        $eligiblePlaces = \array_filter(
-            $byCell,
-            function (array $list, string $cell) use (&$visitCounts): bool {
-                if (\count($list) < $this->minItemsTotal) {
-                    return false;
-                }
+        $eligiblePlaces = $this->filterGroupsByMinItems($byCell, $this->minItemsTotal);
 
+        $eligiblePlaces = $this->filterGroupsWithKeys(
+            $eligiblePlaces,
+            function (array $list, string $cell) use (&$visitCounts): bool {
                 /** @var array<string,bool> $days */
                 $days = [];
                 foreach ($list as $m) {
-                    $days[$m->getTakenAt()->format('Y-m-d')] = true;
+                    $takenAt = $m->getTakenAt();
+                    \assert($takenAt instanceof DateTimeImmutable);
+                    $days[$takenAt->format('Y-m-d')] = true;
                 }
 
                 $count = \count($days);
@@ -80,8 +84,7 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
                 $visitCounts[$cell] = $count;
 
                 return true;
-            },
-            ARRAY_FILTER_USE_BOTH
+            }
         );
 
         if ($eligiblePlaces === []) {

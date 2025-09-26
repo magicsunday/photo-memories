@@ -16,6 +16,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     /**
      * @var array<int, true>
@@ -83,14 +84,15 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $media) {
+        foreach ($timestamped as $media) {
             $takenAt = $media->getTakenAt();
-            if (!$takenAt instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($takenAt instanceof DateTimeImmutable);
 
             $local = $takenAt->setTimezone($tz);
             $dow = (int) $local->format('N');
@@ -112,10 +114,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $keepDays */
         $keepDays = [];
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         foreach ($eligibleDays as $day => $list) {
             $within = [];

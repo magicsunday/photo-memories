@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -11,15 +12,17 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PetMomentsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItems = 6
+        private readonly int $minItemsPerRun = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -35,11 +38,11 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             fn (Media $m): bool => $this->looksLikePet(\strtolower($m->getPath()))
-        ));
-        if (\count($cand) < $this->minItems) {
+        );
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -47,20 +50,38 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
             ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        /** @var list<list<Media>> $runs */
+        $runs = [];
         /** @var list<Media> $buf */
         $buf = [];
         $last = null;
 
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
+        foreach ($cand as $m) {
+            $ts = $m->getTakenAt()?->getTimestamp();
+            if ($ts === null) {
+                continue;
             }
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
+                $runs[] = $buf;
+                $buf = [];
+            }
+            $buf[] = $m;
+            $last = $ts;
+        }
+
+        if ($buf !== []) {
+            $runs[] = $buf;
+        }
+
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
+
+        /** @var list<ClusterDraft> $out */
+        $out = [];
+
+        foreach ($eligibleRuns as $run) {
+            $gps = $this->filterGpsItems($run);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-            $time = MediaMath::timeRange($buf);
+            $time = MediaMath::timeRange($run);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -68,23 +89,9 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
             );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp();
-            if ($ts === null) {
-                continue;
-            }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $last = $ts;
         }
-        $flush();
 
         return $out;
     }

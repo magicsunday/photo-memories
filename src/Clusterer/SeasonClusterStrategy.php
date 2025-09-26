@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,11 +14,14 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class SeasonClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
-        private readonly int $minItems = 20
+        // Minimum members per (season, year) bucket.
+        private readonly int $minItemsPerSeason = 20
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerSeason < 1) {
+            throw new \InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
     }
 
@@ -32,14 +36,15 @@ final class SeasonClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $month = (int) $t->format('n');
             $year  = (int) $t->format('Y');
 
@@ -61,10 +66,7 @@ final class SeasonClusterStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleGroups */
-        $eligibleGroups = \array_filter(
-            $groups,
-            fn (array $members): bool => \count($members) >= $this->minItems
-        );
+        $eligibleGroups = $this->filterGroupsByMinItems($groups, $this->minItemsPerSeason);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

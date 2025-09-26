@@ -4,23 +4,25 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 final class PhashSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly int $maxHamming = 6,
-        private readonly int $minItems = 2,
+        private readonly int $minItemsPerBucket = 2,
     ) {
         if ($this->maxHamming < 0) {
             throw new \InvalidArgumentException('maxHamming must be >= 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerBucket < 1) {
+            throw new \InvalidArgumentException('minItemsPerBucket must be >= 1.');
         }
     }
 
@@ -36,10 +38,10 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         // 1) nur mit pHash
-        $with = \array_values(\array_filter(
+        $with = $this->filterTimestampedItemsBy(
             $items,
-            static fn(Media $m): bool => \is_string($m->getPhash()) && $m->getPhash() !== ''
-        ));
+            static fn (Media $m): bool => \is_string($m->getPhash()) && $m->getPhash() !== ''
+        );
 
         if ($with === []) {
             return [];
@@ -56,16 +58,13 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleBuckets */
-        $eligibleBuckets = \array_filter(
-            $buckets,
-            fn (array $group): bool => \count($group) >= $this->minItems
-        );
+        $eligibleBuckets = $this->filterGroupsByMinItems($buckets, $this->minItemsPerBucket);
 
         // 3) Pro Bucket Komponenten nach Hamming-Distanz
         $drafts = [];
         foreach ($eligibleBuckets as $group) {
             foreach ($this->components($group) as $comp) {
-                if (\count($comp) < $this->minItems) {
+                if (\count($comp) < $this->minItemsPerBucket) {
                     continue;
                 }
                 $params = [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,10 +14,13 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class BurstClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $maxGapSeconds = 90,
         private readonly float $maxMoveMeters = 50.0,
-        private readonly int $minItems = 3
+        // Minimum photos per burst run before emitting a memory.
+        private readonly int $minItemsPerBurst = 3
     ) {
         if ($this->maxGapSeconds < 1) {
             throw new \InvalidArgumentException('maxGapSeconds must be >= 1.');
@@ -24,8 +28,8 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
         if ($this->maxMoveMeters < 0.0) {
             throw new \InvalidArgumentException('maxMoveMeters must be >= 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerBurst < 1) {
+            throw new \InvalidArgumentException('minItemsPerBurst must be >= 1.');
         }
     }
 
@@ -40,13 +44,17 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        $n = \count($items);
-        if ($n < $this->minItems) {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
+        $n = \count($timestamped);
+        if ($n < $this->minItemsPerBurst) {
             return [];
         }
 
-        \usort($items, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt() ?? new DateTimeImmutable('@0')) <=> ($b->getTakenAt() ?? new DateTimeImmutable('@0'))
+        \usort(
+            $timestamped,
+            static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt()
         );
 
         /** @var list<list<Media>> $sessions */
@@ -54,17 +62,22 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
         /** @var list<Media> $current */
         $current  = [];
 
-        foreach ($items as $i => $media) {
+        foreach ($timestamped as $i => $media) {
             if ($i === 0) {
                 $current[] = $media;
                 continue;
             }
 
-            $prev = $items[$i - 1];
+            $prev = $timestamped[$i - 1];
+
+            $currTakenAt = $media->getTakenAt();
+            $prevTakenAt = $prev->getTakenAt();
+            \assert($currTakenAt instanceof DateTimeImmutable);
+            \assert($prevTakenAt instanceof DateTimeImmutable);
 
             $timeOk = MediaMath::secondsBetween(
-                    $media->getTakenAt() ?? new DateTimeImmutable('@0'),
-                    $prev->getTakenAt() ?? new DateTimeImmutable('@0')
+                    $currTakenAt,
+                    $prevTakenAt
                 ) <= $this->maxGapSeconds;
 
             $distOk = true;
@@ -90,10 +103,7 @@ final class BurstClusterStrategy implements ClusterStrategyInterface
             $sessions[] = $current;
         }
 
-        $eligible = \array_values(\array_filter(
-            $sessions,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        ));
+        $eligible = $this->filterListsByMinItems($sessions, $this->minItemsPerBurst);
 
         return \array_map(
             fn (array $members): ClusterDraft => $this->makeDraft($members),

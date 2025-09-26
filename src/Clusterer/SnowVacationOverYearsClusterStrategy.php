@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -15,6 +16,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
@@ -57,15 +59,20 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<int, array<string, list<Media>>> $byYearDay */
         $byYearDay = [];
 
-        foreach ($items as $m) {
-            $t = $m->getTakenAt();
+        foreach ($timestamped as $m) {
             $path = \strtolower($m->getPath());
-            if (!$t instanceof DateTimeImmutable || !$this->looksSnow($path)) {
+            if (!$this->looksSnow($path)) {
                 continue;
             }
+
+            $t = $m->getTakenAt();
+            \assert($t instanceof DateTimeImmutable);
             $mon = (int) $t->setTimezone($tz)->format('n');
             $winter = ($mon === 12 || $mon <= 2);
             if ($winter === false) {
@@ -84,10 +91,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
         $yearsPicked = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $eligibleDaysMap = \array_filter(
-                $daysMap,
-                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-            );
+            $eligibleDaysMap = $this->filterGroupsByMinItems($daysMap, $this->minItemsPerDay);
 
             if ($eligibleDaysMap === []) {
                 continue;

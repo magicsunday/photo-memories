@@ -15,6 +15,8 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     /**
      * @param list<string> $keywords
      */
@@ -50,11 +52,12 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         /** @var array<int, array<string, list<Media>>> $byYearDay */
         $byYearDay = [];
 
-        foreach ($items as $media) {
+        foreach ($this->filterTimestampedItemsBy(
+            $items,
+            fn (Media $media): bool => $this->matchesMedia($media)
+        ) as $media) {
             $takenAt = $media->getTakenAt();
-            if (!$takenAt instanceof DateTimeImmutable || !$this->matchesMedia($media)) {
-                continue;
-            }
+            \assert($takenAt instanceof DateTimeImmutable);
 
             $local = $takenAt->setTimezone($tz);
             $year  = (int) $local->format('Y');
@@ -69,10 +72,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         $eligibleByYear = [];
 
         foreach ($byYearDay as $year => $days) {
-            $eligibleDays = \array_filter(
-                $days,
-                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-            );
+            $eligibleDays = $this->filterGroupsByMinItems($days, $this->minItemsPerDay);
 
             if ($eligibleDays !== []) {
                 $eligibleByYear[$year] = $eligibleDays;

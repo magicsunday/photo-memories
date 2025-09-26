@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -11,12 +12,27 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly float $minAspect = 2.4,
-        private readonly int $perYearMin = 3,
+        // Minimum panoramas that must exist within each individual year.
+        private readonly int $minItemsPerYear = 3,
         private readonly int $minYears = 3,
         private readonly int $minItemsTotal = 15
     ) {
+        if ($this->minAspect <= 0.0) {
+            throw new \InvalidArgumentException('minAspect must be > 0.');
+        }
+        if ($this->minItemsPerYear < 1) {
+            throw new \InvalidArgumentException('minItemsPerYear must be >= 1.');
+        }
+        if ($this->minYears < 1) {
+            throw new \InvalidArgumentException('minYears must be >= 1.');
+        }
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
     }
 
     public function name(): string
@@ -33,27 +49,32 @@ final class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
         /** @var array<int, list<Media>> $byYear */
         $byYear = [];
 
-        foreach ($items as $m) {
+        $panoramaItems = $this->filterTimestampedItemsBy(
+            $items,
+            function (Media $m): bool {
+                $w = $m->getWidth();
+                $h = $m->getHeight();
+
+                if ($w === null || $h === null || $w <= 0 || $h <= 0 || $w <= $h) {
+                    return false;
+                }
+
+                $ratio = (float) $w / (float) $h;
+
+                return $ratio >= $this->minAspect;
+            }
+        );
+
+        foreach ($panoramaItems as $m) {
             $t = $m->getTakenAt();
-            $w = $m->getWidth();
-            $h = $m->getHeight();
-            if ($t === null || $w === null || $h === null || $w <= 0 || $h <= 0 || $w <= $h) {
-                continue;
-            }
-            $ratio = (float) $w / (float) $h;
-            if ($ratio < $this->minAspect) {
-                continue;
-            }
+            \assert($t instanceof \DateTimeImmutable);
             $y = (int) $t->format('Y');
             $byYear[$y] ??= [];
             $byYear[$y][] = $m;
         }
 
         /** @var array<int, list<Media>> $eligibleYears */
-        $eligibleYears = \array_filter(
-            $byYear,
-            fn (array $list): bool => \count($list) >= $this->perYearMin
-        );
+        $eligibleYears = $this->filterGroupsByMinItems($byYear, $this->minItemsPerYear);
 
         if ($eligibleYears === []) {
             return [];

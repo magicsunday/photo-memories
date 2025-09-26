@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -16,6 +17,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
@@ -59,19 +61,20 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestampedGps */
+        $timestampedGps = $this->filterTimestampedGpsItems($items);
+
         /** @var array<string, array<string, list<Media>>> $cellDayMap */
         $cellDayMap = [];
 
-        foreach ($items as $m) {
+        foreach ($timestampedGps as $m) {
             $t   = $m->getTakenAt();
-            $lat = $m->getGpsLat();
-            $lon = $m->getGpsLon();
-            if (!$t instanceof DateTimeImmutable || $lat === null || $lon === null) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
+            $lat = (float) $m->getGpsLat();
+            $lon = (float) $m->getGpsLon();
             $local = $t->setTimezone($tz);
             $day = $local->format('Y-m-d');
-            $cell = $this->cellKey((float)$lat, (float)$lon);
+            $cell = $this->cellKey($lat, $lon);
             $cellDayMap[$cell] ??= [];
             $cellDayMap[$cell][$day] ??= [];
             $cellDayMap[$cell][$day][] = $m;
@@ -81,10 +84,7 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         $out = [];
 
         foreach ($cellDayMap as $cell => $daysMap) {
-            $eligibleDaysMap = \array_filter(
-                $daysMap,
-                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-            );
+            $eligibleDaysMap = $this->filterGroupsByMinItems($daysMap, $this->minItemsPerDay);
 
             if ($eligibleDaysMap === []) {
                 continue;

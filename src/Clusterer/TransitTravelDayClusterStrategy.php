@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,16 +14,19 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly float $minTravelKm = 60.0,
-        private readonly int $minGpsSamples = 5
+        // Counts only media items that already contain GPS coordinates.
+        private readonly int $minItemsPerDay = 5
     ) {
         if ($this->minTravelKm <= 0.0) {
             throw new \InvalidArgumentException('minTravelKm must be > 0.');
         }
-        if ($this->minGpsSamples < 1) {
-            throw new \InvalidArgumentException('minGpsSamples must be >= 1.');
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -39,31 +43,29 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        $timestampedGpsItems = $this->filterTimestampedGpsItems($items);
+
+        if ($timestampedGpsItems === []) {
+            return [];
+        }
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
+        foreach ($timestampedGpsItems as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            if ($m->getGpsLat() === null || $m->getGpsLon() === null) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minGpsSamples
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, float> $dayDistanceKm */
         $dayDistanceKm = [];
-        $travelDays = \array_filter(
+        $travelDays = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$dayDistanceKm): bool {
                 $sorted = $list;
@@ -88,8 +90,7 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
                 $dayDistanceKm[$day] = $distKm;
 
                 return true;
-            },
-            ARRAY_FILTER_USE_BOTH
+            }
         );
 
         if ($travelDays === []) {
@@ -116,4 +117,5 @@ final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
+
 }
