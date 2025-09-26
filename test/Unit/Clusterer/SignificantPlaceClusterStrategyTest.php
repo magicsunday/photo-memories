@@ -6,8 +6,8 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
-use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
@@ -92,19 +92,14 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon, Location $location): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/significant-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "significant-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
 }

@@ -112,19 +112,14 @@ final class AnniversaryClusterStrategyTest extends TestCase
         float $lat,
         float $lon,
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/anniversary-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "anniversary-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
     private function createLocation(string $key): Location

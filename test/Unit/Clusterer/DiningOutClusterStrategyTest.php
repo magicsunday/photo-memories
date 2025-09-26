@@ -75,18 +75,13 @@ final class DiningOutClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, string $path): Media
     {
-        $media = new Media(
+        return $this->makeMedia(
+            id: $id,
             path: $path,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

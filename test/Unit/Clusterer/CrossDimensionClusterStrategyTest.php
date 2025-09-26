@@ -73,18 +73,13 @@ final class CrossDimensionClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/cross-dimension-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "cross-dimension-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

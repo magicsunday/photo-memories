@@ -56,16 +56,11 @@ final class NoveltyHeuristicTest extends TestCase
 
     private function createMedia(int $id, string $takenAt): Media
     {
-        $media = new Media(
+        return $this->makeMedia(
+            id: $id,
             path: __DIR__ . "/novelty-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+            takenAt: $takenAt,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        return $media;
     }
 
 }

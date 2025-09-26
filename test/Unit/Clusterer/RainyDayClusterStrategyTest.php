@@ -69,18 +69,13 @@ final class RainyDayClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/rainy-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: 'rainy-' . $id . '.jpg',
+            takenAt: $takenAt,
+            lat: 47.5,
+            lon: 7.6,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(47.5);
-        $media->setGpsLon(7.6);
-
-        return $media;
     }
 
 }
