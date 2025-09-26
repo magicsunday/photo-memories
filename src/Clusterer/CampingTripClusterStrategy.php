@@ -8,6 +8,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 
 /**
  * Multi-day camping runs (consecutive days) using keywords.
@@ -15,6 +16,7 @@ use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 final class CampingTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
@@ -56,12 +58,15 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
+        $campingItems = $this->filterTimestampedItemsBy(
+            $items,
+            fn (Media $m): bool => $this->looksCamping(\strtolower($m->getPath()))
+        );
+
+        foreach ($campingItems as $m) {
             $t = $m->getTakenAt();
-            $path = \strtolower($m->getPath());
-            if (!$t instanceof DateTimeImmutable || !$this->looksCamping($path)) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
+
             $d = $t->setTimezone($tz)->format('Y-m-d');
             $byDay[$d] ??= [];
             $byDay[$d][] = $m;
@@ -71,10 +76,7 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         if ($eligibleDays === []) {
             return [];

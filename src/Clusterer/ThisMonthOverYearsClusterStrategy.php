@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,17 +14,19 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $minYears = 3,
-        private readonly int $minItems = 24,
+        private readonly int $minItemsTotal = 24,
         private readonly int $minDistinctDays = 8
     ) {
         if ($this->minYears < 1) {
             throw new \InvalidArgumentException('minYears must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
         if ($this->minDistinctDays < 1) {
             throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
@@ -51,13 +54,11 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
         $days = [];
 
         /** @var list<Media> $picked */
-        $picked = \array_values(\array_filter(
+        $picked = $this->filterTimestampedItemsBy(
             $items,
             static function (Media $m) use ($tz, $mon, &$years, &$days): bool {
                 $takenAt = $m->getTakenAt();
-                if (!$takenAt instanceof DateTimeImmutable) {
-                    return false;
-                }
+                \assert($takenAt instanceof DateTimeImmutable);
 
                 $local = $takenAt->setTimezone($tz);
                 if ((int) $local->format('n') !== $mon) {
@@ -69,9 +70,9 @@ final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterfac
 
                 return true;
             }
-        ));
+        );
 
-        if (\count($picked) < $this->minItems || \count($years) < $this->minYears || \count($days) < $this->minDistinctDays) {
+        if (\count($picked) < $this->minItemsTotal || \count($years) < $this->minYears || \count($days) < $this->minDistinctDays) {
             return [];
         }
 

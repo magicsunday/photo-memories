@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,12 +14,15 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItems = 2
+        // Minimum number of videos per local day to emit a story.
+        private readonly int $minItemsPerDay = 2
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -38,15 +42,18 @@ final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
-            $mime = $m->getMime();
-            if (!\is_string($mime) || \strpos($mime, 'video/') !== 0) {
-                continue;
+        $videoItems = $this->filterTimestampedItemsBy(
+            $items,
+            static function (Media $m): bool {
+                $mime = $m->getMime();
+
+                return \is_string($mime) && \str_starts_with($mime, 'video/');
             }
+        );
+
+        foreach ($videoItems as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
@@ -54,10 +61,7 @@ final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleDays */
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $members): bool => \count($members) >= $this->minItems
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

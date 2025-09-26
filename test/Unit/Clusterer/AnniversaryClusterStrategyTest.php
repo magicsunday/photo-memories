@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -11,234 +11,132 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class AnniversaryClusterStrategyTest extends TestCase
 {
     #[Test]
-    public function clustersMediaSharingSameMonthDayAcrossYears(): void
+    public function keepsHighestScoringAnniversariesWithinLimit(): void
     {
-        $strategy = new AnniversaryClusterStrategy(new LocationHelper());
+        $strategy = new AnniversaryClusterStrategy(
+            new LocationHelper(),
+            minItemsPerAnniversary: 3,
+            minDistinctYears: 2,
+            maxClusters: 1,
+        );
 
-        $location = $this->createLocation(city: 'Berlin');
+        $berlin = $this->createLocation('berlin');
+        $munich = $this->createLocation('munich');
+
         $mediaItems = [
-            $this->createMedia(
-                id: 10,
-                takenAt: '2020-05-10 09:00:00',
-                lat: 52.5200,
-                lon: 13.4050,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 11,
-                takenAt: '2021-05-10 10:15:00',
-                lat: 52.5205,
-                lon: 13.4045,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 12,
-                takenAt: '2022-05-10 08:30:00',
-                lat: 52.5195,
-                lon: 13.4055,
-                location: $location,
-            ),
+            // Jan-05 group (4 items across 3 years) -> higher score
+            $this->createMedia(1001, '2019-01-05 09:00:00', $berlin, 52.5200, 13.4050),
+            $this->createMedia(1002, '2020-01-05 09:05:00', $berlin, 52.5202, 13.4052),
+            $this->createMedia(1003, '2020-01-05 09:06:00', $berlin, 52.5201, 13.4051),
+            $this->createMedia(1004, '2021-01-05 09:10:00', $berlin, 52.5203, 13.4053),
+            // Mar-10 group (3 items across 3 years) -> lower score, should be dropped by maxClusters
+            $this->createMedia(1101, '2018-03-10 11:00:00', $munich, 48.1371, 11.5753),
+            $this->createMedia(1102, '2019-03-10 11:05:00', $munich, 48.1372, 11.5754),
+            $this->createMedia(1103, '2020-03-10 11:10:00', $munich, 48.1373, 11.5755),
         ];
 
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
+
         self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('anniversary', $cluster->getAlgorithm());
-        self::assertSame([10, 11, 12], $cluster->getMembers());
+        self::assertSame([1001, 1002, 1003, 1004], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertSame('Berlin', $params['place']);
 
         $expectedRange = [
-            'from' => (new DateTimeImmutable('2020-05-10 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2022-05-10 08:30:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'from' => (new DateTimeImmutable('2019-01-05 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2021-01-05 09:10:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
-        self::assertSame($expectedRange, $cluster->getParams()['time_range']);
-        self::assertSame('Berlin', $cluster->getParams()['place']);
+        self::assertSame($expectedRange, $params['time_range']);
 
         $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta(52.52, $centroid['lat'], 0.0005);
-        self::assertEqualsWithDelta(13.405, $centroid['lon'], 0.0005);
+        self::assertEqualsWithDelta(52.52015, $centroid['lat'], 0.0001);
+        self::assertEqualsWithDelta(13.40515, $centroid['lon'], 0.0001);
     }
 
     #[Test]
-    public function skipsGroupsWithLessThanThreeMedia(): void
+    public function returnsEmptyWhenAnniversaryLacksDistinctYears(): void
     {
-        $strategy = new AnniversaryClusterStrategy(new LocationHelper());
+        $strategy = new AnniversaryClusterStrategy(
+            new LocationHelper(),
+            minItemsPerAnniversary: 3,
+            minDistinctYears: 3,
+            maxClusters: 0,
+        );
 
-        $location = $this->createLocation(city: 'Hamburg');
+        $location = $this->createLocation('hamburg');
+
         $mediaItems = [
-            $this->createMedia(
-                id: 20,
-                takenAt: '2020-03-15 12:00:00',
-                lat: 53.5511,
-                lon: 9.9937,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 21,
-                takenAt: '2021-03-15 12:00:00',
-                lat: 53.5512,
-                lon: 9.9936,
-                location: $location,
-            ),
-        ];
-
-        $clusters = $strategy->cluster($mediaItems);
-
-        self::assertSame([], $clusters);
-    }
-
-    #[Test]
-    public function enforcesMinimumDistinctYears(): void
-    {
-        $strategy = new AnniversaryClusterStrategy(new LocationHelper(), minItems: 3, minDistinctYears: 3);
-
-        $location = $this->createLocation(city: 'Munich');
-        $mediaItems = [
-            $this->createMedia(
-                id: 30,
-                takenAt: '2020-07-04 09:00:00',
-                lat: 48.1371,
-                lon: 11.5754,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 31,
-                takenAt: '2021-07-04 10:00:00',
-                lat: 48.1372,
-                lon: 11.5755,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 32,
-                takenAt: '2021-07-04 11:00:00',
-                lat: 48.1373,
-                lon: 11.5756,
-                location: $location,
-            ),
+            $this->createMedia(2001, '2022-07-04 10:00:00', $location, 53.5511, 9.9937),
+            $this->createMedia(2002, '2022-07-04 10:02:00', $location, 53.5512, 9.9938),
+            $this->createMedia(2003, '2023-07-04 10:05:00', $location, 53.5513, 9.9939),
         ];
 
         self::assertSame([], $strategy->cluster($mediaItems));
-
-        $mediaItems[] = $this->createMedia(
-            id: 33,
-            takenAt: '2022-07-04 09:30:00',
-            lat: 48.1374,
-            lon: 11.5753,
-            location: $location,
-        );
-
-        $clusters = $strategy->cluster($mediaItems);
-        self::assertCount(1, $clusters);
-        self::assertSame([30, 31, 32, 33], $clusters[0]->getMembers());
     }
 
     #[Test]
-    public function limitsClustersToConfiguredMaximum(): void
+    public function skipsGroupsBelowMinimumItemCount(): void
     {
-        $strategy = new AnniversaryClusterStrategy(new LocationHelper(), minItems: 3, minDistinctYears: 1, maxClusters: 1);
+        $strategy = new AnniversaryClusterStrategy(
+            new LocationHelper(),
+            minItemsPerAnniversary: 4,
+            minDistinctYears: 2,
+            maxClusters: 0,
+        );
 
-        $location = $this->createLocation(city: 'Cologne');
+        $location = $this->createLocation('berlin');
+
         $mediaItems = [
-            $this->createMedia(
-                id: 40,
-                takenAt: '2018-01-01 08:00:00',
-                lat: 50.9375,
-                lon: 6.9603,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 41,
-                takenAt: '2019-01-01 08:15:00',
-                lat: 50.9376,
-                lon: 6.9604,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 42,
-                takenAt: '2020-01-01 08:30:00',
-                lat: 50.9377,
-                lon: 6.9605,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 43,
-                takenAt: '2021-01-01 08:45:00',
-                lat: 50.9378,
-                lon: 6.9606,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 44,
-                takenAt: '2018-02-02 08:00:00',
-                lat: 50.9375,
-                lon: 6.9603,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 45,
-                takenAt: '2019-02-02 08:15:00',
-                lat: 50.9376,
-                lon: 6.9604,
-                location: $location,
-            ),
-            $this->createMedia(
-                id: 46,
-                takenAt: '2020-02-02 08:30:00',
-                lat: 50.9377,
-                lon: 6.9605,
-                location: $location,
-            ),
+            $this->createMedia(3001, '2020-09-15 12:00:00', $location, 52.5201, 13.4049),
+            $this->createMedia(3002, '2021-09-15 12:05:00', $location, 52.5202, 13.4050),
+            $this->createMedia(3003, '2022-09-15 12:10:00', $location, 52.5203, 13.4051),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
-        self::assertCount(1, $clusters);
-        self::assertSame([40, 41, 42, 43], $clusters[0]->getMembers());
+        self::assertSame([], $strategy->cluster($mediaItems));
     }
 
-    private function createMedia(int $id, string $takenAt, float $lat, float $lon, Location $location): Media
-    {
-        $media = new Media(
-            path: __DIR__."/fixtures/media-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+    private function createMedia(
+        int $id,
+        string $takenAt,
+        Location $location,
+        float $lat,
+        float $lon,
+    ): Media {
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "anniversary-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
-    private function createLocation(string $city): Location
+    private function createLocation(string $key): Location
     {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: 'place-'.$city,
-            displayName: $city,
-            lat: 0.0,
-            lon: 0.0,
-            cell: 'cell-'.$city,
+        $city = match ($key) {
+            'berlin' => 'Berlin',
+            'munich' => 'Munich',
+            default => 'Hamburg',
+        };
+
+        return $this->makeLocation(
+            providerPlaceId: $key,
+            displayName: ucfirst($key),
+            lat: 50.0,
+            lon: 8.0,
+            city: $city,
         );
-
-        $location->setCity($city);
-        $location->setCountry('Germany');
-
-        return $location;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

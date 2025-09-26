@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,15 +14,18 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $minYears = 3,
-        private readonly int $minItems = 30
+        // Minimum total members per season bucket across all years considered.
+        private readonly int $minItemsPerSeason = 30
     ) {
         if ($this->minYears < 1) {
             throw new \InvalidArgumentException('minYears must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerSeason < 1) {
+            throw new \InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
     }
 
@@ -36,14 +40,15 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $month = (int) $t->format('n');
             $season = match (true) {
                 $month >= 3 && $month <= 5  => 'Frühling',
@@ -55,10 +60,7 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
             $groups[$season][] = $m;
         }
 
-        $eligibleSeasons = \array_filter(
-            $groups,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        );
+        $eligibleSeasons = $this->filterGroupsByMinItems($groups, $this->minItemsPerSeason);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -15,6 +16,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class LongTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         /** Home base; if null, strategy is effectively disabled. */
@@ -23,6 +25,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
         private readonly float $minAwayKm = 150.0,
         private readonly int $minNights = 3,
         private readonly string $timezone = 'Europe/Berlin',
+        // Counts timestamped media before we enforce GPS coverage for distance checks.
         private readonly int $minItemsPerDay = 3
     ) {
         if ($this->minAwayKm <= 0.0) {
@@ -53,64 +56,71 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
 
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
-        /** @var array<string, float> $dayDistance */
-        $dayDistance = [];
-        /** @var array<string, list<Media>> $usableDayItems */
-        $usableDayItems = \array_filter(
-            $eligibleDays,
-            function (array $list, string $day) use (&$dayDistance): bool {
-                $gps = \array_values(\array_filter(
-                    $list,
-                    static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
-                ));
+        /**
+         * Keep both the complete per-day members and the GPS-only subset so we can
+         * enforce distance thresholds without discarding supporting media.
+         *
+         * @var array<string, list<Media>> $dayMembers
+         * @var array<string, list<Media>> $dayGpsMembers
+         * @var array<string, float> $dayDistanceKm
+         */
+        $dayMembers = [];
+        $dayGpsMembers = [];
+        $dayDistanceKm = [];
 
-                if (\count($gps) < $this->minItemsPerDay) {
-                    return false;
-                }
+        foreach ($eligibleDays as $day => $list) {
+            $gpsMembers = $this->filterTimestampedGpsItems($list);
 
-                $centroid = MediaMath::centroid($gps);
-                $dist = MediaMath::haversineDistanceInMeters(
-                        (float) $centroid['lat'],
-                        (float) $centroid['lon'],
-                        (float) $this->homeLat,
-                        (float) $this->homeLon
+            if (\count($gpsMembers) < $this->minItemsPerDay) {
+                continue;
+            }
+
+            $sortedGps = $gpsMembers;
+            \usort($sortedGps, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+
+            $distKm = 0.0;
+            for ($i = 1, $n = \count($sortedGps); $i < $n; $i++) {
+                $p = $sortedGps[$i - 1];
+                $q = $sortedGps[$i];
+                $distKm += MediaMath::haversineDistanceInMeters(
+                        (float) $p->getGpsLat(),
+                        (float) $p->getGpsLon(),
+                        (float) $q->getGpsLat(),
+                        (float) $q->getGpsLon()
                     ) / 1000.0;
+            }
 
-                if ($dist < $this->minAwayKm) {
-                    return false;
-                }
+            if ($distKm < $this->minAwayKm) {
+                continue;
+            }
 
-                $dayDistance[$day] = $dist;
+            $dayMembers[$day] = $list;
+            $dayGpsMembers[$day] = $gpsMembers;
+            $dayDistanceKm[$day] = $distKm;
+        }
 
-                return true;
-            },
-            ARRAY_FILTER_USE_BOTH
-        );
-
-        if ($usableDayItems === []) {
+        if ($dayMembers === []) {
             return [];
         }
 
         // Sort days and find consecutive away sequences
-        $days = \array_keys($usableDayItems);
+        $days = \array_keys($dayMembers);
         \sort($days, \SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
@@ -118,7 +128,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $run */
         $run = [];
 
-        $flush = function () use (&$run, &$out, $usableDayItems, $dayDistance): void {
+        $flush = function () use (&$run, &$out, $dayMembers, $dayGpsMembers, $dayDistanceKm): void {
             $runSize = \count($run);
             if ($runSize < 2) {
                 $run = [];
@@ -129,11 +139,11 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
             /** @var list<Media> $gpsMembers */
             $gpsMembers = [];
             foreach ($run as $d) {
-                foreach ($usableDayItems[$d] as $m) {
+                foreach ($dayMembers[$d] as $m) {
                     $all[] = $m;
-                    if ($m->getGpsLat() !== null && $m->getGpsLon() !== null) {
-                        $gpsMembers[] = $m;
-                    }
+                }
+                foreach ($dayGpsMembers[$d] as $m) {
+                    $gpsMembers[] = $m;
                 }
             }
             $nights = \max(0, \count($run) - 1);
@@ -151,7 +161,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
 
             $totalDistanceKm = 0.0;
             foreach ($run as $day) {
-                $totalDistanceKm += $dayDistance[$day] ?? 0.0;
+                $totalDistanceKm += $dayDistanceKm[$day] ?? 0.0;
             }
             $averageDistanceKm = $runSize > 0 ? $totalDistanceKm / $runSize : 0.0;
             if ($averageDistanceKm < $this->minAwayKm) {

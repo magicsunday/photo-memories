@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,10 +13,12 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $timeGapSeconds = 2 * 3600,   // 2h
         private readonly float $radiusMeters = 150.0,      // 150 m
-        private readonly int $minItems = 6
+        private readonly int $minItemsPerRun = 6
     ) {
         if ($this->timeGapSeconds < 1) {
             throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
@@ -24,8 +26,8 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
         if ($this->radiusMeters <= 0.0) {
             throw new \InvalidArgumentException('radiusMeters must be > 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -41,12 +43,9 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         // Filter: need time; prefer GPS (we allow some without GPS as long as cluster centroid is stable)
-        $withTime = \array_values(\array_filter(
-            $items,
-            static fn (Media $m): bool => $m->getTakenAt() instanceof DateTimeImmutable
-        ));
+        $withTime = $this->filterTimestampedItems($items);
 
-        if (\count($withTime) < $this->minItems) {
+        if (\count($withTime) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -76,16 +75,13 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
             $runs[] = $buf;
         }
 
-        $eligibleRuns = \array_values(\array_filter(
-            $runs,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        ));
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $gps = \array_values(\array_filter($run, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            $gps = $this->filterGpsItems($run);
             $centroid = $gps !== []
                 ? MediaMath::centroid($gps)
                 : ['lat' => 0.0, 'lon' => 0.0];

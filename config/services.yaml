@@ -137,11 +137,26 @@ services:
     MagicSunday\Memories\Service\Geocoding\ReverseGeocoderInterface:
         alias: MagicSunday\Memories\Service\Geocoding\NominatimReverseGeocoder
 
+    MagicSunday\Memories\Service\Geocoding\OverpassClient:
+        arguments:
+            $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $baseUrl: '%memories.geocoding.overpass.base_url%'
+            $userAgent: '%memories.geocoding.nominatim.user_agent%'
+            $contactEmail: '%memories.geocoding.nominatim.email%'
+            $queryTimeout: '%memories.geocoding.overpass.timeout%'
+            $httpTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher:
+        arguments:
+            $radiusMeters: '%memories.geocoding.overpass.radius_m%'
+            $maxPois: '%memories.geocoding.overpass.max_pois%'
+
     MagicSunday\Memories\Service\Geocoding\LocationCellIndex: ~
 
     MagicSunday\Memories\Service\Geocoding\LocationResolver:
         arguments:
             $cellDeg: 0.01
+            $poiEnricher: '@MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher'
 
     MagicSunday\Memories\Service\Geocoding\MediaLocationLinker:
         arguments:
@@ -160,28 +175,28 @@ services:
     MagicSunday\Memories\Clusterer\TimeSimilarityStrategy:
         arguments:
             $maxGapSeconds: 10800   # 3h keeps sessions cohesive without spanning full days
-            $minItems: 9
+            $minItemsPerBucket: 9
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.time_similarity_strategy%' }
 
     MagicSunday\Memories\Clusterer\LocationSimilarityStrategy:
         arguments:
             $radiusMeters: 140.0
-            $minItems: 6
+            $minItemsPerPlace: 6
             $maxSpanHours: 16
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.location_similarity_strategy%' }
 
     MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy:
         arguments:
-            $minItems: 5
+            $minItemsPerGroup: 5
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.device_similarity_strategy%' }
 
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
             $maxHamming: 7
-            $minItems: 2
+            $minItemsPerBucket: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.phash_similarity_strategy%' }
 
@@ -190,14 +205,14 @@ services:
         arguments:
             $maxGapSeconds: 90
             $maxMoveMeters: 45.0
-            $minItems: 3
+            $minItemsPerBurst: 3
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.burst_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy:
         arguments:
             $sessionGapSeconds: 86400   # 24h keeps multi-day motifs together without spanning weeks
-            $minItems: 7
+            $minItemsPerMotif: 7
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.photo_motif_cluster_strategy%' }
 
@@ -205,7 +220,7 @@ services:
         arguments:
             $timeGapSeconds: 5400        # 1.5h blends adjacent scene
             $radiusMeters: 130.0
-            $minItems: 5
+            $minItemsPerRun: 5
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.cross_dimension_cluster_strategy%' }
 
@@ -213,14 +228,14 @@ services:
         arguments:
             $minAspect: 2.3
             $sessionGapSeconds: 9000   # 2.5h
-            $minItems: 3
+            $minItemsPerRun: 3
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.panorama_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy:
         arguments:
             $minAspect: 2.3
-            $perYearMin: 2
+            $minItemsPerYear: 2
             $minYears: 3
             $minItemsTotal: 10
         tags:
@@ -230,14 +245,14 @@ services:
         arguments:
             $minPortraitRatio: 1.2
             $sessionGapSeconds: 7200      # 2h
-            $minItems: 4
+            $minItemsPerRun: 4
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.portrait_orientation_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minItems: 2
+            $minItemsPerDay: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.video_stories_cluster_strategy%' }
 
@@ -245,7 +260,7 @@ services:
     MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minItems: 7
+            $minItemsPerDay: 7
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.day_album_cluster_strategy%' }
 
@@ -254,7 +269,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 4800      # 1h20m keeps morning rituals tight
             $radiusMeters: 180.0
-            $minItems: 3
+            $minItemsPerRun: 3
             $minHour: 7
             $maxHour: 10
         tags:
@@ -289,7 +304,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 5400   # 1.5h
             $radiusMeters: 200.0
-            $minItems: 4
+            $minItemsPerRun: 4
             $minHour: 17
             $maxHour: 23
         tags:
@@ -298,7 +313,7 @@ services:
     # --- Social celebrations & people ---
     MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy:
         arguments:
-            $minItems: 5
+            $minItemsPerAnniversary: 5
             $minDistinctYears: 10
             $maxClusters: 30
         tags:
@@ -307,7 +322,7 @@ services:
     MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy:
         arguments:
             $minPersons: 2
-            $minItems: 4
+            $minItemsTotal: 4
             $windowDays: 10
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.person_cohort_cluster_strategy%' }
@@ -317,7 +332,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 9600      # 2h40m keeps party blocks intact
             $radiusMeters: 230.0
-            $minItems: 5
+            $minItemsPerRun: 5
             $minHour: 10
             $maxHour: 21
         tags:
@@ -326,13 +341,13 @@ services:
     MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy:
         arguments:
             $sessionGapSeconds: 7200   # 2h
-            $minItems: 6
+            $minItemsPerRun: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.pet_moments_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy:
         arguments:
-            $minItems: 6
+            $minItemsPerHoliday: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.holiday_event_cluster_strategy%' }
 
@@ -342,7 +357,7 @@ services:
             $timezone: 'Europe/Berlin'
             $timeGapSeconds: 9000        # 2.5h keeps multi-venue nights linked
             $radiusMeters: 260.0
-            $minItems: 5
+            $minItemsPerRun: 5
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.nightlife_event_cluster_strategy%' }
 
@@ -351,7 +366,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 9000     # 2.5h
             $radiusMeters: 480.0
-            $minItems: 8
+            $minItemsPerRun: 8
             $preferWeekend: true
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.sports_event_cluster_strategy%' }
@@ -361,7 +376,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 9000     # 2.5h
             $radiusMeters: 480.0
-            $minItems: 8
+            $minItemsPerRun: 8
             $startMonth: 6
             $endMonth: 9
             $afternoonStartHour: 14
@@ -374,7 +389,7 @@ services:
             $timezone: 'Europe/Berlin'
             $startHour: 20
             $endHour: 2
-            $minItems: 6
+            $minItemsPerYear: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.new_year_eve_cluster_strategy%' }
 
@@ -383,7 +398,7 @@ services:
         arguments:
             $minAwayKm: 75.0
             $minNights: 1
-            $minItems: 3
+            $minItemsPerTrip: 3
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.weekend_trip_cluster_strategy%' }
 
@@ -411,7 +426,7 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $minDailyKm: 110.0
-            $minGpsSamplesPerDay: 8
+            $minItemsPerDay: 8
             $minNights: 3
             $minItemsTotal: 30
         tags:
@@ -421,8 +436,8 @@ services:
         arguments:
             $sessionGapSeconds: 9000     # 2.5h
             $minDistanceKm: 5.5
-            $minItems: 5
-            $minItemsNoGps: 9
+            $minItemsPerRun: 5
+            $minItemsPerRunNoGps: 9
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.hike_adventure_cluster_strategy%' }
 
@@ -471,7 +486,7 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $minTravelKm: 70.0
-            $minGpsSamples: 6
+            $minItemsPerDay: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.transit_travel_day_cluster_strategy%' }
 
@@ -500,7 +515,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 6000      # 1h40m balances blue-hour transitions
             $radiusMeters: 260.0
-            $minItems: 5
+            $minItemsPerRun: 5
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.cityscape_night_cluster_strategy%' }
 
@@ -509,7 +524,7 @@ services:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 6600      # 1h50m keeps exhibits contiguous
             $radiusMeters: 260.0
-            $minItems: 5
+            $minItemsPerRun: 5
             $minHour: 9
             $maxHour: 20
         tags:
@@ -536,14 +551,14 @@ services:
     # --- Weather & seasonal highlights ---
     MagicSunday\Memories\Clusterer\SeasonClusterStrategy:
         arguments:
-            $minItems: 18
+            $minItemsPerSeason: 18
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.season_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy:
         arguments:
             $minYears: 3
-            $minItems: 26
+            $minItemsPerSeason: 26
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.season_over_years_cluster_strategy%' }
 
@@ -568,7 +583,7 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $sessionGapSeconds: 7200      # 2h
-            $minItems: 5
+            $minItemsPerRun: 5
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.snow_day_cluster_strategy%' }
 
@@ -584,7 +599,7 @@ services:
                 - 19
                 - 20
             $sessionGapSeconds: 5400
-            $minItems: 4
+            $minItemsPerRun: 4
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.golden_hour_cluster_strategy%' }
 
@@ -593,7 +608,7 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $minYears: 3
-            $minItems: 20
+            $minItemsTotal: 20
             $minDistinctDays: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.this_month_over_years_cluster_strategy%' }
@@ -603,7 +618,7 @@ services:
             $timezone: 'Europe/Berlin'
             $windowDays: 0
             $minYears: 3
-            $minItems: 10
+            $minItemsTotal: 10
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.on_this_day_over_years_cluster_strategy%' }
 
@@ -611,13 +626,13 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $windowDays: 3
-            $minItems: 6
+            $minItemsTotal: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.one_year_ago_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy:
         arguments:
-            $minItems: 110
+            $minItemsPerYear: 110
             $minDistinctMonths: 4
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.year_in_review_cluster_strategy%' }
@@ -625,7 +640,7 @@ services:
     MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minItems: 28
+            $minItemsPerMonth: 28
             $minDistinctDays: 7
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.monthly_highlights_cluster_strategy%' }
@@ -681,6 +696,7 @@ services:
                 novelty: 0.14
                 holiday: 0.07
                 recency: 0.15
+                poi: 0.10
             $qualitySharpnessWeight: 0.35
             $qualityAestheticWeight: 0.25
             $recencyAnniversaryWindowDays: 7
@@ -739,6 +755,7 @@ services:
                 device_similarity: 0.82
                 phash_similarity: 0.55
                 burst: 0.55
+            $poiCategoryBoosts: '%memories.score.poi_category_boosts%'
             $qualityBaselineMegapixels: 12.0
             $minValidYear: '%memories.score.min_valid_year%'
             $timeRangeMinSamples: '%memories.score.time_range.min_samples%'

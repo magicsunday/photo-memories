@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -15,6 +16,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
@@ -57,14 +59,15 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<int, array<string, list<Media>>> $byYearDay */
         $byYearDay = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $y = (int) $local->format('Y');
             $d = $local->format('Y-m-d');
@@ -79,10 +82,7 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
         $yearsPicked = [];
 
         foreach ($byYearDay as $year => $daysMap) {
-            $eligibleDaysMap = \array_filter(
-                $daysMap,
-                fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-            );
+            $eligibleDaysMap = $this->filterGroupsByMinItems($daysMap, $this->minItemsPerDay);
 
             if ($eligibleDaysMap === []) {
                 continue;

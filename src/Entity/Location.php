@@ -72,6 +72,12 @@ class Location
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $boundingBox = null;
 
+    /**
+     * @var list<array<string,mixed>>|null nearby Points of Interest enriched via Overpass API
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $pois = null;
+
     public function __construct(
         string $provider,
         string $providerPlaceId,
@@ -382,6 +388,24 @@ class Location
     public function setBoundingBox(?array $boundingBox): Location
     {
         $this->boundingBox = $boundingBox;
+        return $this;
+    }
+
+    /**
+     * @return list<array<string,mixed>>|null
+     */
+    public function getPois(): ?array
+    {
+        return $this->pois;
+    }
+
+    /**
+     * @param list<array<string,mixed>>|null $pois
+     */
+    public function setPois(?array $pois): Location
+    {
+        $this->pois = $pois;
+
         return $this;
     }
 }

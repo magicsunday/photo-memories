@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Service\Clusterer\Scoring;
+namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Scoring;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -9,7 +9,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class NoveltyHeuristicTest extends TestCase
 {
@@ -56,22 +56,11 @@ final class NoveltyHeuristicTest extends TestCase
 
     private function createMedia(int $id, string $takenAt): Media
     {
-        $media = new Media(
+        return $this->makeMedia(
+            id: $id,
             path: __DIR__ . "/novelty-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+            takenAt: $takenAt,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

@@ -52,7 +52,8 @@
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^12.0",
-        "rector/rector": "^2.0"
+        "rector/rector": "^2.0",
+        "a9f/fractor": "^0.5"
     },
     "autoload": {
         "psr-4": {
@@ -86,13 +87,20 @@
         "ci:test:php:rector": [
             "@ci:rector --dry-run"
         ],
+        "ci:test:php:fractor": [
+            "@ci:fractor --dry-run"
+        ],
         "ci:test:php:unit": [
             "bin/php vendor/bin/phpunit --configuration .build/phpunit.xml"
+        ],
+        "ci:test:php:unit:coverage": [
+            "XDEBUG_MODE=coverage && bin/php vendor/bin/phpunit --configuration .build/UnitTests.xml --coverage-html .build/coverage/"
         ],
         "ci:test": [
             "@ci:test:php:lint",
             "@ci:test:php:phpstan",
             "@ci:test:php:rector",
+            "@ci:fractor",
             "@ci:test:php:cgl",
             "@ci:test:php:unit"
         ]

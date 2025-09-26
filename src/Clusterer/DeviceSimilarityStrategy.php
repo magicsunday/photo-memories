@@ -5,19 +5,21 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 final class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
-        private readonly int $minItems = 5,
+        private readonly int $minItemsPerGroup = 5,
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerGroup < 1) {
+            throw new \InvalidArgumentException('minItemsPerGroup must be >= 1.');
         }
     }
 
@@ -32,14 +34,16 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $withTimestamp */
+        $withTimestamp = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
         /** @var array<string, string> $devices */
         $devices = [];
 
-        foreach ($items as $m) {
-            $date   = $m->getTakenAt() instanceof DateTimeImmutable ? $m->getTakenAt()->format('Y-m-d') : 'ohne-datum';
+        $ingest = function (Media $m, string $date) use (&$groups, &$devices): void {
             $device = $m->getCameraModel() ?? 'unbekannt';
             $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
 
@@ -47,13 +51,24 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
             $groups[$key] = $groups[$key] ?? [];
             $groups[$key][] = $m;
             $devices[$key] = $device;
+        };
+
+        foreach ($withTimestamp as $m) {
+            $takenAt = $m->getTakenAt();
+            \assert($takenAt instanceof DateTimeImmutable);
+            $ingest($m, $takenAt->format('Y-m-d'));
+        }
+
+        foreach ($items as $m) {
+            if ($m->getTakenAt() instanceof DateTimeImmutable) {
+                continue;
+            }
+            // Group timestamp-less media separately so they can still surface.
+            $ingest($m, 'ohne-datum');
         }
 
         /** @var array<string, list<Media>> $eligibleGroups */
-        $eligibleGroups = \array_filter(
-            $groups,
-            fn (array $group): bool => \count($group) >= $this->minItems
-        );
+        $eligibleGroups = $this->filterGroupsByMinItems($groups, $this->minItemsPerGroup);
 
         $drafts = [];
         foreach ($eligibleGroups as $key => $group) {

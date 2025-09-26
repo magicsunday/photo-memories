@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -11,10 +12,12 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PortraitOrientationClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly float $minPortraitRatio = 1.2, // height / width
         private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItems = 4
+        private readonly int $minItemsPerRun = 4
     ) {
         if ($this->minPortraitRatio <= 0.0) {
             throw new \InvalidArgumentException('minPortraitRatio must be > 0.');
@@ -22,8 +25,8 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -39,14 +42,13 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
                 $w = $m->getWidth();
                 $h = $m->getHeight();
-                $ts = $m->getTakenAt()?->getTimestamp();
 
-                if ($w === null || $h === null || $w <= 0 || $h <= 0 || $ts === null) {
+                if ($w === null || $h === null || $w <= 0 || $h <= 0) {
                     return false;
                 }
 
@@ -58,9 +60,9 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
 
                 return $ratio >= $this->minPortraitRatio;
             }
-        ));
+        );
 
-        if (\count($cand) < $this->minItems) {
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -68,43 +70,47 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
             ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        /** @var list<list<Media>> $runs */
+        $runs = [];
         /** @var list<Media> $buf */
         $buf = [];
         $last = null;
-
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
-                $buf = [];
-                return;
-            }
-            $centroid = MediaMath::centroid($buf);
-            $time     = MediaMath::timeRange($buf);
-
-            $out[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
-                centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                members: \array_map(static fn(Media $m): int => $m->getId(), $buf)
-            );
-            $buf = [];
-        };
 
         foreach ($cand as $m) {
             $ts = $m->getTakenAt()?->getTimestamp();
             if ($ts === null) {
                 continue;
             }
-            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
-                $flush();
+            if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
+                $runs[] = $buf;
+                $buf = [];
             }
             $buf[] = $m;
             $last = $ts;
         }
-        $flush();
+
+        if ($buf !== []) {
+            $runs[] = $buf;
+        }
+
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
+
+        /** @var list<ClusterDraft> $out */
+        $out = [];
+
+        foreach ($eligibleRuns as $run) {
+            $centroid = MediaMath::centroid($run);
+            $time     = MediaMath::timeRange($run);
+
+            $out[] = new ClusterDraft(
+                algorithm: $this->name(),
+                params: [
+                    'time_range' => $time,
+                ],
+                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+            );
+        }
 
         return $out;
     }

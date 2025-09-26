@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -11,18 +12,19 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
         private readonly float $radiusMeters = 150.0,
-        private readonly int $minItems = 5,
+        private readonly int $minItemsPerPlace = 5,
         private readonly int $maxSpanHours = 24,
     ) {
         if ($this->radiusMeters <= 0.0) {
             throw new \InvalidArgumentException('radiusMeters must be > 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerPlace < 1) {
+            throw new \InvalidArgumentException('minItemsPerPlace must be >= 1.');
         }
         if ($this->maxSpanHours < 0) {
             throw new \InvalidArgumentException('maxSpanHours must be >= 0.');
@@ -40,12 +42,15 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $withTimestamp */
+        $withTimestamp = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byLocality */
         $byLocality = [];
         /** @var list<Media> $noLocality */
         $noLocality = [];
 
-        foreach ($items as $m) {
+        foreach ($withTimestamp as $m) {
             $key = $this->locHelper->localityKeyForMedia($m);
             if ($key !== null) {
                 $byLocality[$key] = $byLocality[$key] ?? [];
@@ -56,10 +61,7 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleLocalities */
-        $eligibleLocalities = \array_filter(
-            $byLocality,
-            fn (array $group): bool => \count($group) >= $this->minItems
-        );
+        $eligibleLocalities = $this->filterGroupsByMinItems($byLocality, $this->minItemsPerPlace);
 
         $drafts = [];
 
@@ -71,6 +73,20 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
             ];
             if ($label !== null) {
                 $params['place'] = $label;
+            }
+
+            $poi = $this->locHelper->majorityPoiContext($group);
+            if ($poi !== null) {
+                $params['poi_label'] = $poi['label'];
+                if ($poi['categoryKey'] !== null) {
+                    $params['poi_category_key'] = $poi['categoryKey'];
+                }
+                if ($poi['categoryValue'] !== null) {
+                    $params['poi_category_value'] = $poi['categoryValue'];
+                }
+                if ($poi['tags'] !== []) {
+                    $params['poi_tags'] = $poi['tags'];
+                }
             }
 
             $drafts[] = new ClusterDraft(
@@ -85,10 +101,7 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         /** @var list<list<Media>> $spatialBuckets */
         $spatialBuckets = $this->spatialWindows($noLocality);
         /** @var list<list<Media>> $eligibleBuckets */
-        $eligibleBuckets = \array_values(\array_filter(
-            $spatialBuckets,
-            fn (array $bucket): bool => \count($bucket) >= $this->minItems
-        ));
+        $eligibleBuckets = $this->filterListsByMinItems($spatialBuckets, $this->minItemsPerPlace);
 
         foreach ($eligibleBuckets as $bucket) {
             $params = [
@@ -108,10 +121,7 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
     /** @param list<Media> $items @return list<list<Media>> */
     private function spatialWindows(array $items): array
     {
-        $gps = \array_values(\array_filter(
-            $items,
-            static fn(Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
-        ));
+        $gps = $this->filterTimestampedGpsItems($items);
 
         \usort(
             $gps,

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -11,10 +12,12 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PanoramaClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly float $minAspect = 2.4,     // width / height threshold
         private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly int $minItems = 3
+        private readonly int $minItemsPerRun = 3
     ) {
         if ($this->minAspect <= 0.0) {
             throw new \InvalidArgumentException('minAspect must be > 0.');
@@ -22,8 +25,8 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -39,7 +42,7 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
     public function cluster(array $items): array
     {
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
                 $w = $m->getWidth();
@@ -57,8 +60,8 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
 
                 return $ratio >= $this->minAspect;
             }
-        ));
-        if (\count($cand) < $this->minItems) {
+        );
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -73,11 +76,11 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
         $last = null;
 
         $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
+            if (\count($buf) < $this->minItemsPerRun) {
                 $buf = [];
                 return;
             }
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            $gps = $this->filterGpsItems($buf);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
             $time = MediaMath::timeRange($buf);
 

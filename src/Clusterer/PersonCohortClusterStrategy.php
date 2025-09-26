@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -12,16 +13,18 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly int $minPersons = 2,
-        private readonly int $minItems   = 5,
+        private readonly int $minItemsTotal   = 5,
         private readonly int $windowDays = 14
     ) {
         if ($this->minPersons < 1) {
             throw new \InvalidArgumentException('minPersons must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
         if ($this->windowDays < 0) {
             throw new \InvalidArgumentException('windowDays must be >= 0.');
@@ -40,27 +43,21 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        // If there is no person method, exit early
-        $hasMethod = \count(\array_filter(
-                $items,
-                static fn (Media $m): bool => \method_exists($m, 'getPersonIds')
-            )) > 0;
+        /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
+        $buckets = [];
+        $withPersons = $this->filterTimestampedItemsBy(
+            $items,
+            static fn (Media $m): bool => \method_exists($m, 'getPersonIds')
+        );
 
-        if (!$hasMethod) {
+        if ($withPersons === []) {
             return [];
         }
 
-        /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
-        $buckets = [];
-        $withTime = \array_values(\array_filter(
-            $items,
-            static fn (Media $m): bool => $m->getTakenAt() !== null
-        ));
-
         // Phase 1: bucket by persons signature per day
-        foreach ($withTime as $m) {
+        foreach ($withPersons as $m) {
             /** @var list<int> $persons */
-            $persons = \method_exists($m, 'getPersonIds') ? (array) $m->getPersonIds() : [];
+            $persons = (array) $m->getPersonIds();
             if (\count($persons) < $this->minPersons) {
                 continue;
             }
@@ -75,13 +72,13 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, array<string, list<Media>>> $eligibleBuckets */
-        $eligibleBuckets = \array_filter(
+        $eligibleBuckets = $this->filterGroups(
             $buckets,
             function (array $byDay): bool {
                 $total = 0;
                 foreach ($byDay as $list) {
                     $total += \count($list);
-                    if ($total >= $this->minItems) {
+                    if ($total >= $this->minItemsTotal) {
                         return true;
                     }
                 }
@@ -120,7 +117,7 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
                     continue;
                 }
 
-                if (\count($current) >= $this->minItems) {
+                if (\count($current) >= $this->minItemsTotal) {
                     $clusters[] = $this->makeDraft($current);
                 }
 
@@ -128,7 +125,7 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
                 $lastDay = $day;
             }
 
-            if (\count($current) >= $this->minItems) {
+            if (\count($current) >= $this->minItemsTotal) {
                 $clusters[] = $this->makeDraft($current);
             }
         }

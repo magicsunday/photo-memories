@@ -15,7 +15,17 @@ final class CompositeClusterScorer
         private readonly EntityManagerInterface $em,
         private readonly HolidayResolverInterface $holidayResolver,
         private readonly NoveltyHeuristic $novelty,
-        /** @var array{quality:float,people:float,content:float,density:float,novelty:float,holiday:float,recency:float} */
+        /**
+         * @var array{
+         *     quality:float,
+         *     people:float,
+         *     density:float,
+         *     novelty:float,
+         *     holiday:float,
+         *     recency:float,
+         *     poi?:float
+         * }
+         */
         private readonly array $weights = [
             'quality' => 0.22,
             'people'  => 0.20,
@@ -24,9 +34,12 @@ final class CompositeClusterScorer
             'novelty' => 0.12,
             'holiday' => 0.08,
             'recency' => 0.13,
+            'poi'     => 0.05,
         ],
         /** @var array<string,float> $algorithmBoosts */
         private readonly array $algorithmBoosts = [],
+        /** @var array<string,float> $poiCategoryBoosts */
+        private readonly array $poiCategoryBoosts = [],
         private readonly float $qualityBaselineMegapixels = 12.0,
         private readonly float $qualitySharpnessWeight = 0.3,
         private readonly float $qualityAestheticWeight = 0.2,
@@ -41,6 +54,17 @@ final class CompositeClusterScorer
             if ($boost <= 0.0) {
                 throw new \InvalidArgumentException(
                     \sprintf('Algorithm boost must be > 0.0, got %s => %f', (string) $algorithm, $boost)
+                );
+            }
+        }
+
+        foreach ($this->poiCategoryBoosts as $pattern => $boost) {
+            if (!\is_string($pattern) || $pattern === '') {
+                throw new \InvalidArgumentException('POI category boost keys must be non-empty strings.');
+            }
+            if (!\is_numeric($boost)) {
+                throw new \InvalidArgumentException(
+                    \sprintf('POI category boost for %s must be numeric.', $pattern)
                 );
             }
         }
@@ -192,6 +216,10 @@ final class CompositeClusterScorer
             }
             $c->setParam('recency', $recency);
 
+            // --- poi context (only available when strategies attached Overpass metadata)
+            $poiScore = $this->computePoiScore($c);
+            $c->setParam('poi_score', $poiScore);
+
             // --- weighted sum
             $score =
                 $this->weights['quality'] * $quality +
@@ -200,7 +228,8 @@ final class CompositeClusterScorer
                 $this->weights['density'] * $density +
                 $this->weights['novelty'] * $novelty +
                 $this->weights['holiday'] * $holiday +
-                $this->weights['recency'] * $recency;
+                $this->weights['recency'] * $recency +
+                ($this->weights['poi'] ?? 0.0) * $poiScore;
 
             if ($this->diversityDayPenaltyWeight > 0.0 && $tr !== null) {
                 $dayKey = $dayKeys[$idx] ?? null;
@@ -454,6 +483,79 @@ final class CompositeClusterScorer
         }
 
         return $counts;
+    }
+
+    private function computePoiScore(ClusterDraft $cluster): float
+    {
+        $params = $cluster->getParams();
+        $label = $this->stringOrNull($params['poi_label'] ?? null);
+        $categoryKey = $this->stringOrNull($params['poi_category_key'] ?? null);
+        $categoryValue = $this->stringOrNull($params['poi_category_value'] ?? null);
+        $tags = \is_array($params['poi_tags'] ?? null) ? $params['poi_tags'] : [];
+
+        $score = 0.0;
+
+        if ($label !== null) {
+            $score += 0.45;
+        }
+
+        if ($categoryKey !== null || $categoryValue !== null) {
+            $score += 0.25;
+        }
+
+        $score += $this->lookupPoiCategoryBoost($categoryKey, $categoryValue);
+
+        if (\is_array($tags)) {
+            if ($this->stringOrNull($tags['wikidata'] ?? null) !== null) {
+                $score += 0.15;
+            }
+            if ($this->stringOrNull($tags['website'] ?? null) !== null) {
+                $score += 0.05;
+            }
+        }
+
+        return $this->clamp01($score);
+    }
+
+    private function lookupPoiCategoryBoost(?string $categoryKey, ?string $categoryValue): float
+    {
+        if ($this->poiCategoryBoosts === []) {
+            return 0.0;
+        }
+
+        $boost = 0.0;
+
+        if ($categoryKey !== null) {
+            $boost += (float) ($this->poiCategoryBoosts[$categoryKey.'/*'] ?? 0.0);
+        }
+
+        if ($categoryValue !== null) {
+            $boost += (float) ($this->poiCategoryBoosts['*/'.$categoryValue] ?? 0.0);
+        }
+
+        if ($categoryKey !== null && $categoryValue !== null) {
+            $boost += (float) ($this->poiCategoryBoosts[$categoryKey.'/'.$categoryValue] ?? 0.0);
+        }
+
+        return $boost;
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        return \is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function clamp01(float $value): float
+    {
+        if ($value <= 0.0) {
+            return 0.0;
+        }
+
+        if ($value >= 1.0) {
+            return 1.0;
+        }
+
+        return $value;
     }
 
     private function computeHolidayScore(int $fromTs, int $toTs): float

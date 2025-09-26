@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,13 +14,15 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class GoldenHourClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         /** Inclusive local hours considered golden-hour candidates. */
         private readonly array $morningHours = [6, 7, 8],
         private readonly array $eveningHours = [18, 19, 20],
         private readonly int $sessionGapSeconds = 90 * 60,
-        private readonly int $minItems = 5
+        private readonly int $minItemsPerRun = 5
     ) {
         if ($this->morningHours === [] || $this->eveningHours === []) {
             throw new \InvalidArgumentException('Morning and evening hours must not be empty.');
@@ -34,8 +37,8 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -53,60 +56,61 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                if (!$t instanceof DateTimeImmutable) {
-                    return false;
-                }
-
+                \assert($t instanceof DateTimeImmutable);
                 $h = (int) $t->setTimezone($tz)->format('G');
 
                 return \in_array($h, $this->morningHours, true)
                     || \in_array($h, $this->eveningHours, true);
             }
-        ));
+        );
 
-        if (\count($cand) < $this->minItems) {
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
         \usort($cand, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-        /** @var list<ClusterDraft> $out */
-        $out = [];
+        /** @var list<list<Media>> $runs */
+        $runs = [];
         /** @var list<Media> $buf */
         $buf = [];
         $lastTs = null;
 
-        $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
+        foreach ($cand as $m) {
+            $ts = (int) $m->getTakenAt()->getTimestamp();
+            if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds && $buf !== []) {
+                $runs[] = $buf;
                 $buf = [];
-                return;
             }
-            $centroid = MediaMath::centroid($buf);
-            $time     = MediaMath::timeRange($buf);
+            $buf[] = $m;
+            $lastTs = $ts;
+        }
+
+        if ($buf !== []) {
+            $runs[] = $buf;
+        }
+
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
+
+        /** @var list<ClusterDraft> $out */
+        $out = [];
+
+        foreach ($eligibleRuns as $run) {
+            $centroid = MediaMath::centroid($run);
+            $time     = MediaMath::timeRange($run);
             $out[] = new ClusterDraft(
                 algorithm: 'golden_hour',
                 params: [
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
             );
-            $buf = [];
-        };
-
-        foreach ($cand as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
-            if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
-                $flush();
-            }
-            $buf[] = $m;
-            $lastTs = $ts;
         }
-        $flush();
 
         return $out;
     }
