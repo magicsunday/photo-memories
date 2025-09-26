@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,16 +14,18 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 3 * 3600,
         private readonly float $radiusMeters = 250.0,
-        private readonly int $minItems = 6,
+        private readonly int $minItemsPerRun = 6,
         private readonly int $minHour = 10,
         private readonly int $maxHour = 21
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
         if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
             throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
@@ -46,14 +49,11 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                if (!$t instanceof DateTimeImmutable) {
-                    return false;
-                }
-
+                \assert($t instanceof DateTimeImmutable);
                 $h = (int) $t->setTimezone($tz)->format('G');
                 if ($h < $this->minHour || $h > $this->maxHour) {
                     return false;
@@ -63,9 +63,9 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
 
                 return $this->looksBirthday($path);
             }
-        ));
+        );
 
-        if (\count($cand) < $this->minItems) {
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -80,12 +80,12 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
         $last = null;
 
         $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
+            if (\count($buf) < $this->minItemsPerRun) {
                 $buf = [];
                 return;
             }
             // spatial compactness (if GPS exists)
-            $gps = \array_values(\array_filter($buf, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            $gps = $this->filterGpsItems($buf);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
 
             $ok = true;

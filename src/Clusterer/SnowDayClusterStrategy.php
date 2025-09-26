@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,16 +14,18 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class SnowDayClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItems = 6
+        private readonly int $minItemsPerRun = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -40,13 +43,11 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
         $tz = new DateTimeZone($this->timezone);
 
         /** @var list<Media> $cand */
-        $cand = \array_values(\array_filter(
+        $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                if (!$t instanceof DateTimeImmutable) {
-                    return false;
-                }
+                \assert($t instanceof DateTimeImmutable);
 
                 $local = $t->setTimezone($tz);
                 $month = (int) $local->format('n');
@@ -58,9 +59,9 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
 
                 return $this->looksSnow($path);
             }
-        ));
+        );
 
-        if (\count($cand) < $this->minItems) {
+        if (\count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -75,7 +76,7 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
         $lastTs = null;
 
         $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItems) {
+            if (\count($buf) < $this->minItemsPerRun) {
                 $buf = [];
                 return;
             }

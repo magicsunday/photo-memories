@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -18,6 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final class WeekendTripClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly LocationHelper $locHelper,
@@ -25,7 +27,8 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         #[Autowire(env: 'MEMORIES_HOME_LON')] private readonly ?float $homeLon,
         private readonly float $minAwayKm = 80.0,
         private readonly int $minNights = 1,
-        private readonly int $minItems = 3,
+        // Minimum media items per trip bucket before we analyse nights and distance.
+        private readonly int $minItemsPerTrip = 3,
     ) {
         if ($this->minAwayKm <= 0.0) {
             throw new \InvalidArgumentException('minAwayKm must be > 0.');
@@ -33,8 +36,8 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         if ($this->minNights < 0) {
             throw new \InvalidArgumentException('minNights must be >= 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerTrip < 1) {
+            throw new \InvalidArgumentException('minItemsPerTrip must be >= 1.');
         }
     }
 
@@ -49,10 +52,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        $withTs = \array_values(\array_filter(
-            $items,
-            static fn(Media $m): bool => $m->getTakenAt() instanceof DateTimeImmutable
-        ));
+        $withTs = $this->filterTimestampedItems($items);
 
         \usort(
             $withTs,
@@ -83,10 +83,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
             $buckets[] = $bucket;
         }
 
-        $eligible = \array_values(\array_filter(
-            $buckets,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        ));
+        $eligible = $this->filterListsByMinItems($buckets, $this->minItemsPerTrip);
 
         $drafts = [];
         foreach ($eligible as $trip) {

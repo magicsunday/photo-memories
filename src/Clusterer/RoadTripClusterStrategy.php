@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -15,19 +16,21 @@ use MagicSunday\Memories\Utility\MediaMath;
 final class RoadTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
+    use MediaFilterTrait;
 
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly float $minDailyKm = 120.0,
-        private readonly int $minGpsSamplesPerDay = 8,
+        // Counts only media items that already contain GPS coordinates.
+        private readonly int $minItemsPerDay = 8,
         private readonly int $minNights = 3,       // => at least 4 days
         private readonly int $minItemsTotal = 40
     ) {
         if ($this->minDailyKm <= 0.0) {
             throw new \InvalidArgumentException('minDailyKm must be > 0.');
         }
-        if ($this->minGpsSamplesPerDay < 1) {
-            throw new \InvalidArgumentException('minGpsSamplesPerDay must be >= 1.');
+        if ($this->minItemsPerDay < 1) {
+            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
         if ($this->minNights < 1) {
             throw new \InvalidArgumentException('minNights must be >= 1.');
@@ -50,28 +53,26 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        $timestampedGpsItems = $this->filterTimestampedGpsItems($items);
+
+        if ($timestampedGpsItems === []) {
+            return [];
+        }
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
-        foreach ($items as $m) {
+        foreach ($timestampedGpsItems as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
-            if ($m->getGpsLat() === null || $m->getGpsLon() === null) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $d = $t->setTimezone($tz)->format('Y-m-d');
             $byDay[$d] ??= [];
             $byDay[$d][] = $m;
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minGpsSamplesPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, list<Media>> $travelDayLists */
-        $travelDayLists = \array_filter(
+        $travelDayLists = $this->filterGroups(
             $eligibleDays,
             function (array $list): bool {
                 $sorted = $list;
@@ -155,4 +156,5 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
+
 }

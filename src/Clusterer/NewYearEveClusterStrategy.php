@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,18 +14,21 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class NewYearEveClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         /** Hours considered NYE party window (local, 24h). */
         private readonly int $startHour = 20,
         private readonly int $endHour = 2,
-        private readonly int $minItems = 6
+        // Minimum media per year-long NYE bucket before emitting a memory.
+        private readonly int $minItemsPerYear = 6
     ) {
         if ($this->startHour < 0 || $this->startHour > 23 || $this->endHour < 0 || $this->endHour > 23) {
             throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerYear < 1) {
+            throw new \InvalidArgumentException('minItemsPerYear must be >= 1.');
         }
     }
 
@@ -44,29 +48,31 @@ final class NewYearEveClusterStrategy implements ClusterStrategyInterface
         /** @var array<int, list<Media>> $byYear */
         $byYear = [];
 
-        foreach ($items as $m) {
+        $nyeItems = $this->filterTimestampedItemsBy(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $takenAt = $m->getTakenAt();
+                \assert($takenAt instanceof DateTimeImmutable);
+                $local = $takenAt->setTimezone($tz);
+                $md    = $local->format('m-d');
+                $hour  = (int) $local->format('G');
+
+                return ($md === '12-31' && $hour >= $this->startHour)
+                    || ($md === '01-01' && $hour <= $this->endHour);
+            }
+        );
+
+        foreach ($nyeItems as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $y = (int) $local->format('Y');
-            $md = $local->format('m-d');
-            $h  = (int) $local->format('G');
+            $y     = (int) $local->format('Y');
 
-            $isNYEWindow = ($md === '12-31' && $h >= $this->startHour)
-                || ($md === '01-01' && $h <= $this->endHour);
-
-            if ($isNYEWindow) {
-                $byYear[$y] ??= [];
-                $byYear[$y][] = $m;
-            }
+            $byYear[$y] ??= [];
+            $byYear[$y][] = $m;
         }
 
-        $eligibleYears = \array_filter(
-            $byYear,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        );
+        $eligibleYears = $this->filterGroupsByMinItems($byYear, $this->minItemsPerYear);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

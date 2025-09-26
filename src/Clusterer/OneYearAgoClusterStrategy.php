@@ -6,6 +6,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -14,16 +15,18 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $windowDays = 3,
-        private readonly int $minItems   = 8
+        private readonly int $minItemsTotal   = 8
     ) {
         if ($this->windowDays < 0) {
             throw new \InvalidArgumentException('windowDays must be >= 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -44,21 +47,19 @@ final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
         $anchorEnd   = $now->sub(new DateInterval('P1Y'))->modify('+' . $this->windowDays . ' days');
 
         /** @var list<Media> $picked */
-        $picked = \array_values(\array_filter(
+        $picked = $this->filterTimestampedItemsBy(
             $items,
             static function (Media $m) use ($tz, $anchorStart, $anchorEnd): bool {
                 $takenAt = $m->getTakenAt();
-                if (!$takenAt instanceof DateTimeImmutable) {
-                    return false;
-                }
+                \assert($takenAt instanceof DateTimeImmutable);
 
                 $local = $takenAt->setTimezone($tz);
 
                 return $local >= $anchorStart && $local <= $anchorEnd;
             }
-        ));
+        );
 
-        if (\count($picked) < $this->minItems) {
+        if (\count($picked) < $this->minItemsTotal) {
             return [];
         }
 

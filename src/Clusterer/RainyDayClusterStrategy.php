@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -14,6 +15,8 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class RainyDayClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly WeatherHintProviderInterface $weather,
         private readonly string $timezone = 'Europe/Berlin',
@@ -41,14 +44,18 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        $timestampedItems = $this->filterTimestampedItems($items);
+
+        if ($timestampedItems === []) {
+            return [];
+        }
+
         /** @var array<string, list<Media>> $byDay */
         $byDay = [];
 
-        foreach ($items as $m) {
+        foreach ($timestampedItems as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
@@ -59,14 +66,11 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $eligibleDays = \array_filter(
-            $byDay,
-            fn (array $list): bool => \count($list) >= $this->minItemsPerDay
-        );
+        $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, float> $avgRain */
         $avgRain = [];
-        $rainyDays = \array_filter(
+        $rainyDays = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$avgRain): bool {
                 $sum = 0.0;
@@ -97,8 +101,7 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
                 $avgRain[$day] = $avg;
 
                 return true;
-            },
-            ARRAY_FILTER_USE_BOTH
+            }
         );
 
         if ($rainyDays === []) {
@@ -125,4 +128,5 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
+
 }

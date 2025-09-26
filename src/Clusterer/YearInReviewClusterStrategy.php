@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -12,12 +13,14 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class YearInReviewClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
-        private readonly int $minItems = 150,
+        private readonly int $minItemsPerYear = 150,
         private readonly int $minDistinctMonths = 5
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerYear < 1) {
+            throw new \InvalidArgumentException('minItemsPerYear must be >= 1.');
         }
         if ($this->minDistinctMonths < 1 || $this->minDistinctMonths > 12) {
             throw new \InvalidArgumentException('minDistinctMonths must be within 1..12.');
@@ -35,25 +38,25 @@ final class YearInReviewClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<int, list<Media>> $byYear */
         $byYear = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $y = (int) $t->format('Y');
             $byYear[$y] ??= [];
             $byYear[$y][] = $m;
         }
 
-        $eligibleYears = \array_filter(
-            $byYear,
+        $eligibleYears = $this->filterGroupsByMinItems($byYear, $this->minItemsPerYear);
+
+        $eligibleYears = $this->filterGroups(
+            $eligibleYears,
             function (array $list): bool {
-                if (\count($list) < $this->minItems) {
-                    return false;
-                }
 
                 /** @var array<int,bool> $months */
                 $months = [];

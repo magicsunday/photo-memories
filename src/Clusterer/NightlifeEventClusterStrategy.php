@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,11 +14,13 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $timeGapSeconds = 3 * 3600, // 3h
         private readonly float $radiusMeters = 300.0,
-        private readonly int $minItems = 5
+        private readonly int $minItemsPerRun = 5
     ) {
         if ($this->timeGapSeconds < 1) {
             throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
@@ -25,8 +28,8 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
         if ($this->radiusMeters <= 0.0) {
             throw new \InvalidArgumentException('radiusMeters must be > 0.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerRun < 1) {
+            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -43,17 +46,18 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
-        $night = \array_values(\array_filter($items, function (Media $m) use ($tz): bool {
-            $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                return false;
+        $night = $this->filterTimestampedItemsBy(
+            $items,
+            function (Media $m) use ($tz): bool {
+                $t = $m->getTakenAt();
+                \assert($t instanceof DateTimeImmutable);
+                $local = $t->setTimezone($tz);
+                $h = (int) $local->format('G');
+                return ($h >= 20) || ($h <= 4);
             }
-            $local = $t->setTimezone($tz);
-            $h = (int) $local->format('G'); 
-            return ($h >= 20) || ($h <= 4);
-        }));
+        );
 
-        if (\count($night) < $this->minItems) {
+        if (\count($night) < $this->minItemsPerRun) {
             return [];
         }
 
@@ -80,16 +84,13 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
             $runs[] = $buf;
         }
 
-        $eligibleRuns = \array_values(\array_filter(
-            $runs,
-            fn (array $list): bool => \count($list) >= $this->minItems
-        ));
+        $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $gps = \array_values(\array_filter($run, static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null));
+            $gps = $this->filterGpsItems($run);
             $centroid = $gps !== []
                 ? MediaMath::centroid($gps)
                 : ['lat' => 0.0, 'lon' => 0.0];

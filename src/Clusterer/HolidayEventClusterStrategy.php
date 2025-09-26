@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -15,11 +16,13 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class HolidayEventClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
-        private readonly int $minItems = 8
+        private readonly int $minItemsPerHoliday = 8
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerHoliday < 1) {
+            throw new \InvalidArgumentException('minItemsPerHoliday must be >= 1.');
         }
     }
 
@@ -34,14 +37,15 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $groups */
         $groups = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $name = Calendar::germanFederalHolidayName($t);
             if ($name === null) {
                 continue;
@@ -52,10 +56,7 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
         }
 
         /** @var array<string, list<Media>> $eligibleGroups */
-        $eligibleGroups = \array_filter(
-            $groups,
-            fn (array $members): bool => \count($members) >= $this->minItems
-        );
+        $eligibleGroups = $this->filterGroupsByMinItems($groups, $this->minItemsPerHoliday);
 
         /** @var list<ClusterDraft> $out */
         $out = [];

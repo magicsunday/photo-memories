@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -14,11 +15,13 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly int $windowDays = 0,   // 0 = exact same month/day, 1..3 = tolerant
         private readonly int $minYears   = 3,
-        private readonly int $minItems   = 12
+        private readonly int $minItemsTotal   = 12
     ) {
         if ($this->windowDays < 0) {
             throw new \InvalidArgumentException('windowDays must be >= 0.');
@@ -26,8 +29,8 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         if ($this->minYears < 1) {
             throw new \InvalidArgumentException('minYears must be >= 1.');
         }
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsTotal < 1) {
+            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -51,13 +54,11 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         $tz = $now->getTimezone();
 
         /** @var list<Media> $picked */
-        $picked = \array_values(\array_filter(
+        $picked = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m) use ($tz, $anchorMonth, $anchorDay, &$years): bool {
                 $takenAt = $m->getTakenAt();
-                if (!$takenAt instanceof DateTimeImmutable) {
-                    return false;
-                }
+                \assert($takenAt instanceof DateTimeImmutable);
 
                 $local = $takenAt->setTimezone($tz);
                 $month = (int) $local->format('n');
@@ -71,9 +72,9 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
 
                 return true;
             }
-        ));
+        );
 
-        if (\count($picked) < $this->minItems || \count($years) < $this->minYears) {
+        if (\count($picked) < $this->minItemsTotal || \count($years) < $this->minYears) {
             return [];
         }
 

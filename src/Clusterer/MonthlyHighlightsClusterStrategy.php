@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -13,13 +14,15 @@ use MagicSunday\Memories\Utility\MediaMath;
  */
 final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
 {
+    use MediaFilterTrait;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItems = 40,
+        private readonly int $minItemsPerMonth = 40,
         private readonly int $minDistinctDays = 10
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerMonth < 1) {
+            throw new \InvalidArgumentException('minItemsPerMonth must be >= 1.');
         }
         if ($this->minDistinctDays < 1) {
             throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
@@ -39,31 +42,32 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byYm */
         $byYm = [];
 
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if (!$t instanceof DateTimeImmutable) {
-                continue;
-            }
+            \assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $ym = $local->format('Y-m');
             $byYm[$ym] ??= [];
             $byYm[$ym][] = $m;
         }
 
-        $eligibleMonths = \array_filter(
-            $byYm,
-            function (array $list) use ($tz): bool {
-                if (\count($list) < $this->minItems) {
-                    return false;
-                }
+        $eligibleMonths = $this->filterGroupsByMinItems($byYm, $this->minItemsPerMonth);
 
+        $eligibleMonths = $this->filterGroups(
+            $eligibleMonths,
+            function (array $list) use ($tz): bool {
                 /** @var array<string,bool> $days */
                 $days = [];
                 foreach ($list as $m) {
-                    $days[$m->getTakenAt()->setTimezone($tz)->format('Y-m-d')] = true;
+                    $takenAt = $m->getTakenAt();
+                    \assert($takenAt instanceof DateTimeImmutable);
+                    $days[$takenAt->setTimezone($tz)->format('Y-m-d')] = true;
                 }
 
                 $count = \count($days);

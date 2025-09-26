@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
@@ -24,6 +25,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 final class AnniversaryClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use MediaFilterTrait;
 
     /**
      * Creates a new anniversary cluster strategy.
@@ -33,12 +35,13 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
      */
     public function __construct(
         private readonly LocationHelper $locHelper,
-        private readonly int $minItems = 3,
+        // Minimum media items per anniversary bucket before scoring kicks in.
+        private readonly int $minItemsPerAnniversary = 3,
         private readonly int $minDistinctYears = 1,
         private readonly int $maxClusters = 0
     ) {
-        if ($this->minItems < 1) {
-            throw new \InvalidArgumentException('minItems must be >= 1.');
+        if ($this->minItemsPerAnniversary < 1) {
+            throw new \InvalidArgumentException('minItemsPerAnniversary must be >= 1.');
         }
 
         if ($this->minDistinctYears < 1) {
@@ -75,24 +78,23 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+
         /** @var array<string, list<Media>> $byMonthDay */
         $byMonthDay = [];
-        foreach ($items as $m) {
+        foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            if ($t instanceof DateTimeImmutable) {
-                // Index media by month and day so anniversaries match regardless of year.
-                $byMonthDay[$t->format('m-d')][] = $m;
-            }
+            \assert($t instanceof DateTimeImmutable);
+            // Index media by month and day so anniversaries match regardless of year.
+            $byMonthDay[$t->format('m-d')][] = $m;
         }
 
-        $filteredGroups = \array_filter(
-            $byMonthDay,
-            fn (array $group): bool => \count($group) >= $this->minItems
-        );
+        $eligibleGroups = $this->filterGroupsByMinItems($byMonthDay, $this->minItemsPerAnniversary);
 
         $scoredGroups = [];
 
-        foreach ($filteredGroups as $group) {
+        foreach ($eligibleGroups as $group) {
             $years = [];
             foreach ($group as $media) {
                 $takenAt = $media->getTakenAt();
