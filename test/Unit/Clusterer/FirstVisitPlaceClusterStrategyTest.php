@@ -1,16 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class FirstVisitPlaceClusterStrategyTest extends TestCase
 {
@@ -29,7 +30,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         );
 
         $loc = $this->createLocation('loc-innsbruck', 'Innsbruck', 47.268, 11.392);
-        $start = new DateTimeImmutable('2024-02-10 09:00:00');
+        $start = new DateTimeImmutable('2024-02-10 09:00:00', new DateTimeZone('UTC'));
         $items = [];
 
         for ($dayOffset = 0; $dayOffset < 2; $dayOffset++) {
@@ -46,7 +47,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         }
 
         // Later revisit in same cell should be ignored
-        $later = new DateTimeImmutable('2024-03-05 10:00:00');
+        $later = new DateTimeImmutable('2024-03-05 10:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 4; $i++) {
             $items[] = $this->createMedia(
                 1300 + $i,
@@ -85,7 +86,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         );
 
         $loc = $this->createLocation('loc-bolzano', 'Bolzano', 46.5, 11.35);
-        $start = new DateTimeImmutable('2024-04-01 09:00:00');
+        $start = new DateTimeImmutable('2024-04-01 09:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($dayOffset = 0; $dayOffset < 2; $dayOffset++) {
             $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
@@ -105,11 +106,14 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
 
     private function createLocation(string $id, string $city, float $lat, float $lon): Location
     {
-        $location = new Location('osm', $id, $city, $lat, $lon, 'cell-' . $id);
-        $location->setCity($city);
-        $location->setCountry('Austria');
-
-        return $location;
+        return $this->makeLocation(
+            providerPlaceId: $id,
+            displayName: $city,
+            lat: $lat,
+            lon: $lon,
+            city: $city,
+            country: 'Austria',
+        );
     }
 
     private function createMedia(
@@ -119,25 +123,14 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         float $lon,
         Location $location
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/first-visit-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "first-visit-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

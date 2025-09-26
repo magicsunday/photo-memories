@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -9,7 +9,7 @@ use MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class CampingOverYearsClusterStrategyTest extends TestCase
 {
@@ -34,7 +34,7 @@ final class CampingOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(3105, '2021-07-03 10:00:00', lat: 47.5000, lon: 11.0000),
             $this->createMedia(3106, '2021-07-03 17:00:00', lat: 47.5000, lon: 11.0000),
             // Alternative 2021 day with too few photos
-            $this->createMedia(3110, '2021-08-15 12:00:00', path: __DIR__.'/fixtures/hike-2021.jpg'),
+            $this->createMedia(3110, '2021-08-15 12:00:00', filename: 'hike-2021.jpg'),
             // 2022 qualifying run (3 days)
             $this->createMedia(3201, '2022-07-05 08:45:00', lat: 47.5000, lon: 11.0000),
             $this->createMedia(3202, '2022-07-05 19:30:00', lat: 47.5000, lon: 11.0000),
@@ -50,7 +50,7 @@ final class CampingOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(3305, '2023-07-04 09:05:00', lat: 47.5000, lon: 11.0000),
             $this->createMedia(3306, '2023-07-04 18:05:00', lat: 47.5000, lon: 11.0000),
             // Non-camping media that should be ignored
-            $this->createMedia(3310, '2023-07-10 12:00:00', path: __DIR__.'/fixtures/beach-2023.jpg'),
+            $this->createMedia(3310, '2023-07-10 12:00:00', filename: 'beach-2023.jpg'),
         ];
 
         $clusters = $strategy->cluster($mediaItems);
@@ -112,34 +112,18 @@ final class CampingOverYearsClusterStrategyTest extends TestCase
     private function createMedia(
         int $id,
         string $takenAt,
-        ?string $path = null,
         ?float $lat = null,
         ?float $lon = null,
+        ?string $filename = null,
     ): Media {
-        $media = new Media(
-            path: $path ?? __DIR__ . "/fixtures/camping-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename ?? "camping-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        if ($lat !== null) {
-            $media->setGpsLat($lat);
-        }
-
-        if ($lon !== null) {
-            $media->setGpsLon($lon);
-        }
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

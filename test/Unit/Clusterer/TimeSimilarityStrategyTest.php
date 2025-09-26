@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -11,7 +11,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class TimeSimilarityStrategyTest extends TestCase
 {
@@ -25,7 +25,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 3,
         );
 
-        $berlin = $this->createLocation(
+        $berlin = $this->makeLocation(
             providerPlaceId: 'berlin-city',
             displayName: 'Berlin',
             lat: 52.5200,
@@ -33,7 +33,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             city: 'Berlin',
             country: 'Germany',
         );
-        $munich = $this->createLocation(
+        $munich = $this->makeLocation(
             providerPlaceId: 'munich-city',
             displayName: 'Munich',
             lat: 48.1371,
@@ -84,7 +84,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 4,
         );
 
-        $location = $this->createLocation(
+        $location = $this->makeLocation(
             providerPlaceId: 'hamburg-city',
             displayName: 'Hamburg',
             lat: 53.5511,
@@ -113,48 +113,14 @@ final class TimeSimilarityStrategyTest extends TestCase
         float $lon,
         Location $location
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/time-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
-        );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
-    }
-
-    private function createLocation(
-        string $providerPlaceId,
-        string $displayName,
-        float $lat,
-        float $lon,
-        ?string $city = null,
-        ?string $country = null,
-    ): Location {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: $providerPlaceId,
-            displayName: $displayName,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "time-{$id}.jpg",
+            takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
-            cell: 'cell-' . $providerPlaceId,
+            location: $location,
         );
-
-        $location->setCity($city);
-        $location->setCountry($country);
-
-        return $location;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

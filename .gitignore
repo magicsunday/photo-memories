@@ -23,6 +23,7 @@ composer.lock
 
 # Custom
 /bin/*
+!/bin/php
 /spc
 memories.phar
 /var/

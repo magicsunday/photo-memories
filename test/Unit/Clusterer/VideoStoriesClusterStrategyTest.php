@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class VideoStoriesClusterStrategyTest extends TestCase
 {
@@ -20,7 +21,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             minItemsPerDay: 2,
         );
 
-        $base = new DateTimeImmutable('2024-03-15 08:00:00');
+        $base = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
         $videos = [];
         for ($i = 0; $i < 3; $i++) {
             $videos[] = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
@@ -41,8 +42,8 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         $strategy = new VideoStoriesClusterStrategy();
 
         $items = [
-            $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00')),
-            $this->createPhoto(3401, new DateTimeImmutable('2024-03-16 09:00:00')),
+            $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00', new DateTimeZone('UTC'))),
+            $this->createPhoto(3401, new DateTimeImmutable('2024-03-16 09:00:00', new DateTimeZone('UTC'))),
         ];
 
         self::assertSame([], $strategy->cluster($items));
@@ -50,40 +51,29 @@ final class VideoStoriesClusterStrategyTest extends TestCase
 
     private function createVideo(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/video-' . $id . '.mp4',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "video-{$id}.mp4",
+            takenAt: $takenAt,
+            lat: 48.1,
+            lon: 11.6,
             size: 4096,
+            configure: static function (Media $media): void {
+                $media->setMime('video/mp4');
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setMime('video/mp4');
-        $media->setGpsLat(48.1);
-        $media->setGpsLon(11.6);
-
-        return $media;
     }
 
     private function createPhoto(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/photo-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "photo-{$id}.jpg",
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setMime('image/jpeg');
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setMime('image/jpeg');
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

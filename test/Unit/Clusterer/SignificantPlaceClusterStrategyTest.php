@@ -1,16 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
-use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class SignificantPlaceClusterStrategyTest extends TestCase
 {
@@ -75,42 +75,37 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
 
     private function createLocation(string $id, string $displayName): Location
     {
-        $loc = new Location('provider', $id, $displayName, 52.52, 13.405, 'cell-1234');
-        $loc->setCity('Berlin');
-        $loc->setCountry('Deutschland');
-        $loc->setPois([
-            [
-                'name' => 'Cafe Central',
-                'categoryKey' => 'amenity',
-                'categoryValue' => 'cafe',
-                'tags' => ['cuisine' => 'coffee_shop'],
-            ],
-        ]);
-
-        return $loc;
+        return $this->makeLocation(
+            providerPlaceId: $id,
+            displayName: $displayName,
+            lat: 52.52,
+            lon: 13.405,
+            provider: 'provider',
+            city: 'Berlin',
+            country: 'Deutschland',
+            configure: static function (Location $location): void {
+                $location->setPois([
+                    [
+                        'name' => 'Cafe Central',
+                        'categoryKey' => 'amenity',
+                        'categoryValue' => 'cafe',
+                        'tags' => ['cuisine' => 'coffee_shop'],
+                    ],
+                ]);
+            },
+        );
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon, Location $location): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/significant-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "significant-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -9,7 +9,7 @@ use MagicSunday\Memories\Clusterer\CampingTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class CampingTripClusterStrategyTest extends TestCase
 {
@@ -36,9 +36,9 @@ final class CampingTripClusterStrategyTest extends TestCase
             $this->createMedia(5121, '2022-08-12 10:15:00', lat: 46.8000, lon: 10.5000),
             $this->createMedia(5122, '2022-08-12 17:45:00', lat: 46.8000, lon: 10.5000),
             // Sparse day that should end the run
-            $this->createMedia(5201, '2022-08-14 09:00:00', path: __DIR__.'/fixtures/camping-solo.jpg'),
+            $this->createMedia(5201, '2022-08-14 09:00:00', filename: 'camping-solo.jpg'),
             // Non-camping item ignored
-            $this->createMedia(5301, '2022-08-10 09:00:00', path: __DIR__.'/fixtures/hotel-2022.jpg'),
+            $this->createMedia(5301, '2022-08-10 09:00:00', filename: 'hotel-2022.jpg'),
         ];
 
         $clusters = $strategy->cluster($mediaItems);
@@ -88,34 +88,18 @@ final class CampingTripClusterStrategyTest extends TestCase
     private function createMedia(
         int $id,
         string $takenAt,
-        ?string $path = null,
+        ?string $filename = null,
         ?float $lat = null,
         ?float $lon = null,
     ): Media {
-        $media = new Media(
-            path: $path ?? __DIR__ . "/fixtures/camping-trip-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename ?? "camping-trip-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 1536,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        if ($lat !== null) {
-            $media->setGpsLat($lat);
-        }
-
-        if ($lon !== null) {
-            $media->setGpsLon($lon);
-        }
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

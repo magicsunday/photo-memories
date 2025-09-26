@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Service\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -10,7 +10,7 @@ use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 #[CoversClass(SmartTitleGenerator::class)]
 #[CoversClass(TitleTemplateProvider::class)]

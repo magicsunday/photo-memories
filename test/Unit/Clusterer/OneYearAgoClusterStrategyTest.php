@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
@@ -9,7 +9,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class OneYearAgoClusterStrategyTest extends TestCase
 {
@@ -65,22 +65,11 @@ final class OneYearAgoClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/one-year-ago-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "one-year-ago-{$id}.jpg",
+            takenAt: $takenAt->setTimezone(new DateTimeZone('UTC')),
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt->setTimezone(new DateTimeZone('UTC')));
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

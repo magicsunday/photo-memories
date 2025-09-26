@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class CityscapeNightClusterStrategyTest extends TestCase
 {
@@ -69,24 +69,14 @@ final class CityscapeNightClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, string $filename, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . $filename,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -11,7 +11,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class AnniversaryClusterStrategyTest extends TestCase
 {
@@ -112,19 +112,14 @@ final class AnniversaryClusterStrategyTest extends TestCase
         float $lat,
         float $lon,
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/anniversary-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "anniversary-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
     private function createLocation(string $key): Location
@@ -135,24 +130,13 @@ final class AnniversaryClusterStrategyTest extends TestCase
             default => 'Hamburg',
         };
 
-        $location = new Location(
-            provider: 'osm',
+        return $this->makeLocation(
             providerPlaceId: $key,
             displayName: ucfirst($key),
             lat: 50.0,
             lon: 8.0,
-            cell: 'cell-' . $key,
+            city: $city,
         );
-
-        $location->setCity($city);
-
-        return $location;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class PortraitOrientationClusterStrategyTest extends TestCase
 {
@@ -21,7 +22,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             minItemsPerRun: 4,
         );
 
-        $start = new DateTimeImmutable('2024-04-10 10:00:00');
+        $start = new DateTimeImmutable('2024-04-10 10:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 4; $i++) {
             $media = $this->createPortraitMedia(3700 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
@@ -42,7 +43,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     {
         $strategy = new PortraitOrientationClusterStrategy();
 
-        $start = new DateTimeImmutable('2024-04-11 10:00:00');
+        $start = new DateTimeImmutable('2024-04-11 10:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 4; $i++) {
             $media = $this->createLandscapeMedia(3800 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
@@ -54,42 +55,30 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
 
     private function createPortraitMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/portrait-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "portrait-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 48.0,
+            lon: 11.0,
+            configure: static function (Media $media): void {
+                $media->setWidth(1000);
+                $media->setHeight(1500);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(1000);
-        $media->setHeight(1500);
-        $media->setGpsLat(48.0);
-        $media->setGpsLon(11.0);
-
-        return $media;
     }
 
     private function createLandscapeMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/landscape-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "landscape-{$id}.jpg",
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setWidth(1600);
+                $media->setHeight(900);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(1600);
-        $media->setHeight(900);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

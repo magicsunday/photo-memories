@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class PhotoMotifClusterStrategyTest extends TestCase
 {
@@ -20,7 +21,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             minItemsPerMotif: 6,
         );
 
-        $start = new DateTimeImmutable('2023-09-01 08:00:00');
+        $start = new DateTimeImmutable('2023-09-01 08:00:00', new DateTimeZone('UTC'));
         $mediaItems = [];
         for ($i = 0; $i < 6; $i++) {
             $mediaItems[] = $this->createMedia(
@@ -55,7 +56,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
         for ($i = 0; $i < 5; $i++) {
             $items[] = $this->createMedia(
                 400 + $i,
-                new DateTimeImmutable('2023-07-10 09:00:00'),
+                new DateTimeImmutable('2023-07-10 09:00:00', new DateTimeZone('UTC')),
                 "beach-day-{$i}.jpg",
                 36.0,
                 -5.0,
@@ -67,24 +68,14 @@ final class PhotoMotifClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, string $filename, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . $filename,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 512,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

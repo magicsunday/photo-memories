@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 {
@@ -24,7 +25,7 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2021, 2022, 2023] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 100) + $i,
@@ -58,7 +59,7 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2022, 2023] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 1000) + $i,
@@ -75,24 +76,14 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, string $pattern, int $year, int $index): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . sprintf($pattern, $year, $index),
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: sprintf($pattern, $year, $index),
+            takenAt: $takenAt,
+            lat: 50.0 + $index * 0.01,
+            lon: 8.0 + $index * 0.01,
             size: 512,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(50.0 + $index * 0.01);
-        $media->setGpsLon(8.0 + $index * 0.01);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

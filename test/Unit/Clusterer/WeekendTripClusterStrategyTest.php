@@ -1,15 +1,16 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
-use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class WeekendTripClusterStrategyTest extends TestCase
 {
@@ -70,34 +71,24 @@ final class WeekendTripClusterStrategyTest extends TestCase
 
     private function createLocation(string $id, string $city, float $lat, float $lon): Location
     {
-        $location = new Location('osm', $id, $city, $lat, $lon, 'cell-' . $id);
-        $location->setCity($city);
-        $location->setCountry('Germany');
-
-        return $location;
+        return $this->makeLocation(
+            providerPlaceId: $id,
+            displayName: $city,
+            lat: $lat,
+            lon: $lon,
+            city: $city,
+            country: 'Germany',
+        );
     }
 
     private function createMedia(int $id, string $takenAt, Location $location): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/weekend-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "weekend-{$id}.jpg",
+            takenAt: $takenAt,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt));
-        $media->setGpsLat($location->getLat());
-        $media->setGpsLon($location->getLon());
-        $media->setLocation($location);
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

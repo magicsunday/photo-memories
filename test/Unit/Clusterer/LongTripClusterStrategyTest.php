@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
@@ -11,7 +11,7 @@ use MagicSunday\Memories\Clusterer\LongTripClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class LongTripClusterStrategyTest extends TestCase
 {
@@ -136,30 +136,14 @@ final class LongTripClusterStrategyTest extends TestCase
         ?float $lat = null,
         ?float $lon = null
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/long-trip-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "long-trip-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        if ($lat !== null) {
-            $media->setGpsLat($lat);
-        }
-
-        if ($lon !== null) {
-            $media->setGpsLon($lon);
-        }
-
-        return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }
