@@ -19,7 +19,7 @@ final class ZooAquariumClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 1800,
             radiusMeters: 350.0,
-            minItems: 5,
+            minItemsPerRun: 5,
             minHour: 9,
             maxHour: 19,
         );

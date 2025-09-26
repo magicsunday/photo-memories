@@ -22,7 +22,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         $strategy = new TimeSimilarityStrategy(
             locHelper: $helper,
             maxGapSeconds: 1800,
-            minItems: 3,
+            minItemsPerBucket: 3,
         );
 
         $berlin = $this->createLocation(
@@ -81,7 +81,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         $strategy = new TimeSimilarityStrategy(
             locHelper: new LocationHelper(),
             maxGapSeconds: 900,
-            minItems: 4,
+            minItemsPerBucket: 4,
         );
 
         $location = $this->createLocation(

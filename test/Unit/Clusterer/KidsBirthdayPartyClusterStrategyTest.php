@@ -20,7 +20,7 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 3 * 3600,
             radiusMeters: 300.0,
-            minItems: 6,
+            minItemsPerRun: 6,
             minHour: 9,
             maxHour: 21,
         );
@@ -57,7 +57,7 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 3 * 3600,
             radiusMeters: 300.0,
-            minItems: 5,
+            minItemsPerRun: 5,
             minHour: 10,
             maxHour: 20,
         );

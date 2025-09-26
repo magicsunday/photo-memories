@@ -19,7 +19,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         $strategy = new TransitTravelDayClusterStrategy(
             timezone: 'Europe/Berlin',
             minTravelKm: 60.0,
-            minGpsSamples: 5,
+            minItemsPerDay: 5,
         );
 
         $day = new DateTimeImmutable('2024-07-01 06:00:00', new DateTimeZone('UTC'));

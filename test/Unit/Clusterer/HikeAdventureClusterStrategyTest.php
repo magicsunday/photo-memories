@@ -18,8 +18,8 @@ final class HikeAdventureClusterStrategyTest extends TestCase
         $strategy = new HikeAdventureClusterStrategy(
             sessionGapSeconds: 1800,
             minDistanceKm: 5.0,
-            minItems: 6,
-            minItemsNoGps: 10,
+            minItemsPerRun: 6,
+            minItemsPerRunNoGps: 10,
         );
 
         $start = new DateTimeImmutable('2023-09-10 08:00:00');
@@ -46,8 +46,8 @@ final class HikeAdventureClusterStrategyTest extends TestCase
         $strategy = new HikeAdventureClusterStrategy(
             sessionGapSeconds: 1800,
             minDistanceKm: 8.0,
-            minItems: 6,
-            minItemsNoGps: 10,
+            minItemsPerRun: 6,
+            minItemsPerRunNoGps: 10,
         );
 
         $start = new DateTimeImmutable('2023-09-11 08:00:00');

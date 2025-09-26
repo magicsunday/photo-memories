@@ -17,7 +17,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         $strategy = new VideoStoriesClusterStrategy(
             timezone: 'Europe/Berlin',
-            minItems: 2,
+            minItemsPerDay: 2,
         );
 
         $base = new DateTimeImmutable('2024-03-15 08:00:00');

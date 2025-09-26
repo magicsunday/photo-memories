@@ -17,7 +17,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     {
         $strategy = new PersonCohortClusterStrategy(
             minPersons: 2,
-            minItems: 5,
+            minItemsTotal: 5,
             windowDays: 7,
         );
 
@@ -49,7 +49,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     {
         $strategy = new PersonCohortClusterStrategy(
             minPersons: 3,
-            minItems: 5,
+            minItemsTotal: 5,
             windowDays: 7,
         );
 

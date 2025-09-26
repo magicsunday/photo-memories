@@ -20,7 +20,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             timeGapSeconds: 3 * 3600,
             radiusMeters: 400.0,
-            minItems: 5,
+            minItemsPerRun: 5,
         );
 
         $start = new DateTimeImmutable('2024-03-15 20:30:00', new DateTimeZone('UTC'));
@@ -54,7 +54,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             timeGapSeconds: 3 * 3600,
             radiusMeters: 50.0,
-            minItems: 5,
+            minItemsPerRun: 5,
         );
 
         $start = new DateTimeImmutable('2024-03-16 22:00:00', new DateTimeZone('UTC'));

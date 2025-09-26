@@ -17,7 +17,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new SeasonOverYearsClusterStrategy(
             minYears: 3,
-            minItems: 6,
+            minItemsPerSeason: 6,
         );
 
         $mediaItems = [
@@ -46,7 +46,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new SeasonOverYearsClusterStrategy(
             minYears: 4,
-            minItems: 5,
+            minItemsPerSeason: 5,
         );
 
         $mediaItems = [

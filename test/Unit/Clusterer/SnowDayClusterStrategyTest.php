@@ -19,7 +19,7 @@ final class SnowDayClusterStrategyTest extends TestCase
         $strategy = new SnowDayClusterStrategy(
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 5400,
-            minItems: 6,
+            minItemsPerRun: 6,
         );
 
         $start = new DateTimeImmutable('2024-01-12 09:00:00', new DateTimeZone('UTC'));
@@ -50,7 +50,7 @@ final class SnowDayClusterStrategyTest extends TestCase
         $strategy = new SnowDayClusterStrategy(
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 5400,
-            minItems: 4,
+            minItemsPerRun: 4,
         );
 
         $start = new DateTimeImmutable('2024-04-01 09:00:00', new DateTimeZone('UTC'));

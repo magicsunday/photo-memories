@@ -20,7 +20,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             startHour: 20,
             endHour: 2,
-            minItems: 6,
+            minItemsPerYear: 6,
         );
 
         $start = new DateTimeImmutable('2023-12-31 20:00:00', new DateTimeZone('Europe/Berlin'));

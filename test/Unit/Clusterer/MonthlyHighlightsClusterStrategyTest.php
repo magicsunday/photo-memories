@@ -17,7 +17,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
     {
         $strategy = new MonthlyHighlightsClusterStrategy(
             timezone: 'UTC',
-            minItems: 4,
+            minItemsPerMonth: 4,
             minDistinctDays: 3,
         );
 
@@ -47,7 +47,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
     {
         $strategy = new MonthlyHighlightsClusterStrategy(
             timezone: 'UTC',
-            minItems: 4,
+            minItemsPerMonth: 4,
             minDistinctDays: 4,
         );
 

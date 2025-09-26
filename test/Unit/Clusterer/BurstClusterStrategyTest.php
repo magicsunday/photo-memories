@@ -16,7 +16,7 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function clustersSequentialShotsWithinGapAndDistance(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 120, maxMoveMeters: 100.0, minItems: 3);
+        $strategy = new BurstClusterStrategy(maxGapSeconds: 120, maxMoveMeters: 100.0, minItemsPerBurst: 3);
 
         $mediaItems = [
             $this->createMedia(3001, '2023-04-15 10:01:10', 52.5201, 13.4051),
@@ -49,7 +49,7 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function breaksSequenceWhenGapExceedsThreshold(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 60, maxMoveMeters: 100.0, minItems: 3);
+        $strategy = new BurstClusterStrategy(maxGapSeconds: 60, maxMoveMeters: 100.0, minItemsPerBurst: 3);
 
         $mediaItems = [
             $this->createMedia(4001, '2023-04-15 09:00:00', 40.7127, -74.0061),
@@ -71,7 +71,7 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenNoBurstReachesMinimumSize(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 90, maxMoveMeters: 50.0, minItems: 4);
+        $strategy = new BurstClusterStrategy(maxGapSeconds: 90, maxMoveMeters: 50.0, minItemsPerBurst: 4);
 
         $mediaItems = [
             $this->createMedia(5001, '2023-07-20 14:00:00', 34.0521, -118.2436),

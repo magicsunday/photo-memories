@@ -20,7 +20,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             windowDays: 1,
             minYears: 3,
-            minItems: 5,
+            minItemsTotal: 5,
         );
 
         $anchor = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
@@ -52,7 +52,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             windowDays: 0,
             minYears: 4,
-            minItems: 5,
+            minItemsTotal: 5,
         );
 
         $anchor = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));

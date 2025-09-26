@@ -19,7 +19,7 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 900,
             radiusMeters: 150.0,
-            minItems: 3,
+            minItemsPerRun: 3,
             minHour: 7,
             maxHour: 10,
         );

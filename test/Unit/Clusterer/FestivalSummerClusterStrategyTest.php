@@ -19,7 +19,7 @@ final class FestivalSummerClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 1800,
             radiusMeters: 500.0,
-            minItems: 8,
+            minItemsPerRun: 8,
             startMonth: 6,
             endMonth: 9,
             afternoonStartHour: 14,

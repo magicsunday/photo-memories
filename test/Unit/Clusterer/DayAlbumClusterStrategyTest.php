@@ -16,7 +16,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     #[Test]
     public function groupsMediaByLocalCalendarDay(): void
     {
-        $strategy = new DayAlbumClusterStrategy(timezone: 'America/Los_Angeles', minItems: 2);
+        $strategy = new DayAlbumClusterStrategy(timezone: 'America/Los_Angeles', minItemsPerDay: 2);
 
         $mediaItems = [
             $this->createMedia(101, '2022-06-01 23:30:00', 34.0522, -118.2437),
@@ -51,7 +51,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenNoDayMeetsMinimumItemCount(): void
     {
-        $strategy = new DayAlbumClusterStrategy(timezone: 'UTC', minItems: 3);
+        $strategy = new DayAlbumClusterStrategy(timezone: 'UTC', minItemsPerDay: 3);
 
         $mediaItems = [
             $this->createMedia(201, '2022-08-01 09:00:00', 52.5, 13.4),

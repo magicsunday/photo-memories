@@ -19,7 +19,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
         $strategy = new CrossDimensionClusterStrategy(
             timeGapSeconds: 900,
             radiusMeters: 150.0,
-            minItems: 4,
+            minItemsPerRun: 4,
         );
 
         $mediaItems = [
@@ -57,7 +57,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
         $strategy = new CrossDimensionClusterStrategy(
             timeGapSeconds: 900,
             radiusMeters: 80.0,
-            minItems: 4,
+            minItemsPerRun: 4,
         );
 
         $mediaItems = [

@@ -18,7 +18,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
         $strategy = new ThisMonthOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
             minYears: 3,
-            minItems: 6,
+            minItemsTotal: 6,
             minDistinctDays: 4,
         );
 
@@ -54,7 +54,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
         $strategy = new ThisMonthOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
             minYears: 2,
-            minItems: 4,
+            minItemsTotal: 4,
             minDistinctDays: 5,
         );
 

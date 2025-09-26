@@ -19,7 +19,7 @@ final class SportsEventClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 3600,
             radiusMeters: 600.0,
-            minItems: 5,
+            minItemsPerRun: 5,
             preferWeekend: true,
         );
 
@@ -51,7 +51,7 @@ final class SportsEventClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 3600,
             radiusMeters: 600.0,
-            minItems: 5,
+            minItemsPerRun: 5,
             preferWeekend: true,
         );
 
