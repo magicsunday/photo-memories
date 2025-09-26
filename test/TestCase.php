@@ -32,12 +32,17 @@ abstract class TestCase extends BaseTestCase
         ?callable $configure = null,
         int $size = 1024,
         ?string $checksum = null,
+        ?callable $factory = null,
     ): Media {
-        $media = new Media(
-            path: $path,
-            checksum: $checksum ?? str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: $size,
-        );
+        $mediaChecksum = $checksum ?? str_pad((string) $id, 64, '0', STR_PAD_LEFT);
+
+        $media = $factory !== null
+            ? $factory($path, $mediaChecksum, $size)
+            : new Media(
+                path: $path,
+                checksum: $mediaChecksum,
+                size: $size,
+            );
 
         $this->assignId($media, $id);
 
@@ -82,10 +87,96 @@ abstract class TestCase extends BaseTestCase
         ?callable $configure = null,
         int $size = 1024,
         ?string $checksum = null,
+        ?callable $factory = null,
     ): Media {
         return $this->makeMedia(
             id: $id,
             path: $this->fixturePath($filename),
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
+            configure: $configure,
+            size: $size,
+            checksum: $checksum,
+            factory: $factory,
+        );
+    }
+
+    /**
+     * @param list<int> $personIds
+     */
+    protected function makePersonTaggedMedia(
+        int $id,
+        string $path,
+        array $personIds,
+        DateTimeInterface|string|null $takenAt = null,
+        ?float $lat = null,
+        ?float $lon = null,
+        ?Location $location = null,
+        ?callable $configure = null,
+        int $size = 1024,
+        ?string $checksum = null,
+    ): Media {
+        $factory = static function (string $mediaPath, string $mediaChecksum, int $mediaSize) use ($personIds): Media {
+            return new class ($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
+                /**
+                 * @var list<int>
+                 */
+                private array $personIds;
+
+                /**
+                 * @param list<int> $personIds
+                 */
+                public function __construct(string $path, string $checksum, int $size, array $personIds)
+                {
+                    parent::__construct($path, $checksum, $size);
+                    $this->personIds = $personIds;
+                }
+
+                /**
+                 * @return list<int>
+                 */
+                public function getPersonIds(): array
+                {
+                    return $this->personIds;
+                }
+            };
+        };
+
+        return $this->makeMedia(
+            id: $id,
+            path: $path,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
+            configure: $configure,
+            size: $size,
+            checksum: $checksum,
+            factory: $factory,
+        );
+    }
+
+    /**
+     * @param list<int> $personIds
+     */
+    protected function makePersonTaggedMediaFixture(
+        int $id,
+        string $filename,
+        array $personIds,
+        DateTimeInterface|string|null $takenAt = null,
+        ?float $lat = null,
+        ?float $lon = null,
+        ?Location $location = null,
+        ?callable $configure = null,
+        int $size = 1024,
+        ?string $checksum = null,
+    ): Media {
+        return $this->makePersonTaggedMedia(
+            id: $id,
+            path: $this->fixturePath($filename),
+            personIds: $personIds,
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
