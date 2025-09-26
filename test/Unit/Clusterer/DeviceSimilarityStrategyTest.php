@@ -11,7 +11,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class DeviceSimilarityStrategyTest extends TestCase
 {
@@ -132,10 +132,4 @@ final class DeviceSimilarityStrategyTest extends TestCase
         return $location;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

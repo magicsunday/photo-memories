@@ -9,7 +9,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class DayAlbumClusterStrategyTest extends TestCase
 {
@@ -77,10 +77,4 @@ final class DayAlbumClusterStrategyTest extends TestCase
         return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }

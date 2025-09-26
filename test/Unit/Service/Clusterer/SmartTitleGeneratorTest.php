@@ -10,7 +10,7 @@ use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 #[CoversClass(SmartTitleGenerator::class)]
 #[CoversClass(TitleTemplateProvider::class)]

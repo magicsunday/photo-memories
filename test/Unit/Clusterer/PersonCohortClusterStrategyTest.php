@@ -9,7 +9,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class PersonCohortClusterStrategyTest extends TestCase
 {
@@ -84,12 +84,6 @@ final class PersonCohortClusterStrategyTest extends TestCase
         return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }
 
 final class PersonTagMedia extends Media

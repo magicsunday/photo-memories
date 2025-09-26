@@ -10,7 +10,7 @@ use MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class SunnyDayClusterStrategyTest extends TestCase
 {
@@ -91,12 +91,6 @@ final class SunnyDayClusterStrategyTest extends TestCase
         return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }
 
 final class InMemoryWeatherProvider implements WeatherHintProviderInterface

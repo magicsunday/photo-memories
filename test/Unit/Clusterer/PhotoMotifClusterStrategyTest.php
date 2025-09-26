@@ -9,7 +9,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
+use MagicSunday\Memories\Test\TestCase;
 
 final class PhotoMotifClusterStrategyTest extends TestCase
 {
@@ -82,10 +82,4 @@ final class PhotoMotifClusterStrategyTest extends TestCase
         return $media;
     }
 
-    private function assignId(Media $media, int $id): void
-    {
-        \Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
-    }
 }
