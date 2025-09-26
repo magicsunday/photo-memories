@@ -74,18 +74,14 @@ final class MuseumOverYearsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, int $year, int $index): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . sprintf('museum-%d-%d.jpg', $year, $index),
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: sprintf('museum-%d-%d.jpg', $year, $index),
+            takenAt: $takenAt,
+            lat: 52.0 + $index * 0.01,
+            lon: 13.0 + $index * 0.01,
             size: 1024,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(52.0 + $index * 0.01);
-        $media->setGpsLon(13.0 + $index * 0.01);
-
-        return $media;
     }
 
 }

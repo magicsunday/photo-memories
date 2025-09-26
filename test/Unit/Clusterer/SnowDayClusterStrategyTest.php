@@ -31,7 +31,7 @@ final class SnowDayClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($index * 25) . 'M')),
                 47.0 + ($index * 0.001),
                 11.0 + ($index * 0.001),
-                __DIR__ . "/fixtures/{$keyword}-moment.jpg",
+                "{$keyword}-moment.jpg",
             );
         }
 
@@ -61,27 +61,23 @@ final class SnowDayClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 30) . 'M')),
                 47.5 + ($i * 0.001),
                 11.5 + ($i * 0.001),
-                __DIR__ . "/fixtures/mountain-hike-$i.jpg",
+                "mountain-hike-{$i}.jpg",
             );
         }
 
         self::assertSame([], $strategy->cluster($media));
     }
 
-    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, string $path): Media
+    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, string $filename): Media
     {
-        $media = new Media(
-            path: $path,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 1024,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

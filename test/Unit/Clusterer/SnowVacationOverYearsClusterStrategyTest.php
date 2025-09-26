@@ -116,18 +116,14 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
         float $lat,
         float $lon
     ): Media {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . $path,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $path,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 4096,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

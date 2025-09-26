@@ -80,18 +80,14 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/weekend-getaway-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "weekend-getaway-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 47.0,
+            lon: 11.0,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(47.0);
-        $media->setGpsLon(11.0);
-
-        return $media;
     }
 
 }

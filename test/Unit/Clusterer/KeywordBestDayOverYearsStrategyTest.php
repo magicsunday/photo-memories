@@ -165,18 +165,13 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, string $pathSuffix, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . $pathSuffix,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $pathSuffix,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

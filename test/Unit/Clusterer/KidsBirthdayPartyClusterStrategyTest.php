@@ -33,7 +33,7 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 20) . 'M')),
                 48.137 + ($i * 0.0003),
                 11.575 + ($i * 0.0003),
-                __DIR__ . "/fixtures/birthday-party-$i-cake.jpg",
+                "birthday-party-{$i}-cake.jpg",
             );
         }
 
@@ -70,27 +70,23 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 15) . 'M')),
                 48.20 + ($i * 0.0004),
                 11.60 + ($i * 0.0004),
-                __DIR__ . "/fixtures/playdate-$i.jpg",
+                "playdate-{$i}.jpg",
             );
         }
 
         self::assertSame([], $strategy->cluster($media));
     }
 
-    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, string $path): Media
+    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, string $filename): Media
     {
-        $media = new Media(
-            path: $path,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

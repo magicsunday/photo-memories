@@ -73,18 +73,13 @@ final class NightlifeEventClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/nightlife-$id.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "nightlife-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }

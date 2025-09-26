@@ -100,20 +100,17 @@ final class PhashSimilarityStrategyTest extends TestCase
         string $phash,
         Location $location
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/phash-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "phash-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
+            configure: static function (Media $media) use ($phash): void {
+                $media->setPhash($phash);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setPhash($phash);
-        $media->setLocation($location);
-
-        return $media;
     }
 
     private function createLocation(

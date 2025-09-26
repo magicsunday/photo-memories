@@ -29,21 +29,21 @@ final class BeachOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(1102, '2019-08-05 10:15:00', lat: 36.5000, lon: -4.8800),
             $this->createMedia(1103, '2019-08-05 11:45:00', lat: 36.5000, lon: -4.8800),
             // Competing 2019 day with fewer matches
-            $this->createMedia(1110, '2019-08-20 12:00:00', path: __DIR__.'/fixtures/beach-2019-alt-1.jpg'),
-            $this->createMedia(1111, '2019-08-20 13:00:00', path: __DIR__.'/fixtures/beach-2019-alt-2.jpg'),
+            $this->createMedia(1110, '2019-08-20 12:00:00', filename: 'beach-2019-alt-1.jpg'),
+            $this->createMedia(1111, '2019-08-20 13:00:00', filename: 'beach-2019-alt-2.jpg'),
             // 2020 best day (three qualifying beach photos)
             $this->createMedia(1201, '2020-08-12 09:30:00', lat: 36.5000, lon: -4.8800),
             $this->createMedia(1202, '2020-08-12 10:45:00', lat: 36.5000, lon: -4.8800),
             $this->createMedia(1203, '2020-08-12 12:15:00', lat: 36.5000, lon: -4.8800),
             // Competing 2020 day with fewer matches
-            $this->createMedia(1210, '2020-09-01 08:00:00', path: __DIR__.'/fixtures/beach-2020-alt-1.jpg'),
-            $this->createMedia(1211, '2020-09-01 08:30:00', path: __DIR__.'/fixtures/beach-2020-alt-2.jpg'),
+            $this->createMedia(1210, '2020-09-01 08:00:00', filename: 'beach-2020-alt-1.jpg'),
+            $this->createMedia(1211, '2020-09-01 08:30:00', filename: 'beach-2020-alt-2.jpg'),
             // 2021 best day (three qualifying beach photos)
             $this->createMedia(1301, '2021-08-20 09:45:00', lat: 36.5000, lon: -4.8800),
             $this->createMedia(1302, '2021-08-20 10:30:00', lat: 36.5000, lon: -4.8800),
             $this->createMedia(1303, '2021-08-20 11:30:00', lat: 36.5000, lon: -4.8800),
             // Non-beach media that should be ignored completely
-            $this->createMedia(1310, '2021-08-21 09:00:00', path: __DIR__.'/fixtures/mountain-1310.jpg'),
+            $this->createMedia(1310, '2021-08-21 09:00:00', filename: 'mountain-1310.jpg'),
         ];
 
         $clusters = $strategy->cluster($mediaItems);
@@ -96,28 +96,18 @@ final class BeachOverYearsClusterStrategyTest extends TestCase
     private function createMedia(
         int $id,
         string $takenAt,
-        ?string $path = null,
+        ?string $filename = null,
         ?float $lat = null,
         ?float $lon = null,
     ): Media {
-        $media = new Media(
-            path: $path ?? __DIR__ . "/fixtures/beach-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename ?? "beach-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        if ($lat !== null) {
-            $media->setGpsLat($lat);
-        }
-
-        if ($lon !== null) {
-            $media->setGpsLon($lon);
-        }
-
-        return $media;
     }
 
 }

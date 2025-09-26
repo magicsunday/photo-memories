@@ -77,18 +77,13 @@ final class SunnyDayClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/sunny-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "sunny-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 48.0,
+            lon: 11.0,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(48.0);
-        $media->setGpsLon(11.0);
-
-        return $media;
     }
 
 }

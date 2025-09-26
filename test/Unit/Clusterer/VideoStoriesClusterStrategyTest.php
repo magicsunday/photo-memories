@@ -51,34 +51,29 @@ final class VideoStoriesClusterStrategyTest extends TestCase
 
     private function createVideo(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/video-' . $id . '.mp4',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "video-{$id}.mp4",
+            takenAt: $takenAt,
+            lat: 48.1,
+            lon: 11.6,
             size: 4096,
+            configure: static function (Media $media): void {
+                $media->setMime('video/mp4');
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setMime('video/mp4');
-        $media->setGpsLat(48.1);
-        $media->setGpsLon(11.6);
-
-        return $media;
     }
 
     private function createPhoto(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/photo-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "photo-{$id}.jpg",
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setMime('image/jpeg');
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setMime('image/jpeg');
-
-        return $media;
     }
 
 }

@@ -136,24 +136,14 @@ final class LongTripClusterStrategyTest extends TestCase
         ?float $lat = null,
         ?float $lon = null
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/long-trip-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "long-trip-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 2048,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-
-        if ($lat !== null) {
-            $media->setGpsLat($lat);
-        }
-
-        if ($lon !== null) {
-            $media->setGpsLon($lon);
-        }
-
-        return $media;
     }
 
 }

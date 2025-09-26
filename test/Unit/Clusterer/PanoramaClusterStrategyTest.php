@@ -51,36 +51,31 @@ final class PanoramaClusterStrategyTest extends TestCase
 
     private function createPanorama(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/panorama-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "panorama-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 45.0,
+            lon: 7.0,
             size: 2048,
+            configure: static function (Media $media): void {
+                $media->setWidth(5000);
+                $media->setHeight(1000);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(5000);
-        $media->setHeight(1000);
-        $media->setGpsLat(45.0);
-        $media->setGpsLon(7.0);
-
-        return $media;
     }
 
     private function createNarrowPhoto(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/photo-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "photo-{$id}.jpg",
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setWidth(2000);
+                $media->setHeight(1500);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(2000);
-        $media->setHeight(1500);
-
-        return $media;
     }
 
 }

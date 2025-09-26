@@ -56,18 +56,13 @@ final class PetMomentsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/dog-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "dog-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 52.5,
+            lon: 13.4,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat(52.5);
-        $media->setGpsLon(13.4);
-
-        return $media;
     }
 
 }

@@ -113,19 +113,14 @@ final class TimeSimilarityStrategyTest extends TestCase
         float $lon,
         Location $location
     ): Media {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/time-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "time-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
+            location: $location,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-        $media->setLocation($location);
-
-        return $media;
     }
 
     private function createLocation(

@@ -73,16 +73,11 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . "/fixtures/this-month-{$id}.jpg",
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "this-month-{$id}.jpg",
+            takenAt: $takenAt->setTimezone(new DateTimeZone('UTC')),
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt->setTimezone(new DateTimeZone('UTC')));
-
-        return $media;
     }
 
 }

@@ -55,36 +55,30 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
 
     private function createPortraitMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/portrait-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "portrait-{$id}.jpg",
+            takenAt: $takenAt,
+            lat: 48.0,
+            lon: 11.0,
+            configure: static function (Media $media): void {
+                $media->setWidth(1000);
+                $media->setHeight(1500);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(1000);
-        $media->setHeight(1500);
-        $media->setGpsLat(48.0);
-        $media->setGpsLon(11.0);
-
-        return $media;
     }
 
     private function createLandscapeMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/landscape-' . $id . '.jpg',
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
-            size: 1024,
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: "landscape-{$id}.jpg",
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setWidth(1600);
+                $media->setHeight(900);
+            },
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setWidth(1600);
-        $media->setHeight(900);
-
-        return $media;
     }
 
 }

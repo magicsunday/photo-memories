@@ -64,18 +64,14 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, string $filename, float $lat, float $lon): Media
     {
-        $media = new Media(
-            path: __DIR__ . '/fixtures/' . $filename,
-            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: $filename,
+            takenAt: $takenAt,
+            lat: $lat,
+            lon: $lon,
             size: 256,
         );
-
-        $this->assignId($media, $id);
-        $media->setTakenAt($takenAt);
-        $media->setGpsLat($lat);
-        $media->setGpsLon($lon);
-
-        return $media;
     }
 
 }
