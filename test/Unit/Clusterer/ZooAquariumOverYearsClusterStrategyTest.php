@@ -1,0 +1,98 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Test\Clusterer;
+
+use DateInterval;
+use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
+use MagicSunday\Memories\Entity\Media;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
+{
+    #[Test]
+    public function aggregatesBestZooDayPerYear(): void
+    {
+        $strategy = new ZooAquariumOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minItemsPerDay: 5,
+            minYears: 3,
+            minItemsTotal: 18,
+        );
+
+        $items = [];
+        foreach ([2021, 2022, 2023] as $year) {
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            for ($i = 0; $i < 6; $i++) {
+                $items[] = $this->createMedia(
+                    ($year * 100) + $i,
+                    $day->add(new DateInterval('PT' . ($i * 300) . 'S')),
+                    "zoo-%d-%d.jpg",
+                    $year,
+                    $i,
+                );
+            }
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame('zoo_aquarium_over_years', $cluster->getAlgorithm());
+        self::assertCount(18, $cluster->getMembers());
+        self::assertSame([2021, 2022, 2023], $cluster->getParams()['years']);
+    }
+
+    #[Test]
+    public function requiresEnoughYears(): void
+    {
+        $strategy = new ZooAquariumOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minItemsPerDay: 5,
+            minYears: 3,
+            minItemsTotal: 18,
+        );
+
+        $items = [];
+        foreach ([2022, 2023] as $year) {
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            for ($i = 0; $i < 6; $i++) {
+                $items[] = $this->createMedia(
+                    ($year * 1000) + $i,
+                    $day->add(new DateInterval('PT' . ($i * 300) . 'S')),
+                    "zoo-%d-%d.jpg",
+                    $year,
+                    $i,
+                );
+            }
+        }
+
+        self::assertSame([], $strategy->cluster($items));
+    }
+
+    private function createMedia(int $id, DateTimeImmutable $takenAt, string $pattern, int $year, int $index): Media
+    {
+        $media = new Media(
+            path: __DIR__ . '/fixtures/' . sprintf($pattern, $year, $index),
+            checksum: str_pad((string) $id, 64, '0', STR_PAD_LEFT),
+            size: 512,
+        );
+
+        $this->assignId($media, $id);
+        $media->setTakenAt($takenAt);
+        $media->setGpsLat(50.0 + $index * 0.01);
+        $media->setGpsLon(8.0 + $index * 0.01);
+
+        return $media;
+    }
+
+    private function assignId(Media $media, int $id): void
+    {
+        \Closure::bind(function (Media $m, int $value): void {
+            $m->id = $value;
+        }, null, Media::class)($media, $id);
+    }
+}
