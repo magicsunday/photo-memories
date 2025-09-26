@@ -19,7 +19,7 @@ final class RoadTripClusterStrategyTest extends TestCase
         $strategy = new RoadTripClusterStrategy(
             timezone: 'Europe/Berlin',
             minDailyKm: 80.0,
-            minGpsSamplesPerDay: 3,
+            minItemsPerDay: 3,
             minNights: 2,
             minItemsTotal: 12,
         );
@@ -60,7 +60,7 @@ final class RoadTripClusterStrategyTest extends TestCase
         $strategy = new RoadTripClusterStrategy(
             timezone: 'Europe/Berlin',
             minDailyKm: 500.0,
-            minGpsSamplesPerDay: 3,
+            minItemsPerDay: 3,
             minNights: 2,
             minItemsTotal: 12,
         );

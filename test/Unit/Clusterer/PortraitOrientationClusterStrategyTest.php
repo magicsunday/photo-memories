@@ -18,7 +18,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
         $strategy = new PortraitOrientationClusterStrategy(
             minPortraitRatio: 1.2,
             sessionGapSeconds: 900,
-            minItems: 4,
+            minItemsPerRun: 4,
         );
 
         $start = new DateTimeImmutable('2024-04-10 10:00:00');

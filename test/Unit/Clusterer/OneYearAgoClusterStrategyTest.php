@@ -19,7 +19,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
         $strategy = new OneYearAgoClusterStrategy(
             timezone: 'Europe/Berlin',
             windowDays: 2,
-            minItems: 4,
+            minItemsTotal: 4,
         );
 
         $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
@@ -49,7 +49,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
         $strategy = new OneYearAgoClusterStrategy(
             timezone: 'Europe/Berlin',
             windowDays: 1,
-            minItems: 3,
+            minItemsTotal: 3,
         );
 
         $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));

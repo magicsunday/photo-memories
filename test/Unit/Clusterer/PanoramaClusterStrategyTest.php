@@ -18,7 +18,7 @@ final class PanoramaClusterStrategyTest extends TestCase
         $strategy = new PanoramaClusterStrategy(
             minAspect: 2.4,
             sessionGapSeconds: 1800,
-            minItems: 3,
+            minItemsPerRun: 3,
         );
 
         $start = new DateTimeImmutable('2024-06-01 12:00:00');

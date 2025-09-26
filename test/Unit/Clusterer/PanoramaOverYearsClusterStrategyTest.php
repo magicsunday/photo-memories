@@ -17,7 +17,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new PanoramaOverYearsClusterStrategy(
             minAspect: 2.4,
-            perYearMin: 3,
+            minItemsPerYear: 3,
             minYears: 3,
             minItemsTotal: 15,
         );

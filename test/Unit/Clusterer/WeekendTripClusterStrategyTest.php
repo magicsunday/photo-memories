@@ -23,7 +23,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
             homeLon: 13.4050,
             minAwayKm: 50.0,
             minNights: 1,
-            minItems: 3,
+            minItemsPerTrip: 3,
         );
 
         $location = $this->createLocation('munich', 'Munich', 48.137, 11.575);
@@ -55,7 +55,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
             homeLon: 13.4050,
             minAwayKm: 80.0,
             minNights: 1,
-            minItems: 3,
+            minItemsPerTrip: 3,
         );
 
         $location = $this->createLocation('potsdam', 'Potsdam', 52.400, 13.050);

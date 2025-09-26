@@ -17,7 +17,7 @@ final class PetMomentsClusterStrategyTest extends TestCase
     {
         $strategy = new PetMomentsClusterStrategy(
             sessionGapSeconds: 1200,
-            minItems: 6,
+            minItemsPerRun: 6,
         );
 
         $start = new DateTimeImmutable('2024-01-20 15:00:00');

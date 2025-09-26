@@ -21,7 +21,7 @@ final class LocationSimilarityStrategyTest extends TestCase
         $strategy = new LocationSimilarityStrategy(
             locHelper: new LocationHelper(),
             radiusMeters: 200.0,
-            minItems: 3,
+            minItemsPerPlace: 3,
             maxSpanHours: 12,
         );
 
@@ -93,7 +93,7 @@ final class LocationSimilarityStrategyTest extends TestCase
         $strategy = new LocationSimilarityStrategy(
             locHelper: new LocationHelper(),
             radiusMeters: 250.0,
-            minItems: 3,
+            minItemsPerPlace: 3,
             maxSpanHours: 1,
         );
 

@@ -15,7 +15,7 @@ final class SeasonClusterStrategyTest extends TestCase
     #[Test]
     public function groupsItemsBySeasonPerYear(): void
     {
-        $strategy = new SeasonClusterStrategy(minItems: 4);
+        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 4);
 
         $mediaItems = [
             $this->createMedia(1, '2023-12-15 09:00:00'),
@@ -39,7 +39,7 @@ final class SeasonClusterStrategyTest extends TestCase
     #[Test]
     public function skipsGroupsBelowMinimum(): void
     {
-        $strategy = new SeasonClusterStrategy(minItems: 3);
+        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 3);
 
         $mediaItems = [
             $this->createMedia(11, '2024-06-01 10:00:00'),

@@ -20,7 +20,7 @@ final class DiningOutClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 2 * 3600,
             radiusMeters: 200.0,
-            minItems: 4,
+            minItemsPerRun: 4,
             minHour: 17,
             maxHour: 23,
         );
@@ -54,7 +54,7 @@ final class DiningOutClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 1800,
             radiusMeters: 250.0,
-            minItems: 3,
+            minItemsPerRun: 3,
             minHour: 16,
             maxHour: 22,
         );

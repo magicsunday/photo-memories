@@ -19,7 +19,7 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 1800,
             radiusMeters: 400.0,
-            minItems: 5,
+            minItemsPerRun: 5,
         );
 
         $base = new DateTimeImmutable('2023-05-20 20:00:00', new DateTimeZone('UTC'));
@@ -50,7 +50,7 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             timezone: 'Europe/Berlin',
             sessionGapSeconds: 1800,
             radiusMeters: 400.0,
-            minItems: 5,
+            minItemsPerRun: 5,
         );
 
         $items = [];

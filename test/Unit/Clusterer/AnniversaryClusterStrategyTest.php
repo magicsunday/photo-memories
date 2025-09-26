@@ -19,8 +19,8 @@ final class AnniversaryClusterStrategyTest extends TestCase
     public function keepsHighestScoringAnniversariesWithinLimit(): void
     {
         $strategy = new AnniversaryClusterStrategy(
-            locHelper: new LocationHelper(),
-            minItems: 3,
+            new LocationHelper(),
+            minItemsPerAnniversary: 3,
             minDistinctYears: 2,
             maxClusters: 1,
         );
@@ -67,8 +67,8 @@ final class AnniversaryClusterStrategyTest extends TestCase
     public function returnsEmptyWhenAnniversaryLacksDistinctYears(): void
     {
         $strategy = new AnniversaryClusterStrategy(
-            locHelper: new LocationHelper(),
-            minItems: 3,
+            new LocationHelper(),
+            minItemsPerAnniversary: 3,
             minDistinctYears: 3,
             maxClusters: 0,
         );
@@ -88,8 +88,8 @@ final class AnniversaryClusterStrategyTest extends TestCase
     public function skipsGroupsBelowMinimumItemCount(): void
     {
         $strategy = new AnniversaryClusterStrategy(
-            locHelper: new LocationHelper(),
-            minItems: 4,
+            new LocationHelper(),
+            minItemsPerAnniversary: 4,
             minDistinctYears: 2,
             maxClusters: 0,
         );

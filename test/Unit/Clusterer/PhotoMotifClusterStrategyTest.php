@@ -17,7 +17,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
     {
         $strategy = new PhotoMotifClusterStrategy(
             sessionGapSeconds: 36 * 3600,
-            minItems: 6,
+            minItemsPerMotif: 6,
         );
 
         $start = new DateTimeImmutable('2023-09-01 08:00:00');
@@ -48,7 +48,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
     {
         $strategy = new PhotoMotifClusterStrategy(
             sessionGapSeconds: 36 * 3600,
-            minItems: 6,
+            minItemsPerMotif: 6,
         );
 
         $items = [];

@@ -21,7 +21,7 @@ final class PhashSimilarityStrategyTest extends TestCase
         $strategy = new PhashSimilarityStrategy(
             locHelper: new LocationHelper(),
             maxHamming: 6,
-            minItems: 3,
+            minItemsPerBucket: 3,
         );
 
         $location = $this->createLocation(
@@ -71,7 +71,7 @@ final class PhashSimilarityStrategyTest extends TestCase
         $strategy = new PhashSimilarityStrategy(
             locHelper: new LocationHelper(),
             maxHamming: 2,
-            minItems: 2,
+            minItemsPerBucket: 2,
         );
 
         $location = $this->createLocation(

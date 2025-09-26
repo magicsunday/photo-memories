@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Clusterer;
 
+use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -20,29 +21,58 @@ final class LongTripClusterStrategyTest extends TestCase
         $strategy = new LongTripClusterStrategy(
             homeLat: 52.5200,
             homeLon: 13.4050,
-            minAwayKm: 150.0,
+            minAwayKm: 20.0,
             minNights: 2,
             timezone: 'UTC',
             minItemsPerDay: 3,
         );
 
-        $lisbonLat = 38.7223;
-        $lisbonLon = -9.1393;
-
-        $mediaItems = [
-            // Day 1
-            $this->createMedia(70101, '2023-07-01 08:30:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70102, '2023-07-01 12:15:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70103, '2023-07-01 19:45:00', $lisbonLat, $lisbonLon),
-            // Day 2
-            $this->createMedia(70111, '2023-07-02 09:10:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70112, '2023-07-02 14:20:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70113, '2023-07-02 22:05:00', $lisbonLat, $lisbonLon),
-            // Day 3
-            $this->createMedia(70121, '2023-07-03 09:00:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70122, '2023-07-03 13:30:00', $lisbonLat, $lisbonLon),
-            $this->createMedia(70123, '2023-07-03 20:15:00', $lisbonLat, $lisbonLon),
+        $dayTracks = [
+            [
+                ['lat' => 38.70, 'lon' => -9.14],
+                ['lat' => 38.80, 'lon' => -9.24],
+                ['lat' => 38.90, 'lon' => -9.34],
+            ],
+            [
+                ['lat' => 39.00, 'lon' => -9.10],
+                ['lat' => 39.10, 'lon' => -9.20],
+                ['lat' => 39.20, 'lon' => -9.30],
+            ],
+            [
+                ['lat' => 39.30, 'lon' => -9.05],
+                ['lat' => 39.40, 'lon' => -9.15],
+                ['lat' => 39.50, 'lon' => -9.25],
+            ],
         ];
+
+        $mediaItems = [];
+        $start = new DateTimeImmutable('2023-07-01 08:00:00', new DateTimeZone('UTC'));
+        $id = 70100;
+        $perDayDistances = [];
+
+        foreach ($dayTracks as $dayIndex => $points) {
+            $dayStart = $start->add(new DateInterval('P' . $dayIndex . 'D'));
+            $previous = null;
+            $distanceKm = 0.0;
+
+            foreach ($points as $offset => $coords) {
+                $timestamp = $dayStart->add(new DateInterval('PT' . ($offset * 3) . 'H'));
+                $mediaItems[] = $this->createMedia(++$id, $timestamp->format('Y-m-d H:i:00'), $coords['lat'], $coords['lon']);
+
+                if ($previous !== null) {
+                    $distanceKm += MediaMath::haversineDistanceInMeters(
+                        $previous['lat'],
+                        $previous['lon'],
+                        $coords['lat'],
+                        $coords['lon']
+                    ) / 1000.0;
+                }
+
+                $previous = $coords;
+            }
+
+            $perDayDistances[] = $distanceKm;
+        }
 
         $clusters = $strategy->cluster($mediaItems);
 
@@ -51,29 +81,19 @@ final class LongTripClusterStrategyTest extends TestCase
 
         self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('long_trip', $cluster->getAlgorithm());
-        self::assertSame([
-            70101, 70102, 70103,
-            70111, 70112, 70113,
-            70121, 70122, 70123,
-        ], $cluster->getMembers());
+        self::assertSame(range(70101, 70109), $cluster->getMembers());
 
         $params = $cluster->getParams();
         self::assertSame(2, $params['nights']);
 
-        $expectedDistanceKm = MediaMath::haversineDistanceInMeters(
-                $lisbonLat,
-                $lisbonLon,
-                52.5200,
-                13.4050
-            ) / 1000.0;
-
         self::assertArrayHasKey('distance_km', $params);
-        self::assertGreaterThan(150.0, $params['distance_km']);
-        self::assertEqualsWithDelta($expectedDistanceKm, $params['distance_km'], 0.1);
+        $expectedAverageDistance = array_sum($perDayDistances) / count($perDayDistances);
+        self::assertEqualsWithDelta($expectedAverageDistance, $params['distance_km'], 0.1);
 
         $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta($lisbonLat, $centroid['lat'], 0.0001);
-        self::assertEqualsWithDelta($lisbonLon, $centroid['lon'], 0.0001);
+        $expectedCentroid = MediaMath::centroid($mediaItems);
+        self::assertEqualsWithDelta((float) $expectedCentroid['lat'], $centroid['lat'], 0.0001);
+        self::assertEqualsWithDelta((float) $expectedCentroid['lon'], $centroid['lon'], 0.0001);
     }
 
     #[Test]

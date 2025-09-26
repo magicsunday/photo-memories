@@ -15,7 +15,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
     #[Test]
     public function groupsItemsByHolidayPerYear(): void
     {
-        $strategy = new HolidayEventClusterStrategy(minItems: 3);
+        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 3);
 
         $mediaItems = [
             $this->createMedia(1, '2023-12-25 09:00:00', 52.5, 13.4),
@@ -45,7 +45,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
     #[Test]
     public function filtersGroupsBelowMinimumCount(): void
     {
-        $strategy = new HolidayEventClusterStrategy(minItems: 4);
+        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 4);
 
         $mediaItems = [
             $this->createMedia(11, '2023-10-03 08:00:00', 52.0, 13.0),

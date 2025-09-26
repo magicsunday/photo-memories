@@ -16,7 +16,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
     #[Test]
     public function buildsClusterForYearsMeetingThresholds(): void
     {
-        $strategy = new YearInReviewClusterStrategy(minItems: 4, minDistinctMonths: 3);
+        $strategy = new YearInReviewClusterStrategy(minItemsPerYear: 4, minDistinctMonths: 3);
 
         $mediaItems = [
             $this->createMedia(501, '2021-01-05 09:00:00', 52.5200, 13.4050),
@@ -56,7 +56,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenYearsLackDistinctMonths(): void
     {
-        $strategy = new YearInReviewClusterStrategy(minItems: 3, minDistinctMonths: 4);
+        $strategy = new YearInReviewClusterStrategy(minItemsPerYear: 3, minDistinctMonths: 4);
 
         $mediaItems = [
             $this->createMedia(701, '2022-01-01 09:00:00', 40.7128, -74.0060),

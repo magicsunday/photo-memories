@@ -21,7 +21,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
             morningHours: [6, 7, 8],
             eveningHours: [18, 19, 20],
             sessionGapSeconds: 1200,
-            minItems: 5,
+            minItemsPerRun: 5,
         );
 
         $base = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
