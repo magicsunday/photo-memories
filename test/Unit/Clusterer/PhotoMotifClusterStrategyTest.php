@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,7 +21,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             minItemsPerMotif: 6,
         );
 
-        $start = new DateTimeImmutable('2023-09-01 08:00:00');
+        $start = new DateTimeImmutable('2023-09-01 08:00:00', new DateTimeZone('UTC'));
         $mediaItems = [];
         for ($i = 0; $i < 6; $i++) {
             $mediaItems[] = $this->createMedia(
@@ -55,7 +56,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
         for ($i = 0; $i < 5; $i++) {
             $items[] = $this->createMedia(
                 400 + $i,
-                new DateTimeImmutable('2023-07-10 09:00:00'),
+                new DateTimeImmutable('2023-07-10 09:00:00', new DateTimeZone('UTC')),
                 "beach-day-{$i}.jpg",
                 36.0,
                 -5.0,

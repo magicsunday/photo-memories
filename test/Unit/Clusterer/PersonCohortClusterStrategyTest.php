@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,7 +22,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             windowDays: 7,
         );
 
-        $start = new DateTimeImmutable('2024-01-05 12:00:00');
+        $start = new DateTimeImmutable('2024-01-05 12:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 5; $i++) {
             $items[] = $this->createPersonMedia(
@@ -53,7 +54,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             windowDays: 7,
         );
 
-        $start = new DateTimeImmutable('2024-02-01 10:00:00');
+        $start = new DateTimeImmutable('2024-02-01 10:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 5; $i++) {
             $items[] = $this->createPersonMedia(

@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,7 +25,7 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2021, 2022, 2023] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 100) + $i,
@@ -58,7 +59,7 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2022, 2023] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 1000) + $i,

@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,7 +25,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2018, 2019, 2020] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 5; $i++) {
                 $items[] = $this->createPanorama(
                     ($year * 100) + $i,
@@ -50,7 +51,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2021, 2022] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-09-01 12:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 5; $i++) {
                 $items[] = $this->createPanorama(
                     ($year * 1000) + $i,

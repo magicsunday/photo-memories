@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,7 +22,7 @@ final class PanoramaClusterStrategyTest extends TestCase
             minItemsPerRun: 3,
         );
 
-        $start = new DateTimeImmutable('2024-06-01 12:00:00');
+        $start = new DateTimeImmutable('2024-06-01 12:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 3; $i++) {
             $items[] = $this->createPanorama(3900 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
@@ -39,7 +40,7 @@ final class PanoramaClusterStrategyTest extends TestCase
     {
         $strategy = new PanoramaClusterStrategy();
 
-        $start = new DateTimeImmutable('2024-06-02 12:00:00');
+        $start = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 3; $i++) {
             $items[] = $this->createNarrowPhoto(4000 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));

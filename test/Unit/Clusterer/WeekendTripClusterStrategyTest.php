@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -86,7 +87,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
         );
 
         $this->assignId($media, $id);
-        $media->setTakenAt(new DateTimeImmutable($takenAt));
+        $media->setTakenAt(new DateTimeImmutable($takenAt, new DateTimeZone('UTC')));
         $media->setGpsLat($location->getLat());
         $media->setGpsLon($location->getLon());
         $media->setLocation($location);

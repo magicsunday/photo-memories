@@ -6,7 +6,8 @@
 
 # Composer
 vendor/
-bin/
+/bin/
+!bin/php
 logs/
 log/
 composer.lock
@@ -23,6 +24,7 @@ composer.lock
 
 # Custom
 /bin/*
+!/bin/php
 /spc
 memories.phar
 /var/

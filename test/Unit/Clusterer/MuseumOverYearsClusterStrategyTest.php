@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,7 +25,7 @@ final class MuseumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2019, 2020, 2021] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-03-10 11:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-03-10 11:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 100) + $i,
@@ -57,7 +58,7 @@ final class MuseumOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2021, 2022] as $year) {
-            $day = new DateTimeImmutable(sprintf('%d-04-05 12:00:00', $year));
+            $day = new DateTimeImmutable(sprintf('%d-04-05 12:00:00', $year), new DateTimeZone('UTC'));
             for ($i = 0; $i < 6; $i++) {
                 $items[] = $this->createMedia(
                     ($year * 1000) + $i,

@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -21,7 +22,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             minItemsPerRun: 4,
         );
 
-        $start = new DateTimeImmutable('2024-04-10 10:00:00');
+        $start = new DateTimeImmutable('2024-04-10 10:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 4; $i++) {
             $media = $this->createPortraitMedia(3700 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
@@ -42,7 +43,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     {
         $strategy = new PortraitOrientationClusterStrategy();
 
-        $start = new DateTimeImmutable('2024-04-11 10:00:00');
+        $start = new DateTimeImmutable('2024-04-11 10:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 4; $i++) {
             $media = $this->createLandscapeMedia(3800 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));

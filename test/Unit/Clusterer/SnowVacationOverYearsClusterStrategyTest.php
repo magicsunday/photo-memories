@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
@@ -27,7 +27,7 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2020, 2021, 2022] as $year) {
-            $start = new DateTimeImmutable(sprintf('%d-01-10 09:00:00', $year));
+            $start = new DateTimeImmutable(sprintf('%d-01-10 09:00:00', $year), new DateTimeZone('UTC'));
 
             for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
                 $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
@@ -46,7 +46,7 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
             // Add a non-winter day that should be ignored.
             $items[] = $this->createMedia(
                 ($year * 1000) + 99,
-                new DateTimeImmutable(sprintf('%d-06-05 12:00:00', $year)),
+                new DateTimeImmutable(sprintf('%d-06-05 12:00:00', $year), new DateTimeZone('UTC')),
                 'summer-hike-' . $year . '.jpg',
                 45.0,
                 10.0,
@@ -88,7 +88,7 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2020, 2021] as $year) {
-            $start = new DateTimeImmutable(sprintf('%d-02-03 08:00:00', $year));
+            $start = new DateTimeImmutable(sprintf('%d-02-03 08:00:00', $year), new DateTimeZone('UTC'));
 
             for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
                 $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));

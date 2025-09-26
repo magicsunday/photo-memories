@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,7 +27,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2020, 2021, 2022] as $year) {
-            $friday = new DateTimeImmutable(sprintf('%d-06-05 16:00:00', $year)); // Friday
+            $friday = new DateTimeImmutable(sprintf('%d-06-05 16:00:00', $year), new DateTimeZone('UTC')); // Friday
             for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
                 $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
                 for ($i = 0; $i < 4; $i++) {
@@ -62,7 +63,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         $items = [];
         foreach ([2021, 2022] as $year) {
-            $friday = new DateTimeImmutable(sprintf('%d-07-09 16:00:00', $year));
+            $friday = new DateTimeImmutable(sprintf('%d-07-09 16:00:00', $year), new DateTimeZone('UTC'));
             for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
                 $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
                 for ($i = 0; $i < 4; $i++) {

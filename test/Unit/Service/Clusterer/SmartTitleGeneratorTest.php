@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Service\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;

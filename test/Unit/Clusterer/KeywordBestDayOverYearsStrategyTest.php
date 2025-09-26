@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\KeywordBestDayOverYearsStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -26,7 +27,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
         $items = [];
 
         // 2021 has two keyword days; only the six-item day should be kept.
-        $day2021Primary = new DateTimeImmutable('2021-04-15 10:00:00');
+        $day2021Primary = new DateTimeImmutable('2021-04-15 10:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 6; $i++) {
             $items[] = $this->createMedia(
                 id: 202100 + $i,
@@ -37,7 +38,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
             );
         }
 
-        $day2021Secondary = new DateTimeImmutable('2021-05-20 12:00:00');
+        $day2021Secondary = new DateTimeImmutable('2021-05-20 12:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 5; $i++) {
             $items[] = $this->createMedia(
                 id: 202110 + $i,
@@ -49,7 +50,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
         }
 
         // 2022 provides another eligible day.
-        $day2022 = new DateTimeImmutable('2022-03-08 09:30:00');
+        $day2022 = new DateTimeImmutable('2022-03-08 09:30:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 4; $i++) {
             $items[] = $this->createMedia(
                 id: 202200 + $i,
@@ -83,7 +84,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
 
         $items = [];
 
-        $eligibleDay = new DateTimeImmutable('2020-02-10 13:00:00');
+        $eligibleDay = new DateTimeImmutable('2020-02-10 13:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; $i++) {
             $items[] = $this->createMedia(
                 id: 202000 + $i,
@@ -95,7 +96,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
         }
 
         // 2021 does not reach the minItemsPerDay threshold (only two keyword hits).
-        $underfilledDay = new DateTimeImmutable('2021-04-02 14:00:00');
+        $underfilledDay = new DateTimeImmutable('2021-04-02 14:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 2; $i++) {
             $items[] = $this->createMedia(
                 id: 202100 + $i,

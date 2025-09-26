@@ -1,10 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Clusterer;
+namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,7 +21,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             minItemsPerDay: 2,
         );
 
-        $base = new DateTimeImmutable('2024-03-15 08:00:00');
+        $base = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
         $videos = [];
         for ($i = 0; $i < 3; $i++) {
             $videos[] = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
@@ -41,8 +42,8 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         $strategy = new VideoStoriesClusterStrategy();
 
         $items = [
-            $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00')),
-            $this->createPhoto(3401, new DateTimeImmutable('2024-03-16 09:00:00')),
+            $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00', new DateTimeZone('UTC'))),
+            $this->createPhoto(3401, new DateTimeImmutable('2024-03-16 09:00:00', new DateTimeZone('UTC'))),
         ];
 
         self::assertSame([], $strategy->cluster($items));
