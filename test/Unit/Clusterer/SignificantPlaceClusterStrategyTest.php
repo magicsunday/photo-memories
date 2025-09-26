@@ -75,19 +75,25 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
 
     private function createLocation(string $id, string $displayName): Location
     {
-        $loc = new Location('provider', $id, $displayName, 52.52, 13.405, 'cell-1234');
-        $loc->setCity('Berlin');
-        $loc->setCountry('Deutschland');
-        $loc->setPois([
-            [
-                'name' => 'Cafe Central',
-                'categoryKey' => 'amenity',
-                'categoryValue' => 'cafe',
-                'tags' => ['cuisine' => 'coffee_shop'],
-            ],
-        ]);
-
-        return $loc;
+        return $this->makeLocation(
+            providerPlaceId: $id,
+            displayName: $displayName,
+            lat: 52.52,
+            lon: 13.405,
+            provider: 'provider',
+            city: 'Berlin',
+            country: 'Deutschland',
+            configure: static function (Location $location): void {
+                $location->setPois([
+                    [
+                        'name' => 'Cafe Central',
+                        'categoryKey' => 'amenity',
+                        'categoryValue' => 'cafe',
+                        'tags' => ['cuisine' => 'coffee_shop'],
+                    ],
+                ]);
+            },
+        );
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon, Location $location): Media

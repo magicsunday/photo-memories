@@ -25,7 +25,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             maxSpanHours: 12,
         );
 
-        $museum = $this->createLocation(
+        $museum = $this->makeLocation(
             providerPlaceId: 'berlin-museum',
             displayName: 'Neues Museum',
             lat: 52.5200,
@@ -49,7 +49,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             $this->createMedia(803, '2023-04-01 09:35:00', 52.5203, 13.4051, $museum),
             $this->createMedia(804, '2023-04-01 10:05:00', 52.5204, 13.4052, $museum),
             // Below the locality threshold: different place
-            $this->createMedia(805, '2023-04-01 11:00:00', 48.1371, 11.5753, $this->createLocation(
+            $this->createMedia(805, '2023-04-01 11:00:00', 48.1371, 11.5753, $this->makeLocation(
                 providerPlaceId: 'munich-park',
                 displayName: 'Englischer Garten',
                 lat: 48.1371,
@@ -145,31 +145,6 @@ final class LocationSimilarityStrategyTest extends TestCase
             lon: $lon,
             location: $location,
         );
-    }
-
-    private function createLocation(
-        string $providerPlaceId,
-        string $displayName,
-        float $lat,
-        float $lon,
-        ?string $city = null,
-        ?string $country = null,
-        ?string $suburb = null,
-    ): Location {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: $providerPlaceId,
-            displayName: $displayName,
-            lat: $lat,
-            lon: $lon,
-            cell: 'cell-' . $providerPlaceId,
-        );
-
-        $location->setCity($city);
-        $location->setCountry($country);
-        $location->setSuburb($suburb);
-
-        return $location;
     }
 
 }

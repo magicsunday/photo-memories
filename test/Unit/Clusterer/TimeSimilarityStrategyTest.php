@@ -25,7 +25,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 3,
         );
 
-        $berlin = $this->createLocation(
+        $berlin = $this->makeLocation(
             providerPlaceId: 'berlin-city',
             displayName: 'Berlin',
             lat: 52.5200,
@@ -33,7 +33,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             city: 'Berlin',
             country: 'Germany',
         );
-        $munich = $this->createLocation(
+        $munich = $this->makeLocation(
             providerPlaceId: 'munich-city',
             displayName: 'Munich',
             lat: 48.1371,
@@ -84,7 +84,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 4,
         );
 
-        $location = $this->createLocation(
+        $location = $this->makeLocation(
             providerPlaceId: 'hamburg-city',
             displayName: 'Hamburg',
             lat: 53.5511,
@@ -121,29 +121,6 @@ final class TimeSimilarityStrategyTest extends TestCase
             lon: $lon,
             location: $location,
         );
-    }
-
-    private function createLocation(
-        string $providerPlaceId,
-        string $displayName,
-        float $lat,
-        float $lon,
-        ?string $city = null,
-        ?string $country = null,
-    ): Location {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: $providerPlaceId,
-            displayName: $displayName,
-            lat: $lat,
-            lon: $lon,
-            cell: 'cell-' . $providerPlaceId,
-        );
-
-        $location->setCity($city);
-        $location->setCountry($country);
-
-        return $location;
     }
 
 }

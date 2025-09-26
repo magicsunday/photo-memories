@@ -130,18 +130,13 @@ final class AnniversaryClusterStrategyTest extends TestCase
             default => 'Hamburg',
         };
 
-        $location = new Location(
-            provider: 'osm',
+        return $this->makeLocation(
             providerPlaceId: $key,
             displayName: ucfirst($key),
             lat: 50.0,
             lon: 8.0,
-            cell: 'cell-' . $key,
+            city: $city,
         );
-
-        $location->setCity($city);
-
-        return $location;
     }
 
 }

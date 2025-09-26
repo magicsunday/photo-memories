@@ -71,11 +71,14 @@ final class WeekendTripClusterStrategyTest extends TestCase
 
     private function createLocation(string $id, string $city, float $lat, float $lon): Location
     {
-        $location = new Location('osm', $id, $city, $lat, $lon, 'cell-' . $id);
-        $location->setCity($city);
-        $location->setCountry('Germany');
-
-        return $location;
+        return $this->makeLocation(
+            providerPlaceId: $id,
+            displayName: $city,
+            lat: $lat,
+            lon: $lon,
+            city: $city,
+            country: 'Germany',
+        );
     }
 
     private function createMedia(int $id, string $takenAt, Location $location): Media

@@ -96,6 +96,46 @@ abstract class TestCase extends BaseTestCase
         );
     }
 
+    protected function makeLocation(
+        string $providerPlaceId,
+        string $displayName,
+        float $lat,
+        float $lon,
+        string $provider = 'osm',
+        ?string $cell = null,
+        ?string $city = null,
+        ?string $country = null,
+        ?string $suburb = null,
+        ?callable $configure = null,
+    ): Location {
+        $location = new Location(
+            provider: $provider,
+            providerPlaceId: $providerPlaceId,
+            displayName: $displayName,
+            lat: $lat,
+            lon: $lon,
+            cell: $cell ?? 'cell-' . $providerPlaceId,
+        );
+
+        if ($city !== null) {
+            $location->setCity($city);
+        }
+
+        if ($country !== null) {
+            $location->setCountry($country);
+        }
+
+        if ($suburb !== null) {
+            $location->setSuburb($suburb);
+        }
+
+        if ($configure !== null) {
+            $configure($location);
+        }
+
+        return $location;
+    }
+
     protected function fixturePath(string $filename): string
     {
         return $this->fixtureDir() . '/' . ltrim($filename, '/');

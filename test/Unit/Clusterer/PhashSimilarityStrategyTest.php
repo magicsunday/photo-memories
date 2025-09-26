@@ -24,7 +24,7 @@ final class PhashSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 3,
         );
 
-        $location = $this->createLocation(
+        $location = $this->makeLocation(
             providerPlaceId: 'berlin-phash',
             displayName: 'Museum Island',
             lat: 52.5200,
@@ -74,7 +74,7 @@ final class PhashSimilarityStrategyTest extends TestCase
             minItemsPerBucket: 2,
         );
 
-        $location = $this->createLocation(
+        $location = $this->makeLocation(
             providerPlaceId: 'munich-phash',
             displayName: 'Marienplatz',
             lat: 48.1371,
@@ -111,29 +111,6 @@ final class PhashSimilarityStrategyTest extends TestCase
                 $media->setPhash($phash);
             },
         );
-    }
-
-    private function createLocation(
-        string $providerPlaceId,
-        string $displayName,
-        float $lat,
-        float $lon,
-        ?string $city = null,
-        ?string $country = null
-    ): Location {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: $providerPlaceId,
-            displayName: $displayName,
-            lat: $lat,
-            lon: $lon,
-            cell: 'cell-' . $providerPlaceId,
-        );
-
-        $location->setCity($city);
-        $location->setCountry($country);
-
-        return $location;
     }
 
 }

@@ -20,7 +20,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
     {
         $strategy = new DeviceSimilarityStrategy(new LocationHelper(), minItemsPerGroup: 3);
 
-        $berlin = $this->createLocation(
+        $berlin = $this->makeLocation(
             providerPlaceId: 'berlin-001',
             displayName: 'Berlin',
             lat: 52.5200,
@@ -67,7 +67,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
     {
         $strategy = new DeviceSimilarityStrategy(new LocationHelper(), minItemsPerGroup: 4);
 
-        $location = $this->createLocation(
+        $location = $this->makeLocation(
             providerPlaceId: 'munich-001',
             displayName: 'Munich',
             lat: 48.1371,
@@ -104,29 +104,6 @@ final class DeviceSimilarityStrategyTest extends TestCase
                 $media->setCameraModel($camera);
             },
         );
-    }
-
-    private function createLocation(
-        string $providerPlaceId,
-        string $displayName,
-        float $lat,
-        float $lon,
-        ?string $city = null,
-        ?string $country = null,
-    ): Location {
-        $location = new Location(
-            provider: 'osm',
-            providerPlaceId: $providerPlaceId,
-            displayName: $displayName,
-            lat: $lat,
-            lon: $lon,
-            cell: 'cell-' . $providerPlaceId,
-        );
-
-        $location->setCity($city);
-        $location->setCountry($country);
-
-        return $location;
     }
 
 }
