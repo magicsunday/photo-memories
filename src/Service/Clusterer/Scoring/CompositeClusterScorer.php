@@ -128,19 +128,33 @@ final class CompositeClusterScorer
                 }
             }
 
-            // --- quality_avg
-            $qualityMetrics = $this->computeQualityMetrics($mediaItems);
-            $quality        = (float) ($params['quality_avg'] ?? $qualityMetrics['quality']);
-            $aesthetics     = $qualityMetrics['aesthetics'];
+            // --- quality metrics (reuse cached enrichment when available)
+            $quality        = $this->floatOrNull($params['quality_avg'] ?? null);
+            $aesthetics     = $this->floatOrNull($params['aesthetics_score'] ?? null);
+            $qualityMetrics = null;
+            $resolution     = $this->floatOrNull($params['quality_resolution'] ?? null);
+            $sharpness      = $this->floatOrNull($params['quality_sharpness'] ?? null);
+            $iso            = $this->floatOrNull($params['quality_iso'] ?? null);
+
+            if ($quality === null || $aesthetics === null || $resolution === null || $sharpness === null || $iso === null) {
+                $qualityMetrics = $this->computeQualityMetrics($mediaItems);
+                $quality    ??= $qualityMetrics['quality'];
+                $aesthetics ??= $qualityMetrics['aesthetics'];
+                $resolution ??= $qualityMetrics['resolution'];
+                $sharpness  ??= $qualityMetrics['sharpness'];
+                $iso        ??= $qualityMetrics['iso'];
+            }
+
+            $quality = $quality ?? 0.0;
             $c->setParam('quality_avg', $quality);
-            if ($qualityMetrics['resolution'] !== null) {
-                $c->setParam('quality_resolution', $qualityMetrics['resolution']);
+            if ($resolution !== null) {
+                $c->setParam('quality_resolution', $resolution);
             }
-            if ($qualityMetrics['sharpness'] !== null) {
-                $c->setParam('quality_sharpness', $qualityMetrics['sharpness']);
+            if ($sharpness !== null) {
+                $c->setParam('quality_sharpness', $sharpness);
             }
-            if ($qualityMetrics['iso'] !== null) {
-                $c->setParam('quality_iso', $qualityMetrics['iso']);
+            if ($iso !== null) {
+                $c->setParam('quality_iso', $iso);
             }
             if ($aesthetics !== null) {
                 $c->setParam('aesthetics_score', $aesthetics);
@@ -159,32 +173,44 @@ final class CompositeClusterScorer
             // captured duration. Without a reliable time range the signal is
             // meaningless and defaults to zero so it does not skew the final
             // score.
-            $density = 0.0;
-            if ($tr !== null) {
-                $duration = \max(1, (int) $tr['to'] - (int) $tr['from']);
-                $n        = \max(1, $membersCount);
-                $density  = \min(1.0, $n / \max(60.0, (float) $duration / 60.0));
+            $density = $this->floatOrNull($params['density'] ?? null);
+            if ($density === null) {
+                $density = 0.0;
+                if ($tr !== null) {
+                    $duration = \max(1, (int) $tr['to'] - (int) $tr['from']);
+                    $n        = \max(1, $membersCount);
+                    $density  = \min(1.0, $n / \max(60.0, (float) $duration / 60.0));
+                }
+            }
+            if ($tr !== null || isset($params['density'])) {
                 $c->setParam('density', $density);
             }
 
             // --- novelty
-            $novelty = (float) ($params['novelty'] ?? $this->novelty->computeNovelty($c, $mediaMap, $noveltyStats));
+            $novelty = $this->floatOrNull($params['novelty'] ?? null);
+            if ($novelty === null) {
+                $novelty = $this->novelty->computeNovelty($c, $mediaMap, $noveltyStats);
+            }
             $c->setParam('novelty', $novelty);
 
             // --- holiday (only with valid time)
-            $holiday = 0.0;
-            if ($tr !== null) {
+            $holiday = $this->floatOrNull($params['holiday'] ?? null) ?? 0.0;
+            if ($tr !== null && !isset($params['holiday'])) {
                 $holiday = $this->computeHolidayScore((int) $tr['from'], (int) $tr['to']);
+            }
+            if ($tr !== null || isset($params['holiday'])) {
                 $c->setParam('holiday', $holiday);
             }
 
-            // --- recency (only with valid time; neutral=0.0 wenn unbekannt)
-            $recency = 0.0;
-            if ($tr !== null) {
+            // --- recency (only with valid time; neutral=0.0 when unknown)
+            $recency = $this->floatOrNull($params['recency'] ?? null) ?? 0.0;
+            if ($tr !== null && !isset($params['recency'])) {
                 $ageDays = \max(0.0, ($now - (int) $tr['to']) / 86400.0);
                 $recency = \max(0.0, 1.0 - \min(1.0, $ageDays / 365.0));
             }
-            $c->setParam('recency', $recency);
+            if ($tr !== null || isset($params['recency'])) {
+                $c->setParam('recency', $recency);
+            }
 
             // --- poi context (only available when strategies attached Overpass metadata)
             $poiScore = $this->computePoiScore($c);
@@ -205,7 +231,12 @@ final class CompositeClusterScorer
             $c->setParam('location_geo_coverage', $locationMetrics['geo_coverage']);
 
             // --- temporal coverage
-            $temporalMetrics = $this->computeTemporalMetrics($mediaItems, $membersCount, $tr);
+            $temporalParams = [
+                'score'            => $this->floatOrNull($params['temporal_score'] ?? null),
+                'coverage'         => $this->floatOrNull($params['temporal_coverage'] ?? null),
+                'duration_seconds' => $this->intOrNull($params['temporal_duration_seconds'] ?? null),
+            ];
+            $temporalMetrics = $this->computeTemporalMetrics($mediaItems, $membersCount, $tr, $temporalParams);
             $temporalScore   = $temporalMetrics['score'];
             $c->setParam('temporal_score', $temporalScore);
             $c->setParam('temporal_coverage', $temporalMetrics['coverage']);
@@ -305,6 +336,9 @@ final class CompositeClusterScorer
     /**
      * Validates that a time range is chronological and within the accepted
      * year window.
+     *
+     * @param array{from:int,to:int}|null $tr
+     * @return bool
      */
     private function isValidTimeRange(?array $tr): bool
     {
@@ -327,6 +361,8 @@ final class CompositeClusterScorer
      * samples and returns `null` when the heuristics deem the coverage
      * unreliable.
      *
+     * @param ClusterDraft $c
+     * @param array<int,Media> $mediaMap
      * @return array{from:int,to:int}|null
      */
     private function computeTimeRangeFromMembers(ClusterDraft $c, array $mediaMap): ?array
@@ -351,10 +387,16 @@ final class CompositeClusterScorer
 
     /**
      * Builds a POI score from metadata gathered by geospatial enrichment.
+     *
+     * @param ClusterDraft $cluster
+     * @return float
      */
     private function computePoiScore(ClusterDraft $cluster): float
     {
         $params = $cluster->getParams();
+        if (isset($params['poi_score']) && \is_numeric($params['poi_score'])) {
+            return $this->clamp01((float) $params['poi_score']);
+        }
         $label = $this->stringOrNull($params['poi_label'] ?? null);
         $categoryKey = $this->stringOrNull($params['poi_category_key'] ?? null);
         $categoryValue = $this->stringOrNull($params['poi_category_value'] ?? null);
@@ -386,6 +428,10 @@ final class CompositeClusterScorer
 
     /**
      * Calculates configured bonus multipliers for specific POI categories.
+     *
+     * @param string|null $categoryKey
+     * @param string|null $categoryValue
+     * @return float
      */
     private function lookupPoiCategoryBoost(?string $categoryKey, ?string $categoryValue): float
     {
@@ -412,6 +458,9 @@ final class CompositeClusterScorer
 
     /**
      * Normalises a mixed value to a trimmed string or `null` when empty.
+     *
+     * @param mixed $value
+     * @return string|null
      */
     private function stringOrNull(mixed $value): ?string
     {
@@ -419,7 +468,32 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Normalises a mixed value to a float or `null` when unavailable.
+     *
+     * @param mixed $value
+     * @return float|null
+     */
+    private function floatOrNull(mixed $value): ?float
+    {
+        return \is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * Normalises a mixed value to an integer or `null` when unavailable.
+     *
+     * @param mixed $value
+     * @return int|null
+     */
+    private function intOrNull(mixed $value): ?int
+    {
+        return \is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
      * Restricts a value into the inclusive [0.0, 1.0] range.
+     *
+     * @param float $value
+     * @return float
      */
     private function clamp01(float $value): float
     {
@@ -547,6 +621,7 @@ final class CompositeClusterScorer
      * coverage across media items to build the score and supporting metrics.
      *
      * @param list<Media> $mediaItems
+     * @param int $members
      * @param array<string,mixed> $params
      * @return array{score:float,unique:int,mentions:int,coverage:float}
      */
@@ -612,6 +687,7 @@ final class CompositeClusterScorer
      * values are reused instead of scanning the media items again.
      *
      * @param list<Media> $mediaItems
+     * @param int $members
      * @param array<string,mixed> $params
      * @return array{score:float,unique_keywords:int,total_keywords:int,coverage:float}
      */
@@ -676,6 +752,7 @@ final class CompositeClusterScorer
      * unrelated events being grouped together.
      *
      * @param list<Media> $mediaItems
+     * @param int $members
      * @param array<string,mixed> $params
      * @return array{score:float,geo_coverage:float}
      */
@@ -746,34 +823,46 @@ final class CompositeClusterScorer
      * Derives a temporal coverage score combining timestamp density and span.
      *
      * @param list<Media> $mediaItems
+     * @param int $members
      * @param array{from:int,to:int}|null $timeRange
+     * @param array{score:float|null,coverage:float|null,duration_seconds:int|null} $cached
      * @return array{score:float,coverage:float,duration_seconds:int}
      */
-    private function computeTemporalMetrics(array $mediaItems, int $members, ?array $timeRange): array
+    private function computeTemporalMetrics(array $mediaItems, int $members, ?array $timeRange, array $cached): array
     {
-        $duration = 0;
-        if (\is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
+        $duration = $cached['duration_seconds'] ?? null;
+        if ($duration === null && \is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
             $duration = \max(0, (int) $timeRange['to'] - (int) $timeRange['from']);
         }
+        $duration = $duration !== null ? \max(0, (int) $duration) : 0;
 
-        $timestamped = 0;
-        foreach ($mediaItems as $media) {
-            if ($media->getTakenAt() instanceof DateTimeImmutable) {
-                $timestamped++;
+        $coverage = $cached['coverage'] ?? null;
+        if ($coverage === null) {
+            $timestamped = 0;
+            if ($members > 0) {
+                foreach ($mediaItems as $media) {
+                    if ($media->getTakenAt() instanceof DateTimeImmutable) {
+                        $timestamped++;
+                    }
+                }
+                $coverage = $timestamped / $members;
+            } else {
+                $coverage = 0.0;
             }
         }
 
-        $coverage = $members > 0 ? $timestamped / $members : 0.0;
-        $spanScore = $duration > 0 ? $this->spanScore((float) $duration) : 0.0;
-
-        $score = $this->combineScores([
-            [$coverage, 0.55],
-            [$spanScore, 0.45],
-        ], 0.0);
+        $score = $cached['score'] ?? null;
+        if ($score === null) {
+            $spanScore = $duration > 0 ? $this->spanScore((float) $duration) : 0.0;
+            $score = $this->combineScores([
+                [$coverage, 0.55],
+                [$spanScore, 0.45],
+            ], 0.0);
+        }
 
         return [
-            'score'            => $score,
-            'coverage'         => $coverage,
+            'score'            => $this->clamp01($score),
+            'coverage'         => $this->clamp01($coverage),
             'duration_seconds' => $duration,
         ];
     }
@@ -782,6 +871,8 @@ final class CompositeClusterScorer
      * Blends weighted components into a single normalised score.
      *
      * @param list<array{0:float|null,1:float}> $components
+     * @param float|null $default
+     * @return float
      */
     private function combineScores(array $components, ?float $default): float
     {
@@ -805,6 +896,11 @@ final class CompositeClusterScorer
 
     /**
      * Converts a value into a score relative to a desired target band.
+     *
+     * @param float $value
+     * @param float $target
+     * @param float $tolerance
+     * @return float
      */
     private function balancedScore(float $value, float $target, float $tolerance): float
     {
@@ -818,6 +914,9 @@ final class CompositeClusterScorer
 
     /**
      * Maps camera ISO values into a [0,1] score, favouring low-noise captures.
+     *
+     * @param int $iso
+     * @return float
      */
     private function normalizeIso(int $iso): float
     {
@@ -832,6 +931,9 @@ final class CompositeClusterScorer
     /**
      * Scores cluster duration, rewarding concise events and tapering off for
      * very long spans.
+     *
+     * @param float $durationSeconds
+     * @return float
      */
     private function spanScore(float $durationSeconds): float
     {
@@ -854,6 +956,10 @@ final class CompositeClusterScorer
 
     /**
      * Uses the configured holiday resolver to detect holiday/weekend overlap.
+     *
+     * @param int $fromTs
+     * @param int $toTs
+     * @return float
      */
     private function computeHolidayScore(int $fromTs, int $toTs): float
     {
@@ -889,6 +995,10 @@ final class CompositeClusterScorer
 
     /**
      * Backwards-compatible helper retained for legacy consumers.
+     *
+     * @param ClusterDraft $c
+     * @param array<int,Media> $mediaMap
+     * @return float
      */
     private function computeQualityAvg(ClusterDraft $c, array $mediaMap): float
     {
