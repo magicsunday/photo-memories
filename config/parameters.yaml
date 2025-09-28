@@ -179,7 +179,8 @@ parameters:
     memories.feed.max_per_algorithm: 12
 
     # Weather
-    memories.weather.enabled: '%env(default:false:bool:MEMORIES_WEATHER_ENABLED)%'
+    memories.weather.enabled_default: false
+    memories.weather.enabled: '%env(default:memories.weather.enabled_default:bool:MEMORIES_WEATHER_ENABLED)%'
     memories.weather.openweather.base_url: '%env(default::string:OPENWEATHER_BASE_URL)%'
     memories.weather.openweather.api_key: '%env(default::string:OPENWEATHER_API_KEY)%'
     memories.weather.openweather.max_past_hours_default: 120
