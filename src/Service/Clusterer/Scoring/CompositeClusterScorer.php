@@ -23,7 +23,11 @@ final class CompositeClusterScorer
          *     novelty:float,
          *     holiday:float,
          *     recency:float,
-         *     poi?:float
+         *     poi?:float,
+         *     aesthetics?:float,
+         *     content?:float,
+         *     location?:float,
+         *     time_coverage?:float
          * }
          */
         private readonly array $weights = [
@@ -34,6 +38,10 @@ final class CompositeClusterScorer
             'holiday' => 0.10,
             'recency' => 0.20,
             'poi'     => 0.05,
+            'aesthetics'    => 0.0,
+            'content'       => 0.0,
+            'location'      => 0.0,
+            'time_coverage' => 0.0,
         ],
         /** @var array<string,float> $algorithmBoosts */
         private readonly array $algorithmBoosts = [],
@@ -131,6 +139,31 @@ final class CompositeClusterScorer
             }
             $c->setParam('recency', $recency);
 
+            // --- optional blended heuristics (normalised externally)
+            $aestheticsRaw = $params['aesthetics'] ?? null;
+            $aesthetics    = $this->clamp01((float) ($aestheticsRaw ?? 0.0));
+            if ($aestheticsRaw !== null) {
+                $c->setParam('aesthetics', $aesthetics);
+            }
+
+            $contentRaw = $params['content'] ?? null;
+            $content    = $this->clamp01((float) ($contentRaw ?? 0.0));
+            if ($contentRaw !== null) {
+                $c->setParam('content', $content);
+            }
+
+            $locationRaw = $params['location'] ?? null;
+            $location    = $this->clamp01((float) ($locationRaw ?? 0.0));
+            if ($locationRaw !== null) {
+                $c->setParam('location', $location);
+            }
+
+            $timeCoverageRaw = $params['time_coverage'] ?? null;
+            $timeCoverage    = $this->clamp01((float) ($timeCoverageRaw ?? 0.0));
+            if ($timeCoverageRaw !== null) {
+                $c->setParam('time_coverage', $timeCoverage);
+            }
+
             // --- poi context (only available when strategies attached Overpass metadata)
             $poiScore = $this->computePoiScore($c);
             $c->setParam('poi_score', $poiScore);
@@ -143,7 +176,11 @@ final class CompositeClusterScorer
                 $this->weights['novelty'] * $novelty +
                 $this->weights['holiday'] * $holiday +
                 $this->weights['recency'] * $recency +
-                ($this->weights['poi'] ?? 0.0) * $poiScore;
+                ($this->weights['poi'] ?? 0.0) * $poiScore +
+                ($this->weights['aesthetics'] ?? 0.0) * $aesthetics +
+                ($this->weights['content'] ?? 0.0) * $content +
+                ($this->weights['location'] ?? 0.0) * $location +
+                ($this->weights['time_coverage'] ?? 0.0) * $timeCoverage;
 
             $algorithm = $c->getAlgorithm();
             $boost     = $this->algorithmBoosts[$algorithm] ?? 1.0;
