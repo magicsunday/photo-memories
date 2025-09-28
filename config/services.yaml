@@ -776,6 +776,7 @@ services:
             $minMembers: '%memories.feed.min_members%'
             $maxPerDay: '%memories.feed.max_per_day%'
             $maxTotal: '%memories.feed.max_total%'
+            $maxPerAlgorithm: '%memories.feed.max_per_algorithm%'
 
     MagicSunday\Memories\Service\Feed\FeedBuilderInterface:
         alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder

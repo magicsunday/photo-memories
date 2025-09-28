@@ -28,7 +28,8 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
         private readonly float $minScore = 0.35,
         private readonly int $minMembers = 4,
         private readonly int $maxPerDay = 6,
-        private readonly int $maxTotal = 60
+        private readonly int $maxTotal = 60,
+        private readonly int $maxPerAlgorithm = 12
     ) {
     }
 
@@ -66,6 +67,8 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
         $seenPlace = [];
         /** @var array<string,int> $seenAlg */
         $seenAlg = [];
+        /** @var array<string,int> $algCount */
+        $algCount = [];
 
         $result = [];
 
@@ -85,6 +88,14 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
 
             $place = $c->getParams()['place'] ?? null;
             $alg   = $c->getAlgorithm();
+
+            if (!\is_string($alg)) {
+                continue;
+            }
+
+            if (($algCount[$alg] ?? 0) >= $this->maxPerAlgorithm) {
+                continue;
+            }
 
             // simple diversity: limit repeats
             if (\is_string($place)) {
@@ -125,6 +136,7 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
                 $seenPlace[\sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[\sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
             }
             $seenAlg[$algKey] = ($seenAlg[$algKey] ?? 0) + 1;
+            $algCount[$alg] = ($algCount[$alg] ?? 0) + 1;
         }
 
         return $result;

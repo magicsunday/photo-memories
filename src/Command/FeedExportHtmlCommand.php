@@ -25,6 +25,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 /**
  * Export a static HTML page that previews the "Für dich" feed.
  * Copies (or symlinks) thumbnails into an export folder and uses lazy-loading.
+ * Greift dabei auf die globale Algorithmus-Begrenzung des Feed-Builders zurück.
  */
 #[AsCommand(
     name: 'memories:feed:export-html',

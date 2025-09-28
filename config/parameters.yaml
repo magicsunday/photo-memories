@@ -174,3 +174,4 @@ parameters:
     memories.feed.min_members: 4
     memories.feed.max_per_day: 6
     memories.feed.max_total: 60
+    memories.feed.max_per_algorithm: 12
