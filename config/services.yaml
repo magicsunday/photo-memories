@@ -150,6 +150,7 @@ services:
         arguments:
             $radiusMeters: '%memories.geocoding.overpass.radius_m%'
             $maxPois: '%memories.geocoding.overpass.max_pois%'
+            $fetchLimitMultiplier: '%memories.geocoding.overpass.fetch_limit_multiplier%'
 
     MagicSunday\Memories\Service\Geocoding\LocationCellIndex: ~
 

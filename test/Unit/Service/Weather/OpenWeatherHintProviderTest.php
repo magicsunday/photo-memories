@@ -76,7 +76,6 @@ final class OpenWeatherHintProviderTest extends TestCase
         self::assertSame(48.1, $captured['options']['query']['lat']);
         self::assertSame(11.5, $captured['options']['query']['lon']);
         self::assertSame($timestamp, $captured['options']['query']['dt']);
-
         self::assertTrue($storage->hasObservation(48.1, 11.5, $timestamp));
     }
 
@@ -243,4 +242,3 @@ final class InMemoryObservationStorage implements WeatherObservationStorageInter
         ];
     }
 }
-

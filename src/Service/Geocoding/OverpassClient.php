@@ -35,6 +35,15 @@ final class OverpassClient
         'building',
     ];
 
+    /**
+     * Additional tags we keep even though they are not primary category keys.
+     *
+     * @var list<string>
+     */
+    private const AUXILIARY_TAG_KEYS = [
+        'wikidata',
+    ];
+
     private bool $lastUsedNetwork = false;
 
     /**
@@ -55,15 +64,16 @@ final class OverpassClient
      *
      * @return list<array<string,mixed>>
      */
-    public function fetchPois(float $lat, float $lon, int $radiusMeters, int $limit): array
+    public function fetchPois(float $lat, float $lon, int $radiusMeters, ?int $limit): array
     {
         $this->lastUsedNetwork = false;
 
-        if ($radiusMeters <= 0 || $limit <= 0) {
+        if ($radiusMeters <= 0) {
             return [];
         }
 
-        $query = $this->buildQuery($lat, $lon, $radiusMeters, $limit);
+        $queryLimit = $limit !== null ? \max(1, $limit) : null;
+        $query = $this->buildQuery($lat, $lon, $radiusMeters, $queryLimit);
 
         try {
             $this->lastUsedNetwork = true;
@@ -151,8 +161,8 @@ final class OverpassClient
             static fn (array $a, array $b): int => $a['distanceMeters'] <=> $b['distanceMeters']
         );
 
-        if (\count($values) > $limit) {
-            $values = \array_slice($values, 0, $limit);
+        if ($queryLimit !== null && \count($values) > $queryLimit) {
+            $values = \array_slice($values, 0, $queryLimit);
         }
 
         return $values;
@@ -166,18 +176,18 @@ final class OverpassClient
         return $used;
     }
 
-    private function buildQuery(float $lat, float $lon, int $radius, int $limit): string
+    private function buildQuery(float $lat, float $lon, int $radius, ?int $limit): string
     {
         $latS = \number_format($lat, 7, '.', '');
         $lonS = \number_format($lon, 7, '.', '');
         $radius = \max(1, $radius);
-        $limit = \max(1, $limit);
 
         $query = \sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
         foreach (self::TAG_KEYS as $key) {
             $query .= \sprintf('nwr(around:%d,%s,%s)["%s"];', $radius, $latS, $lonS, $key);
         }
-        $query .= \sprintf(');out tags center %d;', $limit);
+        $limitFragment = $limit !== null ? ' '.\max(1, $limit) : '';
+        $query .= \sprintf(');out tags center%s;', $limitFragment);
 
         return $query;
     }
@@ -232,6 +242,13 @@ final class OverpassClient
     {
         $selected = [];
         foreach ($this->relevantTagKeys() as $key) {
+            $value = $this->stringOrNull($tags[$key] ?? null);
+            if ($value !== null) {
+                $selected[$key] = $value;
+            }
+        }
+
+        foreach (self::AUXILIARY_TAG_KEYS as $key) {
             $value = $this->stringOrNull($tags[$key] ?? null);
             if ($value !== null) {
                 $selected[$key] = $value;

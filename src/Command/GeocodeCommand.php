@@ -39,6 +39,8 @@ final class GeocodeCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl zu verarbeitender Medien', null)
             ->addOption('all', null, InputOption::VALUE_NONE, 'Alle Medien erneut geokodieren (auch bereits verknüpft)')
             ->addOption('city', null, InputOption::VALUE_REQUIRED, 'Orte nach Stadtnamen aktualisieren (z.B. "Paris")')
+            ->addOption('missing-pois', null, InputOption::VALUE_NONE, 'Orte ohne POI-Daten ergänzen')
+            ->addOption('refresh-pois', null, InputOption::VALUE_NONE, 'Bereits gespeicherte POI-Daten neu abrufen')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur anzeigen, keine Änderungen speichern');
     }
 
@@ -50,11 +52,17 @@ final class GeocodeCommand extends Command
         $limitN = \is_string($limit) ? (int) $limit : null;
         $all    = (bool) $input->getOption('all');
         $city   = $input->getOption('city');
+        $missingPois = (bool) $input->getOption('missing-pois');
+        $refreshPois = (bool) $input->getOption('refresh-pois');
 
         $io->title('🗺️  Orte ermitteln');
 
+        if ($missingPois) {
+            return $this->reprocessLocationsMissingPois($dryRun, $refreshPois, $io, $output);
+        }
+
         if (\is_string($city) && $city !== '') {
-            return $this->reprocessLocationsByCity($city, $dryRun, $io, $output);
+            return $this->reprocessLocationsByCity($city, $dryRun, $refreshPois, $io, $output);
         }
 
         $loaded = $this->cellIndex->warmUpFromDb();
@@ -94,7 +102,7 @@ final class GeocodeCommand extends Command
         $linked    = 0;
         $netCalls  = 0;
 
-        $batchSize = 100; // größerer Batch ist OK
+        $batchSize = 10; // kleinerer Batch verringert Datenverlust bei Fehlern
         foreach ($medias as $m) {
             $bar->setMessage('Rückwärtssuche');
             $loc = $this->linker->link($m, 'de');
@@ -139,27 +147,29 @@ final class GeocodeCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function reprocessLocationsByCity(string $city, bool $dryRun, SymfonyStyle $io, OutputInterface $output): int
+    private function reprocessLocationsMissingPois(bool $dryRun, bool $refreshPois, SymfonyStyle $io, OutputInterface $output): int
     {
-        $normalizedCity = \mb_strtolower($city);
+        $io->section('📍 Orte ohne POI-Daten ergänzen');
 
-        $io->section(\sprintf('🏙️  Orte mit Stadtnamen "%s" aktualisieren', $city));
+        if ($refreshPois) {
+            $io->note('Bestehende POI-Daten werden neu abgerufen.');
+        }
 
         $repo = $this->em->getRepository(Location::class);
         $qb   = $repo->createQueryBuilder('l');
 
-        $qb->where('LOWER(l.city) = :city')
-            ->orWhere('LOWER(l.displayName) LIKE :cityLike')
-            ->setParameter('city', $normalizedCity)
-            ->setParameter('cityLike', '%' . $normalizedCity . '%')
-            ->orderBy('l.id', 'ASC');
+        if (!$refreshPois) {
+            $qb->where('l.pois IS NULL');
+        }
+
+        $qb->orderBy('l.id', 'ASC');
 
         /** @var list<Location> $locations */
         $locations = $qb->getQuery()->getResult();
 
         $count = \count($locations);
         if ($count < 1) {
-            $io->writeln('Keine passenden Orte gefunden.');
+            $io->writeln('Keine Orte ohne POI-Daten gefunden.');
 
             return Command::SUCCESS;
         }
@@ -172,15 +182,15 @@ final class GeocodeCommand extends Command
         $processed = 0;
         $updated   = 0;
         $netCalls  = 0;
-        $batchSize = 100;
+        $batchSize = 10;
 
         foreach ($locations as $location) {
             $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
-            $bar->setMessage($label);
+            $bar->setMessage($this->formatProgressLabel($label));
 
             $beforePois = $location->getPois();
 
-            $this->locationResolver->ensurePois($location);
+            $this->locationResolver->ensurePois($location, $refreshPois);
             if ($this->locationResolver->consumeLastUsedNetwork()) {
                 $netCalls++;
             }
@@ -214,5 +224,102 @@ final class GeocodeCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    private function reprocessLocationsByCity(string $city, bool $dryRun, bool $refreshPois, SymfonyStyle $io, OutputInterface $output): int
+    {
+        $normalizedCity = \mb_strtolower($city);
+
+        $io->section(\sprintf('🏙️  Orte mit Stadtnamen "%s" aktualisieren', $city));
+
+        if ($refreshPois) {
+            $io->note('Bestehende POI-Daten werden neu abgerufen.');
+        }
+
+        $repo = $this->em->getRepository(Location::class);
+        $qb   = $repo->createQueryBuilder('l');
+
+        $qb->where('LOWER(l.city) = :city')
+            ->orWhere('LOWER(l.displayName) LIKE :cityLike')
+            ->setParameter('city', $normalizedCity)
+            ->setParameter('cityLike', '%' . $normalizedCity . '%')
+            ->orderBy('l.id', 'ASC');
+
+        /** @var list<Location> $locations */
+        $locations = $qb->getQuery()->getResult();
+
+        $count = \count($locations);
+        if ($count < 1) {
+            $io->writeln('Keine passenden Orte gefunden.');
+
+            return Command::SUCCESS;
+        }
+
+        $bar = new ProgressBar($output, $count);
+        $bar->setFormat('%current%/%max% [%bar%] %percent:3s%% | Dauer: %elapsed:6s% | ETA: %estimated:-6s% | %message%');
+        $bar->setMessage('Starte …');
+        $bar->start();
+
+        $processed = 0;
+        $updated   = 0;
+        $netCalls  = 0;
+        $batchSize = 10;
+
+        foreach ($locations as $location) {
+            $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
+            $bar->setMessage($this->formatProgressLabel($label));
+
+            $beforePois = $location->getPois();
+
+            $this->locationResolver->ensurePois($location, $refreshPois);
+            if ($this->locationResolver->consumeLastUsedNetwork()) {
+                $netCalls++;
+            }
+
+            if ($beforePois !== $location->getPois()) {
+                $updated++;
+            }
+
+            $processed++;
+            $bar->advance();
+
+            if (($processed % $batchSize) === 0) {
+                if (!$dryRun) {
+                    $this->em->flush();
+                }
+            }
+        }
+
+        if (!$dryRun) {
+            $this->em->flush();
+        }
+
+        $bar->finish();
+
+        $io->writeln('');
+        $io->writeln('');
+        $io->writeln(\sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+
+        if ($dryRun) {
+            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
+        }
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Shortens long progress bar labels to keep the output on a single line.
+     */
+    private function formatProgressLabel(string $label): string
+    {
+        $normalized = \preg_replace('/\s+/u', ' ', \trim($label)) ?? $label;
+
+        if (\function_exists('mb_strimwidth')) {
+            return \mb_strimwidth($normalized, 0, 70, '…', 'UTF-8');
+        }
+
+        return \strlen($normalized) > 70
+            ? \substr($normalized, 0, 69) . '…'
+            : $normalized;
     }
 }

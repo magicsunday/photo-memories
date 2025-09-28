@@ -11,6 +11,57 @@ use MagicSunday\Memories\Entity\Media;
  */
 final class LocationHelper
 {
+    private const POI_NAME_BONUS = 100;
+    private const POI_CATEGORY_VALUE_BONUS = 30;
+    private const POI_WIKIDATA_BONUS = 120;
+    private const POI_DISTANCE_PENALTY_DIVISOR = 25;
+
+    /**
+     * Tag specific weightings favouring more significant POIs.
+     *
+     * @var array<string,int>
+     */
+    private const POI_TAG_WEIGHTS = [
+        'tourism' => 600,
+        'historic' => 450,
+        'man_made' => 220,
+        'leisure' => 140,
+        'natural' => 140,
+        'place' => 130,
+        'amenity' => 100,
+        'building' => 70,
+        'sport' => 60,
+        'shop' => 40,
+        'landuse' => 25,
+    ];
+
+    /**
+     * Category key bonuses stacked on top of the tag weights.
+     *
+     * @var array<string,int>
+     */
+    private const POI_CATEGORY_KEY_BONUS = [
+        'tourism' => 220,
+        'historic' => 180,
+        'man_made' => 150,
+        'leisure' => 90,
+        'amenity' => 80,
+        'natural' => 90,
+        'place' => 80,
+        'building' => 60,
+        'sport' => 50,
+        'shop' => 40,
+    ];
+
+    /**
+     * Additional bonuses for specific tag/value combinations.
+     *
+     * @var array<string,int>
+     */
+    private const POI_TAG_VALUE_BONUS = [
+        'man_made:tower' => 260,
+    ];
+
     /**
      * Returns a stable locality key for grouping.
      * Priority: suburb -> city -> county -> state -> country -> cell.
@@ -210,6 +261,8 @@ final class LocationHelper
     }
 
     /**
+     * Returns the highest ranked POI for the location using tag-based weighting.
+     *
      * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
      */
     private function primaryPoi(Location $loc): ?array
@@ -219,35 +272,139 @@ final class LocationHelper
             return null;
         }
 
-        foreach ($pois as $poi) {
+        $candidates = [];
+        foreach ($pois as $index => $poi) {
             if (!\is_array($poi)) {
                 continue;
             }
 
-            $name          = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
-            $categoryKey   = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
-            $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
-
-            if ($name === null && $categoryValue === null) {
+            $normalised = $this->normalisePoi($poi);
+            if ($normalised === null) {
                 continue;
             }
 
-            $tags = [];
-            $rawTags = $poi['tags'] ?? null;
-            if (\is_array($rawTags)) {
-                foreach ($rawTags as $tagKey => $tagValue) {
-                    if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
-                        $tags[$tagKey] = $tagValue;
+            $distance = $this->distanceOrNull($poi['distanceMeters'] ?? null);
+            $candidates[] = [
+                'data' => $normalised,
+                'score' => $this->computePoiWeight($normalised, $distance),
+                'distance' => $distance,
+                'index' => $index,
+            ];
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        \usort(
+            $candidates,
+            static function (array $a, array $b): int {
+                $cmp = $b['score'] <=> $a['score'];
+                if ($cmp !== 0) {
+                    return $cmp;
+                }
+
+                $distanceA = $a['distance'];
+                $distanceB = $b['distance'];
+                if ($distanceA !== $distanceB) {
+                    $distanceA ??= \INF;
+                    $distanceB ??= \INF;
+
+                    $cmp = $distanceA <=> $distanceB;
+                    if ($cmp !== 0) {
+                        return $cmp;
                     }
                 }
-            }
 
-            return [
-                'name'          => $name,
-                'categoryKey'   => $categoryKey,
-                'categoryValue' => $categoryValue,
-                'tags'          => $tags,
-            ];
+                $nameA = $a['data']['name'] ?? '';
+                $nameB = $b['data']['name'] ?? '';
+                $cmp = \strcmp($nameA, $nameB);
+                if ($cmp !== 0) {
+                    return $cmp;
+                }
+
+                return $a['index'] <=> $b['index'];
+            }
+        );
+
+        /** @var array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>} $best */
+        $best = $candidates[0]['data'];
+
+        return $best;
+    }
+
+    /**
+     * @param array<string,mixed> $poi
+     * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     */
+    private function normalisePoi(array $poi): ?array
+    {
+        $name = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
+        $categoryKey = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
+        $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
+
+        if ($name === null && $categoryValue === null) {
+            return null;
+        }
+
+        $tags = [];
+        $rawTags = $poi['tags'] ?? null;
+        if (\is_array($rawTags)) {
+            foreach ($rawTags as $tagKey => $tagValue) {
+                if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
+                    $tags[$tagKey] = $tagValue;
+                }
+            }
+        }
+
+        return [
+            'name' => $name,
+            'categoryKey' => $categoryKey,
+            'categoryValue' => $categoryValue,
+            'tags' => $tags,
+        ];
+    }
+
+    /**
+     * @param array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>} $poi
+     */
+    private function computePoiWeight(array $poi, ?float $distance): int
+    {
+        $score = 0;
+
+        if ($poi['name'] !== null) {
+            $score += self::POI_NAME_BONUS;
+        }
+
+        if ($poi['categoryValue'] !== null) {
+            $score += self::POI_CATEGORY_VALUE_BONUS;
+        }
+
+        $categoryKey = $poi['categoryKey'];
+        if ($categoryKey !== null) {
+            $score += self::POI_CATEGORY_KEY_BONUS[$categoryKey] ?? 0;
+        }
+
+        foreach ($poi['tags'] as $tagKey => $tagValue) {
+            $score += self::POI_TAG_WEIGHTS[$tagKey] ?? 0;
+            $score += self::POI_TAG_VALUE_BONUS[$tagKey.':'.$tagValue] ?? 0;
+        }
+
+        if (isset($poi['tags']['wikidata'])) {
+            $score += self::POI_WIKIDATA_BONUS;
+        }
+
+        if ($distance !== null && $distance > 0.0) {
+            $score -= (int) \floor($distance / self::POI_DISTANCE_PENALTY_DIVISOR);
+        }
+
+        return $score;
+    }
+
+    private function distanceOrNull(mixed $value): ?float
+    {
+        if (\is_numeric($value)) {
+            return (float) $value;
         }
 
         return null;

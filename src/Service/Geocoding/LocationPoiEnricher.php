@@ -14,7 +14,8 @@ final class LocationPoiEnricher
     public function __construct(
         private readonly OverpassClient $client,
         private readonly int $radiusMeters = 250,
-        private readonly int $maxPois = 15
+        private readonly int $maxPois = 15,
+        private readonly float $fetchLimitMultiplier = 3.0
     ) {
     }
 
@@ -23,11 +24,22 @@ final class LocationPoiEnricher
      */
     public function enrich(Location $location, GeocodeResult $geocode): bool
     {
+        if ($this->maxPois <= 0) {
+            $this->client->consumeLastUsedNetwork();
+
+            return false;
+        }
+
         $radius = $this->determineRadius($geocode);
-        $pois = $this->client->fetchPois($geocode->lat, $geocode->lon, $radius, $this->maxPois);
+        $queryLimit = $this->determineQueryLimit();
+        $pois = $this->client->fetchPois($geocode->lat, $geocode->lon, $radius, $queryLimit);
         $usedNetwork = $this->client->consumeLastUsedNetwork();
 
         if ($pois !== []) {
+            if ($this->maxPois > 0 && \count($pois) > $this->maxPois) {
+                $pois = \array_slice($pois, 0, $this->maxPois);
+            }
+
             $location->setPois($pois);
         } elseif ($usedNetwork && $location->getPois() === null) {
             // Mark attempted enrichment to avoid hammering the API when no POIs exist.
@@ -35,6 +47,17 @@ final class LocationPoiEnricher
         }
 
         return $usedNetwork;
+    }
+
+    private function determineQueryLimit(): ?int
+    {
+        if ($this->fetchLimitMultiplier <= 0.0 || $this->maxPois <= 0) {
+            return null;
+        }
+
+        $limit = (int) \ceil($this->maxPois * $this->fetchLimitMultiplier);
+
+        return \max($this->maxPois, $limit);
     }
 
     private function determineRadius(GeocodeResult $geocode): int
