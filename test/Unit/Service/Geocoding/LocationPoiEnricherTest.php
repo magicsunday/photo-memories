@@ -1,0 +1,228 @@
+<?php
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
+
+use BadMethodCallException;
+use MagicSunday\Memories\Service\Geocoding\GeocodeResult;
+use MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher;
+use MagicSunday\Memories\Service\Geocoding\OverpassClient;
+use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\MediaMath;
+use PHPUnit\Framework\Attributes\Test;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface;
+
+final class LocationPoiEnricherTest extends TestCase
+{
+    #[Test]
+    public function enrichesLocationWithNearbyPois(): void
+    {
+        $location = $this->makeLocation('place-1', 'Berlin', 52.52, 13.405);
+        $geocode = $this->createGeocodeResult(52.52, 13.405);
+
+        $response = $this->createResponse([
+            'elements' => [
+                [
+                    'type' => 'node',
+                    'id' => 123,
+                    'lat' => 52.5205,
+                    'lon' => 13.4049,
+                    'tags' => [
+                        'name' => 'Brandenburg Gate',
+                        'tourism' => 'attraction',
+                        'historic' => 'monument',
+                    ],
+                ],
+            ],
+        ]);
+
+        $enricher = $this->createEnricher([$response]);
+
+        $usedNetwork = $enricher->enrich($location, $geocode);
+        $pois = $location->getPois();
+
+        self::assertTrue($usedNetwork);
+        self::assertIsArray($pois);
+        self::assertCount(1, $pois);
+
+        $expectedDistance = \round(MediaMath::haversineDistanceInMeters(52.52, 13.405, 52.5205, 13.4049), 2);
+
+        self::assertSame('node/123', $pois[0]['id']);
+        self::assertSame('Brandenburg Gate', $pois[0]['name']);
+        self::assertSame('tourism', $pois[0]['categoryKey']);
+        self::assertSame('attraction', $pois[0]['categoryValue']);
+        self::assertSame($expectedDistance, $pois[0]['distanceMeters']);
+        self::assertSame([
+            'tourism' => 'attraction',
+            'historic' => 'monument',
+        ], $pois[0]['tags']);
+    }
+
+    #[Test]
+    public function marksAttemptWhenNetworkReturnsNoResults(): void
+    {
+        $location = $this->makeLocation('place-2', 'Hamburg', 53.55, 9.993);
+        $geocode = $this->createGeocodeResult(53.55, 9.993);
+
+        $response = $this->createResponse([
+            'elements' => [],
+        ]);
+
+        $enricher = $this->createEnricher([$response]);
+
+        $usedNetwork = $enricher->enrich($location, $geocode);
+
+        self::assertTrue($usedNetwork);
+        self::assertSame([], $location->getPois());
+    }
+
+    #[Test]
+    public function keepsExistingPoisWhenNetworkWasNotUsed(): void
+    {
+        $existingPois = [
+            [
+                'id' => 'node/999',
+                'name' => 'Existing Museum',
+                'categoryKey' => 'tourism',
+                'categoryValue' => 'museum',
+                'distanceMeters' => 10.0,
+            ],
+        ];
+
+        $location = $this->makeLocation('place-3', 'Munich', 48.137, 11.575, configure: static fn ($loc) => $loc->setPois($existingPois));
+        $geocode = $this->createGeocodeResult(48.137, 11.575);
+
+        $enricher = $this->createEnricher([], maxPois: 0);
+
+        $usedNetwork = $enricher->enrich($location, $geocode);
+
+        self::assertFalse($usedNetwork);
+        self::assertSame($existingPois, $location->getPois());
+    }
+
+    /**
+     * @param list<FakeHttpResponse> $responses
+     */
+    private function createEnricher(array $responses, int $radius = 250, int $maxPois = 15): LocationPoiEnricher
+    {
+        $client = new OverpassClient(new FakeHttpClient($responses));
+
+        return new LocationPoiEnricher($client, $radius, $maxPois);
+    }
+
+    private function createGeocodeResult(float $lat, float $lon): GeocodeResult
+    {
+        return new GeocodeResult(
+            provider: 'nominatim',
+            providerPlaceId: 'result-'.$lat.'-'.$lon,
+            lat: $lat,
+            lon: $lon,
+            displayName: 'Test location',
+            countryCode: null,
+            country: null,
+            state: null,
+            county: null,
+            city: null,
+            town: null,
+            village: null,
+            suburb: null,
+            neighbourhood: null,
+            postcode: null,
+            road: null,
+            houseNumber: null,
+            boundingBox: null,
+            category: null,
+            type: null,
+        );
+    }
+
+    private function createResponse(array $payload): FakeHttpResponse
+    {
+        return new FakeHttpResponse(200, $payload);
+    }
+}
+
+/**
+ * @internal simple queued HTTP client used to feed deterministic responses.
+ */
+final class FakeHttpClient implements HttpClientInterface
+{
+    /**
+     * @var list<FakeHttpResponse>
+     */
+    private array $responses;
+
+    /**
+     * @param list<FakeHttpResponse> $responses
+     */
+    public function __construct(array $responses)
+    {
+        $this->responses = $responses;
+    }
+
+    public function request(string $method, string $url, array $options = []): ResponseInterface
+    {
+        if ($this->responses === []) {
+            throw new BadMethodCallException('No queued HTTP response available.');
+        }
+
+        return array_shift($this->responses);
+    }
+
+    public function stream($responses, float $timeout = null): ResponseStreamInterface
+    {
+        throw new BadMethodCallException('Not implemented.');
+    }
+
+    public function withOptions(array $options): static
+    {
+        return $this;
+    }
+}
+
+/**
+ * @internal HTTP response stub returning static payloads.
+ */
+final class FakeHttpResponse implements ResponseInterface
+{
+    public function __construct(
+        private readonly int $statusCode,
+        private readonly array $payload,
+    ) {
+    }
+
+    public function getStatusCode(): int
+    {
+        return $this->statusCode;
+    }
+
+    public function getHeaders(bool $throw = true): array
+    {
+        return [];
+    }
+
+    public function getContent(bool $throw = true): string
+    {
+        return json_encode($this->payload, JSON_THROW_ON_ERROR);
+    }
+
+    public function toArray(bool $throw = true): array
+    {
+        return $this->payload;
+    }
+
+    public function cancel(): void
+    {
+    }
+
+    public function getInfo(string $type = null): mixed
+    {
+        if ($type === null) {
+            return [];
+        }
+
+        return null;
+    }
+}
