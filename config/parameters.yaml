@@ -21,6 +21,9 @@ parameters:
     memories.geocoding.overpass.radius_m: 250
     memories.geocoding.overpass.max_pois: 15
 
+    # Locale Defaults
+    memories.locale.preferred: '%env(default:de,string:MEMORIES_LOCALE_PREFERRED)%'
+
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
 

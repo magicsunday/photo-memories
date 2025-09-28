@@ -162,6 +162,10 @@ services:
         arguments:
             $cellDeg: 0.01
 
+    MagicSunday\Memories\Utility\LocationHelper:
+        arguments:
+            $preferredLocale: '%memories.locale.preferred%'
+
     MagicSunday\Memories\Command\GeocodeCommand:
         arguments:
             $delayMs: '%memories.geocoding.delay_ms%'

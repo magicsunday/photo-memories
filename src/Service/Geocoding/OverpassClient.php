@@ -124,7 +124,9 @@ final class OverpassClient
                 continue; // skip noisier features without any textual context
             }
 
-            $selectedTags = $this->selectRelevantTags($tags);
+            $selection = $this->selectRelevantTags($tags);
+            $selectedTags = $selection['tags'];
+            $names = $selection['names'];
 
             $pois[$id] = [
                 'id'             => $id,
@@ -138,6 +140,7 @@ final class OverpassClient
                     2
                 ),
                 'tags'           => $selectedTags,
+                'names'         => $names,
             ];
         }
 
@@ -226,19 +229,49 @@ final class OverpassClient
     }
 
     /**
-     * @return array<string,string>
+     * @return array{tags:array<string,string>,names:array<string,string>}
      */
     private function selectRelevantTags(array $tags): array
     {
-        $selected = [];
+        $selectedTags = [];
         foreach ($this->relevantTagKeys() as $key) {
             $value = $this->stringOrNull($tags[$key] ?? null);
             if ($value !== null) {
-                $selected[$key] = $value;
+                $selectedTags[$key] = $value;
             }
         }
 
-        return $selected;
+        $names = [];
+
+        $name = $this->stringOrNull($tags['name'] ?? null);
+        if ($name !== null) {
+            $names['name'] = $name;
+        }
+
+        foreach ($tags as $tagKey => $tagValue) {
+            if (!\is_string($tagKey)) {
+                continue;
+            }
+
+            if (!\str_starts_with($tagKey, 'name:')) {
+                continue;
+            }
+
+            $value = $this->stringOrNull($tagValue);
+            if ($value !== null) {
+                $names[$tagKey] = $value;
+            }
+        }
+
+        $altName = $this->stringOrNull($tags['alt_name'] ?? null);
+        if ($altName !== null) {
+            $names['alt_name'] = $altName;
+        }
+
+        return [
+            'tags'  => $selectedTags,
+            'names' => $names,
+        ];
     }
 
     /**

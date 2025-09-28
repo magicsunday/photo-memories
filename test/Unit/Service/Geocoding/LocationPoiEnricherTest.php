@@ -58,6 +58,9 @@ final class LocationPoiEnricherTest extends TestCase
             'tourism' => 'attraction',
             'historic' => 'monument',
         ], $pois[0]['tags']);
+        self::assertSame([
+            'name' => 'Brandenburg Gate',
+        ], $pois[0]['names']);
     }
 
     #[Test]

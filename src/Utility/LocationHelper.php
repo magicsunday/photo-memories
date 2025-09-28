@@ -11,6 +11,13 @@ use MagicSunday\Memories\Entity\Media;
  */
 final class LocationHelper
 {
+    private readonly ?string $preferredLocale;
+
+    public function __construct(?string $preferredLocale = null)
+    {
+        $this->preferredLocale = $this->normaliseLocale($preferredLocale);
+    }
+
     /**
      * Returns a stable locality key for grouping.
      * Priority: suburb -> city -> county -> state -> country -> cell.
@@ -53,7 +60,11 @@ final class LocationHelper
 
         $poi = $this->primaryPoi($loc);
         if ($poi !== null) {
-            $label = $poi['name'] ?? $poi['categoryValue'];
+            $label = $this->resolvePreferredName(
+                $this->filterStringMap($poi['names'] ?? null),
+                $this->stringOrNull($poi['name'] ?? null),
+                $this->stringOrNull($poi['categoryValue'] ?? null)
+            );
             if ($label !== null) {
                 return $label;
             }
@@ -210,7 +221,13 @@ final class LocationHelper
     }
 
     /**
-     * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     * @return array{
+     *     name:?string,
+     *     categoryKey:?string,
+     *     categoryValue:?string,
+     *     tags:array<string,string>,
+     *     names:array<string,string>
+     * }|null
      */
     private function primaryPoi(Location $loc): ?array
     {
@@ -224,32 +241,121 @@ final class LocationHelper
                 continue;
             }
 
-            $name          = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
-            $categoryKey   = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
-            $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
+            $categoryKey   = $this->stringOrNull($poi['categoryKey'] ?? null);
+            $categoryValue = $this->stringOrNull($poi['categoryValue'] ?? null);
+
+            $names = $this->filterStringMap($poi['names'] ?? null);
+            $fallbackName = $this->stringOrNull($poi['name'] ?? null);
+            if ($fallbackName !== null && !isset($names['name'])) {
+                $names['name'] = $fallbackName;
+            }
+
+            $legacyAltName = $this->stringOrNull($poi['alt_name'] ?? null);
+            if ($legacyAltName !== null && !isset($names['alt_name'])) {
+                $names['alt_name'] = $legacyAltName;
+            }
+
+            $name = $this->resolvePreferredName($names, $fallbackName, $categoryValue);
 
             if ($name === null && $categoryValue === null) {
                 continue;
             }
 
-            $tags = [];
-            $rawTags = $poi['tags'] ?? null;
-            if (\is_array($rawTags)) {
-                foreach ($rawTags as $tagKey => $tagValue) {
-                    if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
-                        $tags[$tagKey] = $tagValue;
-                    }
-                }
-            }
+            $tags = $this->filterStringMap($poi['tags'] ?? null);
 
             return [
                 'name'          => $name,
                 'categoryKey'   => $categoryKey,
                 'categoryValue' => $categoryValue,
                 'tags'          => $tags,
+                'names'         => $names,
             ];
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function filterStringMap(mixed $values): array
+    {
+        $result = [];
+        if (!\is_array($values)) {
+            return $result;
+        }
+
+        foreach ($values as $key => $value) {
+            if (\is_string($key) && $key !== '' && \is_string($value) && $value !== '') {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    private function resolvePreferredName(array $names, ?string $fallbackName, ?string $categoryValue): ?string
+    {
+        foreach ($this->preferredLocaleKeys() as $localeKey) {
+            if (isset($names[$localeKey])) {
+                return $names[$localeKey];
+            }
+        }
+
+        if (isset($names['name'])) {
+            return $names['name'];
+        }
+
+        if (isset($names['alt_name'])) {
+            return $names['alt_name'];
+        }
+
+        if ($fallbackName !== null) {
+            return $fallbackName;
+        }
+
+        return $categoryValue;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function preferredLocaleKeys(): array
+    {
+        if ($this->preferredLocale === null) {
+            return [];
+        }
+
+        $variants = [
+            $this->preferredLocale,
+            \str_replace('_', '-', $this->preferredLocale),
+            \str_replace('-', '_', $this->preferredLocale),
+        ];
+
+        $variants = \array_values(\array_unique(\array_filter(
+            $variants,
+            static fn (string $value): bool => $value !== ''
+        )));
+
+        return \array_map(
+            static fn (string $variant): string => 'name:'.$variant,
+            $variants
+        );
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        return \is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private function normaliseLocale(?string $locale): ?string
+    {
+        if ($locale === null) {
+            return null;
+        }
+
+        $trimmed = \strtolower(\trim($locale));
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 }
