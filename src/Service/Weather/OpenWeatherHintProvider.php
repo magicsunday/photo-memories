@@ -6,8 +6,6 @@ namespace MagicSunday\Memories\Service\Weather;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\WeatherObservation;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -26,11 +24,9 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
 {
     public function __construct(
         private readonly HttpClientInterface $http,
-        private readonly CacheInterface $cache,
         private readonly WeatherObservationStorageInterface $storage,
         private readonly string $baseUrl,
         private readonly string $apiKey,
-        private readonly int $cacheTtl,
         private readonly int $maxPastHours = 0,
         private readonly string $units = 'metric',
         private readonly string $source = WeatherObservation::DEFAULT_SOURCE
@@ -65,24 +61,13 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
             return $stored;
         }
 
-        $cacheKey = $this->buildCacheKey($lat, $lon, $timestamp);
+        $hint = $this->fetchHint($lat, $lon, $timestamp);
 
-        return $this->cache->get(
-            $cacheKey,
-            function (ItemInterface $item) use ($lat, $lon, $timestamp): ?array {
-                if ($this->cacheTtl > 0) {
-                    $item->expiresAfter($this->cacheTtl);
-                }
+        if ($hint !== null) {
+            $this->storage->storeHint($lat, $lon, $timestamp, $hint, $this->source);
+        }
 
-                $hint = $this->fetchHint($lat, $lon, $timestamp);
-
-                if ($hint !== null) {
-                    $this->storage->storeHint($lat, $lon, $timestamp, $hint, $this->source);
-                }
-
-                return $hint;
-            }
-        );
+        return $hint;
     }
 
     private function fetchHint(float $lat, float $lon, int $timestamp): ?array
@@ -130,17 +115,10 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         if (isset($payload['hourly'])) {
             $hourly = $payload['hourly'];
 
-            if (\is_array($hourly)) {
-                if ($hourly !== [] && \array_is_list($hourly)) {
-                    $entry = $this->findBestMatchingEntry($hourly, $timestamp);
-                    if ($entry !== null) {
-                        return $this->normaliseEntry($entry);
-                    }
-                } elseif (isset($hourly['time']) && \is_array($hourly['time'])) {
-                    $entry = $this->convertHourlyMatrixToEntry($hourly, $timestamp);
-                    if ($entry !== null) {
-                        return $this->normaliseEntry($entry);
-                    }
+            if (\is_array($hourly) && $hourly !== [] && \array_is_list($hourly)) {
+                $entry = $this->findBestMatchingEntry($hourly, $timestamp);
+                if ($entry !== null) {
+                    return $this->normaliseEntry($entry);
                 }
             }
         }
@@ -186,56 +164,6 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
     }
 
     /**
-     * @param array<string, mixed> $matrix
-     * @return array<string, mixed>|null
-     */
-    private function convertHourlyMatrixToEntry(array $matrix, int $timestamp): ?array
-    {
-        $times = $matrix['time'];
-        if (!\is_array($times) || $times === []) {
-            return null;
-        }
-
-        $bestIdx  = null;
-        $bestDiff = null;
-
-        foreach ($times as $idx => $timeString) {
-            if (!\is_string($timeString)) {
-                continue;
-            }
-
-            $dt = DateTimeImmutable::createFromFormat(DateTimeImmutable::ATOM, $timeString);
-            if (!$dt instanceof DateTimeImmutable) {
-                $dt = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $timeString);
-            }
-            if (!$dt instanceof DateTimeImmutable) {
-                continue;
-            }
-
-            $diff = \abs($dt->getTimestamp() - $timestamp);
-            if ($bestDiff === null || $diff < $bestDiff) {
-                $bestDiff = $diff;
-                $bestIdx  = $idx;
-            }
-        }
-
-        if ($bestIdx === null) {
-            return null;
-        }
-
-        $entry = ['dt' => $timestamp];
-
-        foreach ($matrix as $key => $values) {
-            if (!\is_array($values) || !\array_key_exists($bestIdx, $values)) {
-                continue;
-            }
-            $entry[$key] = $values[$bestIdx];
-        }
-
-        return $entry;
-    }
-
-    /**
      * @param array<string, mixed> $entry
      * @return array{rain_prob: float, precip_mm?: float}|null
      */
@@ -246,18 +174,6 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         $rainProb = null;
         if (isset($entry['pop'])) {
             $rainProb = $this->clamp01((float) $entry['pop']);
-        } elseif (isset($entry['precipitation_probability'])) {
-            $value = (float) $entry['precipitation_probability'];
-            if ($value > 1.0) {
-                $value /= 100.0;
-            }
-            $rainProb = $this->clamp01($value);
-        } elseif (isset($entry['rain_probability'])) {
-            $value    = (float) $entry['rain_probability'];
-            if ($value > 1.0) {
-                $value /= 100.0;
-            }
-            $rainProb = $this->clamp01($value);
         }
 
         if (isset($entry['rain'])) {
@@ -268,32 +184,16 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
             }
         }
 
-        if (!isset($hint['precip_mm']) && isset($entry['precipitation'])) {
-            $hint['precip_mm'] = \max(0.0, (float) $entry['precipitation']);
-        }
-
         if (isset($entry['clouds'])) {
             $hint['cloud_cover'] = $this->clamp01(((float) $entry['clouds']) / 100.0);
-        } elseif (isset($entry['cloud_cover'])) {
-            $value = (float) $entry['cloud_cover'];
-            $hint['cloud_cover'] = $this->clamp01($value > 1.0 ? $value / 100.0 : $value);
-        } elseif (isset($entry['cloudcover'])) {
-            $value = (float) $entry['cloudcover'];
-            $hint['cloud_cover'] = $this->clamp01($value > 1.0 ? $value / 100.0 : $value);
         }
 
-        if (isset($entry['sun_prob'])) {
-            $hint['sun_prob'] = $this->clamp01((float) $entry['sun_prob']);
-        } elseif (isset($hint['cloud_cover'])) {
+        if (isset($hint['cloud_cover'])) {
             $hint['sun_prob'] = $this->clamp01(1.0 - $hint['cloud_cover']);
         }
 
         if (isset($entry['temp'])) {
             $hint['temp_c'] = (float) $entry['temp'];
-        } elseif (isset($entry['temperature'])) {
-            $hint['temp_c'] = (float) $entry['temperature'];
-        } elseif (isset($entry['temperature_2m'])) {
-            $hint['temp_c'] = (float) $entry['temperature_2m'];
         }
 
         if (isset($entry['weather']) && \is_array($entry['weather']) && isset($entry['weather'][0]['description'])) {
@@ -311,14 +211,6 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         $hint['rain_prob'] = $this->clamp01($rainProb);
 
         return $hint === [] ? null : $hint;
-    }
-
-    private function buildCacheKey(float $lat, float $lon, int $timestamp): string
-    {
-        $bucket = (string) \intdiv($timestamp, 3600);
-        $hash   = \sha1(\sprintf('%s|%.3f|%.3f', $bucket, $lat, $lon));
-
-        return 'weather_' . $hash;
     }
 
     private function clamp01(float $value): float

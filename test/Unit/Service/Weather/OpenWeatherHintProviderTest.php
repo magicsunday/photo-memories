@@ -9,7 +9,6 @@ use MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider;
 use MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -45,11 +44,9 @@ final class OpenWeatherHintProviderTest extends TestCase
         $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
-            new ArrayAdapter(),
             $storage,
             'https://api.test/weather',
             'api-key',
-            3600,
             0
         );
 
@@ -80,7 +77,7 @@ final class OpenWeatherHintProviderTest extends TestCase
     }
 
     #[Test]
-    public function cachesResponsesPerHourBucket(): void
+    public function reusesStoredObservationForSubsequentCalls(): void
     {
         $timestamp = (new DateTimeImmutable('2024-06-01T12:00:00Z'))->getTimestamp();
         $requests  = 0;
@@ -107,11 +104,9 @@ final class OpenWeatherHintProviderTest extends TestCase
         $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
-            new ArrayAdapter(),
             $storage,
             'https://api.test/weather',
             'api-key',
-            3600,
             0
         );
 
@@ -131,52 +126,6 @@ final class OpenWeatherHintProviderTest extends TestCase
     }
 
     #[Test]
-    public function supportsOpenMeteoStyleMatrixPayload(): void
-    {
-        $timestamp = (new DateTimeImmutable('2024-06-01T12:00:00Z'))->getTimestamp();
-
-        $client = new MockHttpClient(
-            static fn (): MockResponse => new MockResponse(
-                \json_encode([
-                    'hourly' => [
-                        'time' => ['2024-06-01T11:00', '2024-06-01T12:00'],
-                        'precipitation_probability' => [10, 80],
-                        'precipitation' => [0.1, 4.2],
-                        'cloudcover' => [20, 90],
-                    ],
-                ]),
-                ['http_code' => 200]
-            )
-        );
-
-        $storage  = new InMemoryObservationStorage();
-        $provider = new OpenWeatherHintProvider(
-            $client,
-            new ArrayAdapter(),
-            $storage,
-            'https://api.test/weather',
-            'api-key',
-            3600,
-            0
-        );
-
-        $media = $this->makeMediaFixture(
-            id: 25,
-            filename: 'meteo.jpg',
-            takenAt: '2024-06-01T12:00:00Z',
-            lat: 51.0,
-            lon: 9.0,
-        );
-
-        $hint = $provider->getHint($media);
-
-        self::assertNotNull($hint);
-        self::assertEqualsWithDelta(0.8, $hint['rain_prob'], 1e-6);
-        self::assertEqualsWithDelta(4.2, $hint['precip_mm'], 1e-6);
-        self::assertEqualsWithDelta(0.9, $hint['cloud_cover'], 1e-6);
-    }
-
-    #[Test]
     public function skipsWhenCoordinatesMissing(): void
     {
         $requests = 0;
@@ -191,11 +140,9 @@ final class OpenWeatherHintProviderTest extends TestCase
         $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
-            new ArrayAdapter(),
             $storage,
             'https://api.test/weather',
             'api-key',
-            3600,
             0
         );
 
