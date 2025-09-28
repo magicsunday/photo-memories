@@ -20,6 +20,7 @@ use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Memory;
+use MagicSunday\Memories\Entity\WeatherObservation;
 use Throwable;
 use function class_exists;
 use function count;
@@ -72,6 +73,7 @@ final class EntityManagerFactory
             Cluster::class,
             Memory::class,
             Location::class,
+            WeatherObservation::class,
         ];
 
         $metadata = [];
