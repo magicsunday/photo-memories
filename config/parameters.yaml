@@ -184,4 +184,5 @@ parameters:
     memories.weather.openweather.api_key: '%env(default::string:OPENWEATHER_API_KEY)%'
     memories.weather.openweather.max_past_hours_default: 120
     memories.weather.openweather.max_past_hours: '%env(default:memories.weather.openweather.max_past_hours_default:int:MEMORIES_WEATHER_MAX_PAST_HOURS)%'
-    memories.weather.openweather.source: '%env(default:openweather:string:MEMORIES_WEATHER_SOURCE)%'
+    memories.weather.openweather.source_default: 'openweather'
+    memories.weather.openweather.source: '%env(default:memories.weather.openweather.source_default:string:MEMORIES_WEATHER_SOURCE)%'
