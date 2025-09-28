@@ -18,22 +18,30 @@ final class CompositeClusterScorer
         /**
          * @var array{
          *     quality:float,
+         *     aesthetics:float,
          *     people:float,
+         *     content:float,
          *     density:float,
          *     novelty:float,
          *     holiday:float,
          *     recency:float,
-         *     poi?:float
+         *     location:float,
+         *     poi?:float,
+         *     time_coverage:float
          * }
          */
         private readonly array $weights = [
-            'quality' => 0.23,
-            'people'  => 0.18,
-            'density' => 0.14,
-            'novelty' => 0.10,
-            'holiday' => 0.10,
-            'recency' => 0.20,
-            'poi'     => 0.05,
+            'quality'        => 0.22,
+            'aesthetics'     => 0.10,
+            'people'         => 0.15,
+            'content'        => 0.10,
+            'density'        => 0.08,
+            'novelty'        => 0.08,
+            'holiday'        => 0.07,
+            'recency'        => 0.10,
+            'location'       => 0.05,
+            'poi'            => 0.03,
+            'time_coverage'  => 0.02,
         ],
         /** @var array<string,float> $algorithmBoosts */
         private readonly array $algorithmBoosts = [],
@@ -79,13 +87,15 @@ final class CompositeClusterScorer
         $now          = \time();
 
         foreach ($clusters as $c) {
-            $params = $c->getParams();
+            $params       = $c->getParams();
+            $membersCount = \count($c->getMembers());
+            $mediaItems   = $this->collectMediaItems($c, $mediaMap);
 
             // --- ensure valid time_range (try to reconstruct if invalid)
             /** @var array{from:int,to:int}|null $tr */
             $tr = (\is_array($params['time_range'] ?? null)) ? $params['time_range'] : null;
             if (!$this->isValidTimeRange($tr)) {
-                $re = $this->computeTimeRangeFromMembers($c, $mediaMap);
+                $re = $this->computeTimeRangeFromItems($mediaItems);
                 if ($re !== null) {
                     $tr = $re;
                     $c->setParam('time_range', $re);
@@ -94,20 +104,39 @@ final class CompositeClusterScorer
                 }
             }
 
-            // --- quality_avg
-            $quality = (float) ($params['quality_avg'] ?? $this->computeQualityAvg($c, $mediaMap));
-            $c->setParam('quality_avg', $quality);
+            // --- quality & aesthetics
+            $qualityMetrics = $this->computeQualityMetrics($mediaItems);
+            $c->setParam('quality_avg', $qualityMetrics['resolution_score']);
+            $c->setParam('quality_resolution', $qualityMetrics['resolution_score']);
+            $c->setParam('quality_resolution_samples', $qualityMetrics['resolution_samples']);
+            $c->setParam('quality_sharpness', $qualityMetrics['sharpness_score']);
+            $c->setParam('quality_sharpness_samples', $qualityMetrics['sharpness_samples']);
+            $c->setParam('quality_iso_score', $qualityMetrics['iso_score']);
+            $c->setParam('quality_iso_samples', $qualityMetrics['iso_samples']);
+            $c->setParam('quality_score', $qualityMetrics['quality_score']);
+            $c->setParam('aesthetics_score', $qualityMetrics['aesthetics_score']);
+            $c->setParam('aesthetics_brightness', $qualityMetrics['brightness_score']);
+            $c->setParam('aesthetics_brightness_avg', $qualityMetrics['brightness_avg']);
+            $c->setParam('aesthetics_contrast', $qualityMetrics['contrast_score']);
+            $c->setParam('aesthetics_contrast_avg', $qualityMetrics['contrast_avg']);
+            $c->setParam('aesthetics_entropy', $qualityMetrics['entropy_score']);
+            $c->setParam('aesthetics_entropy_avg', $qualityMetrics['entropy_avg']);
+            $c->setParam('aesthetics_colorfulness', $qualityMetrics['colorfulness_score']);
+            $c->setParam('aesthetics_colorfulness_avg', $qualityMetrics['colorfulness_avg']);
 
             // --- people
-            $peopleCountRaw = (float) ($params['people_count'] ?? 0.0);
-            $people = $peopleCountRaw > 0.0 ? \min(1.0, $peopleCountRaw / 5.0) : 0.0;
+            $peopleMetrics = $this->computePeopleMetrics($mediaItems, $membersCount);
+            $people        = $peopleMetrics['score'];
             $c->setParam('people', $people);
+            $c->setParam('people_count', $peopleMetrics['total_mentions']);
+            $c->setParam('people_unique', $peopleMetrics['unique_people']);
+            $c->setParam('people_coverage', $peopleMetrics['coverage']);
 
             // --- density (only with valid time)
             $density = 0.0;
             if ($tr !== null) {
                 $duration = \max(1, (int) $tr['to'] - (int) $tr['from']);
-                $n        = \max(1, \count($c->getMembers()));
+                $n        = \max(1, $membersCount);
                 $density  = \min(1.0, $n / \max(60.0, (float) $duration / 60.0));
                 $c->setParam('density', $density);
             }
@@ -135,15 +164,41 @@ final class CompositeClusterScorer
             $poiScore = $this->computePoiScore($c);
             $c->setParam('poi_score', $poiScore);
 
+            // --- content & keywords
+            $contentMetrics = $this->computeContentMetrics($mediaItems, $membersCount, $params);
+            $contentScore   = $contentMetrics['score'];
+            $c->setParam('content', $contentScore);
+            $c->setParam('content_keywords_unique', $contentMetrics['unique_keywords']);
+            $c->setParam('content_keywords_total', $contentMetrics['total_keywords']);
+            $c->setParam('content_coverage', $contentMetrics['coverage']);
+
+            // --- location quality
+            $locationMetrics = $this->computeLocationMetrics($mediaItems, $membersCount);
+            $locationScore   = $locationMetrics['score'];
+            $c->setParam('location_score', $locationScore);
+            $c->setParam('location_geo_coverage', $locationMetrics['geo_coverage']);
+
+            // --- temporal coverage
+            $temporalMetrics = $this->computeTemporalMetrics($mediaItems, $membersCount, $tr);
+            $temporalScore   = $temporalMetrics['score'];
+            $c->setParam('temporal_score', $temporalScore);
+            $c->setParam('temporal_coverage', $temporalMetrics['coverage']);
+            $c->setParam('temporal_duration_seconds', $temporalMetrics['duration_seconds']);
+            $c->setParam('temporal_duration_minutes', $temporalMetrics['duration_seconds'] / 60.0);
+
             // --- weighted sum
             $score =
-                $this->weights['quality'] * $quality +
-                $this->weights['people']  * $people  +
-                $this->weights['density'] * $density +
-                $this->weights['novelty'] * $novelty +
-                $this->weights['holiday'] * $holiday +
-                $this->weights['recency'] * $recency +
-                ($this->weights['poi'] ?? 0.0) * $poiScore;
+                ($this->weights['quality'] ?? 0.0)       * $qualityMetrics['quality_score'] +
+                ($this->weights['aesthetics'] ?? 0.0)    * $qualityMetrics['aesthetics_score'] +
+                ($this->weights['people'] ?? 0.0)        * $people +
+                ($this->weights['content'] ?? 0.0)       * $contentScore +
+                ($this->weights['density'] ?? 0.0)       * $density +
+                ($this->weights['novelty'] ?? 0.0)       * $novelty +
+                ($this->weights['holiday'] ?? 0.0)       * $holiday +
+                ($this->weights['recency'] ?? 0.0)       * $recency +
+                ($this->weights['location'] ?? 0.0)      * $locationScore +
+                ($this->weights['poi'] ?? 0.0)           * $poiScore +
+                ($this->weights['time_coverage'] ?? 0.0) * $temporalScore;
 
             $algorithm = $c->getAlgorithm();
             $boost     = $this->algorithmBoosts[$algorithm] ?? 1.0;
@@ -160,6 +215,384 @@ final class CompositeClusterScorer
         });
 
         return $clusters;
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     */
+    private function computeQualityMetrics(array $mediaItems): array
+    {
+        $resolutionSum   = 0.0;
+        $resolutionCount = 0;
+        $sharpnessSum    = 0.0;
+        $sharpnessCount  = 0;
+        $isoScoreSum     = 0.0;
+        $isoCount        = 0;
+
+        $brightnessSum  = 0.0;
+        $brightnessCount = 0;
+        $contrastSum    = 0.0;
+        $contrastCount  = 0;
+        $entropySum     = 0.0;
+        $entropyCount   = 0;
+        $colorSum       = 0.0;
+        $colorCount     = 0;
+
+        foreach ($mediaItems as $media) {
+            $w = $media->getWidth();
+            $h = $media->getHeight();
+            if ($w !== null && $h !== null && $w > 0 && $h > 0) {
+                $mp = ((float) $w * (float) $h) / 1_000_000.0;
+                $resolutionSum += $this->clamp01($mp / \max(1e-6, $this->qualityBaselineMegapixels));
+                $resolutionCount++;
+            }
+
+            $sharpness = $media->getSharpness();
+            if ($sharpness !== null) {
+                $sharpnessSum += $this->clamp01($sharpness);
+                $sharpnessCount++;
+            }
+
+            $iso = $media->getIso();
+            if ($iso !== null && $iso > 0) {
+                $isoScoreSum += $this->normalizeIso($iso);
+                $isoCount++;
+            }
+
+            $brightness = $media->getBrightness();
+            if ($brightness !== null) {
+                $brightnessSum += $this->clamp01($brightness);
+                $brightnessCount++;
+            }
+
+            $contrast = $media->getContrast();
+            if ($contrast !== null) {
+                $contrastSum += $this->clamp01($contrast);
+                $contrastCount++;
+            }
+
+            $entropy = $media->getEntropy();
+            if ($entropy !== null) {
+                $entropySum += $this->clamp01($entropy);
+                $entropyCount++;
+            }
+
+            $colorfulness = $media->getColorfulness();
+            if ($colorfulness !== null) {
+                $colorSum += $this->clamp01($colorfulness);
+                $colorCount++;
+            }
+        }
+
+        $resolutionScore = $resolutionCount > 0 ? $resolutionSum / $resolutionCount : 0.5;
+        $sharpnessScore  = $sharpnessCount > 0 ? $sharpnessSum / $sharpnessCount : 0.5;
+        $isoScoreValue   = $isoCount > 0 ? $isoScoreSum / $isoCount : null;
+
+        $brightnessAvg = $brightnessCount > 0 ? $brightnessSum / $brightnessCount : null;
+        $contrastAvg   = $contrastCount > 0 ? $contrastSum / $contrastCount : null;
+        $entropyAvg    = $entropyCount > 0 ? $entropySum / $entropyCount : null;
+        $colorAvg      = $colorCount > 0 ? $colorSum / $colorCount : null;
+
+        $brightnessScore = $brightnessAvg !== null ? $this->balancedScore($brightnessAvg, 0.55, 0.45) : null;
+        $contrastScore   = $contrastAvg !== null ? $contrastAvg : null;
+        $entropyScore    = $entropyAvg !== null ? $entropyAvg : null;
+        $colorScore      = $colorAvg !== null ? $colorAvg : null;
+
+        $qualityScore = $this->combineScores([
+            [$resolutionScore, 0.4],
+            [$sharpnessScore, 0.35],
+            [$isoScoreValue, 0.25],
+        ], 0.5);
+
+        $aestheticScore = $this->combineScores([
+            [$brightnessScore, 0.25],
+            [$contrastScore, 0.25],
+            [$entropyScore, 0.25],
+            [$colorScore, 0.25],
+        ], 0.5);
+
+        return [
+            'quality_score'          => $qualityScore,
+            'aesthetics_score'       => $aestheticScore,
+            'resolution_score'       => $resolutionScore,
+            'resolution_samples'     => $resolutionCount,
+            'sharpness_score'        => $sharpnessScore,
+            'sharpness_samples'      => $sharpnessCount,
+            'iso_score'              => $isoScoreValue ?? 0.6,
+            'iso_samples'            => $isoCount,
+            'brightness_score'       => $brightnessScore ?? 0.5,
+            'brightness_avg'         => $brightnessAvg,
+            'contrast_score'         => $contrastScore ?? 0.5,
+            'contrast_avg'           => $contrastAvg,
+            'entropy_score'          => $entropyScore ?? 0.5,
+            'entropy_avg'            => $entropyAvg,
+            'colorfulness_score'     => $colorScore ?? 0.5,
+            'colorfulness_avg'       => $colorAvg,
+        ];
+    }
+
+    /**
+     * @param list<array{0:float|null,1:float}> $components
+     */
+    private function combineScores(array $components, float $default = 0.0): float
+    {
+        $sum   = 0.0;
+        $total = 0.0;
+
+        foreach ($components as [$value, $weight]) {
+            if ($value === null) {
+                continue;
+            }
+            $sum   += $this->clamp01($value) * $weight;
+            $total += $weight;
+        }
+
+        if ($total <= 0.0) {
+            return $default;
+        }
+
+        return $sum / $total;
+    }
+
+    private function balancedScore(float $value, float $target, float $tolerance): float
+    {
+        $delta = \abs($value - $target);
+        if ($delta >= $tolerance) {
+            return 0.0;
+        }
+
+        return $this->clamp01(1.0 - ($delta / $tolerance));
+    }
+
+    private function normalizeIso(int $iso): float
+    {
+        $min = 50.0;
+        $max = 6400.0;
+        $iso = (float) \max($min, \min($max, $iso));
+        $ratio = \log($iso / $min) / \log($max / $min);
+
+        return $this->clamp01(1.0 - $ratio);
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     * @return array{score:float,unique_people:int,total_mentions:int,coverage:float}
+     */
+    private function computePeopleMetrics(array $mediaItems, int $totalMembers): array
+    {
+        $unique = [];
+        $mentions = 0;
+        $itemsWithPersons = 0;
+
+        foreach ($mediaItems as $media) {
+            $added = false;
+
+            if (\method_exists($media, 'getPersonIds')) {
+                /** @var list<int> $ids */
+                $ids = (array) $media->getPersonIds();
+                if ($ids !== []) {
+                    $itemsWithPersons++;
+                    foreach ($ids as $id) {
+                        $unique['id:' . (string) $id] = true;
+                    }
+                    $mentions += \count($ids);
+                    $added = true;
+                }
+            }
+
+            if ($added) {
+                continue;
+            }
+
+            $persons = $media->getPersons();
+            if (\is_array($persons) && $persons !== []) {
+                $itemsWithPersons++;
+                foreach ($persons as $name) {
+                    $name = \trim((string) $name);
+                    if ($name === '') {
+                        continue;
+                    }
+                    $unique['name:' . \strtolower($name)] = true;
+                    $mentions++;
+                }
+            }
+        }
+
+        $coverage      = $totalMembers > 0 ? $itemsWithPersons / $totalMembers : 0.0;
+        $uniqueCount   = \count($unique);
+        $diversity     = $uniqueCount > 0 ? \min(1.0, $uniqueCount / 4.0) : 0.0;
+        $densityScore  = $totalMembers > 0 ? \min(1.0, ($mentions / \max(1, $totalMembers)) / 2.0) : 0.0;
+
+        $score = $this->combineScores([
+            [$coverage, 0.5],
+            [$diversity, 0.3],
+            [$densityScore, 0.2],
+        ]);
+
+        return [
+            'score'           => $score,
+            'unique_people'   => $uniqueCount,
+            'total_mentions'  => $mentions,
+            'coverage'        => $this->clamp01($coverage),
+        ];
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     * @param array<string,mixed> $params
+     * @return array{score:float,unique_keywords:int,total_keywords:int,coverage:float}
+     */
+    private function computeContentMetrics(array $mediaItems, int $totalMembers, array $params): array
+    {
+        $keywordSet    = [];
+        $keywordTotal  = 0;
+        $itemsWithTags = 0;
+
+        foreach ($mediaItems as $media) {
+            $keywords = $media->getKeywords();
+            if (!\is_array($keywords) || $keywords === []) {
+                continue;
+            }
+
+            $itemsWithTags++;
+            foreach ($keywords as $keyword) {
+                $normalized = \strtolower(\trim((string) $keyword));
+                if ($normalized === '') {
+                    continue;
+                }
+                $keywordSet[$normalized] = true;
+                $keywordTotal++;
+            }
+        }
+
+        if (\is_array($params['keywords'] ?? null)) {
+            foreach ($params['keywords'] as $keyword) {
+                $normalized = \strtolower(\trim((string) $keyword));
+                if ($normalized === '') {
+                    continue;
+                }
+                $keywordSet[$normalized] = true;
+            }
+        }
+
+        $coverage = $totalMembers > 0 ? $itemsWithTags / $totalMembers : 0.0;
+        $unique   = \count($keywordSet);
+        $diversityScore = $unique > 0 ? \min(1.0, $unique / 6.0) : 0.0;
+
+        $score = $this->combineScores([
+            [$coverage, 0.55],
+            [$diversityScore, 0.45],
+        ]);
+
+        return [
+            'score'           => $score,
+            'unique_keywords' => $unique,
+            'total_keywords'  => $keywordTotal,
+            'coverage'        => $this->clamp01($coverage),
+        ];
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     * @return array{score:float,geo_coverage:float}
+     */
+    private function computeLocationMetrics(array $mediaItems, int $totalMembers): array
+    {
+        $gpsItems = [];
+        foreach ($mediaItems as $media) {
+            if ($media->getGpsLat() !== null && $media->getGpsLon() !== null) {
+                $gpsItems[] = $media;
+            }
+        }
+
+        $geoCoverage = $totalMembers > 0 ? \count($gpsItems) / $totalMembers : 0.0;
+        $compactness = null;
+
+        if (\count($gpsItems) >= 2) {
+            $centroid = MediaMath::centroid($gpsItems);
+            $sum = 0.0;
+            foreach ($gpsItems as $media) {
+                $sum += MediaMath::haversineDistanceInMeters(
+                    (float) $centroid['lat'],
+                    (float) $centroid['lon'],
+                    (float) $media->getGpsLat(),
+                    (float) $media->getGpsLon()
+                );
+            }
+            $avgDistance = $sum / \count($gpsItems);
+            $compactness = $this->clamp01(1.0 / (1.0 + $avgDistance / 1000.0));
+        }
+
+        $score = $this->combineScores([
+            [$geoCoverage, 0.7],
+            [$compactness, 0.3],
+        ]);
+
+        return [
+            'score'        => $score,
+            'geo_coverage' => $this->clamp01($geoCoverage),
+        ];
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     * @param array{from:int,to:int}|null $timeRange
+     * @return array{score:float,coverage:float,duration_seconds:int}
+     */
+    private function computeTemporalMetrics(array $mediaItems, int $totalMembers, ?array $timeRange): array
+    {
+        $timestamped = 0;
+        foreach ($mediaItems as $media) {
+            if ($media->getTakenAt() instanceof DateTimeImmutable) {
+                $timestamped++;
+            }
+        }
+
+        $coverage = $totalMembers > 0 ? $timestamped / $totalMembers : 0.0;
+        $durationSeconds = 0;
+        if ($timeRange !== null) {
+            $durationSeconds = \max(0, (int) $timeRange['to'] - (int) $timeRange['from']);
+        }
+
+        $durationScore = $durationSeconds > 0 ? $this->normalizeDuration($durationSeconds) : null;
+        $score = $this->combineScores([
+            [$coverage, 0.6],
+            [$durationScore, 0.4],
+        ]);
+
+        return [
+            'score'             => $score,
+            'coverage'          => $this->clamp01($coverage),
+            'duration_seconds'  => $durationSeconds,
+        ];
+    }
+
+    private function normalizeDuration(int $seconds): float
+    {
+        if ($seconds <= 0) {
+            return 0.0;
+        }
+
+        $scale = 3 * 3600.0; // ~3 hours to reach ~0.95
+        $score = 1.0 - \exp(-$seconds / $scale);
+
+        return $this->clamp01($score);
+    }
+
+    /**
+     * @return list<Media>
+     */
+    private function collectMediaItems(ClusterDraft $cluster, array $mediaMap): array
+    {
+        $items = [];
+        foreach ($cluster->getMembers() as $id) {
+            $media = $mediaMap[$id] ?? null;
+            if ($media instanceof Media) {
+                $items[] = $media;
+            }
+        }
+
+        return $items;
     }
 
     /** @return array<int, Media> */
@@ -208,21 +641,15 @@ final class CompositeClusterScorer
         return $from >= $minTs && $to >= $minTs;
     }
 
-    /** @return array{from:int,to:int}|null */
-    private function computeTimeRangeFromMembers(ClusterDraft $c, array $mediaMap): ?array
+    /** @param list<Media> $mediaItems @return array{from:int,to:int}|null */
+    private function computeTimeRangeFromItems(array $mediaItems): ?array
     {
-        $items = [];
-        foreach ($c->getMembers() as $id) {
-            $m = $mediaMap[$id] ?? null;
-            if ($m instanceof Media) {
-                $items[] = $m;
-            }
-        }
-        if ($items === []) {
+        if ($mediaItems === []) {
             return null;
         }
+
         return MediaMath::timeRangeReliable(
-            $items,
+            $mediaItems,
             $this->timeRangeMinSamples,
             $this->timeRangeMinCoverage,
             $this->minValidYear
