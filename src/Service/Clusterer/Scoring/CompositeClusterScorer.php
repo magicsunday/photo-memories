@@ -9,6 +9,21 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+/**
+ * Scores clustered media sets by combining multiple heuristic signals.
+ *
+ * The composite scorer reads raw clustering output (`ClusterDraft` objects)
+ * and enriches each cluster with metrics such as photographic quality,
+ * people coverage, keyword diversity, temporal span, and point-of-interest
+ * context. The metrics are converted into normalised scores and aggregated
+ * with the configured weight matrix so downstream consumers can rank
+ * clusters or inspect the individual contributing factors.
+ *
+ * Each heuristic intentionally reuses already calculated parameters when
+ * available (e.g. pre-computed quality averages) and falls back to deriving
+ * values from the attached media entities to avoid expensive recalculation
+ * in hot paths.
+ */
 final class CompositeClusterScorer
 {
     public function __construct(
@@ -73,6 +88,15 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Calculates the composite score for every cluster in the provided list.
+     *
+     * The method hydrates the media entities required for heuristic
+     * calculations, reconstructs missing metadata (such as the time range),
+     * computes each contributing factor, and finally blends the normalised
+     * values with the configured weights. The enriched metrics are persisted
+     * on the `ClusterDraft` so later pipeline stages can inspect or reuse the
+     * intermediate values.
+     *
      * @param list<ClusterDraft> $clusters
      * @return list<ClusterDraft>
      */
@@ -131,6 +155,10 @@ final class CompositeClusterScorer
             $c->setParam('people_coverage', $peopleMetrics['coverage']);
 
             // --- density (only with valid time)
+            // Density approximates how "packed" an event is within its
+            // captured duration. Without a reliable time range the signal is
+            // meaningless and defaults to zero so it does not skew the final
+            // score.
             $density = 0.0;
             if ($tr !== null) {
                 $duration = \max(1, (int) $tr['to'] - (int) $tr['from']);
@@ -214,7 +242,16 @@ final class CompositeClusterScorer
         return $clusters;
     }
 
-    /** @return array<int, Media> */
+    /**
+     * Loads all media entities referenced by the given clusters.
+     *
+     * The lookup is batched to keep Doctrine queries efficient and returns an
+     * associative map keyed by the media identifier for constant-time access
+     * during the scoring loop.
+     *
+     * @param list<ClusterDraft> $clusters
+     * @return array<int, Media>
+     */
     private function loadMediaMap(array $clusters): array
     {
         $ids = [];
@@ -247,6 +284,9 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Collects the media entities for a single cluster from the preloaded map.
+     *
+     * @param array<int, Media> $mediaMap
      * @return list<Media>
      */
     private function collectMediaItems(ClusterDraft $cluster, array $mediaMap): array
@@ -262,6 +302,10 @@ final class CompositeClusterScorer
         return $items;
     }
 
+    /**
+     * Validates that a time range is chronological and within the accepted
+     * year window.
+     */
     private function isValidTimeRange(?array $tr): bool
     {
         if (!\is_array($tr) || !isset($tr['from'], $tr['to'])) {
@@ -276,7 +320,15 @@ final class CompositeClusterScorer
         return $from >= $minTs && $to >= $minTs;
     }
 
-    /** @return array{from:int,to:int}|null */
+    /**
+     * Attempts to rebuild a cluster's time range from its media members.
+     *
+     * Relies on {@see MediaMath::timeRangeReliable()} to filter sparse
+     * samples and returns `null` when the heuristics deem the coverage
+     * unreliable.
+     *
+     * @return array{from:int,to:int}|null
+     */
     private function computeTimeRangeFromMembers(ClusterDraft $c, array $mediaMap): ?array
     {
         $items = [];
@@ -297,6 +349,9 @@ final class CompositeClusterScorer
         );
     }
 
+    /**
+     * Builds a POI score from metadata gathered by geospatial enrichment.
+     */
     private function computePoiScore(ClusterDraft $cluster): float
     {
         $params = $cluster->getParams();
@@ -329,6 +384,9 @@ final class CompositeClusterScorer
         return $this->clamp01($score);
     }
 
+    /**
+     * Calculates configured bonus multipliers for specific POI categories.
+     */
     private function lookupPoiCategoryBoost(?string $categoryKey, ?string $categoryValue): float
     {
         if ($this->poiCategoryBoosts === []) {
@@ -352,11 +410,17 @@ final class CompositeClusterScorer
         return $boost;
     }
 
+    /**
+     * Normalises a mixed value to a trimmed string or `null` when empty.
+     */
     private function stringOrNull(mixed $value): ?string
     {
         return \is_string($value) && $value !== '' ? $value : null;
     }
 
+    /**
+     * Restricts a value into the inclusive [0.0, 1.0] range.
+     */
     private function clamp01(float $value): float
     {
         if ($value <= 0.0) {
@@ -371,6 +435,12 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Aggregates sensor- and analysis-based quality metrics for media items.
+     *
+     * The resulting array exposes both the combined quality score and the
+     * intermediate averages (resolution, sharpness, ISO, aesthetics) so they
+     * can be persisted on the cluster for debugging or downstream tuning.
+     *
      * @param list<Media> $mediaItems
      * @return array{quality:float,aesthetics:float|null,resolution:float|null,sharpness:float|null,iso:float|null}
      */
@@ -470,6 +540,12 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Analyses person annotations and derives a normalised people score.
+     *
+     * Existing cached values from previous pipeline stages are reused when
+     * available; otherwise the method counts unique names, total mentions, and
+     * coverage across media items to build the score and supporting metrics.
+     *
      * @param list<Media> $mediaItems
      * @param array<string,mixed> $params
      * @return array{score:float,unique:int,mentions:int,coverage:float}
@@ -529,6 +605,12 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Evaluates keyword richness, density, and coverage for a cluster.
+     *
+     * Keywords are normalised to lower case to avoid duplicate counting. When
+     * a previous enrichment pass already populated the statistics the cached
+     * values are reused instead of scanning the media items again.
+     *
      * @param list<Media> $mediaItems
      * @param array<string,mixed> $params
      * @return array{score:float,unique_keywords:int,total_keywords:int,coverage:float}
@@ -587,6 +669,12 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Scores the geospatial quality of a cluster.
+     *
+     * Coverage rewards clusters where many items contain GPS data, while the
+     * compactness component penalises wide geographic spreads that may signal
+     * unrelated events being grouped together.
+     *
      * @param list<Media> $mediaItems
      * @param array<string,mixed> $params
      * @return array{score:float,geo_coverage:float}
@@ -655,6 +743,8 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Derives a temporal coverage score combining timestamp density and span.
+     *
      * @param list<Media> $mediaItems
      * @param array{from:int,to:int}|null $timeRange
      * @return array{score:float,coverage:float,duration_seconds:int}
@@ -689,6 +779,8 @@ final class CompositeClusterScorer
     }
 
     /**
+     * Blends weighted components into a single normalised score.
+     *
      * @param list<array{0:float|null,1:float}> $components
      */
     private function combineScores(array $components, ?float $default): float
@@ -711,6 +803,9 @@ final class CompositeClusterScorer
         return $sum / $weightSum;
     }
 
+    /**
+     * Converts a value into a score relative to a desired target band.
+     */
     private function balancedScore(float $value, float $target, float $tolerance): float
     {
         $delta = \abs($value - $target);
@@ -721,6 +816,9 @@ final class CompositeClusterScorer
         return $this->clamp01(1.0 - ($delta / $tolerance));
     }
 
+    /**
+     * Maps camera ISO values into a [0,1] score, favouring low-noise captures.
+     */
     private function normalizeIso(int $iso): float
     {
         $min = 50.0;
@@ -731,6 +829,10 @@ final class CompositeClusterScorer
         return $this->clamp01(1.0 - $ratio);
     }
 
+    /**
+     * Scores cluster duration, rewarding concise events and tapering off for
+     * very long spans.
+     */
     private function spanScore(float $durationSeconds): float
     {
         $hours = $durationSeconds / 3600.0;
@@ -750,6 +852,9 @@ final class CompositeClusterScorer
         return $this->clamp01(0.6 - (($hours - 48.0) / 192.0) * 0.6);
     }
 
+    /**
+     * Uses the configured holiday resolver to detect holiday/weekend overlap.
+     */
     private function computeHolidayScore(int $fromTs, int $toTs): float
     {
         // guard against swapped or absurd ranges (should already be filtered)
@@ -782,6 +887,9 @@ final class CompositeClusterScorer
         return 0.0;
     }
 
+    /**
+     * Backwards-compatible helper retained for legacy consumers.
+     */
     private function computeQualityAvg(ClusterDraft $c, array $mediaMap): float
     {
         $metrics = $this->computeQualityMetrics($this->collectMediaItems($c, $mediaMap));
