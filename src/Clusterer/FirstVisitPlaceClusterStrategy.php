@@ -83,6 +83,9 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
         /** @var list<ClusterDraft> $out */
         $out = [];
 
+        /** @var array<string, array{index: int, members: int, duration: int}> $seenPlaceDay */
+        $seenPlaceDay = [];
+
         foreach ($cellDayMap as $cell => $daysMap) {
             $eligibleDaysMap = $this->filterGroupsByMinItems($daysMap, $this->minItemsPerDay);
 
@@ -98,7 +101,7 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
             $runDays = [];
             $prev = null;
 
-            $flush = function () use (&$runDays, &$out, $eligibleDaysMap, $cell): void {
+            $flush = function () use (&$runDays, &$out, $eligibleDaysMap, $cell, &$seenPlaceDay, $tz): void {
                 if (\count($runDays) === 0) {
                     return;
                 }
@@ -109,7 +112,8 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                         $members[] = $m;
                     }
                 }
-                if (\count($members) < $this->minItemsTotal) {
+                $memberCount = \count($members);
+                if ($memberCount < $this->minItemsTotal) {
                     $runDays = [];
                     return;
                 }
@@ -117,6 +121,10 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
 
                 $centroid = MediaMath::centroid($members);
                 $time     = MediaMath::timeRange($members);
+                $dayLocal = (new DateTimeImmutable('@' . (string) $time['from']))
+                    ->setTimezone($tz)
+                    ->format('Y-m-d');
+                $duration = \max(0, (int) ($time['to'] - $time['from']));
 
                 $params = [
                     'grid_cell'  => $cell,
@@ -129,12 +137,48 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                     $params['place'] = $label;
                 }
 
-                $out[] = new ClusterDraft(
+                $draft = new ClusterDraft(
                     algorithm: 'first_visit_place',
                     params: $params,
                     centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
                     members: \array_map(static fn(Media $m): int => $m->getId(), $members)
                 );
+
+                if ($label !== null) {
+                    $key = \sprintf('%s|%s', $label, $dayLocal);
+
+                    if (isset($seenPlaceDay[$key])) {
+                        $existing = $seenPlaceDay[$key];
+                        $existingMembers = $existing['members'];
+                        $existingDuration = $existing['duration'];
+
+                        $shouldReplace = false;
+
+                        if ($memberCount > $existingMembers) {
+                            $shouldReplace = true;
+                        } elseif ($memberCount === $existingMembers && $duration < $existingDuration) {
+                            $shouldReplace = true;
+                        }
+
+                        if ($shouldReplace) {
+                            $out[$existing['index']] = $draft;
+                            $seenPlaceDay[$key] = [
+                                'index' => $existing['index'],
+                                'members' => $memberCount,
+                                'duration' => $duration,
+                            ];
+                        }
+                    } else {
+                        $seenPlaceDay[$key] = [
+                            'index' => \count($out),
+                            'members' => $memberCount,
+                            'duration' => $duration,
+                        ];
+                        $out[] = $draft;
+                    }
+                } else {
+                    $out[] = $draft;
+                }
 
                 $runDays = [];
             };
