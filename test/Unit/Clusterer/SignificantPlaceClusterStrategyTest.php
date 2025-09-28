@@ -87,6 +87,13 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
                 $location->setPois([
                     [
                         'name' => 'Cafe Central',
+                        'names' => [
+                            'default' => 'Cafe Central',
+                            'localized' => [
+                                'de' => 'Café Central',
+                            ],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'amenity',
                         'categoryValue' => 'cafe',
                         'tags' => ['cuisine' => 'coffee_shop'],

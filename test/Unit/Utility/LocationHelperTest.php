@@ -25,6 +25,11 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/1',
                         'name' => 'Central Bakery',
+                        'names' => [
+                            'default' => 'Central Bakery',
+                            'localized' => [],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'shop',
                         'categoryValue' => 'bakery',
                         'distanceMeters' => 15.0,
@@ -35,6 +40,11 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/2',
                         'name' => 'City Museum',
+                        'names' => [
+                            'default' => 'City Museum',
+                            'localized' => [],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'tourism',
                         'categoryValue' => 'museum',
                         'distanceMeters' => 95.0,
@@ -65,6 +75,11 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/10',
                         'name' => 'Old Town Tower',
+                        'names' => [
+                            'default' => 'Old Town Tower',
+                            'localized' => [],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'man_made',
                         'categoryValue' => 'tower',
                         'distanceMeters' => 40.0,
@@ -76,6 +91,11 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/11',
                         'name' => 'Parking Lot',
+                        'names' => [
+                            'default' => 'Parking Lot',
+                            'localized' => [],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'amenity',
                         'categoryValue' => 'parking',
                         'distanceMeters' => 10.0,
@@ -97,6 +117,13 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/20',
                         'name' => 'City Museum',
+                        'names' => [
+                            'default' => 'City Museum',
+                            'localized' => [
+                                'de' => 'Stadtmuseum',
+                            ],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'tourism',
                         'categoryValue' => 'museum',
                         'distanceMeters' => 110.0,
@@ -108,6 +135,11 @@ final class LocationHelperTest extends TestCase
                     [
                         'id' => 'node/21',
                         'name' => 'Central Cafe',
+                        'names' => [
+                            'default' => 'Central Cafe',
+                            'localized' => [],
+                            'alternates' => [],
+                        ],
                         'categoryKey' => 'amenity',
                         'categoryValue' => 'cafe',
                         'distanceMeters' => 15.0,
@@ -132,5 +164,42 @@ final class LocationHelperTest extends TestCase
         self::assertArrayHasKey('tourism', $context['tags']);
         self::assertSame('museum', $context['tags']['tourism']);
         self::assertSame('Q1', $context['tags']['wikidata']);
+    }
+
+    #[Test]
+    public function displayLabelHonoursPreferredLocale(): void
+    {
+        $helper = new LocationHelper('de');
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'poi-locale-1',
+            displayName: 'Test Location',
+            lat: 48.1,
+            lon: 11.5,
+            configure: static function (Location $loc): void {
+                $loc->setPois([
+                    [
+                        'id' => 'node/30',
+                        'name' => 'Old City Hall',
+                        'names' => [
+                            'default' => 'Old City Hall',
+                            'localized' => [
+                                'de' => 'Altes Rathaus',
+                                'en' => 'Old City Hall',
+                            ],
+                            'alternates' => ['Historisches Rathaus'],
+                        ],
+                        'categoryKey' => 'historic',
+                        'categoryValue' => 'building',
+                        'distanceMeters' => 20.0,
+                        'tags' => [
+                            'historic' => 'yes',
+                        ],
+                    ],
+                ]);
+            },
+        );
+
+        self::assertSame('Altes Rathaus', $helper->displayLabel($location));
     }
 }

@@ -63,6 +63,21 @@ final class LocationHelper
     ];
 
     /**
+     * @var list<string>
+     */
+    private readonly array $preferredLocaleKeys;
+
+    public function __construct(?string $preferredLocale = null)
+    {
+        $preferredLocale = $preferredLocale !== null ? \trim($preferredLocale) : null;
+        if ($preferredLocale === '') {
+            $preferredLocale = null;
+        }
+
+        $this->preferredLocaleKeys = $this->buildPreferredLocaleKeys($preferredLocale);
+    }
+
+    /**
      * Returns a stable locality key for grouping.
      * Priority: suburb -> city -> county -> state -> country -> cell.
      */
@@ -104,7 +119,7 @@ final class LocationHelper
 
         $poi = $this->primaryPoi($loc);
         if ($poi !== null) {
-            $label = $poi['name'] ?? $poi['categoryValue'];
+            $label = $this->preferredPoiLabel($poi) ?? $poi['categoryValue'];
             if ($label !== null) {
                 return $label;
             }
@@ -206,7 +221,7 @@ final class LocationHelper
                 continue;
             }
 
-            $label = $poi['name'] ?? $poi['categoryValue'];
+            $label = $this->preferredPoiLabel($poi) ?? $poi['categoryValue'];
             if ($label === null) {
                 continue;
             }
@@ -263,7 +278,13 @@ final class LocationHelper
     /**
      * Returns the highest ranked POI for the location using tag-based weighting.
      *
-     * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     * @return array{
+     *     name:?string,
+     *     names:array{default:?string, localized:array<string,string>, alternates:list<string>},
+     *     categoryKey:?string,
+     *     categoryValue:?string,
+     *     tags:array<string,string>
+     * }|null
      */
     private function primaryPoi(Location $loc): ?array
     {
@@ -327,7 +348,14 @@ final class LocationHelper
             }
         );
 
-        /** @var array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>} $best */
+        /** @var array{
+         *     name:?string,
+         *     names:array{default:?string, localized:array<string,string>, alternates:list<string>},
+         *     categoryKey:?string,
+         *     categoryValue:?string,
+         *     tags:array<string,string>
+         * } $best
+         */
         $best = $candidates[0]['data'];
 
         return $best;
@@ -335,11 +363,21 @@ final class LocationHelper
 
     /**
      * @param array<string,mixed> $poi
-     * @return array{name:?string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
+     * @return array{
+     *     name:?string,
+     *     names:array{default:?string, localized:array<string,string>, alternates:list<string>},
+     *     categoryKey:?string,
+     *     categoryValue:?string,
+     *     tags:array<string,string>
+     * }|null
      */
     private function normalisePoi(array $poi): ?array
     {
         $name = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
+        $names = $this->normaliseNames($poi['names'] ?? null, $name);
+        if ($name === null) {
+            $name = $this->coalesceName($names);
+        }
         $categoryKey = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
         $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
 
@@ -359,6 +397,7 @@ final class LocationHelper
 
         return [
             'name' => $name,
+            'names' => $names,
             'categoryKey' => $categoryKey,
             'categoryValue' => $categoryValue,
             'tags' => $tags,
@@ -408,5 +447,198 @@ final class LocationHelper
         }
 
         return null;
+    }
+
+    /**
+     * @param array{name:?string, names:array{default:?string, localized:array<string,string>, alternates:list<string>}, categoryKey:?string, categoryValue:?string, tags:array<string,string>} $poi
+     */
+    private function preferredPoiLabel(array $poi): ?string
+    {
+        $names = $poi['names'] ?? null;
+        if (\is_array($names)) {
+            $label = $this->labelFromNames($names);
+            if ($label !== null) {
+                return $label;
+            }
+        }
+
+        $name = $poi['name'] ?? null;
+        return \is_string($name) && $name !== '' ? $name : null;
+    }
+
+    /**
+     * @param array{default:?string, localized:array<string,string>, alternates:list<string>} $names
+     */
+    private function labelFromNames(array $names): ?string
+    {
+        $localized = $names['localized'] ?? [];
+        if (\is_array($localized) && $localized !== []) {
+            foreach ($this->preferredLocaleKeys as $key) {
+                $value = $localized[$key] ?? null;
+                if (\is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        $default = $names['default'] ?? null;
+        if (\is_string($default) && $default !== '') {
+            return $default;
+        }
+
+        if (\is_array($localized)) {
+            foreach ($localized as $value) {
+                if (\is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        $alternates = $names['alternates'] ?? [];
+        if (\is_array($alternates)) {
+            foreach ($alternates as $alternate) {
+                if (\is_string($alternate) && $alternate !== '') {
+                    return $alternate;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array{default:?string, localized:array<string,string>, alternates:list<string>}|null $raw
+     * @return array{default:?string, localized:array<string,string>, alternates:list<string>}
+     */
+    private function normaliseNames(?array $raw, ?string $fallbackDefault): array
+    {
+        $default = $fallbackDefault;
+        $localized = [];
+        $alternates = [];
+
+        if (\is_array($raw)) {
+            $rawDefault = $raw['default'] ?? null;
+            if (\is_string($rawDefault) && $rawDefault !== '') {
+                $default = $rawDefault;
+            }
+
+            $rawLocalized = $raw['localized'] ?? [];
+            if (\is_array($rawLocalized)) {
+                foreach ($rawLocalized as $locale => $value) {
+                    if (!\is_string($locale)) {
+                        continue;
+                    }
+                    $locale = \strtolower(\str_replace(' ', '_', $locale));
+                    if ($locale === '') {
+                        continue;
+                    }
+
+                    if (!\is_string($value) || $value === '') {
+                        continue;
+                    }
+
+                    $localized[$locale] = $value;
+                }
+            }
+
+            $rawAlternates = $raw['alternates'] ?? [];
+            if (\is_array($rawAlternates)) {
+                foreach ($rawAlternates as $alt) {
+                    if (!\is_string($alt)) {
+                        continue;
+                    }
+
+                    $trimmed = \trim($alt);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+
+                    $alternates[$trimmed] = true;
+                }
+            }
+        }
+
+        if ($localized !== []) {
+            \ksort($localized, \SORT_STRING);
+        }
+
+        /** @var list<string> $alternateList */
+        $alternateList = \array_keys($alternates);
+
+        return [
+            'default' => $default,
+            'localized' => $localized,
+            'alternates' => $alternateList,
+        ];
+    }
+
+    /**
+     * @param array{default:?string, localized:array<string,string>, alternates:list<string>} $names
+     */
+    private function coalesceName(array $names): ?string
+    {
+        $default = $names['default'];
+        if (\is_string($default) && $default !== '') {
+            return $default;
+        }
+
+        foreach ($names['localized'] as $value) {
+            if (\is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        foreach ($names['alternates'] as $alternate) {
+            if (\is_string($alternate) && $alternate !== '') {
+                return $alternate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildPreferredLocaleKeys(?string $locale): array
+    {
+        if ($locale === null) {
+            return [];
+        }
+
+        $lower = \strtolower($locale);
+        $normalized = \str_replace('_', '-', $lower);
+
+        $candidates = [];
+        if ($normalized !== '') {
+            $candidates[] = $normalized;
+            $candidates[] = \str_replace('-', '_', $normalized);
+        }
+
+        if (\str_contains($normalized, '-')) {
+            $language = \explode('-', $normalized)[0];
+            if ($language !== '') {
+                $candidates[] = $language;
+            }
+        } elseif ($normalized !== '') {
+            $candidates[] = $normalized;
+        }
+
+        $filtered = [];
+        foreach ($candidates as $candidate) {
+            if (!\is_string($candidate)) {
+                continue;
+            }
+            $trimmed = \trim($candidate);
+            if ($trimmed === '') {
+                continue;
+            }
+            $filtered[$trimmed] = true;
+        }
+
+        /** @var list<string> $keys */
+        $keys = \array_keys($filtered);
+
+        return $keys;
     }
 }
