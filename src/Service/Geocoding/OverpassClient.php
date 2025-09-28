@@ -124,9 +124,8 @@ final class OverpassClient
                 continue; // skip noisier features without any textual context
             }
 
-            $selection = $this->selectRelevantTags($tags);
-            $selectedTags = $selection['tags'];
-            $names = $selection['names'];
+            $selectedTags = $this->selectRelevantTags($tags);
+            $names = $this->extractNames($tags);
 
             $pois[$id] = [
                 'id'             => $id,
@@ -140,7 +139,7 @@ final class OverpassClient
                     2
                 ),
                 'tags'           => $selectedTags,
-                'names'         => $names,
+                'names'          => $names,
             ];
         }
 
@@ -229,7 +228,7 @@ final class OverpassClient
     }
 
     /**
-     * @return array{tags:array<string,string>,names:array<string,string>}
+     * @return array<string,string>
      */
     private function selectRelevantTags(array $tags): array
     {
@@ -241,6 +240,14 @@ final class OverpassClient
             }
         }
 
+        return $selectedTags;
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function extractNames(array $tags): array
+    {
         $names = [];
 
         $name = $this->stringOrNull($tags['name'] ?? null);
@@ -249,11 +256,7 @@ final class OverpassClient
         }
 
         foreach ($tags as $tagKey => $tagValue) {
-            if (!\is_string($tagKey)) {
-                continue;
-            }
-
-            if (!\str_starts_with($tagKey, 'name:')) {
+            if (!\is_string($tagKey) || !\str_starts_with($tagKey, 'name:')) {
                 continue;
             }
 
@@ -268,10 +271,7 @@ final class OverpassClient
             $names['alt_name'] = $altName;
         }
 
-        return [
-            'tags'  => $selectedTags,
-            'names' => $names,
-        ];
+        return $names;
     }
 
     /**
