@@ -61,6 +61,59 @@ final class LocationPoiEnricherTest extends TestCase
     }
 
     #[Test]
+    public function keepsClosestPoisWhenQueryLimitIsUnlimited(): void
+    {
+        $location = $this->makeLocation('place-4', 'Berlin', 52.52, 13.405);
+        $geocode = $this->createGeocodeResult(52.52, 13.405);
+
+        $response = $this->createResponse([
+            'elements' => [
+                [
+                    'type' => 'node',
+                    'id' => 1,
+                    'lat' => 52.5201,
+                    'lon' => 13.405,
+                    'tags' => [
+                        'name' => 'Nearby Cafe',
+                        'amenity' => 'cafe',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id' => 2,
+                    'lat' => 52.5206,
+                    'lon' => 13.406,
+                    'tags' => [
+                        'name' => 'Museum Checkpoint',
+                        'tourism' => 'museum',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id' => 3,
+                    'lat' => 52.522,
+                    'lon' => 13.41,
+                    'tags' => [
+                        'name' => 'Distant Monument',
+                        'historic' => 'monument',
+                    ],
+                ],
+            ],
+        ]);
+
+        $enricher = $this->createEnricher([$response], maxPois: 2, fetchLimitMultiplier: 0.0);
+
+        $usedNetwork = $enricher->enrich($location, $geocode);
+        $pois = $location->getPois();
+
+        self::assertTrue($usedNetwork);
+        self::assertIsArray($pois);
+        self::assertCount(2, $pois);
+        self::assertSame('node/1', $pois[0]['id']);
+        self::assertSame('node/2', $pois[1]['id']);
+    }
+
+    #[Test]
     public function marksAttemptWhenNetworkReturnsNoResults(): void
     {
         $location = $this->makeLocation('place-2', 'Hamburg', 53.55, 9.993);
@@ -105,11 +158,11 @@ final class LocationPoiEnricherTest extends TestCase
     /**
      * @param list<FakeHttpResponse> $responses
      */
-    private function createEnricher(array $responses, int $radius = 250, int $maxPois = 15): LocationPoiEnricher
+    private function createEnricher(array $responses, int $radius = 250, int $maxPois = 15, float $fetchLimitMultiplier = 3.0): LocationPoiEnricher
     {
         $client = new OverpassClient(new FakeHttpClient($responses));
 
-        return new LocationPoiEnricher($client, $radius, $maxPois);
+        return new LocationPoiEnricher($client, $radius, $maxPois, $fetchLimitMultiplier);
     }
 
     private function createGeocodeResult(float $lat, float $lon): GeocodeResult

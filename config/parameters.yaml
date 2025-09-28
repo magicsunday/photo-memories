@@ -20,6 +20,7 @@ parameters:
     memories.geocoding.overpass.timeout: 25
     memories.geocoding.overpass.radius_m: 250
     memories.geocoding.overpass.max_pois: 15
+    memories.geocoding.overpass.fetch_limit_multiplier: 3.0
 
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
