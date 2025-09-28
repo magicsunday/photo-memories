@@ -37,6 +37,13 @@ final class LocationSimilarityStrategyTest extends TestCase
         $museum->setPois([
             [
                 'name'          => 'Museum Island',
+                'names'         => [
+                    'default' => 'Museum Island',
+                    'localized' => [
+                        'de' => 'Museumsinsel',
+                    ],
+                    'alternates' => [],
+                ],
                 'categoryKey'   => 'tourism',
                 'categoryValue' => 'museum',
                 'tags'          => ['wikidata' => 'Q1234'],

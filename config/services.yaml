@@ -25,6 +25,10 @@ services:
         arguments:
             $commands: !tagged command
 
+    MagicSunday\Memories\Utility\LocationHelper:
+        arguments:
+            $preferredLocale: '%memories.localization.preferred_locale%'
+
     ########################################
     # Doctrine EntityManager (ORM 3.5+)
     ########################################

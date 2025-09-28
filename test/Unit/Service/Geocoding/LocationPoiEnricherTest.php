@@ -31,6 +31,9 @@ final class LocationPoiEnricherTest extends TestCase
                     'lon' => 13.4049,
                     'tags' => [
                         'name' => 'Brandenburg Gate',
+                        'name:de' => 'Brandenburger Tor',
+                        'name:en' => 'Brandenburg Gate',
+                        'alt_name' => 'Porta Brandeburghese;Brandenburger Tor',
                         'tourism' => 'attraction',
                         'historic' => 'monument',
                         'wikidata' => 'Q82424',
@@ -52,6 +55,14 @@ final class LocationPoiEnricherTest extends TestCase
 
         self::assertSame('node/123', $pois[0]['id']);
         self::assertSame('Brandenburg Gate', $pois[0]['name']);
+        self::assertSame([
+            'default' => 'Brandenburg Gate',
+            'localized' => [
+                'de' => 'Brandenburger Tor',
+                'en' => 'Brandenburg Gate',
+            ],
+            'alternates' => ['Porta Brandeburghese', 'Brandenburger Tor'],
+        ], $pois[0]['names']);
         self::assertSame('tourism', $pois[0]['categoryKey']);
         self::assertSame('attraction', $pois[0]['categoryValue']);
         self::assertSame($expectedDistance, $pois[0]['distanceMeters']);
@@ -140,6 +151,11 @@ final class LocationPoiEnricherTest extends TestCase
             [
                 'id' => 'node/999',
                 'name' => 'Existing Museum',
+                'names' => [
+                    'default' => 'Existing Museum',
+                    'localized' => [],
+                    'alternates' => [],
+                ],
                 'categoryKey' => 'tourism',
                 'categoryValue' => 'museum',
                 'distanceMeters' => 10.0,

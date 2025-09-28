@@ -126,7 +126,11 @@ final class OverpassClient
                 $tags = [];
             }
 
-            $name = $this->stringOrNull($tags['name'] ?? null);
+            $selection = $this->selectRelevantTags($tags);
+            $selectedTags = $selection['tags'];
+            $names = $selection['names'];
+            $name = $this->fallbackPoiName($names);
+
             $primaryKey = $this->primaryTagKey($tags);
             $primaryValue = $primaryKey !== null ? $this->stringOrNull($tags[$primaryKey] ?? null) : null;
 
@@ -134,11 +138,10 @@ final class OverpassClient
                 continue; // skip noisier features without any textual context
             }
 
-            $selectedTags = $this->selectRelevantTags($tags);
-
             $pois[$id] = [
                 'id'             => $id,
                 'name'           => $name,
+                'names'          => $names,
                 'categoryKey'    => $primaryKey,
                 'categoryValue'  => $primaryValue,
                 'lat'            => $coordinate['lat'],
@@ -236,7 +239,14 @@ final class OverpassClient
     }
 
     /**
-     * @return array<string,string>
+     * @return array{
+     *     tags: array<string,string>,
+     *     names: array{
+     *         default: ?string,
+     *         localized: array<string,string>,
+     *         alternates: list<string>
+     *     }
+     * }
      */
     private function selectRelevantTags(array $tags): array
     {
@@ -255,7 +265,101 @@ final class OverpassClient
             }
         }
 
-        return $selected;
+        $names = $this->extractNames($tags);
+
+        return [
+            'tags'  => $selected,
+            'names' => $names,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     default: ?string,
+     *     localized: array<string,string>,
+     *     alternates: list<string>
+     * }
+     */
+    private function extractNames(array $tags): array
+    {
+        $default = $this->stringOrNull($tags['name'] ?? null);
+
+        /** @var array<string,string> $localized */
+        $localized = [];
+        foreach ($tags as $key => $value) {
+            if (!\is_string($key) || !\str_starts_with($key, 'name:')) {
+                continue;
+            }
+
+            $locale = \substr($key, 5);
+            if ($locale === false) {
+                continue;
+            }
+
+            $locale = \strtolower($locale);
+            if ($locale === '') {
+                continue;
+            }
+
+            $normalizedLocale = \str_replace(' ', '_', $locale);
+            $name = $this->stringOrNull($value);
+            if ($name === null) {
+                continue;
+            }
+
+            $localized[$normalizedLocale] = $name;
+        }
+
+        if ($localized !== []) {
+            \ksort($localized, \SORT_STRING);
+        }
+
+        $alternates = [];
+        $altName = $this->stringOrNull($tags['alt_name'] ?? null);
+        if ($altName !== null) {
+            $parts = \array_map(static fn (string $part): string => \trim($part), \explode(';', $altName));
+            $parts = \array_filter($parts, static fn (string $part): bool => $part !== '');
+            if ($parts !== []) {
+                /** @var list<string> $unique */
+                $unique = \array_values(\array_unique($parts));
+                $alternates = $unique;
+            }
+        }
+
+        return [
+            'default'    => $default,
+            'localized'  => $localized,
+            'alternates' => $alternates,
+        ];
+    }
+
+    /**
+     * @param array{
+     *     default: ?string,
+     *     localized: array<string,string>,
+     *     alternates: list<string>
+     * } $names
+     */
+    private function fallbackPoiName(array $names): ?string
+    {
+        $default = $names['default'];
+        if ($default !== null) {
+            return $default;
+        }
+
+        foreach ($names['localized'] as $name) {
+            if ($name !== '') {
+                return $name;
+            }
+        }
+
+        foreach ($names['alternates'] as $alternate) {
+            if ($alternate !== '') {
+                return $alternate;
+            }
+        }
+
+        return null;
     }
 
     /**
