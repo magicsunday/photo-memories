@@ -102,7 +102,7 @@ final class GeocodeCommand extends Command
         $linked    = 0;
         $netCalls  = 0;
 
-        $batchSize = 100; // größerer Batch ist OK
+        $batchSize = 10; // kleinerer Batch verringert Datenverlust bei Fehlern
         foreach ($medias as $m) {
             $bar->setMessage('Rückwärtssuche');
             $loc = $this->linker->link($m, 'de');
@@ -182,7 +182,7 @@ final class GeocodeCommand extends Command
         $processed = 0;
         $updated   = 0;
         $netCalls  = 0;
-        $batchSize = 100;
+        $batchSize = 10;
 
         foreach ($locations as $location) {
             $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
@@ -263,7 +263,7 @@ final class GeocodeCommand extends Command
         $processed = 0;
         $updated   = 0;
         $netCalls  = 0;
-        $batchSize = 100;
+        $batchSize = 10;
 
         foreach ($locations as $location) {
             $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
