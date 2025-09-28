@@ -40,6 +40,7 @@ final class GeocodeCommand extends Command
             ->addOption('all', null, InputOption::VALUE_NONE, 'Alle Medien erneut geokodieren (auch bereits verknüpft)')
             ->addOption('city', null, InputOption::VALUE_REQUIRED, 'Orte nach Stadtnamen aktualisieren (z.B. "Paris")')
             ->addOption('missing-pois', null, InputOption::VALUE_NONE, 'Orte ohne POI-Daten ergänzen')
+            ->addOption('refresh-pois', null, InputOption::VALUE_NONE, 'Bereits gespeicherte POI-Daten neu abrufen')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur anzeigen, keine Änderungen speichern');
     }
 
@@ -52,15 +53,16 @@ final class GeocodeCommand extends Command
         $all    = (bool) $input->getOption('all');
         $city   = $input->getOption('city');
         $missingPois = (bool) $input->getOption('missing-pois');
+        $refreshPois = (bool) $input->getOption('refresh-pois');
 
         $io->title('🗺️  Orte ermitteln');
 
         if ($missingPois) {
-            return $this->reprocessLocationsMissingPois($dryRun, $io, $output);
+            return $this->reprocessLocationsMissingPois($dryRun, $refreshPois, $io, $output);
         }
 
         if (\is_string($city) && $city !== '') {
-            return $this->reprocessLocationsByCity($city, $dryRun, $io, $output);
+            return $this->reprocessLocationsByCity($city, $dryRun, $refreshPois, $io, $output);
         }
 
         $loaded = $this->cellIndex->warmUpFromDb();
@@ -145,15 +147,22 @@ final class GeocodeCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function reprocessLocationsMissingPois(bool $dryRun, SymfonyStyle $io, OutputInterface $output): int
+    private function reprocessLocationsMissingPois(bool $dryRun, bool $refreshPois, SymfonyStyle $io, OutputInterface $output): int
     {
         $io->section('📍 Orte ohne POI-Daten ergänzen');
+
+        if ($refreshPois) {
+            $io->note('Bestehende POI-Daten werden neu abgerufen.');
+        }
 
         $repo = $this->em->getRepository(Location::class);
         $qb   = $repo->createQueryBuilder('l');
 
-        $qb->where('l.pois IS NULL')
-            ->orderBy('l.id', 'ASC');
+        if (!$refreshPois) {
+            $qb->where('l.pois IS NULL');
+        }
+
+        $qb->orderBy('l.id', 'ASC');
 
         /** @var list<Location> $locations */
         $locations = $qb->getQuery()->getResult();
@@ -181,7 +190,7 @@ final class GeocodeCommand extends Command
 
             $beforePois = $location->getPois();
 
-            $this->locationResolver->ensurePois($location);
+            $this->locationResolver->ensurePois($location, $refreshPois);
             if ($this->locationResolver->consumeLastUsedNetwork()) {
                 $netCalls++;
             }
@@ -217,11 +226,15 @@ final class GeocodeCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function reprocessLocationsByCity(string $city, bool $dryRun, SymfonyStyle $io, OutputInterface $output): int
+    private function reprocessLocationsByCity(string $city, bool $dryRun, bool $refreshPois, SymfonyStyle $io, OutputInterface $output): int
     {
         $normalizedCity = \mb_strtolower($city);
 
         $io->section(\sprintf('🏙️  Orte mit Stadtnamen "%s" aktualisieren', $city));
+
+        if ($refreshPois) {
+            $io->note('Bestehende POI-Daten werden neu abgerufen.');
+        }
 
         $repo = $this->em->getRepository(Location::class);
         $qb   = $repo->createQueryBuilder('l');
@@ -258,7 +271,7 @@ final class GeocodeCommand extends Command
 
             $beforePois = $location->getPois();
 
-            $this->locationResolver->ensurePois($location);
+            $this->locationResolver->ensurePois($location, $refreshPois);
             if ($this->locationResolver->consumeLastUsedNetwork()) {
                 $netCalls++;
             }

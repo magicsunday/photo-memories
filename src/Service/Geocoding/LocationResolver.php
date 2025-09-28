@@ -124,15 +124,20 @@ final class LocationResolver
      * Ensures that a previously stored Location eventually receives POI data.
      *
      * This is used when we re-use Locations from the cell cache/index without
-     * going through the full reverse-geocoding pipeline again.
+     * going through the full reverse-geocoding pipeline again. When
+     * $forceRefresh is true, existing POI data is cleared before the re-fetch.
      */
-    public function ensurePois(Location $location): void
+    public function ensurePois(Location $location, bool $forceRefresh = false): void
     {
-        if ($location->getPois() !== null) {
+        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
             return;
         }
 
-        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
+        if ($forceRefresh && $location->getPois() !== null) {
+            $location->setPois(null);
+        }
+
+        if ($location->getPois() !== null) {
             return;
         }
 
