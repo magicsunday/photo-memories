@@ -186,7 +186,7 @@ final class GeocodeCommand extends Command
 
         foreach ($locations as $location) {
             $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
-            $bar->setMessage($label);
+            $bar->setMessage($this->formatProgressLabel($label));
 
             $beforePois = $location->getPois();
 
@@ -267,7 +267,7 @@ final class GeocodeCommand extends Command
 
         foreach ($locations as $location) {
             $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
-            $bar->setMessage($label);
+            $bar->setMessage($this->formatProgressLabel($label));
 
             $beforePois = $location->getPois();
 
@@ -305,5 +305,21 @@ final class GeocodeCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Shortens long progress bar labels to keep the output on a single line.
+     */
+    private function formatProgressLabel(string $label): string
+    {
+        $normalized = \preg_replace('/\s+/u', ' ', \trim($label)) ?? $label;
+
+        if (\function_exists('mb_strimwidth')) {
+            return \mb_strimwidth($normalized, 0, 70, '…', 'UTF-8');
+        }
+
+        return \strlen($normalized) > 70
+            ? \substr($normalized, 0, 69) . '…'
+            : $normalized;
     }
 }
