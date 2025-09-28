@@ -19,6 +19,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Preview a "Für dich" feed in the console from persisted clusters.
+ * Beachtet dabei die globale Limitierung pro Algorithmus aus dem Feed-Builder.
  */
 #[AsCommand(
     name: 'memories:feed:preview',
