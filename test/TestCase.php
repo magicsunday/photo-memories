@@ -227,6 +227,37 @@ abstract class TestCase extends BaseTestCase
         return $location;
     }
 
+    /**
+     * Executes the callback while ensuring the formatted portion of the current
+     * time does not change during the test. The callback receives the captured
+     * anchor time and a stability checker. Returning <code>true</code> marks the
+     * attempt as successful; returning <code>false</code> retries with a new
+     * anchor. When all attempts observe a changing clock the test is skipped to
+     * avoid flaky behaviour around day/month rollovers.
+     *
+     * @param callable(DateTimeImmutable, callable():bool):bool $callback
+     */
+    protected function runWithStableClock(
+        DateTimeZone $timezone,
+        string $format,
+        callable $callback,
+        int $maxAttempts = 3,
+        string $skipMessage = 'System clock changed during test execution.',
+    ): void {
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $anchor = new DateTimeImmutable('now', $timezone);
+            $isStable = static function () use ($anchor, $timezone, $format): bool {
+                return (new DateTimeImmutable('now', $timezone))->format($format) === $anchor->format($format);
+            };
+
+            if ($callback($anchor, $isStable) === true) {
+                return;
+            }
+        }
+
+        self::markTestSkipped($skipMessage);
+    }
+
     protected function fixturePath(string $filename): string
     {
         return $this->fixtureDir() . '/' . ltrim($filename, '/');

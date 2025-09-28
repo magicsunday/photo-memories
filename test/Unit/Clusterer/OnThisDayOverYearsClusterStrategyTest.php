@@ -9,7 +9,6 @@ use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
-use const CAL_GREGORIAN;
 
 final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 {
@@ -23,26 +22,37 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             minItemsTotal: 5,
         );
 
-        $anchor = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
-        $month = (int) $anchor->format('n');
-        $day = (int) $anchor->format('j');
+        $this->runWithStableClock(
+            new DateTimeZone('Europe/Berlin'),
+            'Y-m-d',
+            function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
+                $month = (int) $anchor->format('n');
+                $day = (int) $anchor->format('j');
 
-        $mediaItems = [];
-        $id = 1;
-        foreach ([2019, 2020, 2021] as $year) {
-            $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
-            $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00'));
-        }
-        $mediaItems[] = $this->createMedia($id++, $this->dateString(2022, $month, $day + 5, '10:00:00'));
+                $mediaItems = [];
+                $id = 1;
+                foreach ([2019, 2020, 2021] as $year) {
+                    $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
+                    $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00'));
+                }
+                $mediaItems[] = $this->createMedia($id++, $this->dateString(2022, $month, $day + 5, '10:00:00'));
 
-        $clusters = $strategy->cluster($mediaItems);
+                $clusters = $strategy->cluster($mediaItems);
 
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
+                if (!$isStable()) {
+                    return false;
+                }
 
-        self::assertSame('on_this_day_over_years', $cluster->getAlgorithm());
-        self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
-        self::assertGreaterThanOrEqual(3, \count($cluster->getParams()['years']));
+                self::assertCount(1, $clusters);
+                $cluster = $clusters[0];
+
+                self::assertSame('on_this_day_over_years', $cluster->getAlgorithm());
+                self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
+                self::assertGreaterThanOrEqual(3, \count($cluster->getParams()['years']));
+
+                return true;
+            }
+        );
     }
 
     #[Test]
@@ -55,22 +65,33 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             minItemsTotal: 5,
         );
 
-        $anchor = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
-        $month = (int) $anchor->format('n');
-        $day = (int) $anchor->format('j');
+        $this->runWithStableClock(
+            new DateTimeZone('Europe/Berlin'),
+            'Y-m-d',
+            function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
+                $month = (int) $anchor->format('n');
+                $day = (int) $anchor->format('j');
 
-        $mediaItems = [
-            $this->createMedia(51, $this->dateString(2019, $month, $day, '09:00:00')),
-            $this->createMedia(52, $this->dateString(2020, $month, $day, '10:00:00')),
-            $this->createMedia(53, $this->dateString(2021, $month, $day, '11:00:00')),
-        ];
+                $mediaItems = [
+                    $this->createMedia(51, $this->dateString(2019, $month, $day, '09:00:00')),
+                    $this->createMedia(52, $this->dateString(2020, $month, $day, '10:00:00')),
+                    $this->createMedia(53, $this->dateString(2021, $month, $day, '11:00:00')),
+                ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+                if (!$isStable()) {
+                    return false;
+                }
+
+                self::assertSame([], $strategy->cluster($mediaItems));
+
+                return true;
+            }
+        );
     }
 
     private function dateString(int $year, int $month, int $day, string $time): string
     {
-        $day = max(1, min($day, \cal_days_in_month(CAL_GREGORIAN, $month, $year)));
+        $day = max(1, min($day, $this->daysInMonth($year, $month)));
 
         return \sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
     }
@@ -82,6 +103,11 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             filename: "on-this-day-{$id}.jpg",
             takenAt: $takenAt,
         );
+    }
+
+    private function daysInMonth(int $year, int $month): int
+    {
+        return (int) (new DateTimeImmutable(\sprintf('%04d-%02d-01', $year, $month)))->format('t');
     }
 
 }

@@ -22,25 +22,36 @@ final class OneYearAgoClusterStrategyTest extends TestCase
             minItemsTotal: 4,
         );
 
-        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
-        $anchorBase = $now->sub(new DateInterval('P1Y'));
+        $this->runWithStableClock(
+            new DateTimeZone('Europe/Berlin'),
+            'Y-m-d',
+            function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
+                $anchorBase = $anchor->sub(new DateInterval('P1Y'));
 
-        $mediaItems = [
-            $this->createMedia(1, $anchorBase->modify('-1 day')),
-            $this->createMedia(2, $anchorBase),
-            $this->createMedia(3, $anchorBase->modify('+1 day')),
-            $this->createMedia(4, $anchorBase->modify('+2 days')),
-            $this->createMedia(5, $anchorBase->modify('+5 days')),
-        ];
+                $mediaItems = [
+                    $this->createMedia(1, $anchorBase->modify('-1 day')),
+                    $this->createMedia(2, $anchorBase),
+                    $this->createMedia(3, $anchorBase->modify('+1 day')),
+                    $this->createMedia(4, $anchorBase->modify('+2 days')),
+                    $this->createMedia(5, $anchorBase->modify('+5 days')),
+                ];
 
-        $clusters = $strategy->cluster($mediaItems);
+                $clusters = $strategy->cluster($mediaItems);
 
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
+                if (!$isStable()) {
+                    return false;
+                }
 
-        self::assertSame('one_year_ago', $cluster->getAlgorithm());
-        self::assertSame([1, 2, 3, 4], $cluster->getMembers());
-        self::assertArrayHasKey('time_range', $cluster->getParams());
+                self::assertCount(1, $clusters);
+                $cluster = $clusters[0];
+
+                self::assertSame('one_year_ago', $cluster->getAlgorithm());
+                self::assertSame([1, 2, 3, 4], $cluster->getMembers());
+                self::assertArrayHasKey('time_range', $cluster->getParams());
+
+                return true;
+            }
+        );
     }
 
     #[Test]
@@ -52,15 +63,26 @@ final class OneYearAgoClusterStrategyTest extends TestCase
             minItemsTotal: 3,
         );
 
-        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Berlin'));
-        $anchorBase = $now->sub(new DateInterval('P1Y'));
+        $this->runWithStableClock(
+            new DateTimeZone('Europe/Berlin'),
+            'Y-m-d',
+            function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
+                $anchorBase = $anchor->sub(new DateInterval('P1Y'));
 
-        $mediaItems = [
-            $this->createMedia(11, $anchorBase),
-            $this->createMedia(12, $anchorBase->modify('+1 day')),
-        ];
+                $mediaItems = [
+                    $this->createMedia(11, $anchorBase),
+                    $this->createMedia(12, $anchorBase->modify('+1 day')),
+                ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+                if (!$isStable()) {
+                    return false;
+                }
+
+                self::assertSame([], $strategy->cluster($mediaItems));
+
+                return true;
+            }
+        );
     }
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
