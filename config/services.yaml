@@ -689,13 +689,17 @@ services:
     MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer:
         arguments:
             $weights:
-                quality: 0.20
-                people: 0.24
-                density: 0.11
-                novelty: 0.13
+                quality: 0.22
+                aesthetics: 0.08
+                people: 0.16
+                content: 0.09
+                density: 0.10
+                novelty: 0.09
                 holiday: 0.07
-                recency: 0.15
-                poi: 0.10
+                recency: 0.12
+                location: 0.05
+                poi: 0.02
+                time_coverage: 0.10
             $algorithmBoosts:
                 long_trip: 1.30
                 road_trip: 1.25
