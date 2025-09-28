@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Weather;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Entity\WeatherObservation;
 use MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider;
+use MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -40,9 +42,11 @@ final class OpenWeatherHintProviderTest extends TestCase
             }
         );
 
+        $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
             new ArrayAdapter(),
+            $storage,
             'https://api.test/weather',
             'api-key',
             3600,
@@ -72,6 +76,7 @@ final class OpenWeatherHintProviderTest extends TestCase
         self::assertSame(48.1, $captured['options']['query']['lat']);
         self::assertSame(11.5, $captured['options']['query']['lon']);
         self::assertSame($timestamp, $captured['options']['query']['dt']);
+        self::assertTrue($storage->hasObservation(48.1, 11.5, $timestamp));
     }
 
     #[Test]
@@ -99,9 +104,11 @@ final class OpenWeatherHintProviderTest extends TestCase
             }
         );
 
+        $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
             new ArrayAdapter(),
+            $storage,
             'https://api.test/weather',
             'api-key',
             3600,
@@ -142,9 +149,11 @@ final class OpenWeatherHintProviderTest extends TestCase
             )
         );
 
+        $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
             new ArrayAdapter(),
+            $storage,
             'https://api.test/weather',
             'api-key',
             3600,
@@ -179,9 +188,11 @@ final class OpenWeatherHintProviderTest extends TestCase
             }
         );
 
+        $storage  = new InMemoryObservationStorage();
         $provider = new OpenWeatherHintProvider(
             $client,
             new ArrayAdapter(),
+            $storage,
             'https://api.test/weather',
             'api-key',
             3600,
@@ -199,3 +210,35 @@ final class OpenWeatherHintProviderTest extends TestCase
     }
 }
 
+/**
+ * @internal test helper
+ */
+final class InMemoryObservationStorage implements WeatherObservationStorageInterface
+{
+    /** @var array<string, array{hint: array<string, mixed>, source: string}> */
+    private array $storage = [];
+
+    public function findHint(float $lat, float $lon, int $timestamp): ?array
+    {
+        $key = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
+
+        return $this->storage[$key]['hint'] ?? null;
+    }
+
+    public function hasObservation(float $lat, float $lon, int $timestamp): bool
+    {
+        $key = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
+
+        return \array_key_exists($key, $this->storage);
+    }
+
+    public function storeHint(float $lat, float $lon, int $timestamp, array $hint, string $source): void
+    {
+        $key = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
+
+        $this->storage[$key] = [
+            'hint'   => $hint,
+            'source' => $source,
+        ];
+    }
+}

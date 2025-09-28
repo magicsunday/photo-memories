@@ -5,6 +5,7 @@ namespace MagicSunday\Memories\Service\Weather;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Entity\WeatherObservation;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -26,11 +27,13 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
     public function __construct(
         private readonly HttpClientInterface $http,
         private readonly CacheInterface $cache,
+        private readonly WeatherObservationStorageInterface $storage,
         private readonly string $baseUrl,
         private readonly string $apiKey,
         private readonly int $cacheTtl,
         private readonly int $maxPastHours = 0,
-        private readonly string $units = 'metric'
+        private readonly string $units = 'metric',
+        private readonly string $source = WeatherObservation::DEFAULT_SOURCE
     ) {
     }
 
@@ -57,6 +60,11 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
             }
         }
 
+        $stored = $this->storage->findHint($lat, $lon, $timestamp);
+        if ($stored !== null) {
+            return $stored;
+        }
+
         $cacheKey = $this->buildCacheKey($lat, $lon, $timestamp);
 
         return $this->cache->get(
@@ -66,7 +74,13 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
                     $item->expiresAfter($this->cacheTtl);
                 }
 
-                return $this->fetchHint($lat, $lon, $timestamp);
+                $hint = $this->fetchHint($lat, $lon, $timestamp);
+
+                if ($hint !== null) {
+                    $this->storage->storeHint($lat, $lon, $timestamp, $hint, $this->source);
+                }
+
+                return $hint;
             }
         );
     }

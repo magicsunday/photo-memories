@@ -183,4 +183,5 @@ parameters:
     memories.weather.openweather.api_key: '%env(default::string:OPENWEATHER_API_KEY)%'
     memories.weather.openweather.cache_ttl: '%env(default:43200:int:MEMORIES_WEATHER_CACHE_TTL)%'
     memories.weather.openweather.max_past_hours: '%env(default:120:int:MEMORIES_WEATHER_MAX_PAST_HOURS)%'
+    memories.weather.openweather.source: '%env(default:openweather:string:MEMORIES_WEATHER_SOURCE)%'
     memories.weather.cache_namespace: '%env(default:memories_weather:string:MEMORIES_WEATHER_CACHE_NAMESPACE)%'

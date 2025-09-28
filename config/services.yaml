@@ -770,6 +770,7 @@ services:
     MagicSunday\Memories\Service\Feed\DefaultCoverPicker: ~
 
     MagicSunday\Memories\Repository\MediaRepository: ~
+    MagicSunday\Memories\Repository\WeatherObservationRepository: ~
 
     MagicSunday\Memories\Service\Feed\MemoryFeedBuilder:
         arguments:
@@ -796,10 +797,14 @@ services:
         arguments:
             $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
             $cache: '@memories.weather.cache'
+            $storage: '@MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface'
             $baseUrl: '%memories.weather.openweather.base_url%'
             $apiKey: '%memories.weather.openweather.api_key%'
             $cacheTtl: '%memories.weather.openweather.cache_ttl%'
             $maxPastHours: '%memories.weather.openweather.max_past_hours%'
+            $source: '%memories.weather.openweather.source%'
+
+    MagicSunday\Memories\Service\Weather\DoctrineWeatherObservationStorage: ~
 
     MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider:
         arguments:
@@ -809,6 +814,9 @@ services:
 
     MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface:
         alias: MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider
+
+    MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface:
+        alias: MagicSunday\Memories\Service\Weather\DoctrineWeatherObservationStorage
 
     # Feeds
     MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
