@@ -10,30 +10,40 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Repository;
 
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\WeatherObservation;
 
 /**
- * @extends ServiceEntityRepository<WeatherObservation>
+ * Repository helpers for weather observations.
  */
-final class WeatherObservationRepository extends ServiceEntityRepository
+final class WeatherObservationRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(private readonly EntityManagerInterface $entityManager)
     {
-        parent::__construct($registry, WeatherObservation::class);
     }
 
     public function findOneByLookupHash(string $lookupHash): ?WeatherObservation
     {
-        return $this->findOneBy(['lookupHash' => $lookupHash]);
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb
+            ->select('w')
+            ->from(WeatherObservation::class, 'w')
+            ->where('w.lookupHash = :lookupHash')
+            ->setParameter('lookupHash', $lookupHash)
+            ->setMaxResults(1);
+
+        /** @var WeatherObservation|null $result */
+        $result = $qb->getQuery()->getOneOrNullResult();
+
+        return $result;
     }
 
     public function existsByLookupHash(string $lookupHash): bool
     {
-        $qb = $this->createQueryBuilder('w');
+        $qb = $this->entityManager->createQueryBuilder();
         $qb
             ->select('1')
+            ->from(WeatherObservation::class, 'w')
             ->where('w.lookupHash = :lookupHash')
             ->setParameter('lookupHash', $lookupHash)
             ->setMaxResults(1);
