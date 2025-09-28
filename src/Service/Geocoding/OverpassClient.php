@@ -35,6 +35,15 @@ final class OverpassClient
         'building',
     ];
 
+    /**
+     * Additional tags we keep even though they are not primary category keys.
+     *
+     * @var list<string>
+     */
+    private const AUXILIARY_TAG_KEYS = [
+        'wikidata',
+    ];
+
     private bool $lastUsedNetwork = false;
 
     /**
@@ -232,6 +241,13 @@ final class OverpassClient
     {
         $selected = [];
         foreach ($this->relevantTagKeys() as $key) {
+            $value = $this->stringOrNull($tags[$key] ?? null);
+            if ($value !== null) {
+                $selected[$key] = $value;
+            }
+        }
+
+        foreach (self::AUXILIARY_TAG_KEYS as $key) {
             $value = $this->stringOrNull($tags[$key] ?? null);
             if ($value !== null) {
                 $selected[$key] = $value;
