@@ -175,3 +175,11 @@ parameters:
     memories.feed.max_per_day: 6
     memories.feed.max_total: 60
     memories.feed.max_per_algorithm: 12
+
+    # Weather
+    memories.weather.enabled: '%env(default:false:bool:MEMORIES_WEATHER_ENABLED)%'
+    memories.weather.openweather.base_url: '%env(default:https://api.openweathermap.org/data/3.0/onecall/timemachine:string:OPENWEATHER_BASE_URL)%'
+    memories.weather.openweather.api_key: '%env(default::string:OPENWEATHER_API_KEY)%'
+    memories.weather.openweather.cache_ttl: '%env(default:43200:int:MEMORIES_WEATHER_CACHE_TTL)%'
+    memories.weather.openweather.max_past_hours: '%env(default:120:int:MEMORIES_WEATHER_MAX_PAST_HOURS)%'
+    memories.weather.cache_namespace: '%env(default:memories_weather:string:MEMORIES_WEATHER_CACHE_NAMESPACE)%'
