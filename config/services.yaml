@@ -782,10 +782,32 @@ services:
         alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder
 
     # Weather
+    memories.weather.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            - '%memories.weather.cache_namespace%'
+            - '%memories.weather.openweather.cache_ttl%'
+            - '%kernel.cache_dir%/weather'
+
     MagicSunday\Memories\Service\Weather\NullWeatherHintProvider: ~
 
+    MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider:
+        arguments:
+            $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
+            $cache: '@memories.weather.cache'
+            $baseUrl: '%memories.weather.openweather.base_url%'
+            $apiKey: '%memories.weather.openweather.api_key%'
+            $cacheTtl: '%memories.weather.openweather.cache_ttl%'
+            $maxPastHours: '%memories.weather.openweather.max_past_hours%'
+
+    MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider:
+        arguments:
+            $primary: '@MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider'
+            $fallback: '@MagicSunday\Memories\Service\Weather\NullWeatherHintProvider'
+            $enabled: '%memories.weather.enabled%'
+
     MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface:
-        alias: MagicSunday\Memories\Service\Weather\NullWeatherHintProvider
+        alias: MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider
 
     # Feeds
     MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
