@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Support;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_filter;
 use function array_values;
@@ -153,5 +154,107 @@ trait MediaFilterTrait
     private function filterGroupsWithKeys(array $groups, callable $predicate): array
     {
         return array_filter($groups, $predicate, ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * Removes spatial outliers from a list of media using a lightweight DBSCAN run.
+     *
+     * @param list<Media> $items
+     *
+     * @return list<Media>
+     */
+    private function filterGpsOutliers(array $items, float $radiusKm, int $minSamples): array
+    {
+        if ($items === []) {
+            return $items;
+        }
+
+        if ($minSamples < 2) {
+            return $items;
+        }
+
+        if (count($items) < $minSamples) {
+            return $items;
+        }
+
+        $coordinates = [];
+        foreach ($items as $media) {
+            $lat = $media->getGpsLat();
+            $lon = $media->getGpsLon();
+            if ($lat === null || $lon === null) {
+                return $items;
+            }
+
+            $coordinates[] = [(float) $lat, (float) $lon];
+        }
+
+        $count        = count($coordinates);
+        $labels       = array_fill(0, $count, null);
+        $clusterId    = 0;
+        $radiusMeters = $radiusKm * 1000.0;
+
+        $regionQuery = static function (array $points, int $index, float $radius): array {
+            $neighbors = [];
+            [$latA, $lonA] = $points[$index];
+
+            foreach ($points as $idx => [$latB, $lonB]) {
+                $distance = MediaMath::haversineDistanceInMeters($latA, $lonA, $latB, $lonB);
+                if ($distance <= $radius) {
+                    $neighbors[] = $idx;
+                }
+            }
+
+            return $neighbors;
+        };
+
+        for ($i = 0; $i < $count; ++$i) {
+            if ($labels[$i] !== null) {
+                continue;
+            }
+
+            $neighbors = $regionQuery($coordinates, $i, $radiusMeters);
+            if (count($neighbors) < $minSamples) {
+                $labels[$i] = -1;
+                continue;
+            }
+
+            $labels[$i] = $clusterId;
+            $queue      = $neighbors;
+            for ($queueIndex = 0; $queueIndex < count($queue); ++$queueIndex) {
+                $neighborIndex = $queue[$queueIndex];
+
+                if ($labels[$neighborIndex] === -1) {
+                    $labels[$neighborIndex] = $clusterId;
+                }
+
+                if ($labels[$neighborIndex] !== null) {
+                    continue;
+                }
+
+                $labels[$neighborIndex] = $clusterId;
+                $neighborNeighbors      = $regionQuery($coordinates, $neighborIndex, $radiusMeters);
+
+                if (count($neighborNeighbors) >= $minSamples) {
+                    foreach ($neighborNeighbors as $newIndex) {
+                        $queue[] = $newIndex;
+                    }
+                }
+            }
+
+            ++$clusterId;
+        }
+
+        $result = [];
+        foreach ($items as $index => $media) {
+            if ($labels[$index] !== null && $labels[$index] >= 0) {
+                $result[] = $media;
+            }
+        }
+
+        if ($result === []) {
+            return $items;
+        }
+
+        return array_values($result);
     }
 }
