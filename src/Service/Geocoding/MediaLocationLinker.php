@@ -35,7 +35,7 @@ final class MediaLocationLinker
     ) {
     }
 
-    public function link(Media $media, string $acceptLanguage = 'de'): ?Location
+    public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location
     {
         $this->lastNetworkCalls = 0;
 
@@ -50,7 +50,7 @@ final class MediaLocationLinker
         // 1) in-run cache first
         if (isset($this->cellCache[$cell])) {
             $loc = $this->cellCache[$cell];
-            $this->ensurePois($loc);
+            $this->ensurePois($loc, $forceRefreshPois);
             $media->setLocation($loc);
 
             return $loc;
@@ -60,7 +60,7 @@ final class MediaLocationLinker
         $fromIndex = $this->cellIndex->findByCell($cell);
         if ($fromIndex instanceof Location) {
             $this->cellCache[$cell] = $fromIndex;
-            $this->ensurePois($fromIndex);
+            $this->ensurePois($fromIndex, $forceRefreshPois);
             $media->setLocation($fromIndex);
 
             return $fromIndex;
@@ -104,9 +104,9 @@ final class MediaLocationLinker
         return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 
-    private function ensurePois(Location $location): void
+    private function ensurePois(Location $location, bool $forceRefresh): void
     {
-        $this->resolver->ensurePois($location);
+        $this->resolver->ensurePois($location, $forceRefresh);
 
         if ($this->resolver->consumeLastUsedNetwork()) {
             ++$this->lastNetworkCalls;
