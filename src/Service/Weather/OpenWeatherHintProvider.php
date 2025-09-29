@@ -51,12 +51,14 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
 
         if ($this->maxPastHours > 0) {
             $earliest = time() - ($this->maxPastHours * 3600);
+
             if ($timestamp < $earliest) {
                 return null;
             }
         }
 
         $stored = $this->storage->findHint($lat, $lon, $timestamp);
+
         if ($stored !== null) {
             return $stored;
         }

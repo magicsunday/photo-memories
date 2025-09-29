@@ -19,13 +19,12 @@ final class ToggleableWeatherHintProvider implements WeatherHintProviderInterfac
 
     public function getHint(Media $media): ?array
     {
-        if (!$this->enabled) {
-            return $this->fallback->getHint($media);
-        }
+        if ($this->enabled) {
+            $hint = $this->primary->getHint($media);
 
-        $hint = $this->primary->getHint($media);
-        if ($hint !== null) {
-            return $hint;
+            if ($hint !== null) {
+                return $hint;
+            }
         }
 
         return $this->fallback->getHint($media);

@@ -35,7 +35,6 @@
         "symfony/config": "^7.0",
         "symfony/console": "^7.0",
         "symfony/http-client": "^7.0",
-        "symfony/http-client-contracts": "^3.5",
         "symfony/process": "^7.0",
         "symfony/dotenv": "^7.0",
         "symfony/dependency-injection": "^7.0",
@@ -73,6 +72,9 @@
         "ci:rector": [
             "bin/php vendor/bin/rector process --config .build/rector.php"
         ],
+        "ci:fractor": [
+            "bin/php vendor/bin/fractor process --config .build/fractor.php"
+        ],
         "ci:test:php:cgl": [
             "@ci:cgl --dry-run"
         ],
@@ -101,7 +103,7 @@
             "@ci:test:php:lint",
             "@ci:test:php:phpstan",
             "@ci:test:php:rector",
-            "@ci:fractor",
+            "@ci:test:php:fractor",
             "@ci:test:php:cgl",
             "@ci:test:php:unit"
         ]

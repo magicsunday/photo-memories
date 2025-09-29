@@ -133,7 +133,7 @@ final class WeatherHintWarmupCommand extends Command
             $processed++;
             $bar->advance();
 
-            if (($processed % 100) === 0) {
+            if (($processed % 10) === 0) {
                 $this->em->clear();
             }
         }
