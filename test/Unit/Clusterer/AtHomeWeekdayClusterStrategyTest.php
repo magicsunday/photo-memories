@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekdayClusterStrategyTest extends TestCase
 {
@@ -78,5 +86,4 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

@@ -1,14 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
+use function array_slice;
+use function assert;
+use function count;
 
 /**
  * Groups media into anniversary clusters.
@@ -31,15 +43,15 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     /**
      * Creates a new anniversary cluster strategy.
      *
-     * @param LocationHelper $locHelper Helper that can derive human readable place labels
-     *                                  from media items for the metadata summary.
+     * @param LocationHelper $locHelper helper that can derive human readable place labels
+     *                                  from media items for the metadata summary
      */
     public function __construct(
         private LocationHelper $locHelper,
         // Minimum media items per anniversary bucket before scoring kicks in.
         private int $minItemsPerAnniversary = 3,
         private int $minDistinctYears = 1,
-        private int $maxClusters = 0
+        private int $maxClusters = 0,
     ) {
         if ($this->minItemsPerAnniversary < 1) {
             throw new InvalidArgumentException('minItemsPerAnniversary must be >= 1.');
@@ -57,7 +69,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     /**
      * Returns the unique identifier for this strategy.
      *
-     * @return string Identifier that is used to mark generated clusters.
+     * @return string identifier that is used to mark generated clusters
      */
     public function name(): string
     {
@@ -73,9 +85,9 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
      * aggregates descriptive metadata: the majority place label, the time range covering
      * all members, the geographic centroid, and the list of media identifiers.
      *
-     * @param list<Media> $items Media items that should be evaluated for anniversary clusters.
+     * @param list<Media> $items media items that should be evaluated for anniversary clusters
      *
-     * @return list<ClusterDraft> Draft clusters that summarize the anniversary groups.
+     * @return list<ClusterDraft> draft clusters that summarize the anniversary groups
      */
     public function cluster(array $items): array
     {
@@ -86,7 +98,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         $byMonthDay = [];
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             // Index media by month and day so anniversaries match regardless of year.
             $byMonthDay[$t->format('m-d')][] = $m;
         }
@@ -100,23 +112,23 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             foreach ($group as $media) {
                 $takenAt = $media->getTakenAt();
                 if ($takenAt instanceof DateTimeImmutable) {
-                    $year = (int) $takenAt->format('Y');
+                    $year         = (int) $takenAt->format('Y');
                     $years[$year] = ($years[$year] ?? 0) + 1;
                 }
             }
 
-            $distinctYears = \count($years);
+            $distinctYears = count($years);
             if ($distinctYears < $this->minDistinctYears) {
                 continue;
             }
 
-            $total = \count($group);
+            $total     = count($group);
             $spanYears = 0;
             /** @var list<int> $yearKeys */
-            $yearKeys = array_keys($years);
+            $yearKeys  = array_keys($years);
             $spanYears = max($yearKeys) - min($yearKeys) + 1;
 
-            $maxPerYear = $years === [] ? 0 : max($years);
+            $maxPerYear     = $years === [] ? 0 : max($years);
             $averagePerYear = $distinctYears === 0 ? 0.0 : $total / $distinctYears;
 
             // Weight recurring anniversaries stronger than one-off bursts while still
@@ -140,8 +152,8 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             static fn (array $left, array $right): int => $right['score'] <=> $left['score']
         );
 
-        if ($this->maxClusters > 0 && \count($scoredGroups) > $this->maxClusters) {
-            $scoredGroups = \array_slice($scoredGroups, 0, $this->maxClusters);
+        if ($this->maxClusters > 0 && count($scoredGroups) > $this->maxClusters) {
+            $scoredGroups = array_slice($scoredGroups, 0, $this->maxClusters);
         }
 
         $drafts = [];

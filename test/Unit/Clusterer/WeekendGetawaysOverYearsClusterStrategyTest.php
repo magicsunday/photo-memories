@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 {
@@ -28,9 +36,9 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $items = [];
         foreach ([2020, 2021, 2022] as $year) {
             $friday = new DateTimeImmutable(sprintf('%d-06-05 16:00:00', $year), new DateTimeZone('UTC')); // Friday
-            for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
+            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
                 $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
-                for ($i = 0; $i < 4; $i++) {
+                for ($i = 0; $i < 4; ++$i) {
                     $items[] = $this->createMedia(
                         ($year * 100) + ($dayOffset * 10) + $i,
                         $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
@@ -64,9 +72,9 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $items = [];
         foreach ([2021, 2022] as $year) {
             $friday = new DateTimeImmutable(sprintf('%d-07-09 16:00:00', $year), new DateTimeZone('UTC'));
-            for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
+            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
                 $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
-                for ($i = 0; $i < 4; $i++) {
+                for ($i = 0; $i < 4; ++$i) {
                     $items[] = $this->createMedia(
                         ($year * 1000) + ($dayOffset * 10) + $i,
                         $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
@@ -89,5 +97,4 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             size: 2048,
         );
     }
-
 }

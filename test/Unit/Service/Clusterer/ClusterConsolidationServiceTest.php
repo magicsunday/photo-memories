@@ -1,12 +1,20 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class ClusterConsolidationServiceTest extends TestCase
 {
@@ -26,14 +34,14 @@ final class ClusterConsolidationServiceTest extends TestCase
             minValidYear: 1990,
         );
 
-        $primaryWinner = $this->createDraft('primary', 0.9, [1, 2, 3]);
-        $primaryDuplicate = $this->createDraft('primary', 0.6, [3, 2, 1]);
-        $secondaryDominated = $this->createDraft('secondary', 0.95, [2, 3, 4]);
+        $primaryWinner         = $this->createDraft('primary', 0.9, [1, 2, 3]);
+        $primaryDuplicate      = $this->createDraft('primary', 0.6, [3, 2, 1]);
+        $secondaryDominated    = $this->createDraft('secondary', 0.95, [2, 3, 4]);
         $secondaryCapCandidate = $this->createDraft('secondary', 0.8, [3, 6]);
-        $annotationKeeps = $this->createDraft('annot', 0.7, [4, 5, 6]);
-        $annotationDrops = $this->createDraft('annot', 0.9, [1, 3]);
-        $tooSmall = $this->createDraft('primary', 0.9, [10]);
-        $tooLowScore = $this->createDraft('primary', 0.3, [11, 12]);
+        $annotationKeeps       = $this->createDraft('annot', 0.7, [4, 5, 6]);
+        $annotationDrops       = $this->createDraft('annot', 0.9, [1, 3]);
+        $tooSmall              = $this->createDraft('primary', 0.9, [10]);
+        $tooLowScore           = $this->createDraft('primary', 0.3, [11, 12]);
 
         $result = $service->consolidate([
             $primaryWinner,

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -7,6 +15,10 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function count;
+use function usort;
 
 /**
  * Clusters items that are both temporally and spatially close.
@@ -19,7 +31,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
     public function __construct(
         private int $timeGapSeconds = 2 * 3600,   // 2h
         private float $radiusMeters = 150.0,      // 150 m
-        private int $minItemsPerRun = 6
+        private int $minItemsPerRun = 6,
     ) {
         if ($this->timeGapSeconds < 1) {
             throw new InvalidArgumentException('timeGapSeconds must be >= 1.');
@@ -41,6 +53,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -48,16 +61,16 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         // Filter: need time; prefer GPS (we allow some without GPS as long as cluster centroid is stable)
         $withTime = $this->filterTimestampedItems($items);
 
-        if (\count($withTime) < $this->minItemsPerRun) {
+        if (count($withTime) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($withTime, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($withTime, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         /** @var list<list<Media>> $runs */
         $runs = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf    = [];
         $lastTs = null;
 
         foreach ($withTime as $m) {
@@ -82,7 +95,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $gps = $this->filterGpsItems($run);
+            $gps      = $this->filterGpsItems($run);
             $centroid = $gps !== []
                 ? MediaMath::centroid($gps)
                 : ['lat' => 0.0, 'lon' => 0.0];
@@ -106,14 +119,14 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
                 continue;
             }
 
-            $time = MediaMath::timeRange($run);
+            $time  = MediaMath::timeRange($run);
             $out[] = new ClusterDraft(
                 algorithm: 'cross_dimension',
                 params: [
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }
 

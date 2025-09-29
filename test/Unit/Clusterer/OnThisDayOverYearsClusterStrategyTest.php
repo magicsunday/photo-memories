@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
+
+use function count;
 
 final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 {
@@ -27,10 +37,10 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             'Y-m-d',
             function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
                 $month = (int) $anchor->format('n');
-                $day = (int) $anchor->format('j');
+                $day   = (int) $anchor->format('j');
 
                 $mediaItems = [];
-                $id = 1;
+                $id         = 1;
                 foreach ([2019, 2020, 2021] as $year) {
                     $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
                     $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00'));
@@ -49,7 +59,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 
                 self::assertSame('on_this_day_over_years', $cluster->getAlgorithm());
                 self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
-                self::assertGreaterThanOrEqual(3, \count($cluster->getParams()['years']));
+                self::assertGreaterThanOrEqual(3, count($cluster->getParams()['years']));
 
                 return true;
             }
@@ -71,7 +81,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             'Y-m-d',
             function (DateTimeImmutable $anchor, callable $isStable) use ($strategy): bool {
                 $month = (int) $anchor->format('n');
-                $day = (int) $anchor->format('j');
+                $day   = (int) $anchor->format('j');
 
                 $mediaItems = [
                     $this->createMedia(51, $this->dateString(2019, $month, $day, '09:00:00')),

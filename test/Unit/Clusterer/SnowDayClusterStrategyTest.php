@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SnowDayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class SnowDayClusterStrategyTest extends TestCase
 {
@@ -22,8 +30,8 @@ final class SnowDayClusterStrategyTest extends TestCase
             minItemsPerRun: 6,
         );
 
-        $start = new DateTimeImmutable('2024-01-12 09:00:00', new DateTimeZone('UTC'));
-        $media = [];
+        $start    = new DateTimeImmutable('2024-01-12 09:00:00', new DateTimeZone('UTC'));
+        $media    = [];
         $keywords = ['snow', 'ski', 'piste', 'snowboard', 'eiszapfen', 'schnee'];
         foreach ($keywords as $index => $keyword) {
             $media[] = $this->createMedia(
@@ -55,7 +63,7 @@ final class SnowDayClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-04-01 09:00:00', new DateTimeZone('UTC'));
         $media = [];
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 4; ++$i) {
             $media[] = $this->createMedia(
                 1100 + $i,
                 $start->add(new DateInterval('PT' . ($i * 30) . 'M')),
@@ -79,5 +87,4 @@ final class SnowDayClusterStrategyTest extends TestCase
             size: 1024,
         );
     }
-
 }

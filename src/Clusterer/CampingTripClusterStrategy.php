@@ -1,15 +1,34 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function assert;
+use function count;
+use function sort;
+use function str_contains;
+use function strtolower;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Multi-day camping runs (consecutive days) using keywords.
@@ -24,7 +43,7 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
         private int $minItemsPerDay = 3,
         private int $minNights = 2,
         private int $maxNights = 14,
-        private int $minItemsTotal = 20
+        private int $minItemsTotal = 20,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
@@ -54,6 +73,7 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -65,12 +85,12 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
 
         $campingItems = $this->filterTimestampedItemsBy(
             $items,
-            fn (Media $m): bool => $this->looksCamping(\strtolower($m->getPath()))
+            fn (Media $m): bool => $this->looksCamping(strtolower($m->getPath()))
         );
 
         foreach ($campingItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
 
             $d = $t->setTimezone($tz)->format('Y-m-d');
             $byDay[$d] ??= [];
@@ -87,13 +107,13 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
             return [];
         }
 
-        $days = \array_keys($eligibleDays);
-        \sort($days, \SORT_STRING);
+        $days = array_keys($eligibleDays);
+        sort($days, SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
         /** @var list<string> $run */
-        $run = [];
+        $run  = [];
         $prev = null;
 
         $flush = function () use (&$run, &$out, $eligibleDays): void {
@@ -101,9 +121,10 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
                 return;
             }
 
-            $nights = \count($run) - 1;
+            $nights = count($run) - 1;
             if ($nights < $this->minNights || $nights > $this->maxNights) {
                 $run = [];
+
                 return;
             }
 
@@ -115,12 +136,13 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
                 }
             }
 
-            if (\count($members) < $this->minItemsTotal) {
+            if (count($members) < $this->minItemsTotal) {
                 $run = [];
+
                 return;
             }
 
-            \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);
 
@@ -131,7 +153,7 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
 
             $run = [];
@@ -156,7 +178,7 @@ final readonly class CampingTripClusterStrategy implements ClusterStrategyInterf
         /** @var list<string> $kw */
         $kw = ['camping', 'zelt', 'zelten', 'wohnmobil', 'caravan', 'wohnwagen', 'campground', 'camp site', 'campsite', 'stellplatz'];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

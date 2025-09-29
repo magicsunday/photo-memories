@@ -1,15 +1,36 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function sort;
+use function str_contains;
+use function strcmp;
+use function strtolower;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Picks the best multi-day camping run per year and aggregates over years.
@@ -25,7 +46,7 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
         private int $minNights = 2,
         private int $maxNights = 14,
         private int $minYears = 3,
-        private int $minItemsTotal = 24
+        private int $minItemsTotal = 24,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
@@ -59,6 +80,7 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -70,12 +92,12 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
 
         $campingItems = $this->filterTimestampedItemsBy(
             $items,
-            fn (Media $m): bool => $this->looksCamping(\strtolower($m->getPath()))
+            fn (Media $m): bool => $this->looksCamping(strtolower($m->getPath()))
         );
 
         foreach ($campingItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
 
             $y = (int) $t->format('Y');
             $d = $t->setTimezone($tz)->format('Y-m-d');
@@ -96,21 +118,21 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
                 continue;
             }
 
-            $days = \array_keys($eligibleDaysMap);
-            \sort($days, \SORT_STRING);
+            $days = array_keys($eligibleDaysMap);
+            sort($days, SORT_STRING);
 
             /** @var list<array{days:list<string>, items:list<Media>}> $runs */
-            $runs = [];
-            $runDays = [];
+            $runs     = [];
+            $runDays  = [];
             $runItems = [];
-            $prev = null;
+            $prev     = null;
 
             $flushRun = function () use (&$runs, &$runDays, &$runItems): void {
                 if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
 
-                $runDays = [];
+                $runDays  = [];
                 $runItems = [];
             };
 
@@ -132,7 +154,7 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
             /** filter by nights and pick best */
             $candidates = [];
             foreach ($runs as $r) {
-                $nights = \count($r['days']) - 1;
+                $nights = count($r['days']) - 1;
                 if ($nights < $this->minNights) {
                     continue;
                 }
@@ -148,20 +170,20 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
                 continue;
             }
 
-            \usort($candidates, static function (array $a, array $b): int {
-                $na = \count($a['items']);
-                $nb = \count($b['items']);
+            usort($candidates, static function (array $a, array $b): int {
+                $na = count($a['items']);
+                $nb = count($b['items']);
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
 
-                $sa = \count($a['days']);
-                $sb = \count($b['days']);
+                $sa = count($a['days']);
+                $sb = count($b['days']);
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
 
-                return \strcmp($a['days'][0], $b['days'][0]);
+                return strcmp($a['days'][0], $b['days'][0]);
             });
 
             $best = $candidates[0];
@@ -172,11 +194,11 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
             $years[$year] = true;
         }
 
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
+        if (count($years) < $this->minYears || count($picked) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
         $centroid = MediaMath::centroid($picked);
         $time     = MediaMath::timeRange($picked);
 
@@ -184,11 +206,11 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => \array_values(\array_keys($years)),
+                    'years'      => array_values(array_keys($years)),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
+                members: array_map(static fn (Media $m): int => $m->getId(), $picked)
             ),
         ];
     }
@@ -198,7 +220,7 @@ final readonly class CampingOverYearsClusterStrategy implements ClusterStrategyI
         /** @var list<string> $kw */
         $kw = ['camping', 'zelt', 'zelten', 'wohnmobil', 'caravan', 'wohnwagen', 'campground', 'camp site', 'campsite', 'stellplatz'];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

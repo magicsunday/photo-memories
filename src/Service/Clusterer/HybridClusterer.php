@@ -1,12 +1,25 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
-use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
+
+use function array_merge;
+use function count;
+use function is_array;
+use function iterator_to_array;
 
 final class HybridClusterer
 {
@@ -19,15 +32,15 @@ final class HybridClusterer
     public function __construct(
         private readonly iterable $strategies,
         private readonly CompositeClusterScorer $scorer,
-        private readonly TitleGeneratorInterface $titleGenerator
+        private readonly TitleGeneratorInterface $titleGenerator,
     ) {
     }
 
     /**
      * New API: lifecycle + per-strategy progress.
      *
-     * @param list<Media> $items
-     * @param callable(string $strategy, int $index, int $total)|null $onDone
+     * @param list<Media>                                                                  $items
+     * @param callable(string $strategy, int $index, int $total)|null                      $onDone
      * @param callable(string $strategy): callable(int $cur, int $max, string $stage)|null $makeProgress
      *
      * @return list<ClusterDraft>
@@ -38,13 +51,13 @@ final class HybridClusterer
         ?callable $onDone,
     ): array {
         $strategies = $this->getStrategies();
-        $total      = \count($strategies);
+        $total      = count($strategies);
 
         $drafts = [[]];
         $idx    = 0;
 
         foreach ($strategies as $s) {
-            $idx++;
+            ++$idx;
 
             if ($onStart !== null) {
                 $onStart($s->name(), $idx, $total);
@@ -61,7 +74,7 @@ final class HybridClusterer
             }
         }
 
-        $drafts = \array_merge(...$drafts);
+        $drafts = array_merge(...$drafts);
 
         if ($drafts === []) {
             return [];
@@ -79,7 +92,7 @@ final class HybridClusterer
 
     public function countStrategies(): int
     {
-        return \count($this->getStrategies());
+        return count($this->getStrategies());
     }
 
     /** @return list<ClusterStrategyInterface> */
@@ -89,9 +102,9 @@ final class HybridClusterer
             return $this->strategiesCache;
         }
 
-        $this->strategiesCache = \is_array($this->strategies)
+        $this->strategiesCache = is_array($this->strategies)
             ? $this->strategies
-            : \iterator_to_array($this->strategies, false);
+            : iterator_to_array($this->strategies, false);
 
         return $this->strategiesCache;
     }

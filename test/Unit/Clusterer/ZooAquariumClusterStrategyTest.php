@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class ZooAquariumClusterStrategyTest extends TestCase
 {
@@ -26,7 +34,7 @@ final class ZooAquariumClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2023-08-12 09:30:00', new DateTimeZone('UTC'));
         $media = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 1000 + $i,
                 $start->modify('+' . ($i * 20) . ' minutes'),
@@ -49,7 +57,7 @@ final class ZooAquariumClusterStrategyTest extends TestCase
         $strategy = new ZooAquariumClusterStrategy();
 
         $items = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 1100 + $i,
                 new DateTimeImmutable('2023-08-12 22:00:00', new DateTimeZone('UTC')),
@@ -72,5 +80,4 @@ final class ZooAquariumClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

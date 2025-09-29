@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the package magicsunday/photo-memories.
  *
@@ -21,6 +22,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+
+use function count;
+use function is_string;
+use function sprintf;
 
 #[AsCommand(
     name: 'memories:weather:warmup',
@@ -46,11 +51,11 @@ final class WeatherHintWarmupCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io      = new SymfonyStyle($input, $output);
-        $limit   = $input->getOption('limit');
-        $limitN  = \is_string($limit) ? (int) $limit : null;
-        $force   = (bool) $input->getOption('force');
-        $dryRun  = (bool) $input->getOption('dry-run');
+        $io     = new SymfonyStyle($input, $output);
+        $limit  = $input->getOption('limit');
+        $limitN = is_string($limit) ? (int) $limit : null;
+        $force  = (bool) $input->getOption('force');
+        $dryRun = (bool) $input->getOption('dry-run');
 
         $io->title('🌦️  Wetterhinweise vorbereiten');
 
@@ -69,9 +74,10 @@ final class WeatherHintWarmupCommand extends Command
         /** @var list<Media> $medias */
         $medias = $qb->getQuery()->getResult();
 
-        $count = \count($medias);
+        $count = count($medias);
         if ($count < 1) {
             $io->writeln('Nichts zu tun – keine Medien mit GPS- und Zeitstempel gefunden.');
+
             return Command::SUCCESS;
         }
 
@@ -94,7 +100,7 @@ final class WeatherHintWarmupCommand extends Command
             $lon     = $media->getGpsLon();
 
             if ($takenAt === null || $lat === null || $lon === null) {
-                $processed++;
+                ++$processed;
                 $bar->advance();
                 continue;
             }
@@ -107,30 +113,30 @@ final class WeatherHintWarmupCommand extends Command
             }
 
             if (!$needsFetch) {
-                $skipped++;
-                $processed++;
+                ++$skipped;
+                ++$processed;
                 $bar->advance();
                 continue;
             }
 
             if ($dryRun) {
-                $refetched++;
-                $processed++;
+                ++$refetched;
+                ++$processed;
                 $bar->advance();
                 continue;
             }
 
             $bar->setMessage('Rufe API ab');
-            $refetched++;
+            ++$refetched;
             $hint = $this->provider->getHint($media);
 
             if ($hint !== null) {
-                $storedHints++;
+                ++$storedHints;
             } else {
-                $failures++;
+                ++$failures;
             }
 
-            $processed++;
+            ++$processed;
             $bar->advance();
 
             if (($processed % 10) === 0) {
@@ -142,7 +148,7 @@ final class WeatherHintWarmupCommand extends Command
 
         $io->writeln('');
         $io->writeln('');
-        $io->writeln(\sprintf(
+        $io->writeln(sprintf(
             '✅ %d Medien verarbeitet, %d Hinweise neu gespeichert, %d übersprungen, %d ohne Ergebnis.',
             $processed,
             $storedHints,
@@ -151,9 +157,9 @@ final class WeatherHintWarmupCommand extends Command
         ));
 
         if ($dryRun) {
-            $io->note(\sprintf('%d Medien würden abgefragt werden.', $refetched));
+            $io->note(sprintf('%d Medien würden abgefragt werden.', $refetched));
         } else {
-            $io->writeln(\sprintf('🌐 %d Medien über die Wetter-API abgefragt.', $refetched));
+            $io->writeln(sprintf('🌐 %d Medien über die Wetter-API abgefragt.', $refetched));
 
             if ($force) {
                 $io->note('Option --force aktiv: vorhandene Daten wurden überschrieben.');

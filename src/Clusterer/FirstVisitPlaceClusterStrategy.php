@@ -1,16 +1,36 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Entity\Media;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function assert;
+use function count;
+use function floor;
+use function max;
+use function sort;
+use function sprintf;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Detects the earliest visit session per geogrid cell (first time at this place).
@@ -27,7 +47,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
         private int $minItemsPerDay = 4,
         private int $minNights = 0,  // 0..3 (0 means single day ok)
         private int $maxNights = 3,
-        private int $minItemsTotal = 8
+        private int $minItemsTotal = 8,
     ) {
         if ($this->gridDegrees <= 0.0) {
             throw new InvalidArgumentException('gridDegrees must be > 0.');
@@ -61,6 +81,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -74,13 +95,13 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
         $cellDayMap = [];
 
         foreach ($timestampedGps as $m) {
-            $t   = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
-            $lat = (float) $m->getGpsLat();
-            $lon = (float) $m->getGpsLon();
+            $t = $m->getTakenAt();
+            assert($t instanceof DateTimeImmutable);
+            $lat   = (float) $m->getGpsLat();
+            $lon   = (float) $m->getGpsLon();
             $local = $t->setTimezone($tz);
-            $day = $local->format('Y-m-d');
-            $cell = $this->cellKey($lat, $lon);
+            $day   = $local->format('Y-m-d');
+            $cell  = $this->cellKey($lat, $lon);
             $cellDayMap[$cell] ??= [];
             $cellDayMap[$cell][$day] ??= [];
             $cellDayMap[$cell][$day][] = $m;
@@ -99,13 +120,13 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 continue;
             }
 
-            $days = \array_keys($eligibleDaysMap);
-            \sort($days, \SORT_STRING);
+            $days = array_keys($eligibleDaysMap);
+            sort($days, SORT_STRING);
 
             // find earliest run satisfying constraints
             /** @var list<string> $runDays */
             $runDays = [];
-            $prev = null;
+            $prev    = null;
 
             $flush = function () use (&$runDays, &$out, $eligibleDaysMap, $cell, &$seenPlaceDay, $tz): void {
                 if ($runDays === []) {
@@ -120,20 +141,21 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                     }
                 }
 
-                $memberCount = \count($members);
+                $memberCount = count($members);
                 if ($memberCount < $this->minItemsTotal) {
                     $runDays = [];
+
                     return;
                 }
 
-                \usort($members, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+                usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $centroid = MediaMath::centroid($members);
                 $time     = MediaMath::timeRange($members);
                 $dayLocal = (new DateTimeImmutable('@' . $time['from']))
                     ->setTimezone($tz)
                     ->format('Y-m-d');
-                $duration = \max(0, (int) ($time['to'] - $time['from']));
+                $duration = max(0, (int) ($time['to'] - $time['from']));
 
                 $params = [
                     'grid_cell'  => $cell,
@@ -149,16 +171,16 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 $draft = new ClusterDraft(
                     algorithm: 'first_visit_place',
                     params: $params,
-                    centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                    members: \array_map(static fn(Media $m): int => $m->getId(), $members)
+                    centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                    members: array_map(static fn (Media $m): int => $m->getId(), $members)
                 );
 
                 if ($label !== null) {
-                    $key = \sprintf('%s|%s', $label, $dayLocal);
+                    $key = sprintf('%s|%s', $label, $dayLocal);
 
                     if (isset($seenPlaceDay[$key])) {
-                        $existing = $seenPlaceDay[$key];
-                        $existingMembers = $existing['members'];
+                        $existing         = $seenPlaceDay[$key];
+                        $existingMembers  = $existing['members'];
                         $existingDuration = $existing['duration'];
 
                         $shouldReplace = false;
@@ -171,16 +193,16 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
                         if ($shouldReplace) {
                             $out[$existing['index']] = $draft;
-                            $seenPlaceDay[$key] = [
-                                'index' => $existing['index'],
-                                'members' => $memberCount,
+                            $seenPlaceDay[$key]      = [
+                                'index'    => $existing['index'],
+                                'members'  => $memberCount,
                                 'duration' => $duration,
                             ];
                         }
                     } else {
                         $seenPlaceDay[$key] = [
-                            'index' => \count($out),
-                            'members' => $memberCount,
+                            'index'    => count($out),
+                            'members'  => $memberCount,
                             'duration' => $duration,
                         ];
                         $out[] = $draft;
@@ -198,7 +220,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 // consecutive day logic
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     // check previous run
-                    $nights = \max(0, \count($runDays) - 1);
+                    $nights = max(0, count($runDays) - 1);
                     if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                         $flush();
                         $haveFirst = true;
@@ -209,11 +231,11 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 }
 
                 $runDays[] = $d;
-                $prev = $d;
+                $prev      = $d;
             }
 
             if ($haveFirst === false && $runDays !== []) {
-                $nights = \max(0, \count($runDays) - 1);
+                $nights = max(0, count($runDays) - 1);
                 if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                     $flush();
                 }
@@ -225,9 +247,10 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
     private function cellKey(float $lat, float $lon): string
     {
-        $gd = $this->gridDegrees;
-        $rlat = $gd * \floor($lat / $gd);
-        $rlon = $gd * \floor($lon / $gd);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        $gd   = $this->gridDegrees;
+        $rlat = $gd * floor($lat / $gd);
+        $rlon = $gd * floor($lon / $gd);
+
+        return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 }

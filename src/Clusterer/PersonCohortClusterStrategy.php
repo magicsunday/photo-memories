@@ -1,13 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function array_merge;
+use function count;
+use function implode;
+use function ksort;
+use function method_exists;
+use function sort;
 
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
@@ -19,8 +35,8 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
     public function __construct(
         private int $minPersons = 2,
-        private int $minItemsTotal   = 5,
-        private int $windowDays = 14
+        private int $minItemsTotal = 5,
+        private int $windowDays = 14,
     ) {
         if ($this->minPersons < 1) {
             throw new InvalidArgumentException('minPersons must be >= 1.');
@@ -48,10 +64,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     public function cluster(array $items): array
     {
         /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
-        $buckets = [];
+        $buckets     = [];
         $withPersons = $this->filterTimestampedItemsBy(
             $items,
-            static fn (Media $m): bool => \method_exists($m, 'getPersonIds')
+            static fn (Media $m): bool => method_exists($m, 'getPersonIds')
         );
 
         if ($withPersons === []) {
@@ -62,12 +78,12 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         foreach ($withPersons as $m) {
             /** @var list<int> $persons */
             $persons = (array) $m->getPersonIds();
-            if (\count($persons) < $this->minPersons) {
+            if (count($persons) < $this->minPersons) {
                 continue;
             }
 
-            \sort($persons);
-            $sig = 'p:' . \implode('-', \array_map(static fn (int $id): string => (string) $id, $persons));
+            sort($persons);
+            $sig = 'p:' . implode('-', array_map(static fn (int $id): string => (string) $id, $persons));
             $day = $m->getTakenAt()?->format('Y-m-d') ?? '1970-01-01';
 
             $buckets[$sig] ??= [];
@@ -81,7 +97,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             function (array $byDay): bool {
                 $total = 0;
                 foreach ($byDay as $list) {
-                    $total += \count($list);
+                    $total += count($list);
                     if ($total >= $this->minItemsTotal) {
                         return true;
                     }
@@ -99,7 +115,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
         // Phase 2: merge consecutive days within window for each signature
         foreach ($eligibleBuckets as $byDay) {
-            \ksort($byDay);
+            ksort($byDay);
 
             $current = [];
             $lastDay = null;
@@ -116,12 +132,12 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
                 if ($gapDays <= $this->windowDays) {
                     /** @var list<Media> $current */
-                    $current = \array_merge($current, $list);
+                    $current = array_merge($current, $list);
                     $lastDay = $day;
                     continue;
                 }
 
-                if (\count($current) >= $this->minItemsTotal) {
+                if (count($current) >= $this->minItemsTotal) {
                     $clusters[] = $this->makeDraft($current);
                 }
 
@@ -129,7 +145,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                 $lastDay = $day;
             }
 
-            if (\count($current) >= $this->minItemsTotal) {
+            if (count($current) >= $this->minItemsTotal) {
                 $clusters[] = $this->makeDraft($current);
             }
         }
@@ -150,7 +166,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                 'time_range' => MediaMath::timeRange($members),
             ],
             centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+            members: array_map(static fn (Media $m): int => $m->getId(), $members)
         );
     }
 }

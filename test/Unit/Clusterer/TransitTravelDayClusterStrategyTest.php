@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class TransitTravelDayClusterStrategyTest extends TestCase
 {
@@ -22,7 +30,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             minItemsPerDay: 5,
         );
 
-        $day = new DateTimeImmutable('2024-07-01 06:00:00', new DateTimeZone('UTC'));
+        $day    = new DateTimeImmutable('2024-07-01 06:00:00', new DateTimeZone('UTC'));
         $points = [
             [50.0, 8.0],
             [50.3, 8.5],
@@ -51,7 +59,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
     {
         $strategy = new TransitTravelDayClusterStrategy();
 
-        $day = new DateTimeImmutable('2024-07-02 06:00:00', new DateTimeZone('UTC'));
+        $day    = new DateTimeImmutable('2024-07-02 06:00:00', new DateTimeZone('UTC'));
         $points = [
             [50.0, 8.0],
             [50.01, 8.01],
@@ -78,5 +86,4 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

@@ -1,10 +1,18 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
-use Doctrine\ORM\Query;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Query;
 use MagicSunday\Memories\Entity\Location;
 
 /**
@@ -16,7 +24,9 @@ final class LocationCellIndex
     /** @var array<string,int> cell -> location id */
     private array $cellToId = [];
 
-    public function __construct(private readonly EntityManagerInterface $em) {}
+    public function __construct(private readonly EntityManagerInterface $em)
+    {
+    }
 
     /**
      * Load (cell,id) pairs from DB into memory. Returns number of distinct cells loaded.
@@ -40,7 +50,7 @@ final class LocationCellIndex
             $cell = (string) $row['cell'];
             if ($cell !== '' && !isset($this->cellToId[$cell])) {
                 $this->cellToId[$cell] = (int) $row['id'];
-                $n++;
+                ++$n;
             }
         }
 
@@ -81,6 +91,7 @@ final class LocationCellIndex
 
         // stale id: remove and retry repository fallback next time
         unset($this->cellToId[$cell]);
+
         return null;
     }
 

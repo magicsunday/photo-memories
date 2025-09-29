@@ -1,14 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function substr;
 
 /**
  * Groups photos by local calendar day. Produces compact "Day Tour" clusters.
@@ -19,7 +31,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 
     public function __construct(
         private string $timezone = 'Europe/Berlin',
-        private int $minItemsPerDay = 8
+        private int $minItemsPerDay = 8,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
@@ -33,6 +45,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -47,9 +60,9 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
+            $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -61,18 +74,17 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         $out = [];
 
         foreach ($eligibleDays as $key => $members) {
-
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'year'       => (int) \substr($key, 0, 4),
+                    'year'       => (int) substr($key, 0, 4),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
         }
 

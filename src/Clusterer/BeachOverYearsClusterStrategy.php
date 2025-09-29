@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -14,7 +22,7 @@ final class BeachOverYearsClusterStrategy extends KeywordBestDayOverYearsStrateg
         string $timezone = 'Europe/Berlin',
         int $minItemsPerDay = 6,
         int $minYears = 3,
-        int $minItemsTotal = 24
+        int $minItemsTotal = 24,
     ) {
         parent::__construct(
             timezone: $timezone,

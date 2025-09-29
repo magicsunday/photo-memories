@@ -1,14 +1,24 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
+use function assert;
 
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -31,6 +41,7 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -48,15 +59,15 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             $device = $m->getCameraModel() ?? 'unbekannt';
             $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
 
-            $key = $device.'|'.$date.'|'.$locKey;
+            $key = $device . '|' . $date . '|' . $locKey;
             $groups[$key] ??= [];
             $groups[$key][] = $m;
-            $devices[$key] = $device;
+            $devices[$key]  = $device;
         };
 
         foreach ($withTimestamp as $m) {
             $takenAt = $m->getTakenAt();
-            \assert($takenAt instanceof DateTimeImmutable);
+            assert($takenAt instanceof DateTimeImmutable);
             $ingest($m, $takenAt->format('Y-m-d'));
         }
 
@@ -74,10 +85,10 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
 
         $drafts = [];
         foreach ($eligibleGroups as $key => $group) {
-            $label = $this->locHelper->majorityLabel($group);
+            $label  = $this->locHelper->majorityLabel($group);
             $params = [
                 'time_range' => $this->computeTimeRange($group),
-                'device' => $devices[$key] ?? 'Unbekannt',
+                'device'     => $devices[$key] ?? 'Unbekannt',
             ];
             if ($label !== null) {
                 $params['place'] = $label;

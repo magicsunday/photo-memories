@@ -1,9 +1,31 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
 use MagicSunday\Memories\Entity\Media;
+
+use function array_values;
+use function bindec;
+use function dechex;
+use function is_array;
+use function is_file;
+use function is_string;
+use function method_exists;
+use function sort;
+use function str_repeat;
+use function strlen;
+use function substr;
+
+use const SORT_STRING;
 
 /**
  * Shared image helpers for GD/Imagick backends.
@@ -17,17 +39,18 @@ trait GdImageToolsTrait
     {
         $thumbs = $m->getThumbnails();
 
-        if (\is_array($thumbs) && $thumbs !== []) {
-            $paths = \array_values($thumbs);
-            \sort($paths, \SORT_STRING);
+        if (is_array($thumbs) && $thumbs !== []) {
+            $paths = array_values($thumbs);
+            sort($paths, SORT_STRING);
             $p = $paths[0];
-            if (\is_string($p) && \is_file($p)) {
+            if (is_string($p) && is_file($p)) {
                 return $p;
             }
         }
 
         $p = $m->getPath();
-        return \is_file($p) ? $p : null;
+
+        return is_file($p) ? $p : null;
     }
 
     /**
@@ -58,24 +81,24 @@ trait GdImageToolsTrait
      */
     private function bitsToHex(string $bits, ?int $targetBits = null): string
     {
-        $len = \strlen($bits);
+        $len = strlen($bits);
 
         if ($targetBits !== null && $targetBits > $len) {
-            $bits = \str_repeat('0', $targetBits - $len) . $bits;
+            $bits = str_repeat('0', $targetBits - $len) . $bits;
             $len  = $targetBits;
         }
 
         // pad to nibble boundary
         $padBits = (4 - ($len % 4)) % 4;
         if ($padBits > 0) {
-            $bits = \str_repeat('0', $padBits) . $bits;
+            $bits = str_repeat('0', $padBits) . $bits;
             $len += $padBits;
         }
 
         $hex = '';
         for ($i = 0; $i < $len; $i += 4) {
-            $chunk = \substr($bits, $i, 4);
-            $hex  .= \dechex(\bindec($chunk));
+            $chunk = substr($bits, $i, 4);
+            $hex .= dechex(bindec($chunk));
         }
 
         return $hex;
@@ -90,17 +113,17 @@ trait GdImageToolsTrait
     {
         // Imagick Fast-Path: ein Export statt 1024 getLuma()-Aufrufe
         if ($src instanceof ImagickImageAdapter
-            && \method_exists($src, 'exportRgbBytes')
+            && method_exists($src, 'exportRgbBytes')
         ) {
             $rgb = $src->exportRgbBytes($w, $h); // length = w*h*3
             $out = [];
             $idx = 0;
-            for ($y = 0; $y < $h; $y++) {
+            for ($y = 0; $y < $h; ++$y) {
                 $row = [];
-                for ($x = 0; $x < $w; $x++) {
-                    $r = (float) $rgb[$idx++]; // 0..255
-                    $g = (float) $rgb[$idx++];
-                    $b = (float) $rgb[$idx++];
+                for ($x = 0; $x < $w; ++$x) {
+                    $r     = (float) $rgb[$idx++]; // 0..255
+                    $g     = (float) $rgb[$idx++];
+                    $b     = (float) $rgb[$idx++];
                     $row[] = 0.299 * $r + 0.587 * $g + 0.114 * $b;
                 }
 
@@ -112,10 +135,10 @@ trait GdImageToolsTrait
 
         // Generischer Fallback: wie bisher (GD o. ä.)
         $resized = $src->resize($w, $h);
-        $out = [];
-        for ($y = 0; $y < $h; $y++) {
+        $out     = [];
+        for ($y = 0; $y < $h; ++$y) {
             $row = [];
-            for ($x = 0; $x < $w; $x++) {
+            for ($x = 0; $x < $w; ++$x) {
                 $row[] = $resized->getLuma($x, $y);
             }
 

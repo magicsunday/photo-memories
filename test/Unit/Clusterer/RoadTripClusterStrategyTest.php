@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\RoadTripClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class RoadTripClusterStrategyTest extends TestCase
 {
@@ -36,7 +44,7 @@ final class RoadTripClusterStrategyTest extends TestCase
         $id = 1000;
         foreach ($days as $index => $coords) {
             $dayStart = $start->add(new DateInterval('P' . $index . 'D'));
-            $media = [...$media, ...$this->createDailyTrack($id, $dayStart, $coords['lat'], $coords['lon'])];
+            $media    = [...$media, ...$this->createDailyTrack($id, $dayStart, $coords['lat'], $coords['lon'])];
             $id += 4;
         }
 
@@ -77,7 +85,7 @@ final class RoadTripClusterStrategyTest extends TestCase
         $id = 2000;
         foreach ($coords as $index => $pos) {
             $dayStart = $start->add(new DateInterval('P' . $index . 'D'));
-            $media = [...$media, ...$this->createDailyTrack($id, $dayStart, $pos['lat'], $pos['lon'])];
+            $media    = [...$media, ...$this->createDailyTrack($id, $dayStart, $pos['lat'], $pos['lon'])];
             $id += 4;
         }
 
@@ -119,5 +127,4 @@ final class RoadTripClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

@@ -1,15 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function usort;
 
 /**
  * Builds a memory around the same date last year within a +/- window.
@@ -21,7 +34,7 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
     public function __construct(
         private string $timezone = 'Europe/Berlin',
         private int $windowDays = 3,
-        private int $minItemsTotal   = 8
+        private int $minItemsTotal = 8,
     ) {
         if ($this->windowDays < 0) {
             throw new InvalidArgumentException('windowDays must be >= 0.');
@@ -39,12 +52,13 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-        $now = new DateTimeImmutable('now', $tz);
+        $tz          = new DateTimeZone($this->timezone);
+        $now         = new DateTimeImmutable('now', $tz);
         $anchorStart = $now->sub(new DateInterval('P1Y'))->modify('-' . $this->windowDays . ' days');
         $anchorEnd   = $now->sub(new DateInterval('P1Y'))->modify('+' . $this->windowDays . ' days');
 
@@ -53,7 +67,7 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
             $items,
             static function (Media $m) use ($tz, $anchorStart, $anchorEnd): bool {
                 $takenAt = $m->getTakenAt();
-                \assert($takenAt instanceof DateTimeImmutable);
+                assert($takenAt instanceof DateTimeImmutable);
 
                 $local = $takenAt->setTimezone($tz);
 
@@ -61,11 +75,11 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
             }
         );
 
-        if (\count($picked) < $this->minItemsTotal) {
+        if (count($picked) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
         $centroid = MediaMath::centroid($picked);
         $time     = MediaMath::timeRange($picked);
 
@@ -76,7 +90,7 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
+                members: array_map(static fn (Media $m): int => $m->getId(), $picked)
             ),
         ];
     }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class PanoramaClusterStrategyTest extends TestCase
 {
@@ -24,7 +32,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-01 12:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createPanorama(3900 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
 
@@ -42,7 +50,7 @@ final class PanoramaClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createNarrowPhoto(4000 + $i, $start->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
 
@@ -77,5 +85,4 @@ final class PanoramaClusterStrategyTest extends TestCase
             },
         );
     }
-
 }

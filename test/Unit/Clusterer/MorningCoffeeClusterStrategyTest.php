@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class MorningCoffeeClusterStrategyTest extends TestCase
 {
@@ -24,9 +32,9 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
             maxHour: 10,
         );
 
-        $base = new DateTimeImmutable('2023-06-10 07:30:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2023-06-10 07:30:00', new DateTimeZone('UTC'));
         $media = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $media[] = $this->createMedia(
                 1500 + $i,
                 $base->modify('+' . ($i * 10) . ' minutes'),
@@ -49,7 +57,7 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
         $strategy = new MorningCoffeeClusterStrategy();
 
         $items = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createMedia(
                 1600 + $i,
                 new DateTimeImmutable('2023-06-10 13:00:00', new DateTimeZone('UTC')),
@@ -73,5 +81,4 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
             size: 256,
         );
     }
-
 }

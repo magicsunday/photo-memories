@@ -1,14 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function floor;
+use function sprintf;
 
 /**
  * Aggregates recurring places using a coarse geogrid (lat/lon rounding).
@@ -22,7 +36,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
         private LocationHelper $locHelper,
         private float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
         private int $minVisitDays = 3,
-        private int $minItemsTotal = 20
+        private int $minItemsTotal = 20,
     ) {
         if ($this->gridDegrees <= 0.0) {
             throw new InvalidArgumentException('gridDegrees must be > 0.');
@@ -44,6 +58,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -58,14 +73,14 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
             $lat = $m->getGpsLat();
             $lon = $m->getGpsLon();
             $t   = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $cell = $this->cellKey((float) $lat, (float) $lon);
             $byCell[$cell] ??= [];
             $byCell[$cell][] = $m;
         }
 
         /** @var array<string,int> $visitCounts */
-        $visitCounts = [];
+        $visitCounts    = [];
         $eligiblePlaces = $this->filterGroupsByMinItems($byCell, $this->minItemsTotal);
 
         $eligiblePlaces = $this->filterGroupsWithKeys(
@@ -75,11 +90,11 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
                 $days = [];
                 foreach ($list as $m) {
                     $takenAt = $m->getTakenAt();
-                    \assert($takenAt instanceof DateTimeImmutable);
+                    assert($takenAt instanceof DateTimeImmutable);
                     $days[$takenAt->format('Y-m-d')] = true;
                 }
 
-                $count = \count($days);
+                $count = count($days);
                 if ($count < $this->minVisitDays) {
                     return false;
                 }
@@ -102,9 +117,9 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
             $time     = MediaMath::timeRange($list);
 
             $params = [
-                'grid_cell'   => $cell,
-                'visit_days'  => $visitCounts[$cell] ?? 0,
-                'time_range'  => $time,
+                'grid_cell'  => $cell,
+                'visit_days' => $visitCounts[$cell] ?? 0,
+                'time_range' => $time,
             ];
             $label = $this->locHelper->majorityLabel($list);
             if ($label !== null) {
@@ -131,7 +146,7 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
                 algorithm: $this->name(),
                 params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 
@@ -140,9 +155,10 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
 
     private function cellKey(float $lat, float $lon): string
     {
-        $gd = $this->gridDegrees;
-        $rlat = $gd * \floor($lat / $gd);
-        $rlon = $gd * \floor($lon / $gd);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        $gd   = $this->gridDegrees;
+        $rlat = $gd * floor($lat / $gd);
+        $rlon = $gd * floor($lon / $gd);
+
+        return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 }

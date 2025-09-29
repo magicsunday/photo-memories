@@ -1,16 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+
+use function count;
+use function max;
+use function usort;
 
 /**
  * Detects short weekend trips (Fri afternoon to Sun/Monday),
@@ -24,9 +36,9 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
     public function __construct(
         private LocationHelper $locHelper,
         #[Autowire(env: 'MEMORIES_HOME_LAT')]
- private ?float $homeLat,
+        private ?float $homeLat,
         #[Autowire(env: 'MEMORIES_HOME_LON')]
- private ?float $homeLon,
+        private ?float $homeLon,
         private float $minAwayKm = 80.0,
         private int $minNights = 1,
         // Minimum media items per trip bucket before we analyse nights and distance.
@@ -52,16 +64,16 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
     {
         $withTs = $this->filterTimestampedItems($items);
 
-        \usort(
+        usort(
             $withTs,
-            static fn(Media $a, Media $b): int =>
-                ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $buckets */
@@ -115,11 +127,11 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
             return null;
         }
 
-        $label = $this->locHelper->majorityLabel($bucket) ?? 'Ausflug';
+        $label  = $this->locHelper->majorityLabel($bucket) ?? 'Ausflug';
         $params = [
-            'place' => $label,
-            'nights'      => $nights,
-            'time_range'  => $this->computeTimeRange($bucket),
+            'place'      => $label,
+            'nights'     => $nights,
+            'time_range' => $this->computeTimeRange($bucket),
         ];
         if ($distanceKm !== null) {
             $params['distance_km'] = $distanceKm;
@@ -145,8 +157,9 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
             }
         }
 
-        $unique = \count($days);
-        return $unique > 0 ? \max(0, $unique - 1) : 0;
+        $unique = count($days);
+
+        return $unique > 0 ? max(0, $unique - 1) : 0;
     }
 
     /** @param list<Media> $bucket */
@@ -164,6 +177,7 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
                     (float) $m->getGpsLat(),
                     (float) $m->getGpsLon()
                 );
+
                 return $mtrs / 1000.0;
             }
         }

@@ -1,14 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function explode;
 
 /**
  * Builds clusters for German (federal) holidays per year (no state-specific).
@@ -19,7 +31,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
     use MediaFilterTrait;
 
     public function __construct(
-        private int $minItemsPerHoliday = 8
+        private int $minItemsPerHoliday = 8,
     ) {
         if ($this->minItemsPerHoliday < 1) {
             throw new InvalidArgumentException('minItemsPerHoliday must be >= 1.');
@@ -33,6 +45,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -45,7 +58,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $name = Calendar::germanFederalHolidayName($t);
             if ($name === null) {
                 continue;
@@ -63,21 +76,20 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         $out = [];
 
         foreach ($eligibleGroups as $key => $members) {
-
-            [$yearStr, $name,] = \explode(':', $key, 3);
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
+            [$yearStr, $name] = explode(':', $key, 3);
+            $centroid         = MediaMath::centroid($members);
+            $time             = MediaMath::timeRange($members);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params   : [
-                    'year'         => (int)$yearStr,
+                    'year'         => (int) $yearStr,
                     'holiday'      => 1.0,
                     'holiday_name' => $name,
                     'time_range'   => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
         }
 

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
@@ -8,9 +16,15 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
+use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
+
+use function file_put_contents;
+use function is_file;
+use function sys_get_temp_dir;
+use function tempnam;
+use function unlink;
 
 #[CoversClass(SmartTitleGenerator::class)]
 #[CoversClass(TitleTemplateProvider::class)]
@@ -25,8 +39,8 @@ final class SmartTitleGeneratorTest extends TestCase
         parent::tearDown();
 
         foreach ($this->tempFiles as $path) {
-            if (\is_file($path)) {
-                @\unlink($path);
+            if (is_file($path)) {
+                @unlink($path);
             }
         }
 
@@ -47,7 +61,7 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'time_similarity',
             params: [
-                'place' => 'Berlin',
+                'place'      => 'Berlin',
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-06-03 20:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -73,7 +87,7 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'weekend_trip',
             params: [
-                'place' => 'Hamburg',
+                'place'      => 'Hamburg',
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-07-05 00:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-07-07 21:59:59', new DateTimeZone('UTC')))->getTimestamp(),
@@ -93,7 +107,7 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'unknown',
             params: [
-                'label' => 'Sommer 2024',
+                'label'      => 'Sommer 2024',
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-08-12 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-08-12 21:59:59', new DateTimeZone('UTC')))->getTimestamp(),
@@ -107,12 +121,12 @@ YAML
 
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
     {
-        $path = \tempnam(\sys_get_temp_dir(), 'titles_');
+        $path = tempnam(sys_get_temp_dir(), 'titles_');
         if ($path === false) {
             self::fail('Failed to create temporary template file.');
         }
 
-        $result = \file_put_contents($path, $yaml);
+        $result = file_put_contents($path, $yaml);
         if ($result === false) {
             self::fail('Failed to write template configuration.');
         }

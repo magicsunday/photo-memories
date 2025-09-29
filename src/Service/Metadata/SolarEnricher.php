@@ -1,10 +1,27 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+
+use function acos;
+use function asin;
+use function cos;
+use function deg2rad;
+use function floor;
+use function fmod;
+use function rad2deg;
+use function sin;
 
 /**
  * Rough sunrise/sunset and golden-hour flags without requiring php-calendar.
@@ -16,7 +33,7 @@ use MagicSunday\Memories\Entity\Media;
 final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private int $goldenMinutes = 60
+        private int $goldenMinutes = 60,
     ) {
     }
 
@@ -47,15 +64,14 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $offsetSec = $offsetMin * 60;
 
         $sunriseLocal = $sunUtc['sunrise'] + $offsetSec;
-        $sunsetLocal  = $sunUtc['sunset']  + $offsetSec;
+        $sunsetLocal  = $sunUtc['sunset'] + $offsetSec;
         $photoLocal   = $t->getTimestamp() + $offsetSec;
 
-        $delta = $this->goldenMinutes * 60;
-        $isGolden =
-            ($photoLocal >= $sunriseLocal && $photoLocal <= ($sunriseLocal + $delta)) ||
-            ($photoLocal >= ($sunsetLocal - $delta) && $photoLocal <= $sunsetLocal);
+        $delta    = $this->goldenMinutes * 60;
+        $isGolden = ($photoLocal >= $sunriseLocal && $photoLocal <= ($sunriseLocal + $delta))
+            || ($photoLocal >= ($sunsetLocal - $delta) && $photoLocal <= $sunsetLocal);
 
-        $features = $media->getFeatures() ?? [];
+        $features                 = $media->getFeatures() ?? [];
         $features['isGoldenHour'] = $isGolden;
         $media->setFeatures($features);
 
@@ -82,23 +98,23 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $n       = $Jday - 2451545.0 + 0.0008;
         $Japprox = $n - ($lon / 360.0);
 
-        $M      = \fmod(357.5291 + 0.98560028 * $Japprox, 360.0);
-        $C      = 1.9148 * \sin(\deg2rad($M)) + 0.0200 * \sin(2.0 * \deg2rad($M)) + 0.0003 * \sin(3.0 * \deg2rad($M));
-        $lambda = \fmod($M + 102.9372 + $C + 180.0, 360.0);
+        $M      = fmod(357.5291 + 0.98560028 * $Japprox, 360.0);
+        $C      = 1.9148 * sin(deg2rad($M)) + 0.0200 * sin(2.0 * deg2rad($M)) + 0.0003 * sin(3.0 * deg2rad($M));
+        $lambda = fmod($M + 102.9372 + $C + 180.0, 360.0);
 
-        $Jtransit = 2451545.0 + $Japprox + 0.0053 * \sin(\deg2rad($M)) - 0.0069 * \sin(2.0 * \deg2rad($lambda));
-        $delta    = \asin(\sin(\deg2rad($lambda)) * \sin(\deg2rad(23.44)));
+        $Jtransit = 2451545.0 + $Japprox + 0.0053 * sin(deg2rad($M)) - 0.0069 * sin(2.0 * deg2rad($lambda));
+        $delta    = asin(sin(deg2rad($lambda)) * sin(deg2rad(23.44)));
 
-        $latR = \deg2rad($lat);
-        $cosH = (\sin(\deg2rad(-0.83)) - \sin($latR) * \sin($delta)) / (\cos($latR) * \cos($delta));
+        $latR = deg2rad($lat);
+        $cosH = (sin(deg2rad(-0.83)) - sin($latR) * sin($delta)) / (cos($latR) * cos($delta));
         if ($cosH < -1.0 || $cosH > 1.0) {
             // Polar day/night for that date/lat → no golden hour
             return null;
         }
 
-        $H     = \acos($cosH);
-        $Jset  = $Jtransit + \rad2deg($H) / 360.0;
-        $Jrise = $Jtransit - \rad2deg($H) / 360.0;
+        $H     = acos($cosH);
+        $Jset  = $Jtransit + rad2deg($H) / 360.0;
+        $Jrise = $Jtransit - rad2deg($H) / 360.0;
 
         // Convert Julian Day to Unix time (UTC): JD(Unix epoch) = 2440587.5
         $sunriseUtc = $this->julianDayToUnix($Jrise);
@@ -128,10 +144,10 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 
     /**
      * Convert Julian Day (days since noon UTC) to Unix timestamp (seconds UTC).
-     * JD(epoch) = 2440587.5  → unix = (JD - 2440587.5) * 86400
+     * JD(epoch) = 2440587.5  → unix = (JD - 2440587.5) * 86400.
      */
     private function julianDayToUnix(float $jd): int
     {
-        return (int) \floor(($jd - 2440587.5) * 86400.0);
+        return (int) floor(($jd - 2440587.5) * 86400.0);
     }
 }

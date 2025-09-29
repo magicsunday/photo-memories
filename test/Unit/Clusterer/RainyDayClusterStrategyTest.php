@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,8 +17,8 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\RainyDayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class RainyDayClusterStrategyTest extends TestCase
 {
@@ -32,9 +40,9 @@ final class RainyDayClusterStrategyTest extends TestCase
             minItemsPerDay: 6,
         );
 
-        $base = new DateTimeImmutable('2024-10-01 09:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-10-01 09:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(2900 + $i, $base->add(new DateInterval('PT' . ($i * 900) . 'S')));
         }
 
@@ -58,9 +66,9 @@ final class RainyDayClusterStrategyTest extends TestCase
         ]);
         $strategy = new RainyDayClusterStrategy(weather: $provider);
 
-        $base = new DateTimeImmutable('2024-10-02 09:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-10-02 09:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(3000 + $i, $base->add(new DateInterval('PT' . ($i * 900) . 'S')));
         }
 
@@ -77,7 +85,6 @@ final class RainyDayClusterStrategyTest extends TestCase
             lon: 7.6,
         );
     }
-
 }
 
 final class RainHintProvider implements WeatherHintProviderInterface

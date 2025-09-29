@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Utility;
@@ -6,43 +14,47 @@ namespace MagicSunday\Memories\Utility;
 use DateInterval;
 use DateTimeImmutable;
 
+use function sprintf;
+
 /**
  * Calendar helpers (Gregorian).
  */
 final class Calendar
 {
-    private function __construct() {}
+    private function __construct()
+    {
+    }
 
     /**
      * Western Easter Sunday (Anonymous Gregorian algorithm).
      */
     public static function easterSunday(int $year): DateTimeImmutable
     {
-        $a = $year % 19;
-        $b = intdiv($year, 100);
-        $c = $year % 100;
-        $d = intdiv($b, 4);
-        $e = $b % 4;
-        $f = intdiv($b + 8, 25);
-        $g = intdiv($b - $f + 1, 3);
-        $h = (19 * $a + $b - $d - $g + 15) % 30;
-        $i = intdiv($c, 4);
-        $k = $c % 4;
-        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
-        $m = intdiv($a + 11 * $h + 22 * $l, 451);
+        $a     = $year % 19;
+        $b     = intdiv($year, 100);
+        $c     = $year % 100;
+        $d     = intdiv($b, 4);
+        $e     = $b % 4;
+        $f     = intdiv($b + 8, 25);
+        $g     = intdiv($b - $f + 1, 3);
+        $h     = (19 * $a + $b - $d - $g + 15) % 30;
+        $i     = intdiv($c, 4);
+        $k     = $c % 4;
+        $l     = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m     = intdiv($a + 11 * $h + 22 * $l, 451);
         $month = intdiv($h + $l - 7 * $m + 114, 31); // 3=March, 4=April
         $day   = (($h + $l - 7 * $m + 114) % 31) + 1;
 
-        return new DateTimeImmutable(\sprintf('%04d-%02d-%02d', $year, $month, $day));
+        return new DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $day));
     }
 
     /**
      * Returns the German federal holiday name for a given day, or null if none.
-     * (No state-specific holidays.)
+     * (No state-specific holidays.).
      */
     public static function germanFederalHolidayName(DateTimeImmutable $day): ?string
     {
-        $y = (int) $day->format('Y');
+        $y   = (int) $day->format('Y');
         $key = $day->format('Y-m-d');
 
         $fixed = [
@@ -56,7 +68,7 @@ final class Calendar
             return $fixed[$key];
         }
 
-        $easter = self::easterSunday($y);
+        $easter       = self::easterSunday($y);
         $goodFriday   = $easter->sub(new DateInterval('P2D'));
         $easterMonday = $easter->add(new DateInterval('P1D'));
         $ascension    = $easter->add(new DateInterval('P39D'));

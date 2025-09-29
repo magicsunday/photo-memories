@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class SnowVacationOverYearsClusterStrategyTest extends TestCase
 {
@@ -29,10 +37,10 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
         foreach ([2020, 2021, 2022] as $year) {
             $start = new DateTimeImmutable(sprintf('%d-01-10 09:00:00', $year), new DateTimeZone('UTC'));
 
-            for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
+            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
                 $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
 
-                for ($i = 0; $i < 2; $i++) {
+                for ($i = 0; $i < 2; ++$i) {
                     $items[] = $this->createMedia(
                         ($year * 100) + ($dayOffset * 10) + $i,
                         $day->add(new DateInterval('PT' . ($i * 3600) . 'S')),
@@ -90,10 +98,10 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
         foreach ([2020, 2021] as $year) {
             $start = new DateTimeImmutable(sprintf('%d-02-03 08:00:00', $year), new DateTimeZone('UTC'));
 
-            for ($dayOffset = 0; $dayOffset < 3; $dayOffset++) {
+            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
                 $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
 
-                for ($i = 0; $i < 2; $i++) {
+                for ($i = 0; $i < 2; ++$i) {
                     // Only two items per day, below the configured threshold.
                     $items[] = $this->createMedia(
                         ($year * 200) + ($dayOffset * 10) + $i,
@@ -114,7 +122,7 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
         DateTimeImmutable $takenAt,
         string $path,
         float $lat,
-        float $lon
+        float $lon,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -125,5 +133,4 @@ final class SnowVacationOverYearsClusterStrategyTest extends TestCase
             size: 4096,
         );
     }
-
 }

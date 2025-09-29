@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class NewYearEveClusterStrategyTest extends TestCase
 {
@@ -25,7 +33,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2023-12-31 20:00:00', new DateTimeZone('Europe/Berlin'));
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(
                 2100 + $i,
                 $start->add(new DateInterval('PT' . ($i * 30) . 'M')),
@@ -48,7 +56,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
         $strategy = new NewYearEveClusterStrategy();
 
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(
                 2200 + $i,
                 new DateTimeImmutable('2023-12-31 15:00:00', new DateTimeZone('UTC')),
@@ -69,5 +77,4 @@ final class NewYearEveClusterStrategyTest extends TestCase
             size: 2048,
         );
     }
-
 }

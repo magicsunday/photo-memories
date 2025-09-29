@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Entity;
@@ -6,6 +14,13 @@ namespace MagicSunday\Memories\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+
+use function count;
+use function implode;
+use function sha1;
+use function sort;
+
+use const SORT_NUMERIC;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'cluster')]
@@ -42,13 +57,13 @@ class Cluster
         string $algorithm,
         array $params,
         array $centroid,
-        array $members
+        array $members,
     ) {
-        $this->algorithm = $algorithm;
-        $this->params = $params;
-        $this->centroid = $centroid;
-        $this->members = $members;
-        $this->createdAt = new DateTimeImmutable();
+        $this->algorithm   = $algorithm;
+        $this->params      = $params;
+        $this->centroid    = $centroid;
+        $this->members     = $members;
+        $this->createdAt   = new DateTimeImmutable();
         $this->fingerprint = self::computeFingerprint($this->members);
     }
 
@@ -59,11 +74,11 @@ class Cluster
      */
     public static function computeFingerprint(array $members): string
     {
-        if (\count($members) > 1) {
-            \sort($members, \SORT_NUMERIC);
+        if (count($members) > 1) {
+            sort($members, SORT_NUMERIC);
         }
 
-        return \sha1(\implode(',', $members));
+        return sha1(implode(',', $members));
     }
 
     public function getFingerprint(): string

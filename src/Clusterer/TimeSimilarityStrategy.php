@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -8,6 +16,9 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
+use function array_map;
+use function usort;
 
 final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -35,22 +46,22 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
     {
         $withTs = $this->filterTimestampedItems($items);
 
-        \usort(
+        usort(
             $withTs,
-            static fn(Media $a, Media $b): int =>
-                ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $buckets */
         $buckets = [];
         /** @var list<Media> $bucket */
-        $bucket = [];
+        $bucket  = [];
         $prevTs  = null;
         $prevKey = null;
 
@@ -83,7 +94,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 
         $eligible = $this->filterListsByMinItems($buckets, $this->minItemsPerBucket);
 
-        return \array_map(
+        return array_map(
             fn (array $list): ClusterDraft => $this->makeDraft($list),
             $eligible
         );
@@ -92,7 +103,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
     /** @param list<Media> $bucket */
     private function makeDraft(array $bucket): ClusterDraft
     {
-        $label = $this->locHelper->majorityLabel($bucket);
+        $label  = $this->locHelper->majorityLabel($bucket);
         $params = [
             'time_range' => $this->computeTimeRange($bucket),
         ];

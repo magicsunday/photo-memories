@@ -1,10 +1,25 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
-use Throwable;
 use Imagick;
+use Throwable;
+
+use function class_exists;
+use function count;
+use function extension_loaded;
+use function is_file;
+use function method_exists;
+use function round;
 
 /**
  * Imagick-based adapter, supports HEIC/AVIF (depends on delegates).
@@ -12,17 +27,17 @@ use Imagick;
 final readonly class ImagickImageAdapter implements ImageAdapterInterface
 {
     public function __construct(
-        private Imagick $image
+        private Imagick $image,
     ) {
     }
 
     public static function fromFile(string $path): ?self
     {
-        if (!\class_exists(Imagick::class) || !\extension_loaded('imagick')) {
+        if (!class_exists(Imagick::class) || !extension_loaded('imagick')) {
             return null;
         }
 
-        if (!\is_file($path)) {
+        if (!is_file($path)) {
             return null;
         }
 
@@ -30,19 +45,19 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
             $im = new Imagick($path);
 
             // Auto-orient according to EXIF
-            if (\method_exists($im, 'autoOrient')) {
+            if (method_exists($im, 'autoOrient')) {
                 $im->autoOrient();
-            } elseif (\method_exists($im, 'autoOrientate')) {
+            } elseif (method_exists($im, 'autoOrientate')) {
                 /** @phpstan-ignore-next-line */
                 $im->autoOrientate();
             }
 
             // Normalize to sRGB and 8-bit for stable luma
-            if (\method_exists($im, 'setImageColorspace')) {
+            if (method_exists($im, 'setImageColorspace')) {
                 $im->setImageColorspace(Imagick::COLORSPACE_SRGB);
             }
 
-            if (\method_exists($im, 'setImageDepth')) {
+            if (method_exists($im, 'setImageDepth')) {
                 $im->setImageDepth(8);
             }
 
@@ -69,6 +84,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
         $r = $c['r'] * 255.0;
         $g = $c['g'] * 255.0;
         $b = $c['b'] * 255.0;
+
         return 0.299 * $r + 0.587 * $g + 0.114 * $b;
     }
 
@@ -76,6 +92,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
     {
         $clone = clone $this->image;
         $clone->resizeImage($targetWidth, $targetHeight, Imagick::FILTER_LANCZOS, 1.0, true);
+
         return new self($clone);
     }
 
@@ -118,12 +135,12 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
         $clone->destroy();
 
         // normalisieren auf ints 0..255
-        $out = [];
-        $outLen = \count($buf);
+        $out    = [];
+        $outLen = count($buf);
 
-        for ($i = 0; $i < $outLen; $i++) {
-            $v = $buf[$i];
-            $out[] = (int) (is_float($v) ? \round($v) : $v);
+        for ($i = 0; $i < $outLen; ++$i) {
+            $v     = $buf[$i];
+            $out[] = (int) (is_float($v) ? round($v) : $v);
         }
 
         /** @var list<int> $out */

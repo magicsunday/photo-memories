@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
@@ -7,19 +15,23 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 
+use function array_keys;
+use function array_unique;
+use function array_values;
+
 final readonly class ClusterPersistenceService
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private int $defaultBatchSize = 250
+        private int $defaultBatchSize = 250,
     ) {
     }
 
     /**
      * Persist drafts in batches while skipping already existing (algorithm,fingerprint) pairs.
      *
-     * @param list<ClusterDraft>               $drafts
-     * @param int                              $batchSize
+     * @param list<ClusterDraft>                   $drafts
+     * @param int                                  $batchSize
      * @param callable(int $persistedInBatch)|null $onBatchPersisted
      *
      * @return int Number of newly persisted clusters
@@ -36,8 +48,8 @@ final readonly class ClusterPersistenceService
         /** @var list<array{alg:string, fp:string}> $pairs */
         $pairs = [];
         foreach ($drafts as $d) {
-            $alg = $d->getAlgorithm();
-            $fp  = Cluster::computeFingerprint($d->getMembers());
+            $alg     = $d->getAlgorithm();
+            $fp      = Cluster::computeFingerprint($d->getMembers());
             $pairs[] = ['alg' => $alg, 'fp' => $fp];
         }
 
@@ -55,7 +67,7 @@ final readonly class ClusterPersistenceService
         foreach ($drafts as $d) {
             $alg = $d->getAlgorithm();
             $fp  = Cluster::computeFingerprint($d->getMembers());
-            $key = $alg.'|'.$fp;
+            $key = $alg . '|' . $fp;
             if (isset($existing[$key])) {
                 // already persisted earlier or within this same run
                 continue;
@@ -76,8 +88,8 @@ final readonly class ClusterPersistenceService
 
             $this->em->persist($entity);
 
-            $persisted++;
-            $inBatch++;
+            ++$persisted;
+            ++$inBatch;
             $seenThisRun[$key] = true;
 
             if ($inBatch >= $batchSize) {
@@ -108,6 +120,7 @@ final readonly class ClusterPersistenceService
      * Load already persisted (algorithm,fingerprint) pairs for the given candidate set.
      *
      * @param list<array{alg:string, fp:string}> $pairs
+     *
      * @return array<string,bool> map "alg|fp" => true
      */
     private function loadExistingPairs(array $pairs): array
@@ -125,9 +138,9 @@ final readonly class ClusterPersistenceService
         }
 
         /** @var list<string> $algList */
-        $algList = \array_keys($algs);
+        $algList = array_keys($algs);
         /** @var list<string> $fpList */
-        $fpList  = \array_keys($fps);
+        $fpList = array_keys($fps);
 
         $qb = $this->em->createQueryBuilder()
             ->select('c.algorithm AS alg', 'c.fingerprint AS fp')
@@ -144,7 +157,7 @@ final readonly class ClusterPersistenceService
 
         $out = [];
         foreach ($rows as $r) {
-            $out[$r['alg'].'|'.$r['fp']] = true;
+            $out[$r['alg'] . '|' . $r['fp']] = true;
         }
 
         return $out;
@@ -161,7 +174,7 @@ final readonly class ClusterPersistenceService
             return 0;
         }
 
-        $uniqueAlgorithms = \array_values(\array_unique($algorithms));
+        $uniqueAlgorithms = array_values(array_unique($algorithms));
 
         $q = $this->em->createQueryBuilder()
             ->delete(Cluster::class, 'c')

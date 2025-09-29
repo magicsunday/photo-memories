@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,11 +15,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Location;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class LocationSimilarityStrategyTest extends TestCase
 {
@@ -36,9 +44,9 @@ final class LocationSimilarityStrategyTest extends TestCase
         );
         $museum->setPois([
             [
-                'name'          => 'Museum Island',
-                'names'         => [
-                    'default' => 'Museum Island',
+                'name'  => 'Museum Island',
+                'names' => [
+                    'default'   => 'Museum Island',
                     'localized' => [
                         'de' => 'Museumsinsel',
                     ],
@@ -123,7 +131,7 @@ final class LocationSimilarityStrategyTest extends TestCase
         self::assertSame('location_similarity', $cluster->getAlgorithm());
         self::assertSame([901, 902, 903], $cluster->getMembers());
 
-        $params = $cluster->getParams();
+        $params        = $cluster->getParams();
         $expectedRange = [
             'from' => (new DateTimeImmutable('2023-05-01 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
             'to'   => (new DateTimeImmutable('2023-05-01 10:35:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -153,5 +161,4 @@ final class LocationSimilarityStrategyTest extends TestCase
             location: $location,
         );
     }
-
 }

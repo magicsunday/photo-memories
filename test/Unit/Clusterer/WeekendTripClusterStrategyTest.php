@@ -1,21 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Location;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class WeekendTripClusterStrategyTest extends TestCase
 {
     #[Test]
     public function clustersWeekendTripAwayFromHome(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new WeekendTripClusterStrategy(
             locHelper: $helper,
             homeLat: 52.5200,
@@ -26,7 +34,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
         );
 
         $location = $this->createLocation('munich', 'Munich', 48.137, 11.575);
-        $media = [
+        $media    = [
             $this->createMedia(700, '2024-04-19 16:00:00', $location),
             $this->createMedia(701, '2024-04-20 10:00:00', $location),
             $this->createMedia(702, '2024-04-21 11:00:00', $location),
@@ -47,7 +55,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
     #[Test]
     public function rejectsTripsTooCloseToHome(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new WeekendTripClusterStrategy(
             locHelper: $helper,
             homeLat: 52.5200,
@@ -58,7 +66,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
         );
 
         $location = $this->createLocation('potsdam', 'Potsdam', 52.400, 13.050);
-        $items = [
+        $items    = [
             $this->createMedia(710, '2024-05-17 16:00:00', $location),
             $this->createMedia(711, '2024-05-18 10:00:00', $location),
             $this->createMedia(712, '2024-05-19 11:00:00', $location),
@@ -88,5 +96,4 @@ final class WeekendTripClusterStrategyTest extends TestCase
             location: $location,
         );
     }
-
 }

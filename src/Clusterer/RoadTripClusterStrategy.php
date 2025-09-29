@@ -1,15 +1,32 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function assert;
+use function count;
+use function sort;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Detects multi-day road trips based on daily traveled distance (from GPS track).
@@ -25,7 +42,7 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
         // Counts only media items that already contain GPS coordinates.
         private int $minItemsPerDay = 8,
         private int $minNights = 3,       // => at least 4 days
-        private int $minItemsTotal = 40
+        private int $minItemsTotal = 40,
     ) {
         if ($this->minDailyKm <= 0.0) {
             throw new InvalidArgumentException('minDailyKm must be > 0.');
@@ -51,6 +68,7 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -67,7 +85,7 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
         $byDay = [];
         foreach ($timestampedGpsItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $d = $t->setTimezone($tz)->format('Y-m-d');
             $byDay[$d] ??= [];
             $byDay[$d][] = $m;
@@ -80,18 +98,18 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
             $eligibleDays,
             function (array $list): bool {
                 $sorted = $list;
-                \usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+                usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $km = 0.0;
-                for ($i = 1, $n = \count($sorted); $i < $n; $i++) {
+                for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
                     $p = $sorted[$i - 1];
                     $q = $sorted[$i];
                     $km += MediaMath::haversineDistanceInMeters(
-                            (float) $p->getGpsLat(),
-                            (float) $p->getGpsLon(),
-                            (float) $q->getGpsLat(),
-                            (float) $q->getGpsLon()
-                        ) / 1000.0;
+                        (float) $p->getGpsLat(),
+                        (float) $p->getGpsLon(),
+                        (float) $q->getGpsLat(),
+                        (float) $q->getGpsLon()
+                    ) / 1000.0;
                 }
 
                 return $km >= $this->minDailyKm;
@@ -102,8 +120,8 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $travelDays = \array_keys($travelDayLists);
-        \sort($travelDays, \SORT_STRING);
+        $travelDays = array_keys($travelDayLists);
+        sort($travelDays, SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
@@ -115,9 +133,10 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
                 return;
             }
 
-            $nights = \count($run) - 1;
+            $nights = count($run) - 1;
             if ($nights < $this->minNights) {
                 $run = [];
+
                 return;
             }
 
@@ -129,12 +148,13 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
                 }
             }
 
-            if (\count($members) < $this->minItemsTotal) {
+            if (count($members) < $this->minItemsTotal) {
                 $run = [];
+
                 return;
             }
 
-            \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);
 
@@ -145,7 +165,7 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
 
             $run = [];
@@ -165,5 +185,4 @@ final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
-
 }

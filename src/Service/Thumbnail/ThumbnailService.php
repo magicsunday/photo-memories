@@ -1,12 +1,19 @@
 <?php
 
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Thumbnail;
 
-use RuntimeException;
 use Imagick;
 use MagicSunday\Memories\Entity\Media;
+use RuntimeException;
 
 /**
  * Thumbnail service that supports GD and Imagick fallback.
@@ -21,7 +28,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024])
     {
         $this->thumbnailDir = $thumbnailDir;
-        $this->sizes = $sizes;
+        $this->sizes        = $sizes;
         if (!is_dir($this->thumbnailDir)) {
             @mkdir($this->thumbnailDir, 0755, true);
         }
@@ -66,13 +73,15 @@ class ThumbnailService implements ThumbnailServiceInterface
         $im->thumbnailImage($width, 0);
 
         $hash = hash('crc32b', $filepath . ':' . $width);
-        $out = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
+        $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
         if ($im->writeImage($out)) {
             $im->clear();
+
             return $out;
         }
 
         $im->clear();
+
         return null;
     }
 
@@ -88,18 +97,19 @@ class ThumbnailService implements ThumbnailServiceInterface
             return null;
         }
 
-        $w = imagesx($src);
-        $h = imagesy($src);
+        $w     = imagesx($src);
+        $h     = imagesy($src);
         $ratio = $h > 0 ? ($w / $h) : 1;
-        $newW = $width;
-        $newH = (int)round($width / $ratio);
-        $dst = imagecreatetruecolor($newW, $newH);
+        $newW  = $width;
+        $newH  = (int) round($width / $ratio);
+        $dst   = imagecreatetruecolor($newW, $newH);
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
         $hash = hash('crc32b', $filepath . ':' . $width);
-        $out = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
+        $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
         imagejpeg($dst, $out, 85);
         imagedestroy($dst);
         imagedestroy($src);
+
         return $out;
     }
 }

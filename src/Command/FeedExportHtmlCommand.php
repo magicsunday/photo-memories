@@ -1,10 +1,17 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
 use DateTimeImmutable;
-use RuntimeException;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Entity\Media;
@@ -14,6 +21,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\HtmlFeedRenderer;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
+use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -21,6 +29,18 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+
+use function array_slice;
+use function basename;
+use function copy;
+use function count;
+use function file_put_contents;
+use function is_dir;
+use function is_file;
+use function max;
+use function sprintf;
+use function symlink;
+use function usort;
 
 /**
  * Export a static HTML page that previews the "Für dich" feed.
@@ -40,7 +60,7 @@ final class FeedExportHtmlCommand extends Command
         private readonly ClusterEntityToDraftMapper $mapper,
         private readonly MediaRepository $mediaRepo,
         private readonly HtmlFeedRenderer $renderer,
-        private readonly ThumbnailPathResolver $thumbResolver
+        private readonly ThumbnailPathResolver $thumbResolver,
     ) {
         parent::__construct();
     }
@@ -59,23 +79,23 @@ final class FeedExportHtmlCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io              = new SymfonyStyle($input, $output);
-        $limitClusters   = \max(1, (int) $input->getOption('limit-clusters'));
-        $maxItems        = \max(1, (int) $input->getOption('max-items'));
-        $imagesPerItem   = \max(1, (int) $input->getOption('images-per-item'));
-        $thumbWidth      = \max(64, (int) $input->getOption('thumb-width'));
-        $useSymlink      = (bool) $input->getOption('symlink');
-        $baseOutDir      = (string) $input->getArgument('out-dir');
+        $io            = new SymfonyStyle($input, $output);
+        $limitClusters = max(1, (int) $input->getOption('limit-clusters'));
+        $maxItems      = max(1, (int) $input->getOption('max-items'));
+        $imagesPerItem = max(1, (int) $input->getOption('images-per-item'));
+        $thumbWidth    = max(64, (int) $input->getOption('thumb-width'));
+        $useSymlink    = (bool) $input->getOption('symlink');
+        $baseOutDir    = (string) $input->getArgument('out-dir');
 
-        $stamp   = (new DateTimeImmutable('now'))->format('Ymd-His');
-        $outDir  = rtrim($baseOutDir, '/').('/feed-' . $stamp);
-        $imgDir  = $outDir.'/images';
+        $stamp  = (new DateTimeImmutable('now'))->format('Ymd-His');
+        $outDir = rtrim($baseOutDir, '/') . ('/feed-' . $stamp);
+        $imgDir = $outDir . '/images';
 
-        if (!\is_dir($outDir) && !@mkdir($outDir, 0775, true) && !\is_dir($outDir)) {
+        if (!is_dir($outDir) && !@mkdir($outDir, 0775, true) && !is_dir($outDir)) {
             throw new RuntimeException('Could not create output directory: ' . $outDir);
         }
 
-        if (!\is_dir($imgDir) && !@mkdir($imgDir, 0775, true) && !\is_dir($imgDir)) {
+        if (!is_dir($imgDir) && !@mkdir($imgDir, 0775, true) && !is_dir($imgDir)) {
             throw new RuntimeException('Could not create images directory: ' . $imgDir);
         }
 
@@ -93,15 +113,17 @@ final class FeedExportHtmlCommand extends Command
 
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');
+
             return Command::SUCCESS;
         }
 
         // 2) Map & consolidate
-        $drafts = $this->mapper->mapMany($entities);
+        $drafts       = $this->mapper->mapMany($entities);
         $consolidated = $this->consolidation->consolidate($drafts);
 
         if ($consolidated === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
+
             return Command::SUCCESS;
         }
 
@@ -109,12 +131,13 @@ final class FeedExportHtmlCommand extends Command
         $items = $this->feedBuilder->build($consolidated);
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
+
             return Command::SUCCESS;
         }
 
         // Truncate to max-items
-        if (\count($items) > $maxItems) {
-            $items = \array_slice($items, 0, $maxItems);
+        if (count($items) > $maxItems) {
+            $items = array_slice($items, 0, $maxItems);
         }
 
         // 4) Prepare cards: copy/symlink thumbnails and create relative hrefs
@@ -124,7 +147,7 @@ final class FeedExportHtmlCommand extends Command
          * }> $cards */
         $cards = [];
 
-        $copied = 0;
+        $copied         = 0;
         $skippedNoThumb = 0;
 
         foreach ($items as $it) {
@@ -139,50 +162,55 @@ final class FeedExportHtmlCommand extends Command
             // Cover zuerst, dann weitere Bilder (stabilere Reihenfolge)
             $coverId = $it->getCoverMediaId();
             if ($coverId !== null) {
-                \usort($members, static function (Media $a, Media $b) use ($coverId): int {
-                    if ($a->getId() === $coverId && $b->getId() !== $coverId) { return -1; }
+                usort($members, static function (Media $a, Media $b) use ($coverId): int {
+                    if ($a->getId() === $coverId && $b->getId() !== $coverId) {
+                        return -1;
+                    }
 
-                    if ($b->getId() === $coverId && $a->getId() !== $coverId) { return 1; }
+                    if ($b->getId() === $coverId && $a->getId() !== $coverId) {
+                        return 1;
+                    }
 
                     $ta = $a->getTakenAt()?->getTimestamp() ?? 0;
                     $tb = $b->getTakenAt()?->getTimestamp() ?? 0;
+
                     return $ta <=> $tb;
                 });
             }
 
             $images = [];
             foreach ($members as $m) {
-                if (\count($images) >= $imagesPerItem) {
+                if (count($images) >= $imagesPerItem) {
                     break;
                 }
 
                 $src = $this->thumbResolver->resolveBest($m, $thumbWidth);
                 if ($src === null) {
-                    $skippedNoThumb++;
+                    ++$skippedNoThumb;
                     continue;
                 }
 
                 $targetName = $this->thumbResolver->exportName($m, $src);
-                $targetPath = $imgDir.'/'.$targetName;
-                $relHref    = 'images/'.$targetName;
+                $targetPath = $imgDir . '/' . $targetName;
+                $relHref    = 'images/' . $targetName;
 
-                if (!\is_file($targetPath)) {
+                if (!is_file($targetPath)) {
                     $ok = false;
                     if ($useSymlink) {
                         // Symlink best effort; fallback to copy on failure
-                        $ok = @\symlink($src, $targetPath);
+                        $ok = @symlink($src, $targetPath);
                     }
 
                     if (!$ok) {
-                        $ok = @\copy($src, $targetPath);
+                        $ok = @copy($src, $targetPath);
                     }
 
                     if ($ok) {
-                        $copied++;
+                        ++$copied;
                     }
                 }
 
-                $alt = \basename($m->getPath());
+                $alt      = basename($m->getPath());
                 $images[] = ['href' => $relHref, 'alt' => $alt];
             }
 
@@ -201,18 +229,19 @@ final class FeedExportHtmlCommand extends Command
 
         if ($cards === []) {
             $io->warning('Keine Bilder für die HTML-Ausgabe gefunden.');
+
             return Command::SUCCESS;
         }
 
         // 5) Render HTML and write file
         $html = $this->renderer->render($cards, 'Rückblick – Für dich');
 
-        $indexFile = $outDir.'/index.html';
-        if (@\file_put_contents($indexFile, $html) === false) {
+        $indexFile = $outDir . '/index.html';
+        if (@file_put_contents($indexFile, $html) === false) {
             throw new RuntimeException('Konnte HTML-Datei nicht schreiben: ' . $indexFile);
         }
 
-        $io->success(\sprintf(
+        $io->success(sprintf(
             "HTML erzeugt: %s\nBilder: %d kopiert/verlinkt, %d übersprungen (keine Thumbnail-Quelle).",
             $indexFile,
             $copied,

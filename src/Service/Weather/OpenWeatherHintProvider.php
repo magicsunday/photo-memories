@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Weather;
@@ -12,6 +20,13 @@ use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+
+use function abs;
+use function array_is_list;
+use function array_key_exists;
+use function is_array;
+use function is_numeric;
+use function max;
 
 /**
  * Weather hint provider backed by OpenWeather (or compatible) HTTP APIs.
@@ -29,7 +44,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
         private string $apiKey,
         private int $maxPastHours = 0,
         private string $units = 'metric',
-        private string $source = WeatherObservation::DEFAULT_SOURCE
+        private string $source = WeatherObservation::DEFAULT_SOURCE,
     ) {
     }
 
@@ -80,12 +95,12 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
                 $this->baseUrl,
                 [
                     'query' => [
-                        'lat'    => $lat,
-                        'lon'    => $lon,
-                        'dt'     => $timestamp,
-                        'appid'  => $this->apiKey,
-                        'units'  => $this->units,
-                        'exclude'=> 'minutely,daily,alerts',
+                        'lat'     => $lat,
+                        'lon'     => $lon,
+                        'dt'      => $timestamp,
+                        'appid'   => $this->apiKey,
+                        'units'   => $this->units,
+                        'exclude' => 'minutely,daily,alerts',
                     ],
                 ]
             );
@@ -96,10 +111,10 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
 
             $payload = $response->toArray(false);
         } catch (
-            ClientExceptionInterface |
-            DecodingExceptionInterface |
-            RedirectionExceptionInterface |
-            ServerExceptionInterface |
+            ClientExceptionInterface|
+            DecodingExceptionInterface|
+            RedirectionExceptionInterface|
+            ServerExceptionInterface|
             TransportExceptionInterface
         ) {
             return null;
@@ -110,6 +125,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
 
     /**
      * @param array<mixed> $payload
+     *
      * @return array{rain_prob: float, precip_mm?: float}|null
      */
     private function extractHint(array $payload, int $timestamp): ?array
@@ -117,7 +133,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
         if (isset($payload['hourly'])) {
             $hourly = $payload['hourly'];
 
-            if (\is_array($hourly) && $hourly !== [] && \array_is_list($hourly)) {
+            if (is_array($hourly) && $hourly !== [] && array_is_list($hourly)) {
                 $entry = $this->findBestMatchingEntry($hourly, $timestamp);
                 if ($entry !== null) {
                     return $this->normaliseEntry($entry);
@@ -125,7 +141,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
             }
         }
 
-        if (isset($payload['current']) && \is_array($payload['current'])) {
+        if (isset($payload['current']) && is_array($payload['current'])) {
             return $this->normaliseEntry($payload['current']);
         }
 
@@ -134,6 +150,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
 
     /**
      * @param array<int, array<string, mixed>> $entries
+     *
      * @return array<string, mixed>|null
      */
     private function findBestMatchingEntry(array $entries, int $timestamp): ?array
@@ -142,16 +159,16 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
         $bestDiff = null;
 
         foreach ($entries as $entry) {
-            if (!\is_array($entry)) {
+            if (!is_array($entry)) {
                 continue;
             }
 
-            if (!\array_key_exists('dt', $entry)) {
+            if (!array_key_exists('dt', $entry)) {
                 continue;
             }
 
-            $dt = (int) $entry['dt'];
-            $diff = \abs($dt - $timestamp);
+            $dt   = (int) $entry['dt'];
+            $diff = abs($dt - $timestamp);
 
             if ($bestDiff === null || $diff < $bestDiff) {
                 $bestDiff = $diff;
@@ -168,6 +185,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
 
     /**
      * @param array<string, mixed> $entry
+     *
      * @return array<'rain_prob', float>
      */
     private function normaliseEntry(array $entry): array
@@ -180,10 +198,10 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
         }
 
         if (isset($entry['rain'])) {
-            if (\is_array($entry['rain']) && isset($entry['rain']['1h'])) {
-                $hint['precip_mm'] = \max(0.0, (float) $entry['rain']['1h']);
-            } elseif (\is_numeric($entry['rain'])) {
-                $hint['precip_mm'] = \max(0.0, (float) $entry['rain']);
+            if (is_array($entry['rain']) && isset($entry['rain']['1h'])) {
+                $hint['precip_mm'] = max(0.0, (float) $entry['rain']['1h']);
+            } elseif (is_numeric($entry['rain'])) {
+                $hint['precip_mm'] = max(0.0, (float) $entry['rain']);
             }
         }
 
@@ -199,7 +217,7 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
             $hint['temp_c'] = (float) $entry['temp'];
         }
 
-        if (isset($entry['weather']) && \is_array($entry['weather']) && isset($entry['weather'][0]['description'])) {
+        if (isset($entry['weather']) && is_array($entry['weather']) && isset($entry['weather'][0]['description'])) {
             $hint['summary'] = (string) $entry['weather'][0]['description'];
         }
 
@@ -225,4 +243,3 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
         return $value;
     }
 }
-

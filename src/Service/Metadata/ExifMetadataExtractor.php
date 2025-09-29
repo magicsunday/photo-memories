@@ -1,11 +1,35 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
-use Throwable;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+use Throwable;
+
+use function array_pad;
+use function exif_read_data;
+use function explode;
+use function is_array;
+use function is_file;
+use function is_float;
+use function is_int;
+use function is_string;
+use function preg_match;
+use function str_contains;
+use function str_starts_with;
+use function strlen;
+use function strtoupper;
+use function strtr;
+use function substr;
 
 /**
  * Extracts EXIF metadata from images (and optionally videos) and enriches Media.
@@ -19,7 +43,7 @@ use MagicSunday\Memories\Entity\Media;
 final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private bool $readExifForVideos = false
+        private bool $readExifForVideos = false,
     ) {
     }
 
@@ -30,23 +54,23 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
             return false;
         }
 
-        if (\str_starts_with($mime, 'image/')) {
+        if (str_starts_with($mime, 'image/')) {
             return true;
         }
 
-        return $this->readExifForVideos && \str_starts_with($mime, 'video/');
+        return $this->readExifForVideos && str_starts_with($mime, 'video/');
     }
 
     public function extract(string $filepath, Media $media): Media
     {
-        if (!\is_file($filepath)) {
+        if (!is_file($filepath)) {
             // Not considered a fatal extraction error; simply no-op.
             return $media;
         }
 
         try {
             /** @var array<string,mixed>|false $exif */
-            $exif = @\exif_read_data($filepath, null, true, false);
+            $exif = @exif_read_data($filepath, null, true, false);
         } catch (Throwable) {
             $exif = false;
         }
@@ -142,7 +166,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         }
 
         // --- GPS ---
-        if (isset($exif['GPS']) && \is_array($exif['GPS'])) {
+        if (isset($exif['GPS']) && is_array($exif['GPS'])) {
             $gps = $this->gpsFromExif($exif['GPS']);
             if ($gps !== null) {
                 $media->setGpsLat($gps['lat']);
@@ -190,11 +214,11 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         ];
 
         foreach ($candidates as $c) {
-            if (\is_string($c) && $c !== '') {
+            if (is_string($c) && $c !== '') {
                 // Typical EXIF format: "YYYY:MM:DD HH:MM:SS"
-                $s = \substr($c, 0, 19);
-                if (\strlen($s) === 19 && $s[4] === ':' && $s[7] === ':' && $s[13] === ':' && $s[16] === ':') {
-                    $norm = \strtr($s, [':' => '-']); // becomes "YYYY-MM-DD HH-MM-SS"
+                $s = substr($c, 0, 19);
+                if (strlen($s) === 19 && $s[4] === ':' && $s[7] === ':' && $s[13] === ':' && $s[16] === ':') {
+                    $norm = strtr($s, [':' => '-']); // becomes "YYYY-MM-DD HH-MM-SS"
                     // restore time separators
                     $norm[13] = ':';
                     $norm[16] = ':';
@@ -220,15 +244,16 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     private function parseOffsetMinutes(array $exif): ?int
     {
         $off = $exif['EXIF']['OffsetTimeOriginal'] ?? ($exif['EXIF']['OffsetTime'] ?? null);
-        if (!\is_string($off)) {
+        if (!is_string($off)) {
             return null;
         }
 
         // Match "+02:00" or "+0200"
-        if (\preg_match('~^([+-])(\d{2}):?(\d{2})$~', $off, $m) === 1) {
+        if (preg_match('~^([+-])(\d{2}):?(\d{2})$~', $off, $m) === 1) {
             $sign = $m[1] === '-' ? -1 : 1;
-            $h = (int) $m[2];
-            $mn = (int) $m[3];
+            $h    = (int) $m[2];
+            $mn   = (int) $m[3];
+
             return $sign * ($h * 60 + $mn);
         }
 
@@ -238,11 +263,11 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     /** @param mixed $v */
     private function intOrNull($v): ?int
     {
-        if (\is_int($v)) {
+        if (is_int($v)) {
             return $v;
         }
 
-        if (\is_string($v) && $v !== '') {
+        if (is_string($v) && $v !== '') {
             return (int) $v;
         }
 
@@ -252,21 +277,21 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     /** @param mixed $v */
     private function intFromScalarOrArray($v): ?int
     {
-        if (\is_int($v)) {
+        if (is_int($v)) {
             return $v;
         }
 
-        if (\is_string($v) && $v !== '') {
+        if (is_string($v) && $v !== '') {
             return (int) $v;
         }
 
-        if (\is_array($v) && isset($v[0])) {
+        if (is_array($v) && isset($v[0])) {
             $first = $v[0];
-            if (\is_int($first)) {
+            if (is_int($first)) {
                 return $first;
             }
 
-            if (\is_string($first) && $first !== '') {
+            if (is_string($first) && $first !== '') {
                 return (int) $first;
             }
         }
@@ -277,18 +302,19 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     /** @param mixed $v */
     private function floatOrRational($v): ?float
     {
-        if (\is_float($v)) {
+        if (is_float($v)) {
             return $v;
         }
 
-        if (\is_int($v)) {
+        if (is_int($v)) {
             return (float) $v;
         }
 
-        if (\is_string($v) && $v !== '') {
-            if (\str_contains($v, '/')) {
-                [$a, $b] = \array_pad(\explode('/', $v, 2), 2, '1');
-                $bn = (float) $b;
+        if (is_string($v) && $v !== '') {
+            if (str_contains($v, '/')) {
+                [$a, $b] = array_pad(explode('/', $v, 2), 2, '1');
+                $bn      = (float) $b;
+
                 return $bn !== 0.0 ? (float) $a / $bn : null;
             }
 
@@ -301,17 +327,18 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     /** @param mixed $v */
     private function exposureToSeconds($v): ?float
     {
-        if (\is_string($v) && \str_contains($v, '/')) {
-            [$a, $b] = \array_pad(\explode('/', $v, 2), 2, '1');
-            $bn = (float) $b;
+        if (is_string($v) && str_contains($v, '/')) {
+            [$a, $b] = array_pad(explode('/', $v, 2), 2, '1');
+            $bn      = (float) $b;
+
             return $bn !== 0.0 ? (float) $a / $bn : null;
         }
 
-        if (\is_float($v)) {
+        if (is_float($v)) {
             return $v;
         }
 
-        if (\is_int($v)) {
+        if (is_int($v)) {
             return (float) $v;
         }
 
@@ -320,7 +347,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
 
     private function strOrNull(mixed $v): ?string
     {
-        if (\is_string($v) && $v !== '') {
+        if (is_string($v) && $v !== '') {
             return $v;
         }
 
@@ -329,6 +356,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
 
     /**
      * @param array<string,mixed> $gps
+     *
      * @return array{lat: float, lon: float, alt: ?float, speed: ?float, course: ?float}|null
      */
     private function gpsFromExif(array $gps): ?array
@@ -340,8 +368,8 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         }
 
         // Altitude with reference: 0=above sea level, 1=below
-        $alt     = $this->floatOrRational($gps['GPSAltitude'] ?? null);
-        $altRef  = $this->intOrNull($gps['GPSAltitudeRef'] ?? null);
+        $alt    = $this->floatOrRational($gps['GPSAltitude'] ?? null);
+        $altRef = $this->intOrNull($gps['GPSAltitudeRef'] ?? null);
         if ($alt !== null && $altRef === 1) {
             $alt = -$alt;
         }
@@ -350,10 +378,10 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         $speed   = $this->floatOrRational($gps['GPSSpeed'] ?? null);
         $speedMs = null;
         if ($speed !== null) {
-            $ref = \is_string($gps['GPSSpeedRef'] ?? null) ? $gps['GPSSpeedRef'] : 'K';
-            $speedMs = match (\strtoupper($ref)) {
-                'M' => $speed * 0.44704,   // mph -> m/s
-                'N' => $speed * 0.514444, // knots -> m/s
+            $ref     = is_string($gps['GPSSpeedRef'] ?? null) ? $gps['GPSSpeedRef'] : 'K';
+            $speedMs = match (strtoupper($ref)) {
+                'M'     => $speed * 0.44704,   // mph -> m/s
+                'N'     => $speed * 0.514444, // knots -> m/s
                 default => $speed / 3.6,  // 'K' km/h -> m/s
             };
         }
@@ -365,12 +393,12 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
     }
 
     /**
-     * @param mixed       $val  EXIF GPS coordinate array with rationals
-     * @param string|null $ref  'N'/'S' or 'E'/'W'
+     * @param mixed       $val EXIF GPS coordinate array with rationals
+     * @param string|null $ref 'N'/'S' or 'E'/'W'
      */
     private function coordToFloat(mixed $val, ?string $ref): ?float
     {
-        if (!\is_array($val)) {
+        if (!is_array($val)) {
             return null;
         }
 
@@ -382,6 +410,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         }
 
         $sign = ($ref === 'S' || $ref === 'W') ? -1.0 : 1.0;
+
         return $sign * ($deg + $min / 60.0 + $sec / 3600.0);
     }
 }

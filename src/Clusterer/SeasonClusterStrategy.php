@@ -1,13 +1,25 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function explode;
 
 /**
  * Groups media by meteorological seasons per year (DE).
@@ -19,7 +31,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 
     public function __construct(
         // Minimum members per (season, year) bucket.
-        private int $minItemsPerSeason = 20
+        private int $minItemsPerSeason = 20,
     ) {
         if ($this->minItemsPerSeason < 1) {
             throw new InvalidArgumentException('minItemsPerSeason must be >= 1.');
@@ -33,6 +45,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -45,7 +58,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $month = (int) $t->format('n');
             $year  = (int) $t->format('Y');
 
@@ -53,12 +66,12 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
                 $month >= 3 && $month <= 5  => 'Frühling',
                 $month >= 6 && $month <= 8  => 'Sommer',
                 $month >= 9 && $month <= 11 => 'Herbst',
-                default => 'Winter',
+                default                     => 'Winter',
             };
 
             // Winter: Dezember gehört zum Winter des Folgejahres (2024-12 ⇒ Winter 2025)
             if ($season === 'Winter' && $month === 12) {
-                $year += 1;
+                ++$year;
             }
 
             $key = $year . ':' . $season;
@@ -73,9 +86,8 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         $out = [];
 
         foreach ($eligibleGroups as $key => $members) {
-
-            [$yearStr, $season] = \explode(':', $key, 2);
-            $yearInt = (int) $yearStr;
+            [$yearStr, $season] = explode(':', $key, 2);
+            $yearInt            = (int) $yearStr;
 
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);
@@ -88,7 +100,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
         }
 

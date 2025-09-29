@@ -1,25 +1,45 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
-use finfo;
-use Throwable;
-use RecursiveIteratorIterator;
-use RecursiveDirectoryIterator;
-use FilesystemIterator;
 use Doctrine\ORM\EntityManagerInterface;
+use FilesystemIterator;
+use finfo;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Throwable;
+
+use function count;
+use function filesize;
+use function hash_file;
+use function in_array;
+use function is_dir;
+use function is_numeric;
+use function is_string;
+use function mime_content_type;
+use function pathinfo;
+use function preg_match;
+use function strtolower;
 
 /**
  * Index media files: extract metadata and persist to DB.
@@ -47,7 +67,7 @@ final class IndexCommand extends Command
         private readonly MetadataExtractorInterface $metadataExtractor,
         private readonly ThumbnailServiceInterface $thumbnailService,
         #[Autowire(env: 'MEMORIES_MEDIA_DIR')]
- private readonly string $defaultMediaDir,
+        private readonly string $defaultMediaDir,
         #[Autowire(param: 'memories.index.image_ext')] ?array $imageExt = null,
         #[Autowire(param: 'memories.index.video_ext')] ?array $videoExt = null,
     ) {
@@ -55,11 +75,11 @@ final class IndexCommand extends Command
 
         // Sensible defaults if parameters are not provided via services.yaml
         $this->imageExt = $imageExt ?? [
-            'jpg','jpeg','jpe','jxl','avif','heic','heif','png','webp','gif','bmp','tiff','tif',
-            'cr2','cr3','nef','arw','rw2','raf','dng',
+            'jpg', 'jpeg', 'jpe', 'jxl', 'avif', 'heic', 'heif', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif',
+            'cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng',
         ];
         $this->videoExt = $videoExt ?? [
-            'mp4','m4v','mov','3gp','3g2','avi','mkv','webm',
+            'mp4', 'm4v', 'mov', '3gp', '3g2', 'avi', 'mkv', 'webm',
         ];
     }
 
@@ -77,16 +97,17 @@ final class IndexCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $path        = (string) $input->getArgument('path');
-        $force       = (bool) $input->getOption('force');
-        $dryRun      = (bool) $input->getOption('dry-run');
-        $maxFiles    = $this->toIntOrNull($input->getOption('max-files'));
-        $withThumbs  = (bool) $input->getOption('thumbnails');
-        $noProgress  = (bool) $input->getOption('no-progress');
-        $strictMime  = (bool) $input->getOption('strict-mime');
+        $path       = (string) $input->getArgument('path');
+        $force      = (bool) $input->getOption('force');
+        $dryRun     = (bool) $input->getOption('dry-run');
+        $maxFiles   = $this->toIntOrNull($input->getOption('max-files'));
+        $withThumbs = (bool) $input->getOption('thumbnails');
+        $noProgress = (bool) $input->getOption('no-progress');
+        $strictMime = (bool) $input->getOption('strict-mime');
 
-        if (!\is_dir($path)) {
+        if (!is_dir($path)) {
             $output->writeln(sprintf('<error>Pfad existiert nicht oder ist kein Verzeichnis: %s</error>', $path));
+
             return Command::FAILURE;
         }
 
@@ -98,10 +119,11 @@ final class IndexCommand extends Command
 
         // Collect files using extension whitelist (fast)
         $files = $this->collectMediaFilesByExtension($path, $maxFiles);
-        $total = \count($files);
+        $total = count($files);
 
         if ($total === 0) {
             $output->writeln('<comment>Keine passenden Dateien gefunden.</comment>');
+
             return Command::SUCCESS;
         }
 
@@ -133,7 +155,7 @@ final class IndexCommand extends Command
                 $isImage = $this->isImageExt($filepath);
                 $isVideo = $this->isVideoExt($filepath);
 
-                if ($isImage && \preg_match('#^image/#', $detectedMime) !== 1) {
+                if ($isImage && preg_match('#^image/#', $detectedMime) !== 1) {
                     if ($progress instanceof ProgressBar) {
                         $progress->advance();
                     }
@@ -141,7 +163,7 @@ final class IndexCommand extends Command
                     continue;
                 }
 
-                if ($isVideo && \preg_match('#^video/#', $detectedMime) !== 1) {
+                if ($isVideo && preg_match('#^video/#', $detectedMime) !== 1) {
                     if ($progress instanceof ProgressBar) {
                         $progress->advance();
                     }
@@ -152,7 +174,7 @@ final class IndexCommand extends Command
 
             $output->writeln('Verarbeite: ' . $filepath, OutputInterface::VERBOSITY_VERBOSE);
 
-            $checksum = @\hash_file('sha256', $filepath);
+            $checksum = @hash_file('sha256', $filepath);
             if ($checksum === false) {
                 $output->writeln(sprintf('<error>Could not compute checksum for file: %s</error>', $filepath));
                 if ($progress instanceof ProgressBar) {
@@ -174,7 +196,7 @@ final class IndexCommand extends Command
                 continue;
             }
 
-            $size  = \filesize($filepath) ?: 0;
+            $size  = filesize($filepath) ?: 0;
             $media = $existing ?? new Media($filepath, $checksum, $size);
             $media->setMime($detectedMime);
 
@@ -197,7 +219,7 @@ final class IndexCommand extends Command
 
             if ($dryRun === false) {
                 $this->em->persist($media);
-                $batch++;
+                ++$batch;
 
                 if ($batch >= 50) {
                     $this->em->flush();
@@ -208,7 +230,7 @@ final class IndexCommand extends Command
                 $output->writeln(' (dry-run) ', OutputInterface::VERBOSITY_VERBOSE);
             }
 
-            $count++;
+            ++$count;
             if ($progress instanceof ProgressBar) {
                 $progress->advance();
             }
@@ -224,6 +246,7 @@ final class IndexCommand extends Command
         }
 
         $output->writeln(sprintf('<info>Indexierung abgeschlossen. Insgesamt verarbeitete Dateien: %d</info>', $count));
+
         return Command::SUCCESS;
     }
 
@@ -250,7 +273,7 @@ final class IndexCommand extends Command
             }
 
             $out[] = $path;
-            if ($maxFiles !== null && \count($out) >= $maxFiles) {
+            if ($maxFiles !== null && count($out) >= $maxFiles) {
                 break;
             }
         }
@@ -269,14 +292,16 @@ final class IndexCommand extends Command
 
     private function isImageExt(string $path): bool
     {
-        $ext = \strtolower(\pathinfo($path, PATHINFO_EXTENSION));
-        return $ext !== '' && \in_array($ext, $this->imageExt, true);
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return $ext !== '' && in_array($ext, $this->imageExt, true);
     }
 
     private function isVideoExt(string $path): bool
     {
-        $ext = \strtolower(\pathinfo($path, PATHINFO_EXTENSION));
-        return $ext !== '' && \in_array($ext, $this->videoExt, true);
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return $ext !== '' && in_array($ext, $this->videoExt, true);
     }
 
     private function toIntOrNull(mixed $v): ?int
@@ -285,7 +310,7 @@ final class IndexCommand extends Command
             return null;
         }
 
-        if (\is_numeric($v)) {
+        if (is_numeric($v)) {
             return (int) $v;
         }
 
@@ -300,7 +325,7 @@ final class IndexCommand extends Command
         $mime = '';
         try {
             $m = @$finfo->file($path);
-            if (\is_string($m) && $m !== '') {
+            if (is_string($m) && $m !== '') {
                 $mime = $m;
             }
         } catch (Throwable) {
@@ -308,8 +333,8 @@ final class IndexCommand extends Command
         }
 
         if ($mime === '') {
-            $m = @\mime_content_type($path);
-            if (\is_string($m) && $m !== '') {
+            $m = @mime_content_type($path);
+            if (is_string($m) && $m !== '') {
                 $mime = $m;
             }
         }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DiningOutClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class DiningOutClusterStrategyTest extends TestCase
 {
@@ -25,8 +33,8 @@ final class DiningOutClusterStrategyTest extends TestCase
             maxHour: 23,
         );
 
-        $start = new DateTimeImmutable('2024-02-10 17:30:00', new DateTimeZone('UTC'));
-        $media = [];
+        $start    = new DateTimeImmutable('2024-02-10 17:30:00', new DateTimeZone('UTC'));
+        $media    = [];
         $keywords = ['restaurant', 'dinner', 'wine', 'tapas'];
         foreach ($keywords as $index => $keyword) {
             $media[] = $this->createMedia(
@@ -83,5 +91,4 @@ final class DiningOutClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

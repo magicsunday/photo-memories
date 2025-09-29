@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,9 +17,9 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class DeviceSimilarityStrategyTest extends TestCase
 {
@@ -105,5 +113,4 @@ final class DeviceSimilarityStrategyTest extends TestCase
             },
         );
     }
-
 }

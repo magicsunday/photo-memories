@@ -1,10 +1,34 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Utility;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+
+use function abs;
+use function array_filter;
+use function array_map;
+use function array_values;
+use function asin;
+use function cos;
+use function count;
+use function deg2rad;
+use function min;
+use function sin;
+use function sort;
+use function sprintf;
+use function sqrt;
+
+use const SORT_NUMERIC;
 
 /**
  * Small geo/time helpers for clustering.
@@ -15,29 +39,30 @@ final class MediaMath
 
     public static function secondsBetween(DateTimeImmutable $a, DateTimeImmutable $b): int
     {
-        return \abs($a->getTimestamp() - $b->getTimestamp());
+        return abs($a->getTimestamp() - $b->getTimestamp());
     }
 
     public static function haversineDistanceInMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
-        $dLat = \deg2rad($lat2 - $lat1);
-        $dLon = \deg2rad($lon2 - $lon1);
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
 
-        $a = \sin($dLat / 2) ** 2
-            + \cos(\deg2rad($lat1)) * \cos(\deg2rad($lat2)) * \sin($dLon / 2) ** 2;
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
 
-        return 2 * self::EARTH_RADIUS_KM * 1000 * \asin(\min(1.0, \sqrt($a)));
+        return 2 * self::EARTH_RADIUS_KM * 1000 * asin(min(1.0, sqrt($a)));
     }
 
     /**
      * @param list<Media> $items
+     *
      * @return array{lat: float, lon: float}
      */
     public static function centroid(array $items): array
     {
         $sumLat = 0.0;
         $sumLon = 0.0;
-        $n = 0;
+        $n      = 0;
 
         foreach ($items as $m) {
             $lat = $m->getGpsLat();
@@ -47,7 +72,7 @@ final class MediaMath
                 $sumLat += $lat;
                 $sumLon += $lon;
 
-                $n++;
+                ++$n;
             }
         }
 
@@ -60,19 +85,20 @@ final class MediaMath
 
     /**
      * @param list<Media> $members
+     *
      * @return array{from:int,to:int}
      */
     public static function timeRange(array $members): array
     {
-        $ts = \array_values(\array_filter(
-            \array_map(static fn (Media $m): ?int => $m->getTakenAt()?->getTimestamp(), $members),
+        $ts = array_values(array_filter(
+            array_map(static fn (Media $m): ?int => $m->getTakenAt()?->getTimestamp(), $members),
             static fn (?int $t): bool => $t !== null
         ));
 
-        \sort($ts);
+        sort($ts);
 
         $from = $ts[0] ?? 0;
-        $to   = $ts[\count($ts) - 1] ?? $from;
+        $to   = $ts[count($ts) - 1] ?? $from;
 
         return ['from' => $from, 'to' => $to];
     }
@@ -84,13 +110,14 @@ final class MediaMath
      * or timestamps are earlier than $minValidYear-01-01.
      *
      * @param list<Media> $items
+     *
      * @return array{from:int,to:int}|null
      */
     public static function timeRangeReliable(
         array $items,
         int $minSamples = 3,
         float $minCoverage = 0.6,
-        int $minValidYear = 1990
+        int $minValidYear = 1990,
     ): ?array {
         if ($minSamples < 1) {
             $minSamples = 1;
@@ -100,7 +127,7 @@ final class MediaMath
             $minCoverage = 0.01;
         }
 
-        $total = \count($items);
+        $total = count($items);
         if ($total === 0) {
             return null;
         }
@@ -113,7 +140,7 @@ final class MediaMath
             }
         }
 
-        $valid = \count($ts);
+        $valid = count($ts);
         if ($valid < $minSamples) {
             return null;
         }
@@ -123,12 +150,12 @@ final class MediaMath
             return null;
         }
 
-        \sort($ts, \SORT_NUMERIC);
+        sort($ts, SORT_NUMERIC);
         $from = $ts[0];
-        $to   = $ts[\count($ts) - 1];
+        $to   = $ts[count($ts) - 1];
 
         // Reject obviously bogus dates (e.g. 1970)
-        $minTs = (new DateTimeImmutable(\sprintf('%04d-01-01', $minValidYear)))->getTimestamp();
+        $minTs = (new DateTimeImmutable(sprintf('%04d-01-01', $minValidYear)))->getTimestamp();
         if ($from < $minTs || $to < $minTs) {
             return null;
         }

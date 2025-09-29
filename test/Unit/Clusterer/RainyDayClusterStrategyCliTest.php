@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -16,6 +24,9 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
+
+use function implode;
+use function sprintf;
 
 final class RainyDayClusterStrategyCliTest extends TestCase
 {
@@ -37,10 +48,10 @@ final class RainyDayClusterStrategyCliTest extends TestCase
 
         $base  = new DateTimeImmutable('2024-07-10 14:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->makeMediaFixture(
                 id: 7000 + $i,
-                filename: \sprintf('rain-%d.jpg', $i),
+                filename: sprintf('rain-%d.jpg', $i),
                 takenAt: $base->add(new DateInterval('PT' . ($i * 900) . 'S')),
                 lat: 53.0,
                 lon: 8.0,
@@ -56,7 +67,7 @@ final class RainyDayClusterStrategyCliTest extends TestCase
              */
             public function __construct(
                 private readonly RainyDayClusterStrategy $strategy,
-                array $items
+                array $items,
             ) {
                 parent::__construct('test:rainy-day');
                 $this->items = $items;
@@ -66,10 +77,10 @@ final class RainyDayClusterStrategyCliTest extends TestCase
             {
                 $clusters = $this->strategy->cluster($this->items);
                 foreach ($clusters as $cluster) {
-                    $output->writeln(\sprintf(
+                    $output->writeln(sprintf(
                         '%s | members: %s | rain: %.2f',
                         $cluster->getAlgorithm(),
-                        \implode(',', $cluster->getMembers()),
+                        implode(',', $cluster->getMembers()),
                         $cluster->getParams()['rain_prob'] ?? 0.0
                     ));
                 }
@@ -108,4 +119,3 @@ final readonly class CliRainProvider implements WeatherHintProviderInterface
         return $this->hints[$id] ?? null;
     }
 }
-

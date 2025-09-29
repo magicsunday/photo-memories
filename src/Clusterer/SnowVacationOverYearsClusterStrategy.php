@@ -1,15 +1,36 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function sort;
+use function str_contains;
+use function strcmp;
+use function strtolower;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Picks the best multi-day winter snow vacation per year and aggregates over years.
@@ -25,7 +46,7 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
         private int $minNights = 3,
         private int $maxNights = 14,
         private int $minYears = 3,
-        private int $minItemsTotal = 30
+        private int $minItemsTotal = 30,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
@@ -59,6 +80,7 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -72,14 +94,14 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
         $byYearDay = [];
 
         foreach ($timestamped as $m) {
-            $path = \strtolower($m->getPath());
+            $path = strtolower($m->getPath());
             if (!$this->looksSnow($path)) {
                 continue;
             }
 
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
-            $mon = (int) $t->setTimezone($tz)->format('n');
+            assert($t instanceof DateTimeImmutable);
+            $mon    = (int) $t->setTimezone($tz)->format('n');
             $winter = ($mon === 12 || $mon <= 2);
             if ($winter === false) {
                 continue;
@@ -104,21 +126,21 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
                 continue;
             }
 
-            $days = \array_keys($eligibleDaysMap);
-            \sort($days, \SORT_STRING);
+            $days = array_keys($eligibleDaysMap);
+            sort($days, SORT_STRING);
 
             /** @var list<array{days:list<string>, items:list<Media>}> $runs */
-            $runs = [];
-            $runDays = [];
+            $runs     = [];
+            $runDays  = [];
             $runItems = [];
-            $prev = null;
+            $prev     = null;
 
             $flushRun = function () use (&$runs, &$runDays, &$runItems): void {
                 if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
 
-                $runDays = [];
+                $runDays  = [];
                 $runItems = [];
             };
 
@@ -140,7 +162,7 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
             /** filter runs by nights range & per-day min items */
             $candidates = [];
             foreach ($runs as $r) {
-                $nights = \count($r['days']) - 1;
+                $nights = count($r['days']) - 1;
                 if ($nights < $this->minNights) {
                     continue;
                 }
@@ -156,20 +178,20 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
                 continue;
             }
 
-            \usort($candidates, static function (array $a, array $b): int {
-                $na = \count($a['items']);
-                $nb = \count($b['items']);
+            usort($candidates, static function (array $a, array $b): int {
+                $na = count($a['items']);
+                $nb = count($b['items']);
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
 
-                $sa = \count($a['days']);
-                $sb = \count($b['days']);
+                $sa = count($a['days']);
+                $sb = count($b['days']);
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
 
-                return \strcmp($a['days'][0], $b['days'][0]);
+                return strcmp($a['days'][0], $b['days'][0]);
             });
 
             $best = $candidates[0];
@@ -180,11 +202,11 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
             $yearsPicked[$year] = true;
         }
 
-        if (\count($yearsPicked) < $this->minYears || \count($membersAllYears) < $this->minItemsTotal) {
+        if (count($yearsPicked) < $this->minYears || count($membersAllYears) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
         $centroid = MediaMath::centroid($membersAllYears);
         $time     = MediaMath::timeRange($membersAllYears);
 
@@ -192,11 +214,11 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => \array_values(\array_keys($yearsPicked)),
+                    'years'      => array_values(array_keys($yearsPicked)),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
+                members: array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
             ),
         ];
     }
@@ -206,7 +228,7 @@ final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStra
         /** @var list<string> $kw */
         $kw = ['schnee', 'snow', 'ski', 'langlauf', 'skitour', 'snowboard', 'piste', 'gondel', 'lift', 'alpen', 'hütte', 'huette'];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

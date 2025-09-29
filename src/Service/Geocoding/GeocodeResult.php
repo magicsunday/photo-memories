@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
@@ -29,7 +37,7 @@ final readonly class GeocodeResult
         /** @var list<float>|null [south, north, west, east] */
         public ?array $boundingBox,
         public ?string $category,           // poi category/type if available
-        public ?string $type                // e.g. "residential", "house", "city"
+        public ?string $type,                // e.g. "residential", "house", "city"
     ) {
     }
 }

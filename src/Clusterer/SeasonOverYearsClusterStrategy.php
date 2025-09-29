@@ -1,13 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function usort;
 
 /**
  * Aggregates each season across multiple years into a memory
@@ -20,7 +35,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     public function __construct(
         private int $minYears = 3,
         // Minimum total members per season bucket across all years considered.
-        private int $minItemsPerSeason = 30
+        private int $minItemsPerSeason = 30,
     ) {
         if ($this->minYears < 1) {
             throw new InvalidArgumentException('minYears must be >= 1.');
@@ -38,6 +53,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -50,13 +66,13 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
-            $month = (int) $t->format('n');
+            assert($t instanceof DateTimeImmutable);
+            $month  = (int) $t->format('n');
             $season = match (true) {
                 $month >= 3 && $month <= 5  => 'Frühling',
                 $month >= 6 && $month <= 8  => 'Sommer',
                 $month >= 9 && $month <= 11 => 'Herbst',
-                default => 'Winter',
+                default                     => 'Winter',
             };
             $groups[$season] ??= [];
             $groups[$season][] = $m;
@@ -74,11 +90,11 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
                 $years[(int) $m->getTakenAt()->format('Y')] = true;
             }
 
-            if (\count($years) < $this->minYears) {
+            if (count($years) < $this->minYears) {
                 continue;
             }
 
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
@@ -86,11 +102,11 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
                 algorithm: $this->name(),
                 params: [
                     'label'      => $season . ' im Laufe der Jahre',
-                    'years'      => \array_values(\array_keys($years)),
+                    'years'      => array_values(array_keys($years)),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 

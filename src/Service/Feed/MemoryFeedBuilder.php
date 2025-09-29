@@ -1,14 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
-use DateTimeZone;
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
+
+use function count;
+use function is_array;
+use function is_string;
+use function sprintf;
+use function usort;
 
 /**
  * iOS-like feed selection:
@@ -28,7 +42,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         private int $minMembers = 4,
         private int $maxPerDay = 6,
         private int $maxTotal = 60,
-        private int $maxPerAlgorithm = 12
+        private int $maxPerAlgorithm = 12,
     ) {
     }
 
@@ -37,13 +51,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         // 1) filter
         $filtered = [];
         foreach ($clusters as $c) {
-            $score = (float) ($c->getParams()['score'] ?? 0.0);
+            $score   = (float) ($c->getParams()['score'] ?? 0.0);
             $members = $c->getMembers();
             if ($score < $this->minScore) {
                 continue;
             }
 
-            if (\count($members) < $this->minMembers) {
+            if (count($members) < $this->minMembers) {
                 continue;
             }
 
@@ -55,9 +69,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         // 2) sort high → low score
-        \usort($filtered, static function (ClusterDraft $a, ClusterDraft $b): int {
+        usort($filtered, static function (ClusterDraft $a, ClusterDraft $b): int {
             $sa = (float) ($a->getParams()['score'] ?? 0.0);
             $sb = (float) ($b->getParams()['score'] ?? 0.0);
+
             return $sa < $sb ? 1 : -1;
         });
 
@@ -74,7 +89,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $result = [];
 
         foreach ($filtered as $c) {
-            if (\count($result) >= $this->maxTotal) {
+            if (count($result) >= $this->maxTotal) {
                 break;
             }
 
@@ -91,7 +106,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $place = $c->getParams()['place'] ?? null;
             $alg   = $c->getAlgorithm();
 
-            if (!\is_string($alg)) {
+            if (!is_string($alg)) {
                 continue;
             }
 
@@ -100,14 +115,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             // simple diversity: limit repeats
-            if (\is_string($place)) {
-                $key = \sprintf('%s|%s', $dayKey, $place);
+            if (is_string($place)) {
+                $key = sprintf('%s|%s', $dayKey, $place);
                 if (($seenPlace[$key] ?? 0) >= 2) { // max 2 per place/day
                     continue;
                 }
             }
 
-            $algKey = \sprintf('%s|%s', $dayKey, $alg);
+            $algKey = sprintf('%s|%s', $dayKey, $alg);
             if (($seenAlg[$algKey] ?? 0) >= 2) { // max 2 per algo/day
                 continue;
             }
@@ -118,11 +133,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            $cover = $this->coverPicker->pickCover($members, $c->getParams());
+            $cover   = $this->coverPicker->pickCover($members, $c->getParams());
             $coverId = $cover?->getId();
 
             // 5) titles
-            $title = $this->titleGen->makeTitle($c);
+            $title    = $this->titleGen->makeTitle($c);
             $subtitle = $this->titleGen->makeSubtitle($c);
 
             $result[] = new MemoryFeedItem(
@@ -136,12 +151,12 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             );
 
             $dayCount[$dayKey] = $cap + 1;
-            if (\is_string($place)) {
-                $seenPlace[\sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[\sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
+            if (is_string($place)) {
+                $seenPlace[sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
             }
 
             $seenAlg[$algKey] = ($seenAlg[$algKey] ?? 0) + 1;
-            $algCount[$alg] = ($algCount[$alg] ?? 0) + 1;
+            $algCount[$alg]   = ($algCount[$alg] ?? 0) + 1;
         }
 
         return $result;
@@ -150,7 +165,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     private function dayKey(ClusterDraft $c): ?string
     {
         $tr = $c->getParams()['time_range'] ?? null;
-        if (!\is_array($tr) || !isset($tr['to'])) {
+        if (!is_array($tr) || !isset($tr['to'])) {
             return null;
         }
 
@@ -160,6 +175,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $d = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
+
         return $d->format('Y-m-d');
     }
 }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
@@ -19,6 +27,16 @@ use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_keys;
+use function count;
+use function ctype_digit;
+use function floor;
+use function is_string;
+use function max;
+use function method_exists;
+use function microtime;
+use function sprintf;
+
 #[AsCommand(
     name: 'memories:cluster',
     description: 'Erstellt Erinnerungs-Cluster anhand konfigurierter Strategien.'
@@ -29,7 +47,7 @@ final class ClusterCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly HybridClusterer $clusterer,
         private readonly ClusterPersistenceService $persistence,
-        private readonly ClusterConsolidationService $consolidation
+        private readonly ClusterConsolidationService $consolidation,
     ) {
         parent::__construct();
     }
@@ -45,11 +63,11 @@ final class ClusterCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io       = new SymfonyStyle($input, $output);
-        $dryRun   = (bool) $input->getOption('dry-run');
-        $limit    = $input->getOption('limit');
-        $since    = $input->getOption('since');
-        $replace  = (bool) $input->getOption('replace');
+        $io      = new SymfonyStyle($input, $output);
+        $dryRun  = (bool) $input->getOption('dry-run');
+        $limit   = $input->getOption('limit');
+        $since   = $input->getOption('since');
+        $replace = (bool) $input->getOption('replace');
 
         $io->title('🧠 Memories: Cluster erstellen');
 
@@ -66,10 +84,11 @@ final class ClusterCommand extends Command
             ->orderBy('m.takenAt', 'ASC')
             ->addOrderBy('m.id', 'ASC');
 
-        if (\is_string($since) && $since !== '') {
+        if (is_string($since) && $since !== '') {
             $sinceDt = DateTimeImmutable::createFromFormat('Y-m-d|', $since);
             if (!$sinceDt instanceof DateTimeImmutable) {
                 $io->error('Invalid "since" date. Use YYYY-MM-DD.');
+
                 return Command::INVALID;
             }
 
@@ -77,9 +96,10 @@ final class ClusterCommand extends Command
             $listQb->andWhere('m.takenAt >= :since')->setParameter('since', $sinceDt);
         }
 
-        if (\is_string($limit) && $limit !== '') {
-            if (!\ctype_digit($limit)) {
+        if (is_string($limit) && $limit !== '') {
+            if (!ctype_digit($limit)) {
                 $io->error('Invalid "limit" value. Use a positive integer.');
+
                 return Command::INVALID;
             }
 
@@ -92,28 +112,30 @@ final class ClusterCommand extends Command
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         if ($total === 0) {
             $io->warning('Keine Medien gefunden.');
+
             return Command::SUCCESS;
         }
 
         $loadSection = $output->section();
         $loadBar     = $this->makeBar($loadSection, $total, '📥 Einlesen');
-        $loadStart   = \microtime(true);
+        $loadStart   = microtime(true);
 
         /** @var list<Media> $items */
         $items = [];
         foreach ($listQb->getQuery()->toIterable() as $row) {
             /** @var Media $m */
-            $m = $row;
+            $m       = $row;
             $items[] = $m;
-            $this->tick($loadBar, $loadStart, \count($items), 'Medien');
+            $this->tick($loadBar, $loadStart, count($items), 'Medien');
         }
 
         $loadBar->finish();
         $loadSection->writeln('');
-        $io->success(\sprintf('%d Medien geladen.', \count($items)));
+        $io->success(sprintf('%d Medien geladen.', count($items)));
 
-        if (\count($items) === 0) {
+        if (count($items) === 0) {
             $io->note('Keine Medien zum Clustern vorhanden.');
+
             return Command::SUCCESS;
         }
 
@@ -124,20 +146,20 @@ final class ClusterCommand extends Command
 
         $mainSection = $output->section();
         $mainBar     = $this->makeBar($mainSection, $strategyCount, '🧩 Strategien');
-        $mainStart   = \microtime(true);
+        $mainStart   = microtime(true);
 
         // Hauptleiste: bei Start nur Text setzen, bei Done einen Schritt vorwärts
         $onStart = function (string $strategyName, int $index, int $total) use ($mainBar): void {
-            $mainBar->setMessage(\sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $total), 'phase');
+            $mainBar->setMessage(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $total), 'phase');
             $mainBar->setMessage('–', 'rate');
             // kein advance hier – erst bei Done
         };
 
         $onDone = function (string $strategyName, int $index, int $total) use ($mainBar, $mainStart, $items): void {
-            $elapsed = \max(0.000001, \microtime(true) - $mainStart);
-            $rate    = \count($items) / $elapsed;
-            $mainBar->setMessage(\sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $total), 'phase');
-            $mainBar->setMessage(\sprintf('Durchsatz: %.1f Medien/s', $rate), 'rate');
+            $elapsed = max(0.000001, microtime(true) - $mainStart);
+            $rate    = count($items) / $elapsed;
+            $mainBar->setMessage(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $total), 'phase');
+            $mainBar->setMessage(sprintf('Durchsatz: %.1f Medien/s', $rate), 'rate');
             $mainBar->advance(); // jetzt 1 Schritt weiter
         };
 
@@ -150,37 +172,38 @@ final class ClusterCommand extends Command
 
         $mainBar->finish();
         $mainSection->writeln('');
-        $io->success(\sprintf('%d Cluster vorgeschlagen.', \count($drafts)));
+        $io->success(sprintf('%d Cluster vorgeschlagen.', count($drafts)));
 
-        if (\count($drafts) === 0) {
+        if (count($drafts) === 0) {
             $io->note('Keine Cluster zu speichern.');
+
             return Command::SUCCESS;
         }
 
         $io->section('Konsolidieren');
 
-        $before = \count($drafts);
+        $before        = count($drafts);
         $consolSection = $output->section();
-        $consolBar = $this->makeBar($consolSection, $before, '🧹 Konsolidieren');
-        $conStart = \microtime(true);
+        $consolBar     = $this->makeBar($consolSection, $before, '🧹 Konsolidieren');
+        $conStart      = microtime(true);
 
         $drafts = $this->consolidation->consolidate(
             $drafts,
             function (int $done, int $max, string $stage) use ($consolBar, $conStart): void {
-                $elapsed = \max(
+                $elapsed = max(
                     0.000001,
-                    \microtime(true) - $conStart
+                    microtime(true) - $conStart
                 );
                 $rate = $done / $elapsed;
                 $consolBar->setMessage(
-                    \sprintf(
+                    sprintf(
                         '%s | Durchsatz: %.1f Schritte/s',
                         $stage,
                         $rate
                     ),
                     'rate'
                 );
-                if (\method_exists(
+                if (method_exists(
                     $consolBar,
                     'setProgress'
                 )) {
@@ -193,7 +216,7 @@ final class ClusterCommand extends Command
 
         $consolBar->finish();
         $consolSection->writeln('');
-        $io->success(\sprintf('%d → %d Cluster nach Konsolidierung.', $before, \count($drafts)));
+        $io->success(sprintf('%d → %d Cluster nach Konsolidierung.', $before, count($drafts)));
 
         // 3) Persistieren
         $io->section($dryRun ? 'Persistieren (Trockenlauf)' : 'Persistieren');
@@ -203,18 +226,18 @@ final class ClusterCommand extends Command
 
             if ($algorithms !== []) {
                 $deleted = $this->persistence->deleteByAlgorithms($algorithms);
-                $io->info(\sprintf('%d bestehende Cluster gelöscht.', $deleted));
+                $io->info(sprintf('%d bestehende Cluster gelöscht.', $deleted));
             }
         }
 
         $persistSection = $output->section();
-        $persistBar     = $this->makeBar($persistSection, \count($drafts), '💾 Speichern');
-        $persistStart   = \microtime(true);
+        $persistBar     = $this->makeBar($persistSection, count($drafts), '💾 Speichern');
+        $persistStart   = microtime(true);
 
         $persisted = 0;
         if ($dryRun) {
             foreach ($drafts as $_) {
-                $persisted++;
+                ++$persisted;
                 $this->tick($persistBar, $persistStart, $persisted, 'Cluster');
             }
         } else {
@@ -230,7 +253,7 @@ final class ClusterCommand extends Command
 
         $persistBar->finish();
         $persistSection->writeln('');
-        $io->success(\sprintf('%d Cluster gespeichert.', $persisted));
+        $io->success(sprintf('%d Cluster gespeichert.', $persisted));
 
         return Command::SUCCESS;
     }
@@ -248,7 +271,7 @@ final class ClusterCommand extends Command
             $algorithms[$draft->getAlgorithm()] = true;
         }
 
-        return \array_keys($algorithms);
+        return array_keys($algorithms);
     }
 
     /**
@@ -260,17 +283,18 @@ final class ClusterCommand extends Command
         $bar = new ProgressBar($section, $max);
 
         // Own duration placeholder to avoid version-specific APIs
-        $startedAt = \microtime(true);
+        $startedAt = microtime(true);
         ProgressBar::setPlaceholderFormatterDefinition('duration_hms', static function () use ($startedAt): string {
-            $elapsed = (int) \max(0, \microtime(true) - $startedAt);
-            $h = (int) \floor($elapsed / 3600);
-            $m = (int) \floor(($elapsed % 3600) / 60);
-            $s = $elapsed % 60;
-            return \sprintf('%02d:%02d:%02d', $h, $m, $s);
+            $elapsed = (int) max(0, microtime(true) - $startedAt);
+            $h       = (int) floor($elapsed / 3600);
+            $m       = (int) floor(($elapsed % 3600) / 60);
+            $s       = $elapsed % 60;
+
+            return sprintf('%02d:%02d:%02d', $h, $m, $s);
         });
 
         // Named messages: %phase% and %rate%
-        $bar->setFormat(\sprintf(
+        $bar->setFormat(sprintf(
             "%s\n%%current%%/%%max%% [%%bar%%] %%percent%%%% | Dauer: %%duration_hms%% | ETA: %%remaining%% | %%phase%% | %%rate%%",
             $headline
         ));
@@ -288,9 +312,9 @@ final class ClusterCommand extends Command
 
     private function tick(ProgressBar $bar, float $startTs, int $processed, string $unit): void
     {
-        $elapsed = \max(0.000001, \microtime(true) - $startTs);
+        $elapsed = max(0.000001, microtime(true) - $startTs);
         $rate    = $processed / $elapsed;
-        $bar->setMessage(\sprintf('Durchsatz: %.1f %s/s', $rate, $unit));
+        $bar->setMessage(sprintf('Durchsatz: %.1f %s/s', $rate, $unit));
         $bar->advance();
     }
 }

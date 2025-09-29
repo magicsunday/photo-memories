@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -8,6 +16,16 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
+use function abs;
+use function array_fill;
+use function array_shift;
+use function count;
+use function hexdec;
+use function is_string;
+use function min;
+use function strlen;
+use function substr;
 
 final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -35,6 +53,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -42,7 +61,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         // 1) nur mit pHash
         $with = $this->filterTimestampedItemsBy(
             $items,
-            static fn (Media $m): bool => \is_string($m->getPhash()) && $m->getPhash() !== ''
+            static fn (Media $m): bool => is_string($m->getPhash()) && $m->getPhash() !== ''
         );
 
         if ($with === []) {
@@ -53,8 +72,8 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         /** @var array<string, list<Media>> $buckets */
         $buckets = [];
         foreach ($with as $m) {
-            $p = (string) $m->getPhash();
-            $bucketKey = \substr($p, 0, 4);
+            $p         = (string) $m->getPhash();
+            $bucketKey = substr($p, 0, 4);
             $buckets[$bucketKey] ??= [];
             $buckets[$bucketKey][] = $m;
         }
@@ -66,7 +85,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         $drafts = [];
         foreach ($eligibleBuckets as $group) {
             foreach ($this->components($group) as $comp) {
-                if (\count($comp) < $this->minItemsPerBucket) {
+                if (count($comp) < $this->minItemsPerBucket) {
                     continue;
                 }
 
@@ -93,21 +112,21 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
     /** @param list<Media> $items @return list<list<Media>> */
     private function components(array $items): array
     {
-        $n = \count($items);
+        $n = count($items);
         if ($n <= 1) {
             return $n === 1 ? [[$items[0]]] : [];
         }
 
         // Adjazenz via Hamming<=maxHamming
         /** @var array<int,list<int>> $adj */
-        $adj = \array_fill(0, $n, []);
+        $adj    = array_fill(0, $n, []);
         $hashes = [];
-        for ($i = 0; $i < $n; $i++) {
+        for ($i = 0; $i < $n; ++$i) {
             $hashes[$i] = (string) $items[$i]->getPhash();
         }
 
-        for ($i = 0; $i < $n; $i++) {
-            for ($j = $i + 1; $j < $n; $j++) {
+        for ($i = 0; $i < $n; ++$i) {
+            for ($j = $i + 1; $j < $n; ++$j) {
                 if ($this->hammingHex($hashes[$i], $hashes[$j]) <= $this->maxHamming) {
                     $adj[$i][] = $j;
                     $adj[$j][] = $i;
@@ -115,19 +134,19 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
             }
         }
 
-        $seen = \array_fill(0, $n, false);
+        $seen = array_fill(0, $n, false);
         $out  = [];
-        for ($i = 0; $i < $n; $i++) {
+        for ($i = 0; $i < $n; ++$i) {
             if ($seen[$i]) {
                 continue;
             }
 
             // BFS
-            $queue = [$i];
+            $queue    = [$i];
             $seen[$i] = true;
-            $comp = [];
+            $comp     = [];
             while ($queue !== []) {
-                $v = \array_shift($queue);
+                $v = array_shift($queue);
                 if ($v === null) {
                     break;
                 }
@@ -136,7 +155,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
                 foreach ($adj[$v] as $w) {
                     if (!$seen[$w]) {
                         $seen[$w] = true;
-                        $queue[] = $w;
+                        $queue[]  = $w;
                     }
                 }
             }
@@ -149,16 +168,17 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
     private function hammingHex(string $a, string $b): int
     {
-        $len = \min(\strlen($a), \strlen($b));
+        $len  = min(strlen($a), strlen($b));
         $dist = 0;
-        for ($i = 0; $i < $len; $i++) {
-            $x = \hexdec($a[$i]) ^ \hexdec($b[$i]);
+        for ($i = 0; $i < $len; ++$i) {
+            $x = hexdec($a[$i]) ^ hexdec($b[$i]);
             // count bits in nibble
-            $dist += [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4][$x] ?? 0;
+            $dist += [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4][$x] ?? 0;
         }
 
         // different length → penalize remaining nibbles as full mismatches
-        $extra = \abs(\strlen($a) - \strlen($b)) * 4;
+        $extra = abs(strlen($a) - strlen($b)) * 4;
+
         return $dist + $extra;
     }
 }

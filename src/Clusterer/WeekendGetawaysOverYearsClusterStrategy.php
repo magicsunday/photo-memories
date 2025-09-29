@@ -1,15 +1,36 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function gmdate;
+use function sort;
+use function strcmp;
+use function strtotime;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
@@ -25,7 +46,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         private int $maxNights = 3,
         private int $minItemsPerDay = 4,
         private int $minYears = 3,
-        private int $minItemsTotal = 24
+        private int $minItemsTotal = 24,
     ) {
         if ($this->minNights < 1) {
             throw new InvalidArgumentException('minNights must be >= 1.');
@@ -59,6 +80,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -73,10 +95,10 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $y = (int) $local->format('Y');
-            $d = $local->format('Y-m-d');
+            $y     = (int) $local->format('Y');
+            $d     = $local->format('Y-m-d');
             $byYearDay[$y] ??= [];
             $byYearDay[$y][$d] ??= [];
             $byYearDay[$y][$d][] = $m;
@@ -95,8 +117,8 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             }
 
             // sort days
-            $days = \array_keys($eligibleDaysMap);
-            \sort($days, \SORT_STRING);
+            $days = array_keys($eligibleDaysMap);
+            sort($days, SORT_STRING);
 
             // pack days into consecutive runs
             /** @var list<array{days:list<string>, items:list<Media>}> $runs */
@@ -105,14 +127,14 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $runDays = [];
             /** @var list<Media> $runItems */
             $runItems = [];
-            $prev = null;
+            $prev     = null;
 
             $flush = function () use (&$runs, &$runDays, &$runItems): void {
                 if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
 
-                $runDays = [];
+                $runDays  = [];
                 $runItems = [];
             };
 
@@ -136,7 +158,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $candidates = [];
 
             foreach ($runs as $r) {
-                $nDays = \count($r['days']);
+                $nDays = count($r['days']);
                 if ($nDays < 2) {
                     continue;
                 }
@@ -163,20 +185,20 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             }
 
             // pick best candidate: by items count (desc), tie-breaker by span (more nights), then by latest
-            \usort($candidates, function (array $a, array $b): int {
-                $na = \count($a['items']);
-                $nb = \count($b['items']);
+            usort($candidates, function (array $a, array $b): int {
+                $na = count($a['items']);
+                $nb = count($b['items']);
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
 
-                $sa = \count($a['days']);
-                $sb = \count($b['days']);
+                $sa = count($a['days']);
+                $sb = count($b['days']);
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
 
-                return \strcmp($a['days'][0], $b['days'][0]); // earlier first
+                return strcmp($a['days'][0], $b['days'][0]); // earlier first
             });
 
             $best = $candidates[0];
@@ -187,11 +209,11 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $yearsPicked[$year] = true;
         }
 
-        if (\count($yearsPicked) < $this->minYears || \count($membersAllYears) < $this->minItemsTotal) {
+        if (count($yearsPicked) < $this->minYears || count($membersAllYears) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($membersAllYears, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         $centroid = MediaMath::centroid($membersAllYears);
         $time     = MediaMath::timeRange($membersAllYears);
@@ -200,11 +222,11 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => \array_values(\array_keys($yearsPicked)),
+                    'years'      => array_values(array_keys($yearsPicked)),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
+                members: array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
             ),
         ];
     }
@@ -215,12 +237,12 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     private function containsWeekendDay(array $days): bool
     {
         foreach ($days as $d) {
-            $ts = \strtotime($d . ' 12:00:00');
+            $ts = strtotime($d . ' 12:00:00');
             if ($ts === false) {
                 continue;
             }
 
-            $dow = (int) \gmdate('N', $ts); // 1..7
+            $dow = (int) gmdate('N', $ts); // 1..7
             if ($dow === 6 || $dow === 7) {
                 return true;
             }

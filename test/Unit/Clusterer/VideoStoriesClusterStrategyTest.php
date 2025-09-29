@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class VideoStoriesClusterStrategyTest extends TestCase
 {
@@ -21,9 +29,9 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             minItemsPerDay: 2,
         );
 
-        $base = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
+        $base   = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
         $videos = [];
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $videos[] = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
         }
 
@@ -75,5 +83,4 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             },
         );
     }
-
 }

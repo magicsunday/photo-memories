@@ -1,10 +1,21 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function floor;
+use function sprintf;
 
 /**
  * Adds geoCell and distance-from-home using GPS.
@@ -14,7 +25,7 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
     public function __construct(
         private float $homeLat,
         private float $homeLon,
-        private float $cellDegrees = 0.01
+        private float $cellDegrees = 0.01,
     ) {
     }
 
@@ -39,8 +50,9 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
 
     private function cellKey(float $lat, float $lon, float $gd): string
     {
-        $rlat = $gd * \floor($lat / $gd);
-        $rlon = $gd * \floor($lon / $gd);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        $rlat = $gd * floor($lat / $gd);
+        $rlon = $gd * floor($lon / $gd);
+
+        return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 }

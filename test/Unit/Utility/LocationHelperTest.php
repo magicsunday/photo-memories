@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Utility;
@@ -23,33 +31,33 @@ final class LocationHelperTest extends TestCase
             configure: static function (Location $loc): void {
                 $loc->setPois([
                     [
-                        'id' => 'node/1',
-                        'name' => 'Central Bakery',
+                        'id'    => 'node/1',
+                        'name'  => 'Central Bakery',
                         'names' => [
-                            'default' => 'Central Bakery',
-                            'localized' => [],
+                            'default'    => 'Central Bakery',
+                            'localized'  => [],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'shop',
-                        'categoryValue' => 'bakery',
+                        'categoryKey'    => 'shop',
+                        'categoryValue'  => 'bakery',
                         'distanceMeters' => 15.0,
-                        'tags' => [
+                        'tags'           => [
                             'shop' => 'bakery',
                         ],
                     ],
                     [
-                        'id' => 'node/2',
-                        'name' => 'City Museum',
+                        'id'    => 'node/2',
+                        'name'  => 'City Museum',
                         'names' => [
-                            'default' => 'City Museum',
-                            'localized' => [],
+                            'default'    => 'City Museum',
+                            'localized'  => [],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'tourism',
-                        'categoryValue' => 'museum',
+                        'categoryKey'    => 'tourism',
+                        'categoryValue'  => 'museum',
                         'distanceMeters' => 95.0,
-                        'tags' => [
-                            'tourism' => 'museum',
+                        'tags'           => [
+                            'tourism'  => 'museum',
                             'wikidata' => 'Q1',
                         ],
                     ],
@@ -73,33 +81,33 @@ final class LocationHelperTest extends TestCase
             configure: static function (Location $loc): void {
                 $loc->setPois([
                     [
-                        'id' => 'node/10',
-                        'name' => 'Old Town Tower',
+                        'id'    => 'node/10',
+                        'name'  => 'Old Town Tower',
                         'names' => [
-                            'default' => 'Old Town Tower',
-                            'localized' => [],
+                            'default'    => 'Old Town Tower',
+                            'localized'  => [],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'man_made',
-                        'categoryValue' => 'tower',
+                        'categoryKey'    => 'man_made',
+                        'categoryValue'  => 'tower',
                         'distanceMeters' => 40.0,
-                        'tags' => [
+                        'tags'           => [
                             'man_made' => 'tower',
                             'historic' => 'yes',
                         ],
                     ],
                     [
-                        'id' => 'node/11',
-                        'name' => 'Parking Lot',
+                        'id'    => 'node/11',
+                        'name'  => 'Parking Lot',
                         'names' => [
-                            'default' => 'Parking Lot',
-                            'localized' => [],
+                            'default'    => 'Parking Lot',
+                            'localized'  => [],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'amenity',
-                        'categoryValue' => 'parking',
+                        'categoryKey'    => 'amenity',
+                        'categoryValue'  => 'parking',
                         'distanceMeters' => 10.0,
-                        'tags' => [
+                        'tags'           => [
                             'amenity' => 'parking',
                         ],
                     ],
@@ -115,35 +123,35 @@ final class LocationHelperTest extends TestCase
             configure: static function (Location $loc): void {
                 $loc->setPois([
                     [
-                        'id' => 'node/20',
-                        'name' => 'City Museum',
+                        'id'    => 'node/20',
+                        'name'  => 'City Museum',
                         'names' => [
-                            'default' => 'City Museum',
+                            'default'   => 'City Museum',
                             'localized' => [
                                 'de' => 'Stadtmuseum',
                             ],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'tourism',
-                        'categoryValue' => 'museum',
+                        'categoryKey'    => 'tourism',
+                        'categoryValue'  => 'museum',
                         'distanceMeters' => 110.0,
-                        'tags' => [
-                            'tourism' => 'museum',
+                        'tags'           => [
+                            'tourism'  => 'museum',
                             'wikidata' => 'Q1',
                         ],
                     ],
                     [
-                        'id' => 'node/21',
-                        'name' => 'Central Cafe',
+                        'id'    => 'node/21',
+                        'name'  => 'Central Cafe',
                         'names' => [
-                            'default' => 'Central Cafe',
-                            'localized' => [],
+                            'default'    => 'Central Cafe',
+                            'localized'  => [],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'amenity',
-                        'categoryValue' => 'cafe',
+                        'categoryKey'    => 'amenity',
+                        'categoryValue'  => 'cafe',
                         'distanceMeters' => 15.0,
-                        'tags' => [
+                        'tags'           => [
                             'amenity' => 'cafe',
                         ],
                     ],
@@ -179,20 +187,20 @@ final class LocationHelperTest extends TestCase
             configure: static function (Location $loc): void {
                 $loc->setPois([
                     [
-                        'id' => 'node/30',
-                        'name' => 'Old City Hall',
+                        'id'    => 'node/30',
+                        'name'  => 'Old City Hall',
                         'names' => [
-                            'default' => 'Old City Hall',
+                            'default'   => 'Old City Hall',
                             'localized' => [
                                 'de' => 'Altes Rathaus',
                                 'en' => 'Old City Hall',
                             ],
                             'alternates' => ['Historisches Rathaus'],
                         ],
-                        'categoryKey' => 'historic',
-                        'categoryValue' => 'building',
+                        'categoryKey'    => 'historic',
+                        'categoryValue'  => 'building',
                         'distanceMeters' => 20.0,
-                        'tags' => [
+                        'tags'           => [
                             'historic' => 'yes',
                         ],
                     ],

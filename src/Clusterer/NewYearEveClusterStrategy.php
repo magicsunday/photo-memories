@@ -1,14 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function usort;
 
 /**
  * Builds New Year's Eve clusters (local night around Dec 31 → Jan 1).
@@ -23,7 +35,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
         private int $startHour = 20,
         private int $endHour = 2,
         // Minimum media per year-long NYE bucket before emitting a memory.
-        private int $minItemsPerYear = 6
+        private int $minItemsPerYear = 6,
     ) {
         if ($this->startHour < 0 || $this->startHour > 23 || $this->endHour < 0 || $this->endHour > 23) {
             throw new InvalidArgumentException('Hour bounds must be within 0..23.');
@@ -41,6 +53,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -54,7 +67,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
             $items,
             function (Media $m) use ($tz): bool {
                 $takenAt = $m->getTakenAt();
-                \assert($takenAt instanceof DateTimeImmutable);
+                assert($takenAt instanceof DateTimeImmutable);
                 $local = $takenAt->setTimezone($tz);
                 $md    = $local->format('m-d');
                 $hour  = (int) $local->format('G');
@@ -66,7 +79,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
 
         foreach ($nyeItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
             $y     = (int) $local->format('Y');
 
@@ -80,7 +93,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
         $out = [];
 
         foreach ($eligibleYears as $y => $list) {
-            \usort($list, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
@@ -90,8 +103,8 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
                     'year'       => $y,
                     'time_range' => $time,
                 ],
-                centroid: ['lat' => (float)$centroid['lat'], 'lon' => (float)$centroid['lon']],
-                members: \array_map(static fn(Media $m): int => $m->getId(), $list)
+                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 

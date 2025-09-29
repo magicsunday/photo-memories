@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the package magicsunday/photo-memories.
  *
@@ -10,11 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Entity;
 
-use MagicSunday\Memories\Repository\WeatherObservationRepository;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use MagicSunday\Memories\Repository\WeatherObservationRepository;
+
+use function intdiv;
+use function round;
+use function sha1;
+use function sprintf;
 
 #[ORM\Entity(repositoryClass: WeatherObservationRepository::class)]
 #[ORM\Table(name: 'weather_observation')]
@@ -66,7 +72,7 @@ final class WeatherObservation
         float $lon,
         DateTimeImmutable $observedAt,
         array $hint,
-        string $source = self::DEFAULT_SOURCE
+        string $source = self::DEFAULT_SOURCE,
     ) {
         $this->bucket     = $bucket;
         $this->lat        = $lat;
@@ -139,12 +145,12 @@ final class WeatherObservation
 
     public static function quantizeCoordinate(float $value): float
     {
-        return \round($value, self::COORD_PRECISION);
+        return round($value, self::COORD_PRECISION);
     }
 
     public static function bucketFromTimestamp(int $timestamp): int
     {
-        return \intdiv($timestamp, 3600);
+        return intdiv($timestamp, 3600);
     }
 
     public static function observationTimeFromTimestamp(int $timestamp): DateTimeImmutable
@@ -154,7 +160,7 @@ final class WeatherObservation
 
     public static function lookupHashFor(int $bucket, float $lat, float $lon): string
     {
-        return \sha1(\sprintf('%d|%.3f|%.3f', $bucket, $lat, $lon));
+        return sha1(sprintf('%d|%.3f|%.3f', $bucket, $lat, $lon));
     }
 
     public static function lookupHashFromRaw(float $lat, float $lon, int $timestamp): string

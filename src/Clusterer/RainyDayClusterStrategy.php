@@ -1,15 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
 
 /**
  * Builds "Rainy Day" clusters when weather hints indicate significant rain on a local day.
@@ -22,7 +33,7 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
         private WeatherHintProviderInterface $weather,
         private string $timezone = 'Europe/Berlin',
         private float $minAvgRainProb = 0.6,  // 0..1
-        private int $minItemsPerDay = 6
+        private int $minItemsPerDay = 6,
     ) {
         if ($this->minAvgRainProb < 0.0 || $this->minAvgRainProb > 1.0) {
             throw new InvalidArgumentException('minAvgRainProb must be within 0..1.');
@@ -40,6 +51,7 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -57,9 +69,9 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
 
         foreach ($timestampedItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
+            $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -71,7 +83,7 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
         $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, float> $avgRain */
-        $avgRain = [];
+        $avgRain   = [];
         $rainyDays = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$avgRain): bool {
@@ -85,12 +97,16 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
                     }
 
                     $p = (float) ($hint['rain_prob'] ?? 0.0);
-                    if ($p < 0.0) { $p = 0.0; }
+                    if ($p < 0.0) {
+                        $p = 0.0;
+                    }
 
-                    if ($p > 1.0) { $p = 1.0; }
+                    if ($p > 1.0) {
+                        $p = 1.0;
+                    }
 
                     $sum += $p;
-                    $n++;
+                    ++$n;
                 }
 
                 if ($n === 0) {
@@ -122,15 +138,14 @@ final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'rain_prob'   => $avgRain[$day],
-                    'time_range'  => $time,
+                    'rain_prob'  => $avgRain[$day],
+                    'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 
         return $out;
     }
-
 }

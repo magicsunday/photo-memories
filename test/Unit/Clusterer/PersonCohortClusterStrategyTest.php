@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
-use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
 final class PersonCohortClusterStrategyTest extends TestCase
@@ -24,7 +32,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-01-05 12:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createPersonMedia(
                 1700 + $i,
                 $start->add(new DateInterval('P' . $i . 'D')),
@@ -56,7 +64,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2024-02-01 10:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createPersonMedia(
                 1900 + $i,
                 $start->add(new DateInterval('P' . $i . 'D')),

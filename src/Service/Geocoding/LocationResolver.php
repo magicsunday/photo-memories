@@ -1,10 +1,23 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
+
+use function floor;
+use function sprintf;
+use function strtolower;
+use function strtoupper;
 
 /**
  * Finds or creates a Location for a given GeocodeResult.
@@ -22,14 +35,14 @@ final class LocationResolver
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly float $cellDeg = 0.01, // ~1.1km
-        private readonly ?LocationPoiEnricher $poiEnricher = null
+        private readonly ?LocationPoiEnricher $poiEnricher = null,
     ) {
     }
 
     public function findOrCreate(GeocodeResult $g): Location
     {
         $this->lastUsedNetwork = false;
-        $key = $this->key($g->provider, $g->providerPlaceId);
+        $key                   = $this->key($g->provider, $g->providerPlaceId);
 
         // 0) In-memory cache first (fast path inside one run/batch)
         if (isset($this->cacheByKey[$key])) {
@@ -42,7 +55,7 @@ final class LocationResolver
 
                 if ($managed instanceof Location) {
                     $this->cacheByKey[$key] = $managed;
-                    $loc = $managed;
+                    $loc                    = $managed;
                 }
             }
 
@@ -82,12 +95,12 @@ final class LocationResolver
 
         // 3) Create new (managed) entity and cache under exact key
         $loc = new Location(
-            provider:        $g->provider,
+            provider: $g->provider,
             providerPlaceId: $g->providerPlaceId,
-            displayName:     $g->displayName,
-            lat:             $g->lat,
-            lon:             $g->lon,
-            cell:            $cell
+            displayName: $g->displayName,
+            lat: $g->lat,
+            lon: $g->lon,
+            cell: $cell
         );
 
         $loc->setCountryCode($g->countryCode);
@@ -114,7 +127,7 @@ final class LocationResolver
 
     public function consumeLastUsedNetwork(): bool
     {
-        $v = $this->lastUsedNetwork;
+        $v                     = $this->lastUsedNetwork;
         $this->lastUsedNetwork = false;
 
         return $v;
@@ -147,25 +160,32 @@ final class LocationResolver
     private function key(string $provider, string $providerPlaceId): string
     {
         // normalize to avoid accidental duplicates
-        return \strtolower($provider) . '|' . $providerPlaceId;
+        return strtolower($provider) . '|' . $providerPlaceId;
     }
 
     private function cellKey(float $lat, float $lon, float $deg): string
     {
-        $rlat = $deg * \floor($lat / $deg);
-        $rlon = $deg * \floor($lon / $deg);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        $rlat = $deg * floor($lat / $deg);
+        $rlon = $deg * floor($lon / $deg);
+
+        return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 
     private function similar(Location $loc, GeocodeResult $g): bool
     {
         $score = 0;
-        if ($loc->getCountryCode() !== null && $g->countryCode !== null && $loc->getCountryCode() === \strtoupper($g->countryCode)) { $score++; }
+        if ($loc->getCountryCode() !== null && $g->countryCode !== null && $loc->getCountryCode() === strtoupper($g->countryCode)) {
+            ++$score;
+        }
 
         $gc = $g->city ?? $g->town ?? $g->village;
-        if ($loc->getCity() !== null && $gc !== null && $loc->getCity() === $gc) { $score++; }
+        if ($loc->getCity() !== null && $gc !== null && $loc->getCity() === $gc) {
+            ++$score;
+        }
 
-        if ($loc->getRoad() !== null && $g->road !== null && $loc->getRoad() === $g->road) { $score++; }
+        if ($loc->getRoad() !== null && $g->road !== null && $loc->getRoad() === $g->road) {
+            ++$score;
+        }
 
         return $score >= 2;
     }

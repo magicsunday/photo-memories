@@ -1,11 +1,20 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories;
 
 use Phar;
-use Throwable;
 use Symfony\Component\Dotenv\Dotenv;
+use Throwable;
+
 use function dirname;
 
 final class EnvironmentBootstrap
@@ -46,7 +55,7 @@ final class EnvironmentBootstrap
 
         // 3) Repo root (dev)
         $candidates[] = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.env';
-        $rootEnv = array_find($candidates, fn($file): bool => is_file($file));
+        $rootEnv      = array_find($candidates, fn ($file): bool => is_file($file));
 
         if ($rootEnv === null) {
             // No .env found is fine; rely on process env only

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\KeywordBestDayOverYearsStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class KeywordBestDayOverYearsStrategyTest extends TestCase
 {
@@ -28,7 +36,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
 
         // 2021 has two keyword days; only the six-item day should be kept.
         $day2021Primary = new DateTimeImmutable('2021-04-15 10:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(
                 id: 202100 + $i,
                 takenAt: $day2021Primary->add(new DateInterval('PT' . ($i * 600) . 'S')),
@@ -39,7 +47,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
         }
 
         $day2021Secondary = new DateTimeImmutable('2021-05-20 12:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 id: 202110 + $i,
                 takenAt: $day2021Secondary->add(new DateInterval('PT' . ($i * 300) . 'S')),
@@ -51,7 +59,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
 
         // 2022 provides another eligible day.
         $day2022 = new DateTimeImmutable('2022-03-08 09:30:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 4; ++$i) {
             $items[] = $this->createMedia(
                 id: 202200 + $i,
                 takenAt: $day2022->add(new DateInterval('PT' . ($i * 420) . 'S')),
@@ -85,7 +93,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
         $items = [];
 
         $eligibleDay = new DateTimeImmutable('2020-02-10 13:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 3; ++$i) {
             $items[] = $this->createMedia(
                 id: 202000 + $i,
                 takenAt: $eligibleDay->add(new DateInterval('PT' . ($i * 900) . 'S')),
@@ -97,7 +105,7 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
 
         // 2021 does not reach the minItemsPerDay threshold (only two keyword hits).
         $underfilledDay = new DateTimeImmutable('2021-04-02 14:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 2; $i++) {
+        for ($i = 0; $i < 2; ++$i) {
             $items[] = $this->createMedia(
                 id: 202100 + $i,
                 takenAt: $underfilledDay->add(new DateInterval('PT' . ($i * 600) . 'S')),
@@ -173,5 +181,4 @@ final class KeywordBestDayOverYearsStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

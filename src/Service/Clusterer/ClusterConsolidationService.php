@@ -1,11 +1,32 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+
+use function array_keys;
+use function array_unique;
+use function array_values;
+use function count;
+use function implode;
+use function is_array;
+use function sha1;
+use function sort;
+use function sprintf;
+use function usort;
+
+use const SORT_NUMERIC;
 
 /**
  * Consolidates overlapping clusters without mutating ClusterDraft.
@@ -32,16 +53,16 @@ final class ClusterConsolidationService
     private array $annotateOnlySet = [];
 
     /**
-     * @param float        $minScore               Minimum score to keep a cluster.
-     * @param int          $minSize                Minimum members to keep a cluster.
-     * @param float        $overlapMergeThreshold  Jaccard threshold: treat as same story (candidate loses).
-     * @param float        $overlapDropThreshold   Jaccard threshold: drop candidate (very high overlap).
-     * @param int          $perMediaCap            Max accepted clusters per media id (0 disables).
-     * @param list<string> $keepOrder              Algorithm dominance order (earlier = stronger).
-     * @param list<string> $annotateOnly           Algorithms that should only remain if they add unique value.
-     * @param array<string,float> $minUniqueShare  Minimal unique share per annotateOnly algorithm [0..1].
-     * @param bool         $requireValidTime       Drop clusters without valid time_range (optional).
-     * @param int          $minValidYear           Lower bound year for requireValidTime.
+     * @param float               $minScore              minimum score to keep a cluster
+     * @param int                 $minSize               minimum members to keep a cluster
+     * @param float               $overlapMergeThreshold jaccard threshold: treat as same story (candidate loses)
+     * @param float               $overlapDropThreshold  jaccard threshold: drop candidate (very high overlap)
+     * @param int                 $perMediaCap           max accepted clusters per media id (0 disables)
+     * @param list<string>        $keepOrder             algorithm dominance order (earlier = stronger)
+     * @param list<string>        $annotateOnly          algorithms that should only remain if they add unique value
+     * @param array<string,float> $minUniqueShare        Minimal unique share per annotateOnly algorithm [0..1].
+     * @param bool                $requireValidTime      drop clusters without valid time_range (optional)
+     * @param int                 $minValidYear          lower bound year for requireValidTime
      */
     public function __construct(
         private readonly float $minScore,
@@ -53,14 +74,14 @@ final class ClusterConsolidationService
         private readonly array $annotateOnly = [],
         private readonly array $minUniqueShare = [],
         private readonly bool $requireValidTime = false,
-        private readonly int $minValidYear = 1990
+        private readonly int $minValidYear = 1990,
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
             throw new InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
         }
 
-        $base = \count($this->keepOrder);
-        for ($p = 0; $p < $base; $p++) {
+        $base = count($this->keepOrder);
+        for ($p = 0; $p < $base; ++$p) {
             $this->priorityMap[$this->keepOrder[$p]] = $base - $p;
         }
 
@@ -72,15 +93,16 @@ final class ClusterConsolidationService
     /**
      * Consolidate a list of drafts.
      *
-     * @param list<ClusterDraft> $drafts
+     * @param list<ClusterDraft>                                     $drafts
      * @param callable(int $done, int $max, string $stage):void|null $progress
+     *
      * @return list<ClusterDraft>
      */
     public function consolidate(array $drafts, ?callable $progress = null): array
     {
         // ---- 1) Filter & normalize (no mutation of drafts)
         if ($progress !== null) {
-            $progress(0, \count($drafts), 'Filtern');
+            $progress(0, count($drafts), 'Filtern');
         }
 
         /** @var list<ClusterDraft> $kept */
@@ -88,10 +110,10 @@ final class ClusterConsolidationService
         /** @var list<list<int>> $normMembers */
         $normMembers = [];
 
-        $i = 0;
-        $total = \count($drafts);
+        $i     = 0;
+        $total = count($drafts);
         foreach ($drafts as $d) {
-            $i++;
+            ++$i;
             if ($progress !== null && ($i % 200) === 0) {
                 $progress($i, $total, 'Filtern');
             }
@@ -101,7 +123,7 @@ final class ClusterConsolidationService
             }
 
             $nm = $this->normalizeMembers($d->getMembers());
-            if (\count($nm) < $this->minSize) {
+            if (count($nm) < $this->minSize) {
                 continue;
             }
 
@@ -109,7 +131,7 @@ final class ClusterConsolidationService
                 continue;
             }
 
-            $kept[] = $d;
+            $kept[]        = $d;
             $normMembers[] = $nm;
         }
 
@@ -123,17 +145,17 @@ final class ClusterConsolidationService
 
         // ---- 2) Exact duplicate collapse by fingerprint(normMembers)
         if ($progress !== null) {
-            $progress(0, \count($kept), 'Exakte Duplikate');
+            $progress(0, count($kept), 'Exakte Duplikate');
         }
 
         /** @var array<string,int> $winnerByFp */
         $winnerByFp = [];
-        for ($idx = 0, $n = \count($kept); $idx < $n; $idx++) {
+        for ($idx = 0, $n = count($kept); $idx < $n; ++$idx) {
             if ($progress !== null && ($idx % 400) === 0) {
                 $progress($idx, $n, 'Exakte Duplikate');
             }
 
-            $fp = $this->fingerprint($normMembers[$idx]);
+            $fp      = $this->fingerprint($normMembers[$idx]);
             $current = $winnerByFp[$fp] ?? null;
             if ($current === null || $this->isBetter($kept[$idx], $kept[$current])) {
                 $winnerByFp[$fp] = $idx;
@@ -141,34 +163,34 @@ final class ClusterConsolidationService
         }
 
         /** @var list<int> $dedupIdx */
-        $dedupIdx = \array_values($winnerByFp);
+        $dedupIdx = array_values($winnerByFp);
 
         /** @var list<ClusterDraft> $dedup */
         $dedup = [];
         /** @var list<list<int>> $normDedup */
         $normDedup = [];
         foreach ($dedupIdx as $j) {
-            $dedup[] = $kept[$j];
+            $dedup[]     = $kept[$j];
             $normDedup[] = $normMembers[$j];
         }
 
         if ($progress !== null) {
-            $progress(\count($dedup), \count($dedup), 'Exakte Duplikate');
+            $progress(count($dedup), count($dedup), 'Exakte Duplikate');
         }
 
-        if (\count($dedup) <= 1) {
+        if (count($dedup) <= 1) {
             return $this->applyCap($dedup, $normDedup);
         }
 
         // ---- 3) Dominance selection by keepOrder
         if ($progress !== null) {
-            $progress(0, \count($dedup), 'Dominanz');
+            $progress(0, count($dedup), 'Dominanz');
         }
 
         // Build algorithm → list of indices map
         /** @var array<string,list<int>> $byAlg */
         $byAlg = [];
-        for ($k = 0, $n = \count($dedup); $k < $n; $k++) {
+        for ($k = 0, $n = count($dedup); $k < $n; ++$k) {
             $alg = $dedup[$k]->getAlgorithm();
             $byAlg[$alg] ??= [];
             $byAlg[$alg][] = $k;
@@ -180,16 +202,16 @@ final class ClusterConsolidationService
 
         // Utility: sort comparator inside same algorithm
         $cmp = function (int $ia, int $ib) use ($dedup, $normDedup): int {
-            $a = $dedup[$ia];
-            $b = $dedup[$ib];
+            $a  = $dedup[$ia];
+            $b  = $dedup[$ib];
             $sa = $this->scoreOf($a);
             $sb = $this->scoreOf($b);
             if ($sa !== $sb) {
                 return $sa < $sb ? 1 : -1;
             }
 
-            $na = \count($normDedup[$ia]);
-            $nb = \count($normDedup[$ib]);
+            $na = count($normDedup[$ia]);
+            $nb = count($normDedup[$ib]);
             if ($na !== $nb) {
                 return $na < $nb ? 1 : -1;
             }
@@ -207,12 +229,12 @@ final class ClusterConsolidationService
             $algSeen[$alg] = true;
         }
 
-        foreach (\array_keys($byAlg) as $alg) {
+        foreach (array_keys($byAlg) as $alg) {
             if (isset($algSeen[$alg])) {
                 continue;
             }
 
-            $algOrder[] = $alg;
+            $algOrder[]    = $alg;
             $algSeen[$alg] = true;
         }
 
@@ -223,7 +245,7 @@ final class ClusterConsolidationService
                 continue;
             }
 
-            \usort($idxs, $cmp);
+            usort($idxs, $cmp);
 
             foreach ($idxs as $cand) {
                 // compare to already selected
@@ -260,19 +282,19 @@ final class ClusterConsolidationService
         /** @var list<list<int>> $normAfterDominance */
         $normAfterDominance = [];
         foreach ($selected as $idxSel) {
-            $afterDominance[] = $dedup[$idxSel];
+            $afterDominance[]     = $dedup[$idxSel];
             $normAfterDominance[] = $normDedup[$idxSel];
         }
 
         // ---- 4) Annotation-only demotion with unique-share guard
         if ($progress !== null) {
-            $progress(0, \count($afterDominance), 'Annotation prüfen');
+            $progress(0, count($afterDominance), 'Annotation prüfen');
         }
 
         // Build an index of already accepted members for unique-share computation
         /** @var array<int,int> $memberUse */
         $memberUse = [];
-        for ($t = 0, $n = \count($afterDominance); $t < $n; $t++) {
+        for ($t = 0, $n = count($afterDominance); $t < $n; ++$t) {
             $alg = $afterDominance[$t]->getAlgorithm();
             if ($this->isAnnotateOnly($alg)) {
                 continue;
@@ -288,18 +310,18 @@ final class ClusterConsolidationService
         /** @var list<list<int>> $normPassAnnot */
         $normPassAnnot = [];
 
-        for ($t = 0, $n = \count($afterDominance); $t < $n; $t++) {
+        for ($t = 0, $n = count($afterDominance); $t < $n; ++$t) {
             $cluster = $afterDominance[$t];
             $members = $normAfterDominance[$t];
-            $alg = $cluster->getAlgorithm();
+            $alg     = $cluster->getAlgorithm();
 
             if (!$this->isAnnotateOnly($alg)) {
-                $passAnnot[] = $cluster;
+                $passAnnot[]     = $cluster;
                 $normPassAnnot[] = $members;
                 continue;
             }
 
-            $size = \count($members);
+            $size = count($members);
             if ($size === 0) {
                 continue;
             }
@@ -308,15 +330,15 @@ final class ClusterConsolidationService
             foreach ($members as $mid) {
                 $covered = (int) ($memberUse[$mid] ?? 0);
                 if ($covered === 0) {
-                    $unique++;
+                    ++$unique;
                 }
             }
 
-            $share = $unique / (float) $size;
+            $share    = $unique / (float) $size;
             $minShare = (float) ($this->minUniqueShare[$alg] ?? 0.0);
 
             if ($share >= $minShare) {
-                $passAnnot[] = $cluster;
+                $passAnnot[]     = $cluster;
                 $normPassAnnot[] = $members;
                 foreach ($members as $mid) {
                     $memberUse[$mid] = ($memberUse[$mid] ?? 0) + 1;
@@ -332,6 +354,7 @@ final class ClusterConsolidationService
      * Enforce per-media cap using greedy selection by score, algorithm priority (from keepOrder), and size.
      *
      * @param list<ClusterDraft> $drafts
+     *
      * @return list<ClusterDraft>
      */
     private function applyCap(array $drafts, array $normMembers = []): array
@@ -345,15 +368,15 @@ final class ClusterConsolidationService
         foreach ($drafts as $idx => $draft) {
             $members = $normMembers[$idx] ?? $this->normalizeMembers($draft->getMembers());
             $items[] = [
-                'draft' => $draft,
-                'members' => $members,
-                'score' => $this->scoreOf($draft),
+                'draft'    => $draft,
+                'members'  => $members,
+                'score'    => $this->scoreOf($draft),
                 'priority' => (int) ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
-                'size' => \count($members),
+                'size'     => count($members),
             ];
         }
 
-        \usort($items, static function (array $a, array $b): int {
+        usort($items, static function (array $a, array $b): int {
             if ($a['score'] !== $b['score']) {
                 return $a['score'] < $b['score'] ? 1 : -1;
             }
@@ -376,7 +399,7 @@ final class ClusterConsolidationService
 
         foreach ($items as $item) {
             $members = $item['members'];
-            $ok = true;
+            $ok      = true;
 
             foreach ($members as $mid) {
                 $cnt = $assign[$mid] ?? 0;
@@ -400,12 +423,14 @@ final class ClusterConsolidationService
 
     /**
      * @param list<int> $members
+     *
      * @return list<int>
      */
     private function normalizeMembers(array $members): array
     {
-        $members = \array_values(\array_unique($members, \SORT_NUMERIC));
-        \sort($members, \SORT_NUMERIC);
+        $members = array_values(array_unique($members, SORT_NUMERIC));
+        sort($members, SORT_NUMERIC);
+
         return $members;
     }
 
@@ -415,27 +440,28 @@ final class ClusterConsolidationService
      */
     private function jaccard(array $a, array $b): float
     {
-        $ia = 0;
-        $ib = 0;
+        $ia    = 0;
+        $ib    = 0;
         $inter = 0;
-        $na = \count($a);
-        $nb = \count($b);
+        $na    = count($a);
+        $nb    = count($b);
 
         while ($ia < $na && $ib < $nb) {
             $va = $a[$ia];
             $vb = $b[$ib];
             if ($va === $vb) {
-                $inter++;
-                $ia++;
-                $ib++;
+                ++$inter;
+                ++$ia;
+                ++$ib;
             } elseif ($va < $vb) {
-                $ia++;
+                ++$ia;
             } else {
-                $ib++;
+                ++$ib;
             }
         }
 
         $union = $na + $nb - $inter;
+
         return $union > 0 ? $inter / (float) $union : 0.0;
     }
 
@@ -444,7 +470,7 @@ final class ClusterConsolidationService
      */
     private function fingerprint(array $members): string
     {
-        return \sha1(\implode(',', $members));
+        return sha1(implode(',', $members));
     }
 
     private function isAnnotateOnly(string $algorithm): bool
@@ -462,13 +488,13 @@ final class ClusterConsolidationService
         }
 
         // Fallback: size as score
-        return (float) \count($this->normalizeMembers($d->getMembers()));
+        return (float) count($this->normalizeMembers($d->getMembers()));
     }
 
     private function hasValidTimeRange(ClusterDraft $d): bool
     {
         $tr = $d->getParams()['time_range'] ?? null;
-        if (!\is_array($tr) || !isset($tr['from'], $tr['to'])) {
+        if (!is_array($tr) || !isset($tr['from'], $tr['to'])) {
             return false;
         }
 
@@ -478,7 +504,8 @@ final class ClusterConsolidationService
             return false;
         }
 
-        $minTs = (new DateTimeImmutable(\sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
+        $minTs = (new DateTimeImmutable(sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
+
         return $from >= $minTs && $to >= $minTs;
     }
 
@@ -500,7 +527,7 @@ final class ClusterConsolidationService
             return $pa > $pb;
         }
 
-        return \count($this->normalizeMembers($a->getMembers()))
-            >= \count($this->normalizeMembers($b->getMembers()));
+        return count($this->normalizeMembers($a->getMembers()))
+            >= count($this->normalizeMembers($b->getMembers()));
     }
 }

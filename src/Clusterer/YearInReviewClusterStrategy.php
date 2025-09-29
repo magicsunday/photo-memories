@@ -1,13 +1,25 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
 
 /**
  * Builds one macro cluster per year if enough items exist.
@@ -18,7 +30,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
 
     public function __construct(
         private int $minItemsPerYear = 150,
-        private int $minDistinctMonths = 5
+        private int $minDistinctMonths = 5,
     ) {
         if ($this->minItemsPerYear < 1) {
             throw new InvalidArgumentException('minItemsPerYear must be >= 1.');
@@ -36,6 +48,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -48,7 +61,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $y = (int) $t->format('Y');
             $byYear[$y] ??= [];
             $byYear[$y][] = $m;
@@ -59,14 +72,14 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
         $eligibleYears = $this->filterGroups(
             $eligibleYears,
             function (array $list): bool {
-
                 /** @var array<int,bool> $months */
                 $months = [];
                 foreach ($list as $m) {
                     $months[(int) $m->getTakenAt()->format('n')] = true;
                 }
 
-                $count = \count($months);
+                $count = count($months);
+
                 return $count >= $this->minDistinctMonths;
             }
         );
@@ -89,7 +102,7 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 

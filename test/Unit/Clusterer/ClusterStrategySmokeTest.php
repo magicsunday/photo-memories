@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -11,6 +19,7 @@ use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
 use MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\CampingTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
+use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
@@ -28,8 +37,8 @@ use MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy;
 use MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
-use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
+use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
 use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
@@ -55,19 +64,18 @@ use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy;
 use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
-use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\DataProvider;
-use MagicSunday\Memories\Test\TestCase;
 
 final class ClusterStrategySmokeTest extends TestCase
 {
     /**
      * Ensures every cluster strategy exposes its declared name and gracefully handles empty input.
      *
-     * @param class-string<ClusterStrategyInterface> $class
+     * @param class-string<ClusterStrategyInterface>   $class
      * @param callable():ClusterStrategyInterface|null $factory
      */
     #[DataProvider('strategyProvider')]

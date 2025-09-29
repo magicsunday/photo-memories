@@ -1,15 +1,30 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function sort;
+
+use const SORT_STRING;
 
 /**
  * Shared implementation for at-home day clustering strategies.
@@ -80,6 +95,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -98,10 +114,10 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
         foreach ($timestamped as $media) {
             $takenAt = $media->getTakenAt();
-            \assert($takenAt instanceof DateTimeImmutable);
+            assert($takenAt instanceof DateTimeImmutable);
 
             $local = $takenAt->setTimezone($tz);
-            $dow = (int) $local->format('N');
+            $dow   = (int) $local->format('N');
             if (!isset($this->allowedWeekdayLookup[$dow])) {
                 continue;
             }
@@ -151,10 +167,10 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                 continue;
             }
 
-            $share = \count($within) / (float) \count($list);
+            $share = count($within) / (float) count($list);
             if ($share >= $this->minHomeShare) {
                 $homeOnly[$day] = $within;
-                $keepDays[] = $day;
+                $keepDays[]     = $day;
             }
         }
 
@@ -162,7 +178,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        \sort($keepDays, \SORT_STRING);
+        sort($keepDays, SORT_STRING);
 
         /** @var list<ClusterDraft> $clusters */
         $clusters = [];
@@ -182,12 +198,13 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                 }
             }
 
-            if (\count($members) < $this->minItemsTotal) {
+            if (count($members) < $this->minItemsTotal) {
                 $run = [];
+
                 return;
             }
 
-            $centroid = MediaMath::centroid($members);
+            $centroid  = MediaMath::centroid($members);
             $timeRange = MediaMath::timeRange($members);
 
             $clusters[] = new ClusterDraft(
@@ -196,7 +213,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $timeRange,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $media): int => $media->getId(), $members),
+                members: array_map(static fn (Media $media): int => $media->getId(), $members),
             );
 
             $run = [];
@@ -209,7 +226,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             }
 
             $run[] = $day;
-            $prev = $day;
+            $prev  = $day;
         }
 
         $flush();

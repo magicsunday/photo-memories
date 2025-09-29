@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Weather;
@@ -13,7 +21,7 @@ final readonly class ToggleableWeatherHintProvider implements WeatherHintProvide
     public function __construct(
         private WeatherHintProviderInterface $primary,
         private WeatherHintProviderInterface $fallback,
-        private bool $enabled
+        private bool $enabled,
     ) {
     }
 
@@ -30,4 +38,3 @@ final readonly class ToggleableWeatherHintProvider implements WeatherHintProvide
         return $this->fallback->getHint($media);
     }
 }
-

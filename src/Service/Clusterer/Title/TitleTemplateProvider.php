@@ -1,10 +1,22 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Title;
 
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
+
+use function is_array;
+use function is_file;
+use function is_string;
 
 /**
  * Loads i18n-able title templates per algorithm from YAML.
@@ -15,7 +27,7 @@ use Symfony\Component\Yaml\Yaml;
  *      subtitle: "{{ date_range }}"
  *    weekend_trip:
  *      title: "Wochenendtrip nach {{ city }}"
- *      subtitle: "{{ start_date }} – {{ end_date }}"
+ *      subtitle: "{{ start_date }} – {{ end_date }}".
  */
 final class TitleTemplateProvider
 {
@@ -24,34 +36,34 @@ final class TitleTemplateProvider
 
     public function __construct(
         private readonly string $configPath,
-        private readonly string $locale = 'de'
+        private readonly string $locale = 'de',
     ) {
         $this->load();
     }
 
     private function load(): void
     {
-        if (!\is_file($this->configPath)) {
-            throw new RuntimeException('Title-templates YAML missing: '.$this->configPath);
+        if (!is_file($this->configPath)) {
+            throw new RuntimeException('Title-templates YAML missing: ' . $this->configPath);
         }
 
         /** @var array<string,mixed> $data */
         $data = Yaml::parseFile($this->configPath) ?? [];
-        if (!\is_array($data)) {
+        if (!is_array($data)) {
             $data = [];
         }
 
         // Normalize to [locale][algorithm] = ['title'=>..., 'subtitle'=>...]
         foreach ($data as $loc => $algos) {
-            if (!\is_array($algos)) {
+            if (!is_array($algos)) {
                 continue;
             }
 
             foreach ($algos as $algo => $tpl) {
-                if (\is_array($tpl) && isset($tpl['title']) && \is_string($tpl['title'])) {
+                if (is_array($tpl) && isset($tpl['title']) && is_string($tpl['title'])) {
                     $this->templates[$loc][$algo] = [
                         'title'    => $tpl['title'],
-                        'subtitle' => isset($tpl['subtitle']) && \is_string($tpl['subtitle']) ? $tpl['subtitle'] : '',
+                        'subtitle' => isset($tpl['subtitle']) && is_string($tpl['subtitle']) ? $tpl['subtitle'] : '',
                     ];
                 }
             }
@@ -69,6 +81,7 @@ final class TitleTemplateProvider
 
         // Fallback: try default locale „de“
         $hit = $this->templates['de'][$algorithm] ?? null;
+
         return $hit !== null ? ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''] : null;
     }
 }

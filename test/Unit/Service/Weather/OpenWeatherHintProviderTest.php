@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Weather;
@@ -11,6 +19,9 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+
+use function array_key_exists;
+use function json_encode;
 
 final class OpenWeatherHintProviderTest extends TestCase
 {
@@ -25,14 +36,14 @@ final class OpenWeatherHintProviderTest extends TestCase
                 $captured = ['method' => $method, 'url' => $url, 'options' => $options];
 
                 return new MockResponse(
-                    \json_encode([
+                    json_encode([
                         'hourly' => [
                             [
-                                'dt'     => $timestamp,
-                                'pop'    => 0.75,
-                                'rain'   => ['1h' => 1.2],
-                                'clouds' => 20,
-                                'weather'=> [['description' => 'light rain']],
+                                'dt'      => $timestamp,
+                                'pop'     => 0.75,
+                                'rain'    => ['1h' => 1.2],
+                                'clouds'  => 20,
+                                'weather' => [['description' => 'light rain']],
                             ],
                         ],
                     ]),
@@ -84,10 +95,10 @@ final class OpenWeatherHintProviderTest extends TestCase
 
         $client = new MockHttpClient(
             function () use ($timestamp, &$requests): MockResponse {
-                $requests++;
+                ++$requests;
 
                 return new MockResponse(
-                    \json_encode([
+                    json_encode([
                         'hourly' => [
                             [
                                 'dt'   => $timestamp,
@@ -131,7 +142,7 @@ final class OpenWeatherHintProviderTest extends TestCase
         $requests = 0;
         $client   = new MockHttpClient(
             function () use (&$requests): MockResponse {
-                $requests++;
+                ++$requests;
 
                 return new MockResponse('[]', ['http_code' => 200]);
             }
@@ -176,7 +187,7 @@ final class InMemoryObservationStorage implements WeatherObservationStorageInter
     {
         $key = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
 
-        return \array_key_exists($key, $this->storage);
+        return array_key_exists($key, $this->storage);
     }
 
     public function storeHint(float $lat, float $lon, int $timestamp, array $hint, string $source): void

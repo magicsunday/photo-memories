@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
@@ -10,6 +18,31 @@ use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+
+use function array_filter;
+use function array_map;
+use function array_slice;
+use function array_unique;
+use function array_values;
+use function count;
+use function explode;
+use function is_array;
+use function is_int;
+use function is_numeric;
+use function is_string;
+use function ksort;
+use function max;
+use function number_format;
+use function round;
+use function sprintf;
+use function str_replace;
+use function str_starts_with;
+use function strtolower;
+use function substr;
+use function trim;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Minimal Overpass API client fetching nearby Points of Interest.
@@ -47,7 +80,7 @@ final class OverpassClient
     private bool $lastUsedNetwork = false;
 
     /**
-     * @param float $httpTimeout Timeout in seconds for the HTTP request (symfony client option).
+     * @param float $httpTimeout timeout in seconds for the HTTP request (symfony client option)
      */
     public function __construct(
         private readonly HttpClientInterface $http,
@@ -55,7 +88,7 @@ final class OverpassClient
         private readonly string $userAgent = 'Rueckblick/1.0',
         private readonly ?string $contactEmail = null,
         private readonly int $queryTimeout = 25,
-        private readonly float $httpTimeout = 25.0
+        private readonly float $httpTimeout = 25.0,
     ) {
     }
 
@@ -72,18 +105,18 @@ final class OverpassClient
             return [];
         }
 
-        $queryLimit = $limit !== null ? \max(1, $limit) : null;
-        $query = $this->buildQuery($lat, $lon, $radiusMeters, $queryLimit);
+        $queryLimit = $limit !== null ? max(1, $limit) : null;
+        $query      = $this->buildQuery($lat, $lon, $radiusMeters, $queryLimit);
 
         try {
             $this->lastUsedNetwork = true;
-            $response = $this->http->request('POST', $this->baseUrl.'/interpreter', [
+            $response              = $this->http->request('POST', $this->baseUrl . '/interpreter', [
                 'headers' => [
                     'Content-Type' => 'application/x-www-form-urlencoded',
                     'Accept'       => 'application/json',
                     'User-Agent'   => $this->userAgentWithContact(),
                 ],
-                'body'    => [
+                'body' => [
                     'data' => $query,
                 ],
                 'timeout' => $this->httpTimeout,
@@ -100,14 +133,14 @@ final class OverpassClient
         }
 
         $elements = $payload['elements'] ?? null;
-        if (!\is_array($elements)) {
+        if (!is_array($elements)) {
             return [];
         }
 
         /** @var array<string,array<string,mixed>> $pois */
         $pois = [];
         foreach ($elements as $element) {
-            if (!\is_array($element)) {
+            if (!is_array($element)) {
                 continue;
             }
 
@@ -126,16 +159,16 @@ final class OverpassClient
             }
 
             $tags = $element['tags'] ?? null;
-            if (!\is_array($tags)) {
+            if (!is_array($tags)) {
                 $tags = [];
             }
 
-            $selection = $this->selectRelevantTags($tags);
+            $selection    = $this->selectRelevantTags($tags);
             $selectedTags = $selection['tags'];
-            $names = $selection['names'];
-            $name = $this->fallbackPoiName($names);
+            $names        = $selection['names'];
+            $name         = $this->fallbackPoiName($names);
 
-            $primaryKey = $this->primaryTagKey($tags);
+            $primaryKey   = $this->primaryTagKey($tags);
             $primaryValue = $primaryKey !== null ? $this->stringOrNull($tags[$primaryKey] ?? null) : null;
 
             if ($name === null && $primaryValue === null) {
@@ -150,11 +183,11 @@ final class OverpassClient
                 'categoryValue'  => $primaryValue,
                 'lat'            => $coordinate['lat'],
                 'lon'            => $coordinate['lon'],
-                'distanceMeters' => \round(
+                'distanceMeters' => round(
                     MediaMath::haversineDistanceInMeters($lat, $lon, $coordinate['lat'], $coordinate['lon']),
                     2
                 ),
-                'tags'           => $selectedTags,
+                'tags' => $selectedTags,
             ];
         }
 
@@ -162,14 +195,14 @@ final class OverpassClient
             return [];
         }
 
-        $values = \array_values($pois);
-        \usort(
+        $values = array_values($pois);
+        usort(
             $values,
             static fn (array $a, array $b): int => $a['distanceMeters'] <=> $b['distanceMeters']
         );
 
-        if ($queryLimit !== null && \count($values) > $queryLimit) {
-            return \array_slice($values, 0, $queryLimit);
+        if ($queryLimit !== null && count($values) > $queryLimit) {
+            return array_slice($values, 0, $queryLimit);
         }
 
         return $values;
@@ -177,7 +210,7 @@ final class OverpassClient
 
     public function consumeLastUsedNetwork(): bool
     {
-        $used = $this->lastUsedNetwork;
+        $used                  = $this->lastUsedNetwork;
         $this->lastUsedNetwork = false;
 
         return $used;
@@ -185,30 +218,30 @@ final class OverpassClient
 
     private function buildQuery(float $lat, float $lon, int $radius, ?int $limit): string
     {
-        $latS = \number_format($lat, 7, '.', '');
-        $lonS = \number_format($lon, 7, '.', '');
-        $radius = \max(1, $radius);
+        $latS   = number_format($lat, 7, '.', '');
+        $lonS   = number_format($lon, 7, '.', '');
+        $radius = max(1, $radius);
 
-        $query = \sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
+        $query = sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
         foreach (self::TAG_KEYS as $key) {
-            $query .= \sprintf('nwr(around:%d,%s,%s)["%s"];', $radius, $latS, $lonS, $key);
+            $query .= sprintf('nwr(around:%d,%s,%s)["%s"];', $radius, $latS, $lonS, $key);
         }
 
-        $limitFragment = $limit !== null ? ' '.\max(1, $limit) : '';
+        $limitFragment = $limit !== null ? ' ' . max(1, $limit) : '';
 
-        return $query . \sprintf(');out tags center%s;', $limitFragment);
+        return $query . sprintf(');out tags center%s;', $limitFragment);
     }
 
     private function elementId(array $element): ?string
     {
         $type = $this->stringOrNull($element['type'] ?? null);
-        $id = $element['id'] ?? null;
+        $id   = $element['id'] ?? null;
 
-        if ($type === null || (!\is_int($id) && !\is_string($id))) {
+        if ($type === null || (!is_int($id) && !is_string($id))) {
             return null;
         }
 
-        return $type.'/'.$id;
+        return $type . '/' . $id;
     }
 
     /**
@@ -219,13 +252,13 @@ final class OverpassClient
         $lat = $element['lat'] ?? null;
         $lon = $element['lon'] ?? null;
 
-        if (\is_numeric($lat) && \is_numeric($lon)) {
-            return [ 'lat' => (float) $lat, 'lon' => (float) $lon ];
+        if (is_numeric($lat) && is_numeric($lon)) {
+            return ['lat' => (float) $lat, 'lon' => (float) $lon];
         }
 
         $center = $element['center'] ?? null;
-        if (\is_array($center) && \is_numeric($center['lat'] ?? null) && \is_numeric($center['lon'] ?? null)) {
-            return [ 'lat' => (float) $center['lat'], 'lon' => (float) $center['lon'] ];
+        if (is_array($center) && is_numeric($center['lat'] ?? null) && is_numeric($center['lon'] ?? null)) {
+            return ['lat' => (float) $center['lat'], 'lon' => (float) $center['lon']];
         }
 
         return null;
@@ -291,26 +324,26 @@ final class OverpassClient
         /** @var array<string,string> $localized */
         $localized = [];
         foreach ($tags as $key => $value) {
-            if (!\is_string($key)) {
+            if (!is_string($key)) {
                 continue;
             }
 
-            if (!\str_starts_with($key, 'name:')) {
+            if (!str_starts_with($key, 'name:')) {
                 continue;
             }
 
-            $locale = \substr($key, 5);
+            $locale = substr($key, 5);
             if ($locale === false) {
                 continue;
             }
 
-            $locale = \strtolower($locale);
+            $locale = strtolower($locale);
             if ($locale === '') {
                 continue;
             }
 
-            $normalizedLocale = \str_replace(' ', '_', $locale);
-            $name = $this->stringOrNull($value);
+            $normalizedLocale = str_replace(' ', '_', $locale);
+            $name             = $this->stringOrNull($value);
             if ($name === null) {
                 continue;
             }
@@ -319,17 +352,17 @@ final class OverpassClient
         }
 
         if ($localized !== []) {
-            \ksort($localized, \SORT_STRING);
+            ksort($localized, SORT_STRING);
         }
 
         $alternates = [];
-        $altName = $this->stringOrNull($tags['alt_name'] ?? null);
+        $altName    = $this->stringOrNull($tags['alt_name'] ?? null);
         if ($altName !== null) {
-            $parts = \array_map(static fn (string $part): string => \trim($part), \explode(';', $altName));
-            $parts = \array_filter($parts, static fn (string $part): bool => $part !== '');
+            $parts = array_map(static fn (string $part): string => trim($part), explode(';', $altName));
+            $parts = array_filter($parts, static fn (string $part): bool => $part !== '');
             if ($parts !== []) {
                 /** @var list<string> $unique */
-                $unique = \array_values(\array_unique($parts));
+                $unique     = array_values(array_unique($parts));
                 $alternates = $unique;
             }
         }
@@ -380,7 +413,7 @@ final class OverpassClient
 
     private function stringOrNull(mixed $value): ?string
     {
-        return \is_string($value) && $value !== '' ? $value : null;
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     private function userAgentWithContact(): string
@@ -390,11 +423,11 @@ final class OverpassClient
             return $this->userAgent;
         }
 
-        $trimmed = \trim($email);
+        $trimmed = trim($email);
         if ($trimmed === '') {
             return $this->userAgent;
         }
 
-        return $this->userAgent.' ('.$trimmed.')';
+        return $this->userAgent . ' (' . $trimmed . ')';
     }
 }

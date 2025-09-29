@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -7,6 +15,10 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function count;
+use function usort;
 
 /**
  * Clusters panorama photos (very wide aspect ratio) into time sessions.
@@ -18,7 +30,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
     public function __construct(
         private float $minAspect = 2.4,     // width / height threshold
         private int $sessionGapSeconds = 3 * 3600,
-        private int $minItemsPerRun = 3
+        private int $minItemsPerRun = 3,
     ) {
         if ($this->minAspect <= 0.0) {
             throw new InvalidArgumentException('minAspect must be > 0.');
@@ -40,6 +52,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -64,29 +77,29 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
                 return $ratio >= $this->minAspect;
             }
         );
-        if (\count($cand) < $this->minItemsPerRun) {
+        if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($cand, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<ClusterDraft> $out */
         $out = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf  = [];
         $last = null;
 
         $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItemsPerRun) {
+            if (count($buf) < $this->minItemsPerRun) {
                 $buf = [];
+
                 return;
             }
 
-            $gps = $this->filterGpsItems($buf);
+            $gps      = $this->filterGpsItems($buf);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-            $time = MediaMath::timeRange($buf);
+            $time     = MediaMath::timeRange($buf);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -94,7 +107,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: array_map(static fn (Media $m): int => $m->getId(), $buf)
             );
             $buf = [];
         };
@@ -110,7 +123,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
             }
 
             $buf[] = $m;
-            $last = $ts;
+            $last  = $ts;
         }
 
         $flush();

@@ -1,10 +1,21 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+
+use function floor;
+use function sprintf;
 
 /**
  * Links Media to Locations; uses a pre-warmed cell index + in-run cache.
@@ -20,7 +31,7 @@ final class MediaLocationLinker
         private readonly ReverseGeocoderInterface $geocoder,
         private readonly LocationResolver $resolver,
         private readonly LocationCellIndex $cellIndex,
-        private readonly float $cellDeg = 0.01
+        private readonly float $cellDeg = 0.01,
     ) {
     }
 
@@ -41,6 +52,7 @@ final class MediaLocationLinker
             $loc = $this->cellCache[$cell];
             $this->ensurePois($loc);
             $media->setLocation($loc);
+
             return $loc;
         }
 
@@ -50,6 +62,7 @@ final class MediaLocationLinker
             $this->cellCache[$cell] = $fromIndex;
             $this->ensurePois($fromIndex);
             $media->setLocation($fromIndex);
+
             return $fromIndex;
         }
 
@@ -63,7 +76,7 @@ final class MediaLocationLinker
 
         $loc = $this->resolver->findOrCreate($result);
         if ($this->resolver->consumeLastUsedNetwork()) {
-            $networkCalls++;
+            ++$networkCalls;
         }
 
         $this->cellCache[$cell] = $loc;
@@ -71,12 +84,13 @@ final class MediaLocationLinker
         $this->lastNetworkCalls = $networkCalls;
 
         $media->setLocation($loc);
+
         return $loc;
     }
 
     public function consumeLastNetworkCalls(): int
     {
-        $v = $this->lastNetworkCalls;
+        $v                      = $this->lastNetworkCalls;
         $this->lastNetworkCalls = 0;
 
         return $v;
@@ -84,9 +98,10 @@ final class MediaLocationLinker
 
     private function cellKey(float $lat, float $lon, float $deg): string
     {
-        $rlat = $deg * \floor($lat / $deg);
-        $rlon = $deg * \floor($lon / $deg);
-        return \sprintf('%.4f,%.4f', $rlat, $rlon);
+        $rlat = $deg * floor($lat / $deg);
+        $rlon = $deg * floor($lon / $deg);
+
+        return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
 
     private function ensurePois(Location $location): void
@@ -94,7 +109,7 @@ final class MediaLocationLinker
         $this->resolver->ensurePois($location);
 
         if ($this->resolver->consumeLastUsedNetwork()) {
-            $this->lastNetworkCalls++;
+            ++$this->lastNetworkCalls;
         }
     }
 }

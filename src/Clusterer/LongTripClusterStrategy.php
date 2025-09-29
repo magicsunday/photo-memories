@@ -1,15 +1,33 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function assert;
+use function count;
+use function max;
+use function sort;
+use function usort;
+
+use const SORT_STRING;
 
 /**
  * Detects multi-night trips away from home based on per-day centroids and distance threshold.
@@ -27,7 +45,7 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
         private int $minNights = 3,
         private string $timezone = 'Europe/Berlin',
         // Counts timestamped media before we enforce GPS coverage for distance checks.
-        private int $minItemsPerDay = 3
+        private int $minItemsPerDay = 3,
     ) {
         if ($this->minAwayKm <= 0.0) {
             throw new InvalidArgumentException('minAwayKm must be > 0.');
@@ -49,6 +67,7 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -66,9 +85,9 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
         $byDay = [];
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
+            $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -81,39 +100,39 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
          *
          * @var array<string, list<Media>> $dayMembers
          * @var array<string, list<Media>> $dayGpsMembers
-         * @var array<string, float> $dayDistanceKm
+         * @var array<string, float>       $dayDistanceKm
          */
-        $dayMembers = [];
+        $dayMembers    = [];
         $dayGpsMembers = [];
         $dayDistanceKm = [];
 
         foreach ($eligibleDays as $day => $list) {
             $gpsMembers = $this->filterTimestampedGpsItems($list);
 
-            if (\count($gpsMembers) < $this->minItemsPerDay) {
+            if (count($gpsMembers) < $this->minItemsPerDay) {
                 continue;
             }
 
             $sortedGps = $gpsMembers;
-            \usort($sortedGps, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($sortedGps, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
             $distKm = 0.0;
-            for ($i = 1, $n = \count($sortedGps); $i < $n; $i++) {
+            for ($i = 1, $n = count($sortedGps); $i < $n; ++$i) {
                 $p = $sortedGps[$i - 1];
                 $q = $sortedGps[$i];
                 $distKm += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
-                    ) / 1000.0;
+                    (float) $p->getGpsLat(),
+                    (float) $p->getGpsLon(),
+                    (float) $q->getGpsLat(),
+                    (float) $q->getGpsLon()
+                ) / 1000.0;
             }
 
             if ($distKm < $this->minAwayKm) {
                 continue;
             }
 
-            $dayMembers[$day] = $list;
+            $dayMembers[$day]    = $list;
             $dayGpsMembers[$day] = $gpsMembers;
             $dayDistanceKm[$day] = $distKm;
         }
@@ -123,8 +142,8 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
         }
 
         // Sort days and find consecutive away sequences
-        $days = \array_keys($dayMembers);
-        \sort($days, \SORT_STRING);
+        $days = array_keys($dayMembers);
+        sort($days, SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
@@ -132,9 +151,10 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
         $run = [];
 
         $flush = function () use (&$run, &$out, $dayMembers, $dayGpsMembers, $dayDistanceKm): void {
-            $runSize = \count($run);
+            $runSize = count($run);
             if ($runSize < 2) {
                 $run = [];
+
                 return;
             }
 
@@ -152,14 +172,16 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
                 }
             }
 
-            $nights = \max(0, \count($run) - 1);
+            $nights = max(0, count($run) - 1);
             if ($nights < $this->minNights) {
                 $run = [];
+
                 return;
             }
 
             if ($gpsMembers === []) {
                 $run = [];
+
                 return;
             }
 
@@ -174,6 +196,7 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
             $averageDistanceKm = $runSize > 0 ? $totalDistanceKm / $runSize : 0.0;
             if ($averageDistanceKm < $this->minAwayKm) {
                 $run = [];
+
                 return;
             }
 
@@ -185,7 +208,7 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
                     'time_range'  => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $all)
+                members: array_map(static fn (Media $m): int => $m->getId(), $all)
             );
 
             $run = [];
@@ -198,7 +221,7 @@ final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
             }
 
             $run[] = $d;
-            $prev = $d;
+            $prev  = $d;
         }
 
         $flush();

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
@@ -17,6 +25,18 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function count;
+use function function_exists;
+use function is_string;
+use function mb_strimwidth;
+use function mb_strtolower;
+use function preg_replace;
+use function sprintf;
+use function strlen;
+use function substr;
+use function trim;
+use function usleep;
+
 #[AsCommand(
     name: 'memories:geocode',
     description: 'Orte aus GPS-Daten ermitteln und speichern'
@@ -28,7 +48,7 @@ final class GeocodeCommand extends Command
         private readonly MediaLocationLinker $linker,
         private readonly LocationResolver $locationResolver,
         private readonly LocationCellIndex $cellIndex,
-        private readonly int $delayMs = 1200 // be polite to Nominatim
+        private readonly int $delayMs = 1200, // be polite to Nominatim
     ) {
         parent::__construct();
     }
@@ -46,12 +66,12 @@ final class GeocodeCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io     = new SymfonyStyle($input, $output);
-        $dryRun = (bool) $input->getOption('dry-run');
-        $limit  = $input->getOption('limit');
-        $limitN = \is_string($limit) ? (int) $limit : null;
-        $all    = (bool) $input->getOption('all');
-        $city   = $input->getOption('city');
+        $io          = new SymfonyStyle($input, $output);
+        $dryRun      = (bool) $input->getOption('dry-run');
+        $limit       = $input->getOption('limit');
+        $limitN      = is_string($limit) ? (int) $limit : null;
+        $all         = (bool) $input->getOption('all');
+        $city        = $input->getOption('city');
         $missingPois = (bool) $input->getOption('missing-pois');
         $refreshPois = (bool) $input->getOption('refresh-pois');
 
@@ -61,12 +81,12 @@ final class GeocodeCommand extends Command
             return $this->reprocessLocationsMissingPois($dryRun, $refreshPois, $io, $output);
         }
 
-        if (\is_string($city) && $city !== '') {
+        if (is_string($city) && $city !== '') {
             return $this->reprocessLocationsByCity($city, $dryRun, $refreshPois, $io, $output);
         }
 
         $loaded = $this->cellIndex->warmUpFromDb();
-        $io->writeln(\sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));
+        $io->writeln(sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));
 
         $qb = $this->em->createQueryBuilder()
             ->select('m')
@@ -87,9 +107,10 @@ final class GeocodeCommand extends Command
         /** @var list<Media> $medias */
         $medias = $qb->getQuery()->getResult();
 
-        $count = \count($medias);
+        $count = count($medias);
         if ($count < 1) {
             $io->writeln('Nichts zu tun – keine Medien mit GPS gefunden.');
+
             return Command::SUCCESS;
         }
 
@@ -108,7 +129,7 @@ final class GeocodeCommand extends Command
             $loc = $this->linker->link($m, 'de');
 
             if ($loc instanceof Location) {
-                $linked++;
+                ++$linked;
             }
 
             // nur schlafen, wenn wirklich ein Netz-Call stattfand
@@ -117,13 +138,13 @@ final class GeocodeCommand extends Command
                 $netCalls += $networkCalls;
 
                 if ($this->delayMs > 0) {
-                    for ($i = 0; $i < $networkCalls; $i++) {
-                        \usleep($this->delayMs * 1000);
+                    for ($i = 0; $i < $networkCalls; ++$i) {
+                        usleep($this->delayMs * 1000);
                     }
                 }
             }
 
-            $processed++;
+            ++$processed;
             $bar->advance();
 
             if (($processed % $batchSize) === 0) {
@@ -138,7 +159,7 @@ final class GeocodeCommand extends Command
 
         $io->writeln('');
         $io->writeln('');
-        $io->writeln(\sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $processed, $linked, $netCalls));
+        $io->writeln(sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $processed, $linked, $netCalls));
 
         if ($dryRun) {
             $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
@@ -167,7 +188,7 @@ final class GeocodeCommand extends Command
         /** @var list<Location> $locations */
         $locations = $qb->getQuery()->getResult();
 
-        $count = \count($locations);
+        $count = count($locations);
         if ($count < 1) {
             $io->writeln('Keine Orte ohne POI-Daten gefunden.');
 
@@ -192,14 +213,14 @@ final class GeocodeCommand extends Command
 
             $this->locationResolver->ensurePois($location, $refreshPois);
             if ($this->locationResolver->consumeLastUsedNetwork()) {
-                $netCalls++;
+                ++$netCalls;
             }
 
             if ($beforePois !== $location->getPois()) {
-                $updated++;
+                ++$updated;
             }
 
-            $processed++;
+            ++$processed;
             $bar->advance();
 
             if ($processed % $batchSize === 0 && !$dryRun) {
@@ -215,7 +236,7 @@ final class GeocodeCommand extends Command
 
         $io->writeln('');
         $io->writeln('');
-        $io->writeln(\sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
 
         if ($dryRun) {
             $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
@@ -226,9 +247,9 @@ final class GeocodeCommand extends Command
 
     private function reprocessLocationsByCity(string $city, bool $dryRun, bool $refreshPois, SymfonyStyle $io, OutputInterface $output): int
     {
-        $normalizedCity = \mb_strtolower($city);
+        $normalizedCity = mb_strtolower($city);
 
-        $io->section(\sprintf('🏙️  Orte mit Stadtnamen "%s" aktualisieren', $city));
+        $io->section(sprintf('🏙️  Orte mit Stadtnamen "%s" aktualisieren', $city));
 
         if ($refreshPois) {
             $io->note('Bestehende POI-Daten werden neu abgerufen.');
@@ -246,7 +267,7 @@ final class GeocodeCommand extends Command
         /** @var list<Location> $locations */
         $locations = $qb->getQuery()->getResult();
 
-        $count = \count($locations);
+        $count = count($locations);
         if ($count < 1) {
             $io->writeln('Keine passenden Orte gefunden.');
 
@@ -271,14 +292,14 @@ final class GeocodeCommand extends Command
 
             $this->locationResolver->ensurePois($location, $refreshPois);
             if ($this->locationResolver->consumeLastUsedNetwork()) {
-                $netCalls++;
+                ++$netCalls;
             }
 
             if ($beforePois !== $location->getPois()) {
-                $updated++;
+                ++$updated;
             }
 
-            $processed++;
+            ++$processed;
             $bar->advance();
 
             if ($processed % $batchSize === 0 && !$dryRun) {
@@ -294,7 +315,7 @@ final class GeocodeCommand extends Command
 
         $io->writeln('');
         $io->writeln('');
-        $io->writeln(\sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
 
         if ($dryRun) {
             $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
@@ -308,14 +329,14 @@ final class GeocodeCommand extends Command
      */
     private function formatProgressLabel(string $label): string
     {
-        $normalized = \preg_replace('/\s+/u', ' ', \trim($label)) ?? $label;
+        $normalized = preg_replace('/\s+/u', ' ', trim($label)) ?? $label;
 
-        if (\function_exists('mb_strimwidth')) {
-            return \mb_strimwidth($normalized, 0, 70, '…', 'UTF-8');
+        if (function_exists('mb_strimwidth')) {
+            return mb_strimwidth($normalized, 0, 70, '…', 'UTF-8');
         }
 
-        return \strlen($normalized) > 70
-            ? \substr($normalized, 0, 69) . '…'
+        return strlen($normalized) > 70
+            ? substr($normalized, 0, 69) . '…'
             : $normalized;
     }
 }

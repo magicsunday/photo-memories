@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,8 +17,8 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class SunnyDayClusterStrategyTest extends TestCase
 {
@@ -35,9 +43,9 @@ final class SunnyDayClusterStrategyTest extends TestCase
             minHintsPerDay: 3,
         );
 
-        $base = new DateTimeImmutable('2024-05-01 10:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-05-01 10:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(2500 + $i, $base->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
 
@@ -66,9 +74,9 @@ final class SunnyDayClusterStrategyTest extends TestCase
         );
         $strategy = new SunnyDayClusterStrategy(weather: $provider);
 
-        $base = new DateTimeImmutable('2024-05-02 10:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-05-02 10:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(2600 + $i, $base->add(new DateInterval('PT' . ($i * 600) . 'S')));
         }
 
@@ -85,7 +93,6 @@ final class SunnyDayClusterStrategyTest extends TestCase
             lon: 11.0,
         );
     }
-
 }
 
 final class InMemoryWeatherProvider implements WeatherHintProviderInterface
@@ -104,6 +111,7 @@ final class InMemoryWeatherProvider implements WeatherHintProviderInterface
     public function getHint(Media $media): ?array
     {
         $id = $media->getId();
+
         return $this->hints[$id] ?? null;
     }
 }

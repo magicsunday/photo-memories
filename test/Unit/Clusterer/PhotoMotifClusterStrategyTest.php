@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class PhotoMotifClusterStrategyTest extends TestCase
 {
@@ -21,9 +29,9 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             minItemsPerMotif: 6,
         );
 
-        $start = new DateTimeImmutable('2023-09-01 08:00:00', new DateTimeZone('UTC'));
+        $start      = new DateTimeImmutable('2023-09-01 08:00:00', new DateTimeZone('UTC'));
         $mediaItems = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 6; ++$i) {
             $mediaItems[] = $this->createMedia(
                 300 + $i,
                 $start->add(new DateInterval('PT' . ($i * 600) . 'S')),
@@ -53,7 +61,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
         );
 
         $items = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 400 + $i,
                 new DateTimeImmutable('2023-07-10 09:00:00', new DateTimeZone('UTC')),
@@ -77,5 +85,4 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             size: 512,
         );
     }
-
 }

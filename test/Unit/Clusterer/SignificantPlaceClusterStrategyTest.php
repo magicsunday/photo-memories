@@ -1,21 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Location;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class SignificantPlaceClusterStrategyTest extends TestCase
 {
     #[Test]
     public function buildsClusterForFrequentPlace(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new SignificantPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -23,7 +31,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             minItemsTotal: 5,
         );
 
-        $location = $this->createLocation('loc-berlin', 'Kaffeehaus');
+        $location   = $this->createLocation('loc-berlin', 'Kaffeehaus');
         $mediaItems = [
             $this->createMedia(1, '2024-03-01 08:00:00', 52.5200, 13.4050, $location),
             $this->createMedia(2, '2024-03-01 09:00:00', 52.5202, 13.4052, $location),
@@ -51,7 +59,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function enforcesMinimumVisitDays(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new SignificantPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -59,7 +67,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             minItemsTotal: 5,
         );
 
-        $location = $this->createLocation('loc-berlin', 'Kaffeehaus');
+        $location   = $this->createLocation('loc-berlin', 'Kaffeehaus');
         $mediaItems = [
             $this->createMedia(11, '2024-03-01 08:00:00', 52.5200, 13.4050, $location),
             $this->createMedia(12, '2024-03-01 09:00:00', 52.5202, 13.4052, $location),
@@ -84,17 +92,17 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             configure: static function (Location $location): void {
                 $location->setPois([
                     [
-                        'name' => 'Cafe Central',
+                        'name'  => 'Cafe Central',
                         'names' => [
-                            'default' => 'Cafe Central',
+                            'default'   => 'Cafe Central',
                             'localized' => [
                                 'de' => 'Café Central',
                             ],
                             'alternates' => [],
                         ],
-                        'categoryKey' => 'amenity',
+                        'categoryKey'   => 'amenity',
                         'categoryValue' => 'cafe',
-                        'tags' => ['cuisine' => 'coffee_shop'],
+                        'tags'          => ['cuisine' => 'coffee_shop'],
                     ],
                 ]);
             },
@@ -112,5 +120,4 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             location: $location,
         );
     }
-
 }

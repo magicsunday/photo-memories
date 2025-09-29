@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
@@ -15,6 +23,12 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function count;
+use function implode;
+use function max;
+use function number_format;
+use function sprintf;
+
 /**
  * Preview a "Für dich" feed in the console from persisted clusters.
  * Beachtet dabei die globale Limitierung pro Algorithmus aus dem Feed-Builder.
@@ -30,7 +44,7 @@ final class FeedPreviewCommand extends Command
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterConsolidationService $consolidation,
         private readonly ClusterEntityToDraftMapper $mapper,
-        private readonly int $defaultClusterLimit = 5000
+        private readonly int $defaultClusterLimit = 5000,
     ) {
         parent::__construct();
     }
@@ -72,7 +86,7 @@ final class FeedPreviewCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('📰 Rückblick-Feed Vorschau');
 
-        $limit = \max(1, (int) $input->getOption('limit-clusters'));
+        $limit = max(1, (int) $input->getOption('limit-clusters'));
 
         $qb = $this->em->createQueryBuilder()
             ->select('c')
@@ -85,6 +99,7 @@ final class FeedPreviewCommand extends Command
 
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');
+
             return Command::SUCCESS;
         }
 
@@ -98,13 +113,14 @@ final class FeedPreviewCommand extends Command
             static function (int $done, int $max, string $stage) use ($io): void {
                 // lightweight progress (no heavy bars to keep output tidy)
                 if ($max > 0 && ($done === $max)) {
-                    $io->writeln(\sprintf('  ✔ %s (%d)', $stage, $max));
+                    $io->writeln(sprintf('  ✔ %s (%d)', $stage, $max));
                 }
             }
         );
 
         if ($consolidated === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
+
             return Command::SUCCESS;
         }
 
@@ -114,25 +130,26 @@ final class FeedPreviewCommand extends Command
 
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
+
             return Command::SUCCESS;
         }
 
         // Render table
-        $rows = [];
+        $rows        = [];
         $showMembers = (bool) $input->getOption('show-members');
-        $idx = 0;
+        $idx         = 0;
 
         foreach ($items as $it) {
-            $idx++;
+            ++$idx;
             $rows[] = [
                 (string) $idx,
                 $it->getAlgorithm(),
                 $it->getTitle(),
                 $it->getSubtitle(),
-                \number_format($it->getScore(), 3, ',', ''),
-                (string) \count($it->getMemberIds()),
+                number_format($it->getScore(), 3, ',', ''),
+                (string) count($it->getMemberIds()),
                 $it->getCoverMediaId() !== null ? (string) $it->getCoverMediaId() : '–',
-                $showMembers ? \implode(',', $it->getMemberIds()) : '–',
+                $showMembers ? implode(',', $it->getMemberIds()) : '–',
             ];
         }
 
@@ -141,7 +158,8 @@ final class FeedPreviewCommand extends Command
             $rows
         );
 
-        $io->success(\sprintf('%d Feed-Items angezeigt.', \count($items)));
+        $io->success(sprintf('%d Feed-Items angezeigt.', count($items)));
+
         return Command::SUCCESS;
     }
 }

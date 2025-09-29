@@ -1,13 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function usort;
 
 /**
  * Aggregates panoramas across years; requires per-year minimum.
@@ -21,7 +36,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
         // Minimum panoramas that must exist within each individual year.
         private int $minItemsPerYear = 3,
         private int $minYears = 3,
-        private int $minItemsTotal = 15
+        private int $minItemsTotal = 15,
     ) {
         if ($this->minAspect <= 0.0) {
             throw new InvalidArgumentException('minAspect must be > 0.');
@@ -47,6 +62,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -72,7 +88,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
 
         foreach ($panoramaItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $y = (int) $t->format('Y');
             $byYear[$y] ??= [];
             $byYear[$y][] = $m;
@@ -98,11 +114,11 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
             $years[$y] = true;
         }
 
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
+        if (count($years) < $this->minYears || count($picked) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
         $centroid = MediaMath::centroid($picked);
         $time     = MediaMath::timeRange($picked);
 
@@ -110,11 +126,11 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => \array_values(\array_keys($years)),
+                    'years'      => array_values(array_keys($years)),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $picked)
+                members: array_map(static fn (Media $m): int => $m->getId(), $picked)
             ),
         ];
     }

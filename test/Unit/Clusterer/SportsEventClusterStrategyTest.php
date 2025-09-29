@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SportsEventClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class SportsEventClusterStrategyTest extends TestCase
 {
@@ -24,7 +32,7 @@ final class SportsEventClusterStrategyTest extends TestCase
         );
 
         $mediaItems = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $mediaItems[] = $this->createMedia(
                 100 + $i,
                 new DateTimeImmutable('2024-03-16 ' . (18 + $i) . ':00:00', new DateTimeZone('UTC')),
@@ -56,7 +64,7 @@ final class SportsEventClusterStrategyTest extends TestCase
         );
 
         $weekdayItems = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $weekdayItems[] = $this->createMedia(
                 200 + $i,
                 new DateTimeImmutable('2024-03-13 ' . (18 + $i) . ':00:00', new DateTimeZone('UTC')),
@@ -79,5 +87,4 @@ final class SportsEventClusterStrategyTest extends TestCase
             lon: $lon,
         );
     }
-
 }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,9 +17,9 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\LongTripClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class LongTripClusterStrategyTest extends TestCase
 {
@@ -45,18 +53,18 @@ final class LongTripClusterStrategyTest extends TestCase
             ],
         ];
 
-        $mediaItems = [];
-        $start = new DateTimeImmutable('2023-07-01 08:00:00', new DateTimeZone('UTC'));
-        $id = 70100;
+        $mediaItems      = [];
+        $start           = new DateTimeImmutable('2023-07-01 08:00:00', new DateTimeZone('UTC'));
+        $id              = 70100;
         $perDayDistances = [];
 
         foreach ($dayTracks as $dayIndex => $points) {
-            $dayStart = $start->add(new DateInterval('P' . $dayIndex . 'D'));
-            $previous = null;
+            $dayStart   = $start->add(new DateInterval('P' . $dayIndex . 'D'));
+            $previous   = null;
             $distanceKm = 0.0;
 
             foreach ($points as $offset => $coords) {
-                $timestamp = $dayStart->add(new DateInterval('PT' . ($offset * 3) . 'H'));
+                $timestamp    = $dayStart->add(new DateInterval('PT' . ($offset * 3) . 'H'));
                 $mediaItems[] = $this->createMedia(++$id, $timestamp->format('Y-m-d H:i:00'), $coords['lat'], $coords['lon']);
 
                 if ($previous !== null) {
@@ -90,7 +98,7 @@ final class LongTripClusterStrategyTest extends TestCase
         $expectedAverageDistance = array_sum($perDayDistances) / count($perDayDistances);
         self::assertEqualsWithDelta($expectedAverageDistance, $params['distance_km'], 0.1);
 
-        $centroid = $cluster->getCentroid();
+        $centroid         = $cluster->getCentroid();
         $expectedCentroid = MediaMath::centroid($mediaItems);
         self::assertEqualsWithDelta((float) $expectedCentroid['lat'], $centroid['lat'], 0.0001);
         self::assertEqualsWithDelta((float) $expectedCentroid['lon'], $centroid['lon'], 0.0001);
@@ -134,7 +142,7 @@ final class LongTripClusterStrategyTest extends TestCase
         int $id,
         string $takenAt,
         ?float $lat = null,
-        ?float $lon = null
+        ?float $lon = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -145,5 +153,4 @@ final class LongTripClusterStrategyTest extends TestCase
             size: 2048,
         );
     }
-
 }

@@ -1,15 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_key_exists;
+use function array_map;
+use function assert;
+use function max;
 
 /**
  * Builds "Sunny Day" clusters when weather hints indicate strong sunshine on a local day.
@@ -24,7 +37,7 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
         private string $timezone = 'Europe/Berlin',
         private float $minAvgSunScore = 0.65, // 0..1
         private int $minItemsPerDay = 6,
-        private int $minHintsPerDay = 3
+        private int $minHintsPerDay = 3,
     ) {
         if ($this->minAvgSunScore < 0.0 || $this->minAvgSunScore > 1.0) {
             throw new InvalidArgumentException('minAvgSunScore must be within 0..1.');
@@ -46,6 +59,7 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -60,9 +74,9 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
+            $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -74,7 +88,7 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
         $eligibleDays = $this->filterGroupsByMinItems($byDay, $this->minItemsPerDay);
 
         /** @var array<string, float> $avgSun */
-        $avgSun = [];
+        $avgSun    = [];
         $sunnyDays = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$avgSun): bool {
@@ -87,22 +101,26 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
                         continue;
                     }
 
-                    if (\array_key_exists('sun_prob', $hint)) {
+                    if (array_key_exists('sun_prob', $hint)) {
                         $p = (float) $hint['sun_prob'];
-                    } elseif (\array_key_exists('cloud_cover', $hint)) {
+                    } elseif (array_key_exists('cloud_cover', $hint)) {
                         $p = 1.0 - (float) $hint['cloud_cover'];
-                    } elseif (\array_key_exists('rain_prob', $hint)) {
-                        $p = \max(0.0, 1.0 - $hint['rain_prob']);
+                    } elseif (array_key_exists('rain_prob', $hint)) {
+                        $p = max(0.0, 1.0 - $hint['rain_prob']);
                     } else {
                         continue;
                     }
 
-                    if ($p < 0.0) { $p = 0.0; }
+                    if ($p < 0.0) {
+                        $p = 0.0;
+                    }
 
-                    if ($p > 1.0) { $p = 1.0; }
+                    if ($p > 1.0) {
+                        $p = 1.0;
+                    }
 
                     $sum += $p;
-                    $n++;
+                    ++$n;
                 }
 
                 if ($n < $this->minHintsPerDay) {
@@ -138,7 +156,7 @@ final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 

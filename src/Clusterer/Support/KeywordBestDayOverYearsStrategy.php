@@ -1,15 +1,32 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_keys;
+use function array_map;
+use function array_values;
+use function assert;
+use function count;
+use function str_contains;
+use function strtolower;
+use function usort;
 
 /**
  * Shared implementation for strategies that pick the strongest keyword-based day per year.
@@ -26,7 +43,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         private readonly int $minItemsPerDay,
         private readonly int $minYears,
         private readonly int $minItemsTotal,
-        private readonly array $keywords
+        private readonly array $keywords,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
@@ -47,6 +64,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -61,7 +79,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
             fn (Media $media): bool => $this->matchesMedia($media)
         ) as $media) {
             $takenAt = $media->getTakenAt();
-            \assert($takenAt instanceof DateTimeImmutable);
+            assert($takenAt instanceof DateTimeImmutable);
 
             $local = $takenAt->setTimezone($tz);
             $year  = (int) $local->format('Y');
@@ -93,14 +111,14 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         $years = [];
 
         foreach ($eligibleByYear as $year => $eligibleDays) {
-            $bestDay = null;
+            $bestDay   = null;
             $bestCount = 0;
 
             foreach ($eligibleDays as $day => $list) {
-                $count = \count($list);
+                $count = count($list);
                 if ($count > $bestCount) {
                     $bestCount = $count;
-                    $bestDay = $day;
+                    $bestDay   = $day;
                 }
             }
 
@@ -115,11 +133,11 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
             $years[$year] = true;
         }
 
-        if (\count($years) < $this->minYears || \count($picked) < $this->minItemsTotal) {
+        if (count($years) < $this->minYears || count($picked) < $this->minItemsTotal) {
             return [];
         }
 
-        \usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         $centroid = MediaMath::centroid($picked);
         $time     = MediaMath::timeRange($picked);
@@ -129,7 +147,7 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
                 algorithm: $this->name(),
                 params: $this->buildParams($years, $time),
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $media): int => $media->getId(), $picked)
+                members: array_map(static fn (Media $media): int => $media->getId(), $picked)
             ),
         ];
     }
@@ -137,14 +155,15 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
     abstract public function name(): string;
 
     /**
-     * @param array<int,bool> $years
+     * @param array<int,bool>        $years
      * @param array{from:int,to:int} $timeRange
+     *
      * @return array<string,mixed>
      */
     protected function buildParams(array $years, array $timeRange): array
     {
         return [
-            'years'      => \array_values(\array_keys($years)),
+            'years'      => array_values(array_keys($years)),
             'time_range' => $timeRange,
         ];
     }
@@ -156,7 +175,8 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
 
     private function pathContainsKeyword(string $path): bool
     {
-        $lower = \strtolower($path);
-        return array_any($this->keywords, fn($keyword): bool => \str_contains($lower, $keyword));
+        $lower = strtolower($path);
+
+        return array_any($this->keywords, fn ($keyword): bool => str_contains($lower, $keyword));
     }
 }

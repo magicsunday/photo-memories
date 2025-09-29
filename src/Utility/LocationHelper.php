@@ -1,10 +1,42 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Utility;
 
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+
+use function array_key_first;
+use function array_keys;
+use function arsort;
+use function explode;
+use function floor;
+use function implode;
+use function is_array;
+use function is_numeric;
+use function is_string;
+use function ksort;
+use function method_exists;
+use function reset;
+use function str_contains;
+use function str_replace;
+use function strcmp;
+use function strtolower;
+use function trim;
+use function uasort;
+use function usort;
+
+use const INF;
+use const SORT_NUMERIC;
+use const SORT_STRING;
 
 /**
  * Helper for deriving location keys and display labels from Location entities.
@@ -25,17 +57,17 @@ final readonly class LocationHelper
      * @var array<string,int>
      */
     private const array POI_TAG_WEIGHTS = [
-        'tourism' => 600,
+        'tourism'  => 600,
         'historic' => 450,
         'man_made' => 220,
-        'leisure' => 140,
-        'natural' => 140,
-        'place' => 130,
-        'amenity' => 100,
+        'leisure'  => 140,
+        'natural'  => 140,
+        'place'    => 130,
+        'amenity'  => 100,
         'building' => 70,
-        'sport' => 60,
-        'shop' => 40,
-        'landuse' => 25,
+        'sport'    => 60,
+        'shop'     => 40,
+        'landuse'  => 25,
     ];
 
     /**
@@ -44,16 +76,16 @@ final readonly class LocationHelper
      * @var array<string,int>
      */
     private const array POI_CATEGORY_KEY_BONUS = [
-        'tourism' => 220,
+        'tourism'  => 220,
         'historic' => 180,
         'man_made' => 150,
-        'leisure' => 90,
-        'amenity' => 80,
-        'natural' => 90,
-        'place' => 80,
+        'leisure'  => 90,
+        'amenity'  => 80,
+        'natural'  => 90,
+        'place'    => 80,
         'building' => 60,
-        'sport' => 50,
-        'shop' => 40,
+        'sport'    => 50,
+        'shop'     => 40,
     ];
 
     /**
@@ -72,7 +104,7 @@ final readonly class LocationHelper
 
     public function __construct(?string $preferredLocale = null)
     {
-        $preferredLocale = $preferredLocale !== null ? \trim($preferredLocale) : null;
+        $preferredLocale = $preferredLocale !== null ? trim($preferredLocale) : null;
         if ($preferredLocale === '') {
             $preferredLocale = null;
         }
@@ -90,29 +122,39 @@ final readonly class LocationHelper
             return null;
         }
 
-        $parts = [];
-        $suburb = $loc->getSuburb();
-        $city   = $loc->getCity();
-        $county = $loc->getCounty();
-        $state  = $loc->getState();
-        $country= $loc->getCountry();
-        $cell   = \method_exists($loc, 'getCell') ? $loc->getCell() : null;
+        $parts   = [];
+        $suburb  = $loc->getSuburb();
+        $city    = $loc->getCity();
+        $county  = $loc->getCounty();
+        $state   = $loc->getState();
+        $country = $loc->getCountry();
+        $cell    = method_exists($loc, 'getCell') ? $loc->getCell() : null;
 
-        if ($suburb !== null) { $parts[] = 'suburb:'.$suburb; }
-
-        if ($city   !== null) { $parts[] = 'city:'.$city; }
-
-        if ($county !== null) { $parts[] = 'county:'.$county; }
-
-        if ($state  !== null) { $parts[] = 'state:'.$state; }
-
-        if ($country!== null) { $parts[] = 'country:'.$country; }
-
-        if ($parts === [] && $cell !== null) {
-            $parts[] = 'cell:'.$cell;
+        if ($suburb !== null) {
+            $parts[] = 'suburb:' . $suburb;
         }
 
-        return $parts !== [] ? \implode('|', $parts) : null;
+        if ($city !== null) {
+            $parts[] = 'city:' . $city;
+        }
+
+        if ($county !== null) {
+            $parts[] = 'county:' . $county;
+        }
+
+        if ($state !== null) {
+            $parts[] = 'state:' . $state;
+        }
+
+        if ($country !== null) {
+            $parts[] = 'country:' . $country;
+        }
+
+        if ($parts === [] && $cell !== null) {
+            $parts[] = 'cell:' . $cell;
+        }
+
+        return $parts !== [] ? implode('|', $parts) : null;
     }
 
     /**
@@ -137,6 +179,7 @@ final readonly class LocationHelper
         $county  = $loc->getCounty();
         $state   = $loc->getState();
         $country = $loc->getCountry();
+
         return (($city ?? $county) ?? $state) ?? $country;
     }
 
@@ -180,9 +223,9 @@ final readonly class LocationHelper
             return null;
         }
 
-        \arsort($count, \SORT_NUMERIC);
+        arsort($count, SORT_NUMERIC);
 
-        return \array_key_first($count);
+        return array_key_first($count);
     }
 
     /**
@@ -192,6 +235,7 @@ final readonly class LocationHelper
     {
         $ka = $this->localityKeyForMedia($a);
         $kb = $this->localityKeyForMedia($b);
+
         return $ka !== null && $kb !== null && $ka === $kb;
     }
 
@@ -199,6 +243,7 @@ final readonly class LocationHelper
      * Returns metadata about the dominant POI within a media collection.
      *
      * @param list<Media> $members
+     *
      * @return array{label:string, categoryKey:?string, categoryValue:?string, tags:array<string,string>}|null
      */
     public function majorityPoiContext(array $members): ?array
@@ -224,22 +269,22 @@ final readonly class LocationHelper
 
             $catKey   = $poi['categoryKey'] ?? null;
             $catValue = $poi['categoryValue'] ?? null;
-            $key = \strtolower($label.'|'.($catKey ?? '').'|'.($catValue ?? ''));
+            $key      = strtolower($label . '|' . ($catKey ?? '') . '|' . ($catValue ?? ''));
 
             if (!isset($counts[$key])) {
                 $counts[$key] = [
-                    'label'        => $label,
-                    'categoryKey'  => $catKey,
-                    'categoryValue'=> $catValue,
-                    'tags'         => [],
-                    'count'        => 0,
+                    'label'         => $label,
+                    'categoryKey'   => $catKey,
+                    'categoryValue' => $catValue,
+                    'tags'          => [],
+                    'count'         => 0,
                 ];
             }
 
-            $counts[$key]['count']++;
+            ++$counts[$key]['count'];
 
             foreach ($poi['tags'] as $tagKey => $tagValue) {
-                if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
+                if (is_string($tagKey) && $tagKey !== '' && is_string($tagValue) && $tagValue !== '') {
                     $counts[$key]['tags'][$tagKey] = $tagValue;
                 }
             }
@@ -249,7 +294,7 @@ final readonly class LocationHelper
             return null;
         }
 
-        \uasort(
+        uasort(
             $counts,
             static function (array $a, array $b): int {
                 $cmp = $b['count'] <=> $a['count'];
@@ -257,17 +302,17 @@ final readonly class LocationHelper
                     return $cmp;
                 }
 
-                return \strcmp($a['label'], $b['label']);
+                return strcmp($a['label'], $b['label']);
             }
         );
 
-        $top = \reset($counts);
+        $top = reset($counts);
 
         return [
-            'label'        => $top['label'],
-            'categoryKey'  => $top['categoryKey'],
-            'categoryValue'=> $top['categoryValue'],
-            'tags'         => $top['tags'],
+            'label'         => $top['label'],
+            'categoryKey'   => $top['categoryKey'],
+            'categoryValue' => $top['categoryValue'],
+            'tags'          => $top['tags'],
         ];
     }
 
@@ -285,13 +330,13 @@ final readonly class LocationHelper
     private function primaryPoi(Location $loc): ?array
     {
         $pois = $loc->getPois();
-        if (!\is_array($pois) || $pois === []) {
+        if (!is_array($pois) || $pois === []) {
             return null;
         }
 
         $candidates = [];
         foreach ($pois as $index => $poi) {
-            if (!\is_array($poi)) {
+            if (!is_array($poi)) {
                 continue;
             }
 
@@ -300,12 +345,12 @@ final readonly class LocationHelper
                 continue;
             }
 
-            $distance = $this->distanceOrNull($poi['distanceMeters'] ?? null);
+            $distance     = $this->distanceOrNull($poi['distanceMeters'] ?? null);
             $candidates[] = [
-                'data' => $normalised,
-                'score' => $this->computePoiWeight($normalised, $distance),
+                'data'     => $normalised,
+                'score'    => $this->computePoiWeight($normalised, $distance),
                 'distance' => $distance,
-                'index' => $index,
+                'index'    => $index,
             ];
         }
 
@@ -313,7 +358,7 @@ final readonly class LocationHelper
             return null;
         }
 
-        \usort(
+        usort(
             $candidates,
             static function (array $a, array $b): int {
                 $cmp = $b['score'] <=> $a['score'];
@@ -324,8 +369,8 @@ final readonly class LocationHelper
                 $distanceA = $a['distance'];
                 $distanceB = $b['distance'];
                 if ($distanceA !== $distanceB) {
-                    $distanceA ??= \INF;
-                    $distanceB ??= \INF;
+                    $distanceA ??= INF;
+                    $distanceB ??= INF;
 
                     $cmp = $distanceA <=> $distanceB;
                     if ($cmp !== 0) {
@@ -335,7 +380,7 @@ final readonly class LocationHelper
 
                 $nameA = $a['data']['name'] ?? '';
                 $nameB = $b['data']['name'] ?? '';
-                $cmp = \strcmp($nameA, $nameB);
+                $cmp   = strcmp($nameA, $nameB);
                 if ($cmp !== 0) {
                     return $cmp;
                 }
@@ -359,6 +404,7 @@ final readonly class LocationHelper
 
     /**
      * @param array<string,mixed> $poi
+     *
      * @return array{
      *     name:?string,
      *     names:array{default:?string, localized:array<string,string>, alternates:list<string>},
@@ -369,35 +415,35 @@ final readonly class LocationHelper
      */
     private function normalisePoi(array $poi): ?array
     {
-        $name = \is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
+        $name  = is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
         $names = $this->normaliseNames($poi['names'] ?? null, $name);
         if ($name === null) {
             $name = $this->coalesceName($names);
         }
 
-        $categoryKey = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
-        $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
+        $categoryKey   = is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
+        $categoryValue = is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
 
         if ($name === null && $categoryValue === null) {
             return null;
         }
 
-        $tags = [];
+        $tags    = [];
         $rawTags = $poi['tags'] ?? null;
-        if (\is_array($rawTags)) {
+        if (is_array($rawTags)) {
             foreach ($rawTags as $tagKey => $tagValue) {
-                if (\is_string($tagKey) && $tagKey !== '' && \is_string($tagValue) && $tagValue !== '') {
+                if (is_string($tagKey) && $tagKey !== '' && is_string($tagValue) && $tagValue !== '') {
                     $tags[$tagKey] = $tagValue;
                 }
             }
         }
 
         return [
-            'name' => $name,
-            'names' => $names,
-            'categoryKey' => $categoryKey,
+            'name'          => $name,
+            'names'         => $names,
+            'categoryKey'   => $categoryKey,
             'categoryValue' => $categoryValue,
-            'tags' => $tags,
+            'tags'          => $tags,
         ];
     }
 
@@ -423,7 +469,7 @@ final readonly class LocationHelper
 
         foreach ($poi['tags'] as $tagKey => $tagValue) {
             $score += self::POI_TAG_WEIGHTS[$tagKey] ?? 0;
-            $score += self::POI_TAG_VALUE_BONUS[$tagKey.':'.$tagValue] ?? 0;
+            $score += self::POI_TAG_VALUE_BONUS[$tagKey . ':' . $tagValue] ?? 0;
         }
 
         if (isset($poi['tags']['wikidata'])) {
@@ -431,7 +477,7 @@ final readonly class LocationHelper
         }
 
         if ($distance !== null && $distance > 0.0) {
-            $score -= (int) \floor($distance / self::POI_DISTANCE_PENALTY_DIVISOR);
+            $score -= (int) floor($distance / self::POI_DISTANCE_PENALTY_DIVISOR);
         }
 
         return $score;
@@ -439,7 +485,7 @@ final readonly class LocationHelper
 
     private function distanceOrNull(mixed $value): ?float
     {
-        if (\is_numeric($value)) {
+        if (is_numeric($value)) {
             return (float) $value;
         }
 
@@ -452,7 +498,7 @@ final readonly class LocationHelper
     private function preferredPoiLabel(array $poi): ?string
     {
         $names = $poi['names'] ?? null;
-        if (\is_array($names)) {
+        if (is_array($names)) {
             $label = $this->labelFromNames($names);
             if ($label !== null) {
                 return $label;
@@ -460,7 +506,8 @@ final readonly class LocationHelper
         }
 
         $name = $poi['name'] ?? null;
-        return \is_string($name) && $name !== '' ? $name : null;
+
+        return is_string($name) && $name !== '' ? $name : null;
     }
 
     /**
@@ -469,32 +516,32 @@ final readonly class LocationHelper
     private function labelFromNames(array $names): ?string
     {
         $localized = $names['localized'] ?? [];
-        if (\is_array($localized) && $localized !== []) {
+        if (is_array($localized) && $localized !== []) {
             foreach ($this->preferredLocaleKeys as $key) {
                 $value = $localized[$key] ?? null;
-                if (\is_string($value) && $value !== '') {
+                if (is_string($value) && $value !== '') {
                     return $value;
                 }
             }
         }
 
         $default = $names['default'] ?? null;
-        if (\is_string($default) && $default !== '') {
+        if (is_string($default) && $default !== '') {
             return $default;
         }
 
-        if (\is_array($localized)) {
+        if (is_array($localized)) {
             foreach ($localized as $value) {
-                if (\is_string($value) && $value !== '') {
+                if (is_string($value) && $value !== '') {
                     return $value;
                 }
             }
         }
 
         $alternates = $names['alternates'] ?? [];
-        if (\is_array($alternates)) {
+        if (is_array($alternates)) {
             foreach ($alternates as $alternate) {
-                if (\is_string($alternate) && $alternate !== '') {
+                if (is_string($alternate) && $alternate !== '') {
                     return $alternate;
                 }
             }
@@ -505,33 +552,34 @@ final readonly class LocationHelper
 
     /**
      * @param array{default:?string, localized:array<string,string>, alternates:list<string>}|null $raw
+     *
      * @return array{default:?string, localized:array<string,string>, alternates:list<string>}
      */
     private function normaliseNames(?array $raw, ?string $fallbackDefault): array
     {
-        $default = $fallbackDefault;
-        $localized = [];
+        $default    = $fallbackDefault;
+        $localized  = [];
         $alternates = [];
 
-        if (\is_array($raw)) {
+        if (is_array($raw)) {
             $rawDefault = $raw['default'] ?? null;
-            if (\is_string($rawDefault) && $rawDefault !== '') {
+            if (is_string($rawDefault) && $rawDefault !== '') {
                 $default = $rawDefault;
             }
 
             $rawLocalized = $raw['localized'] ?? [];
-            if (\is_array($rawLocalized)) {
+            if (is_array($rawLocalized)) {
                 foreach ($rawLocalized as $locale => $value) {
-                    if (!\is_string($locale)) {
+                    if (!is_string($locale)) {
                         continue;
                     }
 
-                    $locale = \strtolower(\str_replace(' ', '_', $locale));
+                    $locale = strtolower(str_replace(' ', '_', $locale));
                     if ($locale === '') {
                         continue;
                     }
 
-                    if (!\is_string($value)) {
+                    if (!is_string($value)) {
                         continue;
                     }
 
@@ -544,13 +592,13 @@ final readonly class LocationHelper
             }
 
             $rawAlternates = $raw['alternates'] ?? [];
-            if (\is_array($rawAlternates)) {
+            if (is_array($rawAlternates)) {
                 foreach ($rawAlternates as $alt) {
-                    if (!\is_string($alt)) {
+                    if (!is_string($alt)) {
                         continue;
                     }
 
-                    $trimmed = \trim($alt);
+                    $trimmed = trim($alt);
                     if ($trimmed === '') {
                         continue;
                     }
@@ -561,15 +609,15 @@ final readonly class LocationHelper
         }
 
         if ($localized !== []) {
-            \ksort($localized, \SORT_STRING);
+            ksort($localized, SORT_STRING);
         }
 
         /** @var list<string> $alternateList */
-        $alternateList = \array_keys($alternates);
+        $alternateList = array_keys($alternates);
 
         return [
-            'default' => $default,
-            'localized' => $localized,
+            'default'    => $default,
+            'localized'  => $localized,
             'alternates' => $alternateList,
         ];
     }
@@ -580,18 +628,18 @@ final readonly class LocationHelper
     private function coalesceName(array $names): ?string
     {
         $default = $names['default'];
-        if (\is_string($default) && $default !== '') {
+        if (is_string($default) && $default !== '') {
             return $default;
         }
 
         foreach ($names['localized'] as $value) {
-            if (\is_string($value) && $value !== '') {
+            if (is_string($value) && $value !== '') {
                 return $value;
             }
         }
 
         foreach ($names['alternates'] as $alternate) {
-            if (\is_string($alternate) && $alternate !== '') {
+            if (is_string($alternate) && $alternate !== '') {
                 return $alternate;
             }
         }
@@ -608,17 +656,17 @@ final readonly class LocationHelper
             return [];
         }
 
-        $lower = \strtolower($locale);
-        $normalized = \str_replace('_', '-', $lower);
+        $lower      = strtolower($locale);
+        $normalized = str_replace('_', '-', $lower);
 
         $candidates = [];
         if ($normalized !== '') {
             $candidates[] = $normalized;
-            $candidates[] = \str_replace('-', '_', $normalized);
+            $candidates[] = str_replace('-', '_', $normalized);
         }
 
-        if (\str_contains($normalized, '-')) {
-            $language = \explode('-', $normalized)[0];
+        if (str_contains($normalized, '-')) {
+            $language = explode('-', $normalized)[0];
             if ($language !== '') {
                 $candidates[] = $language;
             }
@@ -628,11 +676,11 @@ final readonly class LocationHelper
 
         $filtered = [];
         foreach ($candidates as $candidate) {
-            if (!\is_string($candidate)) {
+            if (!is_string($candidate)) {
                 continue;
             }
 
-            $trimmed = \trim($candidate);
+            $trimmed = trim($candidate);
             if ($trimmed === '') {
                 continue;
             }
@@ -641,7 +689,7 @@ final readonly class LocationHelper
         }
 
         /** @var list<string> $keys */
-        $keys = \array_keys($filtered);
+        $keys = array_keys($filtered);
 
         return $keys;
     }

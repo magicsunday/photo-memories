@@ -1,10 +1,21 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\PathTokensTrait;
+
+use function str_contains;
+use function str_starts_with;
 
 /**
  * Adds path tokens and filename-based hint.
@@ -22,7 +33,7 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
     {
         $tokens = $this->tokenizePath($filepath);
 
-        $features = $media->getFeatures() ?? [];
+        $features                 = $media->getFeatures() ?? [];
         $features['pathTokens']   = $tokens;
         $features['filenameHint'] = $this->hintFromTokens($tokens);
 
@@ -31,6 +42,7 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
         }
 
         $media->setFeatures($features);
+
         return $media;
     }
 
@@ -38,13 +50,21 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
     private function hintFromTokens(array $tokens): string
     {
         foreach ($tokens as $t) {
-            if (\str_starts_with($t, 'pano')) { return 'pano'; }
+            if (str_starts_with($t, 'pano')) {
+                return 'pano';
+            }
 
-            if (\str_starts_with($t, 'img_e')) { return 'edited'; }
+            if (str_starts_with($t, 'img_e')) {
+                return 'edited';
+            }
 
-            if (\str_contains($t, 'timelapse')) { return 'timelapse'; }
+            if (str_contains($t, 'timelapse')) {
+                return 'timelapse';
+            }
 
-            if (\str_contains($t, 'slowmo') || \str_contains($t, 'slo-mo')) { return 'slowmo'; }
+            if (str_contains($t, 'slowmo') || str_contains($t, 'slo-mo')) {
+                return 'slowmo';
+            }
         }
 
         return 'normal';

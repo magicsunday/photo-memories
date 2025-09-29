@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
@@ -8,13 +16,28 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
+use function array_unique;
+use function array_values;
+use function count;
+use function floor;
+use function is_array;
+use function is_float;
+use function is_string;
+use function max;
+use function min;
+use function round;
+use function strtolower;
+use function substr;
+
+use const SORT_NUMERIC;
+
 /**
  * Computes a novelty score (0..1) per cluster using corpus-level rarity signals.
  * Signals:
  *  - place rarity: quantized lat/lon cell frequency
  *  - time rarity : day-of-year frequency
  *  - device rarity: camera model frequency
- *  - content rarity: pHash high-nibble prefix frequency
+ *  - content rarity: pHash high-nibble prefix frequency.
  *
  * No external models; runs on fields already present on Media.
  */
@@ -29,7 +52,7 @@ final readonly class NoveltyHeuristic
             'time'    => 0.25,
             'device'  => 0.20,
             'content' => 0.20,
-        ]
+        ],
     ) {
     }
 
@@ -37,6 +60,7 @@ final readonly class NoveltyHeuristic
      * Precompute corpus histograms from the media universe you consider (ideally all indexed media).
      *
      * @param array<int, Media> $mediaMap id => Media
+     *
      * @return array{
      *   total:int,
      *   device: array<string,int>,
@@ -55,11 +79,11 @@ final readonly class NoveltyHeuristic
 
         $total = 0;
         foreach ($mediaMap as $m) {
-            $total++;
+            ++$total;
 
             // device
             $dev = $m->getCameraModel();
-            if (\is_string($dev) && $dev !== '') {
+            if (is_string($dev) && $dev !== '') {
                 $device[$dev] = ($device[$dev] ?? 0) + 1;
             }
 
@@ -73,15 +97,15 @@ final readonly class NoveltyHeuristic
             // day-of-year (only if time present)
             $t = $m->getTakenAt();
             if ($t !== null) {
-                $d = (int) $t->format('z') + 1; // 1..366
+                $d       = (int) $t->format('z') + 1; // 1..366
                 $doy[$d] = ($doy[$d] ?? 0) + 1;
             }
 
             // pHash prefix
             $ph = $m->getPhash();
-            if (\is_string($ph) && $ph !== '') {
-                $prefix = \substr(\strtolower($ph), 0, \max(1, \min(16, $this->phashPrefixNibbles)));
-                $key = 'h:' . $prefix;
+            if (is_string($ph) && $ph !== '') {
+                $prefix      = substr(strtolower($ph), 0, max(1, min(16, $this->phashPrefixNibbles)));
+                $key         = 'h:' . $prefix;
                 $phash[$key] = ($phash[$key] ?? 0) + 1;
             }
         }
@@ -106,18 +130,18 @@ final readonly class NoveltyHeuristic
     /**
      * Compute novelty for a cluster using precomputed corpus stats.
      *
-     * @param array<int, Media> $mediaMap id => Media
-     * @param array<string, mixed> $stats see buildCorpusStats()
+     * @param array<int, Media>    $mediaMap id => Media
+     * @param array<string, mixed> $stats    see buildCorpusStats()
      */
     public function computeNovelty(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         // --- place rarity: use centroid's cell frequency
         $centroid = $cluster->getCentroid();
-        $place = 0.5; // neutral default
-        if (isset($centroid['lat'], $centroid['lon']) && \is_float($centroid['lat']) && \is_float($centroid['lon'])) {
-            $cell = $this->gridCell($centroid['lat'], $centroid['lon']);
-            $cnt  = (int) ($stats['grid'][$cell] ?? 0);
-            $max  = (int) ($stats['max']['grid'] ?? 0);
+        $place    = 0.5; // neutral default
+        if (isset($centroid['lat'], $centroid['lon']) && is_float($centroid['lat']) && is_float($centroid['lon'])) {
+            $cell  = $this->gridCell($centroid['lat'], $centroid['lon']);
+            $cnt   = (int) ($stats['grid'][$cell] ?? 0);
+            $max   = (int) ($stats['max']['grid'] ?? 0);
             $place = $this->rarityFromCounts($cnt, $max);
         }
 
@@ -132,31 +156,31 @@ final readonly class NoveltyHeuristic
                 $acc += $this->rarityFromCounts($cnt, $max);
             }
 
-            $time = $acc / \count($days);
+            $time = $acc / count($days);
         }
 
         // --- device rarity: take majority device inside cluster
-        $device = 0.5;
+        $device   = 0.5;
         $majorDev = $this->majorityDevice($cluster, $mediaMap);
         if ($majorDev !== null) {
-            $cnt = (int) ($stats['device'][$majorDev] ?? 0);
-            $max = (int) ($stats['max']['device'] ?? 0);
+            $cnt    = (int) ($stats['device'][$majorDev] ?? 0);
+            $max    = (int) ($stats['max']['device'] ?? 0);
             $device = $this->rarityFromCounts($cnt, $max);
         }
 
         // --- content rarity: majority pHash prefix
         $content = 0.5;
-        $prefix = $this->majorityPhashPrefix($cluster, $mediaMap);
+        $prefix  = $this->majorityPhashPrefix($cluster, $mediaMap);
         if ($prefix !== null) {
-            $cnt = (int) ($stats['phash']['h:' . $prefix] ?? 0);
-            $max = (int) ($stats['max']['phash'] ?? 0);
+            $cnt     = (int) ($stats['phash']['h:' . $prefix] ?? 0);
+            $max     = (int) ($stats['max']['phash'] ?? 0);
             $content = $this->rarityFromCounts($cnt, $max);
         }
 
         return
-            $this->weights['place']   * $place +
-            $this->weights['time']    * $time +
-            $this->weights['device']  * $device +
+            $this->weights['place'] * $place +
+            $this->weights['time'] * $time +
+            $this->weights['device'] * $device +
             $this->weights['content'] * $content;
     }
 
@@ -183,28 +207,31 @@ final readonly class NoveltyHeuristic
         }
 
         // invert + clamp; small offset keeps 0-count clearly rare
-        $norm = 1.0 - (\min($count, $maxCount) / (float) $maxCount);
-        return \max(0.0, \min(1.0, $norm));
+        $norm = 1.0 - (min($count, $maxCount) / (float) $maxCount);
+
+        return max(0.0, min(1.0, $norm));
     }
 
     private function gridCell(float $lat, float $lon): string
     {
         $step = $this->gridStepDeg > 0.0 ? $this->gridStepDeg : 0.5;
-        $latQ = (int) \floor(($lat + 90.0) / $step);
-        $lonQ = (int) \floor(($lon + 180.0) / $step);
+        $latQ = (int) floor(($lat + 90.0) / $step);
+        $lonQ = (int) floor(($lon + 180.0) / $step);
+
         return $latQ . ':' . $lonQ;
     }
 
     /**
      * @param list<int> $days values 1..366
+     *
      * @return list<int>
      */
     private function collectClusterDays(ClusterDraft $c, array $mediaMap): array
     {
-        $tr = $c->getParams()['time_range'] ?? null;
+        $tr  = $c->getParams()['time_range'] ?? null;
         $out = [];
 
-        if (\is_array($tr) && isset($tr['from'], $tr['to'])) {
+        if (is_array($tr) && isset($tr['from'], $tr['to'])) {
             $from = (int) $tr['from'];
             $to   = (int) $tr['to'];
             if ($to < $from) {
@@ -220,7 +247,7 @@ final readonly class NoveltyHeuristic
                 [$startDay, $endDay] = [$endDay, $startDay];
             }
 
-            $span = $startDay->diff($endDay);
+            $span           = $startDay->diff($endDay);
             $uniqueDayCount = ($span->days ?? 0) + 1;
 
             if ($uniqueDayCount <= 7) {
@@ -228,18 +255,18 @@ final readonly class NoveltyHeuristic
                     $out[] = (int) $d->format('z') + 1;
                 }
             } else {
-                $steps   = 7;
-                $fromTs  = $startDay->getTimestamp();
-                $toTs    = $endDay->getTimestamp();
-                $denom   = \max(1, $steps - 1);
+                $steps  = 7;
+                $fromTs = $startDay->getTimestamp();
+                $toTs   = $endDay->getTimestamp();
+                $denom  = max(1, $steps - 1);
 
-                for ($i = 0; $i < $steps; $i++) {
-                    $ts = $fromTs + (int) \round($i * ($toTs - $fromTs) / $denom);
+                for ($i = 0; $i < $steps; ++$i) {
+                    $ts    = $fromTs + (int) round($i * ($toTs - $fromTs) / $denom);
                     $out[] = (int) (new DateTimeImmutable('@' . $ts))->setTimezone($utc)->format('z') + 1;
                 }
             }
 
-            return \array_values(\array_unique($out, \SORT_NUMERIC));
+            return array_values(array_unique($out, SORT_NUMERIC));
         }
 
         // Fallback: derive days from members
@@ -251,7 +278,7 @@ final readonly class NoveltyHeuristic
             }
         }
 
-        return \array_values(\array_unique($out, \SORT_NUMERIC));
+        return array_values(array_unique($out, SORT_NUMERIC));
     }
 
     private function majorityDevice(ClusterDraft $c, array $mediaMap): ?string
@@ -264,16 +291,16 @@ final readonly class NoveltyHeuristic
             }
 
             $dev = $m->getCameraModel();
-            if (\is_string($dev) && $dev !== '') {
+            if (is_string($dev) && $dev !== '') {
                 $cnt[$dev] = ($cnt[$dev] ?? 0) + 1;
             }
         }
 
-        $best = null;
+        $best  = null;
         $bestN = 0;
         foreach ($cnt as $k => $n) {
             if ($n > $bestN) {
-                $best = $k;
+                $best  = $k;
                 $bestN = $n;
             }
         }
@@ -283,8 +310,8 @@ final readonly class NoveltyHeuristic
 
     private function majorityPhashPrefix(ClusterDraft $c, array $mediaMap): ?string
     {
-        $nibbles = \max(1, \min(16, $this->phashPrefixNibbles));
-        $cnt = [];
+        $nibbles     = max(1, min(16, $this->phashPrefixNibbles));
+        $cnt         = [];
         $prefixByKey = [];
 
         foreach ($c->getMembers() as $id) {
@@ -294,7 +321,7 @@ final readonly class NoveltyHeuristic
             }
 
             $ph = $m->getPhash();
-            if (!\is_string($ph)) {
+            if (!is_string($ph)) {
                 continue;
             }
 
@@ -302,9 +329,9 @@ final readonly class NoveltyHeuristic
                 continue;
             }
 
-            $prefix = \substr(\strtolower($ph), 0, $nibbles);
-            $key = 'h:' . $prefix;
-            $cnt[$key] = ($cnt[$key] ?? 0) + 1;
+            $prefix            = substr(strtolower($ph), 0, $nibbles);
+            $key               = 'h:' . $prefix;
+            $cnt[$key]         = ($cnt[$key] ?? 0) + 1;
             $prefixByKey[$key] = $prefix;
         }
 
@@ -312,7 +339,7 @@ final readonly class NoveltyHeuristic
         $bestN   = 0;
         foreach ($cnt as $k => $n) {
             if ($n > $bestN) {
-                $bestN = $n;
+                $bestN   = $n;
                 $bestKey = $k;
             }
         }

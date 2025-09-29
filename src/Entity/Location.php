@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Entity;
@@ -84,14 +92,14 @@ class Location
         string $displayName,
         float $lat,
         float $lon,
-        string $cell
+        string $cell,
     ) {
-        $this->provider = $provider;
+        $this->provider        = $provider;
         $this->providerPlaceId = $providerPlaceId;
-        $this->displayName = $displayName;
-        $this->lat = $lat;
-        $this->lon = $lon;
-        $this->cell = $cell;
+        $this->displayName     = $displayName;
+        $this->lat             = $lat;
+        $this->lon             = $lon;
+        $this->cell            = $cell;
     }
 
     /**
@@ -160,11 +168,12 @@ class Location
     public function setDisplayName(string $displayName): Location
     {
         $this->displayName = $displayName;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getCountryCode(): ?string
     {
@@ -172,18 +181,19 @@ class Location
     }
 
     /**
-     * @param null|string $countryCode
+     * @param string|null $countryCode
      *
      * @return Location
      */
     public function setCountryCode(?string $countryCode): Location
     {
         $this->countryCode = $countryCode;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getCountry(): ?string
     {
@@ -191,18 +201,19 @@ class Location
     }
 
     /**
-     * @param null|string $country
+     * @param string|null $country
      *
      * @return Location
      */
     public function setCountry(?string $country): Location
     {
         $this->country = $country;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getState(): ?string
     {
@@ -210,18 +221,19 @@ class Location
     }
 
     /**
-     * @param null|string $state
+     * @param string|null $state
      *
      * @return Location
      */
     public function setState(?string $state): Location
     {
         $this->state = $state;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getCounty(): ?string
     {
@@ -229,18 +241,19 @@ class Location
     }
 
     /**
-     * @param null|string $county
+     * @param string|null $county
      *
      * @return Location
      */
     public function setCounty(?string $county): Location
     {
         $this->county = $county;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getCity(): ?string
     {
@@ -248,18 +261,19 @@ class Location
     }
 
     /**
-     * @param null|string $city
+     * @param string|null $city
      *
      * @return Location
      */
     public function setCity(?string $city): Location
     {
         $this->city = $city;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getSuburb(): ?string
     {
@@ -267,18 +281,19 @@ class Location
     }
 
     /**
-     * @param null|string $suburb
+     * @param string|null $suburb
      *
      * @return Location
      */
     public function setSuburb(?string $suburb): Location
     {
         $this->suburb = $suburb;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getPostcode(): ?string
     {
@@ -286,18 +301,19 @@ class Location
     }
 
     /**
-     * @param null|string $postcode
+     * @param string|null $postcode
      *
      * @return Location
      */
     public function setPostcode(?string $postcode): Location
     {
         $this->postcode = $postcode;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getRoad(): ?string
     {
@@ -305,18 +321,19 @@ class Location
     }
 
     /**
-     * @param null|string $road
+     * @param string|null $road
      *
      * @return Location
      */
     public function setRoad(?string $road): Location
     {
         $this->road = $road;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getHouseNumber(): ?string
     {
@@ -324,18 +341,19 @@ class Location
     }
 
     /**
-     * @param null|string $houseNumber
+     * @param string|null $houseNumber
      *
      * @return Location
      */
     public function setHouseNumber(?string $houseNumber): Location
     {
         $this->houseNumber = $houseNumber;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getCategory(): ?string
     {
@@ -343,18 +361,19 @@ class Location
     }
 
     /**
-     * @param null|string $category
+     * @param string|null $category
      *
      * @return Location
      */
     public function setCategory(?string $category): Location
     {
         $this->category = $category;
+
         return $this;
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getType(): ?string
     {
@@ -362,18 +381,19 @@ class Location
     }
 
     /**
-     * @param null|string $type
+     * @param string|null $type
      *
      * @return Location
      */
     public function setType(?string $type): Location
     {
         $this->type = $type;
+
         return $this;
     }
 
     /**
-     * @return null|array
+     * @return array|null
      */
     public function getBoundingBox(): ?array
     {
@@ -381,13 +401,14 @@ class Location
     }
 
     /**
-     * @param null|array $boundingBox
+     * @param array|null $boundingBox
      *
      * @return Location
      */
     public function setBoundingBox(?array $boundingBox): Location
     {
         $this->boundingBox = $boundingBox;
+
         return $this;
     }
 

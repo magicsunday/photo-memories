@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -7,6 +15,12 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function count;
+use function str_contains;
+use function strtolower;
+use function usort;
 
 /**
  * Heuristic pet moments based on path keywords; grouped into time sessions.
@@ -17,7 +31,7 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
 
     public function __construct(
         private int $sessionGapSeconds = 2 * 3600,
-        private int $minItemsPerRun = 6
+        private int $minItemsPerRun = 6,
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -35,6 +49,7 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -42,20 +57,19 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
         /** @var list<Media> $cand */
         $cand = $this->filterTimestampedItemsBy(
             $items,
-            fn (Media $m): bool => $this->looksLikePet(\strtolower($m->getPath()))
+            fn (Media $m): bool => $this->looksLikePet(strtolower($m->getPath()))
         );
-        if (\count($cand) < $this->minItemsPerRun) {
+        if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($cand, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $runs */
         $runs = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf  = [];
         $last = null;
 
         foreach ($cand as $m) {
@@ -66,11 +80,11 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
 
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
-                $buf = [];
+                $buf    = [];
             }
 
             $buf[] = $m;
-            $last = $ts;
+            $last  = $ts;
         }
 
         if ($buf !== []) {
@@ -83,9 +97,9 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $gps = $this->filterGpsItems($run);
+            $gps      = $this->filterGpsItems($run);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-            $time = MediaMath::timeRange($run);
+            $time     = MediaMath::timeRange($run);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -93,7 +107,7 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }
 
@@ -111,7 +125,7 @@ final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterfa
             'haustier', 'pet', 'tierpark', 'zoo',
         ];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

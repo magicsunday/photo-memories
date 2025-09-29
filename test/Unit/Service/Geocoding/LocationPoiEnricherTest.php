@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
@@ -14,27 +22,29 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
+use function round;
+
 final class LocationPoiEnricherTest extends TestCase
 {
     #[Test]
     public function enrichesLocationWithNearbyPois(): void
     {
         $location = $this->makeLocation('place-1', 'Berlin', 52.52, 13.405);
-        $geocode = $this->createGeocodeResult(52.52, 13.405);
+        $geocode  = $this->createGeocodeResult(52.52, 13.405);
 
         $response = $this->createResponse([
             'elements' => [
                 [
                     'type' => 'node',
-                    'id' => 123,
-                    'lat' => 52.5205,
-                    'lon' => 13.4049,
+                    'id'   => 123,
+                    'lat'  => 52.5205,
+                    'lon'  => 13.4049,
                     'tags' => [
-                        'name' => 'Brandenburg Gate',
-                        'name:de' => 'Brandenburger Tor',
-                        'name:en' => 'Brandenburg Gate',
+                        'name'     => 'Brandenburg Gate',
+                        'name:de'  => 'Brandenburger Tor',
+                        'name:en'  => 'Brandenburg Gate',
                         'alt_name' => 'Porta Brandeburghese;Brandenburger Tor',
-                        'tourism' => 'attraction',
+                        'tourism'  => 'attraction',
                         'historic' => 'monument',
                         'wikidata' => 'Q82424',
                     ],
@@ -45,18 +55,18 @@ final class LocationPoiEnricherTest extends TestCase
         $enricher = $this->createEnricher([$response]);
 
         $usedNetwork = $enricher->enrich($location, $geocode);
-        $pois = $location->getPois();
+        $pois        = $location->getPois();
 
         self::assertTrue($usedNetwork);
         self::assertIsArray($pois);
         self::assertCount(1, $pois);
 
-        $expectedDistance = \round(MediaMath::haversineDistanceInMeters(52.52, 13.405, 52.5205, 13.4049), 2);
+        $expectedDistance = round(MediaMath::haversineDistanceInMeters(52.52, 13.405, 52.5205, 13.4049), 2);
 
         self::assertSame('node/123', $pois[0]['id']);
         self::assertSame('Brandenburg Gate', $pois[0]['name']);
         self::assertSame([
-            'default' => 'Brandenburg Gate',
+            'default'   => 'Brandenburg Gate',
             'localized' => [
                 'de' => 'Brandenburger Tor',
                 'en' => 'Brandenburg Gate',
@@ -67,7 +77,7 @@ final class LocationPoiEnricherTest extends TestCase
         self::assertSame('attraction', $pois[0]['categoryValue']);
         self::assertSame($expectedDistance, $pois[0]['distanceMeters']);
         self::assertSame([
-            'tourism' => 'attraction',
+            'tourism'  => 'attraction',
             'historic' => 'monument',
             'wikidata' => 'Q82424',
         ], $pois[0]['tags']);
@@ -77,37 +87,37 @@ final class LocationPoiEnricherTest extends TestCase
     public function keepsClosestPoisWhenQueryLimitIsUnlimited(): void
     {
         $location = $this->makeLocation('place-4', 'Berlin', 52.52, 13.405);
-        $geocode = $this->createGeocodeResult(52.52, 13.405);
+        $geocode  = $this->createGeocodeResult(52.52, 13.405);
 
         $response = $this->createResponse([
             'elements' => [
                 [
                     'type' => 'node',
-                    'id' => 1,
-                    'lat' => 52.5201,
-                    'lon' => 13.405,
+                    'id'   => 1,
+                    'lat'  => 52.5201,
+                    'lon'  => 13.405,
                     'tags' => [
-                        'name' => 'Nearby Cafe',
+                        'name'    => 'Nearby Cafe',
                         'amenity' => 'cafe',
                     ],
                 ],
                 [
                     'type' => 'node',
-                    'id' => 2,
-                    'lat' => 52.5206,
-                    'lon' => 13.406,
+                    'id'   => 2,
+                    'lat'  => 52.5206,
+                    'lon'  => 13.406,
                     'tags' => [
-                        'name' => 'Museum Checkpoint',
+                        'name'    => 'Museum Checkpoint',
                         'tourism' => 'museum',
                     ],
                 ],
                 [
                     'type' => 'node',
-                    'id' => 3,
-                    'lat' => 52.522,
-                    'lon' => 13.41,
+                    'id'   => 3,
+                    'lat'  => 52.522,
+                    'lon'  => 13.41,
                     'tags' => [
-                        'name' => 'Distant Monument',
+                        'name'     => 'Distant Monument',
                         'historic' => 'monument',
                     ],
                 ],
@@ -117,7 +127,7 @@ final class LocationPoiEnricherTest extends TestCase
         $enricher = $this->createEnricher([$response], maxPois: 2, fetchLimitMultiplier: 0.0);
 
         $usedNetwork = $enricher->enrich($location, $geocode);
-        $pois = $location->getPois();
+        $pois        = $location->getPois();
 
         self::assertTrue($usedNetwork);
         self::assertIsArray($pois);
@@ -130,7 +140,7 @@ final class LocationPoiEnricherTest extends TestCase
     public function marksAttemptWhenNetworkReturnsNoResults(): void
     {
         $location = $this->makeLocation('place-2', 'Hamburg', 53.55, 9.993);
-        $geocode = $this->createGeocodeResult(53.55, 9.993);
+        $geocode  = $this->createGeocodeResult(53.55, 9.993);
 
         $response = $this->createResponse([
             'elements' => [],
@@ -149,21 +159,21 @@ final class LocationPoiEnricherTest extends TestCase
     {
         $existingPois = [
             [
-                'id' => 'node/999',
-                'name' => 'Existing Museum',
+                'id'    => 'node/999',
+                'name'  => 'Existing Museum',
                 'names' => [
-                    'default' => 'Existing Museum',
-                    'localized' => [],
+                    'default'    => 'Existing Museum',
+                    'localized'  => [],
                     'alternates' => [],
                 ],
-                'categoryKey' => 'tourism',
-                'categoryValue' => 'museum',
+                'categoryKey'    => 'tourism',
+                'categoryValue'  => 'museum',
                 'distanceMeters' => 10.0,
             ],
         ];
 
         $location = $this->makeLocation('place-3', 'Munich', 48.137, 11.575, configure: static fn ($loc) => $loc->setPois($existingPois));
-        $geocode = $this->createGeocodeResult(48.137, 11.575);
+        $geocode  = $this->createGeocodeResult(48.137, 11.575);
 
         $enricher = $this->createEnricher([], maxPois: 0);
 
@@ -187,7 +197,7 @@ final class LocationPoiEnricherTest extends TestCase
     {
         return new GeocodeResult(
             provider: 'nominatim',
-            providerPlaceId: 'result-'.$lat.'-'.$lon,
+            providerPlaceId: 'result-' . $lat . '-' . $lon,
             lat: $lat,
             lon: $lon,
             displayName: 'Test location',
@@ -216,7 +226,7 @@ final class LocationPoiEnricherTest extends TestCase
 }
 
 /**
- * @internal simple queued HTTP client used to feed deterministic responses.
+ * @internal simple queued HTTP client used to feed deterministic responses
  */
 final class FakeHttpClient implements HttpClientInterface
 {
@@ -254,7 +264,7 @@ final class FakeHttpClient implements HttpClientInterface
 }
 
 /**
- * @internal HTTP response stub returning static payloads.
+ * @internal HTTP response stub returning static payloads
  */
 final readonly class FakeHttpResponse implements ResponseInterface
 {

@@ -1,14 +1,27 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function usort;
 
 /**
  * Marks "travel days" by summing GPS path distance within the day.
@@ -21,7 +34,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         private string $timezone = 'Europe/Berlin',
         private float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
-        private int $minItemsPerDay = 5
+        private int $minItemsPerDay = 5,
     ) {
         if ($this->minTravelKm <= 0.0) {
             throw new InvalidArgumentException('minTravelKm must be > 0.');
@@ -39,6 +52,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -56,9 +70,9 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         foreach ($timestampedGpsItems as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $key = $local->format('Y-m-d');
+            $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -67,22 +81,22 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         /** @var array<string, float> $dayDistanceKm */
         $dayDistanceKm = [];
-        $travelDays = $this->filterGroupsWithKeys(
+        $travelDays    = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$dayDistanceKm): bool {
                 $sorted = $list;
-                \usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+                usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $distKm = 0.0;
-                for ($i = 1, $n = \count($sorted); $i < $n; $i++) {
+                for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
                     $p = $sorted[$i - 1];
                     $q = $sorted[$i];
                     $distKm += MediaMath::haversineDistanceInMeters(
-                            (float) $p->getGpsLat(),
-                            (float) $p->getGpsLon(),
-                            (float) $q->getGpsLat(),
-                            (float) $q->getGpsLon()
-                        ) / 1000.0;
+                        (float) $p->getGpsLat(),
+                        (float) $p->getGpsLon(),
+                        (float) $q->getGpsLat(),
+                        (float) $q->getGpsLon()
+                    ) / 1000.0;
                 }
 
                 if ($distKm < $this->minTravelKm) {
@@ -113,11 +127,10 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     'time_range'  => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 
         return $out;
     }
-
 }

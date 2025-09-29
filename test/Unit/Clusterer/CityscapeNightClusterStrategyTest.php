@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -7,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class CityscapeNightClusterStrategyTest extends TestCase
 {
@@ -22,9 +30,9 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             minItemsPerRun: 5,
         );
 
-        $base = new DateTimeImmutable('2023-05-20 20:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2023-05-20 20:00:00', new DateTimeZone('UTC'));
         $media = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $media[] = $this->createMedia(
                 500 + $i,
                 $base->modify('+' . ($i * 20) . ' minutes'),
@@ -54,7 +62,7 @@ final class CityscapeNightClusterStrategyTest extends TestCase
         );
 
         $items = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 600 + $i,
                 new DateTimeImmutable('2023-05-21 12:00:00', new DateTimeZone('UTC')),
@@ -78,5 +86,4 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             size: 2048,
         );
     }
-
 }

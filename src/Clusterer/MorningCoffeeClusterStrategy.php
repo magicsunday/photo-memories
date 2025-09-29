@@ -1,14 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function str_contains;
+use function strtolower;
+use function usort;
 
 /**
  * Morning café/breakfast moments based on time and keywords, spatially compact.
@@ -23,7 +38,7 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
         private float $radiusMeters = 200.0,
         private int $minItemsPerRun = 3,
         private int $minHour = 7,
-        private int $maxHour = 10
+        private int $maxHour = 10,
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -53,6 +68,7 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -64,31 +80,30 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                \assert($t instanceof DateTimeImmutable);
+                assert($t instanceof DateTimeImmutable);
 
                 $h = (int) $t->setTimezone($tz)->format('G');
                 if ($h < $this->minHour || $h > $this->maxHour) {
                     return false;
                 }
 
-                $path = \strtolower($m->getPath());
+                $path = strtolower($m->getPath());
 
                 return $this->looksLikeCafe($path);
             }
         );
 
-        if (\count($cand) < $this->minItemsPerRun) {
+        if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($cand, static fn(Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $runs */
         $runs = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf  = [];
         $last = null;
 
         foreach ($cand as $m) {
@@ -99,11 +114,11 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
 
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
-                $buf = [];
+                $buf    = [];
             }
 
             $buf[] = $m;
-            $last = $ts;
+            $last  = $ts;
         }
 
         if ($buf !== []) {
@@ -116,7 +131,7 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $gps = $this->filterGpsItems($run);
+            $gps      = $this->filterGpsItems($run);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
 
             // compactness
@@ -143,10 +158,10 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                   'time_range' => $time,
+                    'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }
 
@@ -158,7 +173,7 @@ final readonly class MorningCoffeeClusterStrategy implements ClusterStrategyInte
         /** @var list<string> $kw */
         $kw = ['cafe', 'café', 'coffee', 'kaffee', 'frühstück', 'fruehstueck', 'bakery', 'bäckerei', 'baeckerei', 'brunch', 'espresso', 'barista'];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

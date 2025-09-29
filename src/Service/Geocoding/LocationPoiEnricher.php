@@ -1,10 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_slice;
+use function ceil;
+use function count;
+use function is_array;
+use function is_numeric;
+use function max;
+use function min;
 
 /**
  * Enriches Location entities with nearby Points of Interest using the Overpass API.
@@ -15,7 +31,7 @@ final readonly class LocationPoiEnricher
         private OverpassClient $client,
         private int $radiusMeters = 250,
         private int $maxPois = 15,
-        private float $fetchLimitMultiplier = 3.0
+        private float $fetchLimitMultiplier = 3.0,
     ) {
     }
 
@@ -30,14 +46,14 @@ final readonly class LocationPoiEnricher
             return false;
         }
 
-        $radius = $this->determineRadius($geocode);
-        $queryLimit = $this->determineQueryLimit();
-        $pois = $this->client->fetchPois($geocode->lat, $geocode->lon, $radius, $queryLimit);
+        $radius      = $this->determineRadius($geocode);
+        $queryLimit  = $this->determineQueryLimit();
+        $pois        = $this->client->fetchPois($geocode->lat, $geocode->lon, $radius, $queryLimit);
         $usedNetwork = $this->client->consumeLastUsedNetwork();
 
         if ($pois !== []) {
-            if ($this->maxPois > 0 && \count($pois) > $this->maxPois) {
-                $pois = \array_slice($pois, 0, $this->maxPois);
+            if ($this->maxPois > 0 && count($pois) > $this->maxPois) {
+                $pois = array_slice($pois, 0, $this->maxPois);
             }
 
             $location->setPois($pois);
@@ -55,18 +71,18 @@ final readonly class LocationPoiEnricher
             return null;
         }
 
-        $limit = (int) \ceil($this->maxPois * $this->fetchLimitMultiplier);
+        $limit = (int) ceil($this->maxPois * $this->fetchLimitMultiplier);
 
-        return \max($this->maxPois, $limit);
+        return max($this->maxPois, $limit);
     }
 
     private function determineRadius(GeocodeResult $geocode): int
     {
-        $radius = $this->radiusMeters;
+        $radius     = $this->radiusMeters;
         $bboxRadius = $this->radiusFromBoundingBox($geocode);
 
         if ($bboxRadius !== null) {
-            return \max($radius, $bboxRadius);
+            return max($radius, $bboxRadius);
         }
 
         return $radius;
@@ -75,12 +91,12 @@ final readonly class LocationPoiEnricher
     private function radiusFromBoundingBox(GeocodeResult $geocode): ?int
     {
         $bbox = $geocode->boundingBox;
-        if (!\is_array($bbox) || \count($bbox) !== 4) {
+        if (!is_array($bbox) || count($bbox) !== 4) {
             return null;
         }
 
         [$south, $north, $west, $east] = $bbox;
-        if (!\is_numeric($east)) {
+        if (!is_numeric($east)) {
             return null;
         }
 
@@ -94,12 +110,12 @@ final readonly class LocationPoiEnricher
             MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $west),
         ];
 
-        $radius = (int) \ceil(\max($distances));
+        $radius = (int) ceil(max($distances));
 
         if ($radius <= 0) {
             return null;
         }
 
-        return \max(50, \min($radius, 1000));
+        return max(50, min($radius, 1000));
     }
 }

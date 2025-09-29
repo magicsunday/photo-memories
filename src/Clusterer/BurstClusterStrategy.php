@@ -1,13 +1,26 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function usort;
 
 /**
  * Groups items captured within a short time & small spatial window.
@@ -21,7 +34,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         private int $maxGapSeconds = 90,
         private float $maxMoveMeters = 50.0,
         // Minimum photos per burst run before emitting a memory.
-        private int $minItemsPerBurst = 3
+        private int $minItemsPerBurst = 3,
     ) {
         if ($this->maxGapSeconds < 1) {
             throw new InvalidArgumentException('maxGapSeconds must be >= 1.');
@@ -43,6 +56,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -50,12 +64,12 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         /** @var list<Media> $timestamped */
         $timestamped = $this->filterTimestampedItems($items);
 
-        $n = \count($timestamped);
+        $n = count($timestamped);
         if ($n < $this->minItemsPerBurst) {
             return [];
         }
 
-        \usort(
+        usort(
             $timestamped,
             static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt()
         );
@@ -63,7 +77,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         /** @var list<list<Media>> $sessions */
         $sessions = [];
         /** @var list<Media> $current */
-        $current  = [];
+        $current = [];
 
         foreach ($timestamped as $i => $media) {
             if ($i === 0) {
@@ -75,19 +89,19 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 
             $currTakenAt = $media->getTakenAt();
             $prevTakenAt = $prev->getTakenAt();
-            \assert($currTakenAt instanceof DateTimeImmutable);
-            \assert($prevTakenAt instanceof DateTimeImmutable);
+            assert($currTakenAt instanceof DateTimeImmutable);
+            assert($prevTakenAt instanceof DateTimeImmutable);
 
             $timeOk = MediaMath::secondsBetween(
-                    $currTakenAt,
-                    $prevTakenAt
-                ) <= $this->maxGapSeconds;
+                $currTakenAt,
+                $prevTakenAt
+            ) <= $this->maxGapSeconds;
 
             $distOk = true;
-            $lat1 = $prev->getGpsLat();
-            $lon1 = $prev->getGpsLon();
-            $lat2 = $media->getGpsLat();
-            $lon2 = $media->getGpsLon();
+            $lat1   = $prev->getGpsLat();
+            $lon1   = $prev->getGpsLon();
+            $lat2   = $media->getGpsLat();
+            $lon2   = $media->getGpsLon();
 
             if ($lat1 !== null && $lon1 !== null && $lat2 !== null && $lon2 !== null) {
                 $distOk = MediaMath::haversineDistanceInMeters($lat1, $lon1, $lat2, $lon2) <= $this->maxMoveMeters;
@@ -99,7 +113,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
             }
 
             $sessions[] = $current;
-            $current     = [$media];
+            $current    = [$media];
         }
 
         if ($current !== []) {
@@ -108,7 +122,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 
         $eligible = $this->filterListsByMinItems($sessions, $this->minItemsPerBurst);
 
-        return \array_map(
+        return array_map(
             fn (array $members): ClusterDraft => $this->makeDraft($members),
             $eligible
         );
@@ -127,7 +141,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
                 'time_range' => MediaMath::timeRange($members),
             ],
             centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: \array_map(static fn (Media $m): int => $m->getId(), $members)
+            members: array_map(static fn (Media $m): int => $m->getId(), $members)
         );
     }
 }

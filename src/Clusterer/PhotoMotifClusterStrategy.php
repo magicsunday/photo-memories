@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -7,6 +15,15 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function count;
+use function explode;
+use function preg_match;
+use function str_contains;
+use function str_starts_with;
+use function strtolower;
+use function usort;
 
 /**
  * Heuristic photo motif clustering based on path/camera hints.
@@ -29,7 +46,7 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
 
     public function __construct(
         private int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
-        private int $minItemsPerMotif = 6
+        private int $minItemsPerMotif = 6,
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -47,6 +64,7 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -57,11 +75,11 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
             static function (Media $m): bool {
                 $mime = $m->getMime();
 
-                return $mime === null || \str_starts_with($mime, 'image/');
+                return $mime === null || str_starts_with($mime, 'image/');
             }
         );
 
-        if (\count($pool) < $this->minItemsPerMotif) {
+        if (count($pool) < $this->minItemsPerMotif) {
             return [];
         }
 
@@ -86,22 +104,23 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
 
         // For each motif, form time sessions
         foreach ($eligibleMotifs as $key => $list) {
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
             /** @var list<Media> $buf */
-            $buf = [];
+            $buf    = [];
             $lastTs = null;
 
             $flush = function () use (&$buf, &$out, $key): void {
-                if (\count($buf) < $this->minItemsPerMotif) {
+                if (count($buf) < $this->minItemsPerMotif) {
                     $buf = [];
+
                     return;
                 }
 
-                [$slug, $label] = \explode('|', $key, 2);
-                $gps = $this->filterGpsItems($buf);
-                $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
-                $time = MediaMath::timeRange($buf);
+                [$slug, $label] = explode('|', $key, 2);
+                $gps            = $this->filterGpsItems($buf);
+                $centroid       = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
+                $time           = MediaMath::timeRange($buf);
 
                 $out[] = new ClusterDraft(
                     algorithm: 'photo_motif',
@@ -111,7 +130,7 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
                         'time_range' => $time,
                     ],
                     centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                    members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                    members: array_map(static fn (Media $m): int => $m->getId(), $buf)
                 );
 
                 $buf = [];
@@ -123,7 +142,7 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
                     $flush();
                 }
 
-                $buf[] = $m;
+                $buf[]  = $m;
                 $lastTs = $ts;
             }
 
@@ -140,8 +159,8 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
      */
     private function detectMotif(Media $m): ?array
     {
-        $path = \strtolower($m->getPath());
-        $model = \strtolower($m->getCameraModel() ?? '');
+        $path  = strtolower($m->getPath());
+        $model = strtolower($m->getCameraModel() ?? '');
 
         // Ordered rules (first match wins)
         /** @var list<array{pattern:string,label:string,slug:string}> $rules */
@@ -172,13 +191,13 @@ final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterfa
         ];
 
         foreach ($rules as $r) {
-            if (\preg_match($r['pattern'], $path) === 1) {
+            if (preg_match($r['pattern'], $path) === 1) {
                 return ['label' => $r['label'], 'slug' => $r['slug']];
             }
         }
 
         // Camera hints → action/outdoor
-        if ($model !== '' && (\str_contains($model, 'gopro') || \str_contains($model, 'dji'))) {
+        if ($model !== '' && (str_contains($model, 'gopro') || str_contains($model, 'dji'))) {
             return ['label' => 'Action & Outdoor', 'slug' => 'action_outdoor'];
         }
 

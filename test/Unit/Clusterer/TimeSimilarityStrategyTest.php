@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,16 +17,16 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class TimeSimilarityStrategyTest extends TestCase
 {
     #[Test]
     public function clustersMediaWithinGapAndLocalityBoundaries(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new TimeSimilarityStrategy(
             locHelper: $helper,
             maxGapSeconds: 1800,
@@ -111,7 +119,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         string $takenAt,
         float $lat,
         float $lon,
-        Location $location
+        Location $location,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -122,5 +130,4 @@ final class TimeSimilarityStrategyTest extends TestCase
             location: $location,
         );
     }
-
 }

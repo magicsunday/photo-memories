@@ -1,14 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function str_contains;
+use function strtolower;
+use function usort;
 
 /**
  * Detects dining-out moments based on evening hours and food/venue keywords; spatially compact sessions.
@@ -23,7 +38,7 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
         private float $radiusMeters = 250.0,
         private int $minItemsPerRun = 4,
         private int $minHour = 17,
-        private int $maxHour = 23
+        private int $maxHour = 23,
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -53,6 +68,7 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -64,30 +80,29 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                \assert($t instanceof DateTimeImmutable);
+                assert($t instanceof DateTimeImmutable);
                 $h = (int) $t->setTimezone($tz)->format('G');
                 if ($h < $this->minHour || $h > $this->maxHour) {
                     return false;
                 }
 
-                $path = \strtolower($m->getPath());
+                $path = strtolower($m->getPath());
 
                 return $this->looksLikeDining($path);
             }
         );
 
-        if (\count($cand) < $this->minItemsPerRun) {
+        if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($cand, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<list<Media>> $runs */
         $runs = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf  = [];
         $last = null;
 
         foreach ($cand as $m) {
@@ -98,11 +113,11 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
 
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
-                $buf = [];
+                $buf    = [];
             }
 
             $buf[] = $m;
-            $last = $ts;
+            $last  = $ts;
         }
 
         if ($buf !== []) {
@@ -116,7 +131,7 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
 
         foreach ($eligibleRuns as $run) {
             // centroid from GPS subset; require spatial compactness if GPS exists
-            $gps = $this->filterGpsItems($run);
+            $gps      = $this->filterGpsItems($run);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
 
             $ok = true;
@@ -145,7 +160,7 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }
 
@@ -160,10 +175,10 @@ final readonly class DiningOutClusterStrategy implements ClusterStrategyInterfac
             'cafe', 'café', 'bar', 'kneipe', 'brauhaus',
             'dinner', 'lunch', 'brunch', 'food', 'essen', 'speise',
             'sushi', 'pizza', 'burger', 'steak', 'pasta', 'tapas',
-            'weingut', 'wine', 'wein', 'biergarten'
+            'weingut', 'wine', 'wein', 'biergarten',
         ];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Scoring;
@@ -8,8 +16,8 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class NoveltyHeuristicTest extends TestCase
 {
@@ -42,8 +50,8 @@ final class NoveltyHeuristicTest extends TestCase
             2 => $this->createMedia(2, '2024-03-11 01:00:00'),
         ];
 
-        for ($i = 0; $i < 9; $i++) {
-            $id = 100 + $i;
+        for ($i = 0; $i < 9; ++$i) {
+            $id            = 100 + $i;
             $mediaMap[$id] = $this->createMedia($id, '2024-03-10 12:00:00');
         }
 
@@ -62,5 +70,4 @@ final class NoveltyHeuristicTest extends TestCase
             takenAt: $takenAt,
         );
     }
-
 }

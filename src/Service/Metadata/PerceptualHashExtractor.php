@@ -1,12 +1,43 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
 use InvalidArgumentException;
-use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
+use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
+
+use function acos;
+use function array_fill;
+use function array_shift;
+use function bindec;
+use function ceil;
+use function cos;
+use function count;
+use function dechex;
+use function floor;
+use function is_file;
+use function is_string;
+use function method_exists;
+use function min;
+use function sort;
+use function sqrt;
+use function str_pad;
+use function str_starts_with;
+use function strlen;
+use function substr;
+
+use const SORT_NUMERIC;
+use const STR_PAD_RIGHT;
 
 /**
  * Computes perceptual hashes (pHash 64-bit) plus aHash/dHash from a single
@@ -19,7 +50,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
     public function __construct(
         private int $dctSampleSize = 32,   // NxN downsample for DCT (32 recommended)
-        private int $lowFreqSize  = 8      // use top-left 8x8 block
+        private int $lowFreqSize = 8,      // use top-left 8x8 block
     ) {
         if ($this->dctSampleSize < 16 || ($this->dctSampleSize & ($this->dctSampleSize - 1)) !== 0) {
             // Power-of-two helps for cache reuse; 32 is a good compromise (speed/quality).
@@ -34,13 +65,14 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     public function supports(string $filepath, Media $media): bool
     {
         $mime = $media->getMime();
-        return \is_string($mime) && \str_starts_with($mime, 'image/');
+
+        return is_string($mime) && str_starts_with($mime, 'image/');
     }
 
     public function extract(string $filepath, Media $media): Media
     {
         $src = $this->resolveImageSource($media) ?? $filepath;
-        if (!\is_file($src)) {
+        if (!is_file($src)) {
             return $media;
         }
 
@@ -58,15 +90,16 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $phash = $this->computePhash64($mat, $this->lowFreqSize);
 
         // Optional: derive simple aHash/dHash for QA/Debug (falls Media Felder hat)
-        if (\method_exists($media, 'setAhash')) {
+        if (method_exists($media, 'setAhash')) {
             $media->setAhash($this->computeAhash64($mat));
         }
 
-        if (\method_exists($media, 'setDhash')) {
+        if (method_exists($media, 'setDhash')) {
             $media->setDhash($this->computeDhash64($mat));
         }
 
         $media->setPhash($phash);
+
         return $media;
     }
 
@@ -78,8 +111,8 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
      */
     private function computePhash64(array $g, int $k): string
     {
-        $n = \count($g);
-        if ($n < $k || $n !== \count($g[0])) {
+        $n = count($g);
+        if ($n < $k || $n !== count($g[0])) {
             return '0000000000000000';
         }
 
@@ -87,10 +120,10 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $dct = $this->dct2($g);
 
         // 2) collect kxk block
-        $coeffs = [];
+        $coeffs   = [];
         $coeffs[] = $dct[0][0]; // DC
-        for ($i = 0; $i < $k; $i++) {
-            for ($j = 0; $j < $k; $j++) {
+        for ($i = 0; $i < $k; ++$i) {
+            for ($j = 0; $j < $k; ++$j) {
                 if ($i === 0 && $j === 0) {
                     continue; // exclude DC from median set
                 }
@@ -101,15 +134,15 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
         // 3) median of non-DC coefficients
         $nonDc = $coeffs;
-        \array_shift($nonDc); // drop DC
-        \sort($nonDc, \SORT_NUMERIC);
-        $mIdx = (int) \floor(\count($nonDc) / 2);
+        array_shift($nonDc); // drop DC
+        sort($nonDc, SORT_NUMERIC);
+        $mIdx   = (int) floor(count($nonDc) / 2);
         $median = (float) ($nonDc[$mIdx] ?? 0.0);
 
         // 4) build 64-bit bitstring in row-major order over kxk (incl. DC, thresh by median)
         $bits = '';
-        for ($i = 0; $i < $k; $i++) {
-            for ($j = 0; $j < $k; $j++) {
+        for ($i = 0; $i < $k; ++$i) {
+            for ($j = 0; $j < $k; ++$j) {
                 $c = $dct[$i][$j];
                 $bits .= ($c > $median) ? '1' : '0';
             }
@@ -127,19 +160,20 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function computeAhash64(array $g): string
     {
         $small = $this->resizeMatrixAverage($g, 8, 8);
-        $sum = 0.0; $cnt = 0;
-        for ($y = 0; $y < 8; $y++) {
-            for ($x = 0; $x < 8; $x++) {
+        $sum   = 0.0;
+        $cnt   = 0;
+        for ($y = 0; $y < 8; ++$y) {
+            for ($x = 0; $x < 8; ++$x) {
                 $sum += $small[$y][$x];
-                $cnt++;
+                ++$cnt;
             }
         }
 
         $avg = $sum / (float) $cnt;
 
         $bits = '';
-        for ($y = 0; $y < 8; $y++) {
-            for ($x = 0; $x < 8; $x++) {
+        for ($y = 0; $y < 8; ++$y) {
+            for ($x = 0; $x < 8; ++$x) {
                 $bits .= ($small[$y][$x] > $avg) ? '1' : '0';
             }
         }
@@ -155,9 +189,9 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function computeDhash64(array $g): string
     {
         $small = $this->resizeMatrixAverage($g, 9, 8); // 9x8 for horizontal diffs
-        $bits = '';
-        for ($y = 0; $y < 8; $y++) {
-            for ($x = 0; $x < 8; $x++) {
+        $bits  = '';
+        for ($y = 0; $y < 8; ++$y) {
+            for ($x = 0; $x < 8; ++$x) {
                 $bits .= ($small[$y][$x] > $small[$y][$x + 1]) ? '1' : '0';
             }
         }
@@ -169,22 +203,23 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
      * Orthonormal DCT-II for an NxN matrix.
      *
      * @param array<int,array<int,float>> $g
+     *
      * @return array<int,array<int,float>>
      */
     private function dct2(array $g): array
     {
-        $N = \count($g);
+        $N    = count($g);
         $cosT = $this->cosTable($N);
 
         // Rows DCT
-        $tmp = \array_fill(0, $N, \array_fill(0, $N, 0.0));
-        $alpha0 = \sqrt(1.0 / $N);
-        $alpha  = \sqrt(2.0 / $N);
+        $tmp    = array_fill(0, $N, array_fill(0, $N, 0.0));
+        $alpha0 = sqrt(1.0 / $N);
+        $alpha  = sqrt(2.0 / $N);
 
-        for ($y = 0; $y < $N; $y++) {
-            for ($u = 0; $u < $N; $u++) {
+        for ($y = 0; $y < $N; ++$y) {
+            for ($u = 0; $u < $N; ++$u) {
                 $sum = 0.0;
-                for ($x = 0; $x < $N; $x++) {
+                for ($x = 0; $x < $N; ++$x) {
                     $sum += $g[$y][$x] * $cosT[$u][$x];
                 }
 
@@ -193,11 +228,11 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         // Columns DCT
-        $out = \array_fill(0, $N, \array_fill(0, $N, 0.0));
-        for ($v = 0; $v < $N; $v++) {
-            for ($u = 0; $u < $N; $u++) {
+        $out = array_fill(0, $N, array_fill(0, $N, 0.0));
+        for ($v = 0; $v < $N; ++$v) {
+            for ($u = 0; $u < $N; ++$u) {
                 $sum = 0.0;
-                for ($y = 0; $y < $N; $y++) {
+                for ($y = 0; $y < $N; ++$y) {
                     $sum += $tmp[$y][$u] * $cosT[$v][$y];
                 }
 
@@ -216,16 +251,16 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function cosTable(int $N): array
     {
         static $cache = [];
-        $key = (string) $N;
+        $key          = (string) $N;
         if (isset($cache[$key])) {
             return $cache[$key];
         }
 
-        $t = \array_fill(0, $N, \array_fill(0, $N, 0.0));
-        $pi = \acos(-1.0);
-        for ($u = 0; $u < $N; $u++) {
-            for ($x = 0; $x < $N; $x++) {
-                $t[$u][$x] = \cos(($pi / (2.0 * $N)) * (2.0 * $x + 1.0) * $u);
+        $t  = array_fill(0, $N, array_fill(0, $N, 0.0));
+        $pi = acos(-1.0);
+        for ($u = 0; $u < $N; ++$u) {
+            for ($x = 0; $x < $N; ++$x) {
+                $t[$u][$x] = cos(($pi / (2.0 * $N)) * (2.0 * $x + 1.0) * $u);
             }
         }
 
@@ -236,31 +271,33 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
      * Average pooling resize of a matrix to WxH (fast & stable for hashing).
      *
      * @param array<int,array<int,float>> $g
+     *
      * @return array<int,array<int,float>>
      */
     private function resizeMatrixAverage(array $g, int $w, int $h): array
     {
-        $H = \count($g);
-        $W = $H > 0 ? \count($g[0]) : 0;
+        $H = count($g);
+        $W = $H > 0 ? count($g[0]) : 0;
         if ($W < 1 || $H < 1) {
-            return \array_fill(0, $h, \array_fill(0, $w, 0.0));
+            return array_fill(0, $h, array_fill(0, $w, 0.0));
         }
 
-        $out = \array_fill(0, $h, \array_fill(0, $w, 0.0));
-        $sx = $W / $w;
-        $sy = $H / $h;
+        $out = array_fill(0, $h, array_fill(0, $w, 0.0));
+        $sx  = $W / $w;
+        $sy  = $H / $h;
 
-        for ($yy = 0; $yy < $h; $yy++) {
-            $y0 = (int) \floor($yy * $sy);
-            $y1 = (int) \min($H, \ceil(($yy + 1) * $sy));
-            for ($xx = 0; $xx < $w; $xx++) {
-                $x0 = (int) \floor($xx * $sx);
-                $x1 = (int) \min($W, \ceil(($xx + 1) * $sx));
-                $sum = 0.0; $cnt = 0;
-                for ($y = $y0; $y < $y1; $y++) {
-                    for ($x = $x0; $x < $x1; $x++) {
+        for ($yy = 0; $yy < $h; ++$yy) {
+            $y0 = (int) floor($yy * $sy);
+            $y1 = (int) min($H, ceil(($yy + 1) * $sy));
+            for ($xx = 0; $xx < $w; ++$xx) {
+                $x0  = (int) floor($xx * $sx);
+                $x1  = (int) min($W, ceil(($xx + 1) * $sx));
+                $sum = 0.0;
+                $cnt = 0;
+                for ($y = $y0; $y < $y1; ++$y) {
+                    for ($x = $x0; $x < $x1; ++$x) {
                         $sum += $g[$y][$x];
-                        $cnt++;
+                        ++$cnt;
                     }
                 }
 
@@ -277,13 +314,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     private function bitsToHex64(string $bits): string
     {
         // ensure length is exactly 64
-        if (\strlen($bits) !== 64) {
-            $bits = \strlen($bits) > 64 ? \substr($bits, 0, 64) : \str_pad($bits, 64, '0', \STR_PAD_RIGHT);
+        if (strlen($bits) !== 64) {
+            $bits = strlen($bits) > 64 ? substr($bits, 0, 64) : str_pad($bits, 64, '0', STR_PAD_RIGHT);
         }
 
         $hex = '';
         for ($i = 0; $i < 64; $i += 4) {
-            $hex .= \dechex(\bindec(\substr($bits, $i, 4)));
+            $hex .= dechex(bindec(substr($bits, $i, 4)));
         }
 
         return $hex;

@@ -1,14 +1,29 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function str_contains;
+use function strtolower;
+use function usort;
 
 /**
  * Builds "Snow Day" clusters using winter months and snow/ski keywords.
@@ -20,7 +35,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
     public function __construct(
         private string $timezone = 'Europe/Berlin',
         private int $sessionGapSeconds = 2 * 3600,
-        private int $minItemsPerRun = 6
+        private int $minItemsPerRun = 6,
     ) {
         if ($this->sessionGapSeconds < 1) {
             throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
@@ -38,6 +53,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -49,7 +65,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
             $items,
             function (Media $m) use ($tz): bool {
                 $t = $m->getTakenAt();
-                \assert($t instanceof DateTimeImmutable);
+                assert($t instanceof DateTimeImmutable);
 
                 $local = $t->setTimezone($tz);
                 $month = (int) $local->format('n');
@@ -57,29 +73,29 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
                     return false;
                 }
 
-                $path = \strtolower($m->getPath());
+                $path = strtolower($m->getPath());
 
                 return $this->looksSnow($path);
             }
         );
 
-        if (\count($cand) < $this->minItemsPerRun) {
+        if (count($cand) < $this->minItemsPerRun) {
             return [];
         }
 
-        \usort($cand, static fn (Media $a, Media $b): int =>
-            ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+        usort($cand, static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         /** @var list<ClusterDraft> $out */
         $out = [];
         /** @var list<Media> $buf */
-        $buf = [];
+        $buf    = [];
         $lastTs = null;
 
         $flush = function () use (&$buf, &$out): void {
-            if (\count($buf) < $this->minItemsPerRun) {
+            if (count($buf) < $this->minItemsPerRun) {
                 $buf = [];
+
                 return;
             }
 
@@ -92,7 +108,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $buf)
+                members: array_map(static fn (Media $m): int => $m->getId(), $buf)
             );
             $buf = [];
         };
@@ -107,7 +123,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
                 $flush();
             }
 
-            $buf[] = $m;
+            $buf[]  = $m;
             $lastTs = $ts;
         }
 
@@ -121,7 +137,7 @@ final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
         /** @var list<string> $kw */
         $kw = ['schnee', 'snow', 'ski', 'langlauf', 'skitour', 'snowboard', 'piste', 'eiszapfen'];
         foreach ($kw as $k) {
-            if (\str_contains($pathLower, $k)) {
+            if (str_contains($pathLower, $k)) {
                 return true;
             }
         }

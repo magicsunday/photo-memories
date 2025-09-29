@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -9,16 +17,16 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\TestCase;
 
 final class FirstVisitPlaceClusterStrategyTest extends TestCase
 {
     #[Test]
     public function picksEarliestEligibleVisitPerCell(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new FirstVisitPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -29,13 +37,13 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
             minItemsTotal: 8,
         );
 
-        $loc = $this->createLocation('loc-innsbruck', 'Innsbruck', 47.268, 11.392);
+        $loc   = $this->createLocation('loc-innsbruck', 'Innsbruck', 47.268, 11.392);
         $start = new DateTimeImmutable('2024-02-10 09:00:00', new DateTimeZone('UTC'));
         $items = [];
 
-        for ($dayOffset = 0; $dayOffset < 2; $dayOffset++) {
+        for ($dayOffset = 0; $dayOffset < 2; ++$dayOffset) {
             $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
-            for ($i = 0; $i < 4; $i++) {
+            for ($i = 0; $i < 4; ++$i) {
                 $items[] = $this->createMedia(
                     1200 + ($dayOffset * 10) + $i,
                     $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
@@ -48,7 +56,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
 
         // Later revisit in same cell should be ignored
         $later = new DateTimeImmutable('2024-03-05 10:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 4; ++$i) {
             $items[] = $this->createMedia(
                 1300 + $i,
                 $later->add(new DateInterval('PT' . ($i * 600) . 'S')),
@@ -74,7 +82,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function enforcesMinimumItemsPerDay(): void
     {
-        $helper = new LocationHelper();
+        $helper   = new LocationHelper();
         $strategy = new FirstVisitPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -85,12 +93,12 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
             minItemsTotal: 8,
         );
 
-        $loc = $this->createLocation('loc-bolzano', 'Bolzano', 46.5, 11.35);
+        $loc   = $this->createLocation('loc-bolzano', 'Bolzano', 46.5, 11.35);
         $start = new DateTimeImmutable('2024-04-01 09:00:00', new DateTimeZone('UTC'));
         $items = [];
-        for ($dayOffset = 0; $dayOffset < 2; $dayOffset++) {
+        for ($dayOffset = 0; $dayOffset < 2; ++$dayOffset) {
             $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
-            for ($i = 0; $i < 3; $i++) { // below per-day threshold
+            for ($i = 0; $i < 3; ++$i) { // below per-day threshold
                 $items[] = $this->createMedia(
                     1400 + ($dayOffset * 10) + $i,
                     $day->add(new DateInterval('PT' . ($i * 1200) . 'S')),
@@ -121,7 +129,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         DateTimeImmutable $takenAt,
         float $lat,
         float $lon,
-        Location $location
+        Location $location,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -132,5 +140,4 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
             location: $location,
         );
     }
-
 }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test;
@@ -119,7 +127,7 @@ abstract class TestCase extends BaseTestCase
         int $size = 1024,
         ?string $checksum = null,
     ): Media {
-        $factory = (static fn(string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class ($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
+        $factory = (static fn (string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
             /**
              * @var list<int>
              */
@@ -243,9 +251,9 @@ abstract class TestCase extends BaseTestCase
         int $maxAttempts = 3,
         string $skipMessage = 'System clock changed during test execution.',
     ): void {
-        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
-            $anchor = new DateTimeImmutable('now', $timezone);
-            $isStable = (static fn(): bool => (new DateTimeImmutable('now', $timezone))->format($format) === $anchor->format($format));
+        for ($attempt = 0; $attempt < $maxAttempts; ++$attempt) {
+            $anchor   = new DateTimeImmutable('now', $timezone);
+            $isStable = (static fn (): bool => (new DateTimeImmutable('now', $timezone))->format($format) === $anchor->format($format));
 
             if ($callback($anchor, $isStable) === true) {
                 return;
@@ -263,7 +271,7 @@ abstract class TestCase extends BaseTestCase
     private function fixtureDir(): string
     {
         if ($this->fixtureDir === null) {
-            $reflection = new ReflectionClass($this);
+            $reflection       = new ReflectionClass($this);
             $this->fixtureDir = dirname((string) $reflection->getFileName()) . '/fixtures';
         }
 

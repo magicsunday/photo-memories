@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
@@ -8,8 +16,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
-use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
 {
@@ -26,11 +34,11 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
         $items = [];
         foreach ([2021, 2022, 2023] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
-            for ($i = 0; $i < 6; $i++) {
+            for ($i = 0; $i < 6; ++$i) {
                 $items[] = $this->createMedia(
                     ($year * 100) + $i,
                     $day->add(new DateInterval('PT' . ($i * 300) . 'S')),
-                    "zoo-%d-%d.jpg",
+                    'zoo-%d-%d.jpg',
                     $year,
                     $i,
                 );
@@ -60,11 +68,11 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
         $items = [];
         foreach ([2022, 2023] as $year) {
             $day = new DateTimeImmutable(sprintf('%d-08-15 10:00:00', $year), new DateTimeZone('UTC'));
-            for ($i = 0; $i < 6; $i++) {
+            for ($i = 0; $i < 6; ++$i) {
                 $items[] = $this->createMedia(
                     ($year * 1000) + $i,
                     $day->add(new DateInterval('PT' . ($i * 300) . 'S')),
-                    "zoo-%d-%d.jpg",
+                    'zoo-%d-%d.jpg',
                     $year,
                     $i,
                 );
@@ -85,5 +93,4 @@ final class ZooAquariumOverYearsClusterStrategyTest extends TestCase
             size: 512,
         );
     }
-
 }

@@ -1,14 +1,28 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function array_map;
+use function assert;
+use function count;
+use function substr;
+use function usort;
 
 /**
  * Builds a highlight memory for each (year, month) with sufficient coverage.
@@ -20,7 +34,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
     public function __construct(
         private string $timezone = 'Europe/Berlin',
         private int $minItemsPerMonth = 40,
-        private int $minDistinctDays = 10
+        private int $minDistinctDays = 10,
     ) {
         if ($this->minItemsPerMonth < 1) {
             throw new InvalidArgumentException('minItemsPerMonth must be >= 1.');
@@ -38,6 +52,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -52,9 +67,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
-            \assert($t instanceof DateTimeImmutable);
+            assert($t instanceof DateTimeImmutable);
             $local = $t->setTimezone($tz);
-            $ym = $local->format('Y-m');
+            $ym    = $local->format('Y-m');
             $byYm[$ym] ??= [];
             $byYm[$ym][] = $m;
         }
@@ -68,11 +83,12 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                 $days = [];
                 foreach ($list as $m) {
                     $takenAt = $m->getTakenAt();
-                    \assert($takenAt instanceof DateTimeImmutable);
+                    assert($takenAt instanceof DateTimeImmutable);
                     $days[$takenAt->setTimezone($tz)->format('Y-m-d')] = true;
                 }
 
-                $count = \count($days);
+                $count = count($days);
+
                 return $count >= $this->minDistinctDays;
             }
         );
@@ -85,12 +101,12 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         $out = [];
 
         foreach ($eligibleMonths as $ym => $list) {
-            \usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+            usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
-            $year  = (int) \substr($ym, 0, 4);
-            $month = (int) \substr($ym, 5, 2);
+            $year  = (int) substr($ym, 0, 4);
+            $month = (int) substr($ym, 5, 2);
             $label = $this->germanMonthLabel($month) . ' ' . $year;
 
             $out[] = new ClusterDraft(
@@ -101,7 +117,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: \array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }
 
@@ -111,9 +127,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
     private function germanMonthLabel(int $m): string
     {
         return match ($m) {
-            1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April',
-            5 => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember',
+            1       => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April',
+            5       => 'Mai', 6 => 'Juni', 7 => 'Juli', 8 => 'August',
+            9       => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember',
             default => 'Monat',
         };
     }

@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
@@ -9,6 +17,9 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
+
+use function count;
+use function usort;
 
 final readonly class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -41,6 +52,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
 
     /**
      * @param list<Media> $items
+     *
      * @return list<ClusterDraft>
      */
     public function cluster(array $items): array
@@ -69,7 +81,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         $drafts = [];
 
         foreach ($eligibleLocalities as $key => $group) {
-            $label = $this->locHelper->majorityLabel($group);
+            $label  = $this->locHelper->majorityLabel($group);
             $params = [
                 'place_key'  => $key,
                 'time_range' => $this->computeTimeRange($group),
@@ -128,16 +140,15 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
     {
         $gps = $this->filterTimestampedGpsItems($items);
 
-        \usort(
+        usort(
             $gps,
-            static fn(Media $a, Media $b): int =>
-                ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
         );
 
         $out = [];
         /** @var list<Media> $bucket */
         $bucket = [];
-        $start = null;
+        $start  = null;
 
         foreach ($gps as $m) {
             $ts = $m->getTakenAt()?->getTimestamp() ?? 0;
@@ -149,7 +160,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             }
 
             $anchor = $bucket[0];
-            $dist = MediaMath::haversineDistanceInMeters(
+            $dist   = MediaMath::haversineDistanceInMeters(
                 (float) $anchor->getGpsLat(),
                 (float) $anchor->getGpsLon(),
                 (float) $m->getGpsLat(),
@@ -160,7 +171,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             if ($dist <= $this->radiusMeters && $spanOk) {
                 $bucket[] = $m;
             } else {
-                if (\count($bucket) > 0) {
+                if (count($bucket) > 0) {
                     $out[] = $bucket;
                 }
 

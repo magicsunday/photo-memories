@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the package magicsunday/photo-memories.
  *
@@ -39,8 +40,8 @@ final readonly class DoctrineWeatherObservationStorage implements WeatherObserva
 
     public function storeHint(float $lat, float $lon, int $timestamp, array $hint, string $source): void
     {
-        $hash    = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
-        $current = $this->repository->findOneByLookupHash($hash);
+        $hash       = WeatherObservation::lookupHashFromRaw($lat, $lon, $timestamp);
+        $current    = $this->repository->findOneByLookupHash($hash);
         $observedAt = WeatherObservation::observationTimeFromTimestamp($timestamp);
 
         if ($current instanceof WeatherObservation) {

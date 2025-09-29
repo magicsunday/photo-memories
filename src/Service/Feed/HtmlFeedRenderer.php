@@ -1,7 +1,22 @@
 <?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
+
+use function htmlspecialchars;
+use function implode;
+use function number_format;
+
+use const ENT_QUOTES;
+use const ENT_SUBSTITUTE;
 
 /**
  * Renders a minimal, responsive HTML page with lazy-loaded image grids per card.
@@ -19,7 +34,7 @@ final class HtmlFeedRenderer
      */
     public function render(array $cards, string $pageTitle): string
     {
-        $title = \htmlspecialchars($pageTitle, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
+        $title     = htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $itemsHtml = $this->renderCards($cards);
 
         $css = $this->css();
@@ -60,10 +75,10 @@ HTML;
         $buf = [];
 
         foreach ($cards as $c) {
-            $t  = \htmlspecialchars($c['title'], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
-            $st = \htmlspecialchars($c['subtitle'], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
-            $alg = \htmlspecialchars($c['algorithm'], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
-            $score = \number_format($c['score'], 3, ',', '');
+            $t     = htmlspecialchars($c['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $st    = htmlspecialchars($c['subtitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $alg   = htmlspecialchars($c['algorithm'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $score = number_format($c['score'], 3, ',', '');
 
             $images = $this->renderImages($c['images']);
 
@@ -86,7 +101,7 @@ HTML;
 CARD;
         }
 
-        return \implode("\n", $buf);
+        return implode("\n", $buf);
     }
 
     /**
@@ -96,8 +111,8 @@ CARD;
     {
         $out = [];
         foreach ($images as $img) {
-            $href = \htmlspecialchars($img['href'], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
-            $alt  = \htmlspecialchars($img['alt'], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
+            $href = htmlspecialchars($img['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $alt  = htmlspecialchars($img['alt'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
             $out[] = <<<IMG
 <figure class="ph">
@@ -106,7 +121,7 @@ CARD;
 IMG;
         }
 
-        return \implode("\n", $out);
+        return implode("\n", $out);
     }
 
     private function css(): string
