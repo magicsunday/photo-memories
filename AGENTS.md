@@ -29,7 +29,7 @@
 - Keep Doctrine mappings (`src/Entity/`) and repositories (`src/Repository/`) in sync when modifying persistence logic.
 - Update accompanying documentation (README, examples, CLI help) in the same commit when public behaviour or configuration changes.
 
-### Coding Guidelines
+### Extended Coding Guidelines
 - Do not use "mixed" types, but rather "strict types"
 - Always use comments and PHPdoc blocks in English
 - Text, e.g., labels and user output in German, except for error messages and exceptions

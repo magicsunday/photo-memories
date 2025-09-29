@@ -78,10 +78,6 @@ final class GeocodeCommand extends Command
         $missingPois = (bool) $input->getOption('missing-pois');
         $refreshPois = (bool) $input->getOption('refresh-pois');
 
-        if ($refreshPois) {
-            $all = true;
-        }
-
         $io->title('🗺️  Orte ermitteln');
 
         if ($missingPois) {
@@ -105,7 +101,7 @@ final class GeocodeCommand extends Command
             ->where('m.gpsLat IS NOT NULL')
             ->andWhere('m.gpsLon IS NOT NULL');
 
-        if (!$all) {
+        if (!$all && !$refreshPois) {
             $qb->andWhere('m.location IS NULL');
         }
 
