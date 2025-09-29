@@ -22,6 +22,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
+use function array_map;
 use function round;
 
 final class LocationPoiEnricherTest extends TestCase
@@ -97,28 +98,38 @@ final class LocationPoiEnricherTest extends TestCase
                     'lat'  => 52.5201,
                     'lon'  => 13.405,
                     'tags' => [
+                        'name'    => 'City Museum',
+                        'tourism' => 'museum',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id'   => 2,
+                    'lat'  => 52.52005,
+                    'lon'  => 13.4051,
+                    'tags' => [
                         'name'    => 'Nearby Cafe',
                         'amenity' => 'cafe',
                     ],
                 ],
                 [
                     'type' => 'node',
-                    'id'   => 2,
+                    'id'   => 3,
                     'lat'  => 52.5206,
                     'lon'  => 13.406,
                     'tags' => [
-                        'name'    => 'Museum Checkpoint',
-                        'tourism' => 'museum',
+                        'name'    => 'Skyline Viewpoint',
+                        'tourism' => 'viewpoint',
                     ],
                 ],
                 [
                     'type' => 'node',
-                    'id'   => 3,
+                    'id'   => 4,
                     'lat'  => 52.522,
                     'lon'  => 13.41,
                     'tags' => [
-                        'name'     => 'Distant Monument',
-                        'historic' => 'monument',
+                        'name'     => 'Historic Tower',
+                        'man_made' => 'tower',
                     ],
                 ],
             ],
@@ -133,7 +144,78 @@ final class LocationPoiEnricherTest extends TestCase
         self::assertIsArray($pois);
         self::assertCount(2, $pois);
         self::assertSame('node/1', $pois[0]['id']);
-        self::assertSame('node/2', $pois[1]['id']);
+        self::assertSame('node/3', $pois[1]['id']);
+        self::assertNotContains('node/2', array_map(static fn (array $poi): string => $poi['id'], $pois));
+    }
+
+    #[Test]
+    public function keepsSightseeingCategoriesAndDropsDisallowedOnes(): void
+    {
+        $location = $this->makeLocation('place-5', 'Dresden', 51.05, 13.74);
+        $geocode  = $this->createGeocodeResult(51.05, 13.74);
+
+        $response = $this->createResponse([
+            'elements' => [
+                [
+                    'type' => 'node',
+                    'id'   => 10,
+                    'lat'  => 51.0505,
+                    'lon'  => 13.7405,
+                    'tags' => [
+                        'name'    => 'City Museum',
+                        'tourism' => 'museum',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id'   => 11,
+                    'lat'  => 51.0507,
+                    'lon'  => 13.741,
+                    'tags' => [
+                        'name'    => 'Panorama View',
+                        'tourism' => 'viewpoint',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id'   => 12,
+                    'lat'  => 51.0515,
+                    'lon'  => 13.742,
+                    'tags' => [
+                        'name'     => 'Lighthouse Tower',
+                        'man_made' => 'tower',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id'   => 13,
+                    'lat'  => 51.0502,
+                    'lon'  => 13.7395,
+                    'tags' => [
+                        'name'    => 'Corner Cafe',
+                        'amenity' => 'cafe',
+                    ],
+                ],
+            ],
+        ]);
+
+        $enricher = $this->createEnricher([$response], maxPois: 5, fetchLimitMultiplier: 0.0);
+
+        $usedNetwork = $enricher->enrich($location, $geocode);
+        $pois        = $location->getPois();
+
+        self::assertTrue($usedNetwork);
+        self::assertIsArray($pois);
+        self::assertCount(3, $pois);
+
+        $ids = array_map(static fn (array $poi): string => $poi['id'], $pois);
+        self::assertSame(['node/10', 'node/11', 'node/12'], $ids);
+
+        $categoryKeys = array_map(static fn (array $poi): ?string => $poi['categoryKey'], $pois);
+        $categoryValues = array_map(static fn (array $poi): ?string => $poi['categoryValue'], $pois);
+
+        self::assertSame(['tourism', 'tourism', 'man_made'], $categoryKeys);
+        self::assertSame(['museum', 'viewpoint', 'tower'], $categoryValues);
     }
 
     #[Test]

@@ -63,10 +63,7 @@ final readonly class LocationHelper
         'leisure'  => 140,
         'natural'  => 140,
         'place'    => 130,
-        'amenity'  => 100,
-        'building' => 70,
         'sport'    => 60,
-        'shop'     => 40,
         'landuse'  => 25,
     ];
 
@@ -80,12 +77,9 @@ final readonly class LocationHelper
         'historic' => 180,
         'man_made' => 150,
         'leisure'  => 90,
-        'amenity'  => 80,
         'natural'  => 90,
         'place'    => 80,
-        'building' => 60,
         'sport'    => 50,
-        'shop'     => 40,
     ];
 
     /**
