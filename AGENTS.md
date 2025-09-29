@@ -20,7 +20,7 @@
 - When introducing new services that require configuration, add defaults to `config/parameters.yaml` and expose environment overrides via `%env()%` placeholders.
 
 ## Code Style & Conventions
-- Follow **PSR-12** plus the rules defined in `Build/.php-cs-fixer.dist.php`.
+- Follow **PHP-4**, **PSR-4** and **PSR-12** plus the rules defined in `Build/.php-cs-fixer.dist.php`.
 - Files use strict types, project header docblocks, and Symfony-style imports (global namespace imports are allowed).
 - Keep functions/methods short and focused. Document non-trivial behavior with docblocks or inline comments.
 - Every PHP file must begin with the standard package header comment (enforced via PHP-CS-Fixer).
@@ -28,6 +28,19 @@
 - Prefer constructor injection; register new services in `config/services.yaml`. Commands should remain autoconfigured (tagged as `command`). Entities under `src/Entity/` are excluded from automatic service registration.
 - Keep Doctrine mappings (`src/Entity/`) and repositories (`src/Repository/`) in sync when modifying persistence logic.
 - Update accompanying documentation (README, examples, CLI help) in the same commit when public behaviour or configuration changes.
+
+### Coding Guidelines
+- Do not use "mixed" types, but rather "strict types"
+- Always use comments and PHPdoc blocks in English
+- Text, e.g., labels and user output in German, except for error messages and exceptions
+- Do not use "empty"
+- Use modern design patterns
+- Use attributes
+- Do not use outdated libraries
+- Adhere to the SOLID principle
+- Adhere to KISS (Keep It Simple, Stupid)
+- Adhere to DRY (Don't Repeat Yourself)
+- Adhere to Separation of Concerns
 
 ## Testing & QA
 - Install dependencies with `composer install` (uses `.build/vendor`).
