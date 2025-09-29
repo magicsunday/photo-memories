@@ -25,6 +25,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_filter;
+use function array_values;
 use function count;
 use function function_exists;
 use function is_string;
@@ -33,6 +35,7 @@ use function mb_strtolower;
 use function preg_replace;
 use function sprintf;
 use function strlen;
+use function spl_object_id;
 use function substr;
 use function trim;
 use function usleep;
@@ -89,6 +92,10 @@ final class GeocodeCommand extends Command
             return $this->reprocessLocationsByCity($city, $dryRun, $refreshPois, $io, $output);
         }
 
+        if ($refreshPois && !$all && $limitN === null) {
+            return $this->refreshAllPois($dryRun, $io, $output);
+        }
+
         $loaded = $this->cellIndex->warmUpFromDb();
         $io->writeln(sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));
 
@@ -126,6 +133,8 @@ final class GeocodeCommand extends Command
         $processed = 0;
         $linked    = 0;
         $netCalls  = 0;
+        /** @var array<int,Location> $uniqueLocations */
+        $uniqueLocations = [];
 
         $batchSize = 10; // kleinerer Batch verringert Datenverlust bei Fehlern
         foreach ($medias as $m) {
@@ -134,6 +143,7 @@ final class GeocodeCommand extends Command
 
             if ($loc instanceof Location) {
                 ++$linked;
+                $uniqueLocations[spl_object_id($loc)] = $loc;
             }
 
             // nur schlafen, wenn wirklich ein Netz-Call stattfand
@@ -153,17 +163,65 @@ final class GeocodeCommand extends Command
 
             if (($processed % $batchSize) === 0) {
                 // kein clear(): wir halten Location-Cache und managed Entities intakt
-                $this->em->flush();
+                if (!$dryRun) {
+                    $this->em->flush();
+                }
             }
         }
 
-        $this->em->flush();
+        if (!$dryRun) {
+            $this->em->flush();
+        }
 
         $bar->finish();
 
         $io->writeln('');
         $io->writeln('');
         $io->writeln(sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $processed, $linked, $netCalls));
+
+        $locationsForPois = array_values(array_filter(
+            $uniqueLocations,
+            static fn (Location $location): bool => $refreshPois || $location->getPois() === null,
+        ));
+
+        if (count($locationsForPois) > 0) {
+            $io->section('📍 POI-Daten aktualisieren');
+            if ($refreshPois) {
+                $io->note('Bestehende POI-Daten werden neu abgerufen.');
+            }
+
+            [$poiProcessed, $poiUpdated, $poiNetCalls] = $this->processPoiUpdates($locationsForPois, $dryRun, $refreshPois, $output);
+
+            $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $poiProcessed, $poiUpdated, $poiNetCalls));
+        }
+
+        if ($dryRun) {
+            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
+        }
+
+        return Command::SUCCESS;
+    }
+
+    private function refreshAllPois(bool $dryRun, SymfonyStyle $io, OutputInterface $output): int
+    {
+        $io->section('🌐 Alle POI-Daten aktualisieren');
+        $io->note('Bestehende POI-Daten werden neu abgerufen.');
+
+        $repo      = $this->em->getRepository(Location::class);
+        $locations = $repo->createQueryBuilder('l')
+            ->orderBy('l.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        if (count($locations) < 1) {
+            $io->writeln('Keine Orte vorhanden.');
+
+            return Command::SUCCESS;
+        }
+
+        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, true, $output);
+
+        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
 
         if ($dryRun) {
             $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
@@ -199,47 +257,8 @@ final class GeocodeCommand extends Command
             return Command::SUCCESS;
         }
 
-        $bar = new ProgressBar($output, $count);
-        $bar->setFormat('%current%/%max% [%bar%] %percent:3s%% | Dauer: %elapsed:6s% | ETA: %estimated:-6s% | %message%');
-        $bar->setMessage('Starte …');
-        $bar->start();
+        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
 
-        $processed = 0;
-        $updated   = 0;
-        $netCalls  = 0;
-        $batchSize = 10;
-
-        foreach ($locations as $location) {
-            $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
-            $bar->setMessage($this->formatProgressLabel($label));
-
-            $beforePois = $location->getPois();
-
-            $this->locationResolver->ensurePois($location, $refreshPois);
-            if ($this->locationResolver->consumeLastUsedNetwork()) {
-                ++$netCalls;
-            }
-
-            if ($beforePois !== $location->getPois()) {
-                ++$updated;
-            }
-
-            ++$processed;
-            $bar->advance();
-
-            if ($processed % $batchSize === 0 && !$dryRun) {
-                $this->em->flush();
-            }
-        }
-
-        if (!$dryRun) {
-            $this->em->flush();
-        }
-
-        $bar->finish();
-
-        $io->writeln('');
-        $io->writeln('');
         $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
 
         if ($dryRun) {
@@ -278,6 +297,26 @@ final class GeocodeCommand extends Command
             return Command::SUCCESS;
         }
 
+        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
+
+        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+
+        if ($dryRun) {
+            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
+        }
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @param list<Location> $locations
+     *
+     * @return array{int,int,int} Tuple of processed, updated, and network calls
+     */
+    private function processPoiUpdates(array $locations, bool $dryRun, bool $refreshPois, OutputInterface $output): array
+    {
+        $count = count($locations);
+
         $bar = new ProgressBar($output, $count);
         $bar->setFormat('%current%/%max% [%bar%] %percent:3s%% | Dauer: %elapsed:6s% | ETA: %estimated:-6s% | %message%');
         $bar->setMessage('Starte …');
@@ -317,15 +356,10 @@ final class GeocodeCommand extends Command
 
         $bar->finish();
 
-        $io->writeln('');
-        $io->writeln('');
-        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+        $output->writeln('');
+        $output->writeln('');
 
-        if ($dryRun) {
-            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
-        }
-
-        return Command::SUCCESS;
+        return [$processed, $updated, $netCalls];
     }
 
     /**
