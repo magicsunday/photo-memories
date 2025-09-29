@@ -407,6 +407,9 @@ services:
             $minAwayDistanceKm: 120.0
             $movementThresholdKm: 35.0
             $minItemsPerDay: 3
+            $homeLat: '%env(default::float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(default::float:MEMORIES_HOME_LON)%'
+            $homeRadiusKm: '%env(default::float:MEMORIES_HOME_RADIUS_KM)%'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.vacation_cluster_strategy%' }
 
