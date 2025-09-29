@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -87,6 +88,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         private int $minItemsPerDay = 3,
         private float $gpsOutlierRadiusKm = 1.0,
         private int $gpsOutlierMinSamples = 3,
+        private GeoDbscanHelper $dbscanHelper = new GeoDbscanHelper(),
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -316,7 +318,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool}> $days */
+        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int}> $days */
         $days = [];
 
         foreach ($items as $media) {
@@ -348,6 +350,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'nightAway'         => false,
                     'isAwayCandidate'   => false,
                     'sufficientSamples' => false,
+                    'spotClusters'      => [],
+                    'spotNoise'         => [],
+                    'spotCount'         => 0,
+                    'spotNoiseSamples'  => 0,
+                    'spotDwellSeconds'  => 0,
                 ];
             }
 
@@ -473,6 +480,26 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
                     $summary['nightAway'] = $nightDistance > $home['radius_km'];
                 }
+
+                $clusters = $this->dbscanHelper->clusterMedia(
+                    $summary['gpsMembers'],
+                    0.1,
+                    $this->gpsOutlierMinSamples,
+                );
+
+                $summary['spotClusters'] = $clusters['clusters'];
+                $summary['spotNoise']    = $clusters['noise'];
+                $summary['spotCount']    = count($clusters['clusters']);
+                $summary['spotNoiseSamples'] = count($clusters['noise']);
+
+                $dwellSeconds = 0;
+                foreach ($summary['spotClusters'] as $clusterMembers) {
+                    $range = MediaMath::timeRange($clusterMembers);
+                    $span  = $range['to'] - $range['from'];
+                    $dwellSeconds += max(0, $span);
+                }
+
+                $summary['spotDwellSeconds'] = $dwellSeconds;
             }
 
             if ($summary['poiSamples'] > 0) {
@@ -506,7 +533,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return list<ClusterDraft>
@@ -684,6 +711,9 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $countryCodes = [];
         $workDayPenalty = 0;
         $reliableDays = 0;
+        $spotClusterCount = 0;
+        $multiSpotDays = 0;
+        $spotDwellSeconds = 0;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -727,6 +757,13 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
             if ($summary['sufficientSamples'] && $summary['gpsMembers'] !== []) {
                 ++$reliableDays;
+            }
+
+            $spotClusterCount += $summary['spotCount'];
+            $spotDwellSeconds += $summary['spotDwellSeconds'];
+
+            if ($summary['spotCount'] >= 2) {
+                ++$multiSpotDays;
             }
         }
 
@@ -777,6 +814,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             $airportFlag = true;
         }
 
+        $spotDwellHours = $spotDwellSeconds / 3600.0;
+        $multiSpotBonus = min(3.0, $multiSpotDays * 0.9);
+        $dwellBonus     = min(1.5, $spotDwellHours * 0.3);
+        $spotBonus      = $multiSpotBonus + $dwellBonus;
+
         $awayNightScore = min(7, $awayNights) * 2.0;
         $distanceScore  = $maxDistance > 0.0 ? 1.2 * log(1.0 + $maxDistance) : 0.0;
         $countryBonus   = $countryChange ? 2.5 : 0.0;
@@ -785,6 +827,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $moveBonus      = 0.8 * $moveDays;
         $airportBonus   = $airportFlag ? 1.0 : 0.0;
         $densityBonus   = 0.6 * $photoDensityZ;
+        $explorationBonus = $spotBonus;
         $penalty        = 0.4 * $workDayPenalty;
 
         $score = $awayNightScore
@@ -795,6 +838,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             + $moveBonus
             + $airportBonus
             + $densityBonus
+            + $explorationBonus
             - $penalty;
 
         $classification = 'none';
@@ -843,6 +887,10 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'move_days'            => $moveDays,
             'photo_density_z'      => $photoDensityZ,
             'airport_transfer'     => $airportFlag,
+            'spot_clusters_total'  => $spotClusterCount,
+            'spot_cluster_days'    => $multiSpotDays,
+            'spot_dwell_hours'     => round($spotDwellHours, 2),
+            'spot_exploration_bonus' => round($explorationBonus, 2),
         ];
 
         if ($place !== null) {

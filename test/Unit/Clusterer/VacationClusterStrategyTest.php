@@ -165,6 +165,10 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertTrue($params['country_change']);
         self::assertTrue($params['timezone_change']);
         self::assertTrue($params['airport_transfer']);
+        self::assertArrayHasKey('spot_clusters_total', $params);
+        self::assertArrayHasKey('spot_cluster_days', $params);
+        self::assertArrayHasKey('spot_dwell_hours', $params);
+        self::assertArrayHasKey('spot_exploration_bonus', $params);
     }
 
     #[Test]
@@ -269,6 +273,10 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame('short_trip', $params['classification']);
         self::assertGreaterThanOrEqual(6.0, $params['score']);
         self::assertLessThan(8.0, $params['score']);
+        self::assertArrayHasKey('spot_clusters_total', $params);
+        self::assertArrayHasKey('spot_cluster_days', $params);
+        self::assertArrayHasKey('spot_dwell_hours', $params);
+        self::assertArrayHasKey('spot_exploration_bonus', $params);
     }
 
     #[Test]
@@ -503,6 +511,188 @@ final class VacationClusterStrategyTest extends TestCase
         foreach ($sparsePhotoIds as $photoId) {
             self::assertContains($photoId, $cluster->getMembers());
         }
+    }
+
+    #[Test]
+    public function recognisesMultiSpotExplorationWithinTrip(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            timezone: 'UTC',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 90.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 3,
+        );
+
+        $items = [];
+        $homeLocation = $this->makeLocation('home-berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCountryCode('DE');
+            $loc->setCategory('residential');
+        });
+
+        $sagradaLocation = $this->makeLocation('spot-sagrada', 'Sagrada Família', 41.4036, 2.1744, country: 'Spain', configure: static function (Location $loc): void {
+            $loc->setCountryCode('ES');
+            $loc->setCategory('tourism');
+            $loc->setType('attraction');
+            $loc->setPois([
+                [
+                    'categoryKey'   => 'tourism',
+                    'categoryValue' => 'church',
+                    'tags'          => ['tourism' => 'attraction'],
+                ],
+            ]);
+        });
+
+        $parkLocation = $this->makeLocation('spot-park', 'Park Güell', 41.4145, 2.1527, country: 'Spain', configure: static function (Location $loc): void {
+            $loc->setCountryCode('ES');
+            $loc->setCategory('tourism');
+            $loc->setType('attraction');
+            $loc->setPois([
+                [
+                    'categoryKey'   => 'tourism',
+                    'categoryValue' => 'park',
+                    'tags'          => ['tourism' => 'park'],
+                ],
+            ]);
+        });
+
+        $gothicLocation = $this->makeLocation('spot-gothic', 'Barri Gòtic', 41.3830, 2.1760, country: 'Spain', configure: static function (Location $loc): void {
+            $loc->setCountryCode('ES');
+            $loc->setCategory('tourism');
+            $loc->setType('attraction');
+            $loc->setPois([
+                [
+                    'categoryKey'   => 'tourism',
+                    'categoryValue' => 'sight',
+                    'tags'          => ['tourism' => 'attraction'],
+                ],
+            ]);
+        });
+
+        $montjuicLocation = $this->makeLocation('spot-montjuic', 'Montjuïc', 41.3630, 2.1650, country: 'Spain', configure: static function (Location $loc): void {
+            $loc->setCountryCode('ES');
+            $loc->setCategory('tourism');
+            $loc->setType('viewpoint');
+            $loc->setPois([
+                [
+                    'categoryKey'   => 'tourism',
+                    'categoryValue' => 'viewpoint',
+                    'tags'          => ['tourism' => 'viewpoint'],
+                ],
+            ]);
+        });
+
+        $id = 9000;
+        $homeNight = new DateTimeImmutable('2024-04-10 22:30:00', new DateTimeZone('UTC'));
+        for ($i = 0; $i < 3; ++$i) {
+            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('home-pre-%d.jpg', $i),
+                $timestamp->format('Y-m-d H:i:s'),
+                $homeLocation->getLat(),
+                $homeLocation->getLon(),
+                $homeLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $dayClusters = [
+            [
+                ['location' => $sagradaLocation, 'points' => [
+                    ['lat' => 41.4036, 'lon' => 2.1744],
+                    ['lat' => 41.4038, 'lon' => 2.1742],
+                    ['lat' => 41.4034, 'lon' => 2.1746],
+                ]],
+                ['location' => $parkLocation, 'points' => [
+                    ['lat' => 41.4145, 'lon' => 2.1527],
+                    ['lat' => 41.4147, 'lon' => 2.1529],
+                    ['lat' => 41.4143, 'lon' => 2.1525],
+                ]],
+            ],
+            [
+                ['location' => $gothicLocation, 'points' => [
+                    ['lat' => 41.3830, 'lon' => 2.1760],
+                    ['lat' => 41.3832, 'lon' => 2.1758],
+                    ['lat' => 41.3828, 'lon' => 2.1762],
+                ]],
+                ['location' => $montjuicLocation, 'points' => [
+                    ['lat' => 41.3630, 'lon' => 2.1650],
+                    ['lat' => 41.3632, 'lon' => 2.1652],
+                    ['lat' => 41.3628, 'lon' => 2.1648],
+                ]],
+            ],
+        ];
+
+        $tripStart = new DateTimeImmutable('2024-04-15 09:00:00', new DateTimeZone('UTC'));
+        foreach ($dayClusters as $dayIndex => $clustersForDay) {
+            $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
+            foreach ($clustersForDay as $clusterIndex => $clusterData) {
+                $baseHour = $clusterIndex === 0 ? 9 : 14;
+                foreach ($clusterData['points'] as $pointIndex => $coordinates) {
+                    $timestamp = $dayStart->setTime($baseHour, 0, 0)->add(new DateInterval('PT' . ($pointIndex * 30) . 'M'));
+                    $items[] = $this->makeMediaFixture(
+                        ++$id,
+                        sprintf('trip-%d-%d-%d.jpg', $dayIndex, $clusterIndex, $pointIndex),
+                        $timestamp->format('Y-m-d H:i:s'),
+                        (float) $coordinates['lat'],
+                        (float) $coordinates['lon'],
+                        $clusterData['location'],
+                        static function (Media $media): void {
+                            $media->setTimezoneOffsetMin(120);
+                        }
+                    );
+                }
+            }
+
+            $nightLocation = $clustersForDay[1]['location'];
+            $nightPoint    = $clustersForDay[1]['points'][1];
+            $nightTimestamp = $dayStart->setTime(22, 30, 0);
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('trip-night-%d.jpg', $dayIndex),
+                $nightTimestamp->format('Y-m-d H:i:s'),
+                (float) $nightPoint['lat'],
+                (float) $nightPoint['lon'],
+                $nightLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $returnNight = new DateTimeImmutable('2024-04-18 22:15:00', new DateTimeZone('UTC'));
+        for ($i = 0; $i < 3; ++$i) {
+            $timestamp = $returnNight->add(new DateInterval('P' . $i . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('home-post-%d.jpg', $i),
+                $timestamp->format('Y-m-d H:i:s'),
+                $homeLocation->getLat(),
+                $homeLocation->getLon(),
+                $homeLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        $params = $cluster->getParams();
+        self::assertSame('vacation', $params['classification']);
+        self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame(4, $params['spot_clusters_total']);
+        self::assertSame(2, $params['spot_cluster_days']);
+        self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
+        self::assertGreaterThan(0.0, $params['spot_dwell_hours']);
     }
 
     #[Test]
