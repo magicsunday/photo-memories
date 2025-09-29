@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
@@ -62,6 +63,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 80.0,
@@ -209,6 +211,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
@@ -309,6 +312,115 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
+        self::assertSame(2, $params['weekend_holiday_days']);
+        self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
+    }
+
+    #[Test]
+    public function awardsHolidayBonusOnWeekdays(): void
+    {
+        $helper = new LocationHelper();
+        $holidayDates = ['2024-12-23', '2024-12-24'];
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver($holidayDates),
+            timezone: 'UTC',
+            defaultHomeRadiusKm: 10.0,
+            minAwayDistanceKm: 60.0,
+            movementThresholdKm: 500.0,
+            minItemsPerDay: 3,
+        );
+
+        $items = [];
+        $homeLocation = $this->makeLocation('holiday-home', 'Hamburg, Germany', 53.5511, 9.9937, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCountryCode('DE');
+            $loc->setCategory('residential');
+        });
+
+        $holidayLocation = $this->makeLocation('holiday-trip', 'Weihnachtsmarkt Leipzig', 51.3397, 12.3731, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCountryCode('DE');
+            $loc->setCategory('tourism');
+            $loc->setType('attraction');
+            $loc->setPois([
+                [
+                    'categoryKey'   => 'tourism',
+                    'categoryValue' => 'attraction',
+                    'tags'          => ['tourism' => 'attraction'],
+                ],
+            ]);
+        });
+
+        $villageLocation = $this->makeLocation('holiday-village', 'Leipzig Zentrum', 51.3400, 12.3800, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCountryCode('DE');
+            $loc->setCategory('residential');
+        });
+
+        $id = 4000;
+        $homeNight = new DateTimeImmutable('2024-12-20 22:30:00', new DateTimeZone('UTC'));
+        for ($i = 0; $i < 3; ++$i) {
+            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('holiday-home-%d.jpg', $id),
+                $timestamp->format('Y-m-d H:i:s'),
+                $homeLocation->getLat(),
+                $homeLocation->getLon(),
+                $homeLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+        }
+
+        $tripStart = new DateTimeImmutable('2024-12-23 09:00:00', new DateTimeZone('UTC'));
+        for ($day = 0; $day < 2; ++$day) {
+            $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('holiday-trip-%d-0.jpg', $day),
+                $dayStart->format('Y-m-d H:i:s'),
+                $holidayLocation->getLat(),
+                $holidayLocation->getLon(),
+                $holidayLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('holiday-trip-%d-1.jpg', $day),
+                $dayStart->add(new DateInterval('PT6H'))->format('Y-m-d H:i:s'),
+                $villageLocation->getLat(),
+                $villageLocation->getLon(),
+                $villageLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+            $nightShot = $dayStart->setTime(22, 45, 0);
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('holiday-night-%d.jpg', $day),
+                $nightShot->format('Y-m-d H:i:s'),
+                $holidayLocation->getLat(),
+                $holidayLocation->getLon(),
+                $holidayLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+        $params = $cluster->getParams();
+
+        self::assertSame('vacation', $params['classification']);
+        self::assertSame(2, $params['weekend_holiday_days']);
+        self::assertSame(0.7, $params['weekend_holiday_bonus']);
+        self::assertGreaterThanOrEqual(8.0, $params['score']);
     }
 
     #[Test]
@@ -317,6 +429,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 15.0,
             minAwayDistanceKm: 80.0,
@@ -447,6 +560,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 90.0,
@@ -551,6 +665,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 90.0,
@@ -733,6 +848,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 80.0,
@@ -815,6 +931,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
@@ -842,5 +959,20 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         self::assertSame([], $strategy->cluster($items));
+    }
+
+    /**
+     * @param list<string> $holidayDates
+     */
+    private function createHolidayResolver(array $holidayDates = []): HolidayResolverInterface
+    {
+        $resolver = $this->createMock(HolidayResolverInterface::class);
+        $resolver
+            ->method('isHoliday')
+            ->willReturnCallback(static function (DateTimeImmutable $day) use ($holidayDates): bool {
+                return in_array($day->format('Y-m-d'), $holidayDates, true);
+            });
+
+        return $resolver;
     }
 }

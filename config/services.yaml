@@ -402,6 +402,7 @@ services:
     # --- Travel & outdoor adventures ---
     MagicSunday\Memories\Clusterer\VacationClusterStrategy:
         arguments:
+            $holidayResolver: '@MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface'
             $timezone: 'Europe/Berlin'
             $defaultHomeRadiusKm: 15.0
             $minAwayDistanceKm: 120.0
