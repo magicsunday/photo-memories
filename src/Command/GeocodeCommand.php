@@ -190,9 +190,9 @@ final class GeocodeCommand extends Command
                 $io->note('Bestehende POI-Daten werden neu abgerufen.');
             }
 
-            [$poiProcessed, $poiUpdated, $poiNetCalls] = $this->processPoiUpdates($locationsForPois, $dryRun, $refreshPois, $output);
+            $statistics = $this->processPoiUpdates($locationsForPois, $dryRun, $refreshPois, $output);
 
-            $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $poiProcessed, $poiUpdated, $poiNetCalls));
+            $this->renderPoiUpdateSummary($io, $statistics, $dryRun);
         }
 
         if ($dryRun) {
@@ -219,13 +219,9 @@ final class GeocodeCommand extends Command
             return Command::SUCCESS;
         }
 
-        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, true, $output);
+        $statistics = $this->processPoiUpdates($locations, $dryRun, true, $output);
 
-        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
-
-        if ($dryRun) {
-            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
-        }
+        $this->renderPoiUpdateSummary($io, $statistics, $dryRun);
 
         return Command::SUCCESS;
     }
@@ -257,13 +253,9 @@ final class GeocodeCommand extends Command
             return Command::SUCCESS;
         }
 
-        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
+        $statistics = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
 
-        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
-
-        if ($dryRun) {
-            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
-        }
+        $this->renderPoiUpdateSummary($io, $statistics, $dryRun);
 
         return Command::SUCCESS;
     }
@@ -297,13 +289,9 @@ final class GeocodeCommand extends Command
             return Command::SUCCESS;
         }
 
-        [$processed, $updated, $netCalls] = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
+        $statistics = $this->processPoiUpdates($locations, $dryRun, $refreshPois, $output);
 
-        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
-
-        if ($dryRun) {
-            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
-        }
+        $this->renderPoiUpdateSummary($io, $statistics, $dryRun);
 
         return Command::SUCCESS;
     }
@@ -360,6 +348,20 @@ final class GeocodeCommand extends Command
         $output->writeln('');
 
         return [$processed, $updated, $netCalls];
+    }
+
+    /**
+     * @param array{int,int,int} $statistics
+     */
+    private function renderPoiUpdateSummary(SymfonyStyle $io, array $statistics, bool $dryRun): void
+    {
+        [$processed, $updated, $netCalls] = $statistics;
+
+        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $processed, $updated, $netCalls));
+
+        if ($dryRun) {
+            $io->writeln('Hinweis: Dry-Run – es wurden keine Änderungen gespeichert.');
+        }
     }
 
     /**
