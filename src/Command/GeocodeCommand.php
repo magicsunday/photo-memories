@@ -75,6 +75,10 @@ final class GeocodeCommand extends Command
         $missingPois = (bool) $input->getOption('missing-pois');
         $refreshPois = (bool) $input->getOption('refresh-pois');
 
+        if ($refreshPois) {
+            $all = true;
+        }
+
         $io->title('🗺️  Orte ermitteln');
 
         if ($missingPois) {
@@ -126,7 +130,7 @@ final class GeocodeCommand extends Command
         $batchSize = 10; // kleinerer Batch verringert Datenverlust bei Fehlern
         foreach ($medias as $m) {
             $bar->setMessage('Rückwärtssuche');
-            $loc = $this->linker->link($m, 'de');
+            $loc = $this->linker->link($m, 'de', $refreshPois);
 
             if ($loc instanceof Location) {
                 ++$linked;
