@@ -29,6 +29,7 @@ use function array_values;
 use function assert;
 use function count;
 use function in_array;
+use function intdiv;
 use function is_array;
 use function is_string;
 use function log;
@@ -88,6 +89,9 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         private int $minItemsPerDay = 3,
         private float $gpsOutlierRadiusKm = 1.0,
         private int $gpsOutlierMinSamples = 3,
+        private ?float $homeLat = null,
+        private ?float $homeLon = null,
+        private ?float $homeRadiusKm = null,
         private GeoDbscanHelper $dbscanHelper = new GeoDbscanHelper(),
     ) {
         if ($this->timezone === '') {
@@ -116,6 +120,18 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         if ($this->gpsOutlierMinSamples < 2) {
             throw new InvalidArgumentException('gpsOutlierMinSamples must be >= 2.');
+        }
+
+        if ($this->homeLat !== null && ($this->homeLat < -90.0 || $this->homeLat > 90.0)) {
+            throw new InvalidArgumentException('homeLat must be within -90 and 90 degrees.');
+        }
+
+        if ($this->homeLon !== null && ($this->homeLon < -180.0 || $this->homeLon > 180.0)) {
+            throw new InvalidArgumentException('homeLon must be within -180 and 180 degrees.');
+        }
+
+        if ($this->homeRadiusKm !== null && $this->homeRadiusKm <= 0.0) {
+            throw new InvalidArgumentException('homeRadiusKm must be > 0 when provided.');
         }
     }
 
@@ -163,6 +179,30 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     private function determineHome(array $items): ?array
     {
         $tz = new DateTimeZone($this->timezone);
+
+        if ($this->homeLat !== null && $this->homeLon !== null) {
+            $radius = $this->homeRadiusKm ?? $this->defaultHomeRadiusKm;
+
+            $country = null;
+            $locationInfo = $tz->getLocation();
+            if (is_array($locationInfo)) {
+                $countryCode = $locationInfo['country_code'] ?? null;
+                if (is_string($countryCode) && $countryCode !== '') {
+                    $country = strtolower($countryCode);
+                }
+            }
+
+            $offsetSeconds = (new DateTimeImmutable('now', $tz))->getOffset();
+            $timezoneOffset = intdiv($offsetSeconds, 60);
+
+            return [
+                'lat'             => $this->homeLat,
+                'lon'             => $this->homeLon,
+                'radius_km'       => $radius,
+                'country'         => $country,
+                'timezone_offset' => $timezoneOffset,
+            ];
+        }
 
         /**
          * @var array<string, array{members:list<Media>, countryCounts:array<string,int>, offsets:array<int,int>}>

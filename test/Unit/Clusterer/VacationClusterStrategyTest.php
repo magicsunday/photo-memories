@@ -21,9 +21,41 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 
 final class VacationClusterStrategyTest extends TestCase
 {
+    #[Test]
+    public function returnsConfiguredHomeWhenCoordinatesAreProvided(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 10.0,
+            minAwayDistanceKm: 60.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 2,
+            homeLat: 52.5200,
+            homeLon: 13.4050,
+            homeRadiusKm: 8.0,
+        );
+
+        $reflection = new ReflectionClass($strategy);
+        $method = $reflection->getMethod('determineHome');
+        $method->setAccessible(true);
+
+        /** @var array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}|null $home */
+        $home = $method->invoke($strategy, []);
+
+        self::assertNotNull($home);
+        self::assertSame(52.5200, $home['lat']);
+        self::assertSame(13.4050, $home['lon']);
+        self::assertSame(8.0, $home['radius_km']);
+        self::assertSame('de', $home['country']);
+        self::assertIsInt($home['timezone_offset']);
+    }
+
     #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
