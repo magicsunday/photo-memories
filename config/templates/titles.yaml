@@ -45,7 +45,7 @@ de:
         title: "Besonderer Ort: {{ place }}"
         subtitle: "{{ date_range }}"
     first_visit_place:
-        title: "Erstes Mal in {{ place }}"
+        title: "Erstes Mal: {{ place }}"
         subtitle: "{{ date_range }}"
 
     # Zuhause
