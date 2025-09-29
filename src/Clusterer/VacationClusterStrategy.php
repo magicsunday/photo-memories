@@ -85,6 +85,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         private float $minAwayDistanceKm = 120.0,
         private float $movementThresholdKm = 35.0,
         private int $minItemsPerDay = 3,
+        private float $gpsOutlierRadiusKm = 1.0,
+        private int $gpsOutlierMinSamples = 3,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -104,6 +106,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+
+        if ($this->gpsOutlierRadiusKm <= 0.0) {
+            throw new InvalidArgumentException('gpsOutlierRadiusKm must be > 0.');
+        }
+
+        if ($this->gpsOutlierMinSamples < 2) {
+            throw new InvalidArgumentException('gpsOutlierMinSamples must be >= 2.');
         }
     }
 
@@ -349,25 +359,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             $lon = $media->getGpsLon();
             if ($lat !== null && $lon !== null) {
                 $summary['gpsMembers'][] = $media;
-
-                $distanceKm = MediaMath::haversineDistanceInMeters(
-                    (float) $lat,
-                    (float) $lon,
-                    $home['lat'],
-                    $home['lon'],
-                ) / 1000.0;
-
-                if ($distanceKm > $summary['maxDistanceKm']) {
-                    $summary['maxDistanceKm'] = $distanceKm;
-                }
-
-                $summary['distanceSum'] += $distanceKm;
-                ++$summary['distanceCount'];
-
-                $hour = (int) $local->format('G');
-                if ($hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR) {
-                    $summary['nightGps'][] = $media;
-                }
             }
 
             $offset = $media->getTimezoneOffsetMin();
@@ -403,42 +394,85 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             return [];
         }
         foreach ($days as $date => &$summary) {
+            $summary['gpsMembers'] = $this->filterGpsOutliers(
+                $summary['gpsMembers'],
+                $this->gpsOutlierRadiusKm,
+                $this->gpsOutlierMinSamples,
+            );
+
+            $summary['nightGps']        = [];
+            $summary['maxDistanceKm']   = 0.0;
+            $summary['distanceSum']     = 0.0;
+            $summary['distanceCount']   = 0;
+            $summary['avgDistanceKm']   = 0.0;
+            $summary['travelKm']        = 0.0;
+            $summary['nightAway']       = false;
+
             $gpsMembers = $summary['gpsMembers'];
             if ($gpsMembers !== []) {
                 usort($gpsMembers, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $travelKm = 0.0;
                 $previous = null;
+
                 foreach ($gpsMembers as $gpsMedia) {
+                    $lat = $gpsMedia->getGpsLat();
+                    $lon = $gpsMedia->getGpsLon();
+                    $takenAt = $gpsMedia->getTakenAt();
+
+                    assert($lat !== null && $lon !== null);
+                    assert($takenAt instanceof DateTimeImmutable);
+
+                    $distanceKm = MediaMath::haversineDistanceInMeters(
+                        (float) $lat,
+                        (float) $lon,
+                        $home['lat'],
+                        $home['lon'],
+                    ) / 1000.0;
+
+                    if ($distanceKm > $summary['maxDistanceKm']) {
+                        $summary['maxDistanceKm'] = $distanceKm;
+                    }
+
+                    $summary['distanceSum'] += $distanceKm;
+                    ++$summary['distanceCount'];
+
+                    $local = $takenAt->setTimezone($tz);
+                    $hour  = (int) $local->format('G');
+                    if ($hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR) {
+                        $summary['nightGps'][] = $gpsMedia;
+                    }
+
                     if ($previous instanceof Media) {
                         $travelKm += MediaMath::haversineDistanceInMeters(
                             (float) $previous->getGpsLat(),
                             (float) $previous->getGpsLon(),
-                            (float) $gpsMedia->getGpsLat(),
-                            (float) $gpsMedia->getGpsLon(),
+                            (float) $lat,
+                            (float) $lon,
                         ) / 1000.0;
                     }
 
                     $previous = $gpsMedia;
                 }
 
-                $summary['travelKm'] = $travelKm;
-            }
+                $summary['gpsMembers'] = $gpsMembers;
+                $summary['travelKm']    = $travelKm;
 
-            if ($summary['distanceCount'] > 0) {
-                $summary['avgDistanceKm'] = $summary['distanceSum'] / $summary['distanceCount'];
-            }
+                if ($summary['distanceCount'] > 0) {
+                    $summary['avgDistanceKm'] = $summary['distanceSum'] / $summary['distanceCount'];
+                }
 
-            if ($summary['nightGps'] !== []) {
-                $centroid = MediaMath::centroid($summary['nightGps']);
-                $nightDistance = MediaMath::haversineDistanceInMeters(
-                    (float) $centroid['lat'],
-                    (float) $centroid['lon'],
-                    $home['lat'],
-                    $home['lon'],
-                ) / 1000.0;
+                if ($summary['nightGps'] !== []) {
+                    $centroid = MediaMath::centroid($summary['nightGps']);
+                    $nightDistance = MediaMath::haversineDistanceInMeters(
+                        (float) $centroid['lat'],
+                        (float) $centroid['lon'],
+                        $home['lat'],
+                        $home['lon'],
+                    ) / 1000.0;
 
-                $summary['nightAway'] = $nightDistance > $home['radius_km'];
+                    $summary['nightAway'] = $nightDistance > $home['radius_km'];
+                }
             }
 
             if ($summary['poiSamples'] > 0) {

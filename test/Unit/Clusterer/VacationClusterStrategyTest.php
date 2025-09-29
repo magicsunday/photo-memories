@@ -506,6 +506,88 @@ final class VacationClusterStrategyTest extends TestCase
     }
 
     #[Test]
+    public function ignoresExtremeGpsOutliersWhenScoringAwayDays(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            timezone: 'UTC',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 80.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 3,
+            gpsOutlierRadiusKm: 2.0,
+            gpsOutlierMinSamples: 3,
+        );
+
+        $homeLocation = $this->makeLocation(
+            'home-berlin',
+            'Berlin, Germany',
+            52.5200,
+            13.4050,
+            country: 'Germany',
+            suburb: 'Mitte',
+            configure: static function (Location $location): void {
+                $location->setCountryCode('DE');
+                $location->setCategory('residential');
+            }
+        );
+
+        $outlierLocation = $this->makeLocation(
+            'outlier-sydney',
+            'Sydney, Australia',
+            -33.8688,
+            151.2093,
+            country: 'Australia',
+            suburb: 'Sydney',
+            configure: static function (Location $location): void {
+                $location->setCountryCode('AU');
+                $location->setCategory('tourism');
+            }
+        );
+
+        $items = [];
+        $id = 9000;
+        $start = new DateTimeImmutable('2024-08-01 09:00:00', new DateTimeZone('UTC'));
+
+        for ($day = 0; $day < 3; ++$day) {
+            $dayStart = $start->add(new DateInterval('P' . $day . 'D'));
+
+            for ($photo = 0; $photo < 3; ++$photo) {
+                $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 3) . 'H'));
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-%d-%d.jpg', $day, $photo),
+                    $timestamp,
+                    $homeLocation->getLat() + ($photo * 0.0005),
+                    $homeLocation->getLon() + ($photo * 0.0005),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
+
+            $outlierTimestamp = $dayStart->setTime(12, 0, 0);
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('outlier-%d.jpg', $day),
+                $outlierTimestamp,
+                $outlierLocation->getLat(),
+                $outlierLocation->getLon(),
+                $outlierLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(600);
+                }
+            );
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertSame([], $clusters);
+    }
+
+    #[Test]
     public function returnsEmptyWhenHomeCannotBeDerived(): void
     {
         $helper = new LocationHelper();
