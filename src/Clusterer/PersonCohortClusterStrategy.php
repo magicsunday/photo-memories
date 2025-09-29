@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -11,23 +13,25 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Clusters items by stable co-occurrence of persons within a time window.
  * Requires Media to expose person tags via getPersonIds() -> list<int>.
  */
-final class PersonCohortClusterStrategy implements ClusterStrategyInterface
+final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $minPersons = 2,
-        private readonly int $minItemsTotal   = 5,
-        private readonly int $windowDays = 14
+        private int $minPersons = 2,
+        private int $minItemsTotal   = 5,
+        private int $windowDays = 14
     ) {
         if ($this->minPersons < 1) {
-            throw new \InvalidArgumentException('minPersons must be >= 1.');
+            throw new InvalidArgumentException('minPersons must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
+
         if ($this->windowDays < 0) {
-            throw new \InvalidArgumentException('windowDays must be >= 0.');
+            throw new InvalidArgumentException('windowDays must be >= 0.');
         }
     }
 
@@ -94,7 +98,7 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
         $clusters = [];
 
         // Phase 2: merge consecutive days within window for each signature
-        foreach ($eligibleBuckets as $sig => $byDay) {
+        foreach ($eligibleBuckets as $byDay) {
             \ksort($byDay);
 
             $current = [];
@@ -107,7 +111,7 @@ final class PersonCohortClusterStrategy implements ClusterStrategyInterface
                     continue;
                 }
 
-                $gapDays = (new \DateTimeImmutable($day))->diff(new \DateTimeImmutable($lastDay))->days;
+                $gapDays = (new DateTimeImmutable($day))->diff(new DateTimeImmutable($lastDay))->days;
                 $gapDays = $gapDays === false || $gapDays === null ? 0 : (int) $gapDays;
 
                 if ($gapDays <= $this->windowDays) {

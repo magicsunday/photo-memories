@@ -15,7 +15,7 @@ final class ThumbnailPathResolver
         $thumbs = $m->getThumbnails();
 
         // Prefer associative [size => path]
-        if (\is_array($thumbs) && \count($thumbs) > 0) {
+        if (\is_array($thumbs) && $thumbs !== []) {
             /** @var array<int,string> $bySize */
             $bySize = [];
             foreach ($thumbs as $k => $v) {
@@ -25,6 +25,7 @@ final class ThumbnailPathResolver
                     $bySize[$k] = $v;
                 }
             }
+
             if ($bySize !== []) {
                 \ksort($bySize, \SORT_NUMERIC);
                 $best = null;
@@ -35,6 +36,7 @@ final class ThumbnailPathResolver
                         break;
                     }
                 }
+
                 if (\is_string($best) && \is_file($best)) {
                     return $best;
                 }

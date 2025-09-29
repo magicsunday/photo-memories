@@ -3,23 +3,24 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-final class DeviceSimilarityStrategy implements ClusterStrategyInterface
+final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly int $minItemsPerGroup = 5,
+        private LocationHelper $locHelper,
+        private int $minItemsPerGroup = 5,
     ) {
         if ($this->minItemsPerGroup < 1) {
-            throw new \InvalidArgumentException('minItemsPerGroup must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerGroup must be >= 1.');
         }
     }
 
@@ -48,7 +49,7 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
             $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
 
             $key = $device.'|'.$date.'|'.$locKey;
-            $groups[$key] = $groups[$key] ?? [];
+            $groups[$key] ??= [];
             $groups[$key][] = $m;
             $devices[$key] = $device;
         };
@@ -63,6 +64,7 @@ final class DeviceSimilarityStrategy implements ClusterStrategyInterface
             if ($m->getTakenAt() instanceof DateTimeImmutable) {
                 continue;
             }
+
             // Group timestamp-less media separately so they can still surface.
             $ingest($m, 'ohne-datum');
         }

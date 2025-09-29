@@ -11,11 +11,11 @@ use MagicSunday\Memories\Entity\Media;
  */
 final class MediaMath
 {
-    private const EARTH_RADIUS_KM = 6371.0088;
+    private const float EARTH_RADIUS_KM = 6371.0088;
 
-    public static function secondsBetween(\DateTimeImmutable $a, \DateTimeImmutable $b): int
+    public static function secondsBetween(DateTimeImmutable $a, DateTimeImmutable $b): int
     {
-        return (int) \abs($a->getTimestamp() - $b->getTimestamp());
+        return \abs($a->getTimestamp() - $b->getTimestamp());
     }
 
     public static function haversineDistanceInMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
@@ -26,7 +26,7 @@ final class MediaMath
         $a = \sin($dLat / 2) ** 2
             + \cos(\deg2rad($lat1)) * \cos(\deg2rad($lat2)) * \sin($dLon / 2) ** 2;
 
-        return (float) (2 * self::EARTH_RADIUS_KM * 1000 * \asin(\min(1.0, \sqrt($a))));
+        return 2 * self::EARTH_RADIUS_KM * 1000 * \asin(\min(1.0, \sqrt($a)));
     }
 
     /**
@@ -50,6 +50,7 @@ final class MediaMath
                 $n++;
             }
         }
+
         if ($n === 0) {
             return ['lat' => 0, 'lon' => 0];
         }
@@ -94,6 +95,7 @@ final class MediaMath
         if ($minSamples < 1) {
             $minSamples = 1;
         }
+
         if ($minCoverage <= 0.0) {
             $minCoverage = 0.01;
         }
@@ -122,11 +124,11 @@ final class MediaMath
         }
 
         \sort($ts, \SORT_NUMERIC);
-        $from = (int) $ts[0];
-        $to   = (int) $ts[\count($ts) - 1];
+        $from = $ts[0];
+        $to   = $ts[\count($ts) - 1];
 
         // Reject obviously bogus dates (e.g. 1970)
-        $minTs = (int) (new DateTimeImmutable(\sprintf('%04d-01-01', $minValidYear)))->getTimestamp();
+        $minTs = (new DateTimeImmutable(\sprintf('%04d-01-01', $minValidYear)))->getTimestamp();
         if ($from < $minTs || $to < $minTs) {
             return null;
         }

@@ -28,7 +28,7 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             $media[] = $this->createMedia(
                 500 + $i,
                 $base->modify('+' . ($i * 20) . ' minutes'),
-                "city-skyline-{$i}.jpg",
+                sprintf('city-skyline-%d.jpg', $i),
                 48.1351 + $i * 0.0002,
                 11.5820 + $i * 0.0002,
             );
@@ -58,7 +58,7 @@ final class CityscapeNightClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(
                 600 + $i,
                 new DateTimeImmutable('2023-05-21 12:00:00', new DateTimeZone('UTC')),
-                "city-skyline-{$i}.jpg",
+                sprintf('city-skyline-%d.jpg', $i),
                 48.13 + $i * 0.001,
                 11.58 + $i * 0.001,
             );

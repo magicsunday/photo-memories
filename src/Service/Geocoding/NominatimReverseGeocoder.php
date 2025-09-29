@@ -9,14 +9,14 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Reverse geocoding via Nominatim (OpenStreetMap).
  * Be polite: identify User-Agent and respect rate limits in caller.
  */
-final class NominatimReverseGeocoder implements ReverseGeocoderInterface
+final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterface
 {
     public function __construct(
-        private readonly HttpClientInterface $http,
-        private readonly string $baseUrl = 'https://nominatim.openstreetmap.org',
-        private readonly string $userAgent = 'Rueckblick/1.0',
-        private readonly ?string $contactEmail = null,
-        private readonly int $zoom = 14 // 0..18 – 14 = street level
+        private HttpClientInterface $http,
+        private string $baseUrl = 'https://nominatim.openstreetmap.org',
+        private string $userAgent = 'Rueckblick/1.0',
+        private ?string $contactEmail = null,
+        private int $zoom = 14 // 0..18 – 14 = street level
     ) {
     }
 
@@ -46,7 +46,7 @@ final class NominatimReverseGeocoder implements ReverseGeocoderInterface
         }
 
         /** @var array<string,mixed> $data */
-        $data = (array) $resp->toArray(false);
+        $data = $resp->toArray(false);
 
         $placeId = isset($data['place_id']) ? (string) $data['place_id'] : null;
         $display = isset($data['display_name']) && \is_string($data['display_name']) ? $data['display_name'] : null;

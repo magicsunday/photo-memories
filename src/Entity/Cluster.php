@@ -62,6 +62,7 @@ class Cluster
         if (\count($members) > 1) {
             \sort($members, \SORT_NUMERIC);
         }
+
         return \sha1(\implode(',', $members));
     }
 

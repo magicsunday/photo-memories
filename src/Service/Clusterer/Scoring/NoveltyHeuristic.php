@@ -18,13 +18,13 @@ use MagicSunday\Memories\Entity\Media;
  *
  * No external models; runs on fields already present on Media.
  */
-final class NoveltyHeuristic
+final readonly class NoveltyHeuristic
 {
     public function __construct(
-        private readonly float $gridStepDeg = 0.5,     // ~55 km
-        private readonly int $phashPrefixNibbles = 4,  // 4 hex chars -> 16 bit
+        private float $gridStepDeg = 0.5,     // ~55 km
+        private int $phashPrefixNibbles = 4,  // 4 hex chars -> 16 bit
         /** @var array{place: float, time: float, device: float, content: float} */
-        private readonly array $weights = [
+        private array $weights = [
             'place'   => 0.35,
             'time'    => 0.25,
             'device'  => 0.20,
@@ -124,13 +124,14 @@ final class NoveltyHeuristic
         // --- time rarity: average rarity across involved days (from time_range if vorhanden, sonst per members)
         $time = 0.5;
         $days = $this->collectClusterDays($cluster, $mediaMap);
-        if (\count($days) > 0) {
+        if ($days !== []) {
             $acc = 0.0;
             foreach ($days as $d) {
                 $cnt = (int) ($stats['doy'][$d] ?? 0);
                 $max = (int) ($stats['max']['doy'] ?? 0);
                 $acc += $this->rarityFromCounts($cnt, $max);
             }
+
             $time = $acc / \count($days);
         }
 
@@ -151,6 +152,7 @@ final class NoveltyHeuristic
             $max = (int) ($stats['max']['phash'] ?? 0);
             $content = $this->rarityFromCounts($cnt, $max);
         }
+
         return
             $this->weights['place']   * $place +
             $this->weights['time']    * $time +
@@ -169,6 +171,7 @@ final class NoveltyHeuristic
                 $max = $v;
             }
         }
+
         return $max;
     }
 
@@ -178,6 +181,7 @@ final class NoveltyHeuristic
         if ($maxCount <= 0) {
             return 0.5; // neutral if we have no reference
         }
+
         // invert + clamp; small offset keeps 0-count clearly rare
         $norm = 1.0 - (\min($count, $maxCount) / (float) $maxCount);
         return \max(0.0, \min(1.0, $norm));
@@ -242,7 +246,7 @@ final class NoveltyHeuristic
         foreach ($c->getMembers() as $id) {
             $m = $mediaMap[$id] ?? null;
             $t = $m instanceof Media ? $m->getTakenAt() : null;
-            if ($t !== null) {
+            if ($t instanceof DateTimeImmutable) {
                 $out[] = (int) $t->format('z') + 1;
             }
         }
@@ -258,11 +262,13 @@ final class NoveltyHeuristic
             if (!$m instanceof Media) {
                 continue;
             }
+
             $dev = $m->getCameraModel();
             if (\is_string($dev) && $dev !== '') {
                 $cnt[$dev] = ($cnt[$dev] ?? 0) + 1;
             }
         }
+
         $best = null;
         $bestN = 0;
         foreach ($cnt as $k => $n) {
@@ -271,6 +277,7 @@ final class NoveltyHeuristic
                 $bestN = $n;
             }
         }
+
         return $best;
     }
 
@@ -285,10 +292,16 @@ final class NoveltyHeuristic
             if (!$m instanceof Media) {
                 continue;
             }
+
             $ph = $m->getPhash();
-            if (!\is_string($ph) || $ph === '') {
+            if (!\is_string($ph)) {
                 continue;
             }
+
+            if ($ph === '') {
+                continue;
+            }
+
             $prefix = \substr(\strtolower($ph), 0, $nibbles);
             $key = 'h:' . $prefix;
             $cnt[$key] = ($cnt[$key] ?? 0) + 1;

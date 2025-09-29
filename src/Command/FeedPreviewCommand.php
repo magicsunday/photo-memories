@@ -4,14 +4,12 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;

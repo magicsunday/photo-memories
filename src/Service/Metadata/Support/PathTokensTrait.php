@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
-use MagicSunday\Memories\Entity\Media;
-
 trait PathTokensTrait
 {
     /** @return list<string> */
@@ -21,6 +19,7 @@ trait PathTokensTrait
                 $out[] = $p;
             }
         }
+
         return $out;
     }
 }

@@ -9,19 +9,22 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Helper for deriving location keys and display labels from Location entities.
  */
-final class LocationHelper
+final readonly class LocationHelper
 {
-    private const POI_NAME_BONUS = 100;
-    private const POI_CATEGORY_VALUE_BONUS = 30;
-    private const POI_WIKIDATA_BONUS = 120;
-    private const POI_DISTANCE_PENALTY_DIVISOR = 25;
+    private const int POI_NAME_BONUS = 100;
+
+    private const int POI_CATEGORY_VALUE_BONUS = 30;
+
+    private const int POI_WIKIDATA_BONUS = 120;
+
+    private const int POI_DISTANCE_PENALTY_DIVISOR = 25;
 
     /**
      * Tag specific weightings favouring more significant POIs.
      *
      * @var array<string,int>
      */
-    private const POI_TAG_WEIGHTS = [
+    private const array POI_TAG_WEIGHTS = [
         'tourism' => 600,
         'historic' => 450,
         'man_made' => 220,
@@ -40,7 +43,7 @@ final class LocationHelper
      *
      * @var array<string,int>
      */
-    private const POI_CATEGORY_KEY_BONUS = [
+    private const array POI_CATEGORY_KEY_BONUS = [
         'tourism' => 220,
         'historic' => 180,
         'man_made' => 150,
@@ -58,14 +61,14 @@ final class LocationHelper
      *
      * @var array<string,int>
      */
-    private const POI_TAG_VALUE_BONUS = [
+    private const array POI_TAG_VALUE_BONUS = [
         'man_made:tower' => 260,
     ];
 
     /**
      * @var list<string>
      */
-    private readonly array $preferredLocaleKeys;
+    private array $preferredLocaleKeys;
 
     public function __construct(?string $preferredLocale = null)
     {
@@ -96,10 +99,15 @@ final class LocationHelper
         $cell   = \method_exists($loc, 'getCell') ? $loc->getCell() : null;
 
         if ($suburb !== null) { $parts[] = 'suburb:'.$suburb; }
+
         if ($city   !== null) { $parts[] = 'city:'.$city; }
+
         if ($county !== null) { $parts[] = 'county:'.$county; }
+
         if ($state  !== null) { $parts[] = 'state:'.$state; }
+
         if ($country!== null) { $parts[] = 'country:'.$country; }
+
         if ($parts === [] && $cell !== null) {
             $parts[] = 'cell:'.$cell;
         }
@@ -129,20 +137,7 @@ final class LocationHelper
         $county  = $loc->getCounty();
         $state   = $loc->getState();
         $country = $loc->getCountry();
-
-        if ($city !== null) {
-            return $city;
-        }
-        if ($county !== null) {
-            return $county;
-        }
-        if ($state !== null) {
-            return $state;
-        }
-        if ($country !== null) {
-            return $country;
-        }
-        return null;
+        return (($city ?? $county) ?? $state) ?? $country;
     }
 
     /**
@@ -177,6 +172,7 @@ final class LocationHelper
             if ($label === null) {
                 continue;
             }
+
             $count[$label] = ($count[$label] ?? 0) + 1;
         }
 
@@ -378,6 +374,7 @@ final class LocationHelper
         if ($name === null) {
             $name = $this->coalesceName($names);
         }
+
         $categoryKey = \is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
         $categoryValue = \is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;
 
@@ -528,12 +525,17 @@ final class LocationHelper
                     if (!\is_string($locale)) {
                         continue;
                     }
+
                     $locale = \strtolower(\str_replace(' ', '_', $locale));
                     if ($locale === '') {
                         continue;
                     }
 
-                    if (!\is_string($value) || $value === '') {
+                    if (!\is_string($value)) {
+                        continue;
+                    }
+
+                    if ($value === '') {
                         continue;
                     }
 
@@ -629,10 +631,12 @@ final class LocationHelper
             if (!\is_string($candidate)) {
                 continue;
             }
+
             $trimmed = \trim($candidate);
             if ($trimmed === '') {
                 continue;
             }
+
             $filtered[$trimmed] = true;
         }
 

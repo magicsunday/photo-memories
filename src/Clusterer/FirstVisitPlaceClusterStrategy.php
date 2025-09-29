@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
@@ -14,37 +15,42 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Detects the earliest visit session per geogrid cell (first time at this place).
  */
-final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
+final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly float $gridDegrees = 0.01, // ~1.1 km in lat
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerDay = 4,
-        private readonly int $minNights = 0,  // 0..3 (0 means single day ok)
-        private readonly int $maxNights = 3,
-        private readonly int $minItemsTotal = 8
+        private LocationHelper $locHelper,
+        private float $gridDegrees = 0.01, // ~1.1 km in lat
+        private string $timezone = 'Europe/Berlin',
+        private int $minItemsPerDay = 4,
+        private int $minNights = 0,  // 0..3 (0 means single day ok)
+        private int $maxNights = 3,
+        private int $minItemsTotal = 8
     ) {
         if ($this->gridDegrees <= 0.0) {
-            throw new \InvalidArgumentException('gridDegrees must be > 0.');
+            throw new InvalidArgumentException('gridDegrees must be > 0.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minNights < 0) {
-            throw new \InvalidArgumentException('minNights must be >= 0.');
+            throw new InvalidArgumentException('minNights must be >= 0.');
         }
+
         if ($this->maxNights < 0) {
-            throw new \InvalidArgumentException('maxNights must be >= 0.');
+            throw new InvalidArgumentException('maxNights must be >= 0.');
         }
+
         if ($this->maxNights < $this->minNights) {
-            throw new \InvalidArgumentException('maxNights must be >= minNights.');
+            throw new InvalidArgumentException('maxNights must be >= minNights.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -102,9 +108,10 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
             $prev = null;
 
             $flush = function () use (&$runDays, &$out, $eligibleDaysMap, $cell, &$seenPlaceDay, $tz): void {
-                if (\count($runDays) === 0) {
+                if ($runDays === []) {
                     return;
                 }
+
                 /** @var list<Media> $members */
                 $members = [];
                 foreach ($runDays as $d) {
@@ -112,16 +119,18 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                         $members[] = $m;
                     }
                 }
+
                 $memberCount = \count($members);
                 if ($memberCount < $this->minItemsTotal) {
                     $runDays = [];
                     return;
                 }
+
                 \usort($members, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
                 $centroid = MediaMath::centroid($members);
                 $time     = MediaMath::timeRange($members);
-                $dayLocal = (new DateTimeImmutable('@' . (string) $time['from']))
+                $dayLocal = (new DateTimeImmutable('@' . $time['from']))
                     ->setTimezone($tz)
                     ->format('Y-m-d');
                 $duration = \max(0, (int) ($time['to'] - $time['from']));
@@ -195,6 +204,7 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                         $haveFirst = true;
                         break; // only earliest session per cell
                     }
+
                     $runDays = [];
                 }
 
@@ -202,7 +212,7 @@ final class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
                 $prev = $d;
             }
 
-            if ($haveFirst === false && \count($runDays) > 0) {
+            if ($haveFirst === false && $runDays !== []) {
                 $nights = \max(0, \count($runDays) - 1);
                 if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                     $flush();

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use Throwable;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 
@@ -15,10 +16,10 @@ use MagicSunday\Memories\Entity\Media;
  * - GPS: converts DMS to decimal; GPSSpeedRef K/M/N -> m/s; altitude sign via GPSAltitudeRef.
  * - Fallback for dimensions via EXIF COMPUTED if Media width/height are not set.
  */
-final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
+final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private readonly bool $readExifForVideos = false
+        private bool $readExifForVideos = false
     ) {
     }
 
@@ -28,13 +29,12 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if ($mime === null) {
             return false;
         }
+
         if (\str_starts_with($mime, 'image/')) {
             return true;
         }
-        if ($this->readExifForVideos && \str_starts_with($mime, 'video/')) {
-            return true;
-        }
-        return false;
+
+        return $this->readExifForVideos && \str_starts_with($mime, 'video/');
     }
 
     public function extract(string $filepath, Media $media): Media
@@ -47,7 +47,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         try {
             /** @var array<string,mixed>|false $exif */
             $exif = @\exif_read_data($filepath, null, true, false);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $exif = false;
         }
 
@@ -73,6 +73,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
             if ($w !== null && $w > 0) {
                 $media->setWidth($w);
             }
+
             if ($h !== null && $h > 0) {
                 $media->setHeight($h);
             }
@@ -94,9 +95,11 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if ($make !== null) {
             $media->setCameraMake($make);
         }
+
         if ($model !== null) {
             $media->setCameraModel($model);
         }
+
         if ($lens !== null) {
             $media->setLensModel($lens);
         }
@@ -111,18 +114,23 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if ($focalMm !== null) {
             $media->setFocalLengthMm($focalMm);
         }
+
         if ($focal35 !== null) {
             $media->setFocalLength35mm($focal35);
         }
+
         if ($fNumber !== null) {
             $media->setApertureF($fNumber);
         }
+
         if ($exposureS !== null) {
             $media->setExposureTimeS($exposureS);
         }
+
         if ($iso !== null) {
             $media->setIso($iso);
         }
+
         if ($flash !== null) {
             $media->setFlashFired(($flash & 1) === 1);
         }
@@ -142,9 +150,11 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
                 if ($gps['alt'] !== null) {
                     $media->setGpsAlt($gps['alt']);
                 }
+
                 if ($gps['speed'] !== null) {
                     $media->setGpsSpeedMps($gps['speed']);
                 }
+
                 if ($gps['course'] !== null) {
                     $media->setGpsHeadingDeg($gps['course']);
                 }
@@ -158,6 +168,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
             if ($hM > $wM && ((float) $hM / (float) $wM) >= 1.2) {
                 $media->setIsPortrait(true);
             }
+
             if ($wM > $hM && ((float) $wM / (float) $hM) >= 2.4) {
                 $media->setIsPanorama(true);
             }
@@ -189,18 +200,20 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
                     $norm[16] = ':';
                     try {
                         return new DateTimeImmutable($norm);
-                    } catch (\Throwable) {
+                    } catch (Throwable) {
                         // continue with fallback below
                     }
                 }
+
                 try {
                     // Fallback: feed original as-is
                     return new DateTimeImmutable($c);
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     // try next candidate
                 }
             }
         }
+
         return null;
     }
 
@@ -210,6 +223,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (!\is_string($off)) {
             return null;
         }
+
         // Match "+02:00" or "+0200"
         if (\preg_match('~^([+-])(\d{2}):?(\d{2})$~', $off, $m) === 1) {
             $sign = $m[1] === '-' ? -1 : 1;
@@ -217,6 +231,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
             $mn = (int) $m[3];
             return $sign * ($h * 60 + $mn);
         }
+
         return null;
     }
 
@@ -226,9 +241,11 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (\is_int($v)) {
             return $v;
         }
+
         if (\is_string($v) && $v !== '') {
             return (int) $v;
         }
+
         return null;
     }
 
@@ -238,18 +255,22 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (\is_int($v)) {
             return $v;
         }
+
         if (\is_string($v) && $v !== '') {
             return (int) $v;
         }
+
         if (\is_array($v) && isset($v[0])) {
             $first = $v[0];
             if (\is_int($first)) {
                 return $first;
             }
+
             if (\is_string($first) && $first !== '') {
                 return (int) $first;
             }
         }
+
         return null;
     }
 
@@ -259,17 +280,21 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (\is_float($v)) {
             return $v;
         }
+
         if (\is_int($v)) {
             return (float) $v;
         }
+
         if (\is_string($v) && $v !== '') {
             if (\str_contains($v, '/')) {
                 [$a, $b] = \array_pad(\explode('/', $v, 2), 2, '1');
                 $bn = (float) $b;
                 return $bn !== 0.0 ? (float) $a / $bn : null;
             }
+
             return (float) $v;
         }
+
         return null;
     }
 
@@ -281,12 +306,15 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
             $bn = (float) $b;
             return $bn !== 0.0 ? (float) $a / $bn : null;
         }
+
         if (\is_float($v)) {
             return $v;
         }
+
         if (\is_int($v)) {
             return (float) $v;
         }
+
         return null;
     }
 
@@ -295,6 +323,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (\is_string($v) && $v !== '') {
             return $v;
         }
+
         return null;
     }
 
@@ -321,7 +350,7 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         $speed   = $this->floatOrRational($gps['GPSSpeed'] ?? null);
         $speedMs = null;
         if ($speed !== null) {
-            $ref = \is_string($gps['GPSSpeedRef'] ?? null) ? (string) $gps['GPSSpeedRef'] : 'K';
+            $ref = \is_string($gps['GPSSpeedRef'] ?? null) ? $gps['GPSSpeedRef'] : 'K';
             $speedMs = match (\strtoupper($ref)) {
                 'M' => $speed * 0.44704,   // mph -> m/s
                 'N' => $speed * 0.514444, // knots -> m/s
@@ -344,12 +373,14 @@ final class ExifMetadataExtractor implements SingleMetadataExtractorInterface
         if (!\is_array($val)) {
             return null;
         }
+
         $deg = $this->floatOrRational($val[0] ?? null);
         $min = $this->floatOrRational($val[1] ?? null);
         $sec = $this->floatOrRational($val[2] ?? null);
         if ($deg === null || $min === null || $sec === null) {
             return null;
         }
+
         $sign = ($ref === 'S' || $ref === 'W') ? -1.0 : 1.0;
         return $sign * ($deg + $min / 60.0 + $sec / 3600.0);
     }

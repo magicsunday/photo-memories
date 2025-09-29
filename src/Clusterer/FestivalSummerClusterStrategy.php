@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,44 +13,50 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Outdoor festival/open-air sessions in summer months.
  */
-final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
+final readonly class FestivalSummerClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly float $radiusMeters = 600.0,
-        private readonly int $minItemsPerRun = 8,
-        private readonly int $startMonth = 6,
-        private readonly int $endMonth = 9,
-        private readonly int $afternoonStartHour = 14,
-        private readonly int $lateNightCutoffHour = 2
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 3 * 3600,
+        private float $radiusMeters = 600.0,
+        private int $minItemsPerRun = 8,
+        private int $startMonth = 6,
+        private int $endMonth = 9,
+        private int $afternoonStartHour = 14,
+        private int $lateNightCutoffHour = 2
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
         foreach ([$this->startMonth, $this->endMonth] as $month) {
             if ($month < 1 || $month > 12) {
-                throw new \InvalidArgumentException('Months must be within 1..12.');
+                throw new InvalidArgumentException('Months must be within 1..12.');
             }
         }
+
         if ($this->startMonth > $this->endMonth) {
-            throw new \InvalidArgumentException('startMonth must be <= endMonth.');
+            throw new InvalidArgumentException('startMonth must be <= endMonth.');
         }
+
         foreach ([$this->afternoonStartHour, $this->lateNightCutoffHour] as $hour) {
             if ($hour < 0 || $hour > 23) {
-                throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+                throw new InvalidArgumentException('Hour bounds must be within 0..23.');
             }
         }
+
         if ($this->afternoonStartHour <= $this->lateNightCutoffHour) {
-            throw new \InvalidArgumentException('afternoonStartHour must be greater than lateNightCutoffHour.');
+            throw new InvalidArgumentException('afternoonStartHour must be greater than lateNightCutoffHour.');
         }
     }
 
@@ -108,10 +115,12 @@ final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -143,6 +152,7 @@ final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if ($ok === false) {
                 continue;
             }
@@ -175,6 +185,7 @@ final class FestivalSummerClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

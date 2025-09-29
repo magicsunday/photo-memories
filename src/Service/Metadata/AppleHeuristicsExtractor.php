@@ -27,6 +27,7 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
         if ($pair !== null) {
             $media->setLivePairChecksum($pair);
         }
+
         return $media;
     }
 
@@ -35,12 +36,21 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
         $candidates = [$path . '.xmp', $path];
         foreach ($candidates as $f) {
             if (!\is_file($f)) { continue; }
+
             $blob = @\file_get_contents($f, false, null, 0, 512 * 1024);
-            if (!\is_string($blob) || $blob === '') { continue; }
+            if (!\is_string($blob)) {
+                continue;
+            }
+
+            if ($blob === '') {
+                continue;
+            }
+
             if (\preg_match('~(BurstUUID|Apple\:RunUUID)\s*["\']?[:=]\s*["\']?([0-9A-Fa-f\-]{8,})~', $blob, $m)) {
                 return $m[2];
             }
         }
+
         return null;
     }
 
@@ -61,9 +71,11 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
                 $have[] = $c;
             }
         }
+
         if (\count($have) < 2) {
             return null;
         }
+
         return \sha1(\implode('|', \array_map(static fn(string $f): string => \basename($f), $have)));
     }
 }

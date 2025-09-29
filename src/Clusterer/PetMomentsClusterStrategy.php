@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -10,19 +11,20 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Heuristic pet moments based on path keywords; grouped into time sessions.
  */
-final class PetMomentsClusterStrategy implements ClusterStrategyInterface
+final readonly class PetMomentsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItemsPerRun = 6
+        private int $sessionGapSeconds = 2 * 3600,
+        private int $minItemsPerRun = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -61,10 +63,12 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -111,6 +115,7 @@ final class PetMomentsClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

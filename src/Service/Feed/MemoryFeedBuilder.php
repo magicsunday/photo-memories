@@ -3,10 +3,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
+use DateTimeZone;
 use DateTimeImmutable;
-use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
@@ -19,17 +18,17 @@ use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
  * - simple diversity by (place, algorithm)
  * - pick cover by heuristic
  */
-final class MemoryFeedBuilder implements FeedBuilderInterface
+final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 {
     public function __construct(
-        private readonly TitleGeneratorInterface $titleGen,
-        private readonly CoverPickerInterface $coverPicker,
-        private readonly MediaRepository $mediaRepo,
-        private readonly float $minScore = 0.35,
-        private readonly int $minMembers = 4,
-        private readonly int $maxPerDay = 6,
-        private readonly int $maxTotal = 60,
-        private readonly int $maxPerAlgorithm = 12
+        private TitleGeneratorInterface $titleGen,
+        private CoverPickerInterface $coverPicker,
+        private MediaRepository $mediaRepo,
+        private float $minScore = 0.35,
+        private int $minMembers = 4,
+        private int $maxPerDay = 6,
+        private int $maxTotal = 60,
+        private int $maxPerAlgorithm = 12
     ) {
     }
 
@@ -43,9 +42,11 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
             if ($score < $this->minScore) {
                 continue;
             }
+
             if (\count($members) < $this->minMembers) {
                 continue;
             }
+
             $filtered[] = $c;
         }
 
@@ -81,6 +82,7 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
             if ($dayKey === null) {
                 continue;
             }
+
             $cap = (int) ($dayCount[$dayKey] ?? 0);
             if ($cap >= $this->maxPerDay) {
                 continue;
@@ -104,6 +106,7 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
                     continue;
                 }
             }
+
             $algKey = \sprintf('%s|%s', $dayKey, $alg);
             if (($seenAlg[$algKey] ?? 0) >= 2) { // max 2 per algo/day
                 continue;
@@ -114,6 +117,7 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
             if ($members === []) {
                 continue;
             }
+
             $cover = $this->coverPicker->pickCover($members, $c->getParams());
             $coverId = $cover?->getId();
 
@@ -135,6 +139,7 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
             if (\is_string($place)) {
                 $seenPlace[\sprintf('%s|%s', $dayKey, $place)] = ($seenPlace[\sprintf('%s|%s', $dayKey, $place)] ?? 0) + 1;
             }
+
             $seenAlg[$algKey] = ($seenAlg[$algKey] ?? 0) + 1;
             $algCount[$alg] = ($algCount[$alg] ?? 0) + 1;
         }
@@ -148,11 +153,13 @@ final class MemoryFeedBuilder implements FeedBuilderInterface
         if (!\is_array($tr) || !isset($tr['to'])) {
             return null;
         }
+
         $to = (int) $tr['to'];
         if ($to <= 0) {
             return null;
         }
-        $d = (new DateTimeImmutable("@{$to}"))->setTimezone(new \DateTimeZone('Europe/Berlin'));
+
+        $d = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
         return $d->format('Y-m-d');
     }
 }

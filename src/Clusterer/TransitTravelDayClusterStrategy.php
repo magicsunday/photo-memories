@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,21 +13,22 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Marks "travel days" by summing GPS path distance within the day.
  */
-final class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
+final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly float $minTravelKm = 60.0,
+        private string $timezone = 'Europe/Berlin',
+        private float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
-        private readonly int $minItemsPerDay = 5
+        private int $minItemsPerDay = 5
     ) {
         if ($this->minTravelKm <= 0.0) {
-            throw new \InvalidArgumentException('minTravelKm must be > 0.');
+            throw new InvalidArgumentException('minTravelKm must be > 0.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 

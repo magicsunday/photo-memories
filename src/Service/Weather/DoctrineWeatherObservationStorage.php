@@ -14,11 +14,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\WeatherObservation;
 use MagicSunday\Memories\Repository\WeatherObservationRepository;
 
-final class DoctrineWeatherObservationStorage implements WeatherObservationStorageInterface
+final readonly class DoctrineWeatherObservationStorage implements WeatherObservationStorageInterface
 {
     public function __construct(
-        private readonly WeatherObservationRepository $repository,
-        private readonly EntityManagerInterface $entityManager,
+        private WeatherObservationRepository $repository,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 

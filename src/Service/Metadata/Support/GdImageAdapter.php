@@ -3,15 +3,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
+use Throwable;
 use GdImage;
 
 /**
  * GD-based adapter.
  */
-final class GdImageAdapter implements ImageAdapterInterface
+final readonly class GdImageAdapter implements ImageAdapterInterface
 {
     public function __construct(
-        private readonly GdImage $image
+        private GdImage $image
     ) {
     }
 
@@ -20,7 +21,8 @@ final class GdImageAdapter implements ImageAdapterInterface
         if (!\is_file($path)) {
             return null;
         }
-        $ext = \strtolower((string) \pathinfo($path, \PATHINFO_EXTENSION));
+
+        $ext = \strtolower(\pathinfo($path, \PATHINFO_EXTENSION));
         $im = null;
 
         try {
@@ -39,7 +41,7 @@ final class GdImageAdapter implements ImageAdapterInterface
                     $im = @\imagecreatefromstring($blob) ?: null;
                 }
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $im = null;
         }
 

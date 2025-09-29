@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
@@ -17,7 +18,7 @@ abstract class TestCase extends BaseTestCase
 
     protected function assignId(Media $media, int $id): void
     {
-        \Closure::bind(function (Media $m, int $value): void {
+        Closure::bind(function (Media $m, int $value): void {
             $m->id = $value;
         }, null, Media::class)($media, $id);
     }
@@ -58,7 +59,7 @@ abstract class TestCase extends BaseTestCase
             $media->setGpsLon($lon);
         }
 
-        if ($location !== null) {
+        if ($location instanceof Location) {
             $media->setLocation($location);
 
             if ($lat === null) {
@@ -118,31 +119,29 @@ abstract class TestCase extends BaseTestCase
         int $size = 1024,
         ?string $checksum = null,
     ): Media {
-        $factory = static function (string $mediaPath, string $mediaChecksum, int $mediaSize) use ($personIds): Media {
-            return new class ($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
-                /**
-                 * @var list<int>
-                 */
-                private array $personIds;
+        $factory = (static fn(string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class ($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
+            /**
+             * @var list<int>
+             */
+            private readonly array $personIds;
 
-                /**
-                 * @param list<int> $personIds
-                 */
-                public function __construct(string $path, string $checksum, int $size, array $personIds)
-                {
-                    parent::__construct($path, $checksum, $size);
-                    $this->personIds = $personIds;
-                }
+            /**
+             * @param list<int> $personIds
+             */
+            public function __construct(string $path, string $checksum, int $size, array $personIds)
+            {
+                parent::__construct($path, $checksum, $size);
+                $this->personIds = $personIds;
+            }
 
-                /**
-                 * @return list<int>
-                 */
-                public function getPersonIds(): array
-                {
-                    return $this->personIds;
-                }
-            };
-        };
+            /**
+             * @return list<int>
+             */
+            public function getPersonIds(): array
+            {
+                return $this->personIds;
+            }
+        });
 
         return $this->makeMedia(
             id: $id,
@@ -246,9 +245,7 @@ abstract class TestCase extends BaseTestCase
     ): void {
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
             $anchor = new DateTimeImmutable('now', $timezone);
-            $isStable = static function () use ($anchor, $timezone, $format): bool {
-                return (new DateTimeImmutable('now', $timezone))->format($format) === $anchor->format($format);
-            };
+            $isStable = (static fn(): bool => (new DateTimeImmutable('now', $timezone))->format($format) === $anchor->format($format));
 
             if ($callback($anchor, $isStable) === true) {
                 return;

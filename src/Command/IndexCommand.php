@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
+use finfo;
+use Throwable;
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
+use FilesystemIterator;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
@@ -32,16 +37,17 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class IndexCommand extends Command
 {
     /** @var string[] */
-    private array $imageExt;
+    private readonly array $imageExt;
 
     /** @var string[] */
-    private array $videoExt;
+    private readonly array $videoExt;
 
     public function __construct(
-        private EntityManagerInterface $em,
-        private MetadataExtractorInterface $metadataExtractor,
-        private ThumbnailServiceInterface $thumbnailService,
-        #[Autowire(env: 'MEMORIES_MEDIA_DIR')] private string $defaultMediaDir,
+        private readonly EntityManagerInterface $em,
+        private readonly MetadataExtractorInterface $metadataExtractor,
+        private readonly ThumbnailServiceInterface $thumbnailService,
+        #[Autowire(env: 'MEMORIES_MEDIA_DIR')]
+ private readonly string $defaultMediaDir,
         #[Autowire(param: 'memories.index.image_ext')] ?array $imageExt = null,
         #[Autowire(param: 'memories.index.video_ext')] ?array $videoExt = null,
     ) {
@@ -80,13 +86,13 @@ final class IndexCommand extends Command
         $strictMime  = (bool) $input->getOption('strict-mime');
 
         if (!\is_dir($path)) {
-            $output->writeln("<error>Pfad existiert nicht oder ist kein Verzeichnis: {$path}</error>");
+            $output->writeln(sprintf('<error>Pfad existiert nicht oder ist kein Verzeichnis: %s</error>', $path));
             return Command::FAILURE;
         }
 
-        $output->writeln("Starte Indexierung: <info>{$path}</info>");
+        $output->writeln(sprintf('Starte Indexierung: <info>%s</info>', $path));
         $output->writeln($withThumbs ? '<comment>Thumbnails werden erzeugt.</comment>' : '<comment>Thumbnails werden nicht erzeugt (Option --thumbnails verwenden).</comment>');
-        if ($strictMime === true) {
+        if ($strictMime) {
             $output->writeln('<comment>Strikter MIME-Check ist aktiv.</comment>');
         }
 
@@ -100,7 +106,7 @@ final class IndexCommand extends Command
         }
 
         // Shared finfo instance for this run
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
 
         // Optional progress bar
         $progress = null;
@@ -115,7 +121,7 @@ final class IndexCommand extends Command
         $batch = 0;
 
         foreach ($files as $filepath) {
-            if ($progress !== null) {
+            if ($progress instanceof ProgressBar) {
                 $progress->setMessage($filepath, 'filename');
             }
 
@@ -123,32 +129,36 @@ final class IndexCommand extends Command
             $detectedMime = $this->detectMime($filepath, $finfo);
 
             // If strict MIME is enabled, enforce consistency with extension
-            if ($strictMime === true) {
+            if ($strictMime) {
                 $isImage = $this->isImageExt($filepath);
                 $isVideo = $this->isVideoExt($filepath);
 
                 if ($isImage && \preg_match('#^image/#', $detectedMime) !== 1) {
-                    if ($progress !== null) {
+                    if ($progress instanceof ProgressBar) {
                         $progress->advance();
                     }
+
                     continue;
                 }
+
                 if ($isVideo && \preg_match('#^video/#', $detectedMime) !== 1) {
-                    if ($progress !== null) {
+                    if ($progress instanceof ProgressBar) {
                         $progress->advance();
                     }
+
                     continue;
                 }
             }
 
-            $output->writeln("Verarbeite: {$filepath}", OutputInterface::VERBOSITY_VERBOSE);
+            $output->writeln('Verarbeite: ' . $filepath, OutputInterface::VERBOSITY_VERBOSE);
 
             $checksum = @\hash_file('sha256', $filepath);
             if ($checksum === false) {
-                $output->writeln("<error>Could not compute checksum for file: {$filepath}</error>");
-                if ($progress !== null) {
+                $output->writeln(sprintf('<error>Could not compute checksum for file: %s</error>', $filepath));
+                if ($progress instanceof ProgressBar) {
                     $progress->advance();
                 }
+
                 continue;
             }
 
@@ -157,9 +167,10 @@ final class IndexCommand extends Command
 
             if ($existing !== null && $force === false) {
                 $output->writeln(' -> Übersprungen (bereits indexiert)', OutputInterface::VERBOSITY_VERBOSE);
-                if ($progress !== null) {
+                if ($progress instanceof ProgressBar) {
                     $progress->advance();
                 }
+
                 continue;
             }
 
@@ -170,17 +181,17 @@ final class IndexCommand extends Command
             // Extract metadata (EXIF/ffprobe) – no raw JSON is persisted
             try {
                 $media = $this->metadataExtractor->extract($filepath, $media);
-            } catch (\Throwable $e) {
-                $output->writeln("<error>Metadata extraction failed for {$filepath}: {$e->getMessage()}</error>");
+            } catch (Throwable $e) {
+                $output->writeln(sprintf('<error>Metadata extraction failed for %s: %s</error>', $filepath, $e->getMessage()));
             }
 
             // Thumbnails only when requested
-            if ($withThumbs === true) {
+            if ($withThumbs) {
                 try {
                     $thumbnails = $this->thumbnailService->generateAll($filepath, $media);
                     $media->setThumbnails($thumbnails);
-                } catch (\Throwable $e) {
-                    $output->writeln("<error>Thumbnail generation failed for {$filepath}: {$e->getMessage()}</error>");
+                } catch (Throwable $e) {
+                    $output->writeln(sprintf('<error>Thumbnail generation failed for %s: %s</error>', $filepath, $e->getMessage()));
                 }
             }
 
@@ -198,7 +209,7 @@ final class IndexCommand extends Command
             }
 
             $count++;
-            if ($progress !== null) {
+            if ($progress instanceof ProgressBar) {
                 $progress->advance();
             }
         }
@@ -207,12 +218,12 @@ final class IndexCommand extends Command
             $this->em->flush();
         }
 
-        if ($progress !== null) {
+        if ($progress instanceof ProgressBar) {
             $progress->finish();
             $output->writeln('');
         }
 
-        $output->writeln("<info>Indexierung abgeschlossen. Insgesamt verarbeitete Dateien: {$count}</info>");
+        $output->writeln(sprintf('<info>Indexierung abgeschlossen. Insgesamt verarbeitete Dateien: %d</info>', $count));
         return Command::SUCCESS;
     }
 
@@ -223,8 +234,8 @@ final class IndexCommand extends Command
      */
     private function collectMediaFilesByExtension(string $baseDir, ?int $maxFiles): array
     {
-        $rii = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
+        $rii = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($baseDir, FilesystemIterator::SKIP_DOTS)
         );
 
         $out = [];
@@ -232,32 +243,39 @@ final class IndexCommand extends Command
             if (!$fileInfo->isFile()) {
                 continue;
             }
+
             $path = $fileInfo->getPathname();
             if ($this->isSupportedByExtension($path) === false) {
                 continue;
             }
+
             $out[] = $path;
             if ($maxFiles !== null && \count($out) >= $maxFiles) {
                 break;
             }
         }
+
         return $out;
     }
 
     private function isSupportedByExtension(string $path): bool
     {
-        return $this->isImageExt($path) || $this->isVideoExt($path);
+        if ($this->isImageExt($path)) {
+            return true;
+        }
+
+        return $this->isVideoExt($path);
     }
 
     private function isImageExt(string $path): bool
     {
-        $ext = \strtolower((string) \pathinfo($path, PATHINFO_EXTENSION));
+        $ext = \strtolower(\pathinfo($path, PATHINFO_EXTENSION));
         return $ext !== '' && \in_array($ext, $this->imageExt, true);
     }
 
     private function isVideoExt(string $path): bool
     {
-        $ext = \strtolower((string) \pathinfo($path, PATHINFO_EXTENSION));
+        $ext = \strtolower(\pathinfo($path, PATHINFO_EXTENSION));
         return $ext !== '' && \in_array($ext, $this->videoExt, true);
     }
 
@@ -266,16 +284,18 @@ final class IndexCommand extends Command
         if ($v === null) {
             return null;
         }
+
         if (\is_numeric($v)) {
             return (int) $v;
         }
+
         return null;
     }
 
     /**
      * Determine MIME type using a shared finfo instance with a safe fallback.
      */
-    private function detectMime(string $path, \finfo $finfo): string
+    private function detectMime(string $path, finfo $finfo): string
     {
         $mime = '';
         try {
@@ -283,7 +303,7 @@ final class IndexCommand extends Command
             if (\is_string($m) && $m !== '') {
                 $mime = $m;
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // ignore and try fallback
         }
 

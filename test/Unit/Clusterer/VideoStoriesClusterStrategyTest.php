@@ -53,14 +53,14 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "video-{$id}.mp4",
+            filename: sprintf('video-%d.mp4', $id),
             takenAt: $takenAt,
             lat: 48.1,
             lon: 11.6,
-            size: 4096,
             configure: static function (Media $media): void {
                 $media->setMime('video/mp4');
             },
+            size: 4096,
         );
     }
 
@@ -68,7 +68,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "photo-{$id}.jpg",
+            filename: sprintf('photo-%d.jpg', $id),
             takenAt: $takenAt,
             configure: static function (Media $media): void {
                 $media->setMime('image/jpeg');

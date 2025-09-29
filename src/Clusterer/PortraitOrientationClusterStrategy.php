@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -10,23 +11,25 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Portrait-oriented photos grouped into time sessions (no face detection).
  */
-final class PortraitOrientationClusterStrategy implements ClusterStrategyInterface
+final readonly class PortraitOrientationClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly float $minPortraitRatio = 1.2, // height / width
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItemsPerRun = 4
+        private float $minPortraitRatio = 1.2, // height / width
+        private int $sessionGapSeconds = 2 * 3600,
+        private int $minItemsPerRun = 4
     ) {
         if ($this->minPortraitRatio <= 0.0) {
-            throw new \InvalidArgumentException('minPortraitRatio must be > 0.');
+            throw new InvalidArgumentException('minPortraitRatio must be > 0.');
         }
+
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -81,10 +84,12 @@ final class PortraitOrientationClusterStrategy implements ClusterStrategyInterfa
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }

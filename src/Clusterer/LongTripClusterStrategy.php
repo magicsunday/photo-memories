@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
@@ -13,29 +14,31 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Detects multi-night trips away from home based on per-day centroids and distance threshold.
  */
-final class LongTripClusterStrategy implements ClusterStrategyInterface
+final readonly class LongTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
         /** Home base; if null, strategy is effectively disabled. */
-        private readonly ?float $homeLat = null,
-        private readonly ?float $homeLon = null,
-        private readonly float $minAwayKm = 150.0,
-        private readonly int $minNights = 3,
-        private readonly string $timezone = 'Europe/Berlin',
+        private ?float $homeLat = null,
+        private ?float $homeLon = null,
+        private float $minAwayKm = 150.0,
+        private int $minNights = 3,
+        private string $timezone = 'Europe/Berlin',
         // Counts timestamped media before we enforce GPS coverage for distance checks.
-        private readonly int $minItemsPerDay = 3
+        private int $minItemsPerDay = 3
     ) {
         if ($this->minAwayKm <= 0.0) {
-            throw new \InvalidArgumentException('minAwayKm must be > 0.');
+            throw new InvalidArgumentException('minAwayKm must be > 0.');
         }
+
         if ($this->minNights < 1) {
-            throw new \InvalidArgumentException('minNights must be >= 1.');
+            throw new InvalidArgumentException('minNights must be >= 1.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -134,6 +137,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
                 $run = [];
                 return;
             }
+
             /** @var list<Media> $all */
             $all = [];
             /** @var list<Media> $gpsMembers */
@@ -142,10 +146,12 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
                 foreach ($dayMembers[$d] as $m) {
                     $all[] = $m;
                 }
+
                 foreach ($dayGpsMembers[$d] as $m) {
                     $gpsMembers[] = $m;
                 }
             }
+
             $nights = \max(0, \count($run) - 1);
             if ($nights < $this->minNights) {
                 $run = [];
@@ -156,6 +162,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
                 $run = [];
                 return;
             }
+
             $centroid = MediaMath::centroid($gpsMembers);
             $time     = MediaMath::timeRange($all);
 
@@ -163,6 +170,7 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
             foreach ($run as $day) {
                 $totalDistanceKm += $dayDistanceKm[$day] ?? 0.0;
             }
+
             $averageDistanceKm = $runSize > 0 ? $totalDistanceKm / $runSize : 0.0;
             if ($averageDistanceKm < $this->minAwayKm) {
                 $run = [];
@@ -188,9 +196,11 @@ final class LongTripClusterStrategy implements ClusterStrategyInterface
             if ($prev !== null && $this->isNextDay($prev, $d) === false) {
                 $flush();
             }
+
             $run[] = $d;
             $prev = $d;
         }
+
         $flush();
 
         return $out;

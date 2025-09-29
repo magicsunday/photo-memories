@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -22,19 +23,20 @@ use MagicSunday\Memories\Utility\MediaMath;
  *  - Schnee & Winter      → snow_winter
  *  - Action & Outdoor     → action_outdoor
  */
-final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
+final readonly class PhotoMotifClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
-        private readonly int $minItemsPerMotif = 6
+        private int $sessionGapSeconds = 48 * 3600, // split sessions after 48h gap
+        private int $minItemsPerMotif = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerMotif < 1) {
-            throw new \InvalidArgumentException('minItemsPerMotif must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerMotif must be >= 1.');
         }
     }
 
@@ -71,6 +73,7 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
             if ($motif === null) {
                 continue;
             }
+
             $key = $motif['slug'] . '|' . $motif['label'];
             $byMotif[$key] ??= [];
             $byMotif[$key][] = $m;
@@ -119,9 +122,11 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
                 if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
                     $flush();
                 }
+
                 $buf[] = $m;
                 $lastTs = $ts;
             }
+
             $flush();
         }
 
@@ -136,7 +141,7 @@ final class PhotoMotifClusterStrategy implements ClusterStrategyInterface
     private function detectMotif(Media $m): ?array
     {
         $path = \strtolower($m->getPath());
-        $model = \strtolower((string) ($m->getCameraModel() ?? ''));
+        $model = \strtolower($m->getCameraModel() ?? '');
 
         // Ordered rules (first match wins)
         /** @var list<array{pattern:string,label:string,slug:string}> $rules */

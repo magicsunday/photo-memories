@@ -95,7 +95,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "device-{$id}.jpg",
+            filename: sprintf('device-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

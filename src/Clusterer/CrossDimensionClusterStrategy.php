@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -11,23 +12,25 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Clusters items that are both temporally and spatially close.
  * Sliding-session approach with time gap and radius constraints.
  */
-final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
+final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $timeGapSeconds = 2 * 3600,   // 2h
-        private readonly float $radiusMeters = 150.0,      // 150 m
-        private readonly int $minItemsPerRun = 6
+        private int $timeGapSeconds = 2 * 3600,   // 2h
+        private float $radiusMeters = 150.0,      // 150 m
+        private int $minItemsPerRun = 6
     ) {
         if ($this->timeGapSeconds < 1) {
-            throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('timeGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -49,9 +52,7 @@ final class CrossDimensionClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        \usort($withTime, static function (Media $a, Media $b): int {
-            return $a->getTakenAt() <=> $b->getTakenAt();
-        });
+        \usort($withTime, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         /** @var list<list<Media>> $runs */
         $runs = [];

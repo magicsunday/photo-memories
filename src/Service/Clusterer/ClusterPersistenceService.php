@@ -7,11 +7,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 
-final class ClusterPersistenceService
+final readonly class ClusterPersistenceService
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private readonly int $defaultBatchSize = 250
+        private int $defaultBatchSize = 250
     ) {
     }
 
@@ -52,12 +52,16 @@ final class ClusterPersistenceService
         $inBatch   = 0;
 
         // 3) Persist only new pairs
-        foreach ($drafts as $idx => $d) {
+        foreach ($drafts as $d) {
             $alg = $d->getAlgorithm();
             $fp  = Cluster::computeFingerprint($d->getMembers());
             $key = $alg.'|'.$fp;
+            if (isset($existing[$key])) {
+                // already persisted earlier or within this same run
+                continue;
+            }
 
-            if (isset($existing[$key]) || isset($seenThisRun[$key])) {
+            if (isset($seenThisRun[$key])) {
                 // already persisted earlier or within this same run
                 continue;
             }
@@ -83,6 +87,7 @@ final class ClusterPersistenceService
                 if ($onBatchPersisted !== null) {
                     $onBatchPersisted($inBatch);
                 }
+
                 $inBatch = 0;
             }
         }
@@ -141,6 +146,7 @@ final class ClusterPersistenceService
         foreach ($rows as $r) {
             $out[$r['alg'].'|'.$r['fp']] = true;
         }
+
         return $out;
     }
 

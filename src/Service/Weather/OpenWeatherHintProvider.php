@@ -20,16 +20,16 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * timestamp/coordinates and condenses the response into the internal hint
  * structure used by the clustering heuristics.
  */
-final class OpenWeatherHintProvider implements WeatherHintProviderInterface
+final readonly class OpenWeatherHintProvider implements WeatherHintProviderInterface
 {
     public function __construct(
-        private readonly HttpClientInterface $http,
-        private readonly WeatherObservationStorageInterface $storage,
-        private readonly string $baseUrl,
-        private readonly string $apiKey,
-        private readonly int $maxPastHours = 0,
-        private readonly string $units = 'metric',
-        private readonly string $source = WeatherObservation::DEFAULT_SOURCE
+        private HttpClientInterface $http,
+        private WeatherObservationStorageInterface $storage,
+        private string $baseUrl,
+        private string $apiKey,
+        private int $maxPastHours = 0,
+        private string $units = 'metric',
+        private string $source = WeatherObservation::DEFAULT_SOURCE
     ) {
     }
 
@@ -100,7 +100,7 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
             DecodingExceptionInterface |
             RedirectionExceptionInterface |
             ServerExceptionInterface |
-            TransportExceptionInterface $exception
+            TransportExceptionInterface
         ) {
             return null;
         }
@@ -126,10 +126,7 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         }
 
         if (isset($payload['current']) && \is_array($payload['current'])) {
-            $hint = $this->normaliseEntry($payload['current']);
-            if ($hint !== null) {
-                return $hint;
-            }
+            return $this->normaliseEntry($payload['current']);
         }
 
         return null;
@@ -145,7 +142,11 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         $bestDiff = null;
 
         foreach ($entries as $entry) {
-            if (!\is_array($entry) || !\array_key_exists('dt', $entry)) {
+            if (!\is_array($entry)) {
+                continue;
+            }
+
+            if (!\array_key_exists('dt', $entry)) {
                 continue;
             }
 
@@ -167,9 +168,9 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
 
     /**
      * @param array<string, mixed> $entry
-     * @return array{rain_prob: float, precip_mm?: float}|null
+     * @return array<'rain_prob', float>
      */
-    private function normaliseEntry(array $entry): ?array
+    private function normaliseEntry(array $entry): array
     {
         $hint = [];
 
@@ -203,11 +204,7 @@ final class OpenWeatherHintProvider implements WeatherHintProviderInterface
         }
 
         if ($rainProb === null) {
-            if (isset($hint['cloud_cover'])) {
-                $rainProb = $hint['cloud_cover'];
-            } else {
-                $rainProb = 0.0;
-            }
+            $rainProb = $hint['cloud_cover'] ?? 0.0;
         }
 
         $hint['rain_prob'] = $this->clamp01($rainProb);

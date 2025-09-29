@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,23 +13,24 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds New Year's Eve clusters (local night around Dec 31 → Jan 1).
  */
-final class NewYearEveClusterStrategy implements ClusterStrategyInterface
+final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        private string $timezone = 'Europe/Berlin',
         /** Hours considered NYE party window (local, 24h). */
-        private readonly int $startHour = 20,
-        private readonly int $endHour = 2,
+        private int $startHour = 20,
+        private int $endHour = 2,
         // Minimum media per year-long NYE bucket before emitting a memory.
-        private readonly int $minItemsPerYear = 6
+        private int $minItemsPerYear = 6
     ) {
         if ($this->startHour < 0 || $this->startHour > 23 || $this->endHour < 0 || $this->endHour > 23) {
-            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+            throw new InvalidArgumentException('Hour bounds must be within 0..23.');
         }
+
         if ($this->minItemsPerYear < 1) {
-            throw new \InvalidArgumentException('minItemsPerYear must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerYear must be >= 1.');
         }
     }
 

@@ -69,7 +69,7 @@ final class HikeAdventureClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "wanderung-{$id}.jpg",
+            filename: sprintf('wanderung-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

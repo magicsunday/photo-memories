@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -63,7 +61,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "season-over-years-{$id}.jpg",
+            filename: sprintf('season-over-years-%d.jpg', $id),
             takenAt: $takenAt,
         );
     }

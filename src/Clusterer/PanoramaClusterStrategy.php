@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -10,23 +11,25 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Clusters panorama photos (very wide aspect ratio) into time sessions.
  */
-final class PanoramaClusterStrategy implements ClusterStrategyInterface
+final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly float $minAspect = 2.4,     // width / height threshold
-        private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly int $minItemsPerRun = 3
+        private float $minAspect = 2.4,     // width / height threshold
+        private int $sessionGapSeconds = 3 * 3600,
+        private int $minItemsPerRun = 3
     ) {
         if ($this->minAspect <= 0.0) {
-            throw new \InvalidArgumentException('minAspect must be > 0.');
+            throw new InvalidArgumentException('minAspect must be > 0.');
         }
+
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -80,6 +83,7 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
                 $buf = [];
                 return;
             }
+
             $gps = $this->filterGpsItems($buf);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
             $time = MediaMath::timeRange($buf);
@@ -100,12 +104,15 @@ final class PanoramaClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
                 $flush();
             }
+
             $buf[] = $m;
             $last = $ts;
         }
+
         $flush();
 
         return $out;

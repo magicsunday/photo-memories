@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,24 +13,26 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Aggregates all items from the current month across different years.
  */
-final class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minYears = 3,
-        private readonly int $minItemsTotal = 24,
-        private readonly int $minDistinctDays = 8
+        private string $timezone = 'Europe/Berlin',
+        private int $minYears = 3,
+        private int $minItemsTotal = 24,
+        private int $minDistinctDays = 8
     ) {
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
+
         if ($this->minDistinctDays < 1) {
-            throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
+            throw new InvalidArgumentException('minDistinctDays must be >= 1.');
         }
     }
 

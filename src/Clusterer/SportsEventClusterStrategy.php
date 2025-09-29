@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,25 +13,27 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Sports events based on keywords (stadium/match/club names) and weekend bias.
  */
-final class SportsEventClusterStrategy implements ClusterStrategyInterface
+final readonly class SportsEventClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly float $radiusMeters = 500.0,
-        private readonly int $minItemsPerRun = 5,
-        private readonly bool $preferWeekend = true
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 3 * 3600,
+        private float $radiusMeters = 500.0,
+        private int $minItemsPerRun = 5,
+        private bool $preferWeekend = true
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -88,10 +91,12 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -123,6 +128,7 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if ($ok === false) {
                 continue;
             }
@@ -158,6 +164,7 @@ final class SportsEventClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

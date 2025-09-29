@@ -242,7 +242,7 @@ final class FakeHttpClient implements HttpClientInterface
         return array_shift($this->responses);
     }
 
-    public function stream($responses, float $timeout = null): ResponseStreamInterface
+    public function stream($responses, ?float $timeout = null): ResponseStreamInterface
     {
         throw new BadMethodCallException('Not implemented.');
     }
@@ -256,11 +256,11 @@ final class FakeHttpClient implements HttpClientInterface
 /**
  * @internal HTTP response stub returning static payloads.
  */
-final class FakeHttpResponse implements ResponseInterface
+final readonly class FakeHttpResponse implements ResponseInterface
 {
     public function __construct(
-        private readonly int $statusCode,
-        private readonly array $payload,
+        private int $statusCode,
+        private array $payload,
     ) {
     }
 
@@ -288,7 +288,7 @@ final class FakeHttpResponse implements ResponseInterface
     {
     }
 
-    public function getInfo(string $type = null): mixed
+    public function getInfo(?string $type = null): mixed
     {
         if ($type === null) {
             return [];

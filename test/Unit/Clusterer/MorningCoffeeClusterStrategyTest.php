@@ -30,7 +30,7 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
             $media[] = $this->createMedia(
                 1500 + $i,
                 $base->modify('+' . ($i * 10) . ' minutes'),
-                "coffee-bar-{$i}.jpg",
+                sprintf('coffee-bar-%d.jpg', $i),
                 48.208 + $i * 0.0005,
                 16.372 + $i * 0.0005,
             );
@@ -53,7 +53,7 @@ final class MorningCoffeeClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(
                 1600 + $i,
                 new DateTimeImmutable('2023-06-10 13:00:00', new DateTimeZone('UTC')),
-                "coffee-bar-{$i}.jpg",
+                sprintf('coffee-bar-%d.jpg', $i),
                 48.21,
                 16.37,
             );

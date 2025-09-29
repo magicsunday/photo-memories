@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -28,16 +29,19 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
         private readonly array $keywords
     ) {
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
+
         if ($this->keywords === []) {
-            throw new \InvalidArgumentException('keywords must not be empty.');
+            throw new InvalidArgumentException('keywords must not be empty.');
         }
     }
 
@@ -153,13 +157,6 @@ abstract class KeywordBestDayOverYearsStrategy implements ClusterStrategyInterfa
     private function pathContainsKeyword(string $path): bool
     {
         $lower = \strtolower($path);
-
-        foreach ($this->keywords as $keyword) {
-            if (\str_contains($lower, $keyword)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->keywords, fn($keyword): bool => \str_contains($lower, $keyword));
     }
 }

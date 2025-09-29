@@ -75,7 +75,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "cross-dimension-{$id}.jpg",
+            filename: sprintf('cross-dimension-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

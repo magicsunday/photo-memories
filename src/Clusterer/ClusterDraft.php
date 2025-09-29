@@ -14,10 +14,10 @@ final class ClusterDraft
      * @param list<int> $members
      */
     public function __construct(
-        private string $algorithm,
+        private readonly string $algorithm,
         private array $params,
-        private array $centroid,
-        private array $members
+        private readonly array $centroid,
+        private readonly array $members
     ) {
     }
 

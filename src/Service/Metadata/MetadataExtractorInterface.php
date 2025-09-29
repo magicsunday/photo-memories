@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use RuntimeException;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -18,7 +19,7 @@ interface MetadataExtractorInterface
      *
      * @return Media The same instance, enriched with metadata.
      *
-     * @throws \RuntimeException When extraction fails.
+     * @throws RuntimeException When extraction fails.
      */
     public function extract(string $filepath, Media $media): Media;
 }

@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
+use DateTimeImmutable;
+use RuntimeException;
 use Doctrine\ORM\EntityManagerInterface;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
@@ -67,15 +67,16 @@ final class FeedExportHtmlCommand extends Command
         $useSymlink      = (bool) $input->getOption('symlink');
         $baseOutDir      = (string) $input->getArgument('out-dir');
 
-        $stamp   = (new \DateTimeImmutable('now'))->format('Ymd-His');
-        $outDir  = rtrim($baseOutDir, '/')."/feed-{$stamp}";
+        $stamp   = (new DateTimeImmutable('now'))->format('Ymd-His');
+        $outDir  = rtrim($baseOutDir, '/').('/feed-' . $stamp);
         $imgDir  = $outDir.'/images';
 
         if (!\is_dir($outDir) && !@mkdir($outDir, 0775, true) && !\is_dir($outDir)) {
-            throw new \RuntimeException("Could not create output directory: {$outDir}");
+            throw new RuntimeException('Could not create output directory: ' . $outDir);
         }
+
         if (!\is_dir($imgDir) && !@mkdir($imgDir, 0775, true) && !\is_dir($imgDir)) {
-            throw new \RuntimeException("Could not create images directory: {$imgDir}");
+            throw new RuntimeException('Could not create images directory: ' . $imgDir);
         }
 
         $io->title('📰 HTML-Vorschau des Rückblick-Feeds');
@@ -131,6 +132,7 @@ final class FeedExportHtmlCommand extends Command
             if ($memberIds === []) {
                 continue;
             }
+
             /** @var list<Media> $members */
             $members = $this->mediaRepo->findByIds($memberIds);
 
@@ -139,7 +141,9 @@ final class FeedExportHtmlCommand extends Command
             if ($coverId !== null) {
                 \usort($members, static function (Media $a, Media $b) use ($coverId): int {
                     if ($a->getId() === $coverId && $b->getId() !== $coverId) { return -1; }
+
                     if ($b->getId() === $coverId && $a->getId() !== $coverId) { return 1; }
+
                     $ta = $a->getTakenAt()?->getTimestamp() ?? 0;
                     $tb = $b->getTakenAt()?->getTimestamp() ?? 0;
                     return $ta <=> $tb;
@@ -168,9 +172,11 @@ final class FeedExportHtmlCommand extends Command
                         // Symlink best effort; fallback to copy on failure
                         $ok = @\symlink($src, $targetPath);
                     }
+
                     if (!$ok) {
                         $ok = @\copy($src, $targetPath);
                     }
+
                     if ($ok) {
                         $copied++;
                     }
@@ -203,7 +209,7 @@ final class FeedExportHtmlCommand extends Command
 
         $indexFile = $outDir.'/index.html';
         if (@\file_put_contents($indexFile, $html) === false) {
-            throw new \RuntimeException("Konnte HTML-Datei nicht schreiben: {$indexFile}");
+            throw new RuntimeException('Konnte HTML-Datei nicht schreiben: ' . $indexFile);
         }
 
         $io->success(\sprintf(

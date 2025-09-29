@@ -57,7 +57,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "portrait-{$id}.jpg",
+            filename: sprintf('portrait-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 48.0,
             lon: 11.0,
@@ -72,7 +72,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "landscape-{$id}.jpg",
+            filename: sprintf('landscape-%d.jpg', $id),
             takenAt: $takenAt,
             configure: static function (Media $media): void {
                 $media->setWidth(1600);

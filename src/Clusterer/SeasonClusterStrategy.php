@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -12,16 +13,16 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Groups media by meteorological seasons per year (DE).
  * Winter is Dec–Feb (December assigned to next year).
  */
-final class SeasonClusterStrategy implements ClusterStrategyInterface
+final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
         // Minimum members per (season, year) bucket.
-        private readonly int $minItemsPerSeason = 20
+        private int $minItemsPerSeason = 20
     ) {
         if ($this->minItemsPerSeason < 1) {
-            throw new \InvalidArgumentException('minItemsPerSeason must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
     }
 

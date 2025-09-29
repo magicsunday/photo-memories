@@ -115,7 +115,7 @@ final class TimeSimilarityStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "time-{$id}.jpg",
+            filename: sprintf('time-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

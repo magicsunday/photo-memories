@@ -53,15 +53,15 @@ final class PanoramaClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "panorama-{$id}.jpg",
+            filename: sprintf('panorama-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 45.0,
             lon: 7.0,
-            size: 2048,
             configure: static function (Media $media): void {
                 $media->setWidth(5000);
                 $media->setHeight(1000);
             },
+            size: 2048,
         );
     }
 
@@ -69,7 +69,7 @@ final class PanoramaClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "photo-{$id}.jpg",
+            filename: sprintf('photo-%d.jpg', $id),
             takenAt: $takenAt,
             configure: static function (Media $media): void {
                 $media->setWidth(2000);

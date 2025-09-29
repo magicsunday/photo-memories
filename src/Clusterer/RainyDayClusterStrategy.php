@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -13,21 +14,22 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds "Rainy Day" clusters when weather hints indicate significant rain on a local day.
  */
-final class RainyDayClusterStrategy implements ClusterStrategyInterface
+final readonly class RainyDayClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly WeatherHintProviderInterface $weather,
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly float $minAvgRainProb = 0.6,  // 0..1
-        private readonly int $minItemsPerDay = 6
+        private WeatherHintProviderInterface $weather,
+        private string $timezone = 'Europe/Berlin',
+        private float $minAvgRainProb = 0.6,  // 0..1
+        private int $minItemsPerDay = 6
     ) {
         if ($this->minAvgRainProb < 0.0 || $this->minAvgRainProb > 1.0) {
-            throw new \InvalidArgumentException('minAvgRainProb must be within 0..1.');
+            throw new InvalidArgumentException('minAvgRainProb must be within 0..1.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -81,8 +83,10 @@ final class RainyDayClusterStrategy implements ClusterStrategyInterface
                     if ($hint === null) {
                         continue;
                     }
+
                     $p = (float) ($hint['rain_prob'] ?? 0.0);
                     if ($p < 0.0) { $p = 0.0; }
+
                     if ($p > 1.0) { $p = 1.0; }
 
                     $sum += $p;

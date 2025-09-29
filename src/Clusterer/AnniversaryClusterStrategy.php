@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -22,7 +23,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
  * metadata such as a majority place label, a time range, and the geographical
  * centroid of all members using helper methods from {@see ClusterBuildHelperTrait}.
  */
-final class AnniversaryClusterStrategy implements ClusterStrategyInterface
+final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
@@ -34,22 +35,22 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
      *                                  from media items for the metadata summary.
      */
     public function __construct(
-        private readonly LocationHelper $locHelper,
+        private LocationHelper $locHelper,
         // Minimum media items per anniversary bucket before scoring kicks in.
-        private readonly int $minItemsPerAnniversary = 3,
-        private readonly int $minDistinctYears = 1,
-        private readonly int $maxClusters = 0
+        private int $minItemsPerAnniversary = 3,
+        private int $minDistinctYears = 1,
+        private int $maxClusters = 0
     ) {
         if ($this->minItemsPerAnniversary < 1) {
-            throw new \InvalidArgumentException('minItemsPerAnniversary must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerAnniversary must be >= 1.');
         }
 
         if ($this->minDistinctYears < 1) {
-            throw new \InvalidArgumentException('minDistinctYears must be >= 1.');
+            throw new InvalidArgumentException('minDistinctYears must be >= 1.');
         }
 
         if ($this->maxClusters < 0) {
-            throw new \InvalidArgumentException('maxClusters must be >= 0.');
+            throw new InvalidArgumentException('maxClusters must be >= 0.');
         }
     }
 
@@ -111,11 +112,9 @@ final class AnniversaryClusterStrategy implements ClusterStrategyInterface
 
             $total = \count($group);
             $spanYears = 0;
-            if ($distinctYears > 0) {
-                /** @var list<int> $yearKeys */
-                $yearKeys = array_keys($years);
-                $spanYears = max($yearKeys) - min($yearKeys) + 1;
-            }
+            /** @var list<int> $yearKeys */
+            $yearKeys = array_keys($years);
+            $spanYears = max($yearKeys) - min($yearKeys) + 1;
 
             $maxPerYear = $years === [] ? 0 : max($years);
             $averagePerYear = $distinctYears === 0 ? 0.0 : $total / $distinctYears;

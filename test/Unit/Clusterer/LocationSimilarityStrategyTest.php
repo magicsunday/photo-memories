@@ -146,7 +146,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "location-{$id}.jpg",
+            filename: sprintf('location-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

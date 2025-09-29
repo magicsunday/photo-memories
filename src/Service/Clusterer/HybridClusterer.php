@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
+use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
@@ -17,7 +18,7 @@ final class HybridClusterer
      */
     public function __construct(
         private readonly iterable $strategies,
-        private readonly Scoring\CompositeClusterScorer $scorer,
+        private readonly CompositeClusterScorer $scorer,
         private readonly TitleGeneratorInterface $titleGenerator
     ) {
     }
@@ -87,6 +88,7 @@ final class HybridClusterer
         if ($this->strategiesCache !== null) {
             return $this->strategiesCache;
         }
+
         $this->strategiesCache = \is_array($this->strategies)
             ? $this->strategies
             : \iterator_to_array($this->strategies, false);

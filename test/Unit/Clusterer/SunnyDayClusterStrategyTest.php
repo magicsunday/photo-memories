@@ -79,7 +79,7 @@ final class SunnyDayClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "sunny-{$id}.jpg",
+            filename: sprintf('sunny-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 48.0,
             lon: 11.0,

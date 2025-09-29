@@ -89,7 +89,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "one-year-ago-{$id}.jpg",
+            filename: sprintf('one-year-ago-%d.jpg', $id),
             takenAt: $takenAt->setTimezone(new DateTimeZone('UTC')),
         );
     }

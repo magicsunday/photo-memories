@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -12,20 +13,21 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Aggregates each season across multiple years into a memory
  * (e.g., "Sommer im Laufe der Jahre").
  */
-final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $minYears = 3,
+        private int $minYears = 3,
         // Minimum total members per season bucket across all years considered.
-        private readonly int $minItemsPerSeason = 30
+        private int $minItemsPerSeason = 30
     ) {
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsPerSeason < 1) {
-            throw new \InvalidArgumentException('minItemsPerSeason must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
     }
 
@@ -71,6 +73,7 @@ final class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
             foreach ($list as $m) {
                 $years[(int) $m->getTakenAt()->format('Y')] = true;
             }
+
             if (\count($years) < $this->minYears) {
                 continue;
             }

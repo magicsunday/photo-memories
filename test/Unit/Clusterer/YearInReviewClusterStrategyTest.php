@@ -71,7 +71,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "year-in-review-{$id}.jpg",
+            filename: sprintf('year-in-review-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

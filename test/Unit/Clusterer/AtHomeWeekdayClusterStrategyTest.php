@@ -72,7 +72,7 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "media-{$id}.jpg",
+            filename: sprintf('media-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

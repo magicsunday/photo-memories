@@ -32,7 +32,7 @@ final class FestivalSummerClusterStrategyTest extends TestCase
             $media[] = $this->createMedia(
                 800 + $i,
                 $start->modify('+' . ($i * 15) . ' minutes'),
-                "open-air-stage-{$i}.jpg",
+                sprintf('open-air-stage-%d.jpg', $i),
                 50.0 + $i * 0.0003,
                 8.0 + $i * 0.0003,
             );
@@ -55,7 +55,7 @@ final class FestivalSummerClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(
                 900 + $i,
                 new DateTimeImmutable('2023-11-01 18:00:00', new DateTimeZone('UTC')),
-                "open-air-stage-{$i}.jpg",
+                sprintf('open-air-stage-%d.jpg', $i),
                 50.0,
                 8.0,
             );

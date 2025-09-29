@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
@@ -13,36 +14,41 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
  */
-final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minNights = 1,
-        private readonly int $maxNights = 3,
-        private readonly int $minItemsPerDay = 4,
-        private readonly int $minYears = 3,
-        private readonly int $minItemsTotal = 24
+        private string $timezone = 'Europe/Berlin',
+        private int $minNights = 1,
+        private int $maxNights = 3,
+        private int $minItemsPerDay = 4,
+        private int $minYears = 3,
+        private int $minItemsTotal = 24
     ) {
         if ($this->minNights < 1) {
-            throw new \InvalidArgumentException('minNights must be >= 1.');
+            throw new InvalidArgumentException('minNights must be >= 1.');
         }
+
         if ($this->maxNights < 1) {
-            throw new \InvalidArgumentException('maxNights must be >= 1.');
+            throw new InvalidArgumentException('maxNights must be >= 1.');
         }
+
         if ($this->maxNights < $this->minNights) {
-            throw new \InvalidArgumentException('maxNights must be >= minNights.');
+            throw new InvalidArgumentException('maxNights must be >= minNights.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -102,9 +108,10 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
             $prev = null;
 
             $flush = function () use (&$runs, &$runDays, &$runItems): void {
-                if (\count($runDays) > 0) {
+                if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
+
                 $runDays = [];
                 $runItems = [];
             };
@@ -113,12 +120,15 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     $flush();
                 }
+
                 $runDays[] = $d;
                 foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
+
                 $prev = $d;
             }
+
             $flush();
 
             // evaluate runs: keep only those that (a) include a weekend and (b) span 1..3 nights
@@ -130,14 +140,21 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 if ($nDays < 2) {
                     continue;
                 }
+
                 $nights = $nDays - 1;
-                if ($nights < $this->minNights || $nights > $this->maxNights) {
+                if ($nights < $this->minNights) {
                     continue;
                 }
+
+                if ($nights > $this->maxNights) {
+                    continue;
+                }
+
                 // must include weekend day (Sat/Sun)
                 if (!$this->containsWeekendDay($r['days'])) {
                     continue;
                 }
+
                 $candidates[] = $r;
             }
 
@@ -152,11 +169,13 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
+
                 $sa = \count($a['days']);
                 $sb = \count($b['days']);
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
+
                 return \strcmp($a['days'][0], $b['days'][0]); // earlier first
             });
 
@@ -164,6 +183,7 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
             foreach ($best['items'] as $m) {
                 $membersAllYears[] = $m;
             }
+
             $yearsPicked[$year] = true;
         }
 
@@ -199,11 +219,13 @@ final class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyIn
             if ($ts === false) {
                 continue;
             }
+
             $dow = (int) \gmdate('N', $ts); // 1..7
             if ($dow === 6 || $dow === 7) {
                 return true;
             }
         }
+
         return false;
     }
 }

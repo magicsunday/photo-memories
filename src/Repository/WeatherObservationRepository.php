@@ -16,9 +16,9 @@ use MagicSunday\Memories\Entity\WeatherObservation;
 /**
  * Repository helpers for weather observations.
  */
-final class WeatherObservationRepository
+final readonly class WeatherObservationRepository
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 

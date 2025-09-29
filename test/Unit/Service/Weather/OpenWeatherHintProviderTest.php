@@ -22,7 +22,7 @@ final class OpenWeatherHintProviderTest extends TestCase
         $captured = [];
         $client   = new MockHttpClient(
             function (string $method, string $url, array $options) use ($timestamp, &$captured): MockResponse {
-                $captured = compact('method', 'url', 'options');
+                $captured = ['method' => $method, 'url' => $url, 'options' => $options];
 
                 return new MockResponse(
                     \json_encode([

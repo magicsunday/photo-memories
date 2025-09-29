@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateInterval;
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -16,28 +16,32 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Detects short weekend trips (Fri afternoon to Sun/Monday),
  * sufficiently far from a configured home location.
  */
-final class WeekendTripClusterStrategy implements ClusterStrategyInterface
+final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        #[Autowire(env: 'MEMORIES_HOME_LAT')] private readonly ?float $homeLat,
-        #[Autowire(env: 'MEMORIES_HOME_LON')] private readonly ?float $homeLon,
-        private readonly float $minAwayKm = 80.0,
-        private readonly int $minNights = 1,
+        private LocationHelper $locHelper,
+        #[Autowire(env: 'MEMORIES_HOME_LAT')]
+ private ?float $homeLat,
+        #[Autowire(env: 'MEMORIES_HOME_LON')]
+ private ?float $homeLon,
+        private float $minAwayKm = 80.0,
+        private int $minNights = 1,
         // Minimum media items per trip bucket before we analyse nights and distance.
-        private readonly int $minItemsPerTrip = 3,
+        private int $minItemsPerTrip = 3,
     ) {
         if ($this->minAwayKm <= 0.0) {
-            throw new \InvalidArgumentException('minAwayKm must be > 0.');
+            throw new InvalidArgumentException('minAwayKm must be > 0.');
         }
+
         if ($this->minNights < 0) {
-            throw new \InvalidArgumentException('minNights must be >= 0.');
+            throw new InvalidArgumentException('minNights must be >= 0.');
         }
+
         if ($this->minItemsPerTrip < 1) {
-            throw new \InvalidArgumentException('minItemsPerTrip must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerTrip must be >= 1.');
         }
     }
 
@@ -70,6 +74,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
                 $bucket[] = $m;
                 continue;
             }
+
             if ($this->locHelper->sameLocality($bucket[0], $m)) {
                 $bucket[] = $m;
                 continue;
@@ -88,7 +93,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         $drafts = [];
         foreach ($eligible as $trip) {
             $d = $this->makeTripDraftOrNull($trip);
-            if ($d !== null) {
+            if ($d instanceof ClusterDraft) {
                 $drafts[] = $d;
             }
         }
@@ -139,6 +144,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
                 $days[$t->format('Y-m-d')] = true;
             }
         }
+
         $unique = \count($days);
         return $unique > 0 ? \max(0, $unique - 1) : 0;
     }
@@ -149,6 +155,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
         if ($this->homeLat === null || $this->homeLon === null) {
             return null;
         }
+
         foreach ($bucket as $m) {
             if ($m->getGpsLat() !== null && $m->getGpsLon() !== null) {
                 $mtrs = MediaMath::haversineDistanceInMeters(
@@ -160,6 +167,7 @@ final class WeekendTripClusterStrategy implements ClusterStrategyInterface
                 return $mtrs / 1000.0;
             }
         }
+
         return null;
     }
 }

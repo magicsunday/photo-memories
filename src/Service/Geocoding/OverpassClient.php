@@ -21,7 +21,7 @@ final class OverpassClient
      *
      * @var list<string>
      */
-    private const TAG_KEYS = [
+    private const array TAG_KEYS = [
         'tourism',
         'amenity',
         'leisure',
@@ -40,7 +40,7 @@ final class OverpassClient
      *
      * @var list<string>
      */
-    private const AUXILIARY_TAG_KEYS = [
+    private const array AUXILIARY_TAG_KEYS = [
         'wikidata',
     ];
 
@@ -112,7 +112,11 @@ final class OverpassClient
             }
 
             $id = $this->elementId($element);
-            if ($id === null || isset($pois[$id])) {
+            if ($id === null) {
+                continue;
+            }
+
+            if (isset($pois[$id])) {
                 continue;
             }
 
@@ -165,7 +169,7 @@ final class OverpassClient
         );
 
         if ($queryLimit !== null && \count($values) > $queryLimit) {
-            $values = \array_slice($values, 0, $queryLimit);
+            return \array_slice($values, 0, $queryLimit);
         }
 
         return $values;
@@ -189,10 +193,10 @@ final class OverpassClient
         foreach (self::TAG_KEYS as $key) {
             $query .= \sprintf('nwr(around:%d,%s,%s)["%s"];', $radius, $latS, $lonS, $key);
         }
-        $limitFragment = $limit !== null ? ' '.\max(1, $limit) : '';
-        $query .= \sprintf(');out tags center%s;', $limitFragment);
 
-        return $query;
+        $limitFragment = $limit !== null ? ' '.\max(1, $limit) : '';
+
+        return $query . \sprintf(');out tags center%s;', $limitFragment);
     }
 
     private function elementId(array $element): ?string
@@ -204,7 +208,7 @@ final class OverpassClient
             return null;
         }
 
-        return $type.'/'.(string) $id;
+        return $type.'/'.$id;
     }
 
     /**
@@ -287,7 +291,11 @@ final class OverpassClient
         /** @var array<string,string> $localized */
         $localized = [];
         foreach ($tags as $key => $value) {
-            if (!\is_string($key) || !\str_starts_with($key, 'name:')) {
+            if (!\is_string($key)) {
+                continue;
+            }
+
+            if (!\str_starts_with($key, 'name:')) {
                 continue;
             }
 

@@ -125,7 +125,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "first-visit-{$id}.jpg",
+            filename: sprintf('first-visit-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

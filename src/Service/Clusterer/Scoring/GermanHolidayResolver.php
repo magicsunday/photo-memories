@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
-use DateInterval;
 use DateTimeImmutable;
 use MagicSunday\Memories\Utility\Calendar;
 
@@ -14,7 +13,7 @@ use MagicSunday\Memories\Utility\Calendar;
  */
 final class GermanHolidayResolver implements HolidayResolverInterface
 {
-    public function isHoliday(\DateTimeImmutable $day): bool
+    public function isHoliday(DateTimeImmutable $day): bool
     {
         return Calendar::germanFederalHolidayName($day) !== null;
     }

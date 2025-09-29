@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -12,24 +13,26 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Groups items captured within a short time & small spatial window.
  * Typical for bursts/series shots.
  */
-final class BurstClusterStrategy implements ClusterStrategyInterface
+final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $maxGapSeconds = 90,
-        private readonly float $maxMoveMeters = 50.0,
+        private int $maxGapSeconds = 90,
+        private float $maxMoveMeters = 50.0,
         // Minimum photos per burst run before emitting a memory.
-        private readonly int $minItemsPerBurst = 3
+        private int $minItemsPerBurst = 3
     ) {
         if ($this->maxGapSeconds < 1) {
-            throw new \InvalidArgumentException('maxGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('maxGapSeconds must be >= 1.');
         }
+
         if ($this->maxMoveMeters < 0.0) {
-            throw new \InvalidArgumentException('maxMoveMeters must be >= 0.');
+            throw new InvalidArgumentException('maxMoveMeters must be >= 0.');
         }
+
         if ($this->minItemsPerBurst < 1) {
-            throw new \InvalidArgumentException('minItemsPerBurst must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerBurst must be >= 1.');
         }
     }
 

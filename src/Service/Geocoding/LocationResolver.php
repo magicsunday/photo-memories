@@ -161,9 +161,12 @@ final class LocationResolver
     {
         $score = 0;
         if ($loc->getCountryCode() !== null && $g->countryCode !== null && $loc->getCountryCode() === \strtoupper($g->countryCode)) { $score++; }
+
         $gc = $g->city ?? $g->town ?? $g->village;
         if ($loc->getCity() !== null && $gc !== null && $loc->getCity() === $gc) { $score++; }
+
         if ($loc->getRoad() !== null && $g->road !== null && $loc->getRoad() === $g->road) { $score++; }
+
         return $score >= 2;
     }
 

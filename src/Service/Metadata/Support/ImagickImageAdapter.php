@@ -3,15 +3,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
+use Throwable;
 use Imagick;
 
 /**
  * Imagick-based adapter, supports HEIC/AVIF (depends on delegates).
  */
-final class ImagickImageAdapter implements ImageAdapterInterface
+final readonly class ImagickImageAdapter implements ImageAdapterInterface
 {
     public function __construct(
-        private readonly Imagick $image
+        private Imagick $image
     ) {
     }
 
@@ -20,6 +21,7 @@ final class ImagickImageAdapter implements ImageAdapterInterface
         if (!\class_exists(Imagick::class) || !\extension_loaded('imagick')) {
             return null;
         }
+
         if (!\is_file($path)) {
             return null;
         }
@@ -39,24 +41,25 @@ final class ImagickImageAdapter implements ImageAdapterInterface
             if (\method_exists($im, 'setImageColorspace')) {
                 $im->setImageColorspace(Imagick::COLORSPACE_SRGB);
             }
+
             if (\method_exists($im, 'setImageDepth')) {
                 $im->setImageDepth(8);
             }
 
             return new self($im);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
 
     public function getWidth(): int
     {
-        return (int) $this->image->getImageWidth();
+        return $this->image->getImageWidth();
     }
 
     public function getHeight(): int
     {
-        return (int) $this->image->getImageHeight();
+        return $this->image->getImageHeight();
     }
 
     public function getLuma(int $x, int $y): float
@@ -98,8 +101,8 @@ final class ImagickImageAdapter implements ImageAdapterInterface
 
         // robust, schnell, geringere Speicherlast
         $clone->setIteratorIndex(0);
-        $clone->setImageColorspace(\Imagick::COLORSPACE_RGB);
-        $clone->transformImageColorspace(\Imagick::COLORSPACE_RGB);
+        $clone->setImageColorspace(Imagick::COLORSPACE_RGB);
+        $clone->transformImageColorspace(Imagick::COLORSPACE_RGB);
         $clone->thumbnailImage($w, $h, true, true); // bestfit + crop
 
         /** @var array<int,int|float> $buf */
@@ -109,7 +112,7 @@ final class ImagickImageAdapter implements ImageAdapterInterface
             $clone->getImageWidth(),
             $clone->getImageHeight(),
             'RGB',
-            \Imagick::PIXEL_CHAR
+            Imagick::PIXEL_CHAR
         );
 
         $clone->destroy();

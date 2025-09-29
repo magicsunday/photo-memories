@@ -58,7 +58,7 @@ final class NoveltyHeuristicTest extends TestCase
     {
         return $this->makeMedia(
             id: $id,
-            path: __DIR__ . "/novelty-{$id}.jpg",
+            path: __DIR__ . sprintf('/novelty-%d.jpg', $id),
             takenAt: $takenAt,
         );
     }

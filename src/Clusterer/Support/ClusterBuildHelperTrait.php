@@ -30,6 +30,7 @@ trait ClusterBuildHelperTrait
         foreach ($members as $m) {
             $out[] = $m->getId();
         }
+
         return $out;
     }
 
@@ -46,6 +47,7 @@ trait ClusterBuildHelperTrait
             $ts = $m->getTakenAt()?->getTimestamp();
             if ($ts !== null) {
                 if ($ts < $from) { $from = $ts; }
+
                 if ($ts > $to)   { $to   = $ts; }
             }
         }
@@ -53,6 +55,7 @@ trait ClusterBuildHelperTrait
         if ($from === \PHP_INT_MAX) {
             $from = 0;
         }
+
         return ['from' => $from, 'to' => $to];
     }
 }

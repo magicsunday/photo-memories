@@ -24,9 +24,7 @@ final class Phash
             $dist += self::bitcount(\ord($ab[$i]) ^ \ord($bb[$i]));
         }
 
-        $dist += 8 * \abs(\strlen($ab) - \strlen($bb));
-
-        return $dist;
+        return $dist + 8 * \abs(\strlen($ab) - \strlen($bb));
     }
 
     private static function bitcount(int $v): int
@@ -36,6 +34,7 @@ final class Phash
             $v &= $v - 1;
             $c++;
         }
+
         return $c;
     }
 }

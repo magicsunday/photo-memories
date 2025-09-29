@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -13,24 +14,26 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Aggregates recurring places using a coarse geogrid (lat/lon rounding).
  * Creates one cluster per significant place with enough distinct visit days.
  */
-final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
+final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
-        private readonly int $minVisitDays = 3,
-        private readonly int $minItemsTotal = 20
+        private LocationHelper $locHelper,
+        private float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
+        private int $minVisitDays = 3,
+        private int $minItemsTotal = 20
     ) {
         if ($this->gridDegrees <= 0.0) {
-            throw new \InvalidArgumentException('gridDegrees must be > 0.');
+            throw new InvalidArgumentException('gridDegrees must be > 0.');
         }
+
         if ($this->minVisitDays < 1) {
-            throw new \InvalidArgumentException('minVisitDays must be >= 1.');
+            throw new InvalidArgumentException('minVisitDays must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -114,9 +117,11 @@ final class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
                 if ($poi['categoryKey'] !== null) {
                     $params['poi_category_key'] = $poi['categoryKey'];
                 }
+
                 if ($poi['categoryValue'] !== null) {
                     $params['poi_category_value'] = $poi['categoryValue'];
                 }
+
                 if ($poi['tags'] !== []) {
                     $params['poi_tags'] = $poi['tags'];
                 }

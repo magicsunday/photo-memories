@@ -30,7 +30,7 @@ final class ZooAquariumClusterStrategyTest extends TestCase
             $media[] = $this->createMedia(
                 1000 + $i,
                 $start->modify('+' . ($i * 20) . ' minutes'),
-                "tierpark-{$i}.jpg",
+                sprintf('tierpark-%d.jpg', $i),
                 51.0 + $i * 0.0002,
                 7.0 + $i * 0.0002,
             );
@@ -53,7 +53,7 @@ final class ZooAquariumClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(
                 1100 + $i,
                 new DateTimeImmutable('2023-08-12 22:00:00', new DateTimeZone('UTC')),
-                "tierpark-{$i}.jpg",
+                sprintf('tierpark-%d.jpg', $i),
                 51.0,
                 7.0,
             );

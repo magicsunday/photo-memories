@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
-use GdImage;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -18,7 +17,7 @@ trait GdImageToolsTrait
     {
         $thumbs = $m->getThumbnails();
 
-        if (\is_array($thumbs) && \count($thumbs) > 0) {
+        if (\is_array($thumbs) && $thumbs !== []) {
             $paths = \array_values($thumbs);
             \sort($paths, \SORT_STRING);
             $p = $paths[0];
@@ -78,6 +77,7 @@ trait GdImageToolsTrait
             $chunk = \substr($bits, $i, 4);
             $hex  .= \dechex(\bindec($chunk));
         }
+
         return $hex;
     }
 
@@ -89,7 +89,7 @@ trait GdImageToolsTrait
     private function grayscaleMatrixFromAdapter(ImageAdapterInterface $src, int $w, int $h): array
     {
         // Imagick Fast-Path: ein Export statt 1024 getLuma()-Aufrufe
-        if ($src instanceof \MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter
+        if ($src instanceof ImagickImageAdapter
             && \method_exists($src, 'exportRgbBytes')
         ) {
             $rgb = $src->exportRgbBytes($w, $h); // length = w*h*3
@@ -103,8 +103,10 @@ trait GdImageToolsTrait
                     $b = (float) $rgb[$idx++];
                     $row[] = 0.299 * $r + 0.587 * $g + 0.114 * $b;
                 }
+
                 $out[] = $row;
             }
+
             return $out;
         }
 
@@ -116,8 +118,10 @@ trait GdImageToolsTrait
             for ($x = 0; $x < $w; $x++) {
                 $row[] = $resized->getLuma($x, $y);
             }
+
             $out[] = $row;
         }
+
         $resized->destroy();
 
         return $out;

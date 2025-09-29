@@ -75,7 +75,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "nightlife-{$id}.jpg",
+            filename: sprintf('nightlife-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

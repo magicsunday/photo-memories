@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\Attributes\Test;
@@ -65,7 +63,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "monthly-{$id}.jpg",
+            filename: sprintf('monthly-%d.jpg', $id),
             takenAt: $takenAt,
         );
     }

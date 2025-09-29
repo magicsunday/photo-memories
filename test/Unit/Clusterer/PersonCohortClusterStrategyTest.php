@@ -74,7 +74,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     {
         return $this->makePersonTaggedMediaFixture(
             id: $id,
-            filename: "cohort-{$id}.jpg",
+            filename: sprintf('cohort-%d.jpg', $id),
             personIds: $persons,
             takenAt: $takenAt,
             lat: 52.5,

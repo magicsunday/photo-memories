@@ -102,7 +102,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "phash-{$id}.jpg",
+            filename: sprintf('phash-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

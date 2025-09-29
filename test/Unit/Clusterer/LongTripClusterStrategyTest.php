@@ -138,7 +138,7 @@ final class LongTripClusterStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "long-trip-{$id}.jpg",
+            filename: sprintf('long-trip-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

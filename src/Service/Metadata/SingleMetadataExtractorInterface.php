@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use RuntimeException;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -23,7 +24,7 @@ interface SingleMetadataExtractorInterface
      *
      * Implementations must be idempotent and only set fields they own.
      *
-     * @throws \RuntimeException on extraction error
+     * @throws RuntimeException on extraction error
      */
     public function extract(string $filepath, Media $media): Media;
 }

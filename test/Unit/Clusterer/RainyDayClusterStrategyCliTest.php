@@ -49,7 +49,7 @@ final class RainyDayClusterStrategyCliTest extends TestCase
 
         $command = new class($strategy, $items) extends Command {
             /** @var list<Media> */
-            private array $items;
+            private readonly array $items;
 
             /**
              * @param list<Media> $items
@@ -94,10 +94,10 @@ final class RainyDayClusterStrategyCliTest extends TestCase
 /**
  * @internal test helper
  */
-final class CliRainProvider implements WeatherHintProviderInterface
+final readonly class CliRainProvider implements WeatherHintProviderInterface
 {
     /** @param array<int, array<string, float>> $hints */
-    public function __construct(private readonly array $hints)
+    public function __construct(private array $hints)
     {
     }
 

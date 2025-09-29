@@ -6,7 +6,7 @@ namespace MagicSunday\Memories\Feed;
 /**
  * Simple DTO representing a feed card.
  */
-final class MemoryFeedItem
+final readonly class MemoryFeedItem
 {
     /**
      * @param list<int> $memberIds
@@ -24,8 +24,11 @@ final class MemoryFeedItem
     }
 
     public function getAlgorithm(): string { return $this->algorithm; }
+
     public function getTitle(): string { return $this->title; }
+
     public function getSubtitle(): string { return $this->subtitle; }
+
     public function getCoverMediaId(): ?int { return $this->coverMediaId; }
 
     /** @return list<int> */

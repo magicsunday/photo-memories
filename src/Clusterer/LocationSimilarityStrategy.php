@@ -3,31 +3,34 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
-final class LocationSimilarityStrategy implements ClusterStrategyInterface
+final readonly class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly float $radiusMeters = 150.0,
-        private readonly int $minItemsPerPlace = 5,
-        private readonly int $maxSpanHours = 24,
+        private LocationHelper $locHelper,
+        private float $radiusMeters = 150.0,
+        private int $minItemsPerPlace = 5,
+        private int $maxSpanHours = 24,
     ) {
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerPlace < 1) {
-            throw new \InvalidArgumentException('minItemsPerPlace must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerPlace must be >= 1.');
         }
+
         if ($this->maxSpanHours < 0) {
-            throw new \InvalidArgumentException('maxSpanHours must be >= 0.');
+            throw new InvalidArgumentException('maxSpanHours must be >= 0.');
         }
     }
 
@@ -53,7 +56,7 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
         foreach ($withTimestamp as $m) {
             $key = $this->locHelper->localityKeyForMedia($m);
             if ($key !== null) {
-                $byLocality[$key] = $byLocality[$key] ?? [];
+                $byLocality[$key] ??= [];
                 $byLocality[$key][] = $m;
             } else {
                 $noLocality[] = $m;
@@ -81,9 +84,11 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
                 if ($poi['categoryKey'] !== null) {
                     $params['poi_category_key'] = $poi['categoryKey'];
                 }
+
                 if ($poi['categoryValue'] !== null) {
                     $params['poi_category_value'] = $poi['categoryValue'];
                 }
+
                 if ($poi['tags'] !== []) {
                     $params['poi_tags'] = $poi['tags'];
                 }
@@ -158,6 +163,7 @@ final class LocationSimilarityStrategy implements ClusterStrategyInterface
                 if (\count($bucket) > 0) {
                     $out[] = $bucket;
                 }
+
                 $bucket = [$m];
                 $start  = $ts;
             }

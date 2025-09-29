@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,20 +13,21 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds a highlight memory for each (year, month) with sufficient coverage.
  */
-final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
+final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerMonth = 40,
-        private readonly int $minDistinctDays = 10
+        private string $timezone = 'Europe/Berlin',
+        private int $minItemsPerMonth = 40,
+        private int $minDistinctDays = 10
     ) {
         if ($this->minItemsPerMonth < 1) {
-            throw new \InvalidArgumentException('minItemsPerMonth must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerMonth must be >= 1.');
         }
+
         if ($this->minDistinctDays < 1) {
-            throw new \InvalidArgumentException('minDistinctDays must be >= 1.');
+            throw new InvalidArgumentException('minDistinctDays must be >= 1.');
         }
     }
 
@@ -71,11 +73,7 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
                 }
 
                 $count = \count($days);
-                if ($count < $this->minDistinctDays) {
-                    return false;
-                }
-
-                return true;
+                return $count >= $this->minDistinctDays;
             }
         );
 
@@ -93,7 +91,7 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
 
             $year  = (int) \substr($ym, 0, 4);
             $month = (int) \substr($ym, 5, 2);
-            $label = self::germanMonthLabel($month) . ' ' . $year;
+            $label = $this->germanMonthLabel($month) . ' ' . $year;
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -110,7 +108,7 @@ final class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
         return $out;
     }
 
-    private static function germanMonthLabel(int $m): string
+    private function germanMonthLabel(int $m): string
     {
         return match ($m) {
             1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April',

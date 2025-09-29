@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -13,20 +14,21 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds a memory around the same date last year within a +/- window.
  */
-final class OneYearAgoClusterStrategy implements ClusterStrategyInterface
+final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $windowDays = 3,
-        private readonly int $minItemsTotal   = 8
+        private string $timezone = 'Europe/Berlin',
+        private int $windowDays = 3,
+        private int $minItemsTotal   = 8
     ) {
         if ($this->windowDays < 0) {
-            throw new \InvalidArgumentException('windowDays must be >= 0.');
+            throw new InvalidArgumentException('windowDays must be >= 0.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 

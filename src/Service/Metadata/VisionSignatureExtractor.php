@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
@@ -11,15 +12,15 @@ use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
  * Computes simple vision quality features from a downscaled grayscale matrix.
  * Backend-agnostic via ImageAdapter (Imagick preferred, fallback to GD).
  */
-final class VisionSignatureExtractor implements SingleMetadataExtractorInterface
+final readonly class VisionSignatureExtractor implements SingleMetadataExtractorInterface
 {
     use GdImageToolsTrait;
 
     public function __construct(
-        private readonly int $sampleSize = 96 // square downsample for analysis
+        private int $sampleSize = 96 // square downsample for analysis
     ) {
         if ($this->sampleSize < 16) {
-            throw new \InvalidArgumentException('sampleSize must be >= 16');
+            throw new InvalidArgumentException('sampleSize must be >= 16');
         }
     }
 
@@ -145,6 +146,7 @@ final class VisionSignatureExtractor implements SingleMetadataExtractorInterface
         if ($n < 1) {
             return 0.0;
         }
+
         $mean = $sum / (float) $n;
         $var  = \max(0.0, ($sum2 / (float) $n) - $mean * $mean);
 
@@ -185,6 +187,7 @@ final class VisionSignatureExtractor implements SingleMetadataExtractorInterface
         if ($n < 1) {
             return 0.0;
         }
+
         // Normalize rough range into [0..1]
         $avg = $acc / (float) $n;        // ~[0..128]
         return \max(0.0, \min(1.0, $avg / 64.0));

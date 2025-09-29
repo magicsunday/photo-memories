@@ -113,7 +113,7 @@ final class RoadTripClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "road-trip-{$id}.jpg",
+            filename: sprintf('road-trip-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

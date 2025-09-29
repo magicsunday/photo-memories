@@ -3,26 +3,28 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-final class PhashSimilarityStrategy implements ClusterStrategyInterface
+final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly int $maxHamming = 6,
-        private readonly int $minItemsPerBucket = 2,
+        private LocationHelper $locHelper,
+        private int $maxHamming = 6,
+        private int $minItemsPerBucket = 2,
     ) {
         if ($this->maxHamming < 0) {
-            throw new \InvalidArgumentException('maxHamming must be >= 0.');
+            throw new InvalidArgumentException('maxHamming must be >= 0.');
         }
+
         if ($this->minItemsPerBucket < 1) {
-            throw new \InvalidArgumentException('minItemsPerBucket must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerBucket must be >= 1.');
         }
     }
 
@@ -53,7 +55,7 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
         foreach ($with as $m) {
             $p = (string) $m->getPhash();
             $bucketKey = \substr($p, 0, 4);
-            $buckets[$bucketKey] = $buckets[$bucketKey] ?? [];
+            $buckets[$bucketKey] ??= [];
             $buckets[$bucketKey][] = $m;
         }
 
@@ -67,6 +69,7 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
                 if (\count($comp) < $this->minItemsPerBucket) {
                     continue;
                 }
+
                 $params = [
                     'time_range' => $this->computeTimeRange($comp),
                 ];
@@ -118,6 +121,7 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
             if ($seen[$i]) {
                 continue;
             }
+
             // BFS
             $queue = [$i];
             $seen[$i] = true;
@@ -127,6 +131,7 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
                 if ($v === null) {
                     break;
                 }
+
                 $comp[] = $items[$v];
                 foreach ($adj[$v] as $w) {
                     if (!$seen[$w]) {
@@ -135,9 +140,8 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
                     }
                 }
             }
-            if ($comp !== []) {
-                $out[] = $comp;
-            }
+
+            $out[] = $comp;
         }
 
         return $out;
@@ -152,6 +156,7 @@ final class PhashSimilarityStrategy implements ClusterStrategyInterface
             // count bits in nibble
             $dist += [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4][$x] ?? 0;
         }
+
         // different length → penalize remaining nibbles as full mismatches
         $extra = \abs(\strlen($a) - \strlen($b)) * 4;
         return $dist + $extra;

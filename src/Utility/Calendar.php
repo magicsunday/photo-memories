@@ -46,11 +46,11 @@ final class Calendar
         $key = $day->format('Y-m-d');
 
         $fixed = [
-            "{$y}-01-01" => 'Neujahr',
-            "{$y}-05-01" => 'Tag der Arbeit',
-            "{$y}-10-03" => 'Tag der Deutschen Einheit',
-            "{$y}-12-25" => '1. Weihnachtstag',
-            "{$y}-12-26" => '2. Weihnachtstag',
+            $y . '-01-01' => 'Neujahr',
+            $y . '-05-01' => 'Tag der Arbeit',
+            $y . '-10-03' => 'Tag der Deutschen Einheit',
+            $y . '-12-25' => '1. Weihnachtstag',
+            $y . '-12-26' => '2. Weihnachtstag',
         ];
         if (isset($fixed[$key])) {
             return $fixed[$key];

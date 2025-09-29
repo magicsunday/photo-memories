@@ -29,6 +29,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
                 $ts[] = $t;
             }
         }
+
         \sort($ts, \SORT_NUMERIC);
         $medianTs = $ts !== [] ? $ts[(int) \floor(\count($ts) / 2)] : null;
 
@@ -48,8 +49,8 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
     private function score(Media $m, ?int $medianTs): float
     {
-        $w = (int) ($m->getWidth() ?? 0);
-        $h = (int) ($m->getHeight() ?? 0);
+        $w = $m->getWidth() ?? 0;
+        $h = $m->getHeight() ?? 0;
         $areaMp = $w > 0 && $h > 0 ? (($w * $h) / 1_000_000.0) : 0.0;
 
         // Orientation bonus
@@ -70,7 +71,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         // Thumbnails present?
-        $thumbBonus = ($m->getThumbnails() !== null && \count((array) $m->getThumbnails()) > 0) ? 0.1 : 0.0;
+        $thumbBonus = ($m->getThumbnails() !== null && $m->getThumbnails() !== []) ? 0.1 : 0.0;
 
         // File size hints
         $sizeScore = \min(1.0, (float) $m->getSize() / (8_000_000.0)); // cap @ ~8MB

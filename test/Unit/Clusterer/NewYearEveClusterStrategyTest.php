@@ -62,7 +62,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "nye-{$id}.jpg",
+            filename: sprintf('nye-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 52.5,
             lon: 13.4,

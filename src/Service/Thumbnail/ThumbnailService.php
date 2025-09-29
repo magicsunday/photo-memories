@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Thumbnail;
 
+use RuntimeException;
+use Imagick;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -11,9 +13,10 @@ use MagicSunday\Memories\Entity\Media;
  */
 class ThumbnailService implements ThumbnailServiceInterface
 {
-    private string $thumbnailDir;
+    private readonly string $thumbnailDir;
+
     /** @var int[] sizes in px (width) */
-    private array $sizes;
+    private readonly array $sizes;
 
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024])
     {
@@ -38,6 +41,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 $results[$size] = $path;
             }
         }
+
         return $results;
     }
 
@@ -51,21 +55,23 @@ class ThumbnailService implements ThumbnailServiceInterface
             return $this->generateWithGd($filepath, $width);
         }
 
-        throw new \RuntimeException('No available image library (Imagick or GD) to create thumbnails');
+        throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
     }
 
     private function generateWithImagick(string $filepath, int $width): ?string
     {
-        $im = new \Imagick();
+        $im = new Imagick();
         $im->setOption('jpeg:preserve-settings', 'true');
         $im->readImage($filepath . '[0]');
         $im->thumbnailImage($width, 0);
+
         $hash = hash('crc32b', $filepath . ':' . $width);
         $out = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
         if ($im->writeImage($out)) {
             $im->clear();
             return $out;
         }
+
         $im->clear();
         return null;
     }
@@ -81,6 +87,7 @@ class ThumbnailService implements ThumbnailServiceInterface
         if ($src === false) {
             return null;
         }
+
         $w = imagesx($src);
         $h = imagesy($src);
         $ratio = $h > 0 ? ($w / $h) : 1;

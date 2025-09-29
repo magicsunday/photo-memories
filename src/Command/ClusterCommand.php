@@ -72,6 +72,7 @@ final class ClusterCommand extends Command
                 $io->error('Invalid "since" date. Use YYYY-MM-DD.');
                 return Command::INVALID;
             }
+
             $countQb->andWhere('m.takenAt >= :since')->setParameter('since', $sinceDt);
             $listQb->andWhere('m.takenAt >= :since')->setParameter('since', $sinceDt);
         }
@@ -81,6 +82,7 @@ final class ClusterCommand extends Command
                 $io->error('Invalid "limit" value. Use a positive integer.');
                 return Command::INVALID;
             }
+
             $lim = (int) $limit;
             if ($lim > 0) {
                 $listQb->setMaxResults($lim);
@@ -105,6 +107,7 @@ final class ClusterCommand extends Command
             $items[] = $m;
             $this->tick($loadBar, $loadStart, \count($items), 'Medien');
         }
+
         $loadBar->finish();
         $loadSection->writeln('');
         $io->success(\sprintf('%d Medien geladen.', \count($items)));
@@ -263,7 +266,7 @@ final class ClusterCommand extends Command
             $h = (int) \floor($elapsed / 3600);
             $m = (int) \floor(($elapsed % 3600) / 60);
             $s = $elapsed % 60;
-            return \sprintf('%02d:%02d:%02d', $h, $m, (int) $s);
+            return \sprintf('%02d:%02d:%02d', $h, $m, $s);
         });
 
         // Named messages: %phase% and %rate%

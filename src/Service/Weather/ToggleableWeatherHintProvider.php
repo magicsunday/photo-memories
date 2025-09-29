@@ -8,12 +8,12 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Delegates weather lookups to a primary provider that can be disabled via configuration.
  */
-final class ToggleableWeatherHintProvider implements WeatherHintProviderInterface
+final readonly class ToggleableWeatherHintProvider implements WeatherHintProviderInterface
 {
     public function __construct(
-        private readonly WeatherHintProviderInterface $primary,
-        private readonly WeatherHintProviderInterface $fallback,
-        private readonly bool $enabled
+        private WeatherHintProviderInterface $primary,
+        private WeatherHintProviderInterface $fallback,
+        private bool $enabled
     ) {
     }
 

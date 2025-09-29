@@ -3,26 +3,28 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-final class TimeSimilarityStrategy implements ClusterStrategyInterface
+final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly LocationHelper $locHelper,
-        private readonly int $maxGapSeconds = 21600,
-        private readonly int $minItemsPerBucket = 5,
+        private LocationHelper $locHelper,
+        private int $maxGapSeconds = 21600,
+        private int $minItemsPerBucket = 5,
     ) {
         if ($this->maxGapSeconds < 1) {
-            throw new \InvalidArgumentException('maxGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('maxGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerBucket < 1) {
-            throw new \InvalidArgumentException('minItemsPerBucket must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerBucket must be >= 1.');
         }
     }
 
@@ -60,6 +62,7 @@ final class TimeSimilarityStrategy implements ClusterStrategyInterface
             if ($prevTs !== null && ($ts - $prevTs) > $this->maxGapSeconds) {
                 $split = true;
             }
+
             if ($prevKey !== null && $key !== null && $key !== $prevKey) {
                 $split = true;
             }

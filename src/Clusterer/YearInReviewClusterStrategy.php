@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -11,19 +12,20 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds one macro cluster per year if enough items exist.
  */
-final class YearInReviewClusterStrategy implements ClusterStrategyInterface
+final readonly class YearInReviewClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $minItemsPerYear = 150,
-        private readonly int $minDistinctMonths = 5
+        private int $minItemsPerYear = 150,
+        private int $minDistinctMonths = 5
     ) {
         if ($this->minItemsPerYear < 1) {
-            throw new \InvalidArgumentException('minItemsPerYear must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerYear must be >= 1.');
         }
+
         if ($this->minDistinctMonths < 1 || $this->minDistinctMonths > 12) {
-            throw new \InvalidArgumentException('minDistinctMonths must be within 1..12.');
+            throw new InvalidArgumentException('minDistinctMonths must be within 1..12.');
         }
     }
 
@@ -65,11 +67,7 @@ final class YearInReviewClusterStrategy implements ClusterStrategyInterface
                 }
 
                 $count = \count($months);
-                if ($count < $this->minDistinctMonths) {
-                    return false;
-                }
-
-                return true;
+                return $count >= $this->minDistinctMonths;
             }
         );
 

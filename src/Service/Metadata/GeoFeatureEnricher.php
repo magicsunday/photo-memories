@@ -9,12 +9,12 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Adds geoCell and distance-from-home using GPS.
  */
-final class GeoFeatureEnricher implements SingleMetadataExtractorInterface
+final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private readonly float $homeLat,
-        private readonly float $homeLon,
-        private readonly float $cellDegrees = 0.01
+        private float $homeLat,
+        private float $homeLon,
+        private float $cellDegrees = 0.01
     ) {
     }
 

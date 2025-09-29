@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Thumbnail;
 
+use RuntimeException;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -18,7 +19,7 @@ interface ThumbnailServiceInterface
      *
      * @return array<int,string> Map of width (px) to absolute thumbnail path.
      *
-     * @throws \RuntimeException When thumbnail generation fails.
+     * @throws RuntimeException When thumbnail generation fails.
      */
     public function generateAll(string $filepath, Media $media): array;
 }

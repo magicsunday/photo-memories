@@ -19,6 +19,7 @@ final class DaypartEnricher implements SingleMetadataExtractorInterface
         if (!$t instanceof DateTimeImmutable) {
             return $media;
         }
+
         $offsetMin = $media->getTimezoneOffsetMin() ?? 0;
         $ts = $t->getTimestamp() + $offsetMin * 60;
         $h  = (int) \gmdate('G', $ts);

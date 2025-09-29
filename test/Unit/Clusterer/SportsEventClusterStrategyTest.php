@@ -28,7 +28,7 @@ final class SportsEventClusterStrategyTest extends TestCase
             $mediaItems[] = $this->createMedia(
                 100 + $i,
                 new DateTimeImmutable('2024-03-16 ' . (18 + $i) . ':00:00', new DateTimeZone('UTC')),
-                "matchday-{$i}.jpg",
+                sprintf('matchday-%d.jpg', $i),
                 52.51 + $i * 0.0003,
                 13.4 + $i * 0.0003,
             );
@@ -60,7 +60,7 @@ final class SportsEventClusterStrategyTest extends TestCase
             $weekdayItems[] = $this->createMedia(
                 200 + $i,
                 new DateTimeImmutable('2024-03-13 ' . (18 + $i) . ':00:00', new DateTimeZone('UTC')),
-                "matchday-{$i}.jpg",
+                sprintf('matchday-%d.jpg', $i),
                 52.5 + $i * 0.01,
                 13.3 + $i * 0.01,
             );

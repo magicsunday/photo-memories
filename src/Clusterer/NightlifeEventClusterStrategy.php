@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,24 +13,26 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Clusters evening/night sessions (20:00–04:00 local time) with time gap and spatial compactness.
  */
-final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
+final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $timeGapSeconds = 3 * 3600, // 3h
-        private readonly float $radiusMeters = 300.0,
-        private readonly int $minItemsPerRun = 5
+        private string $timezone = 'Europe/Berlin',
+        private int $timeGapSeconds = 3 * 3600, // 3h
+        private float $radiusMeters = 300.0,
+        private int $minItemsPerRun = 5
     ) {
         if ($this->timeGapSeconds < 1) {
-            throw new \InvalidArgumentException('timeGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('timeGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -61,9 +64,7 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        \usort($night, static function (Media $a, Media $b): int {
-            return $a->getTakenAt() <=> $b->getTakenAt();
-        });
+        \usort($night, static fn(Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         /** @var list<list<Media>> $runs */
         $runs = [];
@@ -77,9 +78,11 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
                 $runs[] = $buf;
                 $buf    = [];
             }
+
             $buf[]  = $m;
             $lastTs = $ts;
         }
+
         if ($buf !== []) {
             $runs[] = $buf;
         }
@@ -109,6 +112,7 @@ final class NightlifeEventClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if (!$ok) {
                 continue;
             }

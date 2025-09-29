@@ -35,6 +35,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
                     $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
                     $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00'));
                 }
+
                 $mediaItems[] = $this->createMedia($id++, $this->dateString(2022, $month, $day + 5, '10:00:00'));
 
                 $clusters = $strategy->cluster($mediaItems);
@@ -91,23 +92,17 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 
     private function dateString(int $year, int $month, int $day, string $time): string
     {
-        $day = max(1, min($day, $this->daysInMonth($year, $month)));
+        $base = new DateTimeImmutable(\sprintf('%04d-%02d-01 %s', $year, $month, $time));
 
-        return \sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+        return $base->setDate($year, $month, $day)->format('Y-m-d H:i:s');
     }
 
     private function createMedia(int $id, string $takenAt): Media
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "on-this-day-{$id}.jpg",
+            filename: sprintf('on-this-day-%d.jpg', $id),
             takenAt: $takenAt,
         );
     }
-
-    private function daysInMonth(int $year, int $month): int
-    {
-        return (int) (new DateTimeImmutable(\sprintf('%04d-%02d-01', $year, $month)))->format('t');
-    }
-
 }

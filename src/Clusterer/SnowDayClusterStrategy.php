@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,20 +13,21 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Builds "Snow Day" clusters using winter months and snow/ski keywords.
  */
-final class SnowDayClusterStrategy implements ClusterStrategyInterface
+final readonly class SnowDayClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly int $minItemsPerRun = 6
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 2 * 3600,
+        private int $minItemsPerRun = 6
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -80,6 +82,7 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
                 $buf = [];
                 return;
             }
+
             $centroid = MediaMath::centroid($buf);
             $time     = MediaMath::timeRange($buf);
 
@@ -99,12 +102,15 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
                 $flush();
             }
+
             $buf[] = $m;
             $lastTs = $ts;
         }
+
         $flush();
 
         return $out;
@@ -119,6 +125,7 @@ final class SnowDayClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,32 +13,36 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Detects dining-out moments based on evening hours and food/venue keywords; spatially compact sessions.
  */
-final class DiningOutClusterStrategy implements ClusterStrategyInterface
+final readonly class DiningOutClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly float $radiusMeters = 250.0,
-        private readonly int $minItemsPerRun = 4,
-        private readonly int $minHour = 17,
-        private readonly int $maxHour = 23
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 2 * 3600,
+        private float $radiusMeters = 250.0,
+        private int $minItemsPerRun = 4,
+        private int $minHour = 17,
+        private int $maxHour = 23
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
         if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
-            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+            throw new InvalidArgumentException('Hour bounds must be within 0..23.');
         }
+
         if ($this->minHour > $this->maxHour) {
-            throw new \InvalidArgumentException('minHour must be <= maxHour.');
+            throw new InvalidArgumentException('minHour must be <= maxHour.');
         }
     }
 
@@ -90,10 +95,12 @@ final class DiningOutClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -125,6 +132,7 @@ final class DiningOutClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if (!$ok) {
                 continue;
             }
@@ -159,6 +167,7 @@ final class DiningOutClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

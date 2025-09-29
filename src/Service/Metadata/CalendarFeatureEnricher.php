@@ -68,6 +68,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         if (!\is_int($tsE)) {
             return [false, null];
         }
+
         $rel = [
             -2 => 'de-goodfriday',
             +1 => 'de-eastermon',
@@ -81,6 +82,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
                 return [true, $code . '-' . $y];
             }
         }
+
         return [false, null];
     }
 

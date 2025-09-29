@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -13,24 +14,26 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Collects all photos taken around today's month/day across different years.
  * Example: Feb-14 across 2014..2025 within a +/- window of days.
  */
-final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $windowDays = 0,   // 0 = exact same month/day, 1..3 = tolerant
-        private readonly int $minYears   = 3,
-        private readonly int $minItemsTotal   = 12
+        private string $timezone = 'Europe/Berlin',
+        private int $windowDays = 0,   // 0 = exact same month/day, 1..3 = tolerant
+        private int $minYears   = 3,
+        private int $minItemsTotal   = 12
     ) {
         if ($this->windowDays < 0) {
-            throw new \InvalidArgumentException('windowDays must be >= 0.');
+            throw new InvalidArgumentException('windowDays must be >= 0.');
         }
+
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -104,6 +107,7 @@ final class OnThisDayOverYearsClusterStrategy implements ClusterStrategyInterfac
         if ($a === false || $b === false) {
             return 9999;
         }
+
         return (int) \abs(($b - $a) / 86400);
     }
 }

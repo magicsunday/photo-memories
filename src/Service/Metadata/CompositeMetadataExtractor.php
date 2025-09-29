@@ -9,7 +9,7 @@ use MagicSunday\Memories\Entity\Media;
  * Orchestrates a sequence of specialized extractors.
  * Keeps IndexCommand unchanged: it still depends on MetadataExtractorInterface.
  */
-final class CompositeMetadataExtractor implements MetadataExtractorInterface
+final readonly class CompositeMetadataExtractor implements MetadataExtractorInterface
 {
     /** @var SingleMetadataExtractorInterface[] */
     private array $extractors;

@@ -55,7 +55,7 @@ final class MediaLocationLinker
 
         // 3) network path once per cell
         $result = $this->geocoder->reverse($lat, $lon, $acceptLanguage);
-        if ($result === null) {
+        if (!$result instanceof GeocodeResult) {
             return null;
         }
 

@@ -13,10 +13,10 @@ use MagicSunday\Memories\Entity\Media;
  * - Converts Julian day directly to Unix time (UTC) via JD 2440587.5 anchor.
  * - Compares in "local wall time" using Media::getTimezoneOffsetMin().
  */
-final class SolarEnricher implements SingleMetadataExtractorInterface
+final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private readonly int $goldenMinutes = 60
+        private int $goldenMinutes = 60
     ) {
     }
 

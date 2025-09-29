@@ -31,7 +31,7 @@ final class SnowDayClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($index * 25) . 'M')),
                 47.0 + ($index * 0.001),
                 11.0 + ($index * 0.001),
-                "{$keyword}-moment.jpg",
+                $keyword . '-moment.jpg',
             );
         }
 
@@ -61,7 +61,7 @@ final class SnowDayClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 30) . 'M')),
                 47.5 + ($i * 0.001),
                 11.5 + ($i * 0.001),
-                "mountain-hike-{$i}.jpg",
+                sprintf('mountain-hike-%d.jpg', $i),
             );
         }
 

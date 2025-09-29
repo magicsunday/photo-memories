@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,33 +13,36 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Heuristic "Golden Hour" clusters around morning/evening hours.
  */
-final class GoldenHourClusterStrategy implements ClusterStrategyInterface
+final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        private string $timezone = 'Europe/Berlin',
         /** Inclusive local hours considered golden-hour candidates. */
-        private readonly array $morningHours = [6, 7, 8],
-        private readonly array $eveningHours = [18, 19, 20],
-        private readonly int $sessionGapSeconds = 90 * 60,
-        private readonly int $minItemsPerRun = 5
+        private array $morningHours = [6, 7, 8],
+        private array $eveningHours = [18, 19, 20],
+        private int $sessionGapSeconds = 90 * 60,
+        private int $minItemsPerRun = 5
     ) {
         if ($this->morningHours === [] || $this->eveningHours === []) {
-            throw new \InvalidArgumentException('Morning and evening hours must not be empty.');
+            throw new InvalidArgumentException('Morning and evening hours must not be empty.');
         }
+
         foreach ([$this->morningHours, $this->eveningHours] as $hours) {
             foreach ($hours as $hour) {
                 if (!\is_int($hour) || $hour < 0 || $hour > 23) {
-                    throw new \InvalidArgumentException('Hour values must be integers within 0..23.');
+                    throw new InvalidArgumentException('Hour values must be integers within 0..23.');
                 }
             }
         }
+
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -86,6 +90,7 @@ final class GoldenHourClusterStrategy implements ClusterStrategyInterface
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $lastTs = $ts;
         }

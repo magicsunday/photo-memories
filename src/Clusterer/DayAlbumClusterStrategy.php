@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,16 +13,16 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Groups photos by local calendar day. Produces compact "Day Tour" clusters.
  */
-final class DayAlbumClusterStrategy implements ClusterStrategyInterface
+final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerDay = 8
+        private string $timezone = 'Europe/Berlin',
+        private int $minItemsPerDay = 8
     ) {
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 

@@ -97,7 +97,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "this-month-{$id}.jpg",
+            filename: sprintf('this-month-%d.jpg', $id),
             takenAt: $takenAt->setTimezone(new DateTimeZone('UTC')),
         );
     }

@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Location;
@@ -85,7 +83,7 @@ final class WeekendTripClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "weekend-{$id}.jpg",
+            filename: sprintf('weekend-%d.jpg', $id),
             takenAt: $takenAt,
             location: $location,
         );

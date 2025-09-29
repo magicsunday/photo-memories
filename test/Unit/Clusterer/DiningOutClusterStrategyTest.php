@@ -34,7 +34,7 @@ final class DiningOutClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($index * 25) . 'M')),
                 40.7128 + ($index * 0.0002),
                 -74.0060 + ($index * 0.0002),
-                __DIR__ . "/fixtures/{$keyword}-shot.jpg",
+                __DIR__ . sprintf('/fixtures/%s-shot.jpg', $keyword),
             );
         }
 

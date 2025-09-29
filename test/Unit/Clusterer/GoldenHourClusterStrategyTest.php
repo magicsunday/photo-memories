@@ -61,7 +61,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "golden-{$id}.jpg",
+            filename: sprintf('golden-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 48.5,
             lon: 9.0,

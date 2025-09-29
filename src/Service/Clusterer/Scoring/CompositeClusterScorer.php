@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -24,12 +25,12 @@ use MagicSunday\Memories\Utility\MediaMath;
  * values from the attached media entities to avoid expensive recalculation
  * in hot paths.
  */
-final class CompositeClusterScorer
+final readonly class CompositeClusterScorer
 {
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly HolidayResolverInterface $holidayResolver,
-        private readonly NoveltyHeuristic $novelty,
+        private EntityManagerInterface $em,
+        private HolidayResolverInterface $holidayResolver,
+        private NoveltyHeuristic $novelty,
         /**
          * @var array{
          *     quality:float,
@@ -45,7 +46,7 @@ final class CompositeClusterScorer
          *     time_coverage:float
          * }
          */
-        private readonly array $weights = [
+        private array $weights = [
             'quality'        => 0.22,
             'aesthetics'     => 0.08,
             'people'         => 0.16,
@@ -59,17 +60,17 @@ final class CompositeClusterScorer
             'time_coverage'  => 0.10,
         ],
         /** @var array<string,float> $algorithmBoosts */
-        private readonly array $algorithmBoosts = [],
+        private array $algorithmBoosts = [],
         /** @var array<string,float> $poiCategoryBoosts */
-        private readonly array $poiCategoryBoosts = [],
-        private readonly float $qualityBaselineMegapixels = 12.0,
-        private readonly int $minValidYear = 1990,
-        private readonly int $timeRangeMinSamples = 3,
-        private readonly float $timeRangeMinCoverage = 0.6
+        private array $poiCategoryBoosts = [],
+        private float $qualityBaselineMegapixels = 12.0,
+        private int $minValidYear = 1990,
+        private int $timeRangeMinSamples = 3,
+        private float $timeRangeMinCoverage = 0.6
     ) {
         foreach ($this->algorithmBoosts as $algorithm => $boost) {
             if ($boost <= 0.0) {
-                throw new \InvalidArgumentException(
+                throw new InvalidArgumentException(
                     \sprintf('Algorithm boost must be > 0.0, got %s => %f', (string) $algorithm, $boost)
                 );
             }
@@ -77,10 +78,11 @@ final class CompositeClusterScorer
 
         foreach ($this->poiCategoryBoosts as $pattern => $boost) {
             if (!\is_string($pattern) || $pattern === '') {
-                throw new \InvalidArgumentException('POI category boost keys must be non-empty strings.');
+                throw new InvalidArgumentException('POI category boost keys must be non-empty strings.');
             }
+
             if (!\is_numeric($boost)) {
-                throw new \InvalidArgumentException(
+                throw new InvalidArgumentException(
                     \sprintf('POI category boost for %s must be numeric.', $pattern)
                 );
             }
@@ -145,17 +147,20 @@ final class CompositeClusterScorer
                 $iso        ??= $qualityMetrics['iso'];
             }
 
-            $quality = $quality ?? 0.0;
+            $quality ??= 0.0;
             $c->setParam('quality_avg', $quality);
             if ($resolution !== null) {
                 $c->setParam('quality_resolution', $resolution);
             }
+
             if ($sharpness !== null) {
                 $c->setParam('quality_sharpness', $sharpness);
             }
+
             if ($iso !== null) {
                 $c->setParam('quality_iso', $iso);
             }
+
             if ($aesthetics !== null) {
                 $c->setParam('aesthetics_score', $aesthetics);
             }
@@ -182,6 +187,7 @@ final class CompositeClusterScorer
                     $density  = \min(1.0, $n / \max(60.0, (float) $duration / 60.0));
                 }
             }
+
             if ($tr !== null || isset($params['density'])) {
                 $c->setParam('density', $density);
             }
@@ -191,6 +197,7 @@ final class CompositeClusterScorer
             if ($novelty === null) {
                 $novelty = $this->novelty->computeNovelty($c, $mediaMap, $noveltyStats);
             }
+
             $c->setParam('novelty', $novelty);
 
             // --- holiday (only with valid time)
@@ -198,6 +205,7 @@ final class CompositeClusterScorer
             if ($tr !== null && !isset($params['holiday'])) {
                 $holiday = $this->computeHolidayScore((int) $tr['from'], (int) $tr['to']);
             }
+
             if ($tr !== null || isset($params['holiday'])) {
                 $c->setParam('holiday', $holiday);
             }
@@ -208,6 +216,7 @@ final class CompositeClusterScorer
                 $ageDays = \max(0.0, ($now - (int) $tr['to']) / 86400.0);
                 $recency = \max(0.0, 1.0 - \min(1.0, $ageDays / 365.0));
             }
+
             if ($tr !== null || isset($params['recency'])) {
                 $c->setParam('recency', $recency);
             }
@@ -266,9 +275,7 @@ final class CompositeClusterScorer
             $c->setParam('score', $score);
         }
 
-        \usort($clusters, static function (ClusterDraft $a, ClusterDraft $b): int {
-            return ($b->getParams()['score'] ?? 0.0) <=> ($a->getParams()['score'] ?? 0.0);
-        });
+        \usort($clusters, static fn(ClusterDraft $a, ClusterDraft $b): int => ($b->getParams()['score'] ?? 0.0) <=> ($a->getParams()['score'] ?? 0.0));
 
         return $clusters;
     }
@@ -291,6 +298,7 @@ final class CompositeClusterScorer
                 $ids[$id] = true;
             }
         }
+
         $allIds = \array_map(static fn (int $k): int => $k, \array_keys($ids));
         if ($allIds === []) {
             return [];
@@ -311,6 +319,7 @@ final class CompositeClusterScorer
                 $map[$m->getId()] = $m;
             }
         }
+
         return $map;
     }
 
@@ -345,12 +354,14 @@ final class CompositeClusterScorer
         if (!\is_array($tr) || !isset($tr['from'], $tr['to'])) {
             return false;
         }
-        $from = (int) $tr['from'];
-        $to   = (int) $tr['to'];
+
+        $from = $tr['from'];
+        $to   = $tr['to'];
         if ($from <= 0 || $to <= 0 || $to < $from) {
             return false;
         }
-        $minTs = (int) (new DateTimeImmutable(\sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
+
+        $minTs = (new DateTimeImmutable(\sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
         return $from >= $minTs && $to >= $minTs;
     }
 
@@ -374,9 +385,11 @@ final class CompositeClusterScorer
                 $items[] = $m;
             }
         }
+
         if ($items === []) {
             return null;
         }
+
         return MediaMath::timeRangeReliable(
             $items,
             $this->timeRangeMinSamples,
@@ -397,6 +410,7 @@ final class CompositeClusterScorer
         if (isset($params['poi_score']) && \is_numeric($params['poi_score'])) {
             return $this->clamp01((float) $params['poi_score']);
         }
+
         $label = $this->stringOrNull($params['poi_label'] ?? null);
         $categoryKey = $this->stringOrNull($params['poi_category_key'] ?? null);
         $categoryValue = $this->stringOrNull($params['poi_category_value'] ?? null);
@@ -418,6 +432,7 @@ final class CompositeClusterScorer
             if ($this->stringOrNull($tags['wikidata'] ?? null) !== null) {
                 $score += 0.15;
             }
+
             if ($this->stringOrNull($tags['website'] ?? null) !== null) {
                 $score += 0.05;
             }
@@ -647,14 +662,24 @@ final class CompositeClusterScorer
 
         foreach ($mediaItems as $media) {
             $persons = $media->getPersons();
-            if (!\is_array($persons) || $persons === []) {
+            if (!\is_array($persons)) {
                 continue;
             }
+
+            if ($persons === []) {
+                continue;
+            }
+
             $itemsWithPeople++;
             foreach ($persons as $person) {
-                if (!\is_string($person) || $person === '') {
+                if (!\is_string($person)) {
                     continue;
                 }
+
+                if ($person === '') {
+                    continue;
+                }
+
                 $uniqueNames[$person] = true;
                 $mentions++;
             }
@@ -712,14 +737,24 @@ final class CompositeClusterScorer
 
         foreach ($mediaItems as $media) {
             $keywords = $media->getKeywords();
-            if (!\is_array($keywords) || $keywords === []) {
+            if (!\is_array($keywords)) {
                 continue;
             }
+
+            if ($keywords === []) {
+                continue;
+            }
+
             $itemsWithKeywords++;
             foreach ($keywords as $keyword) {
-                if (!\is_string($keyword) || $keyword === '') {
+                if (!\is_string($keyword)) {
                     continue;
                 }
+
+                if ($keyword === '') {
+                    continue;
+                }
+
                 $uniqueKeywords[\mb_strtolower($keyword)] = true;
                 $totalKeywords++;
             }
@@ -769,9 +804,14 @@ final class CompositeClusterScorer
         foreach ($mediaItems as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
-            if ($lat === null || $lon === null) {
+            if ($lat === null) {
                 continue;
             }
+
+            if ($lon === null) {
+                continue;
+            }
+
             $coords[] = [$lat, $lon];
         }
 
@@ -787,6 +827,7 @@ final class CompositeClusterScorer
                 $centroidLat += $coord[0];
                 $centroidLon += $coord[1];
             }
+
             $centroidLat /= $n;
             $centroidLon /= $n;
 
@@ -832,8 +873,9 @@ final class CompositeClusterScorer
     {
         $duration = $cached['duration_seconds'] ?? null;
         if ($duration === null && \is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
-            $duration = \max(0, (int) $timeRange['to'] - (int) $timeRange['from']);
+            $duration = \max(0, $timeRange['to'] - $timeRange['from']);
         }
+
         $duration = $duration !== null ? \max(0, (int) $duration) : 0;
 
         $coverage = $cached['coverage'] ?? null;
@@ -845,6 +887,7 @@ final class CompositeClusterScorer
                         $timestamped++;
                     }
                 }
+
                 $coverage = $timestamped / $members;
             } else {
                 $coverage = 0.0;
@@ -883,6 +926,7 @@ final class CompositeClusterScorer
             if ($value === null) {
                 continue;
             }
+
             $sum += $this->clamp01($value) * $weight;
             $weightSum += $weight;
         }
@@ -967,8 +1011,9 @@ final class CompositeClusterScorer
         if ($toTs < $fromTs) {
             return 0.0;
         }
-        $start = (new \DateTimeImmutable('@' . $fromTs))->setTime(0, 0);
-        $end   = (new \DateTimeImmutable('@' . $toTs))->setTime(0, 0);
+
+        $start = (new DateTimeImmutable('@' . $fromTs))->setTime(0, 0);
+        $end   = (new DateTimeImmutable('@' . $toTs))->setTime(0, 0);
 
         $onHoliday = false;
         $onWeekend = false;
@@ -978,6 +1023,7 @@ final class CompositeClusterScorer
                 $onHoliday = true;
                 break;
             }
+
             $dow = (int) $d->format('N'); // 6=Sat, 7=Sun
             if ($dow >= 6) {
                 $onWeekend = true;
@@ -987,23 +1033,11 @@ final class CompositeClusterScorer
         if ($onHoliday) {
             return 1.0;
         }
+
         if ($onWeekend) {
             return 0.5;
         }
+
         return 0.0;
-    }
-
-    /**
-     * Backwards-compatible helper retained for legacy consumers.
-     *
-     * @param ClusterDraft $c
-     * @param array<int,Media> $mediaMap
-     * @return float
-     */
-    private function computeQualityAvg(ClusterDraft $c, array $mediaMap): float
-    {
-        $metrics = $this->computeQualityMetrics($this->collectMediaItems($c, $mediaMap));
-
-        return $metrics['quality'];
     }
 }

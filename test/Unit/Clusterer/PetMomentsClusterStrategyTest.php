@@ -58,7 +58,7 @@ final class PetMomentsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "dog-{$id}.jpg",
+            filename: sprintf('dog-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 52.5,
             lon: 13.4,

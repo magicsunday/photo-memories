@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Location;
@@ -107,7 +105,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "significant-{$id}.jpg",
+            filename: sprintf('significant-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

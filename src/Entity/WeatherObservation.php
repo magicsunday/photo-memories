@@ -10,18 +10,20 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Entity;
 
+use MagicSunday\Memories\Repository\WeatherObservationRepository;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: \MagicSunday\Memories\Repository\WeatherObservationRepository::class)]
+#[ORM\Entity(repositoryClass: WeatherObservationRepository::class)]
 #[ORM\Table(name: 'weather_observation')]
 #[ORM\Index(name: 'idx_weather_bucket', fields: ['bucket'])]
 final class WeatherObservation
 {
-    public const DEFAULT_SOURCE = 'openweather';
-    private const COORD_PRECISION = 3;
+    public const string DEFAULT_SOURCE = 'openweather';
+
+    private const int COORD_PRECISION = 3;
 
     #[ORM\Id]
     #[ORM\Column(type: Types::BIGINT)]

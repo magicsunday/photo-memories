@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -14,25 +15,27 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Builds "Sunny Day" clusters when weather hints indicate strong sunshine on a local day.
  * Priority: use sun_prob; fallback to 1 - cloud_cover; fallback to 1 - rain_prob.
  */
-final class SunnyDayClusterStrategy implements ClusterStrategyInterface
+final readonly class SunnyDayClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly WeatherHintProviderInterface $weather,
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly float $minAvgSunScore = 0.65, // 0..1
-        private readonly int $minItemsPerDay = 6,
-        private readonly int $minHintsPerDay = 3
+        private WeatherHintProviderInterface $weather,
+        private string $timezone = 'Europe/Berlin',
+        private float $minAvgSunScore = 0.65, // 0..1
+        private int $minItemsPerDay = 6,
+        private int $minHintsPerDay = 3
     ) {
         if ($this->minAvgSunScore < 0.0 || $this->minAvgSunScore > 1.0) {
-            throw new \InvalidArgumentException('minAvgSunScore must be within 0..1.');
+            throw new InvalidArgumentException('minAvgSunScore must be within 0..1.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minHintsPerDay < 1) {
-            throw new \InvalidArgumentException('minHintsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minHintsPerDay must be >= 1.');
         }
     }
 
@@ -89,12 +92,13 @@ final class SunnyDayClusterStrategy implements ClusterStrategyInterface
                     } elseif (\array_key_exists('cloud_cover', $hint)) {
                         $p = 1.0 - (float) $hint['cloud_cover'];
                     } elseif (\array_key_exists('rain_prob', $hint)) {
-                        $p = \max(0.0, 1.0 - (float) $hint['rain_prob']);
+                        $p = \max(0.0, 1.0 - $hint['rain_prob']);
                     } else {
                         continue;
                     }
 
                     if ($p < 0.0) { $p = 0.0; }
+
                     if ($p > 1.0) { $p = 1.0; }
 
                     $sum += $p;

@@ -105,6 +105,7 @@ CARD;
 </figure>
 IMG;
         }
+
         return \implode("\n", $out);
     }
 

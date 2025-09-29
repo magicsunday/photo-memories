@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,17 +13,17 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Collects videos into day-based stories (local time).
  */
-final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
+final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
+        private string $timezone = 'Europe/Berlin',
         // Minimum number of videos per local day to emit a story.
-        private readonly int $minItemsPerDay = 2
+        private int $minItemsPerDay = 2
     ) {
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
     }
 
@@ -66,7 +67,7 @@ final class VideoStoriesClusterStrategy implements ClusterStrategyInterface
         /** @var list<ClusterDraft> $out */
         $out = [];
 
-        foreach ($eligibleDays as $day => $members) {
+        foreach ($eligibleDays as $members) {
             \usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
             $centroid = MediaMath::centroid($members);

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use DateInterval;
+use InvalidArgumentException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -14,15 +14,15 @@ use MagicSunday\Memories\Utility\MediaMath;
  * Builds clusters for German (federal) holidays per year (no state-specific).
  * Simple exact-date grouping; minimal dependencies.
  */
-final class HolidayEventClusterStrategy implements ClusterStrategyInterface
+final readonly class HolidayEventClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $minItemsPerHoliday = 8
+        private int $minItemsPerHoliday = 8
     ) {
         if ($this->minItemsPerHoliday < 1) {
-            throw new \InvalidArgumentException('minItemsPerHoliday must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerHoliday must be >= 1.');
         }
     }
 
@@ -50,6 +50,7 @@ final class HolidayEventClusterStrategy implements ClusterStrategyInterface
             if ($name === null) {
                 continue;
             }
+
             $key = $t->format('Y') . ':' . $name . ':' . $t->format('Y-m-d');
             $groups[$key] ??= [];
             $groups[$key][] = $m;

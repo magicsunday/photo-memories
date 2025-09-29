@@ -33,7 +33,7 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 20) . 'M')),
                 48.137 + ($i * 0.0003),
                 11.575 + ($i * 0.0003),
-                "birthday-party-{$i}-cake.jpg",
+                sprintf('birthday-party-%d-cake.jpg', $i),
             );
         }
 
@@ -70,7 +70,7 @@ final class KidsBirthdayPartyClusterStrategyTest extends TestCase
                 $start->add(new DateInterval('PT' . ($i * 15) . 'M')),
                 48.20 + ($i * 0.0004),
                 11.60 + ($i * 0.0004),
-                "playdate-{$i}.jpg",
+                sprintf('playdate-%d.jpg', $i),
             );
         }
 

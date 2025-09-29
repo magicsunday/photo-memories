@@ -114,7 +114,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "anniversary-{$id}.jpg",
+            filename: sprintf('anniversary-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

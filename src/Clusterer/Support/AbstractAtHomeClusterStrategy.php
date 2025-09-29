@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -38,20 +39,25 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         private readonly string $timezone,
     ) {
         if ($this->algorithm === '') {
-            throw new \InvalidArgumentException('algorithm must not be empty.');
+            throw new InvalidArgumentException('algorithm must not be empty.');
         }
+
         if ($this->homeRadiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('homeRadiusMeters must be > 0.');
+            throw new InvalidArgumentException('homeRadiusMeters must be > 0.');
         }
+
         if ($this->minHomeShare < 0.0 || $this->minHomeShare > 1.0) {
-            throw new \InvalidArgumentException('minHomeShare must be within 0..1.');
+            throw new InvalidArgumentException('minHomeShare must be within 0..1.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
+
         $lookup = [];
         foreach ($allowedWeekdays as $dow) {
             $dow = (int) $dow;
@@ -61,7 +67,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         }
 
         if ($lookup === []) {
-            throw new \InvalidArgumentException('allowedWeekdays must contain at least one weekday between 1 and 7.');
+            throw new InvalidArgumentException('allowedWeekdays must contain at least one weekday between 1 and 7.');
         }
 
         $this->allowedWeekdayLookup = $lookup;
@@ -121,15 +127,19 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             foreach ($list as $media) {
                 $lat = $media->getGpsLat();
                 $lon = $media->getGpsLon();
-                if ($lat === null || $lon === null) {
+                if ($lat === null) {
+                    continue;
+                }
+
+                if ($lon === null) {
                     continue;
                 }
 
                 $distance = MediaMath::haversineDistanceInMeters(
                     (float) $lat,
                     (float) $lon,
-                    (float) $this->homeLat,
-                    (float) $this->homeLon,
+                    $this->homeLat,
+                    $this->homeLon,
                 );
 
                 if ($distance <= $this->homeRadiusMeters) {
@@ -160,7 +170,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         $run = [];
 
         $flush = function () use (&$run, &$clusters, $homeOnly): void {
-            if (\count($run) === 0) {
+            if ($run === []) {
                 return;
             }
 

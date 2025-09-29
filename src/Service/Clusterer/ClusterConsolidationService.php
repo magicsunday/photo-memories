@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
+use InvalidArgumentException;
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 
 /**
@@ -54,7 +56,7 @@ final class ClusterConsolidationService
         private readonly int $minValidYear = 1990
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
-            throw new \InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
+            throw new InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
         }
 
         $base = \count($this->keepOrder);
@@ -130,6 +132,7 @@ final class ClusterConsolidationService
             if ($progress !== null && ($idx % 400) === 0) {
                 $progress($idx, $n, 'Exakte Duplikate');
             }
+
             $fp = $this->fingerprint($normMembers[$idx]);
             $current = $winnerByFp[$fp] ?? null;
             if ($current === null || $this->isBetter($kept[$idx], $kept[$current])) {
@@ -184,11 +187,13 @@ final class ClusterConsolidationService
             if ($sa !== $sb) {
                 return $sa < $sb ? 1 : -1;
             }
+
             $na = \count($normDedup[$ia]);
             $nb = \count($normDedup[$ib]);
             if ($na !== $nb) {
                 return $na < $nb ? 1 : -1;
             }
+
             return 0;
         };
 
@@ -206,6 +211,7 @@ final class ClusterConsolidationService
             if (isset($algSeen[$alg])) {
                 continue;
             }
+
             $algOrder[] = $alg;
             $algSeen[$alg] = true;
         }
@@ -216,6 +222,7 @@ final class ClusterConsolidationService
             if ($idxs === []) {
                 continue;
             }
+
             \usort($idxs, $cmp);
 
             foreach ($idxs as $cand) {
@@ -230,6 +237,7 @@ final class ClusterConsolidationService
                         $reject = true;
                         break;
                     }
+
                     if ($j >= $this->overlapMergeThreshold) {
                         // same story; keep earlier by keepOrder/score
                         // earlier winner is $win, so candidate loses
@@ -269,6 +277,7 @@ final class ClusterConsolidationService
             if ($this->isAnnotateOnly($alg)) {
                 continue;
             }
+
             foreach ($normAfterDominance[$t] as $mid) {
                 $memberUse[$mid] = ($memberUse[$mid] ?? 0) + 1;
             }
@@ -348,12 +357,15 @@ final class ClusterConsolidationService
             if ($a['score'] !== $b['score']) {
                 return $a['score'] < $b['score'] ? 1 : -1;
             }
+
             if ($a['priority'] !== $b['priority']) {
                 return $a['priority'] < $b['priority'] ? 1 : -1;
             }
+
             if ($a['size'] !== $b['size']) {
                 return $a['size'] < $b['size'] ? 1 : -1;
             }
+
             return 0;
         });
 
@@ -378,6 +390,7 @@ final class ClusterConsolidationService
                 foreach ($members as $mid) {
                     $assign[$mid] = ($assign[$mid] ?? 0) + 1;
                 }
+
                 $out[] = $item['draft'];
             }
         }
@@ -447,6 +460,7 @@ final class ClusterConsolidationService
         if ($p > 0.0) {
             return $p;
         }
+
         // Fallback: size as score
         return (float) \count($this->normalizeMembers($d->getMembers()));
     }
@@ -457,12 +471,14 @@ final class ClusterConsolidationService
         if (!\is_array($tr) || !isset($tr['from'], $tr['to'])) {
             return false;
         }
+
         $from = (int) $tr['from'];
         $to   = (int) $tr['to'];
         if ($from <= 0 || $to <= 0 || $to < $from) {
             return false;
         }
-        $minTs = (int) (new \DateTimeImmutable(\sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
+
+        $minTs = (new DateTimeImmutable(\sprintf('%04d-01-01', $this->minValidYear)))->getTimestamp();
         return $from >= $minTs && $to >= $minTs;
     }
 

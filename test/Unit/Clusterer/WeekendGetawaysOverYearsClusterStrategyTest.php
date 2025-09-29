@@ -82,7 +82,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "weekend-getaway-{$id}.jpg",
+            filename: sprintf('weekend-getaway-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 47.0,
             lon: 11.0,

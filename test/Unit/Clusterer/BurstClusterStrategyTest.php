@@ -86,7 +86,7 @@ final class BurstClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "burst-{$id}.jpg",
+            filename: sprintf('burst-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

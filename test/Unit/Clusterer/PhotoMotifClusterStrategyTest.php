@@ -27,7 +27,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             $mediaItems[] = $this->createMedia(
                 300 + $i,
                 $start->add(new DateInterval('PT' . ($i * 600) . 'S')),
-                "wander-berge-{$i}.jpg",
+                sprintf('wander-berge-%d.jpg', $i),
                 47.5 + $i * 0.001,
                 11.3 + $i * 0.001,
             );
@@ -57,7 +57,7 @@ final class PhotoMotifClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(
                 400 + $i,
                 new DateTimeImmutable('2023-07-10 09:00:00', new DateTimeZone('UTC')),
-                "beach-day-{$i}.jpg",
+                sprintf('beach-day-%d.jpg', $i),
                 36.0,
                 -5.0,
             );

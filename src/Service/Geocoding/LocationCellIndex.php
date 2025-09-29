@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use Doctrine\ORM\Query;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
@@ -32,7 +33,7 @@ final class LocationCellIndex
         }
 
         /** @var iterable<array{id:int,cell:string}> $it */
-        $it = $q->toIterable([], \Doctrine\ORM\Query::HYDRATE_ARRAY);
+        $it = $q->toIterable([], Query::HYDRATE_ARRAY);
 
         $n = 0;
         foreach ($it as $row) {
@@ -42,6 +43,7 @@ final class LocationCellIndex
                 $n++;
             }
         }
+
         return $n;
     }
 
@@ -89,7 +91,7 @@ final class LocationCellIndex
     {
         $id = $loc->getId() ?? 0;
 
-        if ($id !== null && $id > 0) {
+        if ($id > 0) {
             $this->cellToId[$cell] = $id;
         }
     }

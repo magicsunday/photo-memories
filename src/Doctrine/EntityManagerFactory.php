@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Doctrine;
 
+use PDO;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManager;
@@ -23,7 +24,6 @@ use MagicSunday\Memories\Entity\Memory;
 use MagicSunday\Memories\Entity\WeatherObservation;
 use Throwable;
 use function class_exists;
-use function count;
 
 /**
  * Class EntityManagerFactory.
@@ -47,7 +47,7 @@ final class EntityManagerFactory
             'dbname'   => getenv('DB_NAME') !== false ? (string) getenv('DB_NAME') : 'memories',
             'charset'  => 'utf8mb4',
             'driverOptions' => [
-                 \PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
+                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
              ]
         ];
 
@@ -89,7 +89,7 @@ final class EntityManagerFactory
             }
         }
 
-        if (count($metadata) === 0) {
+        if ($metadata === []) {
             return; // nothing to do
         }
 

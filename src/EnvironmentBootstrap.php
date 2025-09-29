@@ -46,15 +46,7 @@ final class EnvironmentBootstrap
 
         // 3) Repo root (dev)
         $candidates[] = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.env';
-
-        // Pick first existing .env
-        $rootEnv = null;
-        foreach ($candidates as $file) {
-            if (is_file($file)) {
-                $rootEnv = $file;
-                break;
-            }
-        }
+        $rootEnv = array_find($candidates, fn($file): bool => is_file($file));
 
         if ($rootEnv === null) {
             // No .env found is fine; rely on process env only

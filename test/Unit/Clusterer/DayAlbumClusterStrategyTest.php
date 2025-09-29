@@ -65,7 +65,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "day-album-{$id}.jpg",
+            filename: sprintf('day-album-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

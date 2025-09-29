@@ -102,7 +102,7 @@ final class BeachOverYearsClusterStrategyTest extends TestCase
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
-            filename: $filename ?? "beach-{$id}.jpg",
+            filename: $filename ?? sprintf('beach-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

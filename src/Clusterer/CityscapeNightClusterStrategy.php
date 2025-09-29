@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,24 +13,26 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * City night sessions: night hours & urban keywords, spatially compact.
  */
-final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
+final readonly class CityscapeNightClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 2 * 3600,
-        private readonly float $radiusMeters = 350.0,
-        private readonly int $minItemsPerRun = 5
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 2 * 3600,
+        private float $radiusMeters = 350.0,
+        private int $minItemsPerRun = 5
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->radiusMeters <= 0.0) {
-            throw new \InvalidArgumentException('radiusMeters must be > 0.');
+            throw new InvalidArgumentException('radiusMeters must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
     }
 
@@ -83,10 +86,12 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -118,6 +123,7 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if ($ok === false) {
                 continue;
             }
@@ -145,6 +151,7 @@ final class CityscapeNightClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

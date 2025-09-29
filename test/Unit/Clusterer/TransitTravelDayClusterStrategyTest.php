@@ -72,7 +72,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "transit-{$id}.jpg",
+            filename: sprintf('transit-%d.jpg', $id),
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,

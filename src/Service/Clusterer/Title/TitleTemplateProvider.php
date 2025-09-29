@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Title;
 
-use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -32,22 +32,25 @@ final class TitleTemplateProvider
     private function load(): void
     {
         if (!\is_file($this->configPath)) {
-            throw new \RuntimeException('Title-templates YAML missing: '.$this->configPath);
+            throw new RuntimeException('Title-templates YAML missing: '.$this->configPath);
         }
+
         /** @var array<string,mixed> $data */
         $data = Yaml::parseFile($this->configPath) ?? [];
         if (!\is_array($data)) {
             $data = [];
         }
+
         // Normalize to [locale][algorithm] = ['title'=>..., 'subtitle'=>...]
         foreach ($data as $loc => $algos) {
             if (!\is_array($algos)) {
                 continue;
             }
+
             foreach ($algos as $algo => $tpl) {
                 if (\is_array($tpl) && isset($tpl['title']) && \is_string($tpl['title'])) {
                     $this->templates[$loc][$algo] = [
-                        'title'    => (string) $tpl['title'],
+                        'title'    => $tpl['title'],
                         'subtitle' => isset($tpl['subtitle']) && \is_string($tpl['subtitle']) ? $tpl['subtitle'] : '',
                     ];
                 }
@@ -63,6 +66,7 @@ final class TitleTemplateProvider
         if ($hit !== null) {
             return ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''];
         }
+
         // Fallback: try default locale „de“
         $hit = $this->templates['de'][$algorithm] ?? null;
         return $hit !== null ? ['title' => $hit['title'], 'subtitle' => $hit['subtitle'] ?? ''] : null;

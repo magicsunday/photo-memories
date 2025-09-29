@@ -31,11 +31,12 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
             $iptc = @\iptcparse($info['APP13']);
             if (\is_array($iptc)) {
                 $kw = $this->fromIptcStrings($iptc['2#025'] ?? null);
-                if (\count($kw) > 0) {
+                if ($kw !== []) {
                     $keywords = \array_values(\array_unique(\array_merge($keywords, $kw)));
                 }
+
                 $pp = $this->fromIptcStrings($iptc['2#122'] ?? null);
-                if (\count($pp) > 0) {
+                if ($pp !== []) {
                     $persons = \array_values(\array_unique(\array_merge($persons, $pp)));
                 }
             }
@@ -67,8 +68,10 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
                     $out[] = $s;
                 }
             }
+
             return $out;
         }
+
         return [];
     }
 
@@ -78,23 +81,27 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
         if (!\is_string($xml) || $xml === '') {
             return;
         }
+
         $kwMatches = [];
         if (\preg_match_all('~<rdf:li[^>]*>(.*?)</rdf:li>~si', $xml, $kwMatches)) {
             foreach ($kwMatches[1] as $w) {
-                $w = \trim(\strip_tags((string) $w));
+                $w = \trim(\strip_tags($w));
                 if ($w !== '') { $keywords[] = $w; }
             }
         }
+
         $pMatches = [];
         if (\preg_match_all('~<mwg-rs:Name[^>]*>(.*?)</mwg-rs:Name>~si', $xml, $pMatches)) {
             foreach ($pMatches[1] as $p) {
-                $p = \trim(\strip_tags((string) $p));
+                $p = \trim(\strip_tags($p));
                 if ($p !== '') { $persons[] = $p; }
             }
         }
+
         if (\count($keywords) > 1) {
             $keywords = \array_values(\array_unique($keywords));
         }
+
         if (\count($persons) > 1) {
             $persons  = \array_values(\array_unique($persons));
         }

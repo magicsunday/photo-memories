@@ -3,6 +3,58 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy;
+use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
+use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
+use MagicSunday\Memories\Clusterer\BeachOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
+use MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\CampingTripClusterStrategy;
+use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
+use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
+use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
+use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
+use MagicSunday\Memories\Clusterer\DiningOutClusterStrategy;
+use MagicSunday\Memories\Clusterer\FestivalSummerClusterStrategy;
+use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
+use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
+use MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy;
+use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
+use MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy;
+use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
+use MagicSunday\Memories\Clusterer\LongTripClusterStrategy;
+use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
+use MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy;
+use MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
+use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
+use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
+use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
+use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
+use MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy;
+use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
+use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
+use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
+use MagicSunday\Memories\Clusterer\RainyDayClusterStrategy;
+use MagicSunday\Memories\Clusterer\RoadTripClusterStrategy;
+use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
+use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
+use MagicSunday\Memories\Clusterer\SnowDayClusterStrategy;
+use MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\SportsEventClusterStrategy;
+use MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy;
+use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
+use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
+use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
+use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
+use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
+use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
+use MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy;
+use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
@@ -39,284 +91,284 @@ final class ClusterStrategySmokeTest extends TestCase
     public static function strategyProvider(): iterable
     {
         yield 'AnniversaryClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy::class,
+            AnniversaryClusterStrategy::class,
             'anniversary',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy(
+            static fn (): ClusterStrategyInterface => new AnniversaryClusterStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'AtHomeWeekdayClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy::class,
+            AtHomeWeekdayClusterStrategy::class,
             'at_home_weekday',
             null,
         ];
         yield 'AtHomeWeekendClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy::class,
+            AtHomeWeekendClusterStrategy::class,
             'at_home_weekend',
             null,
         ];
         yield 'BeachOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\BeachOverYearsClusterStrategy::class,
+            BeachOverYearsClusterStrategy::class,
             'beach_over_years',
             null,
         ];
         yield 'BurstClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\BurstClusterStrategy::class,
+            BurstClusterStrategy::class,
             'burst',
             null,
         ];
         yield 'CampingOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy::class,
+            CampingOverYearsClusterStrategy::class,
             'camping_over_years',
             null,
         ];
         yield 'CampingTripClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\CampingTripClusterStrategy::class,
+            CampingTripClusterStrategy::class,
             'camping_trip',
             null,
         ];
         yield 'CityscapeNightClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy::class,
+            CityscapeNightClusterStrategy::class,
             'cityscape_night',
             null,
         ];
         yield 'CrossDimensionClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy::class,
+            CrossDimensionClusterStrategy::class,
             'cross_dimension',
             null,
         ];
         yield 'DayAlbumClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy::class,
+            DayAlbumClusterStrategy::class,
             'day_album',
             null,
         ];
         yield 'DeviceSimilarityStrategy' => [
-            \MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy::class,
+            DeviceSimilarityStrategy::class,
             'device_similarity',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy(
+            static fn (): ClusterStrategyInterface => new DeviceSimilarityStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'DiningOutClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\DiningOutClusterStrategy::class,
+            DiningOutClusterStrategy::class,
             'dining_out',
             null,
         ];
         yield 'FestivalSummerClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\FestivalSummerClusterStrategy::class,
+            FestivalSummerClusterStrategy::class,
             'festival_summer',
             null,
         ];
         yield 'FirstVisitPlaceClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy::class,
+            FirstVisitPlaceClusterStrategy::class,
             'first_visit_place',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy(
+            static fn (): ClusterStrategyInterface => new FirstVisitPlaceClusterStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'GoldenHourClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy::class,
+            GoldenHourClusterStrategy::class,
             'golden_hour',
             null,
         ];
         yield 'HikeAdventureClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy::class,
+            HikeAdventureClusterStrategy::class,
             'hike_adventure',
             null,
         ];
         yield 'HolidayEventClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy::class,
+            HolidayEventClusterStrategy::class,
             'holiday_event',
             null,
         ];
         yield 'KidsBirthdayPartyClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy::class,
+            KidsBirthdayPartyClusterStrategy::class,
             'kids_birthday_party',
             null,
         ];
         yield 'LocationSimilarityStrategy' => [
-            \MagicSunday\Memories\Clusterer\LocationSimilarityStrategy::class,
+            LocationSimilarityStrategy::class,
             'location_similarity',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\LocationSimilarityStrategy(
+            static fn (): ClusterStrategyInterface => new LocationSimilarityStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'LongTripClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\LongTripClusterStrategy::class,
+            LongTripClusterStrategy::class,
             'long_trip',
             null,
         ];
         yield 'MonthlyHighlightsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy::class,
+            MonthlyHighlightsClusterStrategy::class,
             'monthly_highlights',
             null,
         ];
         yield 'MorningCoffeeClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy::class,
+            MorningCoffeeClusterStrategy::class,
             'morning_coffee',
             null,
         ];
         yield 'MuseumOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy::class,
+            MuseumOverYearsClusterStrategy::class,
             'museum_over_years',
             null,
         ];
         yield 'NewYearEveClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy::class,
+            NewYearEveClusterStrategy::class,
             'new_year_eve',
             null,
         ];
         yield 'NightlifeEventClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy::class,
+            NightlifeEventClusterStrategy::class,
             'nightlife_event',
             null,
         ];
         yield 'OnThisDayOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy::class,
+            OnThisDayOverYearsClusterStrategy::class,
             'on_this_day_over_years',
             null,
         ];
         yield 'OneYearAgoClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy::class,
+            OneYearAgoClusterStrategy::class,
             'one_year_ago',
             null,
         ];
         yield 'PanoramaClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PanoramaClusterStrategy::class,
+            PanoramaClusterStrategy::class,
             'panorama',
             null,
         ];
         yield 'PanoramaOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy::class,
+            PanoramaOverYearsClusterStrategy::class,
             'panorama_over_years',
             null,
         ];
         yield 'PersonCohortClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy::class,
+            PersonCohortClusterStrategy::class,
             'people_cohort',
             null,
         ];
         yield 'PetMomentsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy::class,
+            PetMomentsClusterStrategy::class,
             'pet_moments',
             null,
         ];
         yield 'PhashSimilarityStrategy' => [
-            \MagicSunday\Memories\Clusterer\PhashSimilarityStrategy::class,
+            PhashSimilarityStrategy::class,
             'phash_similarity',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\PhashSimilarityStrategy(
+            static fn (): ClusterStrategyInterface => new PhashSimilarityStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'PhotoMotifClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy::class,
+            PhotoMotifClusterStrategy::class,
             'photo_motif',
             null,
         ];
         yield 'PortraitOrientationClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy::class,
+            PortraitOrientationClusterStrategy::class,
             'portrait_orientation',
             null,
         ];
         yield 'RainyDayClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\RainyDayClusterStrategy::class,
+            RainyDayClusterStrategy::class,
             'rainy_day',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\RainyDayClusterStrategy(
+            static fn (): ClusterStrategyInterface => new RainyDayClusterStrategy(
                 self::weatherStub()
             ),
         ];
         yield 'RoadTripClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\RoadTripClusterStrategy::class,
+            RoadTripClusterStrategy::class,
             'road_trip',
             null,
         ];
         yield 'SeasonClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SeasonClusterStrategy::class,
+            SeasonClusterStrategy::class,
             'season',
             null,
         ];
         yield 'SeasonOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy::class,
+            SeasonOverYearsClusterStrategy::class,
             'season_over_years',
             null,
         ];
         yield 'SignificantPlaceClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy::class,
+            SignificantPlaceClusterStrategy::class,
             'significant_place',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy(
+            static fn (): ClusterStrategyInterface => new SignificantPlaceClusterStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'SnowDayClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SnowDayClusterStrategy::class,
+            SnowDayClusterStrategy::class,
             'snow_day',
             null,
         ];
         yield 'SnowVacationOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy::class,
+            SnowVacationOverYearsClusterStrategy::class,
             'snow_vacation_over_years',
             null,
         ];
         yield 'SportsEventClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SportsEventClusterStrategy::class,
+            SportsEventClusterStrategy::class,
             'sports_event',
             null,
         ];
         yield 'SunnyDayClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy::class,
+            SunnyDayClusterStrategy::class,
             'sunny_day',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy(
+            static fn (): ClusterStrategyInterface => new SunnyDayClusterStrategy(
                 self::weatherStub()
             ),
         ];
         yield 'ThisMonthOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy::class,
+            ThisMonthOverYearsClusterStrategy::class,
             'this_month_over_years',
             null,
         ];
         yield 'TimeSimilarityStrategy' => [
-            \MagicSunday\Memories\Clusterer\TimeSimilarityStrategy::class,
+            TimeSimilarityStrategy::class,
             'time_similarity',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\TimeSimilarityStrategy(
+            static fn (): ClusterStrategyInterface => new TimeSimilarityStrategy(
                 self::locationHelper()
             ),
         ];
         yield 'TransitTravelDayClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy::class,
+            TransitTravelDayClusterStrategy::class,
             'transit_travel_day',
             null,
         ];
         yield 'VideoStoriesClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy::class,
+            VideoStoriesClusterStrategy::class,
             'video_stories',
             null,
         ];
         yield 'WeekendGetawaysOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy::class,
+            WeekendGetawaysOverYearsClusterStrategy::class,
             'weekend_getaways_over_years',
             null,
         ];
         yield 'WeekendTripClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy::class,
+            WeekendTripClusterStrategy::class,
             'weekend_trip',
-            static fn (): ClusterStrategyInterface => new \MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy(
+            static fn (): ClusterStrategyInterface => new WeekendTripClusterStrategy(
                 self::locationHelper(),
                 null,
                 null,
             ),
         ];
         yield 'YearInReviewClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy::class,
+            YearInReviewClusterStrategy::class,
             'year_in_review',
             null,
         ];
         yield 'ZooAquariumClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy::class,
+            ZooAquariumClusterStrategy::class,
             'zoo_aquarium',
             null,
         ];
         yield 'ZooAquariumOverYearsClusterStrategy' => [
-            \MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy::class,
+            ZooAquariumOverYearsClusterStrategy::class,
             'zoo_aquarium_over_years',
             null,
         ];

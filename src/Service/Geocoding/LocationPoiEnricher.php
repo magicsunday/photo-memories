@@ -9,13 +9,13 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Enriches Location entities with nearby Points of Interest using the Overpass API.
  */
-final class LocationPoiEnricher
+final readonly class LocationPoiEnricher
 {
     public function __construct(
-        private readonly OverpassClient $client,
-        private readonly int $radiusMeters = 250,
-        private readonly int $maxPois = 15,
-        private readonly float $fetchLimitMultiplier = 3.0
+        private OverpassClient $client,
+        private int $radiusMeters = 250,
+        private int $maxPois = 15,
+        private float $fetchLimitMultiplier = 3.0
     ) {
     }
 
@@ -66,7 +66,7 @@ final class LocationPoiEnricher
         $bboxRadius = $this->radiusFromBoundingBox($geocode);
 
         if ($bboxRadius !== null) {
-            $radius = \max($radius, $bboxRadius);
+            return \max($radius, $bboxRadius);
         }
 
         return $radius;
@@ -80,7 +80,7 @@ final class LocationPoiEnricher
         }
 
         [$south, $north, $west, $east] = $bbox;
-        if (!\is_numeric($south) || !\is_numeric($north) || !\is_numeric($west) || !\is_numeric($east)) {
+        if (!\is_numeric($east)) {
             return null;
         }
 
@@ -88,10 +88,10 @@ final class LocationPoiEnricher
         $centerLon = $geocode->lon;
 
         $distances = [
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, (float) $north, $centerLon),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, (float) $south, $centerLon),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, (float) $east),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, (float) $west),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $north, $centerLon),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $south, $centerLon),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $east),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $west),
         ];
 
         $radius = (int) \ceil(\max($distances));

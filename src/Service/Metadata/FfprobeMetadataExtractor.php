@@ -5,11 +5,11 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 
-final class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
+final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private readonly string $ffprobePath = 'ffprobe',
-        private readonly float $slowMoFpsThreshold = 100.0
+        private string $ffprobePath = 'ffprobe',
+        private float $slowMoFpsThreshold = 100.0
     ) {
     }
 
@@ -35,6 +35,7 @@ final class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
         if (!\is_string($out) || $out === '') {
             return $media;
         }
+
         $lines = \array_map('trim', \explode("\n", $out));
         if (\count($lines) >= 3) {
             $codec = $lines[0] !== '' ? $lines[0] : null;
@@ -42,13 +43,16 @@ final class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
             $dur   = $this->parseFloat($lines[2] ?? null);
 
             if ($codec !== null) { $media->setVideoCodec($codec); }
+
             if ($fps !== null)   { $media->setVideoFps($fps); }
+
             if ($dur !== null)   { $media->setVideoDurationS($dur); }
 
             if ($fps !== null) {
                 $media->setIsSlowMo($fps >= $this->slowMoFpsThreshold);
             }
         }
+
         return $media;
     }
 
@@ -57,17 +61,20 @@ final class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
         if ($v === null || $v === '0/0' || $v === '') {
             return null;
         }
+
         if (\str_contains($v, '/')) {
             [$a, $b] = \array_pad(\explode('/', $v, 2), 2, '1');
             $bn = (float) $b;
             return $bn !== 0.0 ? (float) $a / $bn : null;
         }
+
         return (float) $v;
     }
 
     private function parseFloat(?string $v): ?float
     {
         if ($v === null || $v === '') { return null; }
+
         return (float) $v;
     }
 }

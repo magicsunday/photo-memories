@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
@@ -13,36 +14,41 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Picks the best multi-day winter snow vacation per year and aggregates over years.
  */
-final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerDay = 4,
-        private readonly int $minNights = 3,
-        private readonly int $maxNights = 14,
-        private readonly int $minYears = 3,
-        private readonly int $minItemsTotal = 30
+        private string $timezone = 'Europe/Berlin',
+        private int $minItemsPerDay = 4,
+        private int $minNights = 3,
+        private int $maxNights = 14,
+        private int $minYears = 3,
+        private int $minItemsTotal = 30
     ) {
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minNights < 1) {
-            throw new \InvalidArgumentException('minNights must be >= 1.');
+            throw new InvalidArgumentException('minNights must be >= 1.');
         }
+
         if ($this->maxNights < 1) {
-            throw new \InvalidArgumentException('maxNights must be >= 1.');
+            throw new InvalidArgumentException('maxNights must be >= 1.');
         }
+
         if ($this->maxNights < $this->minNights) {
-            throw new \InvalidArgumentException('maxNights must be >= minNights.');
+            throw new InvalidArgumentException('maxNights must be >= minNights.');
         }
+
         if ($this->minYears < 1) {
-            throw new \InvalidArgumentException('minYears must be >= 1.');
+            throw new InvalidArgumentException('minYears must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -78,6 +84,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
             if ($winter === false) {
                 continue;
             }
+
             $y = (int) $t->format('Y');
             $d = $t->setTimezone($tz)->format('Y-m-d');
             $byYearDay[$y] ??= [];
@@ -107,9 +114,10 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
             $prev = null;
 
             $flushRun = function () use (&$runs, &$runDays, &$runItems): void {
-                if (\count($runDays) > 0) {
+                if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
+
                 $runDays = [];
                 $runItems = [];
             };
@@ -118,21 +126,29 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
                 if ($prev !== null && !$this->isNextDay($prev, $d)) {
                     $flushRun();
                 }
+
                 $runDays[] = $d;
                 foreach ($eligibleDaysMap[$d] as $m) {
                     $runItems[] = $m;
                 }
+
                 $prev = $d;
             }
+
             $flushRun();
 
             /** filter runs by nights range & per-day min items */
             $candidates = [];
             foreach ($runs as $r) {
                 $nights = \count($r['days']) - 1;
-                if ($nights < $this->minNights || $nights > $this->maxNights) {
+                if ($nights < $this->minNights) {
                     continue;
                 }
+
+                if ($nights > $this->maxNights) {
+                    continue;
+                }
+
                 $candidates[] = $r;
             }
 
@@ -146,11 +162,13 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
                 if ($na !== $nb) {
                     return $na < $nb ? 1 : -1;
                 }
+
                 $sa = \count($a['days']);
                 $sb = \count($b['days']);
                 if ($sa !== $sb) {
                     return $sa < $sb ? 1 : -1;
                 }
+
                 return \strcmp($a['days'][0], $b['days'][0]);
             });
 
@@ -158,6 +176,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
             foreach ($best['items'] as $m) {
                 $membersAllYears[] = $m;
             }
+
             $yearsPicked[$year] = true;
         }
 
@@ -191,6 +210,7 @@ final class SnowVacationOverYearsClusterStrategy implements ClusterStrategyInter
                 return true;
             }
         }
+
         return false;
     }
 }

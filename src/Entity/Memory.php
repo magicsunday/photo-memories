@@ -48,20 +48,26 @@ class Memory
     }
 
     public function getId(): int { return $this->id; }
+
     public function getTitle(): string { return $this->title; }
 
     public function setSummary(?string $summary): void { $this->summary = $summary; }
+
     public function getSummary(): ?string { return $this->summary; }
 
     public function setClusterId(?int $clusterId): void { $this->clusterId = $clusterId; }
+
     public function getClusterId(): ?int { return $this->clusterId; }
 
     public function setScore(float $score): void { $this->score = $score; }
+
     public function getScore(): float { return $this->score; }
 
     public function setPreviewHtml(?string $html): void { $this->previewHtml = $html; }
+
     public function getPreviewHtml(): ?string { return $this->previewHtml; }
 
     public function setStartAt(?DateTimeImmutable $dt): void { $this->startAt = $dt; }
+
     public function setEndAt(?DateTimeImmutable $dt): void { $this->endAt = $dt; }
 }

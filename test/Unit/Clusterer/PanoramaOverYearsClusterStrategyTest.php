@@ -67,15 +67,15 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
     {
         return $this->makeMediaFixture(
             id: $id,
-            filename: "pano-{$id}.jpg",
+            filename: sprintf('pano-%d.jpg', $id),
             takenAt: $takenAt,
             lat: 46.0,
             lon: 11.0,
-            size: 2048,
             configure: static function (Media $media): void {
                 $media->setWidth(4800);
                 $media->setHeight(1800);
             },
+            size: 2048,
         );
     }
 

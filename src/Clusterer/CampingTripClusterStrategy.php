@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
@@ -13,32 +14,36 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 /**
  * Multi-day camping runs (consecutive days) using keywords.
  */
-final class CampingTripClusterStrategy implements ClusterStrategyInterface
+final readonly class CampingTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $minItemsPerDay = 3,
-        private readonly int $minNights = 2,
-        private readonly int $maxNights = 14,
-        private readonly int $minItemsTotal = 20
+        private string $timezone = 'Europe/Berlin',
+        private int $minItemsPerDay = 3,
+        private int $minNights = 2,
+        private int $maxNights = 14,
+        private int $minItemsTotal = 20
     ) {
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minNights < 1) {
-            throw new \InvalidArgumentException('minNights must be >= 1.');
+            throw new InvalidArgumentException('minNights must be >= 1.');
         }
+
         if ($this->maxNights < 1) {
-            throw new \InvalidArgumentException('maxNights must be >= 1.');
+            throw new InvalidArgumentException('maxNights must be >= 1.');
         }
+
         if ($this->maxNights < $this->minNights) {
-            throw new \InvalidArgumentException('maxNights must be >= minNights.');
+            throw new InvalidArgumentException('maxNights must be >= minNights.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -92,14 +97,16 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
         $prev = null;
 
         $flush = function () use (&$run, &$out, $eligibleDays): void {
-            if (\count($run) === 0) {
+            if ($run === []) {
                 return;
             }
+
             $nights = \count($run) - 1;
             if ($nights < $this->minNights || $nights > $this->maxNights) {
                 $run = [];
                 return;
             }
+
             /** @var list<Media> $members */
             $members = [];
             foreach ($run as $d) {
@@ -107,6 +114,7 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
                     $members[] = $m;
                 }
             }
+
             if (\count($members) < $this->minItemsTotal) {
                 $run = [];
                 return;
@@ -133,9 +141,11 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
             if ($prev !== null && !$this->isNextDay($prev, $d)) {
                 $flush();
             }
+
             $run[] = $d;
             $prev  = $d;
         }
+
         $flush();
 
         return $out;
@@ -150,6 +160,7 @@ final class CampingTripClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

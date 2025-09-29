@@ -39,10 +39,14 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
     {
         foreach ($tokens as $t) {
             if (\str_starts_with($t, 'pano')) { return 'pano'; }
+
             if (\str_starts_with($t, 'img_e')) { return 'edited'; }
+
             if (\str_contains($t, 'timelapse')) { return 'timelapse'; }
+
             if (\str_contains($t, 'slowmo') || \str_contains($t, 'slo-mo')) { return 'slowmo'; }
         }
+
         return 'normal';
     }
 }

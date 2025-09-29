@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -12,26 +13,28 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Detects kids' birthday parties based on keywords; compact time sessions.
  */
-final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
+final readonly class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly float $radiusMeters = 250.0,
-        private readonly int $minItemsPerRun = 6,
-        private readonly int $minHour = 10,
-        private readonly int $maxHour = 21
+        private string $timezone = 'Europe/Berlin',
+        private int $sessionGapSeconds = 3 * 3600,
+        private float $radiusMeters = 250.0,
+        private int $minItemsPerRun = 6,
+        private int $minHour = 10,
+        private int $maxHour = 21
     ) {
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
         if ($this->minHour < 0 || $this->minHour > 23 || $this->maxHour < 0 || $this->maxHour > 23) {
-            throw new \InvalidArgumentException('Hour bounds must be within 0..23.');
+            throw new InvalidArgumentException('Hour bounds must be within 0..23.');
         }
+
         if ($this->minHour > $this->maxHour) {
-            throw new \InvalidArgumentException('minHour must be <= maxHour.');
+            throw new InvalidArgumentException('minHour must be <= maxHour.');
         }
     }
 
@@ -84,6 +87,7 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
                 $buf = [];
                 return;
             }
+
             // spatial compactness (if GPS exists)
             $gps = $this->filterGpsItems($buf);
             $centroid = $gps !== [] ? MediaMath::centroid($gps) : ['lat' => 0.0, 'lon' => 0.0];
@@ -99,6 +103,7 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
                     break;
                 }
             }
+
             if (!$ok) {
                 $buf = [];
                 return;
@@ -122,12 +127,15 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds) {
                 $flush();
             }
+
             $buf[] = $m;
             $last = $ts;
         }
+
         $flush();
 
         return $out;
@@ -142,6 +150,7 @@ final class KidsBirthdayPartyClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

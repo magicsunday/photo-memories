@@ -107,7 +107,7 @@ final class GeocodeCommand extends Command
             $bar->setMessage('Rückwärtssuche');
             $loc = $this->linker->link($m, 'de');
 
-            if ($loc !== null) {
+            if ($loc instanceof Location) {
                 $linked++;
             }
 
@@ -202,10 +202,8 @@ final class GeocodeCommand extends Command
             $processed++;
             $bar->advance();
 
-            if (($processed % $batchSize) === 0) {
-                if (!$dryRun) {
-                    $this->em->flush();
-                }
+            if ($processed % $batchSize === 0 && !$dryRun) {
+                $this->em->flush();
             }
         }
 
@@ -283,10 +281,8 @@ final class GeocodeCommand extends Command
             $processed++;
             $bar->advance();
 
-            if (($processed % $batchSize) === 0) {
-                if (!$dryRun) {
-                    $this->em->flush();
-                }
+            if ($processed % $batchSize === 0 && !$dryRun) {
+                $this->em->flush();
             }
         }
 

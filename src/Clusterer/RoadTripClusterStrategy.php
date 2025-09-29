@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
@@ -13,30 +14,33 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Detects multi-day road trips based on daily traveled distance (from GPS track).
  */
-final class RoadTripClusterStrategy implements ClusterStrategyInterface
+final readonly class RoadTripClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly float $minDailyKm = 120.0,
+        private string $timezone = 'Europe/Berlin',
+        private float $minDailyKm = 120.0,
         // Counts only media items that already contain GPS coordinates.
-        private readonly int $minItemsPerDay = 8,
-        private readonly int $minNights = 3,       // => at least 4 days
-        private readonly int $minItemsTotal = 40
+        private int $minItemsPerDay = 8,
+        private int $minNights = 3,       // => at least 4 days
+        private int $minItemsTotal = 40
     ) {
         if ($this->minDailyKm <= 0.0) {
-            throw new \InvalidArgumentException('minDailyKm must be > 0.');
+            throw new InvalidArgumentException('minDailyKm must be > 0.');
         }
+
         if ($this->minItemsPerDay < 1) {
-            throw new \InvalidArgumentException('minItemsPerDay must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
         if ($this->minNights < 1) {
-            throw new \InvalidArgumentException('minNights must be >= 1.');
+            throw new InvalidArgumentException('minNights must be >= 1.');
         }
+
         if ($this->minItemsTotal < 1) {
-            throw new \InvalidArgumentException('minItemsTotal must be >= 1.');
+            throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
     }
 
@@ -107,14 +111,16 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
         $run = [];
 
         $flush = function () use (&$run, &$out, $travelDayLists): void {
-            if (\count($run) === 0) {
+            if ($run === []) {
                 return;
             }
+
             $nights = \count($run) - 1;
             if ($nights < $this->minNights) {
                 $run = [];
                 return;
             }
+
             /** @var list<Media> $members */
             $members = [];
             foreach ($run as $d) {
@@ -122,6 +128,7 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
                     $members[] = $m;
                 }
             }
+
             if (\count($members) < $this->minItemsTotal) {
                 $run = [];
                 return;
@@ -149,9 +156,11 @@ final class RoadTripClusterStrategy implements ClusterStrategyInterface
             if ($prev !== null && !$this->isNextDay($prev, $d)) {
                 $flush();
             }
+
             $run[] = $d;
             $prev  = $d;
         }
+
         $flush();
 
         return $out;

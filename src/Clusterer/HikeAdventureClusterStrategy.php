@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -10,27 +11,30 @@ use MagicSunday\Memories\Utility\MediaMath;
 /**
  * Groups hiking/adventure sessions based on keywords; validates by traveled distance if GPS is available.
  */
-final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
+final readonly class HikeAdventureClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly int $sessionGapSeconds = 3 * 3600,
-        private readonly float $minDistanceKm = 6.0, // require at least ~6km if GPS is present
-        private readonly int $minItemsPerRun = 6,
-        private readonly int $minItemsPerRunNoGps = 12 // stricter if no GPS available
+        private int $sessionGapSeconds = 3 * 3600,
+        private float $minDistanceKm = 6.0, // require at least ~6km if GPS is present
+        private int $minItemsPerRun = 6,
+        private int $minItemsPerRunNoGps = 12 // stricter if no GPS available
     ) {
         if ($this->sessionGapSeconds < 1) {
-            throw new \InvalidArgumentException('sessionGapSeconds must be >= 1.');
+            throw new InvalidArgumentException('sessionGapSeconds must be >= 1.');
         }
+
         if ($this->minDistanceKm <= 0.0) {
-            throw new \InvalidArgumentException('minDistanceKm must be > 0.');
+            throw new InvalidArgumentException('minDistanceKm must be > 0.');
         }
+
         if ($this->minItemsPerRun < 1) {
-            throw new \InvalidArgumentException('minItemsPerRun must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
         if ($this->minItemsPerRunNoGps < 1) {
-            throw new \InvalidArgumentException('minItemsPerRunNoGps must be >= 1.');
+            throw new InvalidArgumentException('minItemsPerRunNoGps must be >= 1.');
         }
     }
 
@@ -70,10 +74,12 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
             if ($ts === null) {
                 continue;
             }
+
             if ($last !== null && ($ts - $last) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf = [];
             }
+
             $buf[] = $m;
             $last = $ts;
         }
@@ -107,6 +113,7 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
                             (float) $q->getGpsLon()
                         ) / 1000.0;
                 }
+
                 if ($km < $this->minDistanceKm) {
                     continue;
                 }
@@ -143,6 +150,7 @@ final class HikeAdventureClusterStrategy implements ClusterStrategyInterface
                 return true;
             }
         }
+
         return false;
     }
 }

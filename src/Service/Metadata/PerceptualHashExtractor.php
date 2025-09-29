@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use InvalidArgumentException;
+use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 
@@ -11,20 +13,21 @@ use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
  * downsampled grayscale matrix. Uses a numerically stable 2D-DCT and a
  * proper median threshold (excluding DC) for pHash.
  */
-final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
+final readonly class PerceptualHashExtractor implements SingleMetadataExtractorInterface
 {
     use GdImageToolsTrait;
 
     public function __construct(
-        private readonly int $dctSampleSize = 32,   // NxN downsample for DCT (32 recommended)
-        private readonly int $lowFreqSize  = 8      // use top-left 8x8 block
+        private int $dctSampleSize = 32,   // NxN downsample for DCT (32 recommended)
+        private int $lowFreqSize  = 8      // use top-left 8x8 block
     ) {
         if ($this->dctSampleSize < 16 || ($this->dctSampleSize & ($this->dctSampleSize - 1)) !== 0) {
             // Power-of-two helps for cache reuse; 32 is a good compromise (speed/quality).
-            throw new \InvalidArgumentException('dctSampleSize must be a power of two >= 16');
+            throw new InvalidArgumentException('dctSampleSize must be a power of two >= 16');
         }
+
         if ($this->lowFreqSize < 4 || $this->lowFreqSize > $this->dctSampleSize) {
-            throw new \InvalidArgumentException('lowFreqSize must be in [4..dctSampleSize]');
+            throw new InvalidArgumentException('lowFreqSize must be in [4..dctSampleSize]');
         }
     }
 
@@ -42,7 +45,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
         }
 
         $adapter = $this->createImageAdapter($src);
-        if ($adapter === null) {
+        if (!$adapter instanceof ImageAdapterInterface) {
             // No backend → keep previous behavior, but do not crash
             return $media;
         }
@@ -58,6 +61,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
         if (\method_exists($media, 'setAhash')) {
             $media->setAhash($this->computeAhash64($mat));
         }
+
         if (\method_exists($media, 'setDhash')) {
             $media->setDhash($this->computeDhash64($mat));
         }
@@ -79,8 +83,6 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
             return '0000000000000000';
         }
 
-        // Convert to matrix of floats (ensure no ints sneak in)
-        $N = $n;
         // 1) 2D-DCT (type-II) with orthonormal normalization
         $dct = $this->dct2($g);
 
@@ -92,6 +94,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 if ($i === 0 && $j === 0) {
                     continue; // exclude DC from median set
                 }
+
                 $coeffs[] = $dct[$i][$j];
             }
         }
@@ -131,6 +134,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 $cnt++;
             }
         }
+
         $avg = $sum / (float) $cnt;
 
         $bits = '';
@@ -139,6 +143,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 $bits .= ($small[$y][$x] > $avg) ? '1' : '0';
             }
         }
+
         return $this->bitsToHex64($bits);
     }
 
@@ -156,6 +161,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 $bits .= ($small[$y][$x] > $small[$y][$x + 1]) ? '1' : '0';
             }
         }
+
         return $this->bitsToHex64($bits);
     }
 
@@ -168,7 +174,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
     private function dct2(array $g): array
     {
         $N = \count($g);
-        $cosT = self::cosTable($N);
+        $cosT = $this->cosTable($N);
 
         // Rows DCT
         $tmp = \array_fill(0, $N, \array_fill(0, $N, 0.0));
@@ -181,6 +187,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 for ($x = 0; $x < $N; $x++) {
                     $sum += $g[$y][$x] * $cosT[$u][$x];
                 }
+
                 $tmp[$y][$u] = ($u === 0 ? $alpha0 : $alpha) * $sum;
             }
         }
@@ -193,6 +200,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 for ($y = 0; $y < $N; $y++) {
                     $sum += $tmp[$y][$u] * $cosT[$v][$y];
                 }
+
                 $out[$v][$u] = ($v === 0 ? $alpha0 : $alpha) * $sum;
             }
         }
@@ -205,14 +213,14 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
      *
      * @return array<int,array<int,float>>
      */
-    private static function cosTable(int $N): array
+    private function cosTable(int $N): array
     {
         static $cache = [];
         $key = (string) $N;
         if (isset($cache[$key])) {
-            /** @var array<int,array<int,float>> */
             return $cache[$key];
         }
+
         $t = \array_fill(0, $N, \array_fill(0, $N, 0.0));
         $pi = \acos(-1.0);
         for ($u = 0; $u < $N; $u++) {
@@ -220,6 +228,7 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                 $t[$u][$x] = \cos(($pi / (2.0 * $N)) * (2.0 * $x + 1.0) * $u);
             }
         }
+
         return $cache[$key] = $t;
     }
 
@@ -254,9 +263,11 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
                         $cnt++;
                     }
                 }
+
                 $out[$yy][$xx] = $cnt > 0 ? ($sum / (float) $cnt) : 0.0;
             }
         }
+
         return $out;
     }
 
@@ -267,16 +278,14 @@ final class PerceptualHashExtractor implements SingleMetadataExtractorInterface
     {
         // ensure length is exactly 64
         if (\strlen($bits) !== 64) {
-            if (\strlen($bits) > 64) {
-                $bits = \substr($bits, 0, 64);
-            } else {
-                $bits = \str_pad($bits, 64, '0', \STR_PAD_RIGHT);
-            }
+            $bits = \strlen($bits) > 64 ? \substr($bits, 0, 64) : \str_pad($bits, 64, '0', \STR_PAD_RIGHT);
         }
+
         $hex = '';
         for ($i = 0; $i < 64; $i += 4) {
             $hex .= \dechex(\bindec(\substr($bits, $i, 4)));
         }
+
         return $hex;
     }
 }
