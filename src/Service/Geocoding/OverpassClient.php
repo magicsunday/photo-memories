@@ -21,11 +21,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function array_filter;
 use function array_map;
+use function array_merge;
 use function array_slice;
 use function array_unique;
 use function array_values;
 use function count;
 use function explode;
+use function in_array;
 use function is_array;
 use function is_int;
 use function is_numeric;
@@ -33,6 +35,7 @@ use function is_string;
 use function ksort;
 use function max;
 use function number_format;
+use function preg_quote;
 use function round;
 use function sprintf;
 use function str_replace;
@@ -50,22 +53,16 @@ use const SORT_STRING;
 final class OverpassClient
 {
     /**
-     * Relevant tag keys we consider for POI categorisation.
+     * Default Overpass tag filters we consider for POI categorisation.
      *
-     * @var list<string>
+     * @var array<string,list<string>>
      */
-    private const array TAG_KEYS = [
-        'tourism',
-        'amenity',
-        'leisure',
-        'sport',
-        'historic',
-        'man_made',
-        'shop',
-        'natural',
-        'landuse',
-        'place',
-        'building',
+    private const array DEFAULT_ALLOWED_TAGS = [
+        'tourism'  => ['attraction', 'viewpoint', 'museum', 'gallery'],
+        'historic' => ['monument', 'castle', 'memorial'],
+        'man_made' => ['tower', 'lighthouse'],
+        'leisure'  => ['park', 'garden'],
+        'natural'  => ['peak', 'cliff'],
     ];
 
     /**
@@ -80,6 +77,11 @@ final class OverpassClient
     private bool $lastUsedNetwork = false;
 
     /**
+     * @var array<string,list<string>>
+     */
+    private array $allowedTagMap;
+
+    /**
      * @param float $httpTimeout timeout in seconds for the HTTP request (symfony client option)
      */
     public function __construct(
@@ -89,7 +91,9 @@ final class OverpassClient
         private readonly ?string $contactEmail = null,
         private readonly int $queryTimeout = 25,
         private readonly float $httpTimeout = 25.0,
+        array $additionalAllowedTags = [],
     ) {
+        $this->allowedTagMap = $this->mergeAllowedTags($additionalAllowedTags);
     }
 
     /**
@@ -165,11 +169,19 @@ final class OverpassClient
 
             $selection    = $this->selectRelevantTags($tags);
             $selectedTags = $selection['tags'];
-            $names        = $selection['names'];
-            $name         = $this->fallbackPoiName($names);
+            if ($selectedTags === []) {
+                continue;
+            }
+
+            $names = $selection['names'];
+            $name  = $this->fallbackPoiName($names);
 
             $primaryKey   = $this->primaryTagKey($tags);
-            $primaryValue = $primaryKey !== null ? $this->stringOrNull($tags[$primaryKey] ?? null) : null;
+            $primaryValue = $primaryKey !== null ? $this->stringOrNull($selectedTags[$primaryKey] ?? null) : null;
+
+            if ($primaryKey === null || $primaryValue === null) {
+                continue;
+            }
 
             if ($name === null && $primaryValue === null) {
                 continue; // skip noisier features without any textual context
@@ -223,8 +235,14 @@ final class OverpassClient
         $radius = max(1, $radius);
 
         $query = sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
-        foreach (self::TAG_KEYS as $key) {
-            $query .= sprintf('nwr(around:%d,%s,%s)["%s"];', $radius, $latS, $lonS, $key);
+        foreach ($this->allowedTagMap as $key => $values) {
+            if ($values === []) {
+                continue;
+            }
+
+            $escaped = array_map(static fn (string $value): string => preg_quote($value, '/'), $values);
+            $pattern = implode('|', $escaped);
+            $query  .= sprintf('nwr(around:%d,%s,%s)["%s"~"^(%s)$"];', $radius, $latS, $lonS, $key, $pattern);
         }
 
         $limitFragment = $limit !== null ? ' ' . max(1, $limit) : '';
@@ -266,8 +284,13 @@ final class OverpassClient
 
     private function primaryTagKey(array $tags): ?string
     {
-        foreach ($this->relevantTagKeys() as $key) {
-            if ($this->stringOrNull($tags[$key] ?? null) !== null) {
+        foreach ($this->allowedTagMap as $key => $values) {
+            $value = $this->stringOrNull($tags[$key] ?? null);
+            if ($value === null) {
+                continue;
+            }
+
+            if ($this->isAllowedTagValue($value, $values)) {
                 return $key;
             }
         }
@@ -287,13 +310,7 @@ final class OverpassClient
      */
     private function selectRelevantTags(array $tags): array
     {
-        $selected = [];
-        foreach ($this->relevantTagKeys() as $key) {
-            $value = $this->stringOrNull($tags[$key] ?? null);
-            if ($value !== null) {
-                $selected[$key] = $value;
-            }
-        }
+        $selected = $this->filterAllowedTags($tags);
 
         foreach (self::AUXILIARY_TAG_KEYS as $key) {
             $value = $this->stringOrNull($tags[$key] ?? null);
@@ -404,11 +421,82 @@ final class OverpassClient
     }
 
     /**
-     * @return list<string>
+     * @return array<string,string>
      */
-    private function relevantTagKeys(): array
+    private function filterAllowedTags(array $tags): array
     {
-        return self::TAG_KEYS;
+        $allowed = [];
+        foreach ($this->allowedTagMap as $key => $values) {
+            $value = $this->stringOrNull($tags[$key] ?? null);
+            if ($value === null) {
+                continue;
+            }
+
+            if ($this->isAllowedTagValue($value, $values)) {
+                $allowed[$key] = $value;
+            }
+        }
+
+        return $allowed;
+    }
+
+    /**
+     * @param list<string> $allowedValues
+     */
+    private function isAllowedTagValue(string $value, array $allowedValues): bool
+    {
+        if ($allowedValues === []) {
+            return false;
+        }
+
+        return in_array($value, $allowedValues, true);
+    }
+
+    /**
+     * @param array<string,mixed> $additional
+     *
+     * @return array<string,list<string>>
+     */
+    private function mergeAllowedTags(array $additional): array
+    {
+        $merged = self::DEFAULT_ALLOWED_TAGS;
+
+        foreach ($additional as $key => $values) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (is_string($values)) {
+                $values = [$values];
+            }
+
+            if (!is_array($values)) {
+                continue;
+            }
+
+            $normalized = [];
+            foreach ($values as $value) {
+                $value = $this->stringOrNull($value);
+                if ($value === null) {
+                    continue;
+                }
+
+                $normalized[] = $value;
+            }
+
+            if ($normalized === []) {
+                continue;
+            }
+
+            if (isset($merged[$key])) {
+                $merged[$key] = array_values(array_unique(array_merge($merged[$key], $normalized)));
+                continue;
+            }
+
+            $merged[$key] = array_values(array_unique($normalized));
+        }
+
+        return $merged;
     }
 
     private function stringOrNull(mixed $value): ?string

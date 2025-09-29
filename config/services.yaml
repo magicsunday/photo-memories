@@ -149,6 +149,7 @@ services:
             $contactEmail: '%memories.geocoding.nominatim.email%'
             $queryTimeout: '%memories.geocoding.overpass.timeout%'
             $httpTimeout: '%memories.geocoding.overpass.timeout%'
+            $additionalAllowedTags: '%memories.geocoding.overpass.allowed_pois%'
 
     MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher:
         arguments:
