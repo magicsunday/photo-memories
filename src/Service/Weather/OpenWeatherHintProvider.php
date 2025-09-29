@@ -186,9 +186,9 @@ final readonly class OpenWeatherHintProvider implements WeatherHintProviderInter
     /**
      * @param array<string, mixed> $entry
      *
-     * @return array<'rain_prob', float>
+     * @return array<'rain_prob', float>|null
      */
-    private function normaliseEntry(array $entry): array
+    private function normaliseEntry(array $entry): ?array
     {
         $hint = [];
 
