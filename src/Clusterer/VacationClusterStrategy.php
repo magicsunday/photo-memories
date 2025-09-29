@@ -19,6 +19,7 @@ use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -79,8 +80,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
     private const float MIN_STD_EPSILON = 1.0e-6;
 
+    private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
+
     public function __construct(
         private LocationHelper $locationHelper,
+        private HolidayResolverInterface $holidayResolver,
         private string $timezone = 'Europe/Berlin',
         private float $defaultHomeRadiusKm = 15.0,
         private float $minAwayDistanceKm = 120.0,
@@ -714,6 +718,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $spotClusterCount = 0;
         $multiSpotDays = 0;
         $spotDwellSeconds = 0;
+        $weekendHolidayDays = 0;
+        $timezone = new DateTimeZone($this->timezone);
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -764,6 +770,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
             if ($summary['spotCount'] >= 2) {
                 ++$multiSpotDays;
+            }
+
+            $dayDate = new DateTimeImmutable($summary['date'], $timezone);
+            $isWeekend = $summary['weekday'] >= 6;
+            $isHoliday = $this->holidayResolver->isHoliday($dayDate);
+
+            if ($isWeekend || $isHoliday) {
+                ++$weekendHolidayDays;
             }
         }
 
@@ -818,6 +832,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $multiSpotBonus = min(3.0, $multiSpotDays * 0.9);
         $dwellBonus     = min(1.5, $spotDwellHours * 0.3);
         $spotBonus      = $multiSpotBonus + $dwellBonus;
+        $weekendHolidayBonus = min(2.0, $weekendHolidayDays * self::WEEKEND_OR_HOLIDAY_BONUS);
 
         $awayNightScore = min(7, $awayNights) * 2.0;
         $distanceScore  = $maxDistance > 0.0 ? 1.2 * log(1.0 + $maxDistance) : 0.0;
@@ -828,6 +843,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $airportBonus   = $airportFlag ? 1.0 : 0.0;
         $densityBonus   = 0.6 * $photoDensityZ;
         $explorationBonus = $spotBonus;
+        $weekendHolidayScore = $weekendHolidayBonus;
         $penalty        = 0.4 * $workDayPenalty;
 
         $score = $awayNightScore
@@ -839,6 +855,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             + $airportBonus
             + $densityBonus
             + $explorationBonus
+            + $weekendHolidayScore
             - $penalty;
 
         $classification = 'none';
@@ -891,6 +908,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'spot_cluster_days'    => $multiSpotDays,
             'spot_dwell_hours'     => round($spotDwellHours, 2),
             'spot_exploration_bonus' => round($explorationBonus, 2),
+            'weekend_holiday_days' => $weekendHolidayDays,
+            'weekend_holiday_bonus' => round($weekendHolidayBonus, 2),
         ];
 
         if ($place !== null) {
