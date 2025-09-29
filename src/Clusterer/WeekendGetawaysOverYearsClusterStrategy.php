@@ -17,20 +17,25 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_key_first;
 use function array_keys;
 use function array_map;
 use function array_values;
 use function assert;
+use function arsort;
 use function count;
 use function gmdate;
+use function array_search;
 use function sort;
 use function strcmp;
 use function strtotime;
 use function usort;
 
 use const SORT_STRING;
+use const SORT_NUMERIC;
 
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
@@ -41,6 +46,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     use MediaFilterTrait;
 
     public function __construct(
+        private LocationHelper $locHelper,
         private string $timezone = 'Europe/Berlin',
         private int $minNights = 1,
         private int $maxNights = 3,
@@ -116,6 +122,11 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                 continue;
             }
 
+            $allDays = array_keys($daysMap);
+            sort($allDays, SORT_STRING);
+
+            $dayLocality = $this->buildDayLocalityMap($daysMap);
+
             // sort days
             $days = array_keys($eligibleDaysMap);
             sort($days, SORT_STRING);
@@ -174,6 +185,10 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
                 // must include weekend day (Sat/Sun)
                 if (!$this->containsWeekendDay($r['days'])) {
+                    continue;
+                }
+
+                if (!$this->isRunBracketedByDifferentLocality($r, $allDays, $dayLocality)) {
                     continue;
                 }
 
@@ -249,5 +264,127 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, list<Media>> $daysMap
+     *
+     * @return array<string, ?string>
+     */
+    private function buildDayLocalityMap(array $daysMap): array
+    {
+        $locality = [];
+
+        foreach ($daysMap as $day => $items) {
+            $locality[$day] = $this->majorityLocalityKey($items);
+        }
+
+        return $locality;
+    }
+
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     * @param list<string>                                $sortedDays
+     * @param array<string, ?string>                      $dayLocality
+     */
+    private function isRunBracketedByDifferentLocality(array $run, array $sortedDays, array $dayLocality): bool
+    {
+        $runDays = $run['days'];
+        if (count($runDays) === 0) {
+            return false;
+        }
+
+        $runLocality = $this->majorityLocalityKey($run['items']);
+        if ($runLocality === null) {
+            return false;
+        }
+
+        $firstDay = $runDays[0];
+        $lastDayIndex = count($runDays) - 1;
+        $lastDay = $runDays[$lastDayIndex];
+
+        $prevDay = $this->previousDayKey($sortedDays, $firstDay);
+        $nextDay = $this->nextDayKey($sortedDays, $lastDay);
+
+        if ($prevDay === null || $nextDay === null) {
+            return false;
+        }
+
+        $prevLocality = $dayLocality[$prevDay] ?? null;
+        $nextLocality = $dayLocality[$nextDay] ?? null;
+
+        if ($prevLocality === null || $nextLocality === null) {
+            return false;
+        }
+
+        if ($prevLocality === $runLocality) {
+            return false;
+        }
+
+        if ($nextLocality === $runLocality) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<string> $sortedDays
+     */
+    private function previousDayKey(array $sortedDays, string $reference): ?string
+    {
+        $index = array_search($reference, $sortedDays, true);
+        if ($index === false || $index === 0) {
+            return null;
+        }
+
+        return $sortedDays[$index - 1];
+    }
+
+    /**
+     * @param list<string> $sortedDays
+     */
+    private function nextDayKey(array $sortedDays, string $reference): ?string
+    {
+        $index = array_search($reference, $sortedDays, true);
+        if ($index === false) {
+            return null;
+        }
+
+        $nextIndex = $index + 1;
+        $total = count($sortedDays);
+        if ($nextIndex >= $total) {
+            return null;
+        }
+
+        return $sortedDays[$nextIndex];
+    }
+
+    /**
+     * @param list<Media> $items
+     */
+    private function majorityLocalityKey(array $items): ?string
+    {
+        /** @var array<string,int> $counts */
+        $counts = [];
+
+        foreach ($items as $media) {
+            $key = $this->locHelper->localityKeyForMedia($media);
+            if ($key === null) {
+                continue;
+            }
+
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+
+        if ($counts === []) {
+            return null;
+        }
+
+        arsort($counts, SORT_NUMERIC);
+
+        $firstKey = array_key_first($counts);
+
+        return $firstKey instanceof string ? $firstKey : null;
     }
 }
