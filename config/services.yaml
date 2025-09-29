@@ -693,8 +693,8 @@ services:
                 vacation: 1.28
                 transit_travel_day: 1.05
                 camping_trip: 1.22
-                significant_place: 1.15
-                first_visit_place: 1.12
+                significant_place: 1.05
+                first_visit_place: 1.02
                 location_similarity: 1.05
                 person_cohort: 1.22
                 holiday_event: 1.10

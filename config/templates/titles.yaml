@@ -4,7 +4,7 @@ de:
         title: "Schnappschüsse"
         subtitle: "{{ date_range }}"
     day_album:
-        title: "Ein Tag in {{ place }}"
+        title: "Ein Tag im Jahr {{ year }}"
         subtitle: "{{ date_range }}"
     monthly_highlights:
         title: "Monatshighlights"
