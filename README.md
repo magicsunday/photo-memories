@@ -10,19 +10,31 @@ Photo Memories enriches locations with nearby points of interest fetched from th
 capture all available `name:*` variants plus optional `alt_name` entries. The application stores them in a dedicated `names`
 structure alongside the legacy `name` field so consumers can choose the most appropriate label for their locale.
 
-By default the Overpass enrichment focuses on sightseeing-related categories to reduce noise. The whitelist currently includes:
+By default the Overpass enrichment focuses on sightseeing-related categories to reduce noise. Each query block is described by a
+combination of tags that must match together. The bundled combinations are:
 
-| Tag key   | Allowed values                      |
-|-----------|-------------------------------------|
-| `tourism` | `attraction`, `viewpoint`, `museum`, `gallery` |
-| `historic`| `monument`, `castle`, `memorial`     |
-| `man_made`| `tower`, `lighthouse`               |
-| `leisure` | `park`, `garden`                    |
-| `natural` | `peak`, `cliff`                     |
+| Combination |
+|-------------|
+| `tourism` in {`attraction`, `viewpoint`, `museum`, `gallery`} |
+| `historic` in {`monument`, `castle`, `memorial`} |
+| `man_made` in {`tower`, `lighthouse`} |
+| `leisure` in {`park`, `garden`} |
+| `natural` in {`peak`, `cliff`} |
 
 You can extend this list without touching the code by overriding the Symfony parameter
 `memories.geocoding.overpass.allowed_pois` (e.g. in `config/parameters.local.yaml` or environment specific configuration).
-The entries are merged with the defaults so new keys or values become part of the Overpass query and validation pipeline.
+Provide it as a list of combinations, where each entry defines the required tags for one `nwr` block:
+
+```yaml
+memories.geocoding.overpass.allowed_pois:
+  -
+    tourism: [ 'attraction' ]
+    historic: [ 'castle', 'ruins' ]
+  -
+    tourism: [ 'theme_park' ]
+```
+
+Entries are merged with the defaults so new keys or values become part of both the Overpass query and the tag validation pipeline.
 
 To control which language is preferred when rendering titles or cluster labels, configure the new
 `MEMORIES_PREFERRED_LOCALE` environment variable (or its matching Symfony container parameter

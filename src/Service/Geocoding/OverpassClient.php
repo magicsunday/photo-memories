@@ -57,12 +57,12 @@ final class OverpassClient
      *
      * @var array<string,list<string>>
      */
-    private const array DEFAULT_ALLOWED_TAGS = [
-        'tourism'  => ['attraction', 'viewpoint', 'museum', 'gallery'],
-        'historic' => ['monument', 'castle', 'memorial'],
-        'man_made' => ['tower', 'lighthouse'],
-        'leisure'  => ['park', 'garden'],
-        'natural'  => ['peak', 'cliff'],
+    private const array DEFAULT_ALLOWED_COMBINATIONS = [
+        ['tourism' => ['attraction', 'viewpoint', 'museum', 'gallery']],
+        ['historic' => ['monument', 'castle', 'memorial']],
+        ['man_made' => ['tower', 'lighthouse']],
+        ['leisure' => ['park', 'garden']],
+        ['natural' => ['peak', 'cliff']],
     ];
 
     /**
@@ -75,6 +75,11 @@ final class OverpassClient
     ];
 
     private bool $lastUsedNetwork = false;
+
+    /**
+     * @var list<array<string,list<string>>>
+     */
+    private array $allowedTagCombinations;
 
     /**
      * @var array<string,list<string>>
@@ -93,7 +98,7 @@ final class OverpassClient
         private readonly float $httpTimeout = 25.0,
         array $additionalAllowedTags = [],
     ) {
-        $this->allowedTagMap = $this->mergeAllowedTags($additionalAllowedTags);
+        [$this->allowedTagCombinations, $this->allowedTagMap] = $this->mergeAllowedTags($additionalAllowedTags);
     }
 
     /**
@@ -235,14 +240,30 @@ final class OverpassClient
         $radius = max(1, $radius);
 
         $query = sprintf('[out:json][timeout:%d];(', $this->queryTimeout);
-        foreach ($this->allowedTagMap as $key => $values) {
-            if ($values === []) {
+        foreach ($this->allowedTagCombinations as $combination) {
+            if ($combination === []) {
                 continue;
             }
 
-            $escaped = array_map(static fn (string $value): string => preg_quote($value, '/'), $values);
-            $pattern = implode('|', $escaped);
-            $query  .= sprintf('nwr(around:%d,%s,%s)["%s"~"^(%s)$"];', $radius, $latS, $lonS, $key, $pattern);
+            $query .= sprintf('nwr(around:%d,%s,%s)', $radius, $latS, $lonS);
+
+            foreach ($combination as $key => $values) {
+                if ($values === []) {
+                    continue;
+                }
+
+                if (count($values) === 1) {
+                    $query .= sprintf('["%s"="%s"]', $key, str_replace("\"", "\\\"", $values[0]));
+
+                    continue;
+                }
+
+                $escaped = array_map(static fn (string $value): string => preg_quote($value, '/'), $values);
+                $pattern = implode('|', $escaped);
+                $query  .= sprintf('["%s"~"^(%s)$"]', $key, $pattern);
+            }
+
+            $query .= ';';
         }
 
         $limitFragment = $limit !== null ? ' ' . max(1, $limit) : '';
@@ -453,15 +474,64 @@ final class OverpassClient
     }
 
     /**
-     * @param array<string,mixed> $additional
+     * @param array<mixed> $additional
      *
-     * @return array<string,list<string>>
+     * @return array{0:list<array<string,list<string>>>,1:array<string,list<string>>}
      */
     private function mergeAllowedTags(array $additional): array
     {
-        $merged = self::DEFAULT_ALLOWED_TAGS;
+        $combinations = [];
+
+        foreach (self::DEFAULT_ALLOWED_COMBINATIONS as $combination) {
+            $normalized = $this->normalizeCombination($combination);
+            if ($normalized !== []) {
+                $combinations[] = $normalized;
+            }
+        }
 
         foreach ($additional as $key => $values) {
+            if (is_string($key)) {
+                $normalized = $this->normalizeCombination([$key => $values]);
+            } elseif (is_array($values)) {
+                $normalized = $this->normalizeCombination($values);
+            } else {
+                continue;
+            }
+
+            if ($normalized === []) {
+                continue;
+            }
+
+            $combinations[] = $normalized;
+        }
+
+        /** @var array<string,list<string>> $flat */
+        $flat = [];
+
+        foreach ($combinations as $combination) {
+            foreach ($combination as $key => $values) {
+                if (!isset($flat[$key])) {
+                    $flat[$key] = [];
+                }
+
+                $flat[$key] = array_values(array_unique(array_merge($flat[$key], $values)));
+            }
+        }
+
+        return [$combinations, $flat];
+    }
+
+    /**
+     * @param array<mixed> $combination
+     *
+     * @return array<string,list<string>>
+     */
+    private function normalizeCombination(array $combination): array
+    {
+        /** @var array<string,list<string>> $normalized */
+        $normalized = [];
+
+        foreach ($combination as $key => $values) {
             if (!is_string($key)) {
                 continue;
             }
@@ -474,29 +544,24 @@ final class OverpassClient
                 continue;
             }
 
-            $normalized = [];
+            $valueList = [];
             foreach ($values as $value) {
                 $value = $this->stringOrNull($value);
                 if ($value === null) {
                     continue;
                 }
 
-                $normalized[] = $value;
+                $valueList[] = $value;
             }
 
-            if ($normalized === []) {
+            if ($valueList === []) {
                 continue;
             }
 
-            if (isset($merged[$key])) {
-                $merged[$key] = array_values(array_unique(array_merge($merged[$key], $normalized)));
-                continue;
-            }
-
-            $merged[$key] = array_values(array_unique($normalized));
+            $normalized[$key] = array_values(array_unique($valueList));
         }
 
-        return $merged;
+        return $normalized;
     }
 
     private function stringOrNull(mixed $value): ?string
