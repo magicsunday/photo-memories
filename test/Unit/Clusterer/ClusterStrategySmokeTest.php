@@ -31,7 +31,7 @@ use MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
-use MagicSunday\Memories\Clusterer\LongTripClusterStrategy;
+use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy;
 use MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy;
@@ -47,7 +47,6 @@ use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
 use MagicSunday\Memories\Clusterer\RainyDayClusterStrategy;
-use MagicSunday\Memories\Clusterer\RoadTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
@@ -60,7 +59,6 @@ use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
-use MagicSunday\Memories\Clusterer\WeekendTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy;
 use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
@@ -201,10 +199,12 @@ final class ClusterStrategySmokeTest extends TestCase
                 self::locationHelper()
             ),
         ];
-        yield 'LongTripClusterStrategy' => [
-            LongTripClusterStrategy::class,
-            'long_trip',
-            null,
+        yield 'VacationClusterStrategy' => [
+            VacationClusterStrategy::class,
+            'vacation',
+            static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'MonthlyHighlightsClusterStrategy' => [
             MonthlyHighlightsClusterStrategy::class,
@@ -285,11 +285,6 @@ final class ClusterStrategySmokeTest extends TestCase
                 self::weatherStub()
             ),
         ];
-        yield 'RoadTripClusterStrategy' => [
-            RoadTripClusterStrategy::class,
-            'road_trip',
-            null,
-        ];
         yield 'SeasonClusterStrategy' => [
             SeasonClusterStrategy::class,
             'season',
@@ -354,15 +349,8 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'WeekendGetawaysOverYearsClusterStrategy' => [
             WeekendGetawaysOverYearsClusterStrategy::class,
             'weekend_getaways_over_years',
-            null,
-        ];
-        yield 'WeekendTripClusterStrategy' => [
-            WeekendTripClusterStrategy::class,
-            'weekend_trip',
-            static fn (): ClusterStrategyInterface => new WeekendTripClusterStrategy(
-                self::locationHelper(),
-                null,
-                null,
+            static fn (): ClusterStrategyInterface => new WeekendGetawaysOverYearsClusterStrategy(
+                self::locationHelper()
             ),
         ];
         yield 'YearInReviewClusterStrategy' => [

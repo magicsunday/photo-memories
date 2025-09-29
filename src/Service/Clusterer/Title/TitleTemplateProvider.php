@@ -25,8 +25,8 @@ use function is_string;
  *    time_similarity:
  *      title: "Schnappschüsse"
  *      subtitle: "{{ date_range }}"
- *    weekend_trip:
- *      title: "Wochenendtrip nach {{ city }}"
+ *    vacation:
+ *      title: "Reise nach {{ place }}"
  *      subtitle: "{{ start_date }} – {{ end_date }}".
  */
 final class TitleTemplateProvider
