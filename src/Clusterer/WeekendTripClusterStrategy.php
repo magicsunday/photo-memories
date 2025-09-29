@@ -82,7 +82,7 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
         $bucket = [];
 
         foreach ($withTs as $m) {
-            if ($bucket === []) {
+            if (count($bucket) === 0) {
                 $bucket[] = $m;
                 continue;
             }
@@ -100,10 +100,21 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
             $buckets[] = $bucket;
         }
 
-        $eligible = $this->filterListsByMinItems($buckets, $this->minItemsPerTrip);
-
         $drafts = [];
-        foreach ($eligible as $trip) {
+        $countBuckets = count($buckets);
+        for ($i = 0; $i < $countBuckets; $i++) {
+            $trip = $buckets[$i];
+            if (count($trip) < $this->minItemsPerTrip) {
+                continue;
+            }
+
+            $prev = $i > 0 ? $buckets[$i - 1] : null;
+            $next = $i + 1 < $countBuckets ? $buckets[$i + 1] : null;
+
+            if (!$this->isBracketedByDifferentLocality($trip, $prev, $next)) {
+                continue;
+            }
+
             $d = $this->makeTripDraftOrNull($trip);
             if ($d instanceof ClusterDraft) {
                 $drafts[] = $d;
@@ -111,6 +122,36 @@ final readonly class WeekendTripClusterStrategy implements ClusterStrategyInterf
         }
 
         return $drafts;
+    }
+
+    /**
+     * @param list<Media>      $bucket
+     * @param list<Media>|null $previous
+     * @param list<Media>|null $next
+     */
+    private function isBracketedByDifferentLocality(array $bucket, ?array $previous, ?array $next): bool
+    {
+        if ($previous === null || $next === null) {
+            return false;
+        }
+
+        $first = $bucket[0] ?? null;
+        $prevFirst = $previous[0] ?? null;
+        $nextFirst = $next[0] ?? null;
+
+        if (!$first instanceof Media || !$prevFirst instanceof Media || !$nextFirst instanceof Media) {
+            return false;
+        }
+
+        if ($this->locHelper->sameLocality($first, $prevFirst)) {
+            return false;
+        }
+
+        if ($this->locHelper->sameLocality($first, $nextFirst)) {
+            return false;
+        }
+
+        return true;
     }
 
     /** @param list<Media> $bucket */
