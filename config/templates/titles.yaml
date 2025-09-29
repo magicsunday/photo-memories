@@ -26,18 +26,12 @@ de:
     location_similarity:
         title: "Unterwegs in {{ place }}"
         subtitle: "{{ date_range }}"
-    weekend_trip:
-        title: "Wochenendtrip nach {{ place }}"
+    vacation:
+        title: "Reise nach {{ place }}"
         subtitle: "{{ start_date }} – {{ end_date }}"
     weekend_getaways_over_years:
         title: "Wochenenden – durch die Jahre"
         subtitle: "{{ date_range }}"
-    road_trip:
-        title: "Roadtrip"
-        subtitle: "{{ date_range }}"
-    long_trip:
-        title: "Große Reise"
-        subtitle: "{{ start_date }} – {{ end_date }}"
     transit_travel_day:
         title: "Reisetag"
         subtitle: "{{ date_range }}"

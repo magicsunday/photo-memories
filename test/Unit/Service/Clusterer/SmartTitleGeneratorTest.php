@@ -78,14 +78,14 @@ YAML
     {
         $generator = $this->createGenerator(<<<'YAML'
 de:
-  weekend_trip:
-    title: "Wochenendtrip nach {{ place }}"
+  vacation:
+    title: "Reise nach {{ place }}"
     subtitle: "{{ start_date }} – {{ end_date }}"
 YAML
         );
 
         $cluster = $this->createCluster(
-            algorithm: 'weekend_trip',
+            algorithm: 'vacation',
             params: [
                 'place'      => 'Hamburg',
                 'time_range' => [
@@ -95,7 +95,7 @@ YAML
             ],
         );
 
-        self::assertSame('Wochenendtrip nach Hamburg', $generator->makeTitle($cluster, 'en'));
+        self::assertSame('Reise nach Hamburg', $generator->makeTitle($cluster, 'en'));
         self::assertSame('05.07.2024 – 07.07.2024', $generator->makeSubtitle($cluster, 'en'));
     }
 
