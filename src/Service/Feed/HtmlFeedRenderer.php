@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Feed;
 
 use function htmlspecialchars;
 use function implode;
+use function is_string;
 use function number_format;
 
 use const ENT_QUOTES;
@@ -28,6 +29,7 @@ final class HtmlFeedRenderer
      *   title:string,
      *   subtitle:string,
      *   algorithm:string,
+     *   group?:string,
      *   score:float,
      *   images:list<array{href:string, alt:string}>
      * }> $cards
@@ -66,7 +68,7 @@ HTML;
 
     /**
      * @param list<array{
-     *   title:string, subtitle:string, algorithm:string, score:float,
+     *   title:string, subtitle:string, algorithm:string, group?:string, score:float,
      *   images:list<array{href:string, alt:string}>
      * }> $cards
      */
@@ -79,6 +81,17 @@ HTML;
             $st    = htmlspecialchars($c['subtitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $alg   = htmlspecialchars($c['algorithm'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $score = number_format($c['score'], 3, ',', '');
+            $group = $c['group'] ?? null;
+
+            $chips = [];
+            if (is_string($group) && $group !== '') {
+                $grp     = htmlspecialchars($group, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $chips[] = "<span class=\"chip\">{$grp}</span>";
+            }
+
+            $chips[] = "<span class=\"chip\">{$alg}</span>";
+            $chips[] = "<span class=\"chip\">Score {$score}</span>";
+            $meta    = implode("\n      ", $chips);
 
             $images = $this->renderImages($c['images']);
 
@@ -90,8 +103,7 @@ HTML;
       <p class="muted">{$st}</p>
     </div>
     <div class="meta">
-      <span class="chip">{$alg}</span>
-      <span class="chip">Score {$score}</span>
+      {$meta}
     </div>
   </div>
   <div class="thumbs">

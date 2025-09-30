@@ -37,6 +37,7 @@ use function count;
 use function file_put_contents;
 use function is_dir;
 use function is_file;
+use function is_string;
 use function max;
 use function sprintf;
 use function symlink;
@@ -142,7 +143,7 @@ final class FeedExportHtmlCommand extends Command
 
         // 4) Prepare cards: copy/symlink thumbnails and create relative hrefs
         /** @var list<array{
-         *   title:string, subtitle:string, algorithm:string, score:float,
+         *   title:string, subtitle:string, algorithm:string, group?:string, score:float,
          *   images:list<array{href:string, alt:string}>
          * }> $cards */
         $cards = [];
@@ -218,13 +219,22 @@ final class FeedExportHtmlCommand extends Command
                 continue;
             }
 
-            $cards[] = [
+            $params = $it->getParams();
+            $group  = $params['group'] ?? null;
+
+            $card = [
                 'title'     => $it->getTitle(),
                 'subtitle'  => $it->getSubtitle(),
                 'algorithm' => $it->getAlgorithm(),
                 'score'     => $it->getScore(),
                 'images'    => $images,
             ];
+
+            if (is_string($group) && $group !== '') {
+                $card['group'] = $group;
+            }
+
+            $cards[] = $card;
         }
 
         if ($cards === []) {

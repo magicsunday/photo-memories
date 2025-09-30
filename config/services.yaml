@@ -658,6 +658,7 @@ services:
                 day_album: 0.98
                 time_similarity: 0.94
                 photo_motif: 0.88
+            $algorithmGroups: '%memories.cluster.consolidate.groups%'
                 panorama: 0.95
                 panorama_over_years: 1.00
                 portrait_orientation: 0.88
@@ -705,4 +706,6 @@ services:
             $provider: '@MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider'
 
     # Support
-    MagicSunday\Memories\Support\ClusterEntityToDraftMapper: ~
+    MagicSunday\Memories\Support\ClusterEntityToDraftMapper:
+        arguments:
+            $algorithmGroups: '%memories.cluster.consolidate.groups%'

@@ -21,6 +21,7 @@ use function array_map;
 use function array_slice;
 use function count;
 use function is_numeric;
+use function is_string;
 use function sprintf;
 use function usort;
 
@@ -31,6 +32,9 @@ final class CompositeClusterScorer
 {
     /** @var list<ClusterScoreHeuristicInterface> */
     private array $heuristics;
+
+    /** @var array<string,string> */
+    private array $algorithmGroups = [];
 
     /**
      * @param iterable<ClusterScoreHeuristicInterface> $heuristics
@@ -54,6 +58,8 @@ final class CompositeClusterScorer
             'time_coverage' => 0.10,
         ],
         private array $algorithmBoosts = [],
+        array $algorithmGroups = [],
+        private string $defaultAlgorithmGroup = 'default',
     ) {
         $this->heuristics = [];
         foreach ($heuristics as $heuristic) {
@@ -66,6 +72,18 @@ final class CompositeClusterScorer
                     sprintf('Algorithm boost must be > 0.0, got %s => %f', (string) $algorithm, $boost)
                 );
             }
+        }
+
+        foreach ($algorithmGroups as $algorithm => $group) {
+            if (!is_string($group) || $group === '') {
+                continue;
+            }
+
+            $this->algorithmGroups[$algorithm] = $group;
+        }
+
+        if ($this->defaultAlgorithmGroup === '') {
+            $this->defaultAlgorithmGroup = 'default';
         }
     }
 
@@ -99,6 +117,7 @@ final class CompositeClusterScorer
             $score = $this->computeWeightedScore($cluster, $weightedValues);
 
             $algorithm = $cluster->getAlgorithm();
+            $cluster->setParam('group', $this->resolveGroup($algorithm));
             $boost     = $this->algorithmBoosts[$algorithm] ?? 1.0;
             if ($boost !== 1.0) {
                 $score *= $boost;
@@ -179,5 +198,16 @@ final class CompositeClusterScorer
     private function floatOrNull(mixed $value): ?float
     {
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function resolveGroup(string $algorithm): string
+    {
+        $group = $this->algorithmGroups[$algorithm] ?? null;
+
+        if (is_string($group) && $group !== '') {
+            return $group;
+        }
+
+        return $this->defaultAlgorithmGroup;
     }
 }

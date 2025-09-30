@@ -31,6 +31,11 @@ use function usort;
  * - limit per calendar day
  * - simple diversity by (place, algorithm)
  * - pick cover by heuristic
+ *
+ * ClusterDraft::getParams() is expected to expose a non-empty 'group' key which
+ * identifies the consolidated algorithm family (e.g. travel_and_places). The
+ * scorer adds this metadata for freshly created drafts, while persisted drafts
+ * are backfilled during mapping.
  */
 final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 {

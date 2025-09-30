@@ -88,6 +88,7 @@ final class CompositeClusterScorerTest extends TestCase
                 'time_coverage' => 0.10,
             ],
             algorithmBoosts: ['vacation' => 1.45],
+            algorithmGroups: ['vacation' => 'travel_and_places'],
         );
 
         $cluster = new ClusterDraft(
@@ -131,6 +132,7 @@ final class CompositeClusterScorerTest extends TestCase
 
         self::assertEqualsWithDelta($boosted, $params['score'], 1e-6);
         self::assertEqualsWithDelta(1.45, $params['score_algorithm_boost'], 1e-9);
+        self::assertSame('travel_and_places', $params['group']);
     }
 
     /**
