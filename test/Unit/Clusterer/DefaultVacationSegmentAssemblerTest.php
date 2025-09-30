@@ -17,6 +17,9 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\RunDetector;
+use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -45,14 +48,20 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             minItemsPerDay: 2,
         );
 
-        $assembler = new DefaultVacationSegmentAssembler(
+        $transportExtender = new TransportDayExtender();
+        $runDetector = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 80.0,
+            minItemsPerDay: 2,
+        );
+        $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             holidayResolver: new NullHolidayResolver(),
             timezone: 'Europe/Berlin',
-            minAwayDistanceKm: 80.0,
             movementThresholdKm: 25.0,
-            minItemsPerDay: 2,
         );
+
+        $assembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
 
         $tripLocation = $this->makeLocation('trip-lisbon', 'Lisboa, Portugal', 38.7223, -9.1393, country: 'Portugal', configure: static function (Location $loc): void {
             $loc->setCategory('tourism');
