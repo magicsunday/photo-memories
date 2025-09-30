@@ -16,6 +16,7 @@ use MagicSunday\Memories\Entity\Cluster;
 
 use function array_unique;
 use function array_values;
+use function is_string;
 use function sort;
 
 use const SORT_NUMERIC;
@@ -25,6 +26,26 @@ use const SORT_NUMERIC;
  */
 final class ClusterEntityToDraftMapper
 {
+    /** @var array<string,string> */
+    private array $algorithmGroups = [];
+
+    public function __construct(
+        array $algorithmGroups = [],
+        private string $defaultAlgorithmGroup = 'default'
+    ) {
+        foreach ($algorithmGroups as $algorithm => $group) {
+            if (!is_string($group) || $group === '') {
+                continue;
+            }
+
+            $this->algorithmGroups[$algorithm] = $group;
+        }
+
+        if ($this->defaultAlgorithmGroup === '') {
+            $this->defaultAlgorithmGroup = 'default';
+        }
+    }
+
     /**
      * @param list<Cluster> $entities
      *
@@ -36,6 +57,9 @@ final class ClusterEntityToDraftMapper
         foreach ($entities as $e) {
             $algorithm = $e->getAlgorithm();
             $params    = $e->getParams() ?? [];
+            if (!isset($params['group']) || !is_string($params['group']) || $params['group'] === '') {
+                $params['group'] = $this->resolveGroup($algorithm);
+            }
             $centroid  = $e->getCentroid();
             $members   = $this->normalizeMembers($e->getMembers());
 
@@ -61,5 +85,16 @@ final class ClusterEntityToDraftMapper
         sort($members, SORT_NUMERIC);
 
         return $members;
+    }
+
+    private function resolveGroup(string $algorithm): string
+    {
+        $group = $this->algorithmGroups[$algorithm] ?? null;
+
+        if (is_string($group) && $group !== '') {
+            return $group;
+        }
+
+        return $this->defaultAlgorithmGroup;
     }
 }

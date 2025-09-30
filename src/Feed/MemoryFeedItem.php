@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Feed;
 
 /**
  * Simple DTO representing a feed card.
+ *
+ * The params array contains additional metadata such as the algorithm group
+ * (key 'group') added by the cluster scorer/mapper pipeline.
  */
 final readonly class MemoryFeedItem
 {
