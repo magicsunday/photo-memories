@@ -30,7 +30,6 @@ use function array_keys;
 use function array_map;
 use function array_slice;
 use function array_sum;
-use function array_values;
 use function assert;
 use function count;
 use function in_array;
@@ -372,11 +371,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      *     awayByDistance: bool,
      *     firstGpsMedia: Media|null,
      *     lastGpsMedia: Media|null,
+     *     isSynthetic: bool,
      * }>
      */
     private function buildDaySummaries(array $items, array $home): array
     {
-        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,timezoneIdentifierVotes:array<string,int>}> $days */
+        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,timezoneIdentifierVotes:array<string,int>,isSynthetic:bool}> $days */
         $days = [];
 
         foreach ($items as $media) {
@@ -424,6 +424,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'firstGpsMedia'     => null,
                     'lastGpsMedia'      => null,
                     'timezoneIdentifierVotes' => [],
+                    'isSynthetic'       => false,
                 ];
             }
 
@@ -476,6 +477,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         if ($days === []) {
             return [];
         }
+
+        $days = $this->ensureContinuousDayRange($days);
 
         foreach ($days as &$summary) {
             $offset = $this->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
@@ -590,10 +593,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         unset($summary);
 
-        $counts = array_map(
-            static fn (array $day): int => $day['photoCount'],
-            array_values($days)
-        );
+        $counts = [];
+        foreach ($days as $day) {
+            if ($day['isSynthetic']) {
+                continue;
+            }
+
+            $counts[] = $day['photoCount'];
+        }
 
         $stats = $this->computeMeanStd($counts);
         foreach ($days as &$summary) {
@@ -644,6 +651,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         $combinedFlags = $this->applyMorphologicalClosing($combinedFlags);
 
+        $combinedFlags = $this->inheritSyntheticAwayFlags($combinedFlags, $keys, $days);
+
         foreach ($keys as $key) {
             $days[$key]['baseAway'] = $combinedFlags[$key];
         }
@@ -652,7 +661,91 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
+     * @param array<string, array{date:string,isSynthetic:bool}> $days
+     *
+     * @return array<string, array{date:string,isSynthetic:bool}>
+     */
+    private function ensureContinuousDayRange(array $days): array
+    {
+        ksort($days, SORT_STRING);
+
+        $keys = array_keys($days);
+        if ($keys === []) {
+            return $days;
+        }
+
+        $timezone = new DateTimeZone('UTC');
+
+        $first = DateTimeImmutable::createFromFormat('!Y-m-d', $keys[0], $timezone);
+        $last  = DateTimeImmutable::createFromFormat('!Y-m-d', $keys[count($keys) - 1], $timezone);
+
+        if ($first === false || $last === false) {
+            return $days;
+        }
+
+        $cursor = $first;
+        while ($cursor <= $last) {
+            $key = $cursor->format('Y-m-d');
+            if (!isset($days[$key])) {
+                $days[$key] = $this->createSyntheticDaySummary($key);
+            }
+
+            $cursor = $cursor->modify('+1 day');
+        }
+
+        ksort($days, SORT_STRING);
+
+        return $days;
+    }
+
+    /**
+     * @return array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,isSynthetic:bool,timezoneIdentifierVotes:array<string,int>}
+     */
+    private function createSyntheticDaySummary(string $date): array
+    {
+        $timezone = new DateTimeZone($this->timezone);
+        $weekday  = (int) (new DateTimeImmutable($date, $timezone))->format('N');
+
+        return [
+            'date'                    => $date,
+            'members'                 => [],
+            'gpsMembers'              => [],
+            'maxDistanceKm'           => 0.0,
+            'distanceSum'             => 0.0,
+            'distanceCount'           => 0,
+            'avgDistanceKm'           => 0.0,
+            'travelKm'                => 0.0,
+            'countryCodes'            => [],
+            'timezoneOffsets'         => [],
+            'localTimezoneIdentifier' => $this->timezone,
+            'localTimezoneOffset'     => null,
+            'tourismHits'             => 0,
+            'poiSamples'              => 0,
+            'tourismRatio'            => 0.0,
+            'hasAirportPoi'           => false,
+            'weekday'                 => $weekday,
+            'photoCount'              => 0,
+            'densityZ'                => 0.0,
+            'isAwayCandidate'         => false,
+            'sufficientSamples'       => false,
+            'spotClusters'            => [],
+            'spotNoise'               => [],
+            'spotCount'               => 0,
+            'spotNoiseSamples'        => 0,
+            'spotDwellSeconds'        => 0,
+            'staypoints'              => [],
+            'baseLocation'            => null,
+            'baseAway'                => false,
+            'awayByDistance'          => false,
+            'firstGpsMedia'           => null,
+            'lastGpsMedia'            => null,
+            'isSynthetic'             => true,
+            'timezoneIdentifierVotes' => [],
+        ];
+    }
+
+    /**
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,isSynthetic:bool}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return list<ClusterDraft>
@@ -741,7 +834,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
             if ($run !== []) {
                 $last = $run[count($run) - 1];
-                if ($this->isNextDay($last, $key) === false) {
+                if ($this->areSequentialDays($last, $key, $days) === false) {
                     $flush();
                 }
             }
@@ -758,10 +851,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      * Ensures transport-heavy buffer days at the beginning or end of a run are
      * included in the final segment, as mandated by the vacation heuristic.
      *
-     * @param list<string>               $run
-     * @param list<string>               $orderedKeys
-     * @param array<string, int>         $indexByKey
-     * @param array<string, array<mixed>> $days Full per-day summaries; only the airport flag is accessed.
+     * @param list<string>                           $run
+     * @param list<string>                           $orderedKeys
+     * @param array<string, int>                     $indexByKey
+     * @param array<string, array{hasAirportPoi:bool,isSynthetic:bool}> $days Full per-day summaries; only the airport flag and
+     *                                                                 sequential placeholder markers are accessed.
      *
      * @return list<string>
      */
@@ -784,7 +878,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             if (
                 !in_array($candidateKey, $extended, true)
                 && ($days[$candidateKey]['hasAirportPoi'] ?? false)
-                && $this->isNextDay($candidateKey, $firstKey)
+                && $this->areSequentialDays($candidateKey, $firstKey, $days)
             ) {
                 array_unshift($extended, $candidateKey);
             }
@@ -798,7 +892,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             if (
                 !in_array($candidateKey, $extended, true)
                 && ($days[$candidateKey]['hasAirportPoi'] ?? false)
-                && $this->isNextDay($lastKey, $candidateKey)
+                && $this->areSequentialDays($lastKey, $candidateKey, $days)
             ) {
                 $extended[] = $candidateKey;
             }
@@ -809,7 +903,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<string> $dayKeys
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,isSynthetic:bool}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      */
     private function buildClusterDraft(array $dayKeys, array $days, array $home): ?ClusterDraft
@@ -1610,6 +1704,71 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         }
 
         return $this->applyMorphologicalClosing($flags);
+    }
+
+    /**
+     * @param array<string, bool> $flags
+     * @param list<string>        $orderedKeys
+     * @param array<string, array{isSynthetic:bool}> $days
+     *
+     * @return array<string, bool>
+     */
+    private function inheritSyntheticAwayFlags(array $flags, array $orderedKeys, array $days): array
+    {
+        $count = count($orderedKeys);
+
+        for ($i = 0; $i < $count; ++$i) {
+            $key = $orderedKeys[$i];
+            $summary = $days[$key];
+
+            if ($summary['isSynthetic'] === false) {
+                continue;
+            }
+
+            $prev = $i > 0 ? $flags[$orderedKeys[$i - 1]] : null;
+            $next = $i + 1 < $count ? $flags[$orderedKeys[$i + 1]] : null;
+
+            if ($prev === true || $next === true) {
+                $flags[$key] = true;
+            }
+        }
+
+        return $flags;
+    }
+
+    /**
+     * @param array<string, array{isSynthetic:bool}> $days
+     */
+    private function areSequentialDays(string $previous, string $current, array $days): bool
+    {
+        if ($this->isNextDay($previous, $current)) {
+            return true;
+        }
+
+        $timezone = new DateTimeZone('UTC');
+        $start    = DateTimeImmutable::createFromFormat('!Y-m-d', $previous, $timezone);
+        $end      = DateTimeImmutable::createFromFormat('!Y-m-d', $current, $timezone);
+
+        if ($start === false || $end === false || $start > $end) {
+            return false;
+        }
+
+        $cursor = $start->modify('+1 day');
+        while ($cursor < $end) {
+            $key = $cursor->format('Y-m-d');
+            $summary = $days[$key] ?? null;
+            if ($summary === null) {
+                return false;
+            }
+
+            if (($summary['isSynthetic'] ?? false) === false) {
+                return false;
+            }
+
+            $cursor = $cursor->modify('+1 day');
+        }
+
+        return true;
     }
 
     /**
