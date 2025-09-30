@@ -100,8 +100,8 @@ de:
     #   - {{ place_region }} (optional): Dominante Region/Bundesland
     #   - {{ place_country }} (optional): Dominantes Land
     vacation:
-        title: "{{ classification_label }} – {{ place_city|place_region|place_country|place }}"
-        subtitle: "{{ start_date }} – {{ end_date }} · {{ place_city|place_region|place_country|classification_label }}"
+        title: "{{ classification_label }} – {{ place_country }}"
+        subtitle: "{{ start_date }} – {{ end_date }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
