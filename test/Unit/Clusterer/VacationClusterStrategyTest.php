@@ -59,6 +59,61 @@ final class VacationClusterStrategyTest extends TestCase
     }
 
     #[Test]
+    public function determinesHomeFromDaylightSamples(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
+            timezone: 'UTC',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 80.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 2,
+        );
+
+        $homeLocation = $this->makeLocation('home-daylight', 'Hamburg, Germany', 53.5511, 9.9937, country: 'Germany', configure: static function (Location $location): void {
+            $location->setCountryCode('DE');
+            $location->setCategory('residential');
+        });
+
+        $items = [];
+        $daylightStart = new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('UTC'));
+
+        for ($i = 0; $i < 5; ++$i) {
+            $day = $daylightStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    600 + ($i * 3) + $sample,
+                    sprintf('daylight-home-%d-%d.jpg', $i, $sample),
+                    $timestamp->format('Y-m-d H:i:s'),
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(120);
+                    }
+                );
+            }
+        }
+
+        $reflection = new ReflectionClass($strategy);
+        $method = $reflection->getMethod('determineHome');
+        $method->setAccessible(true);
+
+        /** @var array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}|null $home */
+        $home = $method->invoke($strategy, $items);
+
+        self::assertNotNull($home);
+        self::assertEqualsWithDelta($homeLocation->getLat(), $home['lat'], 0.001);
+        self::assertEqualsWithDelta($homeLocation->getLon(), $home['lon'], 0.001);
+        self::assertSame('de', $home['country']);
+        self::assertSame(120, $home['timezone_offset']);
+        self::assertGreaterThanOrEqual(12.0, $home['radius_km']);
+    }
+
+    #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
         $helper = new LocationHelper();
@@ -107,20 +162,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 1000;
-        $startHome = new DateTimeImmutable('2024-05-20 22:00:00', new DateTimeZone('UTC'));
+        $startHome = new DateTimeImmutable('2024-05-20 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 8; ++$i) {
-            $timestamp = $startHome->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-night-%d.jpg', $id),
-                $timestamp->format('Y-m-d H:i:s'),
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $startHome->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-day-%d-%d.jpg', $i, $sample),
+                    $timestamp->format('Y-m-d H:i:s'),
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $tracks = [
@@ -354,20 +412,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 2000;
-        $homeNight = new DateTimeImmutable('2024-07-04 22:30:00', new DateTimeZone('UTC'));
+        $homeSeedStart = new DateTimeImmutable('2024-07-04 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
-            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('weekend-home-%d.jpg', $id),
-                $timestamp->format('Y-m-d H:i:s'),
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(120);
-                }
-            );
+            $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('weekend-home-%d-%d.jpg', $i, $sample),
+                    $timestamp->format('Y-m-d H:i:s'),
+                    $homeLocation->getLat() + (($i + $sample) * 0.0004),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0004),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(120);
+                    }
+                );
+            }
         }
 
         $weekendStart = new DateTimeImmutable('2024-07-06 09:00:00', new DateTimeZone('UTC'));
@@ -473,20 +534,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 4000;
-        $homeNight = new DateTimeImmutable('2024-12-20 22:30:00', new DateTimeZone('UTC'));
+        $homeSeedStart = new DateTimeImmutable('2024-12-20 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
-            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('holiday-home-%d.jpg', $id),
-                $timestamp->format('Y-m-d H:i:s'),
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('holiday-home-%d-%d.jpg', $i, $sample),
+                    $timestamp->format('Y-m-d H:i:s'),
+                    $homeLocation->getLat() + (($i + $sample) * 0.0004),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0004),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $tripStart = new DateTimeImmutable('2024-12-23 09:00:00', new DateTimeZone('UTC'));
@@ -584,20 +648,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 5000;
-        $homeNight = new DateTimeImmutable('2024-07-01 22:30:00', new DateTimeZone('UTC'));
+        $homeSeedStart = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 5; ++$i) {
-            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-before-%d.jpg', $i),
-                $timestamp,
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-before-%d-%d.jpg', $i, $sample),
+                    $timestamp,
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $tripStart = new DateTimeImmutable('2024-07-10 09:00:00', new DateTimeZone('UTC'));
@@ -648,20 +715,23 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        $homeReturn = new DateTimeImmutable('2024-07-13 22:30:00', new DateTimeZone('UTC'));
+        $homeReturn = new DateTimeImmutable('2024-07-13 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
-            $timestamp = $homeReturn->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-after-%d.jpg', $i),
-                $timestamp,
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $homeReturn->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-after-%d-%d.jpg', $i, $sample),
+                    $timestamp,
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $clusters = $strategy->cluster($items);
@@ -712,20 +782,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 6000;
-        $homeNight = new DateTimeImmutable('2024-06-01 22:30:00', new DateTimeZone('UTC'));
+        $homeSeedStart = new DateTimeImmutable('2024-06-01 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 4; ++$i) {
-            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-seed-%d.jpg', $i),
-                $timestamp,
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-seed-%d-%d.jpg', $i, $sample),
+                    $timestamp,
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $tripStart = new DateTimeImmutable('2024-06-10 08:00:00', new DateTimeZone('UTC'));
@@ -858,20 +931,23 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $id = 9000;
-        $homeNight = new DateTimeImmutable('2024-04-10 22:30:00', new DateTimeZone('UTC'));
+        $homeSeedStart = new DateTimeImmutable('2024-04-10 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
-            $timestamp = $homeNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-pre-%d.jpg', $i),
-                $timestamp->format('Y-m-d H:i:s'),
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(120);
-                }
-            );
+            $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-pre-%d-%d.jpg', $i, $sample),
+                    $timestamp->format('Y-m-d H:i:s'),
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(120);
+                    }
+                );
+            }
         }
 
         $dayClusters = [
@@ -998,20 +1074,23 @@ final class VacationClusterStrategyTest extends TestCase
         $items = [];
         $id = 6000;
 
-        $homeBaseline = new DateTimeImmutable('2024-03-24 22:30:00', new DateTimeZone('Europe/Berlin'));
+        $homeBaseline = new DateTimeImmutable('2024-03-24 09:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 3; ++$i) {
-            $timestamp = $homeBaseline->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-before-%d.jpg', $i),
-                $timestamp,
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(60);
-                }
-            );
+            $day = $homeBaseline->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-before-%d-%d.jpg', $i, $sample),
+                    $timestamp,
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(60);
+                    }
+                );
+            }
         }
 
         $tripStart = new DateTimeImmutable('2024-03-30 09:00:00', new DateTimeZone('Europe/Berlin'));
@@ -1050,20 +1129,23 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $returnBaseline = new DateTimeImmutable('2024-04-04 22:30:00', new DateTimeZone('Europe/Berlin'));
+        $returnBaseline = new DateTimeImmutable('2024-04-04 09:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 2; ++$i) {
-            $timestamp = $returnBaseline->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
-                ++$id,
-                sprintf('home-after-%d.jpg', $i),
-                $timestamp,
-                $homeLocation->getLat(),
-                $homeLocation->getLon(),
-                $homeLocation,
-                static function (Media $media): void {
-                    $media->setTimezoneOffsetMin(120);
-                }
-            );
+            $day = $returnBaseline->add(new DateInterval('P' . $i . 'D'));
+            for ($sample = 0; $sample < 3; ++$sample) {
+                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
+                $items[] = $this->makeMediaFixture(
+                    ++$id,
+                    sprintf('home-after-%d-%d.jpg', $i, $sample),
+                    $timestamp,
+                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
+                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
+                    $homeLocation,
+                    static function (Media $media): void {
+                        $media->setTimezoneOffsetMin(120);
+                    }
+                );
+            }
         }
 
         $clusters = $strategy->cluster($items);
