@@ -37,21 +37,17 @@ use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
 use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
-use MagicSunday\Memories\Clusterer\RainyDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\SnowDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy;
-use MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
-use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -221,13 +217,6 @@ final class ClusterStrategySmokeTest extends TestCase
             'portrait_orientation',
             null,
         ];
-        yield 'RainyDayClusterStrategy' => [
-            RainyDayClusterStrategy::class,
-            'rainy_day',
-            static fn (): ClusterStrategyInterface => new RainyDayClusterStrategy(
-                self::weatherStub()
-            ),
-        ];
         yield 'SeasonClusterStrategy' => [
             SeasonClusterStrategy::class,
             'season',
@@ -254,13 +243,6 @@ final class ClusterStrategySmokeTest extends TestCase
             SnowVacationOverYearsClusterStrategy::class,
             'snow_vacation_over_years',
             null,
-        ];
-        yield 'SunnyDayClusterStrategy' => [
-            SunnyDayClusterStrategy::class,
-            'sunny_day',
-            static fn (): ClusterStrategyInterface => new SunnyDayClusterStrategy(
-                self::weatherStub()
-            ),
         ];
         yield 'ThisMonthOverYearsClusterStrategy' => [
             ThisMonthOverYearsClusterStrategy::class,
@@ -301,16 +283,6 @@ final class ClusterStrategySmokeTest extends TestCase
     private static function locationHelper(): LocationHelper
     {
         return new LocationHelper();
-    }
-
-    private static function weatherStub(): WeatherHintProviderInterface
-    {
-        return new class implements WeatherHintProviderInterface {
-            public function getHint(Media $media): ?array
-            {
-                return null;
-            }
-        };
     }
 
     /**
