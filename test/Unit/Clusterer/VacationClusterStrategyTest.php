@@ -21,6 +21,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 
@@ -215,6 +216,17 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(', Italy', $params['place_country']);
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
+
+        $centroid = $cluster->getCentroid();
+        $expectedDistanceKm = MediaMath::haversineDistanceInMeters(
+            52.5200,
+            13.4050,
+            $centroid['lat'],
+            $centroid['lon'],
+        ) / 1000.0;
+
+        self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.1);
+        self::assertGreaterThanOrEqual($params['max_distance_km'], $params['max_observed_distance_km']);
     }
 
     #[Test]
