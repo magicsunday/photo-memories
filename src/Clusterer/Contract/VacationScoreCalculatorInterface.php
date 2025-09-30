@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Clusterer\Contract;
+
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+
+/**
+ * Calculates the vacation cluster score and metadata for a run of days.
+ */
+interface VacationScoreCalculatorInterface
+{
+    /**
+     * @param list<string> $dayKeys
+     * @param array<string, array{date:string,members:list<\MagicSunday\Memories\Entity\Media>,gpsMembers:list<\MagicSunday\Memories\Entity\Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<\MagicSunday\Memories\Entity\Media>>,spotNoise:list<\MagicSunday\Memories\Entity\Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,isSynthetic:bool}> $days
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    public function buildDraft(array $dayKeys, array $days, array $home): ?ClusterDraft;
+}

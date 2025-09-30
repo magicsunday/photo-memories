@@ -21,6 +21,7 @@ use function array_values;
 use function count;
 use function implode;
 use function is_array;
+use function is_string;
 use function sha1;
 use function sort;
 use function sprintf;
@@ -52,6 +53,11 @@ final class ClusterConsolidationService
     /** @var array<string,bool> */
     private array $annotateOnlySet = [];
 
+    /** @var array<string,string> */
+    private array $algorithmGroups = [];
+
+    private string $defaultAlgorithmGroup = 'default';
+
     /**
      * @param float               $minScore              minimum score to keep a cluster
      * @param int                 $minSize               minimum members to keep a cluster
@@ -61,8 +67,10 @@ final class ClusterConsolidationService
      * @param list<string>        $keepOrder             algorithm dominance order (earlier = stronger)
      * @param list<string>        $annotateOnly          algorithms that should only remain if they add unique value
      * @param array<string,float> $minUniqueShare        Minimal unique share per annotateOnly algorithm [0..1].
-     * @param bool                $requireValidTime      drop clusters without valid time_range (optional)
-     * @param int                 $minValidYear          lower bound year for requireValidTime
+     * @param array<string,string> $algorithmGroups      mapping of algorithm identifiers to group keys
+     * @param bool                 $requireValidTime     drop clusters without valid time_range (optional)
+     * @param int                  $minValidYear         lower bound year for requireValidTime
+     * @param string               $defaultAlgorithmGroup fallback group key when an algorithm is unmapped
      */
     public function __construct(
         private readonly float $minScore,
@@ -73,8 +81,10 @@ final class ClusterConsolidationService
         private readonly array $keepOrder = [],
         private readonly array $annotateOnly = [],
         private readonly array $minUniqueShare = [],
+        array $algorithmGroups = [],
         private readonly bool $requireValidTime = false,
         private readonly int $minValidYear = 1990,
+        string $defaultAlgorithmGroup = 'default',
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
             throw new InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
@@ -88,6 +98,16 @@ final class ClusterConsolidationService
         foreach ($this->annotateOnly as $alg) {
             $this->annotateOnlySet[$alg] = true;
         }
+
+        foreach ($algorithmGroups as $algorithm => $group) {
+            if (!is_string($group) || $group === '') {
+                continue;
+            }
+
+            $this->algorithmGroups[$algorithm] = $group;
+        }
+
+        $this->defaultAlgorithmGroup = $defaultAlgorithmGroup !== '' ? $defaultAlgorithmGroup : 'default';
     }
 
     /**
@@ -363,7 +383,7 @@ final class ClusterConsolidationService
             return $drafts;
         }
 
-        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int}> $items */
+        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string}> $items */
         $items = [];
         foreach ($drafts as $idx => $draft) {
             $members = $normMembers[$idx] ?? $this->normalizeMembers($draft->getMembers());
@@ -373,6 +393,7 @@ final class ClusterConsolidationService
                 'score'    => $this->scoreOf($draft),
                 'priority' => (int) ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
                 'size'     => count($members),
+                'group'    => $this->resolveGroup($draft->getAlgorithm()),
             ];
         }
 
@@ -392,17 +413,19 @@ final class ClusterConsolidationService
             return 0;
         });
 
-        /** @var array<int,int> $assign */
+        /** @var array<string,array<int,int>> $assign */
         $assign = [];
         /** @var list<ClusterDraft> $out */
         $out = [];
 
         foreach ($items as $item) {
             $members = $item['members'];
+            $group   = $item['group'];
+            $assign[$group] ??= [];
             $ok      = true;
 
             foreach ($members as $mid) {
-                $cnt = $assign[$mid] ?? 0;
+                $cnt = $assign[$group][$mid] ?? 0;
                 if ($cnt >= $this->perMediaCap) {
                     $ok = false;
                     break;
@@ -411,7 +434,7 @@ final class ClusterConsolidationService
 
             if ($ok) {
                 foreach ($members as $mid) {
-                    $assign[$mid] = ($assign[$mid] ?? 0) + 1;
+                    $assign[$group][$mid] = ($assign[$group][$mid] ?? 0) + 1;
                 }
 
                 $out[] = $item['draft'];
@@ -419,6 +442,17 @@ final class ClusterConsolidationService
         }
 
         return $out;
+    }
+
+    private function resolveGroup(string $algorithm): string
+    {
+        $group = $this->algorithmGroups[$algorithm] ?? null;
+
+        if (is_string($group) && $group !== '') {
+            return $group;
+        }
+
+        return $this->defaultAlgorithmGroup;
     }
 
     /**

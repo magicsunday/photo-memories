@@ -387,12 +387,25 @@ services:
     MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder
 
-    MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler:
+    MagicSunday\Memories\Clusterer\Service\TransportDayExtender: ~
+
+    MagicSunday\Memories\Clusterer\Service\RunDetector:
+        arguments:
+            $minAwayDistanceKm: 120.0
+            $minItemsPerDay: 3
+
+    MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\RunDetector
+
+    MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minAwayDistanceKm: 120.0
             $movementThresholdKm: 35.0
-            $minItemsPerDay: 3
+
+    MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
+
+    MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler: ~
 
     MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler
@@ -531,6 +544,7 @@ services:
             $minSize: '%memories.cluster.consolidate.min_size%'
             $annotateOnly: '%memories.cluster.consolidate.annotate_only%'
             $minUniqueShare: '%memories.cluster.consolidate.min_unique_share%'
+            $algorithmGroups: '%memories.cluster.consolidate.groups%'
             $requireValidTime: '%memories.cluster.consolidate.require_valid_time%'
             $minValidYear: '%memories.cluster.consolidate.min_valid_year%'
 

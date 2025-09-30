@@ -22,6 +22,9 @@ use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
+use MagicSunday\Memories\Clusterer\Service\RunDetector;
+use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
@@ -1258,14 +1261,21 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: $minItemsPerDay,
         );
 
-        $segmentAssembler = new DefaultVacationSegmentAssembler(
+        $transportExtender = new TransportDayExtender();
+        $runDetector = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: $minAwayDistanceKm,
+            minItemsPerDay: $minItemsPerDay,
+        );
+
+        $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
-            minAwayDistanceKm: $minAwayDistanceKm,
             movementThresholdKm: $movementThresholdKm,
-            minItemsPerDay: $minItemsPerDay,
         );
+
+        $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
 
         return new VacationClusterStrategy($homeLocator, $dayBuilder, $segmentAssembler);
     }
