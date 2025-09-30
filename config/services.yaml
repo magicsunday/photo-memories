@@ -66,6 +66,9 @@ services:
         arguments:
             $readExifForVideos: false
 
+    MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface:
+        alias: MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor
+
     MagicSunday\Memories\Service\Metadata\XmpIptcExtractor: ~
 
     MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor: ~
