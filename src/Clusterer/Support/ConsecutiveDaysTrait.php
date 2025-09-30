@@ -11,7 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
-use function strtotime;
+use DateTimeImmutable;
+use DateTimeZone;
 
 /**
  * Helper trait providing utilities for working with consecutive day strings.
@@ -20,13 +21,15 @@ trait ConsecutiveDaysTrait
 {
     private function isNextDay(string $a, string $b): bool
     {
-        $ta = strtotime($a . ' 00:00:00');
-        $tb = strtotime($b . ' 00:00:00');
+        $timezone = new DateTimeZone('UTC');
 
-        if ($ta === false || $tb === false) {
+        $first = DateTimeImmutable::createFromFormat('!Y-m-d', $a, $timezone);
+        $second = DateTimeImmutable::createFromFormat('!Y-m-d', $b, $timezone);
+
+        if ($first === false || $second === false) {
             return false;
         }
 
-        return ($tb - $ta) === 86400;
+        return $first->modify('+1 day')->format('Y-m-d') === $second->format('Y-m-d');
     }
 }

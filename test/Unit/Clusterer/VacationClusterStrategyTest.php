@@ -32,6 +32,7 @@ final class VacationClusterStrategyTest extends TestCase
         $helper = new LocationHelper();
         $strategy = new VacationClusterStrategy(
             locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
             timezone: 'Europe/Berlin',
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
@@ -840,6 +841,136 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(2, $params['spot_cluster_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
         self::assertGreaterThan(0.0, $params['spot_dwell_hours']);
+    }
+
+    #[Test]
+    public function keepsDstTransitionWithinSingleVacationRun(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 80.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 2,
+        );
+
+        $homeLocation = $this->makeLocation('home-berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCountryCode('DE');
+            $loc->setCategory('residential');
+        });
+
+        $tripLocation = $this->makeLocation('trip-lisbon', 'Lisboa, Portugal', 38.7223, -9.1393, country: 'Portugal', configure: static function (Location $loc): void {
+            $loc->setCountryCode('PT');
+            $loc->setCategory('tourism');
+            $loc->setType('attraction');
+        });
+
+        $items = [];
+        $id = 6000;
+
+        $homeBaseline = new DateTimeImmutable('2024-03-24 22:30:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 3; ++$i) {
+            $timestamp = $homeBaseline->add(new DateInterval('P' . $i . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('home-before-%d.jpg', $i),
+                $timestamp,
+                $homeLocation->getLat(),
+                $homeLocation->getLon(),
+                $homeLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+        }
+
+        $tripStart = new DateTimeImmutable('2024-03-30 09:00:00', new DateTimeZone('Europe/Berlin'));
+        $lastNightId = null;
+        for ($day = 0; $day < 4; ++$day) {
+            $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
+
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('trip-day-%d.jpg', $day),
+                $dayStart->setTime(11, 0, 0),
+                $tripLocation->getLat() + ($day * 0.01),
+                $tripLocation->getLon() + ($day * 0.01),
+                $tripLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(0);
+                }
+            );
+
+            $nightTimestamp = $dayStart->setTime(22, 30, 0);
+            $nightId = ++$id;
+            $items[] = $this->makeMediaFixture(
+                $nightId,
+                sprintf('trip-night-%d.jpg', $day),
+                $nightTimestamp,
+                $tripLocation->getLat(),
+                $tripLocation->getLon(),
+                $tripLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(0);
+                }
+            );
+
+            if ($day === 3) {
+                $lastNightId = $nightId;
+            }
+        }
+
+        $returnBaseline = new DateTimeImmutable('2024-04-04 22:30:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 2; ++$i) {
+            $timestamp = $returnBaseline->add(new DateInterval('P' . $i . 'D'));
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('home-after-%d.jpg', $i),
+                $timestamp,
+                $homeLocation->getLat(),
+                $homeLocation->getLon(),
+                $homeLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        $params = $cluster->getParams();
+        self::assertSame(4, $params['away_days']);
+        self::assertSame(3, $params['nights']);
+        self::assertNotNull($lastNightId);
+        self::assertContains($lastNightId, $cluster->getMembers());
+    }
+
+    #[Test]
+    public function considersDstShiftedDatesAsConsecutive(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 80.0,
+            movementThresholdKm: 25.0,
+            minItemsPerDay: 2,
+        );
+
+        $reflection = new ReflectionClass($strategy);
+        $method = $reflection->getMethod('isNextDay');
+        $method->setAccessible(true);
+
+        self::assertTrue($method->invoke($strategy, '2024-03-31', '2024-04-01'));
+        self::assertTrue($method->invoke($strategy, '2024-10-26', '2024-10-27'));
     }
 
     #[Test]
