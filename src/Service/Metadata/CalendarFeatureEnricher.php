@@ -27,6 +27,9 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         return $media->getTakenAt() instanceof DateTimeImmutable;
     }
 
+    /**
+     * Enriches the media entity with seasonal and holiday features based on the capture date.
+     */
     public function extract(string $filepath, Media $media): Media
     {
         $t = $media->getTakenAt();
@@ -60,7 +63,11 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         return $media;
     }
 
-    /** @return array{bool, ?string} */
+    /**
+     * Determines whether the provided date matches a nationally recognised German holiday.
+     *
+     * @return array{bool, ?string}
+     */
     private function isGermanHoliday(int $y, int $m, int $d): array
     {
         $md    = sprintf('%02d-%02d', $m, $d);
@@ -75,9 +82,11 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
             return [true, $fixed[$md] . '-' . $y];
         }
 
+        // Easter Sunday is calculated via the shared calendar helper to avoid duplicated algorithms.
         $origin = Calendar::easterSunday($y);
 
         $rel = [
+            // Relative offsets (in days) from Easter Sunday for moveable feasts in Germany.
             -2  => 'de-goodfriday',
             +1  => 'de-eastermon',
             +39 => 'de-ascension',
