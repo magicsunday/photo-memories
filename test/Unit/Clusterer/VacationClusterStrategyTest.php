@@ -18,6 +18,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
+use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
@@ -30,6 +34,7 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 
 final class VacationClusterStrategyTest extends TestCase
 {
@@ -287,14 +292,14 @@ final class VacationClusterStrategyTest extends TestCase
             $tokyo,
         );
 
-        $dayBuilder = new DefaultDaySummaryBuilder(
-            dbscanHelper: new GeoDbscanHelper(),
-            timezone: 'UTC',
-            minItemsPerDay: 2,
-        );
+        $reflection = new ReflectionClass($strategy);
+        $property   = $reflection->getProperty('daySummaryBuilder');
+        $property->setAccessible(true);
+
+        $builder = $property->getValue($strategy);
 
         /** @var array<string, array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,photoCount:int}> $days */
-        $days = $dayBuilder->buildDaySummaries($items, $home);
+        $days = $builder->buildDaySummaries($items, $home);
 
         self::assertArrayHasKey('2024-02-10', $days);
         self::assertArrayHasKey('2024-02-11', $days);
@@ -1243,8 +1248,13 @@ final class VacationClusterStrategyTest extends TestCase
             homeRadiusKm: $homeRadiusKm,
         );
 
+        $timezoneResolver = new TimezoneResolver($timezone);
         $dayBuilder = new DefaultDaySummaryBuilder(
             dbscanHelper: new GeoDbscanHelper(),
+            staypointDetector: new StaypointDetector(),
+            baseLocationResolver: new BaseLocationResolver(),
+            timezoneResolver: $timezoneResolver,
+            poiClassifier: new PoiClassifier(),
             timezone: $timezone,
             gpsOutlierRadiusKm: $gpsOutlierRadiusKm,
             gpsOutlierMinSamples: $gpsOutlierMinSamples,

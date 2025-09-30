@@ -27,6 +27,10 @@ use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
+use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
@@ -151,7 +155,13 @@ final class ClusterStrategySmokeTest extends TestCase
             'vacation',
             static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
                 new DefaultHomeLocator(),
-                new DefaultDaySummaryBuilder(new GeoDbscanHelper()),
+                new DefaultDaySummaryBuilder(
+                    new GeoDbscanHelper(),
+                    new StaypointDetector(),
+                    new BaseLocationResolver(),
+                    new TimezoneResolver(),
+                    new PoiClassifier(),
+                ),
                 new DefaultVacationSegmentAssembler(
                     new RunDetector(new TransportDayExtender()),
                     new VacationScoreCalculator(
