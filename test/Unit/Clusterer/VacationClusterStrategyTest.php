@@ -18,6 +18,9 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\RunDetector;
+use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
@@ -213,7 +216,7 @@ final class VacationClusterStrategyTest extends TestCase
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -284,12 +287,14 @@ final class VacationClusterStrategyTest extends TestCase
             $tokyo,
         );
 
-        $reflection = new ReflectionClass($strategy);
-        $method = $reflection->getMethod('buildDaySummaries');
-        $method->setAccessible(true);
+        $dayBuilder = new DefaultDaySummaryBuilder(
+            dbscanHelper: new GeoDbscanHelper(),
+            timezone: 'UTC',
+            minItemsPerDay: 2,
+        );
 
         /** @var array<string, array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,photoCount:int}> $days */
-        $days = $method->invoke($strategy, $items, $home);
+        $days = $dayBuilder->buildDaySummaries($items, $home);
 
         self::assertArrayHasKey('2024-02-10', $days);
         self::assertArrayHasKey('2024-02-11', $days);
@@ -1246,14 +1251,21 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: $minItemsPerDay,
         );
 
-        $segmentAssembler = new DefaultVacationSegmentAssembler(
+        $transportExtender = new TransportDayExtender();
+        $runDetector = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: $minAwayDistanceKm,
+            minItemsPerDay: $minItemsPerDay,
+        );
+
+        $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
-            minAwayDistanceKm: $minAwayDistanceKm,
             movementThresholdKm: $movementThresholdKm,
-            minItemsPerDay: $minItemsPerDay,
         );
+
+        $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
 
         return new VacationClusterStrategy($homeLocator, $dayBuilder, $segmentAssembler);
     }
