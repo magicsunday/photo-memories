@@ -17,6 +17,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
@@ -47,15 +51,12 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         );
 
         $timezoneResolver = new TimezoneResolver('Europe/Berlin');
-        $dayBuilder = new DefaultDaySummaryBuilder(
-            dbscanHelper: new GeoDbscanHelper(),
-            staypointDetector: new StaypointDetector(),
-            baseLocationResolver: new BaseLocationResolver(),
-            timezoneResolver: $timezoneResolver,
-            poiClassifier: new PoiClassifier(),
-            timezone: 'Europe/Berlin',
-            minItemsPerDay: 2,
-        );
+        $dayBuilder = new DefaultDaySummaryBuilder([
+            new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin'),
+            new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 2),
+            new DensityStage(),
+            new AwayFlagStage($timezoneResolver, new BaseLocationResolver()),
+        ]);
 
         $transportExtender = new TransportDayExtender();
         $runDetector = new RunDetector(

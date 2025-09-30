@@ -415,12 +415,31 @@ services:
     MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface:
         alias: MagicSunday\Memories\Clusterer\Service\PoiClassifier
 
-    MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder:
+    MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage:
         arguments:
             $timezone: 'Europe/Berlin'
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 400 }
+
+    MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage:
+        arguments:
             $gpsOutlierRadiusKm: 1.0
             $gpsOutlierMinSamples: 3
             $minItemsPerDay: 3
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 300 }
+
+    MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage:
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 200 }
+
+    MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage:
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 100 }
+
+    MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder:
+        arguments:
+            $stages: !tagged_iterator 'memories.day_summary_stage'
 
     MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder

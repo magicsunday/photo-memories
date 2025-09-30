@@ -18,6 +18,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
@@ -1249,17 +1253,12 @@ final class VacationClusterStrategyTest extends TestCase
         );
 
         $timezoneResolver = new TimezoneResolver($timezone);
-        $dayBuilder = new DefaultDaySummaryBuilder(
-            dbscanHelper: new GeoDbscanHelper(),
-            staypointDetector: new StaypointDetector(),
-            baseLocationResolver: new BaseLocationResolver(),
-            timezoneResolver: $timezoneResolver,
-            poiClassifier: new PoiClassifier(),
-            timezone: $timezone,
-            gpsOutlierRadiusKm: $gpsOutlierRadiusKm,
-            gpsOutlierMinSamples: $gpsOutlierMinSamples,
-            minItemsPerDay: $minItemsPerDay,
-        );
+        $dayBuilder = new DefaultDaySummaryBuilder([
+            new InitializationStage($timezoneResolver, new PoiClassifier(), $timezone),
+            new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), $gpsOutlierRadiusKm, $gpsOutlierMinSamples, $minItemsPerDay),
+            new DensityStage(),
+            new AwayFlagStage($timezoneResolver, new BaseLocationResolver()),
+        ]);
 
         $transportExtender = new TransportDayExtender();
         $runDetector = new RunDetector(
