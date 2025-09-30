@@ -15,7 +15,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\HybridClusterer;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -47,7 +47,7 @@ final class ClusterCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly HybridClusterer $clusterer,
         private readonly ClusterPersistenceService $persistence,
-        private readonly ClusterConsolidationService $consolidation,
+        private readonly ClusterConsolidatorInterface $consolidation,
     ) {
         parent::__construct();
     }
