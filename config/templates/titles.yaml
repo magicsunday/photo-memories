@@ -212,34 +212,9 @@ de:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ years }}: Jahre mit Treffern (Liste)
-    beach_over_years:
-        title: "Am Strand – durch die Jahre"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     hike_adventure:
         title: "Wanderung"
         subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ nights }}: Anzahl der Nächte im Cluster
-    camping_trip:
-        title: "Campingtrip"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ years }}: Jahre mit Treffern (Liste)
-    camping_over_years:
-        title: "Camping – durch die Jahre"
-        subtitle: "{{ date_range }}"
-
     # Stadt & Events
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
@@ -254,50 +229,6 @@ de:
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     nightlife_event:
         title: "Abend in der Stadt"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    festival_summer:
-        title: "Sommerfestival"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    sports_event:
-        title: "Sporttag"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    dining_out:
-        title: "Essen gehen"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ years }}: Jahre mit Treffern (Liste)
-    museum_over_years:
-        title: "Museum – durch die Jahre"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    zoo_aquarium:
-        title: "Zoo & Aquarium"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ years }}: Jahre mit Treffern (Liste)
-    zoo_aquarium_over_years:
-        title: "Zoo & Aquarium – durch die Jahre"
         subtitle: "{{ date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
@@ -318,14 +249,6 @@ de:
         title: "Silvester"
         subtitle: "{{ date_range }}"
 
-    # Zeitfenster & Licht
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    morning_coffee:
-        title: "Morgens"
-        subtitle: "{{ date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
@@ -341,20 +264,6 @@ de:
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     person_cohort:
         title: "Mit Freunden & Familie"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    kids_birthday_party:
-        title: "Kindergeburtstag"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    pet_moments:
-        title: "Tiermomente"
         subtitle: "{{ date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
