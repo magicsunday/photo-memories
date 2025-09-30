@@ -119,6 +119,26 @@ services:
         alias: MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor
 
     ########################################
+    # Indexing
+    ########################################
+
+    MagicSunday\Memories\Service\Indexing\DefaultMediaFileLocator:
+        arguments:
+            $imageExtensions: '%memories.index.image_ext%'
+            $videoExtensions: '%memories.index.video_ext%'
+
+    MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface:
+        alias: MagicSunday\Memories\Service\Indexing\DefaultMediaFileLocator
+
+    MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
+        arguments:
+            $imageExtensions: '%memories.index.image_ext%'
+            $videoExtensions: '%memories.index.video_ext%'
+
+    MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface:
+        alias: MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline
+
+    ########################################
     # Geocoding
     ########################################
 
