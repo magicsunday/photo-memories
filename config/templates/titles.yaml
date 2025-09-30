@@ -1,168 +1,436 @@
 de:
     # Zeit & Basis-Gruppierungen
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     time_similarity:
         title: "Schnappschüsse"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ year }}: Jahr des Tages
     day_album:
         title: "Ein Tag im Jahr {{ year }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ month }}: Monat als Zahl (1–12)
+    #   - {{ year }}: Jahr des Monats
     monthly_highlights:
         title: "Monatshighlights"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ year }}: Jahr des Rückblicks
     year_in_review:
         title: "{{ year }} im Rückblick"
         subtitle: "Deine Highlights"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ month }}: Monat als Zahl (1–12)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     this_month_over_years:
         title: "Dieser Monat – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     on_this_day_over_years:
         title: "An diesem Tag"
         subtitle: "Durch die Jahre"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     one_year_ago:
         title: "Heute vor einem Jahr"
         subtitle: "{{ date_range }}"
 
     # Orte & Reisen
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ place_key }} (optional): Normalisierte Ortskennung
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
+    #   - {{ poi_label }} (optional): Name des POI
+    #   - {{ poi_category_key }} (optional): POI-Kategorie-Key
+    #   - {{ poi_category_value }} (optional): POI-Kategorie-Value
+    #   - {{ poi_tags }} (optional): Liste relevanter POI-Tags (Array)
     location_similarity:
         title: "Unterwegs in {{ place }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ classification }}: Klassifikation des Trips (vacation/short_trip/day_trip)
+    #   - {{ classification_label }}: Lesbare Bezeichnung der Klassifikation
+    #   - {{ score }}: Bewerteter Reise-Score
+    #   - {{ nights }}: Anzahl der Nächte unterwegs
+    #   - {{ away_days }}: Anzahl der Abwesenheitstage
+    #   - {{ max_distance_km }}: Maximale Entfernung zum Zuhause (km)
+    #   - {{ avg_distance_km }}: Durchschnittliche Entfernung zum Zuhause (km)
+    #   - {{ country_change }}: Flag für Länderwechsel (bool)
+    #   - {{ timezone_change }}: Flag für Zeitzonenwechsel (bool)
+    #   - {{ tourism_ratio }}: Anteil touristischer POIs (0–1)
+    #   - {{ move_days }}: Tage mit signifikanter Bewegung
+    #   - {{ photo_density_z }}: Standardisierte Fotodichte (z-Wert)
+    #   - {{ airport_transfer }}: Flag für Flughafen- oder Bahnhofs-Transfers
+    #   - {{ spot_clusters_total }}: Anzahl der Spot-Cluster
+    #   - {{ spot_cluster_days }}: Tage mit Spot-Clustern
+    #   - {{ spot_dwell_hours }}: Aufenthaltsstunden in Spot-Clustern
+    #   - {{ spot_exploration_bonus }}: Explorationsbonus (Score)
+    #   - {{ weekend_holiday_days }}: Wochenend- und Feiertage innerhalb des Trips
+    #   - {{ weekend_holiday_bonus }}: Bonus durch Wochenend-/Feiertage
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     vacation:
         title: "Reise nach {{ place }}"
         subtitle: "{{ start_date }} – {{ end_date }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     weekend_getaways_over_years:
         title: "Wochenenden – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ distance_km }}: Zurückgelegte Distanz in Kilometern
     transit_travel_day:
         title: "Reisetag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ grid_cell }}: Identifier der Rasterzelle
+    #   - {{ visit_days }}: Anzahl der Besuchstage
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
+    #   - {{ poi_label }} (optional): Name des POI
+    #   - {{ poi_category_key }} (optional): POI-Kategorie-Key
+    #   - {{ poi_category_value }} (optional): POI-Kategorie-Value
+    #   - {{ poi_tags }} (optional): Liste relevanter POI-Tags (Array)
     significant_place:
         title: "Besonderer Ort: {{ place }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ grid_cell }}: Identifier der Rasterzelle
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     first_visit_place:
         title: "Erstes Mal: {{ place }}"
         subtitle: "{{ date_range }}"
 
     # Zuhause
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     at_home_weekday:
         title: "Alltag zuhause"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     at_home_weekend:
         title: "Zuhause am Wochenende"
         subtitle: "{{ date_range }}"
 
     # Natur & Jahreszeiten
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ label }}: Saisonbezeichnung
+    #   - {{ year }}: Jahr der Saison
     season:
-        title: "{{ season }}"
+        title: "{{ label }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ label }}: Saisonbezeichnung
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     season_over_years:
-        title: "Immer wieder {{ season }}"
+        title: "Immer wieder {{ label }}"
         subtitle: "Durch die Jahre"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ sun_score }}: Sonnenindex (0–1)
     sunny_day:
         title: "Sonniger Tag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ rain_prob }}: Regenwahrscheinlichkeit (0–1)
     rainy_day:
         title: "Regentag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     snow_day:
         title: "Schneetag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     snow_vacation_over_years:
         title: "Winterurlaub – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     beach_over_years:
         title: "Am Strand – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     hike_adventure:
         title: "Wanderung"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ nights }}: Anzahl der Nächte im Cluster
     camping_trip:
         title: "Campingtrip"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     camping_over_years:
         title: "Camping – durch die Jahre"
         subtitle: "{{ date_range }}"
 
     # Stadt & Events
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     cityscape_night:
         title: "Stadt bei Nacht"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     nightlife_event:
         title: "Abend in der Stadt"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     festival_summer:
         title: "Sommerfestival"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     sports_event:
-        title: "{{ sport }}-Tag"
+        title: "Sporttag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     dining_out:
         title: "Essen gehen"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     museum_over_years:
         title: "Museum – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     zoo_aquarium:
         title: "Zoo & Aquarium"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     zoo_aquarium_over_years:
         title: "Zoo & Aquarium – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ year }}: Jahr des Feiertags
+    #   - {{ holiday }}: Feiertagsgewicht (0/1)
+    #   - {{ holiday_name }}: Name des Feiertags
     holiday_event:
         title: "Feiertag: {{ holiday_name }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ year }}: Jahr des Silvesterabends
     new_year_eve:
         title: "Silvester"
         subtitle: "{{ date_range }}"
 
     # Zeitfenster & Licht
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     morning_coffee:
         title: "Morgens"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     golden_hour:
         title: "Goldene Stunde"
         subtitle: "{{ date_range }}"
 
     # Personen & Tiere
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     person_cohort:
         title: "Mit Freunden & Familie"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     kids_birthday_party:
         title: "Kindergeburtstag"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     pet_moments:
         title: "Tiermomente"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     anniversary:
         title: "Jahrestag"
         subtitle: "{{ date_range }}"
 
     # Motive & Medienformate
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ label }}: Motivbezeichnung (Deutsch)
+    #   - {{ motif }}: Motiv-Slug (englisch)
     photo_motif:
-        title: "{{ motif_label }}"
+        title: "{{ label }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     panorama:
         title: "Panoramen"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ years }}: Jahre mit Treffern (Liste)
     panorama_over_years:
         title: "Panoramen – durch die Jahre"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     portrait_orientation:
         title: "Porträts"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     video_stories:
         title: "Videomomente"
         subtitle: "{{ date_range }}"
 
     # Ähnlichkeit/Clustering-Algorithmen
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     burst:
         title: "Serienaufnahmen"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ device }}: Verwendetes Gerät
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     device_similarity:
         title: "Mit {{ device }}"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ place }} (optional): Dominanter Aufnahmeort
     phash_similarity:
         title: "Ähnliche Motive"
         subtitle: "{{ date_range }}"
+    # Platzhalter:
+    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
+    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
+    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     cross_dimension:
         title: "Für dich"
         subtitle: "{{ date_range }}"
