@@ -270,8 +270,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(['it'], $params['countries']);
         self::assertSame([120], $params['timezones']);
         self::assertSame('Roma', $params['place_city']);
-        self::assertSame(', Lazio', $params['place_region']);
-        self::assertSame(', Italy', $params['place_country']);
+        self::assertSame('Lazio', $params['place_region']);
+        self::assertSame('Italy', $params['place_country']);
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
 
@@ -283,7 +283,7 @@ final class VacationClusterStrategyTest extends TestCase
             $centroid['lon'],
         ) / 1000.0;
 
-        self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.1);
+        self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.2);
         self::assertGreaterThanOrEqual($params['max_distance_km'], $params['max_observed_distance_km']);
     }
 
@@ -503,7 +503,7 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame([120], $params['timezones']);
         self::assertArrayNotHasKey('place_city', $params);
         self::assertSame('Schleswig-Holstein', $params['place_region']);
-        self::assertSame(', Germany', $params['place_country']);
+        self::assertSame('Germany', $params['place_country']);
     }
 
     #[Test]

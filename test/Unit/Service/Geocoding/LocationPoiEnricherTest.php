@@ -12,9 +12,12 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use BadMethodCallException;
+use MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder;
+use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
 use MagicSunday\Memories\Service\Geocoding\GeocodeResult;
 use MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher;
 use MagicSunday\Memories\Service\Geocoding\OverpassClient;
+use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
@@ -270,7 +273,13 @@ final class LocationPoiEnricherTest extends TestCase
      */
     private function createEnricher(array $responses, int $radius = 250, int $maxPois = 15, float $fetchLimitMultiplier = 3.0): LocationPoiEnricher
     {
-        $client = new OverpassClient(new FakeHttpClient($responses));
+        $configuration = new OverpassTagConfiguration();
+        $client        = new OverpassClient(
+            http: new FakeHttpClient($responses),
+            queryBuilder: new DefaultOverpassQueryBuilder($configuration, 25),
+            responseParser: new DefaultOverpassResponseParser($configuration),
+            httpTimeout: 5.0,
+        );
 
         return new LocationPoiEnricher($client, $radius, $maxPois, $fetchLimitMultiplier);
     }

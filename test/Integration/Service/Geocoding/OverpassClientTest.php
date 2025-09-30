@@ -9,9 +9,12 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
+namespace MagicSunday\Memories\Test\Integration\Service\Geocoding;
 
+use MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder;
+use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
 use MagicSunday\Memories\Service\Geocoding\OverpassClient;
+use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -21,8 +24,21 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 final class OverpassClientTest extends TestCase
 {
     #[Test]
-    public function buildsQueryUsingTagCombinations(): void
+    public function fetchesPoisUsingBuilderAndParser(): void
     {
+        $configuration = new OverpassTagConfiguration([
+            [
+                'tourism' => ['attraction'],
+                'historic' => ['castle', 'ruins'],
+            ],
+            [
+                'tourism' => ['theme_park'],
+            ],
+        ]);
+
+        $builder = new DefaultOverpassQueryBuilder($configuration, 25);
+        $parser  = new DefaultOverpassResponseParser($configuration);
+
         $response = new StaticJsonResponse(200, [
             'elements' => [
                 [
@@ -38,32 +54,31 @@ final class OverpassClientTest extends TestCase
             ],
         ]);
 
-        $client = new RecordingHttpClient($response);
+        $http = new RecordingHttpClient($response);
 
-        $overpass = new OverpassClient(
-            http: $client,
-            additionalAllowedTags: [
-                [
-                    'tourism' => ['attraction'],
-                    'historic' => ['castle', 'ruins'],
-                ],
-                [
-                    'tourism' => ['theme_park'],
-                ],
-            ],
+        $client = new OverpassClient(
+            http: $http,
+            queryBuilder: $builder,
+            responseParser: $parser,
+            userAgent: 'Integration/1.0',
+            contactEmail: 'integration@example.com',
+            httpTimeout: 10.0,
         );
 
-        $pois = $overpass->fetchPois(1.23, 3.21, 250, null);
+        $pois = $client->fetchPois(1.23, 3.21, 250, null);
 
-        self::assertNotSame('', $client->lastQuery);
-        self::assertStringContainsString('nwr(around:250,1.2300000,3.2100000)["tourism"="theme_park"]', $client->lastQuery);
-        self::assertStringContainsString('["tourism"="attraction"]["historic"~"^(castle|ruins)$"]', $client->lastQuery);
+        self::assertNotSame('', $http->lastQuery);
+        self::assertStringContainsString('nwr(around:250,1.2300000,3.2100000)["tourism"="theme_park"]', $http->lastQuery);
+        self::assertStringContainsString('["tourism"="attraction"]["historic"~"^(castle|ruins)$"]', $http->lastQuery);
 
         self::assertCount(1, $pois);
         $firstPoi = $pois[0];
 
         self::assertSame('tourism', $firstPoi['categoryKey']);
         self::assertSame('theme_park', $firstPoi['categoryValue']);
+        self::assertSame('Example Park', $firstPoi['name']);
+        self::assertTrue($client->consumeLastUsedNetwork());
+        self::assertFalse($client->consumeLastUsedNetwork());
     }
 }
 
@@ -77,7 +92,7 @@ final class RecordingHttpClient implements HttpClientInterface
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        $data = $options['body']['data'] ?? null;
+        $data          = $options['body']['data'] ?? null;
         $this->lastQuery = is_string($data) ? $data : '';
 
         return $this->response;
