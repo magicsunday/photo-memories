@@ -208,10 +208,22 @@ services:
         arguments:
             $cellDeg: 0.01
 
-    MagicSunday\Memories\Command\GeocodeCommand:
+    MagicSunday\Memories\Service\Geocoding\MediaLocationLinkerInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\MediaLocationLinker
+
+    MagicSunday\Memories\Service\Geocoding\DefaultMediaGeocodingProcessor:
         arguments:
+            $locale: '%memories.localization.preferred_locale%'
             $delayMs: '%memories.geocoding.delay_ms%'
-        tags: ['console.command']
+
+    MagicSunday\Memories\Service\Geocoding\MediaGeocodingProcessorInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultMediaGeocodingProcessor
+
+    MagicSunday\Memories\Service\Geocoding\PoiUpdateProcessorInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultPoiUpdateProcessor
+
+    MagicSunday\Memories\Service\Geocoding\PoiEnsurerInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\LocationResolver
 
 
     ########################################
