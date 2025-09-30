@@ -12,7 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
+use MagicSunday\Memories\Service\Geocoding\OverpassElementFilter;
+use MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
+use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
+use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +25,13 @@ final class DefaultOverpassResponseParserTest extends TestCase
     #[Test]
     public function parsesPayloadAndOrdersByDistance(): void
     {
-        $parser = new DefaultOverpassResponseParser(new OverpassTagConfiguration());
+        $configuration = new OverpassTagConfiguration();
+        $parser        = new DefaultOverpassResponseParser(
+            new OverpassElementFilter(),
+            new OverpassTagSelector($configuration),
+            new OverpassPrimaryTagResolver($configuration),
+            new PoiNameExtractor(),
+        );
 
         $payload = [
             'elements' => [
@@ -87,7 +97,13 @@ final class DefaultOverpassResponseParserTest extends TestCase
     #[Test]
     public function appliesLimitToResultSet(): void
     {
-        $parser = new DefaultOverpassResponseParser(new OverpassTagConfiguration());
+        $configuration = new OverpassTagConfiguration();
+        $parser        = new DefaultOverpassResponseParser(
+            new OverpassElementFilter(),
+            new OverpassTagSelector($configuration),
+            new OverpassPrimaryTagResolver($configuration),
+            new PoiNameExtractor(),
+        );
 
         $payload = [
             'elements' => [

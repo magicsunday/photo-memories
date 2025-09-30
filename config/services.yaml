@@ -206,6 +206,26 @@ services:
     MagicSunday\Memories\Service\Geocoding\OverpassQueryBuilderInterface:
         alias: MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder
 
+    MagicSunday\Memories\Service\Geocoding\OverpassElementFilter: ~
+
+    MagicSunday\Memories\Service\Geocoding\Contract\OverpassElementFilterInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\OverpassElementFilter
+
+    MagicSunday\Memories\Service\Geocoding\OverpassTagSelector: ~
+
+    MagicSunday\Memories\Service\Geocoding\Contract\OverpassTagSelectorInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\OverpassTagSelector
+
+    MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver: ~
+
+    MagicSunday\Memories\Service\Geocoding\Contract\OverpassPrimaryTagResolverInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver
+
+    MagicSunday\Memories\Service\Geocoding\PoiNameExtractor: ~
+
+    MagicSunday\Memories\Service\Geocoding\Contract\PoiNameExtractorInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\PoiNameExtractor
+
     MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser: ~
 
     MagicSunday\Memories\Service\Geocoding\OverpassResponseParserInterface:
