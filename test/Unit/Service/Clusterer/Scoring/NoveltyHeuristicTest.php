@@ -59,7 +59,13 @@ final class NoveltyHeuristicTest extends TestCase
 
         $score = $heuristic->computeNovelty($cluster, $mediaMap, $stats);
 
+        $heuristic->prepare([$cluster], $mediaMap);
+        $heuristic->enrich($cluster, $mediaMap);
+
         self::assertEqualsWithDelta(0.45, $score, 1e-9);
+        self::assertEqualsWithDelta(0.45, $cluster->getParams()['novelty'], 1e-9);
+        self::assertEqualsWithDelta(0.45, $heuristic->score($cluster), 1e-9);
+        self::assertSame('novelty', $heuristic->weightKey());
     }
 
     private function createMedia(int $id, string $takenAt): Media
