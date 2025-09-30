@@ -699,7 +699,6 @@ services:
                 day_album: 0.98
                 time_similarity: 0.94
                 photo_motif: 0.88
-            $algorithmGroups: '%memories.cluster.consolidate.groups%'
                 panorama: 0.95
                 panorama_over_years: 1.00
                 portrait_orientation: 0.88
@@ -709,6 +708,7 @@ services:
                 device_similarity: 0.82
                 phash_similarity: 0.55
                 burst: 0.55
+            $algorithmGroups: '%memories.cluster.consolidate.groups%'
 
     ########################################
     # Feed

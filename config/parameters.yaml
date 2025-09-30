@@ -32,7 +32,7 @@ parameters:
     memories.cluster.consolidate.min_size: 3
     memories.cluster.consolidate.overlap_merge_threshold: 0.50
     memories.cluster.consolidate.overlap_drop_threshold: 0.70
-    memories.cluster.consolidate.per_media_cap: 2
+    memories.cluster.consolidate.per_media_cap: 1
     memories.cluster.consolidate.keep_order:
         - 'vacation'
         - 'hike_adventure'
