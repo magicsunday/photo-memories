@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Exception;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
@@ -349,6 +350,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      *     travelKm: float,
      *     countryCodes: array<string, true>,
      *     timezoneOffsets: array<int, int>,
+     *     localTimezoneIdentifier: string,
+     *     localTimezoneOffset: int|null,
      *     tourismHits: int,
      *     poiSamples: int,
      *     tourismRatio: float,
@@ -373,16 +376,18 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     private function buildDaySummaries(array $items, array $home): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
-        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null}> $days */
+        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,timezoneIdentifierVotes:array<string,int>}> $days */
         $days = [];
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
             assert($takenAt instanceof DateTimeImmutable);
-            $local = $takenAt->setTimezone($tz);
-            $date  = $local->format('Y-m-d');
+
+            $mediaTimezone = $this->resolveMediaTimezone($media, $takenAt, $home);
+            $local         = $takenAt->setTimezone($mediaTimezone);
+            $date          = $local->format('Y-m-d');
+            $offsetMinutes = intdiv($local->getOffset(), 60);
+            $timezoneName  = $mediaTimezone->getName();
 
             if (!isset($days[$date])) {
                 $days[$date] = [
@@ -396,6 +401,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'travelKm'          => 0.0,
                     'countryCodes'      => [],
                     'timezoneOffsets'   => [],
+                    'localTimezoneIdentifier' => $timezoneName,
+                    'localTimezoneOffset' => $offsetMinutes,
                     'tourismHits'       => 0,
                     'poiSamples'        => 0,
                     'tourismRatio'      => 0.0,
@@ -416,6 +423,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'awayByDistance'    => false,
                     'firstGpsMedia'     => null,
                     'lastGpsMedia'      => null,
+                    'timezoneIdentifierVotes' => [],
                 ];
             }
 
@@ -429,14 +437,17 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 $summary['gpsMembers'][] = $media;
             }
 
-            $offset = $media->getTimezoneOffsetMin();
-            if ($offset !== null) {
-                if (!isset($summary['timezoneOffsets'][$offset])) {
-                    $summary['timezoneOffsets'][$offset] = 0;
-                }
-
-                ++$summary['timezoneOffsets'][$offset];
+            if (!isset($summary['timezoneOffsets'][$offsetMinutes])) {
+                $summary['timezoneOffsets'][$offsetMinutes] = 0;
             }
+
+            ++$summary['timezoneOffsets'][$offsetMinutes];
+
+            if (!isset($summary['timezoneIdentifierVotes'][$timezoneName])) {
+                $summary['timezoneIdentifierVotes'][$timezoneName] = 0;
+            }
+
+            ++$summary['timezoneIdentifierVotes'][$timezoneName];
 
             $location = $media->getLocation();
             if ($location instanceof Location) {
@@ -465,6 +476,21 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         if ($days === []) {
             return [];
         }
+
+        foreach ($days as &$summary) {
+            $offset = $this->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
+            $summary['localTimezoneOffset'] = $offset;
+            $summary['localTimezoneIdentifier'] = $this->determineLocalTimezoneIdentifier(
+                $summary['timezoneIdentifierVotes'],
+                $home,
+                $offset,
+            );
+
+            unset($summary['timezoneIdentifierVotes']);
+        }
+
+        unset($summary);
+
         foreach ($days as $date => &$summary) {
             $summary['gpsMembers'] = $this->filterGpsOutliers(
                 $summary['gpsMembers'],
@@ -626,7 +652,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return list<ClusterDraft>
@@ -783,7 +809,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<string> $dayKeys
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      */
     private function buildClusterDraft(array $dayKeys, array $days, array $home): ?ClusterDraft
@@ -809,7 +835,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $multiSpotDays = 0;
         $spotDwellSeconds = 0;
         $weekendHolidayDays = 0;
-        $timezone = new DateTimeZone($this->timezone);
         $awayDays = 0;
 
         foreach ($dayKeys as $key) {
@@ -872,7 +897,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 ++$awayDays;
             }
 
-            $dayDate = new DateTimeImmutable($summary['date'], $timezone);
+            $dayTimezone = $this->resolveSummaryTimezone($summary, $home);
+            $dayDate     = new DateTimeImmutable($summary['date'], $dayTimezone);
             $isWeekend = $summary['weekday'] >= 6;
             $isHoliday = $this->holidayResolver->isHoliday($dayDate);
 
@@ -1096,7 +1122,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>,timezoneOffsets:array<int,int>} $summary
+     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null} $summary
      * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null}|null $nextSummary
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
@@ -1104,8 +1130,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     private function determineBaseLocationForDay(array $summary, ?array $nextSummary, array $home): ?array
     {
-        $offset   = $this->selectDominantTimezoneOffset($summary, $home);
-        $timezone = $this->createTimezoneFromOffset($offset);
+        $timezone = $this->resolveSummaryTimezone($summary, $home);
 
         $staypointBase = $this->selectStaypointBase($summary, $nextSummary, $timezone, $home);
         $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
@@ -1135,11 +1160,16 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param array{timezoneOffsets:array<int,int>} $summary
+     * @param array{timezoneOffsets:array<int,int>,localTimezoneOffset:int|null} $summary
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      */
     private function selectDominantTimezoneOffset(array $summary, array $home): ?int
     {
+        $stored = $summary['localTimezoneOffset'] ?? null;
+        if ($stored !== null) {
+            return (int) $stored;
+        }
+
         $offsets = $summary['timezoneOffsets'];
         if ($offsets !== []) {
             $bestOffset = null;
@@ -1159,6 +1189,86 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         return $home['timezone_offset'];
     }
 
+    /**
+     * @param array<int, int> $offsetVotes
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    private function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+    {
+        if ($offsetVotes !== []) {
+            $bestOffset = null;
+            $bestCount  = -1;
+            foreach ($offsetVotes as $offset => $count) {
+                if ($count > $bestCount) {
+                    $bestCount  = $count;
+                    $bestOffset = (int) $offset;
+                }
+            }
+
+            if ($bestOffset !== null) {
+                return $bestOffset;
+            }
+        }
+
+        return $home['timezone_offset'] ?? null;
+    }
+
+    /**
+     * @param array<string, int> $identifierVotes
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    private function determineLocalTimezoneIdentifier(
+        array $identifierVotes,
+        array $home,
+        ?int $offset,
+    ): string {
+        if ($identifierVotes !== []) {
+            $bestIdentifier = null;
+            $bestCount      = -1;
+            foreach ($identifierVotes as $identifier => $count) {
+                if ($count > $bestCount && is_string($identifier) && $identifier !== '') {
+                    $bestCount      = $count;
+                    $bestIdentifier = $identifier;
+                }
+            }
+
+            if ($bestIdentifier !== null) {
+                return $bestIdentifier;
+            }
+        }
+
+        if ($offset !== null) {
+            return $this->createTimezoneFromOffset($offset)->getName();
+        }
+
+        $homeOffset = $home['timezone_offset'] ?? null;
+        if ($homeOffset !== null) {
+            return $this->createTimezoneFromOffset($homeOffset)->getName();
+        }
+
+        return $this->timezone;
+    }
+
+    /**
+     * @param array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>} $summary
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    private function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
+    {
+        $identifier = $summary['localTimezoneIdentifier'] ?? null;
+        if (is_string($identifier) && $identifier !== '') {
+            try {
+                return new DateTimeZone($identifier);
+            } catch (Exception) {
+                // ignore invalid identifier and fall back to offsets
+            }
+        }
+
+        $offset = $summary['localTimezoneOffset'] ?? null;
+
+        return $this->createTimezoneFromOffset($offset ?? $home['timezone_offset']);
+    }
+
     private function createTimezoneFromOffset(?int $offsetMinutes): DateTimeZone
     {
         if ($offsetMinutes === null) {
@@ -1171,6 +1281,74 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $minutes    = $absMinutes % 60;
 
         return new DateTimeZone(sprintf('%s%02d:%02d', $sign, $hours, $minutes));
+    }
+
+    /**
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    private function resolveMediaTimezone(Media $media, DateTimeImmutable $takenAt, array $home): DateTimeZone
+    {
+        $offset = $media->getTimezoneOffsetMin();
+        if ($offset !== null) {
+            return $this->createTimezoneFromOffset($offset);
+        }
+
+        $location = $media->getLocation();
+        if ($location instanceof Location) {
+            $identifier = $this->extractTimezoneIdentifierFromLocation($location);
+            if ($identifier !== null) {
+                try {
+                    return new DateTimeZone($identifier);
+                } catch (Exception) {
+                    // ignore invalid identifier and fall back to other heuristics
+                }
+            }
+        }
+
+        $timezone = $takenAt->getTimezone();
+        if ($timezone instanceof DateTimeZone) {
+            return $timezone;
+        }
+
+        $homeOffset = $home['timezone_offset'] ?? null;
+        if ($homeOffset !== null) {
+            return $this->createTimezoneFromOffset($homeOffset);
+        }
+
+        return new DateTimeZone($this->timezone);
+    }
+
+    private function extractTimezoneIdentifierFromLocation(Location $location): ?string
+    {
+        $pois = $location->getPois();
+        if (!is_array($pois)) {
+            return null;
+        }
+
+        foreach ($pois as $poi) {
+            if (!is_array($poi)) {
+                continue;
+            }
+
+            $direct = $poi['timezone'] ?? null;
+            if (is_string($direct) && $direct !== '') {
+                return $direct;
+            }
+
+            $tags = $poi['tags'] ?? null;
+            if (!is_array($tags)) {
+                continue;
+            }
+
+            foreach (['timezone', 'opening_hours:timezone', 'tz'] as $key) {
+                $value = $tags[$key] ?? null;
+                if (is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

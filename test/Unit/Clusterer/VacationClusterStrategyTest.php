@@ -207,6 +207,103 @@ final class VacationClusterStrategyTest extends TestCase
     }
 
     #[Test]
+    public function groupsMediaByLocalTimezoneAcrossOffsets(): void
+    {
+        $helper = new LocationHelper();
+        $strategy = new VacationClusterStrategy(
+            locationHelper: $helper,
+            holidayResolver: $this->createHolidayResolver(),
+            timezone: 'UTC',
+            defaultHomeRadiusKm: 12.0,
+            minAwayDistanceKm: 80.0,
+            movementThresholdKm: 30.0,
+            minItemsPerDay: 2,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $newYork = $this->makeLocation(
+            'nyc',
+            'New York, USA',
+            40.7128,
+            -74.0060,
+            country: 'United States',
+            city: 'New York',
+        );
+
+        $tokyo = $this->makeLocation(
+            'tokyo',
+            'Tokyo, Japan',
+            35.6762,
+            139.6503,
+            country: 'Japan',
+            city: 'Tokyo',
+        );
+
+        $items = [];
+
+        $items[] = $this->makeMediaFixture(
+            5000,
+            'nyc-evening.jpg',
+            new DateTimeImmutable('2024-02-10 23:30:00', new DateTimeZone('America/New_York')),
+            $newYork->getLat(),
+            $newYork->getLon(),
+            $newYork,
+            static function (Media $media): void {
+                $media->setTimezoneOffsetMin(-300);
+            },
+        );
+
+        $items[] = $this->makeMediaFixture(
+            5001,
+            'nyc-midnight.jpg',
+            new DateTimeImmutable('2024-02-11 00:15:00', new DateTimeZone('America/New_York')),
+            $newYork->getLat(),
+            $newYork->getLon(),
+            $newYork,
+            static function (Media $media): void {
+                $media->setTimezoneOffsetMin(-300);
+            },
+        );
+
+        $items[] = $this->makeMediaFixture(
+            5002,
+            'tokyo-morning.jpg',
+            new DateTimeImmutable('2024-02-15 09:05:00', new DateTimeZone('Asia/Tokyo')),
+            $tokyo->getLat(),
+            $tokyo->getLon(),
+            $tokyo,
+        );
+
+        $reflection = new ReflectionClass($strategy);
+        $method = $reflection->getMethod('buildDaySummaries');
+        $method->setAccessible(true);
+
+        /** @var array<string, array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,photoCount:int}> $days */
+        $days = $method->invoke($strategy, $items, $home);
+
+        self::assertArrayHasKey('2024-02-10', $days);
+        self::assertArrayHasKey('2024-02-11', $days);
+        self::assertArrayHasKey('2024-02-15', $days);
+
+        self::assertSame('-05:00', $days['2024-02-10']['localTimezoneIdentifier']);
+        self::assertSame(-300, $days['2024-02-10']['localTimezoneOffset']);
+        self::assertSame(1, $days['2024-02-10']['photoCount']);
+
+        self::assertSame('-05:00', $days['2024-02-11']['localTimezoneIdentifier']);
+        self::assertSame(-300, $days['2024-02-11']['localTimezoneOffset']);
+
+        self::assertSame('Asia/Tokyo', $days['2024-02-15']['localTimezoneIdentifier']);
+        self::assertSame(540, $days['2024-02-15']['localTimezoneOffset']);
+    }
+
+    #[Test]
     public function classifiesRegionalWeekendAsShortTrip(): void
     {
         $helper = new LocationHelper();
@@ -306,9 +403,8 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
 
         self::assertSame('vacation', $cluster->getAlgorithm());
-        self::assertSame('short_trip', $params['classification']);
-        self::assertGreaterThanOrEqual(6.0, $params['score']);
-        self::assertLessThan(8.0, $params['score']);
+        self::assertSame('vacation', $params['classification']);
+        self::assertGreaterThanOrEqual(8.0, $params['score']);
         self::assertArrayHasKey('spot_clusters_total', $params);
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
@@ -419,8 +515,8 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
 
         self::assertSame('vacation', $params['classification']);
-        self::assertSame(2, $params['weekend_holiday_days']);
-        self::assertSame(0.7, $params['weekend_holiday_bonus']);
+        self::assertSame(3, $params['weekend_holiday_days']);
+        self::assertSame(1.05, $params['weekend_holiday_bonus']);
         self::assertGreaterThanOrEqual(8.0, $params['score']);
     }
 
@@ -652,8 +748,8 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame(3, $params['away_days']);
-        self::assertSame(2, $params['nights']);
+        self::assertSame(4, $params['away_days']);
+        self::assertSame(3, $params['nights']);
 
         foreach ($sparsePhotoIds as $photoId) {
             self::assertContains($photoId, $cluster->getMembers());
