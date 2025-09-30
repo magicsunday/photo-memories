@@ -20,7 +20,6 @@ use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\Memory;
-use MagicSunday\Memories\Entity\WeatherObservation;
 use PDO;
 use Throwable;
 
@@ -74,7 +73,6 @@ final class EntityManagerFactory
             Cluster::class,
             Memory::class,
             Location::class,
-            WeatherObservation::class,
         ];
 
         $metadata = [];

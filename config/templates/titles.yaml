@@ -181,22 +181,6 @@ de:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ sun_score }}: Sonnenindex (0–1)
-    sunny_day:
-        title: "Sonniger Tag"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
-    #   - {{ rain_prob }}: Regenwahrscheinlichkeit (0–1)
-    rainy_day:
-        title: "Regentag"
-        subtitle: "{{ date_range }}"
-    # Platzhalter:
-    #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     snow_day:
         title: "Schneetag"
         subtitle: "{{ date_range }}"

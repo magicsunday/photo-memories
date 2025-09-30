@@ -57,9 +57,7 @@ parameters:
         - 'monthly_highlights'
         - 'season'
         - 'golden_hour'
-        - 'sunny_day'
         - 'snow_day'
-        - 'rainy_day'
         - 'day_album'
         - 'at_home_weekend'
         - 'at_home_weekday'
@@ -111,9 +109,7 @@ parameters:
     memories.cluster.priority.monthly_highlights_cluster_strategy: 61
     memories.cluster.priority.season_cluster_strategy: 60
     memories.cluster.priority.golden_hour_cluster_strategy: 59
-    memories.cluster.priority.sunny_day_cluster_strategy: 58
     memories.cluster.priority.snow_day_cluster_strategy: 56
-    memories.cluster.priority.rainy_day_cluster_strategy: 55
     memories.cluster.priority.day_album_cluster_strategy: 54
     memories.cluster.priority.time_similarity_strategy: 51
     memories.cluster.priority.photo_motif_cluster_strategy: 48
@@ -151,12 +147,3 @@ parameters:
     memories.feed.max_total: 60
     memories.feed.max_per_algorithm: 12
 
-    # Weather
-    memories.weather.enabled_default: false
-    memories.weather.enabled: '%env(default:memories.weather.enabled_default:bool:MEMORIES_WEATHER_ENABLED)%'
-    memories.weather.openweather.base_url: '%env(default::string:OPENWEATHER_BASE_URL)%'
-    memories.weather.openweather.api_key: '%env(default::string:OPENWEATHER_API_KEY)%'
-    memories.weather.openweather.max_past_hours_default: 120
-    memories.weather.openweather.max_past_hours: '%env(default:memories.weather.openweather.max_past_hours_default:int:MEMORIES_WEATHER_MAX_PAST_HOURS)%'
-    memories.weather.openweather.source_default: 'openweather'
-    memories.weather.openweather.source: '%env(default:memories.weather.openweather.source_default:string:MEMORIES_WEATHER_SOURCE)%'

@@ -419,7 +419,7 @@ services:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.cityscape_night_cluster_strategy%' }
 
-    # --- Weather & seasonal highlights ---
+    # --- Seasonal highlights ---
     MagicSunday\Memories\Clusterer\SeasonClusterStrategy:
         arguments:
             $minItemsPerSeason: 18
@@ -432,23 +432,6 @@ services:
             $minItemsPerSeason: 26
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.season_over_years_cluster_strategy%' }
-
-    MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy:
-        arguments:
-            $minAvgSunScore: 0.65
-            $minItemsPerDay: 5
-            $minHintsPerDay: 2
-            $timezone: 'Europe/Berlin'
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.sunny_day_cluster_strategy%' }
-
-    MagicSunday\Memories\Clusterer\RainyDayClusterStrategy:
-        arguments:
-            $minAvgRainProb: 0.6
-            $minItemsPerDay: 5
-            $timezone: 'Europe/Berlin'
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.rainy_day_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\SnowDayClusterStrategy:
         arguments:
@@ -595,9 +578,7 @@ services:
                 monthly_highlights: 1.06
                 season: 0.95
                 golden_hour: 1.02
-                sunny_day: 0.95
                 snow_day: 1.05
-                rainy_day: 0.92
                 day_album: 1.06
                 time_similarity: 1.00
                 photo_motif: 0.88
@@ -626,7 +607,6 @@ services:
     MagicSunday\Memories\Service\Feed\DefaultCoverPicker: ~
 
     MagicSunday\Memories\Repository\MediaRepository: ~
-    MagicSunday\Memories\Repository\WeatherObservationRepository: ~
 
     MagicSunday\Memories\Service\Feed\MemoryFeedBuilder:
         arguments:
@@ -638,32 +618,6 @@ services:
 
     MagicSunday\Memories\Service\Feed\FeedBuilderInterface:
         alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder
-
-    # Weather
-    MagicSunday\Memories\Service\Weather\NullWeatherHintProvider: ~
-
-    MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider:
-        arguments:
-            $http: '@Symfony\Contracts\HttpClient\HttpClientInterface'
-            $storage: '@MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface'
-            $baseUrl: '%memories.weather.openweather.base_url%'
-            $apiKey: '%memories.weather.openweather.api_key%'
-            $maxPastHours: '%memories.weather.openweather.max_past_hours%'
-            $source: '%memories.weather.openweather.source%'
-
-    MagicSunday\Memories\Service\Weather\DoctrineWeatherObservationStorage: ~
-
-    MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider:
-        arguments:
-            $primary: '@MagicSunday\Memories\Service\Weather\OpenWeatherHintProvider'
-            $fallback: '@MagicSunday\Memories\Service\Weather\NullWeatherHintProvider'
-            $enabled: '%memories.weather.enabled%'
-
-    MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface:
-        alias: MagicSunday\Memories\Service\Weather\ToggleableWeatherHintProvider
-
-    MagicSunday\Memories\Service\Weather\WeatherObservationStorageInterface:
-        alias: MagicSunday\Memories\Service\Weather\DoctrineWeatherObservationStorage
 
     # Feeds
     MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
