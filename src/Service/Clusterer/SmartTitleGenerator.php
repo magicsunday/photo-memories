@@ -16,9 +16,11 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 
+use function explode;
 use function is_array;
 use function is_scalar;
 use function preg_replace_callback;
+use function trim;
 
 /**
  * Renders titles/subtitles using YAML templates + params (iOS-like).
@@ -55,11 +57,21 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         $p['start_date'] ??= $this->formatDate($p['time_range']['from'] ?? null);
         $p['end_date'] ??= $this->formatDate($p['time_range']['to'] ?? null);
 
-        return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_\.]+)\s*\}\}/', static function (array $m) use ($p): string {
-            $key = $m[1];
-            $val = $p[$key] ?? null;
-            if (is_scalar($val)) {
-                return (string) $val;
+        return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_\.\|]+)\s*\}\}/', static function (array $m) use ($p): string {
+            $candidates = explode('|', $m[1]);
+            foreach ($candidates as $candidate) {
+                $key = trim($candidate);
+                if ($key === '') {
+                    continue;
+                }
+
+                $val = $p[$key] ?? null;
+                if (is_scalar($val)) {
+                    $stringVal = (string) $val;
+                    if ($stringVal !== '') {
+                        return $stringVal;
+                    }
+                }
             }
 
             return '';

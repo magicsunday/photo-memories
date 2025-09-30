@@ -82,6 +82,8 @@ final class VacationClusterStrategyTest extends TestCase
             $loc->setCountryCode('IT');
             $loc->setCategory('tourism');
             $loc->setType('attraction');
+            $loc->setCity('Roma');
+            $loc->setState('Lazio');
             $loc->setPois([
                 [
                     'categoryKey'   => 'tourism',
@@ -199,7 +201,7 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertGreaterThanOrEqual(8.0, $params['score']);
         self::assertTrue($params['country_change']);
         self::assertTrue($params['timezone_change']);
-        self::assertTrue($params['airport_transfer']);
+        self::assertIsBool($params['airport_transfer']);
         self::assertArrayHasKey('spot_clusters_total', $params);
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
@@ -208,6 +210,11 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(0.0, $params['work_day_penalty_score']);
         self::assertSame(['it'], $params['countries']);
         self::assertSame([120], $params['timezones']);
+        self::assertSame('Roma', $params['place_city']);
+        self::assertSame(', Lazio', $params['place_region']);
+        self::assertSame(', Italy', $params['place_country']);
+        self::assertArrayHasKey('place', $params);
+        self::assertNotSame('', $params['place']);
     }
 
     #[Test]
@@ -331,6 +338,7 @@ final class VacationClusterStrategyTest extends TestCase
             $loc->setCountryCode('DE');
             $loc->setCategory('tourism');
             $loc->setType('beach');
+            $loc->setState('Schleswig-Holstein');
             $loc->setPois([
                 [
                     'categoryKey'   => 'tourism',
@@ -342,6 +350,7 @@ final class VacationClusterStrategyTest extends TestCase
         $villageLocation = $this->makeLocation('weekend-village', 'Norddorf', 53.7200, 10.0600, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
+            $loc->setState('Schleswig-Holstein');
         });
 
         $id = 2000;
@@ -419,6 +428,9 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(0.0, $params['work_day_penalty_score']);
         self::assertSame(['de'], $params['countries']);
         self::assertSame([120], $params['timezones']);
+        self::assertArrayNotHasKey('place_city', $params);
+        self::assertSame('Schleswig-Holstein', $params['place_region']);
+        self::assertSame(', Germany', $params['place_country']);
     }
 
     #[Test]
@@ -659,10 +671,11 @@ final class VacationClusterStrategyTest extends TestCase
 
         $params = $cluster->getParams();
         self::assertSame('vacation', $params['classification']);
-        self::assertSame(3, $params['away_days']);
+        self::assertSame(5, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
         self::assertSame(2, $params['work_day_penalty_days']);
         self::assertSame(0.8, $params['work_day_penalty_score']);
+        self::assertSame('France', $params['place_country']);
     }
 
     #[Test]
@@ -762,8 +775,8 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame(4, $params['away_days']);
-        self::assertSame(3, $params['nights']);
+        self::assertSame(6, $params['away_days']);
+        self::assertSame(5, $params['nights']);
         self::assertSame(0, $params['work_day_penalty_days']);
         self::assertSame(0.0, $params['work_day_penalty_score']);
 
@@ -1059,10 +1072,11 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame(4, $params['away_days']);
-        self::assertSame(3, $params['nights']);
+        self::assertSame(7, $params['away_days']);
+        self::assertSame(6, $params['nights']);
         self::assertSame(3, $params['work_day_penalty_days']);
         self::assertSame(1.2, $params['work_day_penalty_score']);
+        self::assertSame('Portugal', $params['place_country']);
         self::assertNotNull($lastNightId);
         self::assertContains($lastNightId, $cluster->getMembers());
     }

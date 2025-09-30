@@ -96,9 +96,12 @@ de:
     #   - {{ weekend_holiday_days }}: Wochenend- und Feiertage innerhalb des Trips
     #   - {{ weekend_holiday_bonus }}: Bonus durch Wochenend-/Feiertage
     #   - {{ place }} (optional): Dominanter Aufnahmeort
+    #   - {{ place_city }} (optional): Dominante Stadt im Cluster
+    #   - {{ place_region }} (optional): Dominante Region/Bundesland
+    #   - {{ place_country }} (optional): Dominantes Land
     vacation:
-        title: "Reise nach {{ place }}"
-        subtitle: "{{ start_date }} – {{ end_date }}"
+        title: "{{ classification_label }} – {{ place_city|place_region|place_country|place }}"
+        subtitle: "{{ start_date }} – {{ end_date }} · {{ place_city|place_region|place_country|classification_label }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)

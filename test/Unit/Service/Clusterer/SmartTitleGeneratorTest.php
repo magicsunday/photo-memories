@@ -53,7 +53,7 @@ final class SmartTitleGeneratorTest extends TestCase
         $generator = $this->createGenerator(<<<'YAML'
 de:
   time_similarity:
-    title: "Trip nach {{ place }}"
+    title: "Trip nach {{ place_city|place }}"
     subtitle: "{{ date_range }}"
 YAML
         );
@@ -62,6 +62,7 @@ YAML
             algorithm: 'time_similarity',
             params: [
                 'place'      => 'Berlin',
+                'place_city' => 'Berlin',
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-06-03 20:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -79,7 +80,7 @@ YAML
         $generator = $this->createGenerator(<<<'YAML'
 de:
   vacation:
-    title: "Reise nach {{ place }}"
+    title: "Reise nach {{ place_city|place_region|place_country|place }}"
     subtitle: "{{ start_date }} – {{ end_date }}"
 YAML
         );
@@ -87,7 +88,9 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'vacation',
             params: [
-                'place'      => 'Hamburg',
+                'place'        => 'Hamburg',
+                'place_city'   => 'Hamburg',
+                'place_country' => 'Germany',
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-07-05 00:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-07-07 21:59:59', new DateTimeZone('UTC')))->getTimestamp(),
@@ -117,6 +120,31 @@ YAML
 
         self::assertSame('Sommer 2024', $generator->makeTitle($cluster));
         self::assertSame('12.08.2024', $generator->makeSubtitle($cluster));
+    }
+
+    #[Test]
+    public function fallsBackToPlaceWhenComponentsMissing(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  vacation:
+    title: "Reise nach {{ place_city|place_region|place_country|place }}"
+    subtitle: "{{ start_date }} – {{ end_date }}"
+YAML
+        );
+
+        $cluster = $this->createCluster(
+            algorithm: 'vacation',
+            params: [
+                'place'      => 'Nordsee',
+                'time_range' => [
+                    'from' => (new DateTimeImmutable('2024-09-14 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-09-16 21:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+            ],
+        );
+
+        self::assertSame('Reise nach Nordsee', $generator->makeTitle($cluster));
     }
 
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
