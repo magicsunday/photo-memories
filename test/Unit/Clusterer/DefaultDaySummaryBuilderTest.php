@@ -15,6 +15,10 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
@@ -33,12 +37,8 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
         $timezoneResolver = new TimezoneResolver('UTC');
-        $builder = new DefaultDaySummaryBuilder(
-            dbscanHelper: new GeoDbscanHelper(),
-            staypointDetector: new StaypointDetector(),
-            baseLocationResolver: new BaseLocationResolver(),
-            timezoneResolver: $timezoneResolver,
-            poiClassifier: new PoiClassifier(),
+        $builder = $this->createBuilder(
+            $timezoneResolver,
             timezone: 'UTC',
             minItemsPerDay: 1,
         );
@@ -125,12 +125,8 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     public function marksDaysAwayFromHomeWhenBaseLocationIsFar(): void
     {
         $timezoneResolver = new TimezoneResolver('UTC');
-        $builder = new DefaultDaySummaryBuilder(
-            dbscanHelper: new GeoDbscanHelper(),
-            staypointDetector: new StaypointDetector(),
-            baseLocationResolver: new BaseLocationResolver(),
-            timezoneResolver: $timezoneResolver,
-            poiClassifier: new PoiClassifier(),
+        $builder = $this->createBuilder(
+            $timezoneResolver,
             timezone: 'UTC',
             minItemsPerDay: 2,
         );
@@ -199,5 +195,22 @@ final class DefaultDaySummaryBuilderTest extends TestCase
 
         self::assertArrayHasKey('baseAway', $days['2024-06-02']);
         self::assertTrue($days['2024-06-02']['baseAway']);
+}
+
+    private function createBuilder(
+        TimezoneResolver $timezoneResolver,
+        string $timezone = 'Europe/Berlin',
+        float $gpsOutlierRadiusKm = 1.0,
+        int $gpsOutlierMinSamples = 3,
+        int $minItemsPerDay = 3,
+    ): DefaultDaySummaryBuilder {
+        $stages = [
+            new InitializationStage($timezoneResolver, new PoiClassifier(), $timezone),
+            new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), $gpsOutlierRadiusKm, $gpsOutlierMinSamples, $minItemsPerDay),
+            new DensityStage(),
+            new AwayFlagStage($timezoneResolver, new BaseLocationResolver()),
+        ];
+
+        return new DefaultDaySummaryBuilder($stages);
     }
 }

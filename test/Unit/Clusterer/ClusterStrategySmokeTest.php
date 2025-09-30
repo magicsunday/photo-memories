@@ -23,10 +23,13 @@ use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
-use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
@@ -35,6 +38,7 @@ use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
@@ -155,13 +159,12 @@ final class ClusterStrategySmokeTest extends TestCase
             'vacation',
             static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
                 new DefaultHomeLocator(),
-                new DefaultDaySummaryBuilder(
-                    new GeoDbscanHelper(),
-                    new StaypointDetector(),
-                    new BaseLocationResolver(),
-                    new TimezoneResolver(),
-                    new PoiClassifier(),
-                ),
+                new DefaultDaySummaryBuilder([
+                    new InitializationStage(new TimezoneResolver(), new PoiClassifier()),
+                    new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector()),
+                    new DensityStage(),
+                    new AwayFlagStage(new TimezoneResolver(), new BaseLocationResolver()),
+                ]),
                 new DefaultVacationSegmentAssembler(
                     new RunDetector(new TransportDayExtender()),
                     new VacationScoreCalculator(
