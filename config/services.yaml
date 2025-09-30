@@ -147,9 +147,23 @@ services:
             $baseUrl: '%memories.geocoding.overpass.base_url%'
             $userAgent: '%memories.geocoding.nominatim.user_agent%'
             $contactEmail: '%memories.geocoding.nominatim.email%'
-            $queryTimeout: '%memories.geocoding.overpass.timeout%'
             $httpTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration:
+        arguments:
             $additionalAllowedTags: '%memories.geocoding.overpass.allowed_pois%'
+
+    MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder:
+        arguments:
+            $queryTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\OverpassQueryBuilderInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder
+
+    MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser: ~
+
+    MagicSunday\Memories\Service\Geocoding\OverpassResponseParserInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser
 
     MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher:
         arguments:
