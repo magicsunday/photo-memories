@@ -41,6 +41,15 @@ services:
     MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface:
         alias: MagicSunday\Memories\Utility\DefaultPoiScorer
 
+    MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner
+
+    MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\HybridClusterer
+
+    MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService
+
     MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface:
         alias: MagicSunday\Memories\Utility\DefaultLocationLabelResolver
 
