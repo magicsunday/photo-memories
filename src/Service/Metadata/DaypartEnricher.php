@@ -12,9 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
+use DateTimeZone;
+use Exception;
 use MagicSunday\Memories\Entity\Media;
 
-use function gmdate;
+use function sprintf;
 
 final class DaypartEnricher implements SingleMetadataExtractorInterface
 {
@@ -30,9 +32,8 @@ final class DaypartEnricher implements SingleMetadataExtractorInterface
             return $media;
         }
 
-        $offsetMin = $media->getTimezoneOffsetMin() ?? 0;
-        $ts        = $t->getTimestamp() + $offsetMin * 60;
-        $h         = (int) gmdate('G', $ts);
+        $local = $this->withOffsetTimezone($t, $media->getTimezoneOffsetMin());
+        $h     = (int) $local->format('G');
 
         $part = match (true) {
             $h >= 6 && $h <= 10  => 'morning',
@@ -46,5 +47,26 @@ final class DaypartEnricher implements SingleMetadataExtractorInterface
         $media->setFeatures($features);
 
         return $media;
+    }
+
+    private function withOffsetTimezone(DateTimeImmutable $instant, ?int $offsetMinutes): DateTimeImmutable
+    {
+        if ($offsetMinutes === null) {
+            return $instant;
+        }
+
+        $sign      = $offsetMinutes >= 0 ? '+' : '-';
+        $abs       = $offsetMinutes < 0 ? -$offsetMinutes : $offsetMinutes;
+        $hours     = intdiv($abs, 60);
+        $minutes   = $abs % 60;
+        $tzSpec    = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
+
+        try {
+            $tz = new DateTimeZone($tzSpec);
+        } catch (Exception) {
+            return $instant;
+        }
+
+        return $instant->setTimezone($tz);
     }
 }

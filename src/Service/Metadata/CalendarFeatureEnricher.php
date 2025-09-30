@@ -12,12 +12,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 
-use function gmdate;
-use function is_int;
 use function sprintf;
-use function strtotime;
 
 /**
  * Adds weekend/season/holiday flags derived from takenAt.
@@ -78,8 +76,9 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         }
 
         $easter = $this->easterDate($y);
-        $tsE    = strtotime($easter);
-        if (!is_int($tsE)) {
+        $tz     = new DateTimeZone('UTC');
+        $origin = DateTimeImmutable::createFromFormat('Y-m-d', $easter, $tz);
+        if (!$origin instanceof DateTimeImmutable) {
             return [false, null];
         }
 
@@ -90,8 +89,12 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
             +50 => 'de-whitmonday',
         ];
         foreach ($rel as $off => $code) {
-            $ts  = $tsE + $off * 86400;
-            $ymd = gmdate('Y-m-d', $ts);
+            $target = $origin->modify(sprintf('%+d day', $off));
+            if (!$target instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $ymd = $target->format('Y-m-d');
             if ($ymd === sprintf('%04d-%02d-%02d', $y, $m, $d)) {
                 return [true, $code . '-' . $y];
             }

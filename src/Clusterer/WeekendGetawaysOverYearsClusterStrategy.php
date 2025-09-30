@@ -27,11 +27,9 @@ use function array_values;
 use function assert;
 use function arsort;
 use function count;
-use function gmdate;
 use function array_search;
 use function sort;
 use function strcmp;
-use function strtotime;
 use function usort;
 
 use const SORT_STRING;
@@ -251,13 +249,15 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      */
     private function containsWeekendDay(array $days): bool
     {
+        $tz = new DateTimeZone('UTC');
+
         foreach ($days as $d) {
-            $ts = strtotime($d . ' 12:00:00');
-            if ($ts === false) {
+            $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $d . ' 12:00:00', $tz);
+            if (!$date instanceof DateTimeImmutable) {
                 continue;
             }
 
-            $dow = (int) gmdate('N', $ts); // 1..7
+            $dow = (int) $date->format('N'); // 1..7
             if ($dow === 6 || $dow === 7) {
                 return true;
             }

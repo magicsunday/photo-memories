@@ -18,14 +18,13 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function abs;
 use function array_keys;
 use function array_map;
 use function array_values;
 use function assert;
 use function count;
+use function is_int;
 use function sprintf;
-use function strtotime;
 use function usort;
 
 /**
@@ -121,12 +120,21 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
     private function monthDayDistance(int $m1, int $d1, int $m2, int $d2): int
     {
         // Simple absolute distance in days ignoring leap-year wrap; good enough for small windows.
-        $a = strtotime(sprintf('2001-%02d-%02d', $m1, $d1));
-        $b = strtotime(sprintf('2001-%02d-%02d', $m2, $d2));
-        if ($a === false || $b === false) {
+        $tz   = new DateTimeZone('UTC');
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', sprintf('2001-%02d-%02d', $m1, $d1), $tz);
+        $ref  = DateTimeImmutable::createFromFormat('Y-m-d', sprintf('2001-%02d-%02d', $m2, $d2), $tz);
+
+        if (!$date instanceof DateTimeImmutable || !$ref instanceof DateTimeImmutable) {
             return 9999;
         }
 
-        return (int) abs(($b - $a) / 86400);
+        $interval = $date->diff($ref);
+        $days     = $interval->days;
+
+        if (!is_int($days)) {
+            return 9999;
+        }
+
+        return $days;
     }
 }
