@@ -16,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
-use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\HtmlFeedRenderer;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
@@ -57,7 +57,7 @@ final class FeedExportHtmlCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FeedBuilderInterface $feedBuilder,
-        private readonly ClusterConsolidationService $consolidation,
+        private readonly ClusterConsolidatorInterface $consolidation,
         private readonly ClusterEntityToDraftMapper $mapper,
         private readonly MediaRepository $mediaRepo,
         private readonly HtmlFeedRenderer $renderer,

@@ -13,7 +13,7 @@ namespace MagicSunday\Memories\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
-use MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -42,7 +42,7 @@ final class FeedPreviewCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FeedBuilderInterface $feedBuilder,
-        private readonly ClusterConsolidationService $consolidation,
+        private readonly ClusterConsolidatorInterface $consolidation,
         private readonly ClusterEntityToDraftMapper $mapper,
         private readonly int $defaultClusterLimit = 5000,
     ) {
