@@ -29,7 +29,7 @@ final class VacationScoreCalculatorTest extends TestCase
     #[Test]
     public function buildDraftScoresMultiDayTripAsVacation(): void
     {
-        $locationHelper = new LocationHelper();
+        $locationHelper = LocationHelper::createDefault();
         $calculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             holidayResolver: new NullHolidayResolver(),

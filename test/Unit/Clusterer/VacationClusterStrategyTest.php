@@ -41,7 +41,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver([
@@ -220,7 +220,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -319,7 +319,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function classifiesRegionalWeekendAsShortTrip(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(['2024-07-05']),
@@ -441,7 +441,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function awardsHolidayBonusOnWeekdays(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $holidayDates = ['2024-12-23', '2024-12-24'];
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
@@ -555,7 +555,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function includesAirportBufferDayAtSegmentEdges(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -695,7 +695,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function keepsSparsePhotoDaysWithinVacationRuns(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -805,7 +805,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function recognisesMultiSpotExplorationWithinTrip(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -993,7 +993,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function keepsDstTransitionWithinSingleVacationRun(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -1110,7 +1110,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresExtremeGpsOutliersWhenScoringAwayDays(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -1193,7 +1193,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenHomeCannotBeDerived(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),

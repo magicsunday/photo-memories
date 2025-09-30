@@ -23,7 +23,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function buildsClusterForFrequentPlace(): void
     {
-        $helper   = new LocationHelper();
+        $helper   = LocationHelper::createDefault();
         $strategy = new SignificantPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -59,7 +59,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function enforcesMinimumVisitDays(): void
     {
-        $helper   = new LocationHelper();
+        $helper   = LocationHelper::createDefault();
         $strategy = new SignificantPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,

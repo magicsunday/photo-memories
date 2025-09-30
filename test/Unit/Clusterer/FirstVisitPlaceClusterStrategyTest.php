@@ -26,7 +26,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function picksEarliestEligibleVisitPerCell(): void
     {
-        $helper   = new LocationHelper();
+        $helper   = LocationHelper::createDefault();
         $strategy = new FirstVisitPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,
@@ -82,7 +82,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     #[Test]
     public function enforcesMinimumItemsPerDay(): void
     {
-        $helper   = new LocationHelper();
+        $helper   = LocationHelper::createDefault();
         $strategy = new FirstVisitPlaceClusterStrategy(
             locHelper: $helper,
             gridDegrees: 0.01,

@@ -37,7 +37,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
     #[Test]
     public function detectSegmentsMergesDstTransitionDays(): void
     {
-        $locationHelper = new LocationHelper();
+        $locationHelper = LocationHelper::createDefault();
         $homeLocator = new DefaultHomeLocator(
             timezone: 'Europe/Berlin',
             defaultHomeRadiusKm: 12.0,

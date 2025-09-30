@@ -26,7 +26,7 @@ final class TimeSimilarityStrategyTest extends TestCase
     #[Test]
     public function clustersMediaWithinGapAndLocalityBoundaries(): void
     {
-        $helper   = new LocationHelper();
+        $helper   = LocationHelper::createDefault();
         $strategy = new TimeSimilarityStrategy(
             locHelper: $helper,
             maxGapSeconds: 1800,
@@ -87,7 +87,7 @@ final class TimeSimilarityStrategyTest extends TestCase
     public function returnsEmptyWhenNoBucketMeetsMinimumItems(): void
     {
         $strategy = new TimeSimilarityStrategy(
-            locHelper: new LocationHelper(),
+            locHelper: LocationHelper::createDefault(),
             maxGapSeconds: 900,
             minItemsPerBucket: 4,
         );

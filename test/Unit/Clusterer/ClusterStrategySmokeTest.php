@@ -278,7 +278,7 @@ final class ClusterStrategySmokeTest extends TestCase
 
     private static function locationHelper(): LocationHelper
     {
-        return new LocationHelper();
+        return LocationHelper::createDefault();
     }
 
     /**
