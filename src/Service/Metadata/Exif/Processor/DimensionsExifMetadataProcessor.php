@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 /**
  * Sets missing width/height information from the EXIF COMPUTED section.
  */
-#[AutoconfigureTag('memories.metadata.exif.processor')]
+#[AutoconfigureTag('memories.metadata.exif.processor', ['priority' => 100])]
 final class DimensionsExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function process(array $exif, Media $media): void

@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 /**
  * Derives portrait and panorama flags from the media's aspect ratio.
  */
-#[AutoconfigureTag('memories.metadata.exif.processor')]
+#[AutoconfigureTag('memories.metadata.exif.processor', ['priority' => 0])]
 final class AspectFlagExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function process(array $exif, Media $media): void
