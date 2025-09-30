@@ -40,12 +40,14 @@ use function log;
 use function max;
 use function min;
 use function round;
+use function sort;
 use function sprintf;
 use function sqrt;
 use function str_contains;
 use function strtolower;
 use function usort;
 
+use const SORT_NUMERIC;
 use const SORT_STRING;
 
 /**
@@ -1040,6 +1042,18 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             }
         }
 
+        $countries = [];
+        if ($countryCodes !== []) {
+            $countries = array_keys($countryCodes);
+            sort($countries, SORT_STRING);
+        }
+
+        $timezones = [];
+        if ($timezoneOffsets !== []) {
+            $timezones = array_keys($timezoneOffsets);
+            sort($timezones, SORT_NUMERIC);
+        }
+
         $airportFlag = false;
         $firstDay = $days[$dayKeys[0]];
         $lastDay  = $days[$dayKeys[$dayCount - 1]];
@@ -1130,6 +1144,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'spot_exploration_bonus' => round($explorationBonus, 2),
             'weekend_holiday_days' => $weekendHolidayDays,
             'weekend_holiday_bonus' => round($weekendHolidayBonus, 2),
+            'countries'            => $countries,
+            'timezones'            => $timezones,
         ];
 
         if ($place !== null) {
