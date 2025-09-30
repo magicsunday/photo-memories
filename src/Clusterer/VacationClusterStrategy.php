@@ -1014,6 +1014,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         if ($gpsMembers === []) {
             return null;
         }
+
+        $centroid = MediaMath::centroid($gpsMembers);
+        $centroidDistanceKm = MediaMath::haversineDistanceInMeters(
+            (float) $home['lat'],
+            (float) $home['lon'],
+            (float) $centroid['lat'],
+            (float) $centroid['lon'],
+        ) / 1000.0;
         $dayCount   = count($dayKeys);
         $avgDistance = $dayCount > 0 ? $avgDistanceSum / $dayCount : 0.0;
         $tourismRatio = $poiSamples > 0 ? min(1.0, $tourismHits / (float) $poiSamples) : 0.0;
@@ -1072,7 +1080,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $weekendHolidayBonus = min(2.0, $weekendHolidayDays * self::WEEKEND_OR_HOLIDAY_BONUS);
 
         $awayDayScore   = min(10, $awayDays) * 1.6;
-        $distanceScore  = $maxDistance > 0.0 ? 1.2 * log(1.0 + $maxDistance) : 0.0;
+        $distanceScore  = $centroidDistanceKm > 0.0 ? 1.2 * log(1.0 + $centroidDistanceKm) : 0.0;
         $countryBonus   = $countryChange ? 2.5 : 0.0;
         $timezoneBonus  = $timezoneChange ? 2.0 : 0.0;
         $tourismBonus   = 1.5 * $tourismRatio;
@@ -1111,7 +1119,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         $timeRange = MediaMath::timeRange($members);
-        $centroid  = MediaMath::centroid($gpsMembers);
 
         $memberIds = array_map(
             static fn (Media $media): int => $media->getId(),
@@ -1135,7 +1142,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'away_days'            => $awayDays,
             'total_days'           => $dayCount,
             'time_range'           => $timeRange,
-            'max_distance_km'      => $maxDistance,
+            'max_distance_km'      => $centroidDistanceKm,
+            'max_observed_distance_km' => $maxDistance,
             'avg_distance_km'      => $avgDistance,
             'country_change'       => $countryChange,
             'timezone_change'      => $timezoneChange,
