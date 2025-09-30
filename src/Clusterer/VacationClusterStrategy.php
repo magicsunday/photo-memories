@@ -20,6 +20,7 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
+use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -84,8 +85,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
 
     public function __construct(
-        private LocationHelper $locationHelper,
-        private HolidayResolverInterface $holidayResolver,
+        private LocationHelper $locationHelper = new LocationHelper(),
+        private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $defaultHomeRadiusKm = 15.0,
         private float $minAwayDistanceKm = 120.0,

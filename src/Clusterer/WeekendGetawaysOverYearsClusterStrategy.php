@@ -44,7 +44,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     use MediaFilterTrait;
 
     public function __construct(
-        private LocationHelper $locHelper,
+        private LocationHelper $locHelper = new LocationHelper(),
         private string $timezone = 'Europe/Berlin',
         private int $minNights = 1,
         private int $maxNights = 3,
@@ -296,7 +296,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         $runLocality = $this->majorityLocalityKey($run['items']);
         if ($runLocality === null) {
-            return false;
+            return true;
         }
 
         $firstDay = $runDays[0];
@@ -307,25 +307,17 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         $nextDay = $this->nextDayKey($sortedDays, $lastDay);
 
         if ($prevDay === null || $nextDay === null) {
-            return false;
+            return true;
         }
 
         $prevLocality = $dayLocality[$prevDay] ?? null;
         $nextLocality = $dayLocality[$nextDay] ?? null;
 
         if ($prevLocality === null || $nextLocality === null) {
-            return false;
+            return true;
         }
 
-        if ($prevLocality === $runLocality) {
-            return false;
-        }
-
-        if ($nextLocality === $runLocality) {
-            return false;
-        }
-
-        return true;
+        return $prevLocality !== $runLocality && $nextLocality !== $runLocality;
     }
 
     /**
