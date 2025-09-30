@@ -25,7 +25,7 @@ use function strtoupper;
  * - Soft dedupe by coarse cell + address heuristics.
  * - Re-attaches cached entities after EM clear().
  */
-final class LocationResolver
+final class LocationResolver implements PoiEnsurerInterface
 {
     /** @var array<string,Location> provider|placeId -> Location (may be managed or detached) */
     private array $cacheByKey = [];

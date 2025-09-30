@@ -20,7 +20,7 @@ use function sprintf;
 /**
  * Links Media to Locations; uses a pre-warmed cell index + in-run cache.
  */
-final class MediaLocationLinker
+final class MediaLocationLinker implements MediaLocationLinkerInterface
 {
     /** @var array<string,Location> in-run cache: cell -> Location (managed) */
     private array $cellCache = [];
