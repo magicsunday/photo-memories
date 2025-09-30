@@ -24,8 +24,10 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function abs;
 use function array_keys;
 use function array_map;
+use function array_slice;
 use function array_sum;
 use function array_values;
 use function assert;
@@ -38,7 +40,6 @@ use function log;
 use function max;
 use function min;
 use function round;
-use function sort;
 use function sprintf;
 use function sqrt;
 use function str_contains;
@@ -156,6 +157,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         if ($timestamped === []) {
             return [];
         }
+
+        usort($timestamped, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
         $home = $this->determineHome($timestamped);
         if ($home === null) {
@@ -341,12 +344,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      *     date: string,
      *     members: list<Media>,
      *     gpsMembers: list<Media>,
-     *     nightGps: list<Media>,
      *     maxDistanceKm: float,
      *     avgDistanceKm: float,
      *     travelKm: float,
      *     countryCodes: array<string, true>,
-     *     timezoneOffsets: array<int, true>,
+     *     timezoneOffsets: array<int, int>,
      *     tourismHits: int,
      *     poiSamples: int,
      *     tourismRatio: float,
@@ -354,16 +356,26 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      *     weekday: int,
      *     photoCount: int,
      *     densityZ: float,
-     *     nightAway: bool,
      *     isAwayCandidate: bool,
-     *     sufficientSamples: bool
+     *     sufficientSamples: bool,
+     *     spotClusters: list<list<Media>>,
+     *     spotNoise: list<Media>,
+     *     spotCount: int,
+     *     spotNoiseSamples: int,
+     *     spotDwellSeconds: int,
+     *     staypoints: list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,
+     *     baseLocation: array{lat:float,lon:float,distance_km:float,source:string}|null,
+     *     baseAway: bool,
+     *     awayByDistance: bool,
+     *     firstGpsMedia: Media|null,
+     *     lastGpsMedia: Media|null,
      * }>
      */
     private function buildDaySummaries(array $items, array $home): array
     {
         $tz = new DateTimeZone($this->timezone);
 
-        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int}> $days */
+        /** @var array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null}> $days */
         $days = [];
 
         foreach ($items as $media) {
@@ -377,7 +389,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'date'              => $date,
                     'members'           => [],
                     'gpsMembers'        => [],
-                    'nightGps'          => [],
                     'maxDistanceKm'     => 0.0,
                     'distanceSum'       => 0.0,
                     'distanceCount'     => 0,
@@ -392,7 +403,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'weekday'           => (int) $local->format('N'),
                     'photoCount'        => 0,
                     'densityZ'          => 0.0,
-                    'nightAway'         => false,
                     'isAwayCandidate'   => false,
                     'sufficientSamples' => false,
                     'spotClusters'      => [],
@@ -400,6 +410,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     'spotCount'         => 0,
                     'spotNoiseSamples'  => 0,
                     'spotDwellSeconds'  => 0,
+                    'staypoints'        => [],
+                    'baseLocation'      => null,
+                    'baseAway'          => false,
+                    'awayByDistance'    => false,
+                    'firstGpsMedia'     => null,
+                    'lastGpsMedia'      => null,
                 ];
             }
 
@@ -415,7 +431,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
             $offset = $media->getTimezoneOffsetMin();
             if ($offset !== null) {
-                $summary['timezoneOffsets'][$offset] = true;
+                if (!isset($summary['timezoneOffsets'][$offset])) {
+                    $summary['timezoneOffsets'][$offset] = 0;
+                }
+
+                ++$summary['timezoneOffsets'][$offset];
             }
 
             $location = $media->getLocation();
@@ -452,13 +472,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 $this->gpsOutlierMinSamples,
             );
 
-            $summary['nightGps']        = [];
             $summary['maxDistanceKm']   = 0.0;
             $summary['distanceSum']     = 0.0;
             $summary['distanceCount']   = 0;
             $summary['avgDistanceKm']   = 0.0;
             $summary['travelKm']        = 0.0;
-            $summary['nightAway']       = false;
 
             $gpsMembers = $summary['gpsMembers'];
             if ($gpsMembers !== []) {
@@ -489,12 +507,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                     $summary['distanceSum'] += $distanceKm;
                     ++$summary['distanceCount'];
 
-                    $local = $takenAt->setTimezone($tz);
-                    $hour  = (int) $local->format('G');
-                    if ($hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR) {
-                        $summary['nightGps'][] = $gpsMedia;
-                    }
-
                     if ($previous instanceof Media) {
                         $travelKm += MediaMath::haversineDistanceInMeters(
                             (float) $previous->getGpsLat(),
@@ -509,22 +521,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
                 $summary['gpsMembers'] = $gpsMembers;
                 $summary['travelKm']    = $travelKm;
+                $summary['firstGpsMedia'] = $gpsMembers[0] ?? null;
+                $summary['lastGpsMedia']  = $gpsMembers[count($gpsMembers) - 1] ?? null;
 
                 if ($summary['distanceCount'] > 0) {
                     $summary['avgDistanceKm'] = $summary['distanceSum'] / $summary['distanceCount'];
                 }
 
-                if ($summary['nightGps'] !== []) {
-                    $centroid = MediaMath::centroid($summary['nightGps']);
-                    $nightDistance = MediaMath::haversineDistanceInMeters(
-                        (float) $centroid['lat'],
-                        (float) $centroid['lon'],
-                        $home['lat'],
-                        $home['lon'],
-                    ) / 1000.0;
-
-                    $summary['nightAway'] = $nightDistance > $home['radius_km'];
-                }
+                $summary['staypoints'] = $this->computeStaypoints($gpsMembers);
 
                 $clusters = $this->dbscanHelper->clusterMedia(
                     $summary['gpsMembers'],
@@ -545,6 +549,10 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 }
 
                 $summary['spotDwellSeconds'] = $dwellSeconds;
+            } else {
+                $summary['firstGpsMedia'] = null;
+                $summary['lastGpsMedia']  = null;
+                $summary['staypoints']    = [];
             }
 
             if ($summary['poiSamples'] > 0) {
@@ -574,11 +582,51 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         ksort($days, SORT_STRING);
 
+        $keys = array_keys($days);
+        $countKeys = count($keys);
+
+        $baseFlags = [];
+        $distanceFlags = [];
+
+        for ($i = 0; $i < $countKeys; ++$i) {
+            $key = $keys[$i];
+            $summary = &$days[$key];
+            $nextSummary = $i + 1 < $countKeys ? $days[$keys[$i + 1]] : null;
+
+            $baseLocation = $this->determineBaseLocationForDay($summary, $nextSummary, $home);
+            $summary['baseLocation'] = $baseLocation;
+            $summary['baseAway']     = $baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km'];
+            $summary['awayByDistance'] = $summary['maxDistanceKm'] > $home['radius_km'];
+
+            $baseFlags[$key]     = $summary['baseAway'];
+            $distanceFlags[$key] = $summary['awayByDistance'];
+
+            unset($summary);
+        }
+
+        $baseFlags     = $this->applyMorphologicalClosing($baseFlags);
+        $distanceFlags = $this->propagateDistanceRuns($distanceFlags);
+
+        foreach ($keys as $key) {
+            $days[$key]['baseAway'] = $baseFlags[$key] || $distanceFlags[$key];
+        }
+
+        $combinedFlags = [];
+        foreach ($keys as $key) {
+            $combinedFlags[$key] = $days[$key]['baseAway'];
+        }
+
+        $combinedFlags = $this->applyMorphologicalClosing($combinedFlags);
+
+        foreach ($keys as $key) {
+            $days[$key]['baseAway'] = $combinedFlags[$key];
+        }
+
         return $days;
     }
 
     /**
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return list<ClusterDraft>
@@ -597,7 +645,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         foreach ($keys as $key) {
             $summary = &$days[$key];
-            $isCandidate = $summary['nightAway'];
+            $isCandidate = $summary['baseAway'];
 
             if ($isCandidate === false && $summary['gpsMembers'] !== []) {
                 // Treat lightly-sampled days as valid when they still provide
@@ -735,7 +783,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
     /**
      * @param list<string> $dayKeys
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,nightGps:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,true>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,nightAway:bool,isAwayCandidate:bool,sufficientSamples:bool}> $days
+     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,baseAway:bool,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null}> $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      */
     private function buildClusterDraft(array $dayKeys, array $days, array $home): ?ClusterDraft
@@ -752,6 +800,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $poiSamples = 0;
         $moveDays = 0;
         $photoDensitySum = 0.0;
+        $photoDensityDenominator = 0;
         $timezoneOffsets = [];
         $countryCodes = [];
         $workDayPenalty = 0;
@@ -761,6 +810,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $spotDwellSeconds = 0;
         $weekendHolidayDays = 0;
         $timezone = new DateTimeZone($this->timezone);
+        $awayDays = 0;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -777,19 +827,24 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             }
 
             $avgDistanceSum += $summary['avgDistanceKm'];
-            $tourismHits += $summary['tourismHits'];
-            $poiSamples += $summary['poiSamples'];
+            if ($summary['baseAway']) {
+                $tourismHits += $summary['tourismHits'];
+                $poiSamples += $summary['poiSamples'];
 
-            if ($summary['travelKm'] > $this->movementThresholdKm) {
-                ++$moveDays;
+                if ($summary['travelKm'] > $this->movementThresholdKm) {
+                    ++$moveDays;
+                }
+
+                $photoDensitySum += $summary['densityZ'];
+                ++$photoDensityDenominator;
             }
 
-            $photoDensitySum += $summary['densityZ'];
-
-            foreach ($summary['timezoneOffsets'] as $offset => $value) {
-                if ($value === true) {
-                    $timezoneOffsets[$offset] = true;
+            foreach ($summary['timezoneOffsets'] as $offset => $count) {
+                if (!isset($timezoneOffsets[$offset])) {
+                    $timezoneOffsets[$offset] = 0;
                 }
+
+                $timezoneOffsets[$offset] += $count;
             }
 
             foreach ($summary['countryCodes'] as $code => $value) {
@@ -798,31 +853,35 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 }
             }
 
-            if ($summary['weekday'] >= 1 && $summary['weekday'] <= 5 && $summary['tourismRatio'] < 0.2) {
-                ++$workDayPenalty;
-            }
+            if ($summary['baseAway']) {
+                if ($summary['weekday'] >= 1 && $summary['weekday'] <= 5 && $summary['tourismRatio'] < 0.2) {
+                    ++$workDayPenalty;
+                }
 
-            if ($summary['sufficientSamples'] && $summary['gpsMembers'] !== []) {
-                ++$reliableDays;
-            }
+                if ($summary['sufficientSamples'] && $summary['gpsMembers'] !== []) {
+                    ++$reliableDays;
+                }
 
-            $spotClusterCount += $summary['spotCount'];
-            $spotDwellSeconds += $summary['spotDwellSeconds'];
+                $spotClusterCount += $summary['spotCount'];
+                $spotDwellSeconds += $summary['spotDwellSeconds'];
 
-            if ($summary['spotCount'] >= 2) {
-                ++$multiSpotDays;
+                if ($summary['spotCount'] >= 2) {
+                    ++$multiSpotDays;
+                }
+
+                ++$awayDays;
             }
 
             $dayDate = new DateTimeImmutable($summary['date'], $timezone);
             $isWeekend = $summary['weekday'] >= 6;
             $isHoliday = $this->holidayResolver->isHoliday($dayDate);
 
-            if ($isWeekend || $isHoliday) {
+            if ($summary['baseAway'] && ($isWeekend || $isHoliday)) {
                 ++$weekendHolidayDays;
             }
         }
 
-        if ($reliableDays === 0) {
+        if ($awayDays === 0 || $reliableDays === 0) {
             return null;
         }
 
@@ -830,10 +889,9 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             return null;
         }
         $dayCount   = count($dayKeys);
-        $awayNights = max(0, $dayCount - 1);
         $avgDistance = $dayCount > 0 ? $avgDistanceSum / $dayCount : 0.0;
         $tourismRatio = $poiSamples > 0 ? min(1.0, $tourismHits / (float) $poiSamples) : 0.0;
-        $photoDensityZ = $dayCount > 0 ? $photoDensitySum / $dayCount : 0.0;
+        $photoDensityZ = $photoDensityDenominator > 0 ? $photoDensitySum / $photoDensityDenominator : 0.0;
 
         $countryChange = false;
         if ($countryCodes !== []) {
@@ -851,8 +909,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         if ($timezoneOffsets !== []) {
             $homeOffset = $home['timezone_offset'];
             if ($homeOffset !== null) {
-                foreach ($timezoneOffsets as $offset => $value) {
-                    if ($value === true && $offset !== $homeOffset) {
+                foreach ($timezoneOffsets as $offset => $count) {
+                    if ($count > 0 && $offset !== $homeOffset) {
                         $timezoneChange = true;
                         break;
                     }
@@ -875,7 +933,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $spotBonus      = $multiSpotBonus + $dwellBonus;
         $weekendHolidayBonus = min(2.0, $weekendHolidayDays * self::WEEKEND_OR_HOLIDAY_BONUS);
 
-        $awayNightScore = min(7, $awayNights) * 2.0;
+        $awayDayScore   = min(10, $awayDays) * 1.6;
         $distanceScore  = $maxDistance > 0.0 ? 1.2 * log(1.0 + $maxDistance) : 0.0;
         $countryBonus   = $countryChange ? 2.5 : 0.0;
         $timezoneBonus  = $timezoneChange ? 2.0 : 0.0;
@@ -887,7 +945,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $weekendHolidayScore = $weekendHolidayBonus;
         $penalty        = 0.4 * $workDayPenalty;
 
-        $score = $awayNightScore
+        $score = $awayDayScore
             + $distanceScore
             + $countryBonus
             + $timezoneBonus
@@ -934,8 +992,9 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'classification'       => $classification,
             'classification_label' => $classificationLabels[$classification] ?? 'Reise',
             'score'                => round($score, 2),
-            'nights'               => $awayNights,
-            'away_days'            => $dayCount,
+            'nights'               => max(0, $awayDays - 1),
+            'away_days'            => $awayDays,
+            'total_days'           => $dayCount,
             'time_range'           => $timeRange,
             'max_distance_km'      => $maxDistance,
             'avg_distance_km'      => $avgDistance,
@@ -964,6 +1023,417 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             members: $memberIds,
         );
     }
+
+    /**
+     * @param list<Media> $gpsMembers
+     *
+     * @return list<array{lat:float,lon:float,start:int,end:int,dwell:int}>
+     */
+    private function computeStaypoints(array $gpsMembers): array
+    {
+        $count = count($gpsMembers);
+        if ($count < 2) {
+            return [];
+        }
+
+        $staypoints = [];
+        $i = 0;
+
+        while ($i < $count - 1) {
+            $startMedia = $gpsMembers[$i];
+            $startTime  = $startMedia->getTakenAt();
+            assert($startTime instanceof DateTimeImmutable);
+
+            $j = $i + 1;
+            while ($j < $count) {
+                $candidate     = $gpsMembers[$j];
+                $candidateTime = $candidate->getTakenAt();
+                assert($candidateTime instanceof DateTimeImmutable);
+
+                $distanceKm = MediaMath::haversineDistanceInMeters(
+                    (float) $startMedia->getGpsLat(),
+                    (float) $startMedia->getGpsLon(),
+                    (float) $candidate->getGpsLat(),
+                    (float) $candidate->getGpsLon(),
+                ) / 1000.0;
+
+                if ($distanceKm > 0.2) {
+                    break;
+                }
+
+                ++$j;
+            }
+
+            $endIndex = $j - 1;
+            if ($endIndex <= $i) {
+                ++$i;
+                continue;
+            }
+
+            $endMedia = $gpsMembers[$endIndex];
+            $endTime  = $endMedia->getTakenAt();
+            assert($endTime instanceof DateTimeImmutable);
+
+            $dwell = $endTime->getTimestamp() - $startTime->getTimestamp();
+            if ($dwell >= 3600) {
+                $segment  = array_slice($gpsMembers, $i, $endIndex - $i + 1);
+                $centroid = MediaMath::centroid($segment);
+                $staypoints[] = [
+                    'lat'   => (float) $centroid['lat'],
+                    'lon'   => (float) $centroid['lon'],
+                    'start' => $startTime->getTimestamp(),
+                    'end'   => $endTime->getTimestamp(),
+                    'dwell' => $dwell,
+                ];
+
+                $i = $endIndex + 1;
+            } else {
+                ++$i;
+            }
+        }
+
+        return $staypoints;
+    }
+
+    /**
+     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>,timezoneOffsets:array<int,int>} $summary
+     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null}|null $nextSummary
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     *
+     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
+     */
+    private function determineBaseLocationForDay(array $summary, ?array $nextSummary, array $home): ?array
+    {
+        $offset   = $this->selectDominantTimezoneOffset($summary, $home);
+        $timezone = $this->createTimezoneFromOffset($offset);
+
+        $staypointBase = $this->selectStaypointBase($summary, $nextSummary, $timezone, $home);
+        $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
+
+        if ($staypointBase !== null) {
+            if ($staypointBase['distance_km'] > $home['radius_km']) {
+                return $staypointBase;
+            }
+
+            if ($sleepProxy !== null && $sleepProxy['distance_km'] > $home['radius_km']) {
+                return $sleepProxy;
+            }
+
+            return $staypointBase;
+        }
+
+        if ($sleepProxy !== null) {
+            return $sleepProxy;
+        }
+
+        $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
+        if ($largestStaypoint !== null) {
+            return $largestStaypoint;
+        }
+
+        return $this->fallbackBaseLocation($summary, $home);
+    }
+
+    /**
+     * @param array{timezoneOffsets:array<int,int>} $summary
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     */
+    private function selectDominantTimezoneOffset(array $summary, array $home): ?int
+    {
+        $offsets = $summary['timezoneOffsets'];
+        if ($offsets !== []) {
+            $bestOffset = null;
+            $bestCount  = -1;
+            foreach ($offsets as $offset => $count) {
+                if ($count > $bestCount) {
+                    $bestCount  = $count;
+                    $bestOffset = (int) $offset;
+                }
+            }
+
+            if ($bestOffset !== null) {
+                return $bestOffset;
+            }
+        }
+
+        return $home['timezone_offset'];
+    }
+
+    private function createTimezoneFromOffset(?int $offsetMinutes): DateTimeZone
+    {
+        if ($offsetMinutes === null) {
+            return new DateTimeZone($this->timezone);
+        }
+
+        $sign       = $offsetMinutes >= 0 ? '+' : '-';
+        $absMinutes = abs($offsetMinutes);
+        $hours      = intdiv($absMinutes, 60);
+        $minutes    = $absMinutes % 60;
+
+        return new DateTimeZone(sprintf('%s%02d:%02d', $sign, $hours, $minutes));
+    }
+
+    /**
+     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>} $summary
+     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>}|null $nextSummary
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     *
+     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
+     */
+    private function selectStaypointBase(
+        array $summary,
+        ?array $nextSummary,
+        DateTimeZone $timezone,
+        array $home,
+    ): ?array {
+        $windowStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $summary['date'] . ' 18:00:00', $timezone);
+        if ($windowStart === false) {
+            return null;
+        }
+
+        $windowEnd = $windowStart->modify('+16 hours');
+
+        $candidates = [];
+        foreach ($summary['staypoints'] as $staypoint) {
+            if ($this->staypointOverlapsWindow($staypoint, $windowStart, $windowEnd)) {
+                $candidates[] = $staypoint;
+            }
+        }
+
+        if ($nextSummary !== null) {
+            foreach ($nextSummary['staypoints'] as $staypoint) {
+                if ($this->staypointOverlapsWindow($staypoint, $windowStart, $windowEnd)) {
+                    $candidates[] = $staypoint;
+                }
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort($candidates, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
+        $best = $candidates[0];
+
+        return [
+            'lat'          => $best['lat'],
+            'lon'          => $best['lon'],
+            'distance_km'  => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
+            'source'       => 'staypoint',
+        ];
+    }
+
+    /**
+     * @param array{lat:float,lon:float,start:int,end:int} $staypoint
+     */
+    private function staypointOverlapsWindow(
+        array $staypoint,
+        DateTimeImmutable $windowStart,
+        DateTimeImmutable $windowEnd,
+    ): bool {
+        return $staypoint['end'] >= $windowStart->getTimestamp()
+            && $staypoint['start'] <= $windowEnd->getTimestamp();
+    }
+
+    /**
+     * @param array{firstGpsMedia:Media|null,lastGpsMedia:Media|null} $summary
+     * @param array{firstGpsMedia:Media|null}|null $nextSummary
+     * @param array{lat:float,lon:float,radius_km:float} $home
+     *
+     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
+     */
+    private function computeSleepProxyLocation(array $summary, ?array $nextSummary, array $home): ?array
+    {
+        $last      = $summary['lastGpsMedia'];
+        $nextFirst = $nextSummary['firstGpsMedia'] ?? null;
+
+        if ($last instanceof Media && $nextFirst instanceof Media) {
+            $lastCoords = $this->mediaCoordinates($last);
+            $nextCoords = $this->mediaCoordinates($nextFirst);
+
+            $pairDistance = MediaMath::haversineDistanceInMeters(
+                $lastCoords['lat'],
+                $lastCoords['lon'],
+                $nextCoords['lat'],
+                $nextCoords['lon'],
+            ) / 1000.0;
+
+            $lastDistance = $this->distanceToHomeKm($lastCoords['lat'], $lastCoords['lon'], $home);
+            $nextDistance = $this->distanceToHomeKm($nextCoords['lat'], $nextCoords['lon'], $home);
+
+            if ($pairDistance <= 2.0 && $lastDistance > $home['radius_km'] && $nextDistance > $home['radius_km']) {
+                return [
+                    'lat'         => ($lastCoords['lat'] + $nextCoords['lat']) / 2.0,
+                    'lon'         => ($lastCoords['lon'] + $nextCoords['lon']) / 2.0,
+                    'distance_km' => max($lastDistance, $nextDistance),
+                    'source'      => 'sleep_proxy_pair',
+                ];
+            }
+
+            if ($lastDistance > $nextDistance) {
+                return [
+                    'lat'         => $lastCoords['lat'],
+                    'lon'         => $lastCoords['lon'],
+                    'distance_km' => $lastDistance,
+                    'source'      => 'sleep_proxy_last',
+                ];
+            }
+
+            return [
+                'lat'         => $nextCoords['lat'],
+                'lon'         => $nextCoords['lon'],
+                'distance_km' => $nextDistance,
+                'source'      => 'sleep_proxy_first',
+            ];
+        }
+
+        if ($last instanceof Media) {
+            $coords = $this->mediaCoordinates($last);
+
+            return [
+                'lat'         => $coords['lat'],
+                'lon'         => $coords['lon'],
+                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
+                'source'      => 'sleep_proxy_last',
+            ];
+        }
+
+        if ($nextFirst instanceof Media) {
+            $coords = $this->mediaCoordinates($nextFirst);
+
+            return [
+                'lat'         => $coords['lat'],
+                'lon'         => $coords['lon'],
+                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
+                'source'      => 'sleep_proxy_first',
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{lat:float,lon:float}
+     */
+    private function mediaCoordinates(Media $media): array
+    {
+        return [
+            'lat' => (float) $media->getGpsLat(),
+            'lon' => (float) $media->getGpsLon(),
+        ];
+    }
+
+    /**
+     * @param list<array{lat:float,lon:float,start:int,end:int,dwell:int}> $staypoints
+     * @param array{lat:float,lon:float,radius_km:float} $home
+     *
+     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
+     */
+    private function selectLargestStaypoint(array $staypoints, array $home): ?array
+    {
+        if ($staypoints === []) {
+            return null;
+        }
+
+        usort($staypoints, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
+        $best = $staypoints[0];
+
+        return [
+            'lat'         => $best['lat'],
+            'lon'         => $best['lon'],
+            'distance_km' => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
+            'source'      => 'staypoint',
+        ];
+    }
+
+    /**
+     * @param array{gpsMembers:list<Media>} $summary
+     * @param array{lat:float,lon:float,radius_km:float} $home
+     *
+     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
+     */
+    private function fallbackBaseLocation(array $summary, array $home): ?array
+    {
+        $gpsMembers = $summary['gpsMembers'];
+        if ($gpsMembers === []) {
+            return null;
+        }
+
+        $centroid = MediaMath::centroid($gpsMembers);
+
+        return [
+            'lat'         => (float) $centroid['lat'],
+            'lon'         => (float) $centroid['lon'],
+            'distance_km' => $this->distanceToHomeKm((float) $centroid['lat'], (float) $centroid['lon'], $home),
+            'source'      => 'day_centroid',
+        ];
+    }
+
+    private function distanceToHomeKm(float $lat, float $lon, array $home): float
+    {
+        return MediaMath::haversineDistanceInMeters(
+            $lat,
+            $lon,
+            $home['lat'],
+            $home['lon'],
+        ) / 1000.0;
+    }
+
+    /**
+     * @param array<string, bool> $flags
+     *
+     * @return array<string, bool>
+     */
+    private function applyMorphologicalClosing(array $flags): array
+    {
+        $keys  = array_keys($flags);
+        $count = count($keys);
+
+        if ($count < 3) {
+            return $flags;
+        }
+
+        for ($i = 1; $i < $count - 1; ++$i) {
+            $prev = $flags[$keys[$i - 1]];
+            $curr = $flags[$keys[$i]];
+            $next = $flags[$keys[$i + 1]];
+
+            if ($curr === false && $prev === true && $next === true) {
+                $flags[$keys[$i]] = true;
+            }
+        }
+
+        return $flags;
+    }
+
+    /**
+     * @param array<string, bool> $flags
+     *
+     * @return array<string, bool>
+     */
+    private function propagateDistanceRuns(array $flags): array
+    {
+        $keys  = array_keys($flags);
+        $count = count($keys);
+
+        $first = null;
+        $last  = null;
+        foreach ($keys as $index => $key) {
+            if ($flags[$key] === true) {
+                $first ??= $index;
+                $last = $index;
+            }
+        }
+
+        if ($first !== null && $last !== null && $last > $first) {
+            for ($i = $first; $i <= $last; ++$i) {
+                $flags[$keys[$i]] = true;
+            }
+        }
+
+        return $this->applyMorphologicalClosing($flags);
+    }
+
     /**
      * @param list<int> $values
      *
