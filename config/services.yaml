@@ -618,9 +618,6 @@ services:
     MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface:
         alias: MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator
 
-    MagicSunday\Memories\Service\Clusterer\ClusterConsolidationService:
-        alias: MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator
-
     ########################################
     # Scoring
     ########################################
