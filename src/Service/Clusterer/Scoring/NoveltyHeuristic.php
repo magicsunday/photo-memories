@@ -41,8 +41,11 @@ use const SORT_NUMERIC;
  *
  * No external models; runs on fields already present on Media.
  */
-final readonly class NoveltyHeuristic
+final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 {
+    /** @var array<string,mixed>|null */
+    private ?array $stats = null;
+
     public function __construct(
         private float $gridStepDeg = 0.5,     // ~55 km
         private int $phashPrefixNibbles = 4,  // 4 hex chars -> 16 bit
@@ -54,6 +57,41 @@ final readonly class NoveltyHeuristic
             'content' => 0.20,
         ],
     ) {
+    }
+
+    public function prepare(array $clusters, array $mediaMap): void
+    {
+        $this->stats = $this->buildCorpusStats($mediaMap);
+    }
+
+    public function supports(ClusterDraft $cluster): bool
+    {
+        return true;
+    }
+
+    public function enrich(ClusterDraft $cluster, array $mediaMap): void
+    {
+        $params = $cluster->getParams();
+        $novelty = $this->floatOrNull($params['novelty'] ?? null);
+        if ($novelty === null) {
+            $stats        = $this->stats ?? $this->buildCorpusStats($mediaMap);
+            $novelty      = $this->computeNovelty($cluster, $mediaMap, $stats);
+            $this->stats  = $stats;
+        }
+
+        $cluster->setParam('novelty', $novelty);
+    }
+
+    public function score(ClusterDraft $cluster): float
+    {
+        $params = $cluster->getParams();
+
+        return $this->floatOrNull($params['novelty'] ?? null) ?? 0.0;
+    }
+
+    public function weightKey(): string
+    {
+        return 'novelty';
     }
 
     /**

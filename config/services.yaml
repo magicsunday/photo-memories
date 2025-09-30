@@ -147,9 +147,23 @@ services:
             $baseUrl: '%memories.geocoding.overpass.base_url%'
             $userAgent: '%memories.geocoding.nominatim.user_agent%'
             $contactEmail: '%memories.geocoding.nominatim.email%'
-            $queryTimeout: '%memories.geocoding.overpass.timeout%'
             $httpTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration:
+        arguments:
             $additionalAllowedTags: '%memories.geocoding.overpass.allowed_pois%'
+
+    MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder:
+        arguments:
+            $queryTimeout: '%memories.geocoding.overpass.timeout%'
+
+    MagicSunday\Memories\Service\Geocoding\OverpassQueryBuilderInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder
+
+    MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser: ~
+
+    MagicSunday\Memories\Service\Geocoding\OverpassResponseParserInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser
 
     MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher:
         arguments:
@@ -517,8 +531,57 @@ services:
                 device: 0.20
                 content: 0.20
 
+    MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic:
+        arguments:
+            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
+            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
+            $minValidYear: '%memories.score.min_valid_year%'
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic:
+        arguments:
+            $qualityBaselineMegapixels: 12.0
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic: ~
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic: ~
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic: ~
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic:
+        arguments:
+            $poiCategoryBoosts: '%memories.score.poi_category_boosts%'
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic:
+        arguments:
+            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
+            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
+            $minValidYear: '%memories.score.min_valid_year%'
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic:
+        arguments:
+            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
+            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
+            $minValidYear: '%memories.score.min_valid_year%'
+
+    MagicSunday\Memories\Service\Clusterer\Scoring\DensityClusterScoreHeuristic:
+        arguments:
+            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
+            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
+            $minValidYear: '%memories.score.min_valid_year%'
+
     MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer:
         arguments:
+            $heuristics:
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\DensityClusterScoreHeuristic'
             $weights:
                 quality: 0.22
                 aesthetics: 0.08
@@ -568,11 +631,6 @@ services:
                 device_similarity: 0.82
                 phash_similarity: 0.55
                 burst: 0.55
-            $poiCategoryBoosts: '%memories.score.poi_category_boosts%'
-            $qualityBaselineMegapixels: 12.0
-            $minValidYear: '%memories.score.min_valid_year%'
-            $timeRangeMinSamples: '%memories.score.time_range.min_samples%'
-            $timeRangeMinCoverage: '%memories.score.time_range.min_coverage%'
 
     ########################################
     # Feed
