@@ -21,7 +21,7 @@ final class LocationHelperTest extends TestCase
     #[Test]
     public function displayLabelPrefersWeightedPoi(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
 
         $location = $this->makeLocation(
             providerPlaceId: 'poi-weight-1',
@@ -71,7 +71,7 @@ final class LocationHelperTest extends TestCase
     #[Test]
     public function majorityPoiContextHonoursWeightedSelection(): void
     {
-        $helper = new LocationHelper();
+        $helper = LocationHelper::createDefault();
 
         $towerLocation = $this->makeLocation(
             providerPlaceId: 'poi-weight-2',
@@ -177,7 +177,7 @@ final class LocationHelperTest extends TestCase
     #[Test]
     public function displayLabelHonoursPreferredLocale(): void
     {
-        $helper = new LocationHelper('de');
+        $helper = LocationHelper::createDefault('de');
 
         $location = $this->makeLocation(
             providerPlaceId: 'poi-locale-1',

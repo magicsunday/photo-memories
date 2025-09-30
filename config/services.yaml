@@ -25,9 +25,15 @@ services:
         arguments:
             $commands: !tagged command
 
-    MagicSunday\Memories\Utility\LocationHelper:
+    MagicSunday\Memories\Utility\DefaultPoiContextAnalyzer:
         arguments:
             $preferredLocale: '%memories.localization.preferred_locale%'
+
+    MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface:
+        alias: MagicSunday\Memories\Utility\DefaultPoiContextAnalyzer
+
+    MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface:
+        alias: MagicSunday\Memories\Utility\DefaultLocationLabelResolver
 
     ########################################
     # Doctrine EntityManager (ORM 3.5+)

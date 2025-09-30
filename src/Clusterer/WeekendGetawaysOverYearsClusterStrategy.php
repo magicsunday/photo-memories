@@ -43,8 +43,10 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
+    private LocationHelper $locHelper;
+
     public function __construct(
-        private LocationHelper $locHelper = new LocationHelper(),
+        ?LocationHelper $locHelper = null,
         private string $timezone = 'Europe/Berlin',
         private int $minNights = 1,
         private int $maxNights = 3,
@@ -52,6 +54,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         private int $minYears = 3,
         private int $minItemsTotal = 24,
     ) {
+        $this->locHelper = $locHelper ?? LocationHelper::createDefault();
         if ($this->minNights < 1) {
             throw new InvalidArgumentException('minNights must be >= 1.');
         }

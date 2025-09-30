@@ -27,7 +27,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     public function clustersNearDuplicateMediaByPhash(): void
     {
         $strategy = new PhashSimilarityStrategy(
-            locHelper: new LocationHelper(),
+            locHelper: LocationHelper::createDefault(),
             maxHamming: 6,
             minItemsPerBucket: 3,
         );
@@ -77,7 +77,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     public function returnsEmptyWhenHashesAreTooDissimilar(): void
     {
         $strategy = new PhashSimilarityStrategy(
-            locHelper: new LocationHelper(),
+            locHelper: LocationHelper::createDefault(),
             maxHamming: 2,
             minItemsPerBucket: 2,
         );

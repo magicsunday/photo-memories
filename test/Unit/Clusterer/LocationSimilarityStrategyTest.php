@@ -27,7 +27,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     public function clustersMediaByLocalityWithPoiMetadata(): void
     {
         $strategy = new LocationSimilarityStrategy(
-            locHelper: new LocationHelper(),
+            locHelper: LocationHelper::createDefault(),
             radiusMeters: 200.0,
             minItemsPerPlace: 3,
             maxSpanHours: 12,
@@ -106,7 +106,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     public function fallsBackToSpatialWindowsForItemsWithoutLocality(): void
     {
         $strategy = new LocationSimilarityStrategy(
-            locHelper: new LocationHelper(),
+            locHelper: LocationHelper::createDefault(),
             radiusMeters: 250.0,
             minItemsPerPlace: 3,
             maxSpanHours: 1,

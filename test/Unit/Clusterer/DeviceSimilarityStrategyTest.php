@@ -26,7 +26,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
     #[Test]
     public function groupsMediaByDeviceDateAndLocation(): void
     {
-        $strategy = new DeviceSimilarityStrategy(new LocationHelper(), minItemsPerGroup: 3);
+        $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 3);
 
         $berlin = $this->makeLocation(
             providerPlaceId: 'berlin-001',
@@ -73,7 +73,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenGroupsDoNotReachMinimum(): void
     {
-        $strategy = new DeviceSimilarityStrategy(new LocationHelper(), minItemsPerGroup: 4);
+        $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 4);
 
         $location = $this->makeLocation(
             providerPlaceId: 'munich-001',
