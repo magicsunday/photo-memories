@@ -14,27 +14,19 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
-use MagicSunday\Memories\Clusterer\BeachOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
-use MagicSunday\Memories\Clusterer\CampingOverYearsClusterStrategy;
-use MagicSunday\Memories\Clusterer\CampingTripClusterStrategy;
 use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
-use MagicSunday\Memories\Clusterer\DiningOutClusterStrategy;
-use MagicSunday\Memories\Clusterer\FestivalSummerClusterStrategy;
 use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
 use MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
-use MagicSunday\Memories\Clusterer\KidsBirthdayPartyClusterStrategy;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
-use MagicSunday\Memories\Clusterer\MorningCoffeeClusterStrategy;
-use MagicSunday\Memories\Clusterer\MuseumOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
@@ -42,7 +34,6 @@ use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
 use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
-use MagicSunday\Memories\Clusterer\PetMomentsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
@@ -52,7 +43,6 @@ use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\SnowDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy;
-use MagicSunday\Memories\Clusterer\SportsEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\SunnyDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
@@ -60,8 +50,6 @@ use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
-use MagicSunday\Memories\Clusterer\ZooAquariumClusterStrategy;
-use MagicSunday\Memories\Clusterer\ZooAquariumOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Weather\WeatherHintProviderInterface;
 use MagicSunday\Memories\Test\TestCase;
@@ -113,24 +101,9 @@ final class ClusterStrategySmokeTest extends TestCase
             'at_home_weekend',
             null,
         ];
-        yield 'BeachOverYearsClusterStrategy' => [
-            BeachOverYearsClusterStrategy::class,
-            'beach_over_years',
-            null,
-        ];
         yield 'BurstClusterStrategy' => [
             BurstClusterStrategy::class,
             'burst',
-            null,
-        ];
-        yield 'CampingOverYearsClusterStrategy' => [
-            CampingOverYearsClusterStrategy::class,
-            'camping_over_years',
-            null,
-        ];
-        yield 'CampingTripClusterStrategy' => [
-            CampingTripClusterStrategy::class,
-            'camping_trip',
             null,
         ];
         yield 'CityscapeNightClusterStrategy' => [
@@ -155,16 +128,6 @@ final class ClusterStrategySmokeTest extends TestCase
                 self::locationHelper()
             ),
         ];
-        yield 'DiningOutClusterStrategy' => [
-            DiningOutClusterStrategy::class,
-            'dining_out',
-            null,
-        ];
-        yield 'FestivalSummerClusterStrategy' => [
-            FestivalSummerClusterStrategy::class,
-            'festival_summer',
-            null,
-        ];
         yield 'FirstVisitPlaceClusterStrategy' => [
             FirstVisitPlaceClusterStrategy::class,
             'first_visit_place',
@@ -187,11 +150,6 @@ final class ClusterStrategySmokeTest extends TestCase
             'holiday_event',
             null,
         ];
-        yield 'KidsBirthdayPartyClusterStrategy' => [
-            KidsBirthdayPartyClusterStrategy::class,
-            'kids_birthday_party',
-            null,
-        ];
         yield 'LocationSimilarityStrategy' => [
             LocationSimilarityStrategy::class,
             'location_similarity',
@@ -209,16 +167,6 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'MonthlyHighlightsClusterStrategy' => [
             MonthlyHighlightsClusterStrategy::class,
             'monthly_highlights',
-            null,
-        ];
-        yield 'MorningCoffeeClusterStrategy' => [
-            MorningCoffeeClusterStrategy::class,
-            'morning_coffee',
-            null,
-        ];
-        yield 'MuseumOverYearsClusterStrategy' => [
-            MuseumOverYearsClusterStrategy::class,
-            'museum_over_years',
             null,
         ];
         yield 'NewYearEveClusterStrategy' => [
@@ -254,11 +202,6 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'PersonCohortClusterStrategy' => [
             PersonCohortClusterStrategy::class,
             'people_cohort',
-            null,
-        ];
-        yield 'PetMomentsClusterStrategy' => [
-            PetMomentsClusterStrategy::class,
-            'pet_moments',
             null,
         ];
         yield 'PhashSimilarityStrategy' => [
@@ -312,11 +255,6 @@ final class ClusterStrategySmokeTest extends TestCase
             'snow_vacation_over_years',
             null,
         ];
-        yield 'SportsEventClusterStrategy' => [
-            SportsEventClusterStrategy::class,
-            'sports_event',
-            null,
-        ];
         yield 'SunnyDayClusterStrategy' => [
             SunnyDayClusterStrategy::class,
             'sunny_day',
@@ -356,16 +294,6 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'YearInReviewClusterStrategy' => [
             YearInReviewClusterStrategy::class,
             'year_in_review',
-            null,
-        ];
-        yield 'ZooAquariumClusterStrategy' => [
-            ZooAquariumClusterStrategy::class,
-            'zoo_aquarium',
-            null,
-        ];
-        yield 'ZooAquariumOverYearsClusterStrategy' => [
-            ZooAquariumOverYearsClusterStrategy::class,
-            'zoo_aquarium_over_years',
             null,
         ];
     }
