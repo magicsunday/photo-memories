@@ -33,6 +33,7 @@ use function array_sum;
 use function assert;
 use function count;
 use function explode;
+use function implode;
 use function in_array;
 use function intdiv;
 use function is_array;
@@ -1168,22 +1169,38 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             $region  = $placeComponents['region'] ?? null;
             $country = $placeComponents['country'] ?? null;
 
+            $locationParts = [];
+
             if ($city !== null) {
-                $params['place_city'] = $this->formatLocationComponent($city);
+                $cityLabel = $this->formatLocationComponent($city);
+                if ($cityLabel !== '') {
+                    $params['place_city'] = $cityLabel;
+                    $locationParts[] = $cityLabel;
+                }
             }
 
             if ($region !== null) {
                 $regionLabel = $this->formatLocationComponent($region);
-                $params['place_region'] = isset($params['place_city'])
-                    ? ', ' . $regionLabel
-                    : $regionLabel;
+                if ($regionLabel !== '') {
+                    $params['place_region'] = $regionLabel;
+                    if (!in_array($regionLabel, $locationParts, true)) {
+                        $locationParts[] = $regionLabel;
+                    }
+                }
             }
 
             if ($country !== null) {
                 $countryLabel = $this->formatLocationComponent($country);
-                $params['place_country'] = (isset($params['place_city']) || isset($params['place_region']))
-                    ? ', ' . $countryLabel
-                    : $countryLabel;
+                if ($countryLabel !== '') {
+                    $params['place_country'] = $countryLabel;
+                    if (!in_array($countryLabel, $locationParts, true)) {
+                        $locationParts[] = $countryLabel;
+                    }
+                }
+            }
+
+            if ($locationParts !== []) {
+                $params['place_location'] = implode(', ', $locationParts);
             }
         }
 
