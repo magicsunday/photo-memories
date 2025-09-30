@@ -14,7 +14,11 @@ namespace MagicSunday\Memories\Test\Integration\Service\Geocoding;
 use MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder;
 use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
 use MagicSunday\Memories\Service\Geocoding\OverpassClient;
+use MagicSunday\Memories\Service\Geocoding\OverpassElementFilter;
+use MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
+use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
+use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -37,7 +41,12 @@ final class OverpassClientTest extends TestCase
         ]);
 
         $builder = new DefaultOverpassQueryBuilder($configuration, 25);
-        $parser  = new DefaultOverpassResponseParser($configuration);
+        $parser  = new DefaultOverpassResponseParser(
+            new OverpassElementFilter(),
+            new OverpassTagSelector($configuration),
+            new OverpassPrimaryTagResolver($configuration),
+            new PoiNameExtractor(),
+        );
 
         $response = new StaticJsonResponse(200, [
             'elements' => [

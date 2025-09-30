@@ -17,7 +17,11 @@ use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
 use MagicSunday\Memories\Service\Geocoding\GeocodeResult;
 use MagicSunday\Memories\Service\Geocoding\LocationPoiEnricher;
 use MagicSunday\Memories\Service\Geocoding\OverpassClient;
+use MagicSunday\Memories\Service\Geocoding\OverpassElementFilter;
+use MagicSunday\Memories\Service\Geocoding\OverpassPrimaryTagResolver;
 use MagicSunday\Memories\Service\Geocoding\OverpassTagConfiguration;
+use MagicSunday\Memories\Service\Geocoding\OverpassTagSelector;
+use MagicSunday\Memories\Service\Geocoding\PoiNameExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
@@ -277,7 +281,12 @@ final class LocationPoiEnricherTest extends TestCase
         $client        = new OverpassClient(
             http: new FakeHttpClient($responses),
             queryBuilder: new DefaultOverpassQueryBuilder($configuration, 25),
-            responseParser: new DefaultOverpassResponseParser($configuration),
+            responseParser: new DefaultOverpassResponseParser(
+                new OverpassElementFilter(),
+                new OverpassTagSelector($configuration),
+                new OverpassPrimaryTagResolver($configuration),
+                new PoiNameExtractor(),
+            ),
             httpTimeout: 5.0,
         );
 
