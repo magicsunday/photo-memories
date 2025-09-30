@@ -30,6 +30,11 @@ final class ClusterConsolidationServiceTest extends TestCase
             keepOrder: ['primary', 'secondary'],
             annotateOnly: ['annot'],
             minUniqueShare: ['annot' => 0.4],
+            algorithmGroups: [
+                'primary' => 'stories',
+                'secondary' => 'stories',
+                'annot' => 'annotations',
+            ],
             requireValidTime: false,
             minValidYear: 1990,
         );
@@ -57,6 +62,45 @@ final class ClusterConsolidationServiceTest extends TestCase
         self::assertSame([
             $primaryWinner,
             $annotationKeeps,
+        ], $result);
+    }
+
+    #[Test]
+    public function allowsSameMediumAcrossGroupsWhileEnforcingGroupCap(): void
+    {
+        $service = new ClusterConsolidationService(
+            minScore: 0.1,
+            minSize: 1,
+            overlapMergeThreshold: 0.5,
+            overlapDropThreshold: 0.9,
+            perMediaCap: 1,
+            keepOrder: ['primary', 'secondary', 'other'],
+            annotateOnly: [],
+            minUniqueShare: [],
+            algorithmGroups: [
+                'primary' => 'group_a',
+                'secondary' => 'group_b',
+                'other' => 'group_b',
+            ],
+            requireValidTime: false,
+            minValidYear: 1990,
+        );
+
+        $primary     = $this->createDraft('primary', 1.0, [1, 2]);
+        $secondary   = $this->createDraft('secondary', 0.9, [1, 3]);
+        $primaryDrop = $this->createDraft('primary', 0.8, [1, 4]);
+        $otherDrop   = $this->createDraft('other', 0.7, [1, 5]);
+
+        $result = $service->consolidate([
+            $primary,
+            $secondary,
+            $primaryDrop,
+            $otherDrop,
+        ]);
+
+        self::assertSame([
+            $primary,
+            $secondary,
         ], $result);
     }
 
