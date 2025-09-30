@@ -204,6 +204,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
+        self::assertSame(0, $params['work_day_penalty_days']);
+        self::assertSame(0.0, $params['work_day_penalty_score']);
         self::assertSame(['it'], $params['countries']);
         self::assertSame([120], $params['timezones']);
     }
@@ -413,6 +415,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('spot_exploration_bonus', $params);
         self::assertSame(2, $params['weekend_holiday_days']);
         self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
+        self::assertSame(0, $params['work_day_penalty_days']);
+        self::assertSame(0.0, $params['work_day_penalty_score']);
         self::assertSame(['de'], $params['countries']);
         self::assertSame([120], $params['timezones']);
     }
@@ -522,6 +526,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(3, $params['weekend_holiday_days']);
         self::assertSame(1.05, $params['weekend_holiday_bonus']);
         self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame(0, $params['work_day_penalty_days']);
+        self::assertSame(0.0, $params['work_day_penalty_score']);
         self::assertSame(['de'], $params['countries']);
         self::assertSame([60], $params['timezones']);
     }
@@ -655,6 +661,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame('vacation', $params['classification']);
         self::assertSame(3, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
+        self::assertSame(2, $params['work_day_penalty_days']);
+        self::assertSame(0.8, $params['work_day_penalty_score']);
     }
 
     #[Test]
@@ -756,6 +764,8 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame(4, $params['away_days']);
         self::assertSame(3, $params['nights']);
+        self::assertSame(0, $params['work_day_penalty_days']);
+        self::assertSame(0.0, $params['work_day_penalty_score']);
 
         foreach ($sparsePhotoIds as $photoId) {
             self::assertContains($photoId, $cluster->getMembers());
@@ -943,6 +953,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(2, $params['spot_cluster_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
         self::assertGreaterThan(0.0, $params['spot_dwell_hours']);
+        self::assertSame(1, $params['work_day_penalty_days']);
+        self::assertSame(0.4, $params['work_day_penalty_score']);
     }
 
     #[Test]
@@ -1049,6 +1061,8 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame(4, $params['away_days']);
         self::assertSame(3, $params['nights']);
+        self::assertSame(3, $params['work_day_penalty_days']);
+        self::assertSame(1.2, $params['work_day_penalty_score']);
         self::assertNotNull($lastNightId);
         self::assertContains($lastNightId, $cluster->getMembers());
     }

@@ -1144,6 +1144,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'spot_exploration_bonus' => round($explorationBonus, 2),
             'weekend_holiday_days' => $weekendHolidayDays,
             'weekend_holiday_bonus' => round($weekendHolidayBonus, 2),
+            'work_day_penalty_days' => $workDayPenalty,
+            'work_day_penalty_score' => round($penalty, 2),
             'countries'            => $countries,
             'timezones'            => $timezones,
         ];
