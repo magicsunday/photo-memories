@@ -555,39 +555,39 @@ services:
                 poi: 0.02
                 time_coverage: 0.10
             $algorithmBoosts:
-                vacation: 1.28
-                transit_travel_day: 1.05
-                significant_place: 1.05
-                first_visit_place: 1.02
-                location_similarity: 1.05
+                vacation: 1.45
+                transit_travel_day: 0.95
+                significant_place: 0.98
+                first_visit_place: 0.97
+                location_similarity: 0.96
                 person_cohort: 1.22
-                holiday_event: 1.10
-                new_year_eve: 1.12
+                holiday_event: 1.26
+                new_year_eve: 1.27
                 nightlife_event: 1.05
                 cityscape_night: 1.04
-                hike_adventure: 1.15
+                hike_adventure: 1.30
                 cross_dimension: 1.03
-                on_this_day_over_years: 1.08
-                one_year_ago: 1.12
-                anniversary: 1.12
-                weekend_getaways_over_years: 1.14
-                snow_vacation_over_years: 1.12
-                season_over_years: 1.02
-                this_month_over_years: 1.02
-                year_in_review: 1.15
-                monthly_highlights: 1.06
+                on_this_day_over_years: 1.22
+                one_year_ago: 1.24
+                anniversary: 1.30
+                weekend_getaways_over_years: 1.26
+                snow_vacation_over_years: 1.25
+                season_over_years: 1.05
+                this_month_over_years: 1.08
+                year_in_review: 1.25
+                monthly_highlights: 1.15
                 season: 0.95
-                golden_hour: 1.02
-                snow_day: 1.05
-                day_album: 1.06
-                time_similarity: 1.00
+                golden_hour: 1.00
+                snow_day: 1.00
+                day_album: 0.98
+                time_similarity: 0.94
                 photo_motif: 0.88
-                panorama: 1.00
-                panorama_over_years: 1.06
+                panorama: 0.95
+                panorama_over_years: 1.00
                 portrait_orientation: 0.88
                 video_stories: 0.94
-                at_home_weekend: 0.96
-                at_home_weekday: 0.92
+                at_home_weekend: 0.90
+                at_home_weekday: 0.88
                 device_similarity: 0.82
                 phash_similarity: 0.55
                 burst: 0.55
