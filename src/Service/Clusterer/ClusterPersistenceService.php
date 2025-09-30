@@ -14,12 +14,13 @@ namespace MagicSunday\Memories\Service\Clusterer;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 
 use function array_keys;
 use function array_unique;
 use function array_values;
 
-final readonly class ClusterPersistenceService
+final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
     public function __construct(
         private EntityManagerInterface $em,

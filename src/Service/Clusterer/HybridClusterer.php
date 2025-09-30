@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Clusterer;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 
 use function array_merge;
@@ -21,7 +22,7 @@ use function count;
 use function is_array;
 use function iterator_to_array;
 
-final class HybridClusterer
+final class HybridClusterer implements HybridClustererInterface
 {
     /** @var list<ClusterStrategyInterface>|null */
     private ?array $strategiesCache = null;
