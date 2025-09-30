@@ -32,6 +32,7 @@ use function array_slice;
 use function array_sum;
 use function assert;
 use function count;
+use function explode;
 use function in_array;
 use function intdiv;
 use function is_array;
@@ -39,12 +40,15 @@ use function is_string;
 use function log;
 use function max;
 use function min;
+use function preg_replace;
 use function round;
 use function sort;
 use function sprintf;
 use function sqrt;
 use function str_contains;
+use function str_replace;
 use function strtolower;
+use function ucwords;
 use function usort;
 
 use const SORT_NUMERIC;
@@ -1115,6 +1119,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         );
 
         $place = $this->locationHelper->majorityLabel($members);
+        $placeComponents = $this->locationHelper->majorityLocationComponents($members);
 
         $classificationLabels = [
             'vacation'   => 'Urlaub',
@@ -1150,6 +1155,30 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'timezones'            => $timezones,
         ];
 
+        if ($placeComponents !== []) {
+            $city    = $placeComponents['city'] ?? null;
+            $region  = $placeComponents['region'] ?? null;
+            $country = $placeComponents['country'] ?? null;
+
+            if ($city !== null) {
+                $params['place_city'] = $this->formatLocationComponent($city);
+            }
+
+            if ($region !== null) {
+                $regionLabel = $this->formatLocationComponent($region);
+                $params['place_region'] = isset($params['place_city'])
+                    ? ', ' . $regionLabel
+                    : $regionLabel;
+            }
+
+            if ($country !== null) {
+                $countryLabel = $this->formatLocationComponent($country);
+                $params['place_country'] = (isset($params['place_city']) || isset($params['place_region']))
+                    ? ', ' . $countryLabel
+                    : $countryLabel;
+            }
+        }
+
         if ($place !== null) {
             $params['place'] = $place;
         }
@@ -1160,6 +1189,19 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
             members: $memberIds,
         );
+    }
+
+    private function formatLocationComponent(string $value): string
+    {
+        $value = str_replace('_', ' ', $value);
+        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
+
+        $parts = explode('-', $value);
+        foreach ($parts as $index => $part) {
+            $parts[$index] = ucwords($part);
+        }
+
+        return implode('-', $parts);
     }
 
     /**

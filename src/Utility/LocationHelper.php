@@ -223,6 +223,44 @@ final readonly class LocationHelper
     }
 
     /**
+     * Returns the dominant location components across all members.
+     *
+     * @param list<Media> $members
+     *
+     * @return array{country?:string,region?:string,city?:string}
+     */
+    public function majorityLocationComponents(array $members): array
+    {
+        $counts = [
+            'country' => [],
+            'region'  => [],
+            'city'    => [],
+        ];
+
+        foreach ($members as $media) {
+            $location = $media->getLocation();
+            if (!$location instanceof Location) {
+                continue;
+            }
+
+            $this->collectComponent($counts['country'], $location->getCountry());
+            $this->collectComponent($counts['region'], $location->getState());
+            $this->collectComponent($counts['city'], $location->getCity());
+        }
+
+        $result = [];
+
+        foreach ($counts as $component => $tallies) {
+            $majority = $this->pickMajorityValue($tallies);
+            if ($majority !== null) {
+                $result[$component] = $majority;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Returns true if two medias share the same locality key.
      */
     public function sameLocality(Media $a, Media $b): bool
@@ -308,6 +346,52 @@ final readonly class LocationHelper
             'categoryValue' => $top['categoryValue'],
             'tags'          => $top['tags'],
         ];
+    }
+
+    /**
+     * @param array<string,array{count:int}> $bucket
+     */
+    private function pickMajorityValue(array $bucket): ?string
+    {
+        $winnerValue = null;
+        $winnerCount = -1;
+
+        foreach ($bucket as $value => $payload) {
+            $count = $payload['count'];
+            if ($count > $winnerCount) {
+                $winnerCount = $count;
+                $winnerValue = $value;
+
+                continue;
+            }
+
+            if ($count === $winnerCount && $winnerValue !== null && strcmp($value, $winnerValue) < 0) {
+                $winnerValue = $value;
+            }
+        }
+
+        return $winnerValue;
+    }
+
+    /**
+     * @param array<string,array{count:int}> &$bucket
+     */
+    private function collectComponent(array &$bucket, ?string $value): void
+    {
+        if ($value === null) {
+            return;
+        }
+
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return;
+        }
+
+        if (!isset($bucket[$normalized])) {
+            $bucket[$normalized] = ['count' => 0];
+        }
+
+        ++$bucket[$normalized]['count'];
     }
 
     /**
