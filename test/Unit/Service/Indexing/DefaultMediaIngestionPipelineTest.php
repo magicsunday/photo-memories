@@ -15,6 +15,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
+use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
+use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
+use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
@@ -56,7 +61,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $path     = $this->createTempFile('jpg', 'existing');
         $checksum = (string) hash_file('sha256', $path);
         $media    = new Media($path, $checksum, (int) filesize($path));
-        $output  = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
+        $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
@@ -79,11 +84,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = new DefaultMediaIngestionPipeline(
-            $entityManager,
-            $metadataExtractor,
-            $thumbnailService,
-        );
+        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, false, $output);
 
@@ -122,11 +123,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = new DefaultMediaIngestionPipeline(
-            $entityManager,
-            $metadataExtractor,
-            $thumbnailService,
-        );
+        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, false, $output);
         $pipeline->finalize(false);
@@ -150,17 +147,27 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = new DefaultMediaIngestionPipeline(
-            $entityManager,
-            $metadataExtractor,
-            $thumbnailService,
-            ['jpg'],
-            [],
-        );
+        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, true, $output);
 
         self::assertNull($result);
+    }
+
+    private function createPipeline(
+        EntityManagerInterface $entityManager,
+        MetadataExtractorInterface $metadataExtractor,
+        ThumbnailServiceInterface $thumbnailService,
+        ?array $imageExtensions,
+        ?array $videoExtensions
+    ): DefaultMediaIngestionPipeline {
+        return new DefaultMediaIngestionPipeline([
+            new MimeDetectionStage($imageExtensions, $videoExtensions),
+            new DuplicateHandlingStage($entityManager),
+            new MetadataExtractionStage($metadataExtractor),
+            new ThumbnailGenerationStage($thumbnailService),
+            new PersistenceBatchStage($entityManager),
+        ]);
     }
 
     private function createTempFile(string $extension, string $content): string

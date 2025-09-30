@@ -130,10 +130,27 @@ services:
     MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface:
         alias: MagicSunday\Memories\Service\Indexing\DefaultMediaFileLocator
 
-    MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
+    MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage:
         arguments:
             $imageExtensions: '%memories.index.image_ext%'
             $videoExtensions: '%memories.index.video_ext%'
+
+    MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage: ~
+
+    MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage: ~
+
+    MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
+
+    MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage: ~
+
+    MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
+        arguments:
+            $stages:
+                - '@MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
 
     MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface:
         alias: MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline
