@@ -229,7 +229,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             $local = $takenAt->setTimezone($tz);
             $hour  = (int) $local->format('G');
 
-            if ($hour < self::NIGHT_START_HOUR && $hour >= self::NIGHT_END_HOUR) {
+            if ($hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR) {
                 continue;
             }
 
