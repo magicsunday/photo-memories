@@ -15,14 +15,12 @@ use MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
 use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
-use MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\FirstVisitPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
-use MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
@@ -35,13 +33,10 @@ use MagicSunday\Memories\Clusterer\PanoramaClusterStrategy;
 use MagicSunday\Memories\Clusterer\PanoramaOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
 use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
-use MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
-use MagicSunday\Memories\Clusterer\SnowDayClusterStrategy;
-use MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
@@ -102,11 +97,6 @@ final class ClusterStrategySmokeTest extends TestCase
             'burst',
             null,
         ];
-        yield 'CityscapeNightClusterStrategy' => [
-            CityscapeNightClusterStrategy::class,
-            'cityscape_night',
-            null,
-        ];
         yield 'CrossDimensionClusterStrategy' => [
             CrossDimensionClusterStrategy::class,
             'cross_dimension',
@@ -134,11 +124,6 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'GoldenHourClusterStrategy' => [
             GoldenHourClusterStrategy::class,
             'golden_hour',
-            null,
-        ];
-        yield 'HikeAdventureClusterStrategy' => [
-            HikeAdventureClusterStrategy::class,
-            'hike_adventure',
             null,
         ];
         yield 'HolidayEventClusterStrategy' => [
@@ -207,11 +192,6 @@ final class ClusterStrategySmokeTest extends TestCase
                 self::locationHelper()
             ),
         ];
-        yield 'PhotoMotifClusterStrategy' => [
-            PhotoMotifClusterStrategy::class,
-            'photo_motif',
-            null,
-        ];
         yield 'PortraitOrientationClusterStrategy' => [
             PortraitOrientationClusterStrategy::class,
             'portrait_orientation',
@@ -233,16 +213,6 @@ final class ClusterStrategySmokeTest extends TestCase
             static fn (): ClusterStrategyInterface => new SignificantPlaceClusterStrategy(
                 self::locationHelper()
             ),
-        ];
-        yield 'SnowDayClusterStrategy' => [
-            SnowDayClusterStrategy::class,
-            'snow_day',
-            null,
-        ];
-        yield 'SnowVacationOverYearsClusterStrategy' => [
-            SnowVacationOverYearsClusterStrategy::class,
-            'snow_vacation_over_years',
-            null,
         ];
         yield 'ThisMonthOverYearsClusterStrategy' => [
             ThisMonthOverYearsClusterStrategy::class,

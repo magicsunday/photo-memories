@@ -215,13 +215,6 @@ services:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.burst_cluster_strategy%' }
 
-    MagicSunday\Memories\Clusterer\PhotoMotifClusterStrategy:
-        arguments:
-            $sessionGapSeconds: 86400   # 24h keeps multi-day motifs together without spanning weeks
-            $minItemsPerMotif: 7
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.photo_motif_cluster_strategy%' }
-
     MagicSunday\Memories\Clusterer\CrossDimensionClusterStrategy:
         arguments:
             $timeGapSeconds: 5400        # 1.5h blends adjacent scene
@@ -362,26 +355,6 @@ services:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.weekend_getaways_over_years_cluster_strategy%' }
 
-    MagicSunday\Memories\Clusterer\HikeAdventureClusterStrategy:
-        arguments:
-            $sessionGapSeconds: 9000     # 2.5h
-            $minDistanceKm: 5.5
-            $minItemsPerRun: 5
-            $minItemsPerRunNoGps: 9
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.hike_adventure_cluster_strategy%' }
-
-    MagicSunday\Memories\Clusterer\SnowVacationOverYearsClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $minItemsPerDay: 4
-            $minNights: 3
-            $maxNights: 14
-            $minYears: 3
-            $minItemsTotal: 24
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.snow_vacation_over_years_cluster_strategy%' }
-
     MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
@@ -410,15 +383,6 @@ services:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.significant_place_cluster_strategy%' }
 
-    MagicSunday\Memories\Clusterer\CityscapeNightClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 6000      # 1h40m balances blue-hour transitions
-            $radiusMeters: 260.0
-            $minItemsPerRun: 5
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.cityscape_night_cluster_strategy%' }
-
     # --- Seasonal highlights ---
     MagicSunday\Memories\Clusterer\SeasonClusterStrategy:
         arguments:
@@ -432,14 +396,6 @@ services:
             $minItemsPerSeason: 26
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.season_over_years_cluster_strategy%' }
-
-    MagicSunday\Memories\Clusterer\SnowDayClusterStrategy:
-        arguments:
-            $timezone: 'Europe/Berlin'
-            $sessionGapSeconds: 7200      # 2h
-            $minItemsPerRun: 5
-        tags:
-            - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.snow_day_cluster_strategy%' }
 
     MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy:
         arguments:
