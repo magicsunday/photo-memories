@@ -25,12 +25,21 @@ services:
         arguments:
             $commands: !tagged command
 
-    MagicSunday\Memories\Utility\DefaultPoiContextAnalyzer:
+    MagicSunday\Memories\Utility\DefaultPoiLabelResolver:
         arguments:
             $preferredLocale: '%memories.localization.preferred_locale%'
 
     MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface:
         alias: MagicSunday\Memories\Utility\DefaultPoiContextAnalyzer
+
+    MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface:
+        alias: MagicSunday\Memories\Utility\DefaultPoiLabelResolver
+
+    MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface:
+        alias: MagicSunday\Memories\Utility\DefaultPoiNormalizer
+
+    MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface:
+        alias: MagicSunday\Memories\Utility\DefaultPoiScorer
 
     MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface:
         alias: MagicSunday\Memories\Utility\DefaultLocationLabelResolver

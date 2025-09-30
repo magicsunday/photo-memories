@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface;
 use MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface;
+use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 
 use function array_key_first;
 use function arsort;
@@ -32,8 +33,10 @@ use const SORT_NUMERIC;
  */
 final readonly class DefaultLocationLabelResolver implements LocationLabelResolverInterface
 {
-    public function __construct(private PoiContextAnalyzerInterface $poiContextAnalyzer)
-    {
+    public function __construct(
+        private PoiContextAnalyzerInterface $poiContextAnalyzer,
+        private PoiLabelResolverInterface $poiLabelResolver,
+    ) {
     }
 
     public function localityKey(?Location $location): ?string
@@ -81,6 +84,14 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     {
         if (!$location instanceof Location) {
             return null;
+        }
+
+        $poi = $this->poiContextAnalyzer->resolvePrimaryPoi($location);
+        if ($poi !== null) {
+            $label = $this->poiLabelResolver->preferredLabel($poi);
+            if (is_string($label) && $label !== '') {
+                return $label;
+            }
         }
 
         $label = $this->poiContextAnalyzer->bestLabelForLocation($location);
