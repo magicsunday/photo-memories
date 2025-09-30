@@ -17,7 +17,7 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Minimal repository wrapper to load Media by IDs efficiently.
  */
-final readonly class MediaRepository
+readonly class MediaRepository
 {
     public function __construct(private EntityManagerInterface $em)
     {

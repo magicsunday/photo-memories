@@ -841,6 +841,10 @@ services:
     # Feeds
     MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
     MagicSunday\Memories\Service\Feed\HtmlFeedRenderer: ~
+    MagicSunday\Memories\Service\Feed\HtmlFeedExportService: ~
+
+    MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface:
+        alias: MagicSunday\Memories\Service\Feed\HtmlFeedExportService
 
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
