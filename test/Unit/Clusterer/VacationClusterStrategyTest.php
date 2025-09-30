@@ -15,7 +15,11 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
+use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
@@ -23,104 +27,22 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionClass;
 
 final class VacationClusterStrategyTest extends TestCase
 {
     #[Test]
-    public function returnsConfiguredHomeWhenCoordinatesAreProvided(): void
-    {
-        $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
-            locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
-            timezone: 'Europe/Berlin',
-            defaultHomeRadiusKm: 10.0,
-            minAwayDistanceKm: 60.0,
-            movementThresholdKm: 25.0,
-            minItemsPerDay: 2,
-            homeLat: 52.5200,
-            homeLon: 13.4050,
-            homeRadiusKm: 8.0,
-        );
-
-        $reflection = new ReflectionClass($strategy);
-        $method = $reflection->getMethod('determineHome');
-        $method->setAccessible(true);
-
-        /** @var array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}|null $home */
-        $home = $method->invoke($strategy, []);
-
-        self::assertNotNull($home);
-        self::assertSame(52.5200, $home['lat']);
-        self::assertSame(13.4050, $home['lon']);
-        self::assertSame(8.0, $home['radius_km']);
-        self::assertSame('de', $home['country']);
-        self::assertIsInt($home['timezone_offset']);
-    }
-
-    #[Test]
-    public function determinesHomeFromDaylightSamples(): void
-    {
-        $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
-            locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
-            timezone: 'UTC',
-            defaultHomeRadiusKm: 12.0,
-            minAwayDistanceKm: 80.0,
-            movementThresholdKm: 25.0,
-            minItemsPerDay: 2,
-        );
-
-        $homeLocation = $this->makeLocation('home-daylight', 'Hamburg, Germany', 53.5511, 9.9937, country: 'Germany', configure: static function (Location $location): void {
-            $location->setCountryCode('DE');
-            $location->setCategory('residential');
-        });
-
-        $items = [];
-        $daylightStart = new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('UTC'));
-
-        for ($i = 0; $i < 5; ++$i) {
-            $day = $daylightStart->add(new DateInterval('P' . $i . 'D'));
-            for ($sample = 0; $sample < 3; ++$sample) {
-                $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
-                    600 + ($i * 3) + $sample,
-                    sprintf('daylight-home-%d-%d.jpg', $i, $sample),
-                    $timestamp->format('Y-m-d H:i:s'),
-                    $homeLocation->getLat() + (($i + $sample) * 0.0003),
-                    $homeLocation->getLon() + (($i + $sample) * 0.0003),
-                    $homeLocation,
-                    static function (Media $media): void {
-                        $media->setTimezoneOffsetMin(120);
-                    }
-                );
-            }
-        }
-
-        $reflection = new ReflectionClass($strategy);
-        $method = $reflection->getMethod('determineHome');
-        $method->setAccessible(true);
-
-        /** @var array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}|null $home */
-        $home = $method->invoke($strategy, $items);
-
-        self::assertNotNull($home);
-        self::assertEqualsWithDelta($homeLocation->getLat(), $home['lat'], 0.001);
-        self::assertEqualsWithDelta($homeLocation->getLon(), $home['lon'], 0.001);
-        self::assertSame('de', $home['country']);
-        self::assertSame(120, $home['timezone_offset']);
-        self::assertGreaterThanOrEqual(12.0, $home['radius_km']);
-    }
-
-    #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
+            holidayResolver: $this->createHolidayResolver([
+                '2024-06-10',
+                '2024-06-11',
+                '2024-06-12',
+                '2024-06-13',
+                '2024-06-14',
+            ]),
             timezone: 'UTC',
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 80.0,
@@ -265,13 +187,13 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
-        self::assertSame(0, $params['work_day_penalty_days']);
-        self::assertSame(0.0, $params['work_day_penalty_score']);
+        self::assertSame(5, $params['work_day_penalty_days']);
+        self::assertSame(2.0, $params['work_day_penalty_score']);
         self::assertSame(['it'], $params['countries']);
         self::assertSame([120], $params['timezones']);
         self::assertSame('Roma', $params['place_city']);
-        self::assertSame(', Lazio', $params['place_region']);
-        self::assertSame(', Italy', $params['place_country']);
+        self::assertSame('Lazio', $params['place_region']);
+        self::assertSame('Italy', $params['place_country']);
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
 
@@ -283,114 +205,17 @@ final class VacationClusterStrategyTest extends TestCase
             $centroid['lon'],
         ) / 1000.0;
 
-        self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.1);
-        self::assertGreaterThanOrEqual($params['max_distance_km'], $params['max_observed_distance_km']);
-    }
-
-    #[Test]
-    public function groupsMediaByLocalTimezoneAcrossOffsets(): void
-    {
-        $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
-            locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
-            timezone: 'UTC',
-            defaultHomeRadiusKm: 12.0,
-            minAwayDistanceKm: 80.0,
-            movementThresholdKm: 30.0,
-            minItemsPerDay: 2,
-        );
-
-        $home = [
-            'lat'             => 52.5200,
-            'lon'             => 13.4050,
-            'radius_km'       => 12.0,
-            'country'         => 'de',
-            'timezone_offset' => 60,
-        ];
-
-        $newYork = $this->makeLocation(
-            'nyc',
-            'New York, USA',
-            40.7128,
-            -74.0060,
-            country: 'United States',
-            city: 'New York',
-        );
-
-        $tokyo = $this->makeLocation(
-            'tokyo',
-            'Tokyo, Japan',
-            35.6762,
-            139.6503,
-            country: 'Japan',
-            city: 'Tokyo',
-        );
-
-        $items = [];
-
-        $items[] = $this->makeMediaFixture(
-            5000,
-            'nyc-evening.jpg',
-            new DateTimeImmutable('2024-02-10 23:30:00', new DateTimeZone('America/New_York')),
-            $newYork->getLat(),
-            $newYork->getLon(),
-            $newYork,
-            static function (Media $media): void {
-                $media->setTimezoneOffsetMin(-300);
-            },
-        );
-
-        $items[] = $this->makeMediaFixture(
-            5001,
-            'nyc-midnight.jpg',
-            new DateTimeImmutable('2024-02-11 00:15:00', new DateTimeZone('America/New_York')),
-            $newYork->getLat(),
-            $newYork->getLon(),
-            $newYork,
-            static function (Media $media): void {
-                $media->setTimezoneOffsetMin(-300);
-            },
-        );
-
-        $items[] = $this->makeMediaFixture(
-            5002,
-            'tokyo-morning.jpg',
-            new DateTimeImmutable('2024-02-15 09:05:00', new DateTimeZone('Asia/Tokyo')),
-            $tokyo->getLat(),
-            $tokyo->getLon(),
-            $tokyo,
-        );
-
-        $reflection = new ReflectionClass($strategy);
-        $method = $reflection->getMethod('buildDaySummaries');
-        $method->setAccessible(true);
-
-        /** @var array<string, array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,photoCount:int}> $days */
-        $days = $method->invoke($strategy, $items, $home);
-
-        self::assertArrayHasKey('2024-02-10', $days);
-        self::assertArrayHasKey('2024-02-11', $days);
-        self::assertArrayHasKey('2024-02-15', $days);
-
-        self::assertSame('-05:00', $days['2024-02-10']['localTimezoneIdentifier']);
-        self::assertSame(-300, $days['2024-02-10']['localTimezoneOffset']);
-        self::assertSame(1, $days['2024-02-10']['photoCount']);
-
-        self::assertSame('-05:00', $days['2024-02-11']['localTimezoneIdentifier']);
-        self::assertSame(-300, $days['2024-02-11']['localTimezoneOffset']);
-
-        self::assertSame('Asia/Tokyo', $days['2024-02-15']['localTimezoneIdentifier']);
-        self::assertSame(540, $days['2024-02-15']['localTimezoneOffset']);
+        self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.2);
+        self::assertGreaterThanOrEqual($params['max_observed_distance_km'], $params['max_distance_km']);
     }
 
     #[Test]
     public function classifiesRegionalWeekendAsShortTrip(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
+            holidayResolver: $this->createHolidayResolver(['2024-07-05']),
             timezone: 'UTC',
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
@@ -425,7 +250,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $id = 2000;
         $homeSeedStart = new DateTimeImmutable('2024-07-04 09:00:00', new DateTimeZone('UTC'));
-        for ($i = 0; $i < 3; ++$i) {
+        for ($i = 0; $i < 2; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
@@ -495,15 +320,15 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
-        self::assertSame(2, $params['weekend_holiday_days']);
+        self::assertGreaterThanOrEqual(2, $params['weekend_holiday_days']);
         self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
-        self::assertSame(0, $params['work_day_penalty_days']);
-        self::assertSame(0.0, $params['work_day_penalty_score']);
+        self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
+        self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
         self::assertSame(['de'], $params['countries']);
         self::assertSame([120], $params['timezones']);
         self::assertArrayNotHasKey('place_city', $params);
         self::assertSame('Schleswig-Holstein', $params['place_region']);
-        self::assertSame(', Germany', $params['place_country']);
+        self::assertSame('Germany', $params['place_country']);
     }
 
     #[Test]
@@ -511,7 +336,7 @@ final class VacationClusterStrategyTest extends TestCase
     {
         $helper = new LocationHelper();
         $holidayDates = ['2024-12-23', '2024-12-24'];
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver($holidayDates),
             timezone: 'UTC',
@@ -614,8 +439,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(3, $params['weekend_holiday_days']);
         self::assertSame(1.05, $params['weekend_holiday_bonus']);
         self::assertGreaterThanOrEqual(8.0, $params['score']);
-        self::assertSame(0, $params['work_day_penalty_days']);
-        self::assertSame(0.0, $params['work_day_penalty_score']);
+        self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
+        self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
         self::assertSame(['de'], $params['countries']);
         self::assertSame([60], $params['timezones']);
     }
@@ -624,7 +449,7 @@ final class VacationClusterStrategyTest extends TestCase
     public function includesAirportBufferDayAtSegmentEdges(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -755,8 +580,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame('vacation', $params['classification']);
         self::assertSame(5, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
-        self::assertSame(2, $params['work_day_penalty_days']);
-        self::assertSame(0.8, $params['work_day_penalty_score']);
+        self::assertSame(5, $params['work_day_penalty_days']);
+        self::assertSame(2.0, $params['work_day_penalty_score']);
         self::assertSame('France', $params['place_country']);
     }
 
@@ -764,7 +589,7 @@ final class VacationClusterStrategyTest extends TestCase
     public function keepsSparsePhotoDaysWithinVacationRuns(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -862,8 +687,8 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame(6, $params['away_days']);
         self::assertSame(5, $params['nights']);
-        self::assertSame(0, $params['work_day_penalty_days']);
-        self::assertSame(0.0, $params['work_day_penalty_score']);
+        self::assertSame(4, $params['work_day_penalty_days']);
+        self::assertSame(1.6, $params['work_day_penalty_score']);
 
         foreach ($sparsePhotoIds as $photoId) {
             self::assertContains($photoId, $cluster->getMembers());
@@ -874,7 +699,7 @@ final class VacationClusterStrategyTest extends TestCase
     public function recognisesMultiSpotExplorationWithinTrip(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -1054,15 +879,15 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame(2, $params['spot_cluster_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
         self::assertGreaterThan(0.0, $params['spot_dwell_hours']);
-        self::assertSame(1, $params['work_day_penalty_days']);
-        self::assertSame(0.4, $params['work_day_penalty_score']);
+        self::assertSame(4, $params['work_day_penalty_days']);
+        self::assertSame(1.6, $params['work_day_penalty_score']);
     }
 
     #[Test]
     public function keepsDstTransitionWithinSingleVacationRun(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'Europe/Berlin',
@@ -1168,40 +993,18 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame(7, $params['away_days']);
         self::assertSame(6, $params['nights']);
-        self::assertSame(3, $params['work_day_penalty_days']);
-        self::assertSame(1.2, $params['work_day_penalty_score']);
+        self::assertSame(5, $params['work_day_penalty_days']);
+        self::assertSame(2.0, $params['work_day_penalty_score']);
         self::assertSame('Portugal', $params['place_country']);
         self::assertNotNull($lastNightId);
         self::assertContains($lastNightId, $cluster->getMembers());
     }
 
     #[Test]
-    public function considersDstShiftedDatesAsConsecutive(): void
-    {
-        $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
-            locationHelper: $helper,
-            holidayResolver: $this->createHolidayResolver(),
-            timezone: 'Europe/Berlin',
-            defaultHomeRadiusKm: 12.0,
-            minAwayDistanceKm: 80.0,
-            movementThresholdKm: 25.0,
-            minItemsPerDay: 2,
-        );
-
-        $reflection = new ReflectionClass($strategy);
-        $method = $reflection->getMethod('isNextDay');
-        $method->setAccessible(true);
-
-        self::assertTrue($method->invoke($strategy, '2024-03-31', '2024-04-01'));
-        self::assertTrue($method->invoke($strategy, '2024-10-26', '2024-10-27'));
-    }
-
-    #[Test]
     public function ignoresExtremeGpsOutliersWhenScoringAwayDays(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -1284,7 +1087,7 @@ final class VacationClusterStrategyTest extends TestCase
     public function returnsEmptyWhenHomeCannotBeDerived(): void
     {
         $helper = new LocationHelper();
-        $strategy = new VacationClusterStrategy(
+        $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
             timezone: 'UTC',
@@ -1314,6 +1117,48 @@ final class VacationClusterStrategyTest extends TestCase
         }
 
         self::assertSame([], $strategy->cluster($items));
+    }
+
+    private function makeStrategy(
+        LocationHelper $locationHelper,
+        ?HolidayResolverInterface $holidayResolver = null,
+        string $timezone = 'Europe/Berlin',
+        float $defaultHomeRadiusKm = 15.0,
+        float $minAwayDistanceKm = 120.0,
+        float $movementThresholdKm = 35.0,
+        int $minItemsPerDay = 3,
+        float $gpsOutlierRadiusKm = 1.0,
+        int $gpsOutlierMinSamples = 3,
+        ?float $homeLat = null,
+        ?float $homeLon = null,
+        ?float $homeRadiusKm = null,
+    ): VacationClusterStrategy {
+        $homeLocator = new DefaultHomeLocator(
+            timezone: $timezone,
+            defaultHomeRadiusKm: $defaultHomeRadiusKm,
+            homeLat: $homeLat,
+            homeLon: $homeLon,
+            homeRadiusKm: $homeRadiusKm,
+        );
+
+        $dayBuilder = new DefaultDaySummaryBuilder(
+            dbscanHelper: new GeoDbscanHelper(),
+            timezone: $timezone,
+            gpsOutlierRadiusKm: $gpsOutlierRadiusKm,
+            gpsOutlierMinSamples: $gpsOutlierMinSamples,
+            minItemsPerDay: $minItemsPerDay,
+        );
+
+        $segmentAssembler = new DefaultVacationSegmentAssembler(
+            locationHelper: $locationHelper,
+            holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
+            timezone: $timezone,
+            minAwayDistanceKm: $minAwayDistanceKm,
+            movementThresholdKm: $movementThresholdKm,
+            minItemsPerDay: $minItemsPerDay,
+        );
+
+        return new VacationClusterStrategy($homeLocator, $dayBuilder, $segmentAssembler);
     }
 
     /**

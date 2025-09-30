@@ -330,17 +330,38 @@ services:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.new_year_eve_cluster_strategy%' }
 
     # --- Travel & outdoor adventures ---
-    MagicSunday\Memories\Clusterer\VacationClusterStrategy:
+    MagicSunday\Memories\Clusterer\DefaultHomeLocator:
         arguments:
-            $holidayResolver: '@MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface'
             $timezone: 'Europe/Berlin'
             $defaultHomeRadiusKm: 15.0
-            $minAwayDistanceKm: 120.0
-            $movementThresholdKm: 35.0
-            $minItemsPerDay: 3
             $homeLat: '%env(default::float:MEMORIES_HOME_LAT)%'
             $homeLon: '%env(default::float:MEMORIES_HOME_LON)%'
             $homeRadiusKm: '%env(default::float:MEMORIES_HOME_RADIUS_KM)%'
+
+    MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface:
+        alias: MagicSunday\Memories\Clusterer\DefaultHomeLocator
+
+    MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $gpsOutlierRadiusKm: 1.0
+            $gpsOutlierMinSamples: 3
+            $minItemsPerDay: 3
+
+    MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface:
+        alias: MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder
+
+    MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler:
+        arguments:
+            $timezone: 'Europe/Berlin'
+            $minAwayDistanceKm: 120.0
+            $movementThresholdKm: 35.0
+            $minItemsPerDay: 3
+
+    MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface:
+        alias: MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler
+
+    MagicSunday\Memories\Clusterer\VacationClusterStrategy:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.vacation_cluster_strategy%' }
 

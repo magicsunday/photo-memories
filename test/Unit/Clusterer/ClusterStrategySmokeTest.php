@@ -24,6 +24,10 @@ use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
+use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
+use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
@@ -45,6 +49,7 @@ use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class ClusterStrategySmokeTest extends TestCase
@@ -142,7 +147,12 @@ final class ClusterStrategySmokeTest extends TestCase
             VacationClusterStrategy::class,
             'vacation',
             static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
-                self::locationHelper()
+                new DefaultHomeLocator(),
+                new DefaultDaySummaryBuilder(new GeoDbscanHelper()),
+                new DefaultVacationSegmentAssembler(
+                    locationHelper: self::locationHelper(),
+                    holidayResolver: new NullHolidayResolver(),
+                ),
             ),
         ];
         yield 'MonthlyHighlightsClusterStrategy' => [
