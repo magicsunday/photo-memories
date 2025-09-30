@@ -17,6 +17,10 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
+use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -39,8 +43,13 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             homeRadiusKm: 12.0,
         );
 
+        $timezoneResolver = new TimezoneResolver('Europe/Berlin');
         $dayBuilder = new DefaultDaySummaryBuilder(
             dbscanHelper: new GeoDbscanHelper(),
+            staypointDetector: new StaypointDetector(),
+            baseLocationResolver: new BaseLocationResolver(),
+            timezoneResolver: $timezoneResolver,
+            poiClassifier: new PoiClassifier(),
             timezone: 'Europe/Berlin',
             minItemsPerDay: 2,
         );

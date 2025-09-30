@@ -355,6 +355,28 @@ services:
     MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultHomeLocator
 
+    MagicSunday\Memories\Clusterer\Service\StaypointDetector: ~
+
+    MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\StaypointDetector
+
+    MagicSunday\Memories\Clusterer\Service\BaseLocationResolver: ~
+
+    MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\BaseLocationResolver
+
+    MagicSunday\Memories\Clusterer\Service\TimezoneResolver:
+        arguments:
+            $timezone: 'Europe/Berlin'
+
+    MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\TimezoneResolver
+
+    MagicSunday\Memories\Clusterer\Service\PoiClassifier: ~
+
+    MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface:
+        alias: MagicSunday\Memories\Clusterer\Service\PoiClassifier
+
     MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder:
         arguments:
             $timezone: 'Europe/Berlin'

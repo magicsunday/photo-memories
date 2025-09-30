@@ -15,6 +15,10 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
+use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -28,8 +32,13 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     #[Test]
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
+        $timezoneResolver = new TimezoneResolver('UTC');
         $builder = new DefaultDaySummaryBuilder(
             dbscanHelper: new GeoDbscanHelper(),
+            staypointDetector: new StaypointDetector(),
+            baseLocationResolver: new BaseLocationResolver(),
+            timezoneResolver: $timezoneResolver,
+            poiClassifier: new PoiClassifier(),
             timezone: 'UTC',
             minItemsPerDay: 1,
         );
@@ -115,8 +124,13 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     #[Test]
     public function marksDaysAwayFromHomeWhenBaseLocationIsFar(): void
     {
+        $timezoneResolver = new TimezoneResolver('UTC');
         $builder = new DefaultDaySummaryBuilder(
             dbscanHelper: new GeoDbscanHelper(),
+            staypointDetector: new StaypointDetector(),
+            baseLocationResolver: new BaseLocationResolver(),
+            timezoneResolver: $timezoneResolver,
+            poiClassifier: new PoiClassifier(),
             timezone: 'UTC',
             minItemsPerDay: 2,
         );

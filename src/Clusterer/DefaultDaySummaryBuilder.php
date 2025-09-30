@@ -14,26 +14,25 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
+use MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface;
+use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
+use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
-use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
-use function array_slice;
 use function array_sum;
 use function assert;
 use function count;
 use function in_array;
 use function intdiv;
-use function is_array;
-use function is_string;
 use function max;
 use function sqrt;
-use function str_contains;
 use function strtolower;
 use function usort;
 
@@ -45,33 +44,15 @@ use const SORT_STRING;
 final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
 {
     use MediaFilterTrait;
-    use VacationTimezoneTrait;
-
-    private const array TOURISM_KEYWORDS = [
-        'tourism',
-        'attraction',
-        'beach',
-        'museum',
-        'national_park',
-        'viewpoint',
-        'hotel',
-        'camp_site',
-        'ski',
-        'marina',
-    ];
-
-    private const array TRANSPORT_KEYWORDS = [
-        'airport',
-        'aerodrome',
-        'railway_station',
-        'train_station',
-        'bus_station',
-    ];
 
     private const float MIN_STD_EPSILON = 1.0e-6;
 
     public function __construct(
         private GeoDbscanHelper $dbscanHelper,
+        private StaypointDetectorInterface $staypointDetector,
+        private BaseLocationResolverInterface $baseLocationResolver,
+        private TimezoneResolverInterface $timezoneResolver,
+        private PoiClassifierInterface $poiClassifier,
         private string $timezone = 'Europe/Berlin',
         private float $gpsOutlierRadiusKm = 1.0,
         private int $gpsOutlierMinSamples = 3,
@@ -107,7 +88,7 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
             $takenAt = $media->getTakenAt();
             assert($takenAt instanceof DateTimeImmutable);
 
-            $mediaTimezone = $this->resolveMediaTimezone($media, $takenAt, $home);
+            $mediaTimezone = $this->timezoneResolver->resolveMediaTimezone($media, $takenAt, $home);
             $local         = $takenAt->setTimezone($mediaTimezone);
             $date          = $local->format('Y-m-d');
             $offsetMinutes = intdiv($local->getOffset(), 60);
@@ -182,15 +163,15 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
                     $summary['countryCodes'][strtolower($country)] = true;
                 }
 
-                if ($this->isPoiSample($location)) {
+                if ($this->poiClassifier->isPoiSample($location)) {
                     ++$summary['poiSamples'];
                 }
 
-                if ($this->isTourismPoi($location)) {
+                if ($this->poiClassifier->isTourismPoi($location)) {
                     ++$summary['tourismHits'];
                 }
 
-                if ($this->isTransportPoi($location)) {
+                if ($this->poiClassifier->isTransportPoi($location)) {
                     $summary['hasAirportPoi'] = true;
                 }
             }
@@ -205,9 +186,9 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
         $days = $this->ensureContinuousDayRange($days);
 
         foreach ($days as &$summary) {
-            $offset = $this->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
+            $offset = $this->timezoneResolver->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
             $summary['localTimezoneOffset'] = $offset;
-            $summary['localTimezoneIdentifier'] = $this->determineLocalTimezoneIdentifier(
+            $summary['localTimezoneIdentifier'] = $this->timezoneResolver->determineLocalTimezoneIdentifier(
                 $summary['timezoneIdentifierVotes'],
                 $home,
                 $offset,
@@ -280,7 +261,7 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
 
                 $summary['firstGpsMedia'] = $gpsMembers[0];
                 $summary['lastGpsMedia']  = $gpsMembers[count($gpsMembers) - 1];
-                $summary['staypoints']    = $this->computeStaypoints($gpsMembers);
+                $summary['staypoints']    = $this->staypointDetector->detect($gpsMembers);
 
                 $clusters = $this->dbscanHelper->clusterMedia(
                     $gpsMembers,
@@ -331,7 +312,8 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
             $nextKey = $keys[$index + 1] ?? null;
             $nextSummary = $nextKey !== null ? $days[$nextKey] : null;
 
-            $baseLocation = $this->determineBaseLocationForDay($summary, $nextSummary, $home);
+            $timezone = $this->timezoneResolver->resolveSummaryTimezone($summary, $home);
+            $baseLocation = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
             $summary['baseLocation'] = $baseLocation;
 
             if ($baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km']) {
@@ -462,326 +444,6 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
     }
 
     /**
-     * @param list<Media> $gpsMembers
-     *
-     * @return list<array{lat:float,lon:float,start:int,end:int,dwell:int}>
-     */
-    private function computeStaypoints(array $gpsMembers): array
-    {
-        $count = count($gpsMembers);
-        if ($count < 2) {
-            return [];
-        }
-
-        $staypoints = [];
-        $i = 0;
-
-        while ($i < $count - 1) {
-            $startMedia = $gpsMembers[$i];
-            $startTime  = $startMedia->getTakenAt();
-            assert($startTime instanceof DateTimeImmutable);
-
-            $j = $i + 1;
-            while ($j < $count) {
-                $candidate     = $gpsMembers[$j];
-                $candidateTime = $candidate->getTakenAt();
-                assert($candidateTime instanceof DateTimeImmutable);
-
-                $distanceKm = MediaMath::haversineDistanceInMeters(
-                    (float) $startMedia->getGpsLat(),
-                    (float) $startMedia->getGpsLon(),
-                    (float) $candidate->getGpsLat(),
-                    (float) $candidate->getGpsLon(),
-                ) / 1000.0;
-
-                if ($distanceKm > 0.2) {
-                    break;
-                }
-
-                ++$j;
-            }
-
-            $endIndex = $j - 1;
-            if ($endIndex <= $i) {
-                ++$i;
-                continue;
-            }
-
-            $endMedia = $gpsMembers[$endIndex];
-            $endTime  = $endMedia->getTakenAt();
-            assert($endTime instanceof DateTimeImmutable);
-
-            $dwell = $endTime->getTimestamp() - $startTime->getTimestamp();
-            if ($dwell >= 3600) {
-                $segment  = array_slice($gpsMembers, $i, $endIndex - $i + 1);
-                $centroid = MediaMath::centroid($segment);
-                $staypoints[] = [
-                    'lat'   => (float) $centroid['lat'],
-                    'lon'   => (float) $centroid['lon'],
-                    'start' => $startTime->getTimestamp(),
-                    'end'   => $endTime->getTimestamp(),
-                    'dwell' => $dwell,
-                ];
-
-                $i = $endIndex + 1;
-            } else {
-                ++$i;
-            }
-        }
-
-        return $staypoints;
-    }
-
-    /**
-     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null} $summary
-     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null}|null $nextSummary
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
-     *
-     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
-     */
-    private function determineBaseLocationForDay(array $summary, ?array $nextSummary, array $home): ?array
-    {
-        $timezone = $this->resolveSummaryTimezone($summary, $home);
-
-        $staypointBase = $this->selectStaypointBase($summary, $nextSummary, $timezone, $home);
-        $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
-
-        if ($staypointBase !== null) {
-            if ($staypointBase['distance_km'] > $home['radius_km']) {
-                return $staypointBase;
-            }
-
-            if ($sleepProxy !== null && $sleepProxy['distance_km'] > $home['radius_km']) {
-                return $sleepProxy;
-            }
-
-            return $staypointBase;
-        }
-
-        if ($sleepProxy !== null) {
-            if ($sleepProxy['distance_km'] > $home['radius_km']) {
-                return $sleepProxy;
-            }
-
-            $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
-            if ($largestStaypoint !== null) {
-                return $largestStaypoint;
-            }
-
-            return $sleepProxy;
-        }
-
-        $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
-        if ($largestStaypoint !== null) {
-            return $largestStaypoint;
-        }
-
-        return $this->fallbackBaseLocation($summary, $home);
-    }
-
-    /**
-     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>} $summary
-     * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>}|null $nextSummary
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
-     *
-     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
-     */
-    private function selectStaypointBase(
-        array $summary,
-        ?array $nextSummary,
-        DateTimeZone $timezone,
-        array $home,
-    ): ?array {
-        $windowStart = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $summary['date'] . ' 18:00:00', $timezone);
-        if ($windowStart === false) {
-            return null;
-        }
-
-        $windowEnd = $windowStart->modify('+16 hours');
-
-        $candidates = [];
-        foreach ($summary['staypoints'] as $staypoint) {
-            if ($this->staypointOverlapsWindow($staypoint, $windowStart, $windowEnd)) {
-                $candidates[] = $staypoint;
-            }
-        }
-
-        if ($nextSummary !== null) {
-            foreach ($nextSummary['staypoints'] as $staypoint) {
-                if ($this->staypointOverlapsWindow($staypoint, $windowStart, $windowEnd)) {
-                    $candidates[] = $staypoint;
-                }
-            }
-        }
-
-        if ($candidates === []) {
-            return null;
-        }
-
-        usort($candidates, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
-        $best = $candidates[0];
-
-        return [
-            'lat'          => $best['lat'],
-            'lon'          => $best['lon'],
-            'distance_km'  => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
-            'source'       => 'staypoint',
-        ];
-    }
-
-    /**
-     * @param array{lat:float,lon:float,start:int,end:int} $staypoint
-     */
-    private function staypointOverlapsWindow(
-        array $staypoint,
-        DateTimeImmutable $windowStart,
-        DateTimeImmutable $windowEnd,
-    ): bool {
-        return $staypoint['end'] >= $windowStart->getTimestamp()
-            && $staypoint['start'] <= $windowEnd->getTimestamp();
-    }
-
-    /**
-     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
-     */
-    private function computeSleepProxyLocation(array $summary, ?array $nextSummary, array $home): ?array
-    {
-        $last      = $summary['lastGpsMedia'];
-        $nextFirst = $nextSummary['firstGpsMedia'] ?? null;
-
-        if ($last instanceof Media && $nextFirst instanceof Media) {
-            $lastCoords = $this->mediaCoordinates($last);
-            $nextCoords = $this->mediaCoordinates($nextFirst);
-
-            $pairDistance = MediaMath::haversineDistanceInMeters(
-                $lastCoords['lat'],
-                $lastCoords['lon'],
-                $nextCoords['lat'],
-                $nextCoords['lon'],
-            ) / 1000.0;
-
-            $lastDistance = $this->distanceToHomeKm($lastCoords['lat'], $lastCoords['lon'], $home);
-            $nextDistance = $this->distanceToHomeKm($nextCoords['lat'], $nextCoords['lon'], $home);
-
-            if ($pairDistance <= 2.0 && $lastDistance > $home['radius_km'] && $nextDistance > $home['radius_km']) {
-                return [
-                    'lat'         => ($lastCoords['lat'] + $nextCoords['lat']) / 2.0,
-                    'lon'         => ($lastCoords['lon'] + $nextCoords['lon']) / 2.0,
-                    'distance_km' => max($lastDistance, $nextDistance),
-                    'source'      => 'sleep_proxy_pair',
-                ];
-            }
-
-            if ($lastDistance > $nextDistance) {
-                return [
-                    'lat'         => $lastCoords['lat'],
-                    'lon'         => $lastCoords['lon'],
-                    'distance_km' => $lastDistance,
-                    'source'      => 'sleep_proxy_last',
-                ];
-            }
-
-            return [
-                'lat'         => $nextCoords['lat'],
-                'lon'         => $nextCoords['lon'],
-                'distance_km' => $nextDistance,
-                'source'      => 'sleep_proxy_first',
-            ];
-        }
-
-        if ($last instanceof Media) {
-            $coords = $this->mediaCoordinates($last);
-
-            return [
-                'lat'         => $coords['lat'],
-                'lon'         => $coords['lon'],
-                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
-                'source'      => 'sleep_proxy_last',
-            ];
-        }
-
-        if ($nextFirst instanceof Media) {
-            $coords = $this->mediaCoordinates($nextFirst);
-
-            return [
-                'lat'         => $coords['lat'],
-                'lon'         => $coords['lon'],
-                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
-                'source'      => 'sleep_proxy_first',
-            ];
-        }
-
-        return null;
-    }
-
-    /**
-     * @return array{lat:float,lon:float}
-     */
-    private function mediaCoordinates(Media $media): array
-    {
-        return [
-            'lat' => (float) $media->getGpsLat(),
-            'lon' => (float) $media->getGpsLon(),
-        ];
-    }
-
-    /**
-     * @param list<array{lat:float,lon:float,start:int,end:int,dwell:int}> $staypoints
-     * @param array{lat:float,lon:float,radius_km:float} $home
-     *
-     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
-     */
-    private function selectLargestStaypoint(array $staypoints, array $home): ?array
-    {
-        if ($staypoints === []) {
-            return null;
-        }
-
-        usort($staypoints, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
-        $best = $staypoints[0];
-
-        return [
-            'lat'         => $best['lat'],
-            'lon'         => $best['lon'],
-            'distance_km' => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
-            'source'      => 'staypoint',
-        ];
-    }
-
-    /**
-     * @param array{gpsMembers:list<Media>} $summary
-     * @param array{lat:float,lon:float,radius_km:float} $home
-     *
-     * @return array{lat:float,lon:float,distance_km:float,source:string}|null
-     */
-    private function fallbackBaseLocation(array $summary, array $home): ?array
-    {
-        $gpsMembers = $summary['gpsMembers'];
-        if ($gpsMembers === []) {
-            return null;
-        }
-
-        $centroid = MediaMath::centroid($gpsMembers);
-
-        return [
-            'lat'         => (float) $centroid['lat'],
-            'lon'         => (float) $centroid['lon'],
-            'distance_km' => $this->distanceToHomeKm((float) $centroid['lat'], (float) $centroid['lon'], $home),
-            'source'      => 'day_centroid',
-        ];
-    }
-
-    private function distanceToHomeKm(float $lat, float $lon, array $home): float
-    {
-        return MediaMath::haversineDistanceInMeters(
-            $lat,
-            $lon,
-            $home['lat'],
-            $home['lon'],
-        ) / 1000.0;
-    }
-
-    /**
      * @param array<string, bool> $flags
      *
      * @return array<string, bool>
@@ -891,226 +553,5 @@ final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
         return ['mean' => $mean, 'std' => $std];
     }
 
-    /**
-     * @param array<int, int> $offsetVotes
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
-     */
-    private function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
-    {
-        if ($offsetVotes !== []) {
-            $bestOffset = null;
-            $bestCount  = -1;
-            foreach ($offsetVotes as $offset => $count) {
-                if ($count > $bestCount) {
-                    $bestCount  = $count;
-                    $bestOffset = (int) $offset;
-                }
-            }
 
-            if ($bestOffset !== null) {
-                return $bestOffset;
-            }
-        }
-
-        return $home['timezone_offset'] ?? null;
-    }
-
-    /**
-     * @param array<string, int> $identifierVotes
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
-     */
-    private function determineLocalTimezoneIdentifier(
-        array $identifierVotes,
-        array $home,
-        ?int $offset,
-    ): string {
-        if ($identifierVotes !== []) {
-            $bestIdentifier = null;
-            $bestCount      = -1;
-            foreach ($identifierVotes as $identifier => $count) {
-                if ($count > $bestCount && is_string($identifier) && $identifier !== '') {
-                    $bestCount      = $count;
-                    $bestIdentifier = $identifier;
-                }
-            }
-
-            if ($bestIdentifier !== null) {
-                return $bestIdentifier;
-            }
-        }
-
-        if ($offset !== null) {
-            return $this->createTimezoneFromOffset($offset)->getName();
-        }
-
-        $homeOffset = $home['timezone_offset'] ?? null;
-        if ($homeOffset !== null) {
-            return $this->createTimezoneFromOffset($homeOffset)->getName();
-        }
-
-        return $this->timezone;
-    }
-
-    private function isPoiSample(Location $location): bool
-    {
-        $pois = $location->getPois();
-        if (!is_array($pois)) {
-            return false;
-        }
-
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
-            if (isset($poi['categoryKey']) && is_string($poi['categoryKey']) && $poi['categoryKey'] !== '') {
-                return true;
-            }
-
-            if (isset($poi['categoryValue']) && is_string($poi['categoryValue']) && $poi['categoryValue'] !== '') {
-                return true;
-            }
-
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
-
-            if ($tags !== []) {
-                return true;
-            }
-        }
-
-        if ($this->matchesKeyword($location->getCategory(), self::TOURISM_KEYWORDS)) {
-            return true;
-        }
-
-        if ($this->matchesKeyword($location->getType(), self::TOURISM_KEYWORDS)) {
-            return true;
-        }
-
-        return $location->getType() !== null;
-    }
-
-    private function isTourismPoi(Location $location): bool
-    {
-        if ($this->matchesKeyword($location->getCategory(), self::TOURISM_KEYWORDS)) {
-            return true;
-        }
-
-        if ($this->matchesKeyword($location->getType(), self::TOURISM_KEYWORDS)) {
-            return true;
-        }
-
-        $pois = $location->getPois();
-        if (!is_array($pois)) {
-            return false;
-        }
-
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
-            $categoryKey   = $poi['categoryKey'] ?? null;
-            $categoryValue = $poi['categoryValue'] ?? null;
-            if ($this->matchesKeyword($categoryKey, self::TOURISM_KEYWORDS)) {
-                return true;
-            }
-
-            if ($this->matchesKeyword($categoryValue, self::TOURISM_KEYWORDS)) {
-                return true;
-            }
-
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
-
-            foreach ($tags as $tagKey => $tagValue) {
-                if ($this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TOURISM_KEYWORDS)) {
-                    return true;
-                }
-
-                if ($this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TOURISM_KEYWORDS)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private function isTransportPoi(Location $location): bool
-    {
-        if ($this->matchesKeyword($location->getCategory(), self::TRANSPORT_KEYWORDS)) {
-            return true;
-        }
-
-        if ($this->matchesKeyword($location->getType(), self::TRANSPORT_KEYWORDS)) {
-            return true;
-        }
-
-        $pois = $location->getPois();
-        if (!is_array($pois)) {
-            return false;
-        }
-
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
-            $categoryKey   = $poi['categoryKey'] ?? null;
-            $categoryValue = $poi['categoryValue'] ?? null;
-            if ($this->matchesKeyword($categoryKey, self::TRANSPORT_KEYWORDS)) {
-                return true;
-            }
-
-            if ($this->matchesKeyword($categoryValue, self::TRANSPORT_KEYWORDS)) {
-                return true;
-            }
-
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
-
-            foreach ($tags as $tagKey => $tagValue) {
-                if ($this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TRANSPORT_KEYWORDS)) {
-                    return true;
-                }
-
-                if ($this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TRANSPORT_KEYWORDS)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param list<string> $keywords
-     */
-    private function matchesKeyword(?string $value, array $keywords): bool
-    {
-        if ($value === null) {
-            return false;
-        }
-
-        $needle = strtolower($value);
-        foreach ($keywords as $keyword) {
-            $keywordLower = strtolower($keyword);
-            if ($needle === $keywordLower) {
-                return true;
-            }
-
-            if (str_contains($needle, $keywordLower)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

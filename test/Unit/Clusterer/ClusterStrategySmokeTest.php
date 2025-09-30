@@ -27,6 +27,10 @@ use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
+use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
@@ -148,7 +152,13 @@ final class ClusterStrategySmokeTest extends TestCase
             'vacation',
             static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
                 new DefaultHomeLocator(),
-                new DefaultDaySummaryBuilder(new GeoDbscanHelper()),
+                new DefaultDaySummaryBuilder(
+                    new GeoDbscanHelper(),
+                    new StaypointDetector(),
+                    new BaseLocationResolver(),
+                    new TimezoneResolver(),
+                    new PoiClassifier(),
+                ),
                 new DefaultVacationSegmentAssembler(
                     locationHelper: self::locationHelper(),
                     holidayResolver: new NullHolidayResolver(),
