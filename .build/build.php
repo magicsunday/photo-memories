@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 try {
+    $buildDir = __DIR__ . "/build.phar/";
     $pharFile = "memories.phar";
     $binName  = "memories";
 
@@ -21,18 +22,24 @@ try {
         unlink($pharFile . ".gz");
     }
 
-    require_once __DIR__ . '/memories/src/Dependencies.php';
+    require_once $buildDir . '/src/Dependencies.php';
 
     $phar = new Phar($pharFile);
     $phar->startBuffering();
 
     // Create the default stub
-    $defaultStub = Phar::createDefaultStub('src/Memories.php');
+    $defaultStub = Phar::createDefaultStub('/src/Memories.php');
 
-    $phar->buildFromDirectory(__DIR__ . "/memories");
+    // Include all files in the build directory (bash scripts (symfony/console), config files, etc.)
+    $regex = '#\.(php|yaml|bash)$#i';
+    $phar->buildFromDirectory($buildDir, $regex);
+
+    if (extension_loaded('zlib')) {
+        $phar->compressFiles(Phar::GZ);
+    }
+
     $phar->setStub("#!/usr/bin/env php \n" . $defaultStub);
     $phar->stopBuffering();
-    $phar->compressFiles(Phar::GZ);
 
     //  Make the file executable
     chmod($pharFile, 0755);

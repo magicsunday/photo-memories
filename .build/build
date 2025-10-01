@@ -4,7 +4,7 @@ set -e # Instructs a shell to exit if a command fails, i.e., if it outputs a non
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-BUILD_DIR_NAME=".build/memories/"
+BUILD_DIR_NAME=".build/build.phar/"
 BIN_NAME="memories"
 
 echo "Compiling ${BIN_NAME}"
@@ -28,7 +28,7 @@ cp -r src $BUILD_DIR_NAME
 cp -r config $BUILD_DIR_NAME
 cp version $BUILD_DIR_NAME
 echo "Installing composer dependencies"
-bin/composer -d $BUILD_DIR_NAME install --no-dev --no-ansi --no-interaction --no-progress --no-scripts --classmap-authoritative
+bin/composer -d $BUILD_DIR_NAME install --no-dev --no-ansi --no-interaction --no-progress --no-scripts --classmap-authoritative --prefer-dist --optimize-autoloader
 
 find $BUILD_DIR_NAME -type f -iname README.* -delete || :
 find $BUILD_DIR_NAME -type f -iname LICENSE -delete || :
