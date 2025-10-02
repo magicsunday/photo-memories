@@ -15,16 +15,21 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function array_keys;
 use function array_unique;
 use function array_values;
+use function array_slice;
+use function count;
 
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
     public function __construct(
         private EntityManagerInterface $em,
         private int $defaultBatchSize = 250,
+        #[Autowire('%memories.cluster.persistence.max_members%')]
+        private int $maxMembers = 20,
     ) {
     }
 
@@ -50,7 +55,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $pairs = [];
         foreach ($drafts as $d) {
             $alg     = $d->getAlgorithm();
-            $fp      = Cluster::computeFingerprint($d->getMembers());
+            $members = $this->clampMembers($d->getMembers());
+            $fp      = Cluster::computeFingerprint($members);
             $pairs[] = ['alg' => $alg, 'fp' => $fp];
         }
 
@@ -66,8 +72,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         // 3) Persist only new pairs
         foreach ($drafts as $d) {
-            $alg = $d->getAlgorithm();
-            $fp  = Cluster::computeFingerprint($d->getMembers());
+            $alg     = $d->getAlgorithm();
+            $members = $this->clampMembers($d->getMembers());
+            $fp      = Cluster::computeFingerprint($members);
             $key = $alg . '|' . $fp;
             if (isset($existing[$key])) {
                 // already persisted earlier or within this same run
@@ -84,7 +91,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 $alg,
                 $d->getParams(),
                 $d->getCentroid(),
-                $d->getMembers()
+                $members
             );
 
             $this->em->persist($entity);
@@ -188,5 +195,23 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $this->em->clear();
 
         return $deleted;
+    }
+
+    /**
+     * @param list<int> $members
+     *
+     * @return list<int>
+     */
+    private function clampMembers(array $members): array
+    {
+        if ($this->maxMembers <= 0) {
+            return $members;
+        }
+
+        if (count($members) <= $this->maxMembers) {
+            return $members;
+        }
+
+        return array_slice($members, 0, $this->maxMembers);
     }
 }
