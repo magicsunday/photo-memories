@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-require_once __DIR__ . '/../autoload/runtime.php';
+require_once __DIR__ . '/../autoload/ComposerAutoload.php';
 
 ComposerAutoload::require();
 

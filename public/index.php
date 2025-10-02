@@ -26,7 +26,7 @@ use function str_ends_with;
 use function str_starts_with;
 use function substr;
 
-require_once __DIR__ . '/../autoload/runtime.php';
+require_once __DIR__ . '/../autoload/ComposerAutoload.php';
 
 ComposerAutoload::require();
 
