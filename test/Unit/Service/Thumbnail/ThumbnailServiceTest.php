@@ -10,6 +10,8 @@
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Thumbnail {
+    use MagicSunday\Memories\Test\Unit\Service\Thumbnail\ThumbnailServiceTest;
+
     if (!function_exists(__NAMESPACE__ . '\\imagecopyresampled')) {
         function imagecopyresampled($dstImage, $srcImage, int $dstX, int $dstY, int $srcX, int $srcY, int $dstWidth, int $dstHeight, int $srcWidth, int $srcHeight): bool
         {
@@ -18,6 +20,67 @@ namespace MagicSunday\Memories\Service\Thumbnail {
             }
 
             return \imagecopyresampled($dstImage, $srcImage, $dstX, $dstY, $srcX, $srcY, $dstWidth, $dstHeight, $srcWidth, $srcHeight);
+        }
+    }
+
+    if (!function_exists(__NAMESPACE__ . '\\imagecreatefromjpeg')) {
+        function imagecreatefromjpeg(string $filename)
+        {
+            ThumbnailServiceTest::recordGdLoader('imagecreatefromjpeg');
+
+            if (!function_exists('\\imagecreatefromjpeg')) {
+                return false;
+            }
+
+            return \imagecreatefromjpeg($filename);
+        }
+    }
+
+    if (!function_exists(__NAMESPACE__ . '\\imagecreatefrompng')) {
+        function imagecreatefrompng(string $filename)
+        {
+            ThumbnailServiceTest::recordGdLoader('imagecreatefrompng');
+
+            if (!function_exists('\\imagecreatefrompng')) {
+                return false;
+            }
+
+            return \imagecreatefrompng($filename);
+        }
+    }
+
+    if (!function_exists(__NAMESPACE__ . '\\imagecreatefromgif')) {
+        function imagecreatefromgif(string $filename)
+        {
+            ThumbnailServiceTest::recordGdLoader('imagecreatefromgif');
+
+            if (!function_exists('\\imagecreatefromgif')) {
+                return false;
+            }
+
+            return \imagecreatefromgif($filename);
+        }
+    }
+
+    if (!function_exists(__NAMESPACE__ . '\\imagecreatefromwebp')) {
+        function imagecreatefromwebp(string $filename)
+        {
+            ThumbnailServiceTest::recordGdLoader('imagecreatefromwebp');
+
+            if (!function_exists('\\imagecreatefromwebp')) {
+                return false;
+            }
+
+            return \imagecreatefromwebp($filename);
+        }
+    }
+
+    if (!function_exists(__NAMESPACE__ . '\\imagecreatefromstring')) {
+        function imagecreatefromstring(string $string)
+        {
+            ThumbnailServiceTest::recordGdLoader('imagecreatefromstring');
+
+            return \imagecreatefromstring($string);
         }
     }
 }
@@ -37,10 +100,26 @@ use RuntimeException;
 final class ThumbnailServiceTest extends TestCase
 {
     private static bool $forceGdResampleFailure = false;
+    private static ?string $lastGdLoader = null;
 
     public static function isGdResampleFailureForced(): bool
     {
         return self::$forceGdResampleFailure;
+    }
+
+    public static function recordGdLoader(string $loader): void
+    {
+        self::$lastGdLoader = $loader;
+    }
+
+    public static function getLastGdLoader(): ?string
+    {
+        return self::$lastGdLoader;
+    }
+
+    public static function resetLastGdLoader(): void
+    {
+        self::$lastGdLoader = null;
     }
 
     #[Test]
@@ -190,7 +269,7 @@ final class ThumbnailServiceTest extends TestCase
         self::$forceGdResampleFailure = true;
 
         try {
-            $method->invoke($service, $sourcePath, null, [200], $checksum);
+            $method->invoke($service, $sourcePath, null, [200], $checksum, 'image/jpeg');
         } finally {
             self::$forceGdResampleFailure = false;
 
@@ -207,6 +286,140 @@ final class ThumbnailServiceTest extends TestCase
                     @unlink($file);
                 }
 
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function gdLoaderUsesMimeSpecificFunctionWhenAvailable(): void
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $image      = imagecreatetruecolor(80, 60);
+        $color      = imagecolorallocate($image, 10, 20, 30);
+        imagefilledrectangle($image, 0, 0, 79, 59, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media   = new Media($sourcePath, hash('sha256', 'gd-loader-source'), 2048);
+        $service = new ThumbnailService($thumbnailDir, [60]);
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
+
+        self::resetLastGdLoader();
+
+        $thumbnails = [];
+
+        try {
+            /** @var array<int, string> $thumbnails */
+            $thumbnails = $method->invoke($service, $sourcePath, null, [60], $media->getChecksum(), 'image/jpeg');
+
+            self::assertArrayHasKey(60, $thumbnails);
+
+            $thumbnailPath = $thumbnails[60];
+            self::assertFileExists($thumbnailPath);
+
+            self::assertSame('imagecreatefromjpeg', self::getLastGdLoader());
+        } finally {
+            self::resetLastGdLoader();
+
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function gdLoaderFallsBackToStringWhenMimeUnknown(): void
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $image      = imagecreatetruecolor(80, 60);
+        $color      = imagecolorallocate($image, 90, 100, 110);
+        imagefilledrectangle($image, 0, 0, 79, 59, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media   = new Media($sourcePath, hash('sha256', 'gd-loader-fallback'), 4096);
+        $service = new ThumbnailService($thumbnailDir, [60]);
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
+
+        self::resetLastGdLoader();
+
+        $thumbnails = [];
+
+        try {
+            /** @var array<int, string> $thumbnails */
+            $thumbnails = $method->invoke($service, $sourcePath, null, [60], $media->getChecksum(), 'application/octet-stream');
+
+            self::assertArrayHasKey(60, $thumbnails);
+
+            $thumbnailPath = $thumbnails[60];
+            self::assertFileExists($thumbnailPath);
+
+            self::assertSame('imagecreatefromstring', self::getLastGdLoader());
+        } finally {
+            self::resetLastGdLoader();
+
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
                 @rmdir($thumbnailDir);
             }
         }
@@ -694,7 +907,7 @@ final class ThumbnailServiceTest extends TestCase
 
         try {
             /** @var array<int, string> $thumbnails */
-            $thumbnails = $method->invoke($service, $sourcePath, null, [50], $media->getChecksum());
+            $thumbnails = $method->invoke($service, $sourcePath, null, [50], $media->getChecksum(), 'image/webp');
 
             self::assertArrayHasKey(50, $thumbnails);
 

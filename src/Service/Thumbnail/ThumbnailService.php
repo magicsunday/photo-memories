@@ -50,7 +50,7 @@ class ThumbnailService implements ThumbnailServiceInterface
         }
 
         if (function_exists('imagecreatefromstring')) {
-            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum);
+            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
         }
 
         throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
@@ -145,18 +145,52 @@ class ThumbnailService implements ThumbnailServiceInterface
     }
 
     /**
-     * @param int[] $sizes
+     * @param int[]       $sizes
+     * @param string|null $mime
      *
      * @return array<int, string>
      */
-    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes, string $checksum): array
+    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes, string $checksum, ?string $mime = null): array
     {
-        $data = @file_get_contents($filepath);
-        if ($data === false) {
-            throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
+        $src = null;
+
+        if ($mime !== null) {
+            $mime = strtolower($mime);
+            $loaders = [
+                'image/jpeg' => 'imagecreatefromjpeg',
+                'image/jpg' => 'imagecreatefromjpeg',
+                'image/pjpeg' => 'imagecreatefromjpeg',
+                'image/png' => 'imagecreatefrompng',
+                'image/webp' => 'imagecreatefromwebp',
+                'image/gif' => 'imagecreatefromgif',
+            ];
+
+            if (isset($loaders[$mime])) {
+                $loader            = $loaders[$mime];
+                $namespacedLoader  = __NAMESPACE__ . '\\' . $loader;
+                $selectedLoader    = null;
+
+                if (function_exists($namespacedLoader)) {
+                    $selectedLoader = $namespacedLoader;
+                } elseif (function_exists($loader)) {
+                    $selectedLoader = $loader;
+                }
+
+                if ($selectedLoader !== null) {
+                    $src = @$selectedLoader($filepath);
+                }
+            }
         }
 
-        $src = @imagecreatefromstring($data);
+        if (!$src instanceof GdImage) {
+            $data = @file_get_contents($filepath);
+            if ($data === false) {
+                throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
+            }
+
+            $src = @imagecreatefromstring($data);
+        }
+
         if (!$src instanceof GdImage) {
             throw new RuntimeException(sprintf('Unable to create GD image from "%s".', $filepath));
         }
