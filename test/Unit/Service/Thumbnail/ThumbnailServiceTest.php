@@ -9,7 +9,20 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail;
+namespace MagicSunday\Memories\Service\Thumbnail {
+    if (!function_exists(__NAMESPACE__ . '\\imagecopyresampled')) {
+        function imagecopyresampled($dstImage, $srcImage, int $dstX, int $dstY, int $srcX, int $srcY, int $dstWidth, int $dstHeight, int $srcWidth, int $srcHeight): bool
+        {
+            if (\MagicSunday\Memories\Test\Unit\Service\Thumbnail\ThumbnailServiceTest::isGdResampleFailureForced()) {
+                return false;
+            }
+
+            return \imagecopyresampled($dstImage, $srcImage, $dstX, $dstY, $srcX, $srcY, $dstWidth, $dstHeight, $srcWidth, $srcHeight);
+        }
+    }
+}
+
+namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
 use Imagick;
 use MagicSunday\Memories\Entity\Media;
@@ -21,6 +34,13 @@ use RuntimeException;
 
 final class ThumbnailServiceTest extends TestCase
 {
+    private static bool $forceGdResampleFailure = false;
+
+    public static function isGdResampleFailureForced(): bool
+    {
+        return self::$forceGdResampleFailure;
+    }
+
     #[Test]
     public function throwsExceptionWhenThumbnailDirectoryCannotBeCreated(): void
     {
@@ -129,10 +149,10 @@ final class ThumbnailServiceTest extends TestCase
     }
 
     #[Test]
-    public function throwsExceptionWhenImagickThumbnailImageFails(): void
+    public function throwsExceptionWhenGdResampleFails(): void
     {
-        if (!extension_loaded('imagick')) {
-            self::markTestSkipped('Imagick extension is required for this test.');
+        if (!function_exists('imagecreatetruecolor')) {
+            self::markTestSkipped('GD extension is required for this test.');
         }
 
         $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
@@ -146,45 +166,29 @@ final class ThumbnailServiceTest extends TestCase
         }
 
         $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
-        if (file_put_contents($sourcePath, 'thumbnail-source') === false) {
-            self::fail('Unable to create thumbnail source file.');
-        }
+        $image      = imagecreatetruecolor(400, 200);
+        $color      = imagecolorallocate($image, 50, 60, 70);
+        imagefilledrectangle($image, 0, 0, 399, 199, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
 
-        $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
+        $media    = new Media($sourcePath, hash('sha256', 'source'), 1024);
+        $service  = new ThumbnailService($thumbnailDir, [200]);
+        $checksum = $media->getChecksum();
 
-        $imagick = $this->createMock(Imagick::class);
-        $imagick->expects(self::once())->method('setOption')->with('jpeg:preserve-settings', 'true')->willReturn(true);
-        $imagick->expects(self::once())->method('readImage')->with($sourcePath . '[0]')->willReturn(true);
-        $imagick->expects(self::once())->method('autoOrientImage')->willReturn(true);
-        $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
-        $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(false);
-        $imagick->expects(self::never())->method('writeImage');
-        $imagick->expects(self::exactly(2))->method('clear');
-        $imagick->expects(self::exactly(2))->method('destroy');
-
-        $service = new class ($thumbnailDir, [200], $imagick) extends ThumbnailService {
-            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
-            {
-                parent::__construct($thumbnailDir, $sizes);
-            }
-
-            protected function createImagick(): Imagick
-            {
-                return $this->imagick;
-            }
-
-            protected function cloneImagick(Imagick $imagick): Imagick
-            {
-                return $imagick;
-            }
-        };
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Unable to resize image for thumbnail width 200.');
+        $this->expectExceptionMessage('Unable to resample image for thumbnail.');
+
+        self::$forceGdResampleFailure = true;
 
         try {
-            $service->generateAll($sourcePath, $media);
+            $method->invoke($service, $sourcePath, null, [200], $checksum);
         } finally {
+            self::$forceGdResampleFailure = false;
+
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
             }
@@ -563,4 +567,5 @@ final class ThumbnailServiceTest extends TestCase
             }
         }
     }
+}
 }

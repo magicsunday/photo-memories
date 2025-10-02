@@ -162,7 +162,10 @@ class ThumbnailService implements ThumbnailServiceInterface
                 }
 
                 try {
-                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    if ($resampleResult === false) {
+                        throw new RuntimeException('Unable to resample image for thumbnail.');
+                    }
 
                     $out         = $this->buildThumbnailPath($checksum, $size);
                     $writeResult = @imagejpeg($dst, $out, 85);
