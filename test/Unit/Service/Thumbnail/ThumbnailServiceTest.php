@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail;
 
+use Imagick;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
 use MagicSunday\Memories\Test\TestCase;
@@ -45,6 +46,69 @@ final class ThumbnailServiceTest extends TestCase
 
             if (is_dir($thumbnailDirParent)) {
                 rmdir($thumbnailDirParent);
+            }
+        }
+    }
+
+    #[Test]
+    public function throwsExceptionWhenImagickWriteImageFails(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        if (file_put_contents($sourcePath, 'thumbnail-source') === false) {
+            self::fail('Unable to create thumbnail source file.');
+        }
+
+        $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
+
+        $expectedOutput = $thumbnailDir . DIRECTORY_SEPARATOR . hash('crc32b', $sourcePath . ':200') . '.jpg';
+
+        $imagick = $this->createMock(Imagick::class);
+        $imagick->expects(self::once())->method('setOption')->with('jpeg:preserve-settings', 'true')->willReturn(true);
+        $imagick->expects(self::once())->method('readImage')->with($sourcePath . '[0]')->willReturn(true);
+        $imagick->expects(self::once())->method('autoOrientImage')->willReturn(true);
+        $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
+        $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(true);
+        $imagick->expects(self::once())->method('writeImage')->with($expectedOutput)->willReturn(false);
+        $imagick->expects(self::once())->method('clear');
+        $imagick->expects(self::once())->method('destroy');
+
+        $service = new class ($thumbnailDir, [200], $imagick) extends ThumbnailService {
+            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
+            {
+                parent::__construct($thumbnailDir, $sizes);
+            }
+
+            protected function createImagick(): Imagick
+            {
+                return $this->imagick;
+            }
+        };
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(sprintf('Unable to create thumbnail at path "%s".', $expectedOutput));
+
+        try {
+            $service->generateAll($sourcePath, $media);
+        } finally {
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($thumbnailDir);
             }
         }
     }
