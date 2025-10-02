@@ -11,7 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+use MagicSunday\Memories\Bootstrap\ComposerAutoload;
+
+require_once __DIR__ . '/../autoload/ComposerAutoload.php';
+
+ComposerAutoload::require();
 
 $factory = new DependencyContainerFactory();
 $factory->ensure();

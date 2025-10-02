@@ -9,6 +9,7 @@
 
 declare(strict_types=1);
 
+use MagicSunday\Memories\Bootstrap\ComposerAutoload;
 use MagicSunday\Memories\DependencyContainer;
 use MagicSunday\Memories\DependencyContainerFactory;
 use MagicSunday\Memories\Http\Controller\FeedController;
@@ -25,7 +26,9 @@ use function str_ends_with;
 use function str_starts_with;
 use function substr;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../autoload/ComposerAutoload.php';
+
+ComposerAutoload::require();
 
 $request   = Request::fromGlobals();
 $factory   = new DependencyContainerFactory();
