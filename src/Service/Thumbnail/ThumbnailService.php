@@ -30,8 +30,8 @@ class ThumbnailService implements ThumbnailServiceInterface
     {
         $this->thumbnailDir = $thumbnailDir;
         $this->sizes        = $sizes;
-        if (!is_dir($this->thumbnailDir)) {
-            @mkdir($this->thumbnailDir, 0755, true);
+        if (!is_dir($this->thumbnailDir) && !mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
+            throw new RuntimeException(sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir));
         }
     }
 

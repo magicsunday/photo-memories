@@ -20,6 +20,36 @@ use RuntimeException;
 final class ThumbnailServiceTest extends TestCase
 {
     #[Test]
+    public function throwsExceptionWhenThumbnailDirectoryCannotBeCreated(): void
+    {
+        $thumbnailDirParent = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-parent-' . uniqid('', true);
+        $thumbnailDir       = $thumbnailDirParent . DIRECTORY_SEPARATOR . 'child';
+
+        if (!mkdir($thumbnailDirParent) && !is_dir($thumbnailDirParent)) {
+            self::fail('Unable to create thumbnail parent directory.');
+        }
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage(sprintf('Failed to create thumbnail directory "%s".', $thumbnailDir));
+
+            if (file_put_contents($thumbnailDir, '') === false) {
+                self::fail('Unable to create thumbnail directory placeholder file.');
+            }
+
+            new ThumbnailService($thumbnailDir, [200]);
+        } finally {
+            if (is_file($thumbnailDir)) {
+                unlink($thumbnailDir);
+            }
+
+            if (is_dir($thumbnailDirParent)) {
+                rmdir($thumbnailDirParent);
+            }
+        }
+    }
+
+    #[Test]
     public function rotatesImageAccordingToOrientationSix(): void
     {
         if (!function_exists('imagecreatetruecolor')) {
