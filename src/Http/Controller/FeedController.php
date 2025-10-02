@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Http\Request;
 use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Http\Response\JsonResponse;
@@ -22,12 +23,15 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Entity\Media;
+use RuntimeException;
 
 use function array_key_exists;
 use function array_keys;
+use function array_replace;
 use function array_slice;
 use function count;
 use function hash;
@@ -54,6 +58,8 @@ final class FeedController
         private readonly ClusterEntityToDraftMapper $clusterMapper,
         private readonly ThumbnailPathResolver $thumbnailResolver,
         private readonly MediaRepository $mediaRepository,
+        private readonly ThumbnailServiceInterface $thumbnailService,
+        private readonly EntityManagerInterface $entityManager,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -178,7 +184,7 @@ final class FeedController
             ], 404);
         }
 
-        $path = $this->thumbnailResolver->resolveBest($media, $width);
+        $path = $this->resolveOrGenerateThumbnail($media, $width);
         if (!is_string($path)) {
             return new JsonResponse([
                 'error' => 'Thumbnail not available.',
@@ -248,6 +254,41 @@ final class FeedController
         }
 
         return min($int, $this->maxThumbnailWidth);
+    }
+
+    private function resolveOrGenerateThumbnail(Media $media, int $width): ?string
+    {
+        $resolved = $this->thumbnailResolver->resolveBest($media, $width);
+        if (is_string($resolved) && $resolved !== $media->getPath()) {
+            return $resolved;
+        }
+
+        try {
+            $generated = $this->thumbnailService->generateAll($media->getPath(), $media);
+        } catch (RuntimeException) {
+            return $resolved;
+        }
+
+        if ($generated === []) {
+            return $resolved;
+        }
+
+        $current = $media->getThumbnails();
+        if (is_array($current) && $current !== []) {
+            $media->setThumbnails(array_replace($current, $generated));
+        } else {
+            $media->setThumbnails($generated);
+        }
+
+        $this->entityManager->flush();
+
+        $resolved = $this->thumbnailResolver->resolveBest($media, $width);
+
+        if (is_string($resolved)) {
+            return $resolved;
+        }
+
+        return null;
     }
 
     private function transformItem(MemoryFeedItem $item): array
