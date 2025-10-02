@@ -17,6 +17,8 @@ use RuntimeException;
 use function array_keys;
 use function file_get_contents;
 use function filesize;
+use function header;
+use function http_response_code;
 use function is_file;
 use function is_string;
 use function pathinfo;
@@ -31,6 +33,10 @@ final class BinaryFileResponse extends Response
 {
     private const DEFAULT_STATUS = 200;
 
+    private readonly string $filePath;
+
+    private bool $contentLoaded = false;
+
     /**
      * @param array<string, string> $headers
      */
@@ -42,6 +48,8 @@ final class BinaryFileResponse extends Response
         if (is_file($filePath) === false) {
             throw new RuntimeException(sprintf('Binary file response path "%s" does not exist.', $filePath));
         }
+
+        $this->filePath = $filePath;
 
         $resolvedHeaders = $headers;
 
@@ -59,13 +67,48 @@ final class BinaryFileResponse extends Response
             $resolvedHeaders['Content-Length'] = (string) $size;
         }
 
-        $body = file_get_contents($filePath);
+        parent::__construct('', $status, $resolvedHeaders);
+    }
 
-        if ($body === false) {
-            throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $filePath));
+    public function send(): void
+    {
+        if ($this->contentLoaded) {
+            parent::send();
+
+            return;
         }
 
-        parent::__construct($body, $status, $resolvedHeaders);
+        $statusCode = $this->getStatusCode();
+
+        http_response_code($statusCode);
+
+        foreach ($this->getHeaders() as $name => $value) {
+            header($name . ': ' . $value, true, $statusCode);
+        }
+
+        $this->sendFile($this->filePath);
+    }
+
+    public function getContent(): string
+    {
+        if ($this->contentLoaded === false) {
+            $body = file_get_contents($this->filePath);
+
+            if ($body === false) {
+                throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $this->filePath));
+            }
+
+            $this->contentLoaded = true;
+            parent::setContent($body);
+        }
+
+        return parent::getContent();
+    }
+
+    public function setContent(string $content): void
+    {
+        $this->contentLoaded = true;
+        parent::setContent($content);
     }
 
     /**

@@ -15,6 +15,8 @@ use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
+use function file_get_contents;
+
 final class BinaryFileResponseTest extends TestCase
 {
     #[Test]
@@ -26,5 +28,19 @@ final class BinaryFileResponseTest extends TestCase
         $headers  = $response->getHeaders();
 
         self::assertSame('text/css', $headers['Content-Type'] ?? null);
+    }
+
+    #[Test]
+    public function lazilyReadsBinaryContent(): void
+    {
+        $file = $this->fixturePath('assets/sample.css');
+
+        $response = new BinaryFileResponse($file);
+
+        $expected = file_get_contents($file);
+
+        self::assertIsString($expected);
+        self::assertSame($expected, $response->getContent());
+        self::assertSame($expected, $response->getContent());
     }
 }
