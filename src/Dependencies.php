@@ -13,7 +13,7 @@ namespace MagicSunday\Memories;
 
 use MagicSunday\Memories\Bootstrap\ComposerAutoload;
 
-require_once __DIR__ . '/../autoload/ComposerAutoload.php';
+require_once __DIR__ . '/../src/Bootstrap/ComposerAutoload.php';
 
 ComposerAutoload::require();
 

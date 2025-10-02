@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories;
 
+use MagicSunday\Memories\Bootstrap\EnvironmentBootstrap;
 use Phar;
 use RuntimeException;
 use Symfony\Component\Config\FileLocator;

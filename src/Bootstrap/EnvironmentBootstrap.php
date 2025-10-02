@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories;
+namespace MagicSunday\Memories\Bootstrap;
 
 use Phar;
 use Symfony\Component\Dotenv\Dotenv;

@@ -17,16 +17,8 @@ use MagicSunday\Memories\Http\Request;
 use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Http\Response\Response;
-use Throwable;
 
-use function is_file;
-use function preg_match;
-use function realpath;
-use function str_ends_with;
-use function str_starts_with;
-use function substr;
-
-require_once __DIR__ . '/../autoload/ComposerAutoload.php';
+//require_once __DIR__ . '/../autoload/ComposerAutoload.php';
 
 ComposerAutoload::require();
 
