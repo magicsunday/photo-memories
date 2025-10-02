@@ -105,6 +105,9 @@ final class ThumbnailServiceTest extends TestCase
         $imagick->expects(self::once())->method('autoOrientImage')->willReturn(true);
         $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
         $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(true);
+        $imagick->expects(self::once())->method('setImageFormat')->with('jpeg')->willReturn(true);
+        $imagick->expects(self::once())->method('setImageCompression')->with(Imagick::COMPRESSION_JPEG)->willReturn(true);
+        $imagick->expects(self::once())->method('setImageCompressionQuality')->with(85)->willReturn(true);
         $imagick->expects(self::once())->method('writeImage')->with($expectedOutput)->willReturn(false);
         $imagick->expects(self::exactly(2))->method('clear');
         $imagick->expects(self::exactly(2))->method('destroy');

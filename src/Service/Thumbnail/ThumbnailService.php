@@ -119,6 +119,10 @@ class ThumbnailService implements ThumbnailServiceInterface
                         $clone = $flattened;
                     }
 
+                    $clone->setImageFormat('jpeg');
+                    $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
+                    $clone->setImageCompressionQuality(85);
+
                     $out         = $this->buildThumbnailPath($checksum, $size);
                     $writeResult = $clone->writeImage($out);
 
