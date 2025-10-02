@@ -9,7 +9,20 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail;
+namespace MagicSunday\Memories\Service\Thumbnail {
+    if (!function_exists(__NAMESPACE__ . '\\imagecopyresampled')) {
+        function imagecopyresampled($dstImage, $srcImage, int $dstX, int $dstY, int $srcX, int $srcY, int $dstWidth, int $dstHeight, int $srcWidth, int $srcHeight): bool
+        {
+            if (\MagicSunday\Memories\Test\Unit\Service\Thumbnail\ThumbnailServiceTest::isGdResampleFailureForced()) {
+                return false;
+            }
+
+            return \imagecopyresampled($dstImage, $srcImage, $dstX, $dstY, $srcX, $srcY, $dstWidth, $dstHeight, $srcWidth, $srcHeight);
+        }
+    }
+}
+
+namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
 use Imagick;
 use MagicSunday\Memories\Entity\Media;
@@ -21,6 +34,13 @@ use RuntimeException;
 
 final class ThumbnailServiceTest extends TestCase
 {
+    private static bool $forceGdResampleFailure = false;
+
+    public static function isGdResampleFailureForced(): bool
+    {
+        return self::$forceGdResampleFailure;
+    }
+
     #[Test]
     public function throwsExceptionWhenThumbnailDirectoryCannotBeCreated(): void
     {
@@ -110,6 +130,65 @@ final class ThumbnailServiceTest extends TestCase
         try {
             $service->generateAll($sourcePath, $media);
         } finally {
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function throwsExceptionWhenGdResampleFails(): void
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            self::markTestSkipped('GD extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $image      = imagecreatetruecolor(400, 200);
+        $color      = imagecolorallocate($image, 50, 60, 70);
+        imagefilledrectangle($image, 0, 0, 399, 199, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media    = new Media($sourcePath, hash('sha256', 'source'), 1024);
+        $service  = new ThumbnailService($thumbnailDir, [200]);
+        $checksum = $media->getChecksum();
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unable to resample image for thumbnail.');
+
+        self::$forceGdResampleFailure = true;
+
+        try {
+            $method->invoke($service, $sourcePath, null, [200], $checksum);
+        } finally {
+            self::$forceGdResampleFailure = false;
+
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
             }
@@ -488,4 +567,5 @@ final class ThumbnailServiceTest extends TestCase
             }
         }
     }
+}
 }
