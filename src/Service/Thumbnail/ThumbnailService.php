@@ -106,6 +106,19 @@ class ThumbnailService implements ThumbnailServiceInterface
                         throw new RuntimeException(sprintf('Unable to resize image for thumbnail width %d.', $size));
                     }
 
+                    $clone->setImageBackgroundColor('white');
+
+                    if (method_exists($clone, 'setImageAlphaChannel')) {
+                        $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+                    }
+
+                    if ($clone->getImageAlphaChannel()) {
+                        $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                        $clone->clear();
+                        $clone->destroy();
+                        $clone = $flattened;
+                    }
+
                     $out         = $this->buildThumbnailPath($checksum, $size);
                     $writeResult = $clone->writeImage($out);
 
@@ -162,6 +175,20 @@ class ThumbnailService implements ThumbnailServiceInterface
                 }
 
                 try {
+                    imagealphablending($dst, true);
+
+                    $backgroundColor = imagecolorallocate($dst, 255, 255, 255);
+
+                    if (!is_int($backgroundColor)) {
+                        throw new RuntimeException('Unable to allocate background color for thumbnail.');
+                    }
+
+                    $fillResult = imagefill($dst, 0, 0, $backgroundColor);
+
+                    if ($fillResult === false) {
+                        throw new RuntimeException('Unable to fill thumbnail background.');
+                    }
+
                     $resampleResult = imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
                     if ($resampleResult === false) {
                         throw new RuntimeException('Unable to resample image for thumbnail.');
