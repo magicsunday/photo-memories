@@ -1,5 +1,3 @@
-import './style.css';
-
 const defaultFilters = {
   score: '0.35',
   strategie: '',
