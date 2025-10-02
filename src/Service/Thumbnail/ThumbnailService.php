@@ -98,19 +98,26 @@ class ThumbnailService implements ThumbnailServiceInterface
             $results = [];
             foreach ($sizes as $size) {
                 $clone = $this->cloneImagick($imagick);
-                $clone->thumbnailImage($size, 0);
 
-                $out         = $this->buildThumbnailPath($checksum, $size);
-                $writeResult = $clone->writeImage($out);
+                try {
+                    $resizeResult = $clone->thumbnailImage($size, 0);
 
-                $clone->clear();
-                $clone->destroy();
+                    if ($resizeResult === false) {
+                        throw new RuntimeException(sprintf('Unable to resize image for thumbnail width %d.', $size));
+                    }
 
-                if ($writeResult === false) {
-                    throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                    $out         = $this->buildThumbnailPath($checksum, $size);
+                    $writeResult = $clone->writeImage($out);
+
+                    if ($writeResult === false) {
+                        throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                    }
+
+                    $results[$size] = $out;
+                } finally {
+                    $clone->clear();
+                    $clone->destroy();
                 }
-
-                $results[$size] = $out;
             }
 
             return $results;
