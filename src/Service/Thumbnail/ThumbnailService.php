@@ -103,12 +103,12 @@ class ThumbnailService implements ThumbnailServiceInterface
     {
         $data = @file_get_contents($filepath);
         if ($data === false) {
-            return null;
+            throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
         }
 
         $src = @imagecreatefromstring($data);
         if ($src === false) {
-            return null;
+            throw new RuntimeException(sprintf('Unable to create GD image from "%s".', $filepath));
         }
 
         $src = $this->applyOrientationWithGd($src, $orientation);

@@ -16,6 +16,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionMethod;
 use RuntimeException;
 
 final class ThumbnailServiceTest extends TestCase
@@ -62,7 +63,12 @@ final class ThumbnailServiceTest extends TestCase
             self::fail('Unable to create thumbnail directory.');
         }
 
-        $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
         if (file_put_contents($sourcePath, 'thumbnail-source') === false) {
             self::fail('Unable to create thumbnail source file.');
         }
@@ -103,11 +109,83 @@ final class ThumbnailServiceTest extends TestCase
                 @unlink($sourcePath);
             }
 
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
             if (is_dir($thumbnailDir)) {
                 foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
                     @unlink($file);
                 }
 
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function throwsExceptionWhenGdCannotReadSourceFile(): void
+    {
+        if (!function_exists('imagecreatefromstring')) {
+            self::markTestSkipped('GD extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $service = new ThumbnailService($thumbnailDir, [200]);
+        $missingPath = $thumbnailDir . DIRECTORY_SEPARATOR . 'missing.jpg';
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method->setAccessible(true);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath));
+
+        try {
+            $method->invoke($service, $missingPath, 200, null);
+        } finally {
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function throwsExceptionWhenGdCannotCreateImageFromData(): void
+    {
+        if (!function_exists('imagecreatefromstring')) {
+            self::markTestSkipped('GD extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'invalid.jpg';
+        if (file_put_contents($sourcePath, 'not-an-image') === false) {
+            self::fail('Unable to create invalid thumbnail source file.');
+        }
+
+        $service = new ThumbnailService($thumbnailDir, [200]);
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method->setAccessible(true);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(sprintf('Unable to create GD image from "%s".', $sourcePath));
+
+        try {
+            $method->invoke($service, $sourcePath, 200, null);
+        } finally {
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($thumbnailDir)) {
                 @rmdir($thumbnailDir);
             }
         }
@@ -125,7 +203,12 @@ final class ThumbnailServiceTest extends TestCase
             self::fail('Unable to create thumbnail directory.');
         }
 
-        $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
         $image      = imagecreatetruecolor(400, 200);
         $color      = imagecolorallocate($image, 200, 100, 50);
         imagefilledrectangle($image, 0, 0, 399, 199, $color);
@@ -153,6 +236,10 @@ final class ThumbnailServiceTest extends TestCase
                 @unlink($sourcePath);
             }
 
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
             if ($thumbnailPath !== null && is_file($thumbnailPath)) {
                 @unlink($thumbnailPath);
             }
@@ -175,7 +262,12 @@ final class ThumbnailServiceTest extends TestCase
             self::fail('Unable to create thumbnail directory.');
         }
 
-        $sourcePath = $thumbnailDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
         $image      = imagecreatetruecolor(200, 200);
         $color      = imagecolorallocate($image, 50, 150, 200);
         imagefilledrectangle($image, 0, 0, 199, 199, $color);
@@ -186,18 +278,26 @@ final class ThumbnailServiceTest extends TestCase
 
         $service = new ThumbnailService($thumbnailDir, [200]);
 
-        chmod($thumbnailDir, 0555);
+        $relocatedDir = $thumbnailDir . '-moved';
+        if (!@rename($thumbnailDir, $relocatedDir)) {
+            self::fail('Unable to relocate thumbnail directory.');
+        }
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method->setAccessible(true);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessageMatches('/Unable to create thumbnail/');
 
         try {
-            $service->generateAll($sourcePath, $media);
+            $method->invoke($service, $sourcePath, 200, $media->getOrientation());
         } finally {
-            chmod($thumbnailDir, 0755);
-
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
             }
 
             foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
@@ -206,6 +306,14 @@ final class ThumbnailServiceTest extends TestCase
 
             if (is_dir($thumbnailDir)) {
                 @rmdir($thumbnailDir);
+            }
+
+            foreach (glob($relocatedDir . DIRECTORY_SEPARATOR . '*.jpg') ?: [] as $file) {
+                @unlink($file);
+            }
+
+            if (is_dir($relocatedDir)) {
+                @rmdir($relocatedDir);
             }
         }
     }
