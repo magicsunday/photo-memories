@@ -25,6 +25,8 @@ namespace MagicSunday\Memories\Service\Thumbnail {
 namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
 use Imagick;
+use ImagickDraw;
+use ImagickPixel;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
 use MagicSunday\Memories\Test\TestCase;
@@ -263,6 +265,83 @@ final class ThumbnailServiceTest extends TestCase
         } finally {
             foreach ($thumbnails as $file) {
                 if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function imagickRemovesAlphaChannelWhenGeneratingThumbnails(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'transparent.png';
+
+        $image = new Imagick();
+        $image->newImage(60, 60, new ImagickPixel('transparent'), 'png');
+
+        $draw = new ImagickDraw();
+        $draw->setFillColor('red');
+        $draw->circle(30, 30, 30, 15);
+        $image->drawImage($draw);
+        $image->writeImage($sourcePath);
+        $image->clear();
+        $image->destroy();
+
+        $media    = new Media($sourcePath, hash('sha256', 'imagick-alpha-source'), 512);
+        $service  = new ThumbnailService($thumbnailDir, [40]);
+        $thumbnails = [];
+
+        try {
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertArrayHasKey(40, $thumbnails);
+
+            $thumbnailPath = $thumbnails[40];
+            self::assertFileExists($thumbnailPath);
+
+            $thumbnail = new Imagick($thumbnailPath);
+
+            $cornerColor = $thumbnail->getImagePixelColor(0, 0)->getColor();
+            self::assertGreaterThanOrEqual(250, $cornerColor['r']);
+            self::assertGreaterThanOrEqual(250, $cornerColor['g']);
+            self::assertGreaterThanOrEqual(250, $cornerColor['b']);
+
+            $centerColor = $thumbnail->getImagePixelColor(20, 20)->getColor();
+            self::assertGreaterThanOrEqual(180, $centerColor['r']);
+            self::assertLessThanOrEqual(90, $centerColor['g']);
+            self::assertLessThanOrEqual(90, $centerColor['b']);
+
+            $thumbnail->clear();
+            $thumbnail->destroy();
+        } finally {
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
                     @unlink($file);
                 }
             }
@@ -564,6 +643,116 @@ final class ThumbnailServiceTest extends TestCase
 
             if (is_dir($relocatedDir)) {
                 @rmdir($relocatedDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function gdFillsTransparentBackgroundBeforeResampling(): void
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagewebp')) {
+            self::markTestSkipped('GD extension with WebP support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'transparent.webp';
+
+        $image = imagecreatetruecolor(60, 60);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $transparent = imagecolorallocatealpha($image, 0, 0, 0, 127);
+        imagefill($image, 0, 0, $transparent);
+        $opaque = imagecolorallocatealpha($image, 0, 0, 255, 0);
+        imagefilledellipse($image, 30, 30, 20, 20, $opaque);
+
+        $webpResult = imagewebp($image, $sourcePath, 100);
+        imagedestroy($image);
+
+        if ($webpResult === false) {
+            self::fail('Unable to create WebP source image.');
+        }
+
+        $media   = new Media($sourcePath, hash('sha256', 'gd-alpha-source'), 256);
+        $service = new ThumbnailService($thumbnailDir, [50]);
+
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
+
+        $thumbnails = [];
+
+        try {
+            /** @var array<int, string> $thumbnails */
+            $thumbnails = $method->invoke($service, $sourcePath, null, [50], $media->getChecksum());
+
+            self::assertArrayHasKey(50, $thumbnails);
+
+            $thumbnailPath = $thumbnails[50];
+            self::assertFileExists($thumbnailPath);
+
+            if (extension_loaded('imagick')) {
+                $thumbnail = new Imagick($thumbnailPath);
+
+                $cornerColor = $thumbnail->getImagePixelColor(0, 0)->getColor();
+                self::assertGreaterThanOrEqual(250, $cornerColor['r']);
+                self::assertGreaterThanOrEqual(250, $cornerColor['g']);
+                self::assertGreaterThanOrEqual(250, $cornerColor['b']);
+
+                $centerColor = $thumbnail->getImagePixelColor(25, 25)->getColor();
+                self::assertLessThanOrEqual(80, $centerColor['b']);
+
+                $thumbnail->clear();
+                $thumbnail->destroy();
+            } else {
+                $thumbnailData = file_get_contents($thumbnailPath);
+
+                if ($thumbnailData === false) {
+                    self::fail('Unable to read generated thumbnail for inspection.');
+                }
+
+                $thumbnailImage = imagecreatefromstring($thumbnailData);
+
+                if (!$thumbnailImage instanceof GdImage) {
+                    self::markTestSkipped('JPEG decoding is unavailable for thumbnail inspection.');
+                }
+
+                $cornerColorIndex = imagecolorat($thumbnailImage, 0, 0);
+                $cornerColor      = imagecolorsforindex($thumbnailImage, $cornerColorIndex);
+                self::assertGreaterThanOrEqual(250, $cornerColor['red']);
+                self::assertGreaterThanOrEqual(250, $cornerColor['green']);
+                self::assertGreaterThanOrEqual(250, $cornerColor['blue']);
+
+                $centerColorIndex = imagecolorat($thumbnailImage, 25, 25);
+                $centerColor      = imagecolorsforindex($thumbnailImage, $centerColorIndex);
+                self::assertLessThanOrEqual(80, $centerColor['blue']);
+
+                imagedestroy($thumbnailImage);
+            }
+        } finally {
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
             }
         }
     }
