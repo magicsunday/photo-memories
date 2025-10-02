@@ -9,9 +9,11 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories;
+use MagicSunday\Memories\DependencyContainerFactory;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 $factory = new DependencyContainerFactory();
 $factory->ensure();
+
+require_once __DIR__ . '/index.html';

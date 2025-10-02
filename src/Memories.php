@@ -15,11 +15,11 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-require_once __DIR__ . '/Dependencies.php';
-require_once __DIR__ . '/../var/cache/DependencyContainer.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // Create the container
-$container = new DependencyContainer();
+$factory   = new DependencyContainerFactory();
+$container = $factory->create();
 
 // Create and set the SymfonyStyle instance
 $input  = new ArgvInput();
