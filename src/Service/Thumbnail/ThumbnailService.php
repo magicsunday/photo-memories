@@ -70,7 +70,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
     private function generateWithImagick(string $filepath, int $width, ?int $orientation): ?string
     {
-        $im = new Imagick();
+        $im = $this->createImagick();
         $im->setOption('jpeg:preserve-settings', 'true');
         $im->readImage($filepath . '[0]');
         if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
@@ -82,17 +82,21 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $hash = hash('crc32b', $filepath . ':' . $width);
         $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
-        if ($im->writeImage($out)) {
-            $im->clear();
-            $im->destroy();
-
-            return $out;
-        }
+        $writeResult = $im->writeImage($out);
 
         $im->clear();
         $im->destroy();
 
-        return null;
+        if ($writeResult === false) {
+            throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+        }
+
+        return $out;
+    }
+
+    protected function createImagick(): Imagick
+    {
+        return new Imagick();
     }
 
     private function generateWithGd(string $filepath, int $width, ?int $orientation): ?string
