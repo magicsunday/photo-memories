@@ -9,13 +9,14 @@
 
 declare(strict_types=1);
 
-namespace MagicSunday\Memories;
-
 use MagicSunday\Memories\Bootstrap\ComposerAutoload;
+use MagicSunday\Memories\DependencyContainerFactory;
 
-require_once __DIR__ . '/../src/Bootstrap/ComposerAutoload.php';
+//require_once __DIR__ . '/../../autoload/ComposerAutoload.php';
 
 ComposerAutoload::require();
 
 $factory = new DependencyContainerFactory();
 $factory->ensure();
+
+require_once __DIR__ . '/index.html';

@@ -846,6 +846,17 @@ services:
     MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface:
         alias: MagicSunday\Memories\Service\Feed\HtmlFeedExportService
 
+    MagicSunday\Memories\Http\Controller\FeedController:
+        public: true
+        arguments:
+            $defaultFeedLimit: '%memories.http.feed.default_limit%'
+            $maxFeedLimit: '%memories.http.feed.max_limit%'
+            $previewImageCount: '%memories.http.feed.preview_images%'
+            $clusterFetchMultiplier: '%memories.http.feed.cluster_multiplier%'
+            $defaultCoverWidth: '%memories.http.feed.cover_width%'
+            $defaultMemberWidth: '%memories.http.feed.member_width%'
+            $maxThumbnailWidth: '%memories.http.feed.max_thumbnail_width%'
+
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
         arguments:

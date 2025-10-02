@@ -4,6 +4,39 @@
 
 # Photo Memories
 
+## HTTP-Feed & Single-Page-App
+
+Der neue HTTP-Einstiegspunkt unter `public/index.php` liefert zwei Dinge:
+
+* `GET /api/feed` – JSON-Ausgabe des Feed-Builders (Filter für Score, Strategie, Datum)
+* `GET /api/media/{id}/thumbnail` – Auslieferung der generierten Thumbnails bzw. Originaldateien
+
+Unter `public/app/` liegt eine schlanke SPA (Vanilla JS + Vite), die den Feed lädt, Filter per UI anbietet und Cover-Galerien animiert darstellt. Die Anwendung läuft sowohl gegen den lokalen PHP-Server als auch gegen den Vite-Entwicklungsserver.
+
+### Schnelleinstieg
+
+```bash
+# Abhängigkeiten installieren
+make web-install
+
+# PHP-Einstieg starten (separates Terminal)
+make web-serve
+
+# Vite-Entwicklungsserver starten (separates Terminal)
+make web-dev
+
+# Build-Artefakte erzeugen
+make web-build
+
+# Gebautes Bundle lokal prüfen
+make web-preview
+
+# Playwright-Browsertests ausführen
+make web-test
+```
+
+Nach dem Build liefert `public/index.php` automatisch die Dateien aus `public/app/dist/` aus. Ohne Build fällt der Fallback auf `public/app/index.html` zurück (z. B. für reine SPA-Prototypen).
+
 ## Localised Points of Interest
 
 Photo Memories enriches locations with nearby points of interest fetched from the OpenStreetMap Overpass API. These POIs now
