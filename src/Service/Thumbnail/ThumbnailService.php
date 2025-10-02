@@ -118,9 +118,14 @@ class ThumbnailService implements ThumbnailServiceInterface
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
         $hash = hash('crc32b', $filepath . ':' . $width);
         $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
-        imagejpeg($dst, $out, 85);
+
+        $writeResult = @imagejpeg($dst, $out, 85);
         imagedestroy($dst);
         imagedestroy($src);
+
+        if ($writeResult === false) {
+            throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+        }
 
         return $out;
     }
