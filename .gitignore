@@ -13,6 +13,7 @@ composer.lock
 
 # Build stuff
 .build/*.cache
+.build/build.phar/
 
 # Cache
 .build/cache

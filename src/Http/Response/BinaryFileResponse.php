@@ -11,55 +11,116 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Http\Response;
 
-use function basename;
+use finfo;
+use RuntimeException;
+
+use function array_keys;
+use function file_get_contents;
 use function filesize;
-use function finfo_close;
-use function finfo_file;
-use function finfo_open;
 use function is_file;
 use function is_string;
+use function pathinfo;
 use function sprintf;
+use function strcasecmp;
+use function strtolower;
 
 use const FILEINFO_MIME_TYPE;
+use const PATHINFO_EXTENSION;
 
-/**
- * Minimal binary file response.
- */
-final class BinaryFileResponse extends Response
+final class BinaryFileResponse
 {
-    private string $filePath;
+    private const DEFAULT_STATUS = 200;
 
-    public function __construct(string $filePath, int $statusCode = 200, array $headers = [])
-    {
-        if (!is_file($filePath)) {
-            throw new \RuntimeException(sprintf('File "%s" cannot be read.', $filePath));
+    /**
+     * @param array<string, string> $headers
+     */
+    public function __construct(
+        private readonly string $filePath,
+        private readonly int $status = self::DEFAULT_STATUS,
+        private readonly array $headers = [],
+    ) {
+        if (is_file($filePath) === false) {
+            throw new RuntimeException(sprintf('Binary file response path "%s" does not exist.', $filePath));
         }
-
-        $this->filePath = $filePath;
-        parent::__construct('', $statusCode, $headers);
     }
 
-    public function send(): void
+    /**
+     * @return array{status: int, headers: array<string, string>, body: string}
+     */
+    public function send(): array
     {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = $finfo !== false ? finfo_file($finfo, $this->filePath) : null;
-        if ($finfo !== false) {
-            finfo_close($finfo);
+        $headers = $this->headers;
+
+        if ($this->hasHeader($headers, 'Content-Type') === false) {
+            $headers['Content-Type'] = $this->resolveMimeType($this->filePath);
         }
 
-        if (is_string($mime) && $mime !== '') {
-            $this->setHeader('Content-Type', $mime);
+        if ($this->hasHeader($headers, 'Content-Length') === false) {
+            $size = filesize($this->filePath);
+
+            if ($size === false) {
+                throw new RuntimeException(sprintf('Unable to determine file size for "%s".', $this->filePath));
+            }
+
+            $headers['Content-Length'] = (string) $size;
         }
 
-        $this->setHeader('Content-Length', (string) filesize($this->filePath));
-        $this->setHeader('Content-Disposition', 'inline; filename="' . basename($this->filePath) . '"');
+        $body = file_get_contents($this->filePath);
 
-        parent::send();
-        parent::sendFile($this->filePath);
+        if ($body === false) {
+            throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $this->filePath));
+        }
+
+        return [
+            'status'  => $this->status,
+            'headers' => $headers,
+            'body'    => $body,
+        ];
     }
 
-    public function getFilePath(): string
+    /**
+     * @param array<string, string> $headers
+     */
+    private function hasHeader(array $headers, string $name): bool
     {
-        return $this->filePath;
+        foreach (array_keys($headers) as $headerName) {
+            if (strcasecmp($headerName, $name) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveMimeType(string $filePath): string
+    {
+        $extension = strtolower((string) pathinfo($filePath, PATHINFO_EXTENSION));
+
+        $map = [
+            'css'   => 'text/css',
+            'js'    => 'application/javascript',
+            'mjs'   => 'application/javascript',
+            'json'  => 'application/json',
+            'svg'   => 'image/svg+xml',
+            'woff'  => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf'   => 'font/ttf',
+            'otf'   => 'font/otf',
+            'eot'   => 'application/vnd.ms-fontobject',
+            'wasm'  => 'application/wasm',
+        ];
+
+        if ($extension !== '' && isset($map[$extension])) {
+            return $map[$extension];
+        }
+
+        $finfo     = new finfo(FILEINFO_MIME_TYPE);
+        $detected  = $finfo->file($filePath);
+
+        if (is_string($detected) && $detected !== '') {
+            return $detected;
+        }
+
+        return 'application/octet-stream';
     }
 }
