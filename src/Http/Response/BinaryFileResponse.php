@@ -17,6 +17,8 @@ use RuntimeException;
 use function array_keys;
 use function file_get_contents;
 use function filesize;
+use function header;
+use function http_response_code;
 use function is_file;
 use function is_string;
 use function pathinfo;
@@ -27,55 +29,86 @@ use function strtolower;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
-final class BinaryFileResponse
+final class BinaryFileResponse extends Response
 {
     private const DEFAULT_STATUS = 200;
+
+    private readonly string $filePath;
+
+    private bool $contentLoaded = false;
 
     /**
      * @param array<string, string> $headers
      */
     public function __construct(
-        private readonly string $filePath,
-        private readonly int $status = self::DEFAULT_STATUS,
-        private readonly array $headers = [],
+        string $filePath,
+        int $status = self::DEFAULT_STATUS,
+        array $headers = [],
     ) {
         if (is_file($filePath) === false) {
             throw new RuntimeException(sprintf('Binary file response path "%s" does not exist.', $filePath));
         }
-    }
 
-    /**
-     * @return array{status: int, headers: array<string, string>, body: string}
-     */
-    public function send(): array
-    {
-        $headers = $this->headers;
+        $this->filePath = $filePath;
 
-        if ($this->hasHeader($headers, 'Content-Type') === false) {
-            $headers['Content-Type'] = $this->resolveMimeType($this->filePath);
+        $resolvedHeaders = $headers;
+
+        if ($this->hasHeader($resolvedHeaders, 'Content-Type') === false) {
+            $resolvedHeaders['Content-Type'] = $this->resolveMimeType($filePath);
         }
 
-        if ($this->hasHeader($headers, 'Content-Length') === false) {
-            $size = filesize($this->filePath);
+        if ($this->hasHeader($resolvedHeaders, 'Content-Length') === false) {
+            $size = filesize($filePath);
 
             if ($size === false) {
-                throw new RuntimeException(sprintf('Unable to determine file size for "%s".', $this->filePath));
+                throw new RuntimeException(sprintf('Unable to determine file size for "%s".', $filePath));
             }
 
-            $headers['Content-Length'] = (string) $size;
+            $resolvedHeaders['Content-Length'] = (string) $size;
         }
 
-        $body = file_get_contents($this->filePath);
+        parent::__construct('', $status, $resolvedHeaders);
+    }
 
-        if ($body === false) {
-            throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $this->filePath));
+    public function send(): void
+    {
+        if ($this->contentLoaded) {
+            parent::send();
+
+            return;
         }
 
-        return [
-            'status'  => $this->status,
-            'headers' => $headers,
-            'body'    => $body,
-        ];
+        $statusCode = $this->getStatusCode();
+
+        http_response_code($statusCode);
+
+        foreach ($this->getHeaders() as $name => $value) {
+            header($name . ': ' . $value, true, $statusCode);
+        }
+
+        $this->sendFile($this->filePath);
+    }
+
+    public function getContent(): string
+    {
+        if ($this->contentLoaded === false) {
+            $body = file_get_contents($this->filePath);
+
+            if ($body === false) {
+                throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $this->filePath));
+            }
+
+            $this->contentLoaded = true;
+            parent::setContent($body);
+        }
+
+        return parent::getContent();
+    }
+
+    public function setContent(string $content): void
+    {
+        $this->contentLoaded = true;
+        parent::setContent($content);
     }
 
     /**
