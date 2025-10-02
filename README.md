@@ -82,3 +82,10 @@ MEMORIES_PREFERRED_LOCALE=de
 ```
 
 Leave the variable unset to retain the previous behaviour of using the generic `name` tag provided by Overpass.
+
+## Cluster-Konfiguration
+
+Die Persistierung der berechneten Cluster wird jetzt begrenzt, damit Feeds und Oberflächen nicht mit hunderten Medien pro Block
+überladen werden. Über die neue Umgebungsvariable `MEMORIES_CLUSTER_MAX_MEMBERS` (Standard: `20`) legst du fest, wie viele
+Medien pro Cluster maximal gespeichert werden. Für eine abweichende Konfiguration kannst du den Wert entweder direkt in deiner
+`.env` oder über einen passenden Symfony-Parameter überschreiben (`memories.cluster.persistence.max_members`).
