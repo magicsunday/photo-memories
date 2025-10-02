@@ -40,11 +40,11 @@ final class EntityManagerFactory
         // Connection params (MariaDB/MySQL)
         $dbParams = [
             'driver'        => 'pdo_mysql',
-            'host'          => getenv('DB_HOST') !== false ? (string) getenv('DB_HOST') : 'database',
-            'port'          => (int) (getenv('DB_PORT') !== false ? (string) getenv('DB_PORT') : '3306'),
-            'user'          => getenv('DB_USER') !== false ? (string) getenv('DB_USER') : 'memories',
-            'password'      => getenv('DB_PASS') !== false ? (string) getenv('DB_PASS') : 'memories',
-            'dbname'        => getenv('DB_NAME') !== false ? (string) getenv('DB_NAME') : 'memories',
+            'host'          => getenv('MARIADB_HOST') !== false ? (string) getenv('MARIADB_HOST') : 'database',
+            'port'          => (int) (getenv('MARIADB_PORT') !== false ? (string) getenv('MARIADB_PORT') : '3306'),
+            'user'          => getenv('MARIADB_USER') !== false ? (string) getenv('MARIADB_USER') : 'memories',
+            'password'      => getenv('MARIADB_PASSWORD') !== false ? (string) getenv('MARIADB_PASSWORD') : 'memories',
+            'dbname'        => getenv('MARIADB_DATABASE') !== false ? (string) getenv('MARIADB_DATABASE') : 'memories',
             'charset'       => 'utf8mb4',
             'driverOptions' => [
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
