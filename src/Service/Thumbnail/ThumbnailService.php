@@ -43,21 +43,22 @@ class ThumbnailService implements ThumbnailServiceInterface
     public function generateAll(string $filepath, Media $media): array
     {
         $orientation = $media->getOrientation();
+        $checksum    = $media->getChecksum();
 
         if (extension_loaded('imagick')) {
-            return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes);
+            return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
         }
 
         if (function_exists('imagecreatefromstring')) {
-            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes);
+            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum);
         }
 
         throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
     }
 
-    private function generateWithImagick(string $filepath, int $width, ?int $orientation): ?string
+    private function generateWithImagick(string $filepath, int $width, ?int $orientation, string $checksum): ?string
     {
-        $results = $this->generateThumbnailsWithImagick($filepath, $orientation, [$width]);
+        $results = $this->generateThumbnailsWithImagick($filepath, $orientation, [$width], $checksum);
 
         return $results[$width] ?? null;
     }
@@ -67,9 +68,9 @@ class ThumbnailService implements ThumbnailServiceInterface
         return new Imagick();
     }
 
-    private function generateWithGd(string $filepath, int $width, ?int $orientation): ?string
+    private function generateWithGd(string $filepath, int $width, ?int $orientation, string $checksum): ?string
     {
-        $results = $this->generateThumbnailsWithGd($filepath, $orientation, [$width]);
+        $results = $this->generateThumbnailsWithGd($filepath, $orientation, [$width], $checksum);
 
         return $results[$width] ?? null;
     }
@@ -79,7 +80,7 @@ class ThumbnailService implements ThumbnailServiceInterface
      *
      * @return array<int, string>
      */
-    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes): array
+    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes, string $checksum): array
     {
         $imagick = $this->createImagick();
 
@@ -99,7 +100,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 $clone = $this->cloneImagick($imagick);
                 $clone->thumbnailImage($size, 0);
 
-                $out         = $this->buildThumbnailPath($filepath, $size);
+                $out         = $this->buildThumbnailPath($checksum, $size);
                 $writeResult = $clone->writeImage($out);
 
                 $clone->clear();
@@ -124,7 +125,7 @@ class ThumbnailService implements ThumbnailServiceInterface
      *
      * @return array<int, string>
      */
-    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes): array
+    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes, string $checksum): array
     {
         $data = @file_get_contents($filepath);
         if ($data === false) {
@@ -156,7 +157,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 try {
                     imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-                    $out         = $this->buildThumbnailPath($filepath, $size);
+                    $out         = $this->buildThumbnailPath($checksum, $size);
                     $writeResult = @imagejpeg($dst, $out, 85);
                 } finally {
                     imagedestroy($dst);
@@ -180,11 +181,9 @@ class ThumbnailService implements ThumbnailServiceInterface
         return clone $imagick;
     }
 
-    private function buildThumbnailPath(string $filepath, int $width): string
+    private function buildThumbnailPath(string $checksum, int $width): string
     {
-        $hash = hash('crc32b', $filepath . ':' . $width);
-
-        return $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
+        return $this->thumbnailDir . DIRECTORY_SEPARATOR . $checksum . '-' . $width . '.jpg';
     }
 
     private function applyOrientationWithGd(GdImage $image, ?int $orientation): GdImage
