@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 use MagicSunday\Memories\DependencyContainer;
+use MagicSunday\Memories\DependencyContainerFactory;
 use MagicSunday\Memories\Http\Controller\FeedController;
 use MagicSunday\Memories\Http\Request;
 use MagicSunday\Memories\Http\Response\BinaryFileResponse;
@@ -25,11 +26,10 @@ use function str_starts_with;
 use function substr;
 
 require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../src/Dependencies.php';
-require_once __DIR__ . '/../var/cache/DependencyContainer.php';
 
 $request   = Request::fromGlobals();
-$container = new DependencyContainer();
+$factory   = new DependencyContainerFactory();
+$container = $factory->create();
 
 $method = $request->getMethod();
 $path   = $request->getPath();
