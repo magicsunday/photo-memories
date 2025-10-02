@@ -98,6 +98,13 @@ class ThumbnailService implements ThumbnailServiceInterface
             foreach ($sizes as $size) {
                 $clone = $this->cloneImagick($imagick);
                 $clone->thumbnailImage($size, 0);
+                $clone->setImageBackgroundColor('white');
+
+                if (defined('Imagick::ALPHACHANNEL_REMOVE')) {
+                    $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+                } else {
+                    $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_DEACTIVATE);
+                }
 
                 $out         = $this->buildThumbnailPath($filepath, $size);
                 $writeResult = $clone->writeImage($out);
@@ -154,6 +161,9 @@ class ThumbnailService implements ThumbnailServiceInterface
                 }
 
                 try {
+                    $background = imagecolorallocate($dst, 255, 255, 255);
+                    imagefill($dst, 0, 0, $background);
+
                     imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
                     $out         = $this->buildThumbnailPath($filepath, $size);

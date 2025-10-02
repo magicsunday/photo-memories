@@ -21,6 +21,8 @@ use RuntimeException;
 
 final class ThumbnailServiceTest extends TestCase
 {
+    private const TRANSPARENT_FIXTURE_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAGUlEQVQImWNkgIL/DAz/GRgYGJgY0ABhAQBz4QIG65FeAAAAAABJRU5ErkJggg==';
+
     #[Test]
     public function throwsExceptionWhenThumbnailDirectoryCannotBeCreated(): void
     {
@@ -184,6 +186,141 @@ final class ThumbnailServiceTest extends TestCase
         } finally {
             foreach ($thumbnails as $file) {
                 if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function imagickFlattensTransparentPixelsToWhite(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'transparent.png';
+        $this->createTransparentFixture($sourcePath);
+
+        $media   = new Media($sourcePath, hash('sha256', 'transparent'), 1024);
+        $service = new ThumbnailService($thumbnailDir, [4]);
+
+        $thumbnails = [];
+        try {
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertArrayHasKey(4, $thumbnails);
+
+            $thumbnailPath = $thumbnails[4];
+            self::assertFileExists($thumbnailPath);
+
+            $image = new Imagick($thumbnailPath);
+            $pixel = $image->getImagePixelColor(0, 0);
+            $color = $pixel->getColor();
+
+            self::assertGreaterThanOrEqual(250, $color['r']);
+            self::assertGreaterThanOrEqual(250, $color['g']);
+            self::assertGreaterThanOrEqual(250, $color['b']);
+
+            $image->clear();
+            $image->destroy();
+        } finally {
+            foreach ($thumbnails as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function gdFlattensTransparentPixelsToWhite(): void
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            self::markTestSkipped('GD extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'transparent.png';
+        $this->createTransparentFixture($sourcePath);
+
+        $media   = new Media($sourcePath, hash('sha256', 'transparent'), 1024);
+        $service = new ThumbnailService($thumbnailDir, [4]);
+
+        $thumbnails = [];
+        $method     = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
+        $method->setAccessible(true);
+
+        try {
+            /** @var array<int, string> $thumbnails */
+            $thumbnails = $method->invoke($service, $sourcePath, $media->getOrientation(), [4]);
+
+            self::assertArrayHasKey(4, $thumbnails);
+
+            $thumbnailPath = $thumbnails[4];
+            self::assertFileExists($thumbnailPath);
+
+            $image = imagecreatefromjpeg($thumbnailPath);
+            if ($image === false) {
+                self::fail('Unable to read generated JPEG thumbnail.');
+            }
+
+            $color = imagecolorat($image, 0, 0);
+            imagedestroy($image);
+
+            $red   = ($color >> 16) & 0xFF;
+            $green = ($color >> 8) & 0xFF;
+            $blue  = $color & 0xFF;
+
+            self::assertGreaterThanOrEqual(250, $red);
+            self::assertGreaterThanOrEqual(250, $green);
+            self::assertGreaterThanOrEqual(250, $blue);
+        } finally {
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
                     @unlink($file);
                 }
             }
@@ -394,6 +531,18 @@ final class ThumbnailServiceTest extends TestCase
             if (is_dir($relocatedDir)) {
                 @rmdir($relocatedDir);
             }
+        }
+    }
+
+    private function createTransparentFixture(string $path): void
+    {
+        $data = base64_decode(self::TRANSPARENT_FIXTURE_BASE64, true);
+        if ($data === false) {
+            self::fail('Unable to decode transparent PNG fixture.');
+        }
+
+        if (file_put_contents($path, $data) === false) {
+            self::fail('Unable to write transparent PNG fixture.');
         }
     }
 }
