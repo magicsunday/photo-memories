@@ -42,27 +42,14 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     public function generateAll(string $filepath, Media $media): array
     {
-        $results = [];
-        foreach ($this->sizes as $size) {
-            $path = $this->generateThumbnail($filepath, $size, $media);
-            if ($path !== null) {
-                $results[$size] = $path;
-            }
-        }
-
-        return $results;
-    }
-
-    private function generateThumbnail(string $filepath, int $width, Media $media): ?string
-    {
         $orientation = $media->getOrientation();
 
         if (extension_loaded('imagick')) {
-            return $this->generateWithImagick($filepath, $width, $orientation);
+            return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes);
         }
 
         if (function_exists('imagecreatefromstring')) {
-            return $this->generateWithGd($filepath, $width, $orientation);
+            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes);
         }
 
         throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
@@ -70,28 +57,9 @@ class ThumbnailService implements ThumbnailServiceInterface
 
     private function generateWithImagick(string $filepath, int $width, ?int $orientation): ?string
     {
-        $im = $this->createImagick();
-        $im->setOption('jpeg:preserve-settings', 'true');
-        $im->readImage($filepath . '[0]');
-        if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
-            $im->setImageOrientation($orientation);
-        }
-        $im->autoOrientImage();
-        $im->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
-        $im->thumbnailImage($width, 0);
+        $results = $this->generateThumbnailsWithImagick($filepath, $orientation, [$width]);
 
-        $hash = hash('crc32b', $filepath . ':' . $width);
-        $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
-        $writeResult = $im->writeImage($out);
-
-        $im->clear();
-        $im->destroy();
-
-        if ($writeResult === false) {
-            throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
-        }
-
-        return $out;
+        return $results[$width] ?? null;
     }
 
     protected function createImagick(): Imagick
@@ -101,37 +69,122 @@ class ThumbnailService implements ThumbnailServiceInterface
 
     private function generateWithGd(string $filepath, int $width, ?int $orientation): ?string
     {
+        $results = $this->generateThumbnailsWithGd($filepath, $orientation, [$width]);
+
+        return $results[$width] ?? null;
+    }
+
+    /**
+     * @param int[] $sizes
+     *
+     * @return array<int, string>
+     */
+    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes): array
+    {
+        $imagick = $this->createImagick();
+
+        try {
+            $imagick->setOption('jpeg:preserve-settings', 'true');
+            $imagick->readImage($filepath . '[0]');
+
+            if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
+                $imagick->setImageOrientation($orientation);
+            }
+
+            $imagick->autoOrientImage();
+            $imagick->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
+
+            $results = [];
+            foreach ($sizes as $size) {
+                $clone = $this->cloneImagick($imagick);
+                $clone->thumbnailImage($size, 0);
+
+                $out         = $this->buildThumbnailPath($filepath, $size);
+                $writeResult = $clone->writeImage($out);
+
+                $clone->clear();
+                $clone->destroy();
+
+                if ($writeResult === false) {
+                    throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                }
+
+                $results[$size] = $out;
+            }
+
+            return $results;
+        } finally {
+            $imagick->clear();
+            $imagick->destroy();
+        }
+    }
+
+    /**
+     * @param int[] $sizes
+     *
+     * @return array<int, string>
+     */
+    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes): array
+    {
         $data = @file_get_contents($filepath);
         if ($data === false) {
             throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
         }
 
         $src = @imagecreatefromstring($data);
-        if ($src === false) {
+        if (!$src instanceof GdImage) {
             throw new RuntimeException(sprintf('Unable to create GD image from "%s".', $filepath));
         }
 
         $src = $this->applyOrientationWithGd($src, $orientation);
 
-        $w     = imagesx($src);
-        $h     = imagesy($src);
-        $ratio = $h > 0 ? ($w / $h) : 1;
-        $newW  = $width;
-        $newH  = (int) round($width / $ratio);
-        $dst   = imagecreatetruecolor($newW, $newH);
-        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
-        $hash = hash('crc32b', $filepath . ':' . $width);
-        $out  = $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
+        $width  = imagesx($src);
+        $height = imagesy($src);
+        $ratio  = $height > 0 ? ($width / $height) : 1;
 
-        $writeResult = @imagejpeg($dst, $out, 85);
-        imagedestroy($dst);
-        imagedestroy($src);
+        try {
+            $results = [];
+            foreach ($sizes as $size) {
+                $newWidth  = $size;
+                $newHeight = (int) round($size / $ratio);
+                $dst       = imagecreatetruecolor($newWidth, $newHeight);
 
-        if ($writeResult === false) {
-            throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                if (!$dst instanceof GdImage) {
+                    throw new RuntimeException('Unable to create GD thumbnail resource.');
+                }
+
+                try {
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+                    $out         = $this->buildThumbnailPath($filepath, $size);
+                    $writeResult = @imagejpeg($dst, $out, 85);
+                } finally {
+                    imagedestroy($dst);
+                }
+
+                if ($writeResult === false) {
+                    throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                }
+
+                $results[$size] = $out;
+            }
+
+            return $results;
+        } finally {
+            imagedestroy($src);
         }
+    }
 
-        return $out;
+    protected function cloneImagick(Imagick $imagick): Imagick
+    {
+        return clone $imagick;
+    }
+
+    private function buildThumbnailPath(string $filepath, int $width): string
+    {
+        $hash = hash('crc32b', $filepath . ':' . $width);
+
+        return $this->thumbnailDir . DIRECTORY_SEPARATOR . $hash . '.jpg';
     }
 
     private function applyOrientationWithGd(GdImage $image, ?int $orientation): GdImage

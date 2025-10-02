@@ -84,8 +84,8 @@ final class ThumbnailServiceTest extends TestCase
         $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
         $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(true);
         $imagick->expects(self::once())->method('writeImage')->with($expectedOutput)->willReturn(false);
-        $imagick->expects(self::once())->method('clear');
-        $imagick->expects(self::once())->method('destroy');
+        $imagick->expects(self::exactly(2))->method('clear');
+        $imagick->expects(self::exactly(2))->method('destroy');
 
         $service = new class ($thumbnailDir, [200], $imagick) extends ThumbnailService {
             public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
@@ -96,6 +96,11 @@ final class ThumbnailServiceTest extends TestCase
             protected function createImagick(): Imagick
             {
                 return $this->imagick;
+            }
+
+            protected function cloneImagick(Imagick $imagick): Imagick
+            {
+                return $imagick;
             }
         };
 
@@ -118,6 +123,80 @@ final class ThumbnailServiceTest extends TestCase
                     @unlink($file);
                 }
 
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function generatesAllConfiguredThumbnailSizes(): void
+    {
+        if (!extension_loaded('imagick') && !function_exists('imagecreatetruecolor')) {
+            self::markTestSkipped('Imagick or GD extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+
+        if (extension_loaded('imagick')) {
+            $image = new Imagick();
+            $image->newImage(400, 200, 'white');
+            $image->setImageFormat('jpeg');
+            $image->writeImage($sourcePath);
+            $image->clear();
+            $image->destroy();
+        } else {
+            $image = imagecreatetruecolor(400, 200);
+            $color = imagecolorallocate($image, 100, 150, 200);
+            imagefilledrectangle($image, 0, 0, 399, 199, $color);
+            imagejpeg($image, $sourcePath);
+            imagedestroy($image);
+        }
+
+        $sizes = [120, 240];
+
+        $media  = new Media($sourcePath, hash('sha256', 'source'), 1024);
+        $service = new ThumbnailService($thumbnailDir, $sizes);
+
+        $thumbnails = [];
+        try {
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertCount(2, $thumbnails);
+            foreach ($sizes as $size) {
+                self::assertArrayHasKey($size, $thumbnails);
+
+                $thumbnailPath = $thumbnails[$size];
+                self::assertFileExists($thumbnailPath);
+
+                [$width] = getimagesize($thumbnailPath);
+                self::assertSame($size, $width);
+            }
+        } finally {
+            foreach ($thumbnails as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
                 @rmdir($thumbnailDir);
             }
         }
