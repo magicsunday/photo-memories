@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Title;
 
+use Phar;
 use RuntimeException;
 use Symfony\Component\Yaml\Yaml;
 
+use function implode;
 use function is_array;
 use function is_file;
 use function is_string;
@@ -43,12 +45,28 @@ final class TitleTemplateProvider
 
     private function load(): void
     {
-        if (!is_file($this->configPath)) {
-            throw new RuntimeException('Title-templates YAML missing: ' . $this->configPath);
+        $resolvedPath = $this->configPath;
+        $searchedPaths = [$this->configPath];
+
+        if (!is_file($resolvedPath)) {
+            $pharPath = Phar::running(false);
+
+            if ($pharPath !== '') {
+                $fallbackPath = 'phar://' . $pharPath . '/config/templates/titles.yaml';
+                $searchedPaths[] = $fallbackPath;
+
+                if (is_file($fallbackPath)) {
+                    $resolvedPath = $fallbackPath;
+                }
+            }
+        }
+
+        if (!is_file($resolvedPath)) {
+            throw new RuntimeException('Title-templates YAML missing: ' . implode(', ', $searchedPaths));
         }
 
         /** @var array<string,mixed> $data */
-        $data = Yaml::parseFile($this->configPath) ?? [];
+        $data = Yaml::parseFile($resolvedPath) ?? [];
         if (!is_array($data)) {
             $data = [];
         }
