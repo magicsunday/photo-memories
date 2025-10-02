@@ -129,6 +129,81 @@ final class ThumbnailServiceTest extends TestCase
     }
 
     #[Test]
+    public function throwsExceptionWhenImagickThumbnailImageFails(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        if (file_put_contents($sourcePath, 'thumbnail-source') === false) {
+            self::fail('Unable to create thumbnail source file.');
+        }
+
+        $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
+
+        $imagick = $this->createMock(Imagick::class);
+        $imagick->expects(self::once())->method('setOption')->with('jpeg:preserve-settings', 'true')->willReturn(true);
+        $imagick->expects(self::once())->method('readImage')->with($sourcePath . '[0]')->willReturn(true);
+        $imagick->expects(self::once())->method('autoOrientImage')->willReturn(true);
+        $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
+        $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(false);
+        $imagick->expects(self::never())->method('writeImage');
+        $imagick->expects(self::exactly(2))->method('clear');
+        $imagick->expects(self::exactly(2))->method('destroy');
+
+        $service = new class ($thumbnailDir, [200], $imagick) extends ThumbnailService {
+            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
+            {
+                parent::__construct($thumbnailDir, $sizes);
+            }
+
+            protected function createImagick(): Imagick
+            {
+                return $this->imagick;
+            }
+
+            protected function cloneImagick(Imagick $imagick): Imagick
+            {
+                return $imagick;
+            }
+        };
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unable to resize image for thumbnail width 200.');
+
+        try {
+            $service->generateAll($sourcePath, $media);
+        } finally {
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
     public function generatesAllConfiguredThumbnailSizes(): void
     {
         if (!extension_loaded('imagick') && !function_exists('imagecreatetruecolor')) {
