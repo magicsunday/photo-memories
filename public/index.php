@@ -18,8 +18,7 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Http\Response\Response;
 use Throwable;
 
-use RuntimeException;
-use function dirname;
+use function MagicSunday\Memories\Bootstrap\requireComposerAutoload;
 use function is_file;
 use function preg_match;
 use function realpath;
@@ -27,25 +26,9 @@ use function str_ends_with;
 use function str_starts_with;
 use function substr;
 
-$autoloadPaths = [
-    __DIR__ . '/../vendor/autoload.php',
-    dirname(__DIR__, 3) . '/autoload.php',
-];
+require_once __DIR__ . '/../autoload/runtime.php';
 
-$autoloadLoaded = false;
-
-foreach ($autoloadPaths as $autoloadPath) {
-    if (is_file($autoloadPath)) {
-        require_once $autoloadPath;
-        $autoloadLoaded = true;
-
-        break;
-    }
-}
-
-if ($autoloadLoaded === false) {
-    throw new RuntimeException('Composer autoload file not found.');
-}
+requireComposerAutoload();
 
 $request   = Request::fromGlobals();
 $factory   = new DependencyContainerFactory();

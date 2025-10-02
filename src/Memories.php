@@ -15,7 +15,11 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+use function MagicSunday\Memories\Bootstrap\requireComposerAutoload;
+
+require_once __DIR__ . '/../autoload/runtime.php';
+
+requireComposerAutoload();
 
 // Create the container
 $factory   = new DependencyContainerFactory();
