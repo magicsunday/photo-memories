@@ -23,8 +23,8 @@ final class BinaryFileResponseTest extends TestCase
         $file = $this->fixturePath('assets/sample.css');
 
         $response = new BinaryFileResponse($file);
-        $result   = $response->send();
+        $headers  = $response->getHeaders();
 
-        self::assertSame('text/css', $result['headers']['Content-Type'] ?? null);
+        self::assertSame('text/css', $headers['Content-Type'] ?? null);
     }
 }

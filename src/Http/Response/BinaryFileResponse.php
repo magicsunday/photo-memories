@@ -27,7 +27,7 @@ use function strtolower;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
-final class BinaryFileResponse
+final class BinaryFileResponse extends Response
 {
     private const DEFAULT_STATUS = 200;
 
@@ -35,47 +35,37 @@ final class BinaryFileResponse
      * @param array<string, string> $headers
      */
     public function __construct(
-        private readonly string $filePath,
-        private readonly int $status = self::DEFAULT_STATUS,
-        private readonly array $headers = [],
+        string $filePath,
+        int $status = self::DEFAULT_STATUS,
+        array $headers = [],
     ) {
         if (is_file($filePath) === false) {
             throw new RuntimeException(sprintf('Binary file response path "%s" does not exist.', $filePath));
         }
-    }
 
-    /**
-     * @return array{status: int, headers: array<string, string>, body: string}
-     */
-    public function send(): array
-    {
-        $headers = $this->headers;
+        $resolvedHeaders = $headers;
 
-        if ($this->hasHeader($headers, 'Content-Type') === false) {
-            $headers['Content-Type'] = $this->resolveMimeType($this->filePath);
+        if ($this->hasHeader($resolvedHeaders, 'Content-Type') === false) {
+            $resolvedHeaders['Content-Type'] = $this->resolveMimeType($filePath);
         }
 
-        if ($this->hasHeader($headers, 'Content-Length') === false) {
-            $size = filesize($this->filePath);
+        if ($this->hasHeader($resolvedHeaders, 'Content-Length') === false) {
+            $size = filesize($filePath);
 
             if ($size === false) {
-                throw new RuntimeException(sprintf('Unable to determine file size for "%s".', $this->filePath));
+                throw new RuntimeException(sprintf('Unable to determine file size for "%s".', $filePath));
             }
 
-            $headers['Content-Length'] = (string) $size;
+            $resolvedHeaders['Content-Length'] = (string) $size;
         }
 
-        $body = file_get_contents($this->filePath);
+        $body = file_get_contents($filePath);
 
         if ($body === false) {
-            throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $this->filePath));
+            throw new RuntimeException(sprintf('Unable to read binary file response "%s".', $filePath));
         }
 
-        return [
-            'status'  => $this->status,
-            'headers' => $headers,
-            'body'    => $body,
-        ];
+        parent::__construct($body, $status, $resolvedHeaders);
     }
 
     /**
