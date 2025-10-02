@@ -9,6 +9,7 @@
 
 declare(strict_types=1);
 
+use MagicSunday\Memories\Bootstrap\ComposerAutoload;
 use MagicSunday\Memories\DependencyContainer;
 use MagicSunday\Memories\DependencyContainerFactory;
 use MagicSunday\Memories\Http\Controller\FeedController;
@@ -18,7 +19,6 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Http\Response\Response;
 use Throwable;
 
-use function MagicSunday\Memories\Bootstrap\requireComposerAutoload;
 use function is_file;
 use function preg_match;
 use function realpath;
@@ -28,7 +28,7 @@ use function substr;
 
 require_once __DIR__ . '/../autoload/runtime.php';
 
-requireComposerAutoload();
+ComposerAutoload::require();
 
 $request   = Request::fromGlobals();
 $factory   = new DependencyContainerFactory();

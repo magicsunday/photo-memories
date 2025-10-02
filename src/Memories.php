@@ -11,15 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories;
 
+use MagicSunday\Memories\Bootstrap\ComposerAutoload;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-use function MagicSunday\Memories\Bootstrap\requireComposerAutoload;
-
 require_once __DIR__ . '/../autoload/runtime.php';
 
-requireComposerAutoload();
+ComposerAutoload::require();
 
 // Create the container
 $factory   = new DependencyContainerFactory();

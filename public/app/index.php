@@ -9,13 +9,12 @@
 
 declare(strict_types=1);
 
+use MagicSunday\Memories\Bootstrap\ComposerAutoload;
 use MagicSunday\Memories\DependencyContainerFactory;
-
-use function MagicSunday\Memories\Bootstrap\requireComposerAutoload;
 
 require_once __DIR__ . '/../../autoload/runtime.php';
 
-requireComposerAutoload();
+ComposerAutoload::require();
 
 $factory = new DependencyContainerFactory();
 $factory->ensure();

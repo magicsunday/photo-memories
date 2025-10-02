@@ -19,27 +19,33 @@ use function is_file;
 /**
  * Ensures that the Composer autoloader is registered.
  */
-function requireComposerAutoload(): void
+final class ComposerAutoload
 {
-    static $autoloadLoaded = false;
+    private static bool $autoloadLoaded = false;
 
-    if ($autoloadLoaded === true) {
-        return;
-    }
-
-    $autoloadPaths = [
-        dirname(__DIR__) . '/vendor/autoload.php',
-        dirname(__DIR__, 3) . '/autoload.php',
-    ];
-
-    foreach ($autoloadPaths as $autoloadPath) {
-        if (is_file($autoloadPath)) {
-            require_once $autoloadPath;
-            $autoloadLoaded = true;
-
+    /**
+     * Registers the Composer autoloader once per process.
+     */
+    public static function require(): void
+    {
+        if (self::$autoloadLoaded === true) {
             return;
         }
-    }
 
-    throw new RuntimeException('Composer autoload file not found.');
+        $autoloadPaths = [
+            dirname(__DIR__) . '/vendor/autoload.php',
+            dirname(__DIR__, 3) . '/autoload.php',
+        ];
+
+        foreach ($autoloadPaths as $autoloadPath) {
+            if (is_file($autoloadPath)) {
+                require_once $autoloadPath;
+                self::$autoloadLoaded = true;
+
+                return;
+            }
+        }
+
+        throw new RuntimeException('Composer autoload file not found.');
+    }
 }
