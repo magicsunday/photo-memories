@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Http\Controller;
 
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Http\Controller\FeedController;
@@ -21,6 +22,7 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use PHPUnit\Framework\TestCase;
 
@@ -83,6 +85,8 @@ final class FeedControllerTest extends TestCase
 
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
 
         $controller = new FeedController(
             $feedBuilder,
@@ -90,6 +94,8 @@ final class FeedControllerTest extends TestCase
             $mapper,
             $thumbnailResolver,
             $mediaRepo,
+            $thumbnailService,
+            $entityManager,
         );
 
         $request  = Request::create('/api/feed', 'GET', ['score' => '0.5']);
@@ -118,6 +124,8 @@ final class FeedControllerTest extends TestCase
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
 
         $controller = new FeedController(
             $feedBuilder,
@@ -125,6 +133,8 @@ final class FeedControllerTest extends TestCase
             $mapper,
             $thumbnailResolver,
             $mediaRepo,
+            $thumbnailService,
+            $entityManager,
         );
 
         $request  = Request::create('/api/feed', 'GET', ['datum' => '2024-99-01']);
@@ -142,6 +152,8 @@ final class FeedControllerTest extends TestCase
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
 
         $tempFile = tempnam(sys_get_temp_dir(), 'thumb');
         self::assertIsString($tempFile);
@@ -159,12 +171,17 @@ final class FeedControllerTest extends TestCase
             ->with([99])
             ->willReturn([$media]);
 
+        $thumbnailService->expects(self::never())->method('generateAll');
+        $entityManager->expects(self::never())->method('flush');
+
         $controller = new FeedController(
             $feedBuilder,
             $clusterRepo,
             $mapper,
             $thumbnailResolver,
             $mediaRepo,
+            $thumbnailService,
+            $entityManager,
         );
 
         $request  = Request::create('/api/media/99/thumbnail');
@@ -184,6 +201,8 @@ final class FeedControllerTest extends TestCase
         $mapper            = new ClusterEntityToDraftMapper([]);
         $thumbnailResolver = new ThumbnailPathResolver();
         $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -196,6 +215,8 @@ final class FeedControllerTest extends TestCase
             $mapper,
             $thumbnailResolver,
             $mediaRepo,
+            $thumbnailService,
+            $entityManager,
         );
 
         $request  = Request::create('/api/media/123/thumbnail');
@@ -205,5 +226,60 @@ final class FeedControllerTest extends TestCase
         self::assertSame(404, $response->getStatusCode());
         $body = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('Media not found.', $body['error']);
+    }
+
+    public function testThumbnailGeneratesMissingThumbnailWhenAbsent(): void
+    {
+        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
+        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $mapper            = new ClusterEntityToDraftMapper([]);
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
+
+        $original = tempnam(sys_get_temp_dir(), 'orig');
+        $generated = tempnam(sys_get_temp_dir(), 'gen');
+        self::assertIsString($original);
+        self::assertIsString($generated);
+        file_put_contents($original, 'original');
+        file_put_contents($generated, 'generated');
+
+        $media = new Media($original, 'checksum-123', 10);
+        $reflection = new \ReflectionProperty(Media::class, 'id');
+        $reflection->setAccessible(true);
+        $reflection->setValue($media, 12);
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([12])
+            ->willReturn([$media]);
+
+        $thumbnailService->expects(self::once())
+            ->method('generateAll')
+            ->with($original, $media)
+            ->willReturn([320 => $generated]);
+
+        $entityManager->expects(self::once())
+            ->method('flush');
+
+        $controller = new FeedController(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/media/12/thumbnail', 'GET', ['breite' => '320']);
+        $response = $controller->thumbnail($request, 12);
+
+        self::assertInstanceOf(BinaryFileResponse::class, $response);
+        self::assertSame($generated, $response->getFilePath());
+
+        unlink($original);
+        unlink($generated);
     }
 }

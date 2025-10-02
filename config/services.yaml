@@ -856,6 +856,8 @@ services:
             $defaultCoverWidth: '%memories.http.feed.cover_width%'
             $defaultMemberWidth: '%memories.http.feed.member_width%'
             $maxThumbnailWidth: '%memories.http.feed.max_thumbnail_width%'
+            $thumbnailService: '@MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface'
+            $entityManager: '@Doctrine\ORM\EntityManagerInterface'
 
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
