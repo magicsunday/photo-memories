@@ -154,10 +154,14 @@ final class ThumbnailServiceTest extends TestCase
     }
 
     #[Test]
-    public function throwsExceptionWhenImagickWriteImageFails(): void
+    public function fallsBackToGdWhenImagickWriteImageFails(): void
     {
         if (!extension_loaded('imagick')) {
             self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
         }
 
         $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
@@ -171,11 +175,14 @@ final class ThumbnailServiceTest extends TestCase
         }
 
         $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
-        if (file_put_contents($sourcePath, 'thumbnail-source') === false) {
-            self::fail('Unable to create thumbnail source file.');
-        }
+        $image      = imagecreatetruecolor(160, 120);
+        $color      = imagecolorallocate($image, 120, 130, 140);
+        imagefilledrectangle($image, 0, 0, 159, 119, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
 
         $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
+        $media->setMime('image/jpeg');
 
         $expectedOutput = $thumbnailDir . DIRECTORY_SEPARATOR . $media->getChecksum() . '-200.jpg';
 
@@ -209,12 +216,25 @@ final class ThumbnailServiceTest extends TestCase
             }
         };
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage(sprintf('Unable to create thumbnail at path "%s".', $expectedOutput));
+        self::resetLastGdLoader();
+
+        $thumbnails = [];
 
         try {
-            $service->generateAll($sourcePath, $media);
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertArrayHasKey(200, $thumbnails);
+            self::assertFileExists($expectedOutput);
+            self::assertSame('imagecreatefromjpeg', self::getLastGdLoader());
         } finally {
+            self::resetLastGdLoader();
+
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
             }
