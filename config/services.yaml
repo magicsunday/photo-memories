@@ -97,6 +97,7 @@ services:
             $videoDirectory: '%memories.slideshow.video_dir%'
             $projectDirectory: '%kernel.project_dir%'
             $slideDuration: '%memories.slideshow.image_duration_s%'
+            $phpBinary: '%memories.slideshow.php_binary%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
