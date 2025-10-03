@@ -87,6 +87,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
 
 namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
+use GdImage;
 use Imagick;
 use ImagickDraw;
 use ImagickException;
@@ -94,6 +95,7 @@ use ImagickPixel;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 use RuntimeException;
@@ -1077,6 +1079,408 @@ final class ThumbnailServiceTest extends TestCase
                 @rmdir($thumbnailDir);
             }
         }
+    }
+
+    #[Test]
+    #[DataProvider('exifOrientationDataProvider')]
+    public function appliesExifOrientationForAllSupportedValues(int $orientation, array $operations): void
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            self::markTestSkipped('GD extension is required for this test.');
+        }
+
+        $service      = $this->createOrientationTestService();
+        $baseLayout   = $this->createBaseOrientationLayout();
+        $storedLayout = $this->applyLayoutOperations($baseLayout, $operations);
+
+        $this->assertOrientationWithGd($service, $orientation, $storedLayout, $baseLayout);
+
+        if (extension_loaded('imagick')) {
+            $this->assertOrientationWithImagick($service, $orientation, $storedLayout, $baseLayout);
+        }
+    }
+
+    public static function exifOrientationDataProvider(): iterable
+    {
+        yield 'mirror-horizontal' => [2, ['flip-horizontal']];
+        yield 'upside-down' => [3, ['rotate-180']];
+        yield 'mirror-vertical' => [4, ['flip-vertical']];
+        yield 'mirror-horizontal-rotate-ccw' => [5, ['rotate--90', 'flip-horizontal']];
+        yield 'rotate-clockwise' => [6, ['rotate-90']];
+        yield 'mirror-horizontal-rotate-cw' => [7, ['rotate-90', 'flip-horizontal']];
+        yield 'rotate-counter-clockwise' => [8, ['rotate--90']];
+    }
+
+    private function assertOrientationWithGd(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
+    {
+        $image    = $this->createGdImageFromLayout($storedLayout);
+        $oriented = $image;
+
+        try {
+            $oriented = $service->orientGdImage($image, $orientation);
+            $actual   = $this->extractLayoutFromGdImage($oriented);
+
+            $this->assertLayoutEquals($expectedLayout, $actual, 'GD');
+        } finally {
+            if ($oriented instanceof GdImage) {
+                imagedestroy($oriented);
+            }
+        }
+    }
+
+    private function assertOrientationWithImagick(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
+    {
+        $imagick = $this->createImagickFromLayout($storedLayout);
+
+        try {
+            $service->orientImagickImage($imagick, $orientation);
+            $actual = $this->extractLayoutFromImagick($imagick);
+
+            $this->assertLayoutEquals($expectedLayout, $actual, 'Imagick');
+        } finally {
+            $imagick->clear();
+            $imagick->destroy();
+        }
+    }
+
+    private function createOrientationTestService(): OrientationThumbnailServiceStub
+    {
+        return new OrientationThumbnailServiceStub();
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private function createBaseOrientationLayout(): array
+    {
+        return [
+            ['#ff0000', '#00ff00', '#0000ff'],
+            ['#ffff00', '#ff00ff', '#00ffff'],
+        ];
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     * @param list<string>       $operations
+     *
+     * @return list<list<string>>
+     */
+    private function applyLayoutOperations(array $layout, array $operations): array
+    {
+        $result = $layout;
+
+        foreach ($operations as $operation) {
+            switch ($operation) {
+                case 'flip-horizontal':
+                    $result = $this->flipLayoutHorizontally($result);
+
+                    break;
+                case 'flip-vertical':
+                    $result = $this->flipLayoutVertically($result);
+
+                    break;
+                case 'rotate-90':
+                    $result = $this->rotateLayout90($result);
+
+                    break;
+                case 'rotate--90':
+                    $result = $this->rotateLayoutMinus90($result);
+
+                    break;
+                case 'rotate-180':
+                    $result = $this->rotateLayout180($result);
+
+                    break;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     *
+     * @return list<list<string>>
+     */
+    private function flipLayoutHorizontally(array $layout): array
+    {
+        $result = [];
+
+        foreach ($layout as $row) {
+            $result[] = array_values(array_reverse($row));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     *
+     * @return list<list<string>>
+     */
+    private function flipLayoutVertically(array $layout): array
+    {
+        $rows   = array_reverse($layout);
+        $result = [];
+
+        foreach ($rows as $row) {
+            $result[] = array_values($row);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     *
+     * @return list<list<string>>
+     */
+    private function rotateLayout90(array $layout): array
+    {
+        $height = count($layout);
+        $width  = count($layout[0]);
+        $result = [];
+
+        for ($x = $width - 1; $x >= 0; --$x) {
+            $row = [];
+
+            for ($y = 0; $y < $height; ++$y) {
+                $row[] = $layout[$y][$x];
+            }
+
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     *
+     * @return list<list<string>>
+     */
+    private function rotateLayoutMinus90(array $layout): array
+    {
+        $height = count($layout);
+        $width  = count($layout[0]);
+        $result = [];
+
+        for ($x = 0; $x < $width; ++$x) {
+            $row = [];
+
+            for ($y = $height - 1; $y >= 0; --$y) {
+                $row[] = $layout[$y][$x];
+            }
+
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     *
+     * @return list<list<string>>
+     */
+    private function rotateLayout180(array $layout): array
+    {
+        $height = count($layout);
+        $width  = count($layout[0]);
+        $result = [];
+
+        for ($y = $height - 1; $y >= 0; --$y) {
+            $row = [];
+
+            for ($x = $width - 1; $x >= 0; --$x) {
+                $row[] = $layout[$y][$x];
+            }
+
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     */
+    private function createGdImageFromLayout(array $layout): GdImage
+    {
+        $height = count($layout);
+        $width  = count($layout[0]);
+
+        $image = imagecreatetruecolor($width, $height);
+
+        for ($y = 0; $y < $height; ++$y) {
+            for ($x = 0; $x < $width; ++$x) {
+                $colorComponents = $this->hexToRgb($layout[$y][$x]);
+                $colorResource   = imagecolorallocate($image, $colorComponents['r'], $colorComponents['g'], $colorComponents['b']);
+
+                if (!is_int($colorResource)) {
+                    imagedestroy($image);
+
+                    self::fail('Unable to allocate GD color for orientation layout.');
+                }
+
+                $setPixelResult = imagesetpixel($image, $x, $y, $colorResource);
+
+                if ($setPixelResult === false) {
+                    imagedestroy($image);
+
+                    self::fail('Unable to set GD pixel color for orientation layout.');
+                }
+            }
+        }
+
+        return $image;
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private function extractLayoutFromGdImage(GdImage $image): array
+    {
+        $height = imagesy($image);
+        $width  = imagesx($image);
+        $layout = [];
+
+        for ($y = 0; $y < $height; ++$y) {
+            $row = [];
+
+            for ($x = 0; $x < $width; ++$x) {
+                $colorIndex = imagecolorat($image, $x, $y);
+                $color      = imagecolorsforindex($image, $colorIndex);
+
+                $row[] = $this->rgbToHex($color['red'], $color['green'], $color['blue']);
+            }
+
+            $layout[] = $row;
+        }
+
+        return $layout;
+    }
+
+    /**
+     * @param list<list<string>> $layout
+     */
+    private function createImagickFromLayout(array $layout): Imagick
+    {
+        $height = count($layout);
+        $width  = count($layout[0]);
+
+        $imagick = new Imagick();
+        $imagick->newImage($width, $height, new ImagickPixel('white'));
+        $imagick->setImageFormat('png');
+
+        $iterator = $imagick->getPixelIterator();
+
+        foreach ($iterator as $y => $row) {
+            foreach ($row as $x => $pixel) {
+                $pixel->setColor($layout[$y][$x]);
+            }
+
+            $iterator->syncIterator();
+        }
+
+        return $imagick;
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private function extractLayoutFromImagick(Imagick $imagick): array
+    {
+        $height = $imagick->getImageHeight();
+        $width  = $imagick->getImageWidth();
+        $layout = [];
+
+        for ($y = 0; $y < $height; ++$y) {
+            $row = [];
+
+            for ($x = 0; $x < $width; ++$x) {
+                $color = $imagick->getImagePixelColor($x, $y)->getColor(true);
+
+                $row[] = $this->rgbToHex(
+                    (int) round($color['r'] * 255),
+                    (int) round($color['g'] * 255),
+                    (int) round($color['b'] * 255),
+                );
+            }
+
+            $layout[] = $row;
+        }
+
+        return $layout;
+    }
+
+    private function assertLayoutEquals(array $expected, array $actual, string $context): void
+    {
+        self::assertCount(count($expected), $actual, sprintf('%s oriented image height differs.', $context));
+
+        foreach ($expected as $rowIndex => $expectedRow) {
+            self::assertCount(count($expectedRow), $actual[$rowIndex], sprintf('%s oriented image width differs for row %d.', $context, $rowIndex));
+
+            foreach ($expectedRow as $columnIndex => $expectedColor) {
+                self::assertSame(
+                    $expectedColor,
+                    $actual[$rowIndex][$columnIndex],
+                    sprintf('%s pixel differs at position (%d, %d).', $context, $columnIndex, $rowIndex),
+                );
+            }
+        }
+    }
+
+    /**
+     * @return array{r:int, g:int, b:int}
+     */
+    private function hexToRgb(string $hex): array
+    {
+        $normalized = ltrim($hex, '#');
+
+        if (strlen($normalized) !== 6) {
+            self::fail(sprintf('Invalid hexadecimal color "%s".', $hex));
+        }
+
+        return [
+            'r' => (int) hexdec(substr($normalized, 0, 2)),
+            'g' => (int) hexdec(substr($normalized, 2, 2)),
+            'b' => (int) hexdec(substr($normalized, 4, 2)),
+        ];
+    }
+
+    private function rgbToHex(int $red, int $green, int $blue): string
+    {
+        return sprintf('#%02x%02x%02x', $red, $green, $blue);
+    }
+}
+
+final class OrientationThumbnailServiceStub extends ThumbnailService
+{
+    private string $orientationDir;
+
+    public function __construct()
+    {
+        $this->orientationDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-orientation-' . uniqid('', true);
+
+        parent::__construct($this->orientationDir, [1]);
+    }
+
+    public function __destruct()
+    {
+        if (is_dir($this->orientationDir)) {
+            @rmdir($this->orientationDir);
+        }
+    }
+
+    public function orientGdImage(GdImage $image, ?int $orientation): GdImage
+    {
+        return $this->applyOrientationWithGd($image, $orientation);
+    }
+
+    public function orientImagickImage(Imagick $imagick, ?int $orientation): void
+    {
+        $this->applyOrientationWithImagick($imagick, $orientation);
     }
 }
 }

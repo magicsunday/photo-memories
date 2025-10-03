@@ -111,12 +111,7 @@ class ThumbnailService implements ThumbnailServiceInterface
             $imagick->setOption('jpeg:preserve-settings', 'true');
             $imagick->readImage($filepath . '[0]');
 
-            if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
-                $imagick->setImageOrientation($orientation);
-            }
-
-            $imagick->autoOrientImage();
-            $imagick->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
+            $this->applyOrientationWithImagick($imagick, $orientation);
 
             $results = [];
             foreach ($sizes as $size) {
@@ -284,7 +279,7 @@ class ThumbnailService implements ThumbnailServiceInterface
         return $this->thumbnailDir . DIRECTORY_SEPARATOR . $checksum . '-' . $width . '.jpg';
     }
 
-    private function applyOrientationWithGd(GdImage $image, ?int $orientation): GdImage
+    protected function applyOrientationWithGd(GdImage $image, ?int $orientation): GdImage
     {
         if ($orientation === null || $orientation === 1) {
             return $image;
@@ -312,6 +307,16 @@ class ThumbnailService implements ThumbnailServiceInterface
         }
 
         return $image;
+    }
+
+    protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
+    {
+        if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
+            $imagick->setImageOrientation($orientation);
+        }
+
+        $imagick->autoOrientImage();
+        $imagick->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
     }
 
     private function rotateImage(GdImage $image, float $degrees): GdImage
