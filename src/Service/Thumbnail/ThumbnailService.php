@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Thumbnail;
 use GdImage;
 use Imagick;
 use ImagickException;
+use ImagickPixel;
 use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
@@ -366,8 +367,57 @@ class ThumbnailService implements ThumbnailServiceInterface
             $imagick->setImageOrientation($orientation);
         }
 
-        $imagick->autoOrientImage();
+        if (method_exists($imagick, 'autoOrientImage')) {
+            $imagick->autoOrientImage();
+        } else {
+            $this->applyOrientationWithLegacyImagick($imagick);
+        }
+
         $imagick->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
+    }
+
+    /**
+     * Applies the orientation manually for Imagick versions lacking autoOrientImage().
+     */
+    private function applyOrientationWithLegacyImagick(Imagick $imagick): void
+    {
+        $orientation = $imagick->getImageOrientation();
+
+        switch ($orientation) {
+            case Imagick::ORIENTATION_UNDEFINED:
+            case Imagick::ORIENTATION_TOPLEFT:
+                return;
+            case Imagick::ORIENTATION_TOPRIGHT:
+                $imagick->flopImage();
+
+                return;
+            case Imagick::ORIENTATION_BOTTOMRIGHT:
+                $imagick->rotateImage(new ImagickPixel('none'), 180);
+
+                return;
+            case Imagick::ORIENTATION_BOTTOMLEFT:
+                $imagick->flipImage();
+
+                return;
+            case Imagick::ORIENTATION_LEFTTOP:
+                $imagick->flopImage();
+                $imagick->rotateImage(new ImagickPixel('none'), 90);
+
+                return;
+            case Imagick::ORIENTATION_RIGHTTOP:
+                $imagick->rotateImage(new ImagickPixel('none'), -90);
+
+                return;
+            case Imagick::ORIENTATION_RIGHTBOTTOM:
+                $imagick->flopImage();
+                $imagick->rotateImage(new ImagickPixel('none'), -90);
+
+                return;
+            case Imagick::ORIENTATION_LEFTBOTTOM:
+                $imagick->rotateImage(new ImagickPixel('none'), 90);
+
+                return;
+        }
     }
 
     private function rotateImage(GdImage $image, float $degrees): GdImage
