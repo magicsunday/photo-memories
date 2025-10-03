@@ -402,21 +402,47 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $interleaved = [];
-        do {
-            $added = false;
-            foreach ($dayKeys as $dayKey) {
-                $queue = $queues[$dayKey] ?? null;
-                if ($queue === null || $queue === []) {
-                    continue;
+        /** @var list<array{media: Media, score: float, timestamp: int}> $leftovers */
+        $leftovers = [];
+
+        foreach ($dayKeys as $dayKey) {
+            $queue = $queues[$dayKey] ?? null;
+            if ($queue === null) {
+                continue;
+            }
+
+            $first = $queue[0] ?? null;
+            if ($first instanceof Media) {
+                $interleaved[] = $first;
+            }
+
+            $queueCount = count($queue);
+            for ($index = 1; $index < $queueCount; ++$index) {
+                $media = $queue[$index];
+                $takenAt = $media->getTakenAt();
+                $leftovers[] = [
+                    'media' => $media,
+                    'score' => $this->evaluateMediaScore($media),
+                    'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
+                ];
+            }
+        }
+
+        usort($leftovers, static function (array $a, array $b): int {
+            if ($a['score'] === $b['score']) {
+                if ($a['timestamp'] === $b['timestamp']) {
+                    return $a['media']->getId() <=> $b['media']->getId();
                 }
 
-                $media = array_shift($queues[$dayKey]);
-                if ($media instanceof Media) {
-                    $interleaved[] = $media;
-                    $added = true;
-                }
+                return $a['timestamp'] <=> $b['timestamp'];
             }
-        } while ($added);
+
+            return $a['score'] < $b['score'] ? 1 : -1;
+        });
+
+        foreach ($leftovers as $entry) {
+            $interleaved[] = $entry['media'];
+        }
 
         return $interleaved;
     }
