@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Thumbnail;
 
 use GdImage;
 use Imagick;
+use ImagickException;
 use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
@@ -46,7 +47,21 @@ class ThumbnailService implements ThumbnailServiceInterface
         $checksum    = $media->getChecksum();
 
         if (extension_loaded('imagick')) {
-            return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
+            try {
+                return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
+            } catch (ImagickException $exception) {
+                if (function_exists('imagecreatefromstring')) {
+                    return $this->generateThumbnailsWithGd(
+                        $filepath,
+                        $orientation,
+                        $this->sizes,
+                        $checksum,
+                        $media->getMime(),
+                    );
+                }
+
+                throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails', 0, $exception);
+            }
         }
 
         if (function_exists('imagecreatefromstring')) {

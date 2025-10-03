@@ -89,6 +89,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
 use Imagick;
 use ImagickDraw;
+use ImagickException;
 use ImagickPixel;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailService;
@@ -214,6 +215,91 @@ final class ThumbnailServiceTest extends TestCase
         try {
             $service->generateAll($sourcePath, $media);
         } finally {
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
+    public function fallsBackToGdWhenImagickThrowsException(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.jpg';
+        $image      = imagecreatetruecolor(120, 80);
+        $color      = imagecolorallocate($image, 30, 40, 50);
+        imagefilledrectangle($image, 0, 0, 119, 79, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media   = new Media($sourcePath, hash('sha256', 'imagick-fallback'), 1024);
+        $media->setMime('image/jpeg');
+        $sizes   = [100];
+        $service = new class ($thumbnailDir, $sizes) extends ThumbnailService {
+            public function __construct(string $thumbnailDir, array $sizes)
+            {
+                parent::__construct($thumbnailDir, $sizes);
+            }
+
+            /**
+             * @throws ImagickException
+             */
+            protected function createImagick(): Imagick
+            {
+                throw new ImagickException('Simulated Imagick failure.');
+            }
+        };
+
+        self::resetLastGdLoader();
+
+        $thumbnails = [];
+
+        try {
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertArrayHasKey(100, $thumbnails);
+
+            $thumbnailPath = $thumbnails[100];
+            self::assertFileExists($thumbnailPath);
+            self::assertSame('imagecreatefromjpeg', self::getLastGdLoader());
+        } finally {
+            self::resetLastGdLoader();
+
+            foreach ($thumbnails as $file) {
+                if (is_string($file) && is_file($file)) {
+                    @unlink($file);
+                }
+            }
+
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
             }
