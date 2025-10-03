@@ -67,20 +67,41 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 
     public function parseOffsetMinutes(array $exif): ?int
     {
-        $offset = $exif['EXIF']['OffsetTimeOriginal'] ?? ($exif['EXIF']['OffsetTime'] ?? null);
-        if (!is_string($offset)) {
-            return null;
+        $candidates = [
+            $exif['EXIF']['OffsetTimeOriginal'] ?? null,
+            $exif['EXIF']['OffsetTime'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate)) {
+                continue;
+            }
+
+            $normalized = trim($candidate, " \t\n\r\0\x0B");
+            if ($normalized === '') {
+                continue;
+            }
+
+            if ($normalized === 'Z') {
+                return 0;
+            }
+
+            if (preg_match('~^([+-]?)(\d{2})(?::?(\d{2}))(?::?(\d{2}))?$~', $normalized, $matches) !== 1) {
+                continue;
+            }
+
+            $sign    = $matches[1] === '-' ? -1 : 1;
+            $hours   = (int) $matches[2];
+            $minutes = isset($matches[3]) ? (int) $matches[3] : 0;
+
+            if (isset($matches[4]) && $matches[4] !== '00') {
+                continue;
+            }
+
+            return $sign * ($hours * 60 + $minutes);
         }
 
-        if (preg_match('~^([+-])(\d{2}):?(\d{2})$~', $offset, $matches) !== 1) {
-            return null;
-        }
-
-        $sign = $matches[1] === '-' ? -1 : 1;
-        $hours = (int) $matches[2];
-        $minutes = (int) $matches[3];
-
-        return $sign * ($hours * 60 + $minutes);
+        return null;
     }
 
     public function intOrNull(mixed $value): ?int
