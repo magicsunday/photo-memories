@@ -60,6 +60,8 @@ app.innerHTML = `
   <section class="cards" data-cards></section>
 `;
 
+const lightbox = createLightbox();
+
 const filterForm = app.querySelector('[data-filter]');
 const scoreInput = filterForm.querySelector('input[name="score"]');
 const scoreValue = filterForm.querySelector('[data-score-value]');
@@ -267,6 +269,10 @@ function createCard(item) {
       }
 
       const figure = document.createElement('figure');
+      figure.classList.add('is-interactive');
+      figure.tabIndex = 0;
+      figure.setAttribute('role', 'button');
+
       const img = document.createElement('img');
       img.src = image.thumbnail;
       const takenAtLabel = formatDateTime(image.aufgenommenAm);
@@ -279,11 +285,33 @@ function createCard(item) {
       }
       figure.appendChild(img);
 
+      const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
+      figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
+
       if (takenAtLabel) {
         const caption = document.createElement('figcaption');
-        caption.textContent = `Aufgenommen am ${takenAtLabel}`;
+        caption.textContent = captionText;
         figure.appendChild(caption);
       }
+
+      const activateLightbox = () => {
+        if (lightbox.isVisible() && lightbox.getCurrentSource() === image.thumbnail) {
+          lightbox.hide();
+
+          return;
+        }
+
+        lightbox.show(image.thumbnail, img.alt, captionText, figure);
+      };
+
+      figure.addEventListener('click', activateLightbox);
+      figure.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activateLightbox();
+        }
+      });
+
       gallery.appendChild(figure);
     });
   }
@@ -291,6 +319,115 @@ function createCard(item) {
   card.appendChild(gallery);
 
   return card;
+}
+
+function createLightbox() {
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox';
+  overlay.hidden = true;
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Bildvorschau');
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'lightbox__close';
+  closeButton.setAttribute('aria-label', 'Lightbox schließen');
+  closeButton.textContent = 'Schließen';
+
+  const figure = document.createElement('figure');
+  figure.className = 'lightbox__figure';
+
+  const image = document.createElement('img');
+  image.decoding = 'async';
+  image.alt = '';
+
+  const caption = document.createElement('figcaption');
+  caption.className = 'lightbox__caption';
+  caption.hidden = true;
+
+  figure.appendChild(image);
+  figure.appendChild(caption);
+
+  overlay.appendChild(closeButton);
+  overlay.appendChild(figure);
+
+  document.body.appendChild(overlay);
+
+  let visible = false;
+  let currentSource = '';
+  let activeTrigger = null;
+
+  const hide = () => {
+    if (!visible) {
+      return;
+    }
+
+    overlay.classList.remove('is-visible');
+    overlay.hidden = true;
+    image.src = '';
+    document.body.classList.remove('has-lightbox');
+    visible = false;
+    currentSource = '';
+
+    if (activeTrigger) {
+      activeTrigger.focus({ preventScroll: true });
+      activeTrigger = null;
+    }
+  };
+
+  const show = (source, altText, captionText, trigger) => {
+    if (typeof source !== 'string' || source === '') {
+      return;
+    }
+
+    if (visible && currentSource === source) {
+      hide();
+
+      return;
+    }
+
+    image.src = source;
+    image.alt = altText ?? '';
+
+    if (captionText) {
+      caption.textContent = captionText;
+      caption.hidden = false;
+    } else {
+      caption.textContent = '';
+      caption.hidden = true;
+    }
+
+    overlay.hidden = false;
+    overlay.classList.add('is-visible');
+    document.body.classList.add('has-lightbox');
+    visible = true;
+    currentSource = source;
+    activeTrigger = trigger ?? null;
+    closeButton.focus({ preventScroll: true });
+  };
+
+  closeButton.addEventListener('click', hide);
+  figure.addEventListener('click', hide);
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) {
+      hide();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && visible) {
+      event.preventDefault();
+      hide();
+    }
+  });
+
+  return {
+    show,
+    hide,
+    isVisible: () => visible,
+    getCurrentSource: () => currentSource,
+  };
 }
 
 function updateStatus() {
