@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function array_keys;
+use function array_key_exists;
 use function array_unique;
 use function array_values;
 use function array_slice;
@@ -214,26 +215,106 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             return $original;
         }
 
-        $orderedRaw = $metadata['ordered'] ?? null;
-        if (!is_array($orderedRaw)) {
+        $balanced = $this->normaliseOrderList($metadata['ordered'] ?? null, $original);
+
+        if ($draft->getAlgorithm() === 'vacation') {
+            if ($balanced !== null) {
+                return $balanced;
+            }
+
+            $quality = $this->resolveQualityRankedOrder($metadata, $original);
+            if ($quality !== null) {
+                return $quality;
+            }
+
             return $original;
         }
 
-        /** @var list<int> $ordered */
-        $ordered = [];
-        foreach ($orderedRaw as $value) {
-            if (is_int($value)) {
-                $ordered[] = $value;
+        $quality = $this->resolveQualityRankedOrder($metadata, $original);
+        if ($quality !== null) {
+            return $quality;
+        }
+
+        if ($balanced !== null) {
+            return $balanced;
+        }
+
+        return $original;
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @param list<int>            $original
+     *
+     * @return list<int>|null
+     */
+    private function resolveQualityRankedOrder(array $metadata, array $original): ?array
+    {
+        $qualityRanked = $metadata['quality_ranked'] ?? null;
+        $quality = $this->extractOrderedList($qualityRanked, $original);
+        if ($quality !== null) {
+            return $quality;
+        }
+
+        $legacyRanked = $metadata['ranked'] ?? null;
+
+        return $this->extractOrderedList($legacyRanked, $original);
+    }
+
+    /**
+     * @param mixed     $value
+     * @param list<int> $original
+     *
+     * @return list<int>|null
+     */
+    private function extractOrderedList($value, array $original): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        if (isset($value['ordered'])) {
+            return $this->normaliseOrderList($value['ordered'], $original);
+        }
+
+        $ids = [];
+        foreach ($value as $entry) {
+            if (is_int($entry)) {
+                $ids[] = $entry;
                 continue;
             }
 
-            if (is_numeric($value)) {
-                $ordered[] = (int) $value;
+            if (is_numeric($entry)) {
+                $ids[] = (int) $entry;
+                continue;
+            }
+
+            if (is_array($entry) && array_key_exists('id', $entry)) {
+                $idValue = $entry['id'];
+                if (is_int($idValue)) {
+                    $ids[] = $idValue;
+                    continue;
+                }
+
+                if (is_numeric($idValue)) {
+                    $ids[] = (int) $idValue;
+                }
             }
         }
 
-        if ($ordered === []) {
-            return $original;
+        return $this->normaliseOrderList($ids, $original);
+    }
+
+    /**
+     * @param mixed     $raw
+     * @param list<int> $original
+     *
+     * @return list<int>|null
+     */
+    private function normaliseOrderList($raw, array $original): ?array
+    {
+        if (!is_array($raw) || $raw === []) {
+            return null;
         }
 
         /** @var array<int,int> $originalCounts */
@@ -243,10 +324,37 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $originalCounts[$intId] = ($originalCounts[$intId] ?? 0) + 1;
         }
 
+        if ($originalCounts === []) {
+            return null;
+        }
+
+        /** @var list<int> $ordered */
+        $ordered = [];
         /** @var array<int,int> $orderedCounts */
         $orderedCounts = [];
-        foreach ($ordered as $id) {
-            $orderedCounts[$id] = ($orderedCounts[$id] ?? 0) + 1;
+
+        foreach ($raw as $value) {
+            $intValue = null;
+            if (is_int($value)) {
+                $intValue = $value;
+            } elseif (is_numeric($value)) {
+                $intValue = (int) $value;
+            }
+
+            if ($intValue === null) {
+                continue;
+            }
+
+            if (!isset($originalCounts[$intValue])) {
+                continue;
+            }
+
+            $ordered[] = $intValue;
+            $orderedCounts[$intValue] = ($orderedCounts[$intValue] ?? 0) + 1;
+        }
+
+        if ($ordered === []) {
+            return null;
         }
 
         foreach ($original as $id) {

@@ -90,10 +90,12 @@ final class MemberQualityRankingStageTest extends TestCase
         $params = $draft->getParams();
         self::assertArrayHasKey('member_quality', $params);
 
-        /** @var array{ordered:list<int>,members:array<string,array{score:float,quality:float,aesthetics:float,penalty:float}>} $meta */
+        /** @var array{ordered:list<int>,quality_ranked:array{ordered:list<int>,members:list<array{id:int,score:float,quality:float,aesthetics:float,penalty:float}>},members:array<string,array{score:float,quality:float,aesthetics:float,penalty:float}>} $meta */
         $meta = $params['member_quality'];
 
         self::assertSame([101, 102, 103], $meta['ordered']);
+        self::assertSame([101, 102, 103], $meta['quality_ranked']['ordered']);
+        self::assertSame([101, 102, 103], array_map(static fn (array $entry): int => $entry['id'], $meta['quality_ranked']['members']));
 
         $members = $meta['members'];
         self::assertGreaterThan($members['102']['score'], $members['101']['score']);
@@ -170,6 +172,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $members = $meta['members'];
 
         self::assertSame([201, 202, 203], $meta['ordered']);
+        self::assertSame([201, 202, 203], $meta['quality_ranked']['ordered']);
         self::assertSame(0.0, $members['202']['penalty']);
         self::assertGreaterThan($members['202']['penalty'], $members['203']['penalty']);
         self::assertGreaterThan($members['202']['score'], $members['203']['score']);

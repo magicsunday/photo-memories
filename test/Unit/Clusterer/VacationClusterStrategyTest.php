@@ -35,6 +35,8 @@ use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -242,6 +244,162 @@ final class VacationClusterStrategyTest extends TestCase
         for ($i = 0; $i < count($tracks); ++$i) {
             self::assertArrayHasKey($i, $coverage);
         }
+    }
+
+    #[Test]
+    public function keepsBalancedVacationMembersWhenClamped(): void
+    {
+        $dayMembers = [
+            0 => array_values(range(5000, 5019)),
+            1 => array_values(range(6000, 6004)),
+            2 => array_values(range(7000, 7004)),
+        ];
+
+        /** @var array<int,int> $dayByMember */
+        $dayByMember = [];
+        $maxMembersPerDay = 0;
+        foreach ($dayMembers as $day => $ids) {
+            $count = count($ids);
+            if ($count > $maxMembersPerDay) {
+                $maxMembersPerDay = $count;
+            }
+
+            foreach ($ids as $id) {
+                $dayByMember[$id] = $day;
+            }
+        }
+
+        $balancedMembers = [];
+        for ($index = 0; $index < $maxMembersPerDay; ++$index) {
+            foreach ($dayMembers as $ids) {
+                if (isset($ids[$index])) {
+                    $balancedMembers[] = $ids[$index];
+                }
+            }
+        }
+
+        $mediaById = [];
+        $baseTimestamp = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
+        foreach ($dayMembers as $day => $ids) {
+            foreach ($ids as $offset => $id) {
+                $timestamp = $baseTimestamp
+                    ->add(new DateInterval('P' . $day . 'D'))
+                    ->add(new DateInterval('PT' . ($offset % 6) . 'H'));
+
+                $media = $this->makeMediaFixture(
+                    $id,
+                    sprintf('vacation-balance-%d-%d.jpg', $day, $offset),
+                    $timestamp,
+                );
+
+                if ($day === 0) {
+                    $media->setWidth(7200);
+                    $media->setHeight(4800);
+                    $media->setSharpness(0.92);
+                    $media->setIso(80);
+                    $media->setBrightness(0.64);
+                    $media->setContrast(0.72);
+                    $media->setEntropy(0.70);
+                    $media->setColorfulness(0.74);
+                } elseif ($day === 1) {
+                    $media->setWidth(4600);
+                    $media->setHeight(3200);
+                    $media->setSharpness(0.68);
+                    $media->setIso(160);
+                    $media->setBrightness(0.56);
+                    $media->setContrast(0.60);
+                    $media->setEntropy(0.58);
+                    $media->setColorfulness(0.60);
+                } else {
+                    $media->setWidth(3000);
+                    $media->setHeight(2000);
+                    $media->setSharpness(0.38);
+                    $media->setIso(400);
+                    $media->setBrightness(0.48);
+                    $media->setContrast(0.46);
+                    $media->setEntropy(0.44);
+                    $media->setColorfulness(0.42);
+                }
+
+                $media->setPhash(sprintf('day-%d-phash-%d', $day, $offset));
+                $media->setDhash(sprintf('day-%d-dhash-%d', $day, $offset));
+                $media->setBurstUuid(sprintf('day-%d-burst-%d', $day, $offset));
+
+                $mediaById[$id] = $media;
+            }
+        }
+
+        $lookup = new class($mediaById) implements MemberMediaLookupInterface {
+            /**
+             * @param array<int, Media> $map
+             */
+            public function __construct(private array $map)
+            {
+            }
+
+            public function findByIds(array $ids): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    $media = $this->map[$id] ?? null;
+                    if ($media instanceof Media) {
+                        $result[] = $media;
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $stage = new MemberQualityRankingStage($lookup, 12.0);
+        $draft = new ClusterDraft(
+            algorithm: 'vacation',
+            params: [
+                'quality_avg'        => 0.6,
+                'aesthetics_score'   => 0.55,
+                'quality_resolution' => 0.6,
+                'quality_sharpness'  => 0.58,
+                'quality_iso'        => 0.6,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: $balancedMembers,
+        );
+
+        $stage->process([$draft]);
+
+        $service = new ClusterPersistenceService(
+            $this->createStub(EntityManagerInterface::class),
+            250,
+            20,
+        );
+
+        $reflection = new ReflectionClass(ClusterPersistenceService::class);
+        $resolve = $reflection->getMethod('resolveOrderedMembers');
+        $resolve->setAccessible(true);
+
+        /** @var list<int> $resolved */
+        $resolved = $resolve->invoke($service, $draft);
+
+        $clamp = $reflection->getMethod('clampMembers');
+        $clamp->setAccessible(true);
+
+        /** @var list<int> $clamped */
+        $clamped = $clamp->invoke($service, $resolved);
+
+        self::assertCount(20, $clamped);
+
+        $daysSeen = [];
+        foreach ($clamped as $memberId) {
+            $day = $dayByMember[$memberId] ?? null;
+            if ($day !== null) {
+                $daysSeen[$day] = true;
+            }
+        }
+
+        $coveredDays = array_keys($daysSeen);
+        sort($coveredDays);
+
+        self::assertSame([0, 1, 2], $coveredDays);
     }
 
     #[Test]
