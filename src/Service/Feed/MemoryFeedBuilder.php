@@ -14,10 +14,12 @@ namespace MagicSunday\Memories\Service\Feed;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 
+use function array_map;
 use function count;
 use function is_array;
 use function is_string;
@@ -141,6 +143,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $cover   = $this->coverPicker->pickCover($members, $c->getParams());
             $coverId = $cover?->getId();
 
+            $members = $this->sortMembersByTakenAt($members, $coverId);
+            $memberIds = array_map(static function (Media $media): int {
+                return $media->getId();
+            }, $members);
+
             // 5) titles
             $title    = $this->titleGen->makeTitle($c);
             $subtitle = $this->titleGen->makeSubtitle($c);
@@ -150,7 +157,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 title: $title,
                 subtitle: $subtitle,
                 coverMediaId: $coverId,
-                memberIds: $c->getMembers(),
+                memberIds: $memberIds,
                 score: (float) ($c->getParams()['score'] ?? 0.0),
                 params: $c->getParams()
             );
@@ -182,5 +189,32 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $d = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
 
         return $d->format('Y-m-d');
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return list<Media>
+     */
+    private function sortMembersByTakenAt(array $members, ?int $coverId): array
+    {
+        usort($members, static function (Media $a, Media $b) use ($coverId): int {
+            if ($coverId !== null) {
+                if ($a->getId() === $coverId && $b->getId() !== $coverId) {
+                    return -1;
+                }
+
+                if ($b->getId() === $coverId && $a->getId() !== $coverId) {
+                    return 1;
+                }
+            }
+
+            $timestampA = $a->getTakenAt()?->getTimestamp() ?? 0;
+            $timestampB = $b->getTakenAt()?->getTimestamp() ?? 0;
+
+            return $timestampA <=> $timestampB;
+        });
+
+        return $members;
     }
 }
