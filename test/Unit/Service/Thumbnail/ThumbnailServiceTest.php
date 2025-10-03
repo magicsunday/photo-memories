@@ -341,6 +341,71 @@ final class ThumbnailServiceTest extends TestCase
     }
 
     #[Test]
+    public function generatedThumbnailsNeverExceedSourceWidth(): void
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'no-upscale.jpg';
+        $image      = imagecreatetruecolor(150, 100);
+        $color      = imagecolorallocate($image, 120, 130, 140);
+        imagefilledrectangle($image, 0, 0, 149, 99, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media = new Media($sourcePath, hash('sha256', 'no-upscale'), 1024);
+        $media->setMime('image/jpeg');
+
+        $service = new ThumbnailService($thumbnailDir, [64, 512]);
+
+        $thumbnails = [];
+
+        try {
+            $thumbnails = $service->generateAll($sourcePath, $media);
+
+            self::assertNotSame([], $thumbnails);
+
+            foreach ($thumbnails as $width => $path) {
+                self::assertLessThanOrEqual(150, $width);
+                self::assertFileExists($path);
+
+                $imageData = getimagesize($path);
+                self::assertIsArray($imageData);
+                self::assertLessThanOrEqual(150, $imageData[0]);
+            }
+        } finally {
+            foreach ($thumbnails as $path) {
+                if (is_string($path) && is_file($path)) {
+                    @unlink($path);
+                }
+            }
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
     public function throwsExceptionWhenGdResampleFails(): void
     {
         if (!function_exists('imagecreatetruecolor')) {
@@ -1031,7 +1096,7 @@ final class ThumbnailServiceTest extends TestCase
                 self::assertGreaterThanOrEqual(250, $cornerColor['b']);
 
                 $centerColor = $thumbnail->getImagePixelColor(25, 25)->getColor();
-                self::assertLessThanOrEqual(80, $centerColor['b']);
+                self::assertLessThanOrEqual(80, $centerColor['r']);
 
                 $thumbnail->clear();
                 $thumbnail->destroy();
@@ -1056,7 +1121,7 @@ final class ThumbnailServiceTest extends TestCase
 
                 $centerColorIndex = imagecolorat($thumbnailImage, 25, 25);
                 $centerColor      = imagecolorsforindex($thumbnailImage, $centerColorIndex);
-                self::assertLessThanOrEqual(80, $centerColor['blue']);
+                self::assertLessThanOrEqual(80, $centerColor['red']);
 
                 imagedestroy($thumbnailImage);
             }
