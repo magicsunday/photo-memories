@@ -142,8 +142,8 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
         $members = $this->mediaRepository->findByIds($memberIds);
 
         $coverId = $item->getCoverMediaId();
-        if ($coverId !== null) {
-            usort($members, static function (Media $a, Media $b) use ($coverId): int {
+        usort($members, static function (Media $a, Media $b) use ($coverId): int {
+            if ($coverId !== null) {
                 if ($a->getId() === $coverId && $b->getId() !== $coverId) {
                     return -1;
                 }
@@ -151,13 +151,13 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
                 if ($b->getId() === $coverId && $a->getId() !== $coverId) {
                     return 1;
                 }
+            }
 
-                $timestampA = $a->getTakenAt()?->getTimestamp() ?? 0;
-                $timestampB = $b->getTakenAt()?->getTimestamp() ?? 0;
+            $timestampA = $a->getTakenAt()?->getTimestamp() ?? 0;
+            $timestampB = $b->getTakenAt()?->getTimestamp() ?? 0;
 
-                return $timestampA <=> $timestampB;
-            });
-        }
+            return $timestampA <=> $timestampB;
+        });
 
         $images = [];
         foreach ($members as $media) {
