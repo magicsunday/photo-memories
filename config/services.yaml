@@ -658,6 +658,16 @@ services:
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 500 }
 
+    MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage:
+        arguments:
+            $mediaLookup: '@MagicSunday\Memories\Repository\MediaRepository'
+            $qualityBaselineMegapixels: '%memories.score.quality_baseline_megapixels%'
+        tags:
+            - { name: 'memories.cluster_consolidation.stage', priority: 450 }
+
+    MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface:
+        alias: MagicSunday\Memories\Repository\MediaRepository
+
     MagicSunday\Memories\Service\Clusterer\Pipeline\DuplicateCollapseStage:
         arguments:
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
@@ -722,7 +732,7 @@ services:
 
     MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic:
         arguments:
-            $qualityBaselineMegapixels: 12.0
+            $qualityBaselineMegapixels: '%memories.score.quality_baseline_megapixels%'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic: ~
 

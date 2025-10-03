@@ -22,6 +22,9 @@ use function array_unique;
 use function array_values;
 use function array_slice;
 use function count;
+use function is_array;
+use function is_int;
+use function is_numeric;
 
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
@@ -55,7 +58,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $pairs = [];
         foreach ($drafts as $d) {
             $alg     = $d->getAlgorithm();
-            $members = $this->clampMembers($d->getMembers());
+            $ordered = $this->resolveOrderedMembers($d);
+            $members = $this->clampMembers($ordered);
             $fp      = Cluster::computeFingerprint($members);
             $pairs[] = ['alg' => $alg, 'fp' => $fp];
         }
@@ -73,7 +77,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         // 3) Persist only new pairs
         foreach ($drafts as $d) {
             $alg     = $d->getAlgorithm();
-            $members = $this->clampMembers($d->getMembers());
+            $ordered = $this->resolveOrderedMembers($d);
+            $members = $this->clampMembers($ordered);
             $fp      = Cluster::computeFingerprint($members);
             $key = $alg . '|' . $fp;
             if (isset($existing[$key])) {
@@ -195,6 +200,68 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $this->em->clear();
 
         return $deleted;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveOrderedMembers(ClusterDraft $draft): array
+    {
+        $original = $draft->getMembers();
+        $params   = $draft->getParams();
+        $metadata = $params['member_quality'] ?? null;
+        if (!is_array($metadata)) {
+            return $original;
+        }
+
+        $orderedRaw = $metadata['ordered'] ?? null;
+        if (!is_array($orderedRaw)) {
+            return $original;
+        }
+
+        /** @var list<int> $ordered */
+        $ordered = [];
+        foreach ($orderedRaw as $value) {
+            if (is_int($value)) {
+                $ordered[] = $value;
+                continue;
+            }
+
+            if (is_numeric($value)) {
+                $ordered[] = (int) $value;
+            }
+        }
+
+        if ($ordered === []) {
+            return $original;
+        }
+
+        /** @var array<int,int> $originalCounts */
+        $originalCounts = [];
+        foreach ($original as $id) {
+            $intId = (int) $id;
+            $originalCounts[$intId] = ($originalCounts[$intId] ?? 0) + 1;
+        }
+
+        /** @var array<int,int> $orderedCounts */
+        $orderedCounts = [];
+        foreach ($ordered as $id) {
+            $orderedCounts[$id] = ($orderedCounts[$id] ?? 0) + 1;
+        }
+
+        foreach ($original as $id) {
+            $intId   = (int) $id;
+            $expected = $originalCounts[$intId] ?? 0;
+            $current  = $orderedCounts[$intId] ?? 0;
+            if ($current >= $expected) {
+                continue;
+            }
+
+            $ordered[]             = $intId;
+            $orderedCounts[$intId] = $current + 1;
+        }
+
+        return $ordered;
     }
 
     /**

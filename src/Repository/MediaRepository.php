@@ -13,11 +13,12 @@ namespace MagicSunday\Memories\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 
 /**
  * Minimal repository wrapper to load Media by IDs efficiently.
  */
-readonly class MediaRepository
+readonly class MediaRepository implements MemberMediaLookupInterface
 {
     public function __construct(private EntityManagerInterface $em)
     {
