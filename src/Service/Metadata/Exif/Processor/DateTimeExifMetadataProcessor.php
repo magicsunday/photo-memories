@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Exif\Processor;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface;
@@ -29,12 +31,19 @@ final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterf
 
     public function process(array $exif, Media $media): void
     {
+        $offset = $this->accessor->parseOffsetMinutes($exif);
         $takenAt = $this->accessor->findDate($exif);
+
         if ($takenAt !== null) {
+            if ($offset !== null) {
+                $absOffset = abs($offset);
+                $timezone = new DateTimeZone(sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv($absOffset, 60), $absOffset % 60));
+                $takenAt = new DateTimeImmutable($takenAt->format('Y-m-d H:i:s'), $timezone);
+            }
+
             $media->setTakenAt($takenAt);
         }
 
-        $offset = $this->accessor->parseOffsetMinutes($exif);
         if ($offset !== null) {
             $media->setTimezoneOffsetMin($offset);
         }

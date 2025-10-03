@@ -23,6 +23,8 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\DateTimeExifMetadataProcessor;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use PHPUnit\Framework\TestCase;
@@ -139,6 +141,86 @@ final class FeedControllerTest extends TestCase
         self::assertSame(2, $meta['gesamtVerfuegbar']);
         self::assertSame(1, $meta['anzahlGeliefert']);
         self::assertEqualsCanonicalizing(['holiday_event', 'hike_adventure'], $meta['verfuegbareStrategien']);
+    }
+
+    public function testFeedFormatsTakenAtWithExifOffset(): void
+    {
+        $accessor   = new DefaultExifValueAccessor();
+        $processor  = new DateTimeExifMetadataProcessor($accessor);
+        $exif       = [
+            'EXIF' => [
+                'DateTimeOriginal'   => '2024:05:01 14:20:30',
+                'OffsetTimeOriginal' => '+0130',
+            ],
+        ];
+
+        $media = new Media('/media/offset.jpg', 'checksum-offset', 512);
+        $processor->process($exif, $media);
+
+        $reflection = new \ReflectionProperty(Media::class, 'id');
+        $reflection->setAccessible(true);
+        $reflection->setValue($media, 42);
+
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn([
+                new MemoryFeedItem(
+                    algorithm: 'exif_offset',
+                    title: 'Offset aufgenommen',
+                    subtitle: 'Lokale Zeit gebunden',
+                    coverMediaId: 42,
+                    memberIds: [42],
+                    score: 1.0,
+                    params: [
+                        'group'      => 'metadata',
+                        'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_100],
+                    ],
+                ),
+            ]);
+
+        $mediaRepo = $this->createMock(MediaRepository::class);
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([42])
+            ->willReturn([$media]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
+
+        $controller = new FeedController(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/feed', 'GET');
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertIsArray($payload);
+        self::assertArrayHasKey('items', $payload);
+        self::assertCount(1, $payload['items']);
+
+        $item = $payload['items'][0];
+        self::assertSame('2024-05-01T14:20:30+01:30', $item['coverAufgenommenAm']);
+        self::assertSame('2024-05-01T14:20:30+01:30', $item['galerie'][0]['aufgenommenAm']);
+
+        self::assertSame(90, $media->getTimezoneOffsetMin());
     }
 
     public function testFeedRejectsInvalidDate(): void
