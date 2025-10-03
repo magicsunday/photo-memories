@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Command;
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
 use RuntimeException;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,12 +33,9 @@ use const LOCK_EX;
 /**
  * Console command that executes slideshow generation jobs.
  */
+#[AsCommand(name: 'slideshow:generate', description: 'Erstellt ein Slideshow-Video für die angegebene Job-Datei.')]
 final class SlideshowGenerateCommand extends Command
 {
-    protected static $defaultName = 'slideshow:generate';
-
-    protected static $defaultDescription = 'Generates a slideshow video for the given job file.';
-
     public function __construct(private readonly SlideshowVideoGeneratorInterface $generator)
     {
         parent::__construct();
