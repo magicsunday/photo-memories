@@ -16,7 +16,7 @@ Unter `public/app/` liegt eine schlanke SPA (Vanilla JS + Vite), die den Feed l�
 
 ### Rückblick-Videos
 
-Jeder Rückblick erhält optional ein automatisch generiertes Video, das die Vorschaubilder in einer Sequenz mit Überblendungen zeigt. Die Generierung erfolgt asynchron über den neuen Konsolenbefehl `slideshow:generate`, der intern durch den HTTP-Controller angestoßen wird. Bereits erzeugte Videos landen im Verzeichnis `public/videos/` und werden beim nächsten Abruf wiederverwendet, sodass keine unnötige Rechenzeit entsteht.
+Jeder Rückblick erhält optional ein automatisch generiertes Video, das die Vorschaubilder in einer Sequenz mit Überblendungen zeigt. Die Generierung erfolgt asynchron über den neuen Konsolenbefehl `slideshow:generate`, der intern durch den HTTP-Controller angestoßen wird. Bereits erzeugte Videos landen standardmäßig im Verzeichnis `public/videos/` (konfigurierbar über die Umgebungsvariable `MEMORIES_SLIDESHOW_DIR`) und werden beim nächsten Abruf wiederverwendet, sodass keine unnötige Rechenzeit entsteht.
 
 Die Laufzeit pro Bild sowie die Dauer der Übergänge lassen sich über die Parameter `memories.slideshow.image_duration_s` und `memories.slideshow.transition_duration_s` in `config/parameters.yaml` anpassen. Für andere Ausgabegrößen gibt es zusätzlich `memories.slideshow.video_width` und `memories.slideshow.video_height`. Standardmäßig verwendet der Generator das `ffmpeg`-Binary aus dem `PATH`. Falls es an einem anderen Ort liegt, kann der Pfad über den Parameter `memories.slideshow.ffmpeg_path` (oder die Umgebungsvariable `FFMPEG_PATH`) überschrieben werden.
 
