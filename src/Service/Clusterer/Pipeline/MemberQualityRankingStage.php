@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\AbstractClusterScoreHeuristic
 
 use function array_keys;
 use function array_map;
+use function array_values;
 use function count;
 use function max;
 use function usort;
@@ -155,8 +156,8 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 $positions[(int) $memberId] = $idx;
             }
 
-            $ordered = $members;
-            usort($ordered, function (int $a, int $b) use ($details, $positions): int {
+            $qualityOrdered = $members;
+            usort($qualityOrdered, function (int $a, int $b) use ($details, $positions): int {
                 $detailA = $details[(string) $a]['score'] ?? 0.0;
                 $detailB = $details[(string) $b]['score'] ?? 0.0;
 
@@ -168,7 +169,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             });
 
             $ranked = [];
-            foreach ($ordered as $memberId) {
+            foreach ($qualityOrdered as $memberId) {
                 $detail   = $details[(string) $memberId];
                 $ranked[] = [
                     'id'          => $memberId,
@@ -180,9 +181,12 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             }
 
             $draft->setParam('member_quality', [
-                'ordered' => $ordered,
+                'ordered' => array_values($members),
                 'members' => $details,
-                'ranked'  => $ranked,
+                'quality_ranked' => [
+                    'ordered' => $qualityOrdered,
+                    'members' => $ranked,
+                ],
                 'summary' => [
                     'quality_avg'       => $avgQuality,
                     'aesthetics_avg'    => $avgAesthetics,
