@@ -36,6 +36,7 @@ use function array_slice;
 use function count;
 use function hash;
 use function implode;
+use function in_array;
 use function is_array;
 use function is_numeric;
 use function is_string;
@@ -367,8 +368,13 @@ final class FeedController
         $members = $item->getMemberIds();
 
         $previewMembers = array_slice($members, 0, $this->previewImageCount);
+        $mediaIdsToLoad = $previewMembers;
+        if ($coverId !== null && !in_array($coverId, $mediaIdsToLoad, true)) {
+            $mediaIdsToLoad[] = $coverId;
+        }
+
         $memberPayload = [];
-        $memberMediaMap = $this->loadMediaMap($previewMembers);
+        $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad);
         foreach ($previewMembers as $memberId) {
             $media = $memberMediaMap[$memberId] ?? null;
 
@@ -379,6 +385,8 @@ final class FeedController
             ];
         }
 
+        $coverMedia = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
+
         return [
             'id'            => $this->createItemId($item),
             'algorithmus'   => $item->getAlgorithm(),
@@ -388,6 +396,7 @@ final class FeedController
             'score'         => $item->getScore(),
             'coverMediaId'  => $coverId,
             'cover'         => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth) : null,
+            'coverAufgenommenAm' => $this->formatTakenAt($coverMedia),
             'mitglieder'    => $previewMembers,
             'galerie'       => $memberPayload,
             'zeitspanne'    => $this->extractTimeRange($item),

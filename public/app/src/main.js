@@ -18,6 +18,13 @@ const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   month: 'short',
   year: 'numeric',
 });
+const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 document.title = 'Rückblick-Galerie';
 
@@ -238,7 +245,13 @@ function createCard(item) {
 
   const images = Array.isArray(item.galerie) && item.galerie.length > 0
     ? item.galerie
-    : (item.cover ? [{ mediaId: item.coverMediaId, thumbnail: item.cover }] : []);
+    : (item.cover
+        ? [{
+            mediaId: item.coverMediaId,
+            thumbnail: item.cover,
+            aufgenommenAm: item.coverAufgenommenAm ?? null,
+          }]
+        : []);
 
   if (images.length === 0) {
     const placeholder = document.createElement('figure');
@@ -256,10 +269,21 @@ function createCard(item) {
       const figure = document.createElement('figure');
       const img = document.createElement('img');
       img.src = image.thumbnail;
-      img.alt = `Medien-ID ${image.mediaId ?? ''}`;
+      const takenAtLabel = formatDateTime(image.aufgenommenAm);
+      const mediaIdLabel = image.mediaId ? `Medien-ID ${image.mediaId}` : 'Medienvorschau';
+      img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
       img.loading = 'lazy';
       img.decoding = 'async';
+      if (takenAtLabel) {
+        img.title = `Aufgenommen am ${takenAtLabel}`;
+      }
       figure.appendChild(img);
+
+      if (takenAtLabel) {
+        const caption = document.createElement('figcaption');
+        caption.textContent = `Aufgenommen am ${takenAtLabel}`;
+        figure.appendChild(caption);
+      }
       gallery.appendChild(figure);
     });
   }
@@ -392,4 +416,17 @@ function formatDate(value) {
   }
 
   return dateFormatter.format(date);
+}
+
+function formatDateTime(value) {
+  if (typeof value !== 'string' || value === '') {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return dateTimeFormatter.format(date);
 }

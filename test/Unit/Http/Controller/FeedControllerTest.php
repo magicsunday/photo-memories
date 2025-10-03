@@ -127,6 +127,7 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('items', $payload);
         self::assertCount(1, $payload['items']);
         self::assertSame('holiday_event', $payload['items'][0]['algorithmus']);
+        self::assertSame('2024-01-01T10:00:00+00:00', $payload['items'][0]['coverAufgenommenAm']);
 
         $gallery = $payload['items'][0]['galerie'];
         self::assertSame('2024-01-01T10:00:00+00:00', $gallery[0]['aufgenommenAm']);
