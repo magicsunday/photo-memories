@@ -161,6 +161,7 @@ parameters:
     memories.cluster.priority.device_similarity_strategy: 40
 
     # Scoring Defaults
+    memories.score.quality_baseline_megapixels: 12.0
     memories.score.min_valid_year: 1995
     memories.score.time_range.min_samples: 3
     memories.score.time_range.min_coverage: 0.6
