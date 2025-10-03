@@ -73,6 +73,7 @@ services:
         arguments:
             $thumbnailDir: '%env(string:MEMORIES_THUMBNAIL_DIR)%'
             $sizes: '%memories.thumbnail_sizes%'
+            $applyOrientation: '%memories.thumbnail.apply_orientation%'
 
     MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface:
         alias: MagicSunday\Memories\Service\Thumbnail\ThumbnailService
