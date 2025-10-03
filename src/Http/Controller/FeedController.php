@@ -36,6 +36,7 @@ use function array_slice;
 use function count;
 use function hash;
 use function implode;
+use function in_array;
 use function is_array;
 use function is_numeric;
 use function is_string;
@@ -52,6 +53,11 @@ use const SORT_STRING;
  */
 final class FeedController
 {
+    /**
+     * @var array<int, Media|null>
+     */
+    private array $mediaCache = [];
+
     public function __construct(
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterRepository $clusterRepository,
@@ -299,19 +305,87 @@ final class FeedController
         return null;
     }
 
+    /**
+     * @param list<int> $ids
+     *
+     * @return array<int, Media>
+     */
+    private function loadMediaMap(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $missing = [];
+        foreach ($ids as $id) {
+            if (!array_key_exists($id, $this->mediaCache)) {
+                $missing[$id] = true;
+            }
+        }
+
+        if ($missing !== []) {
+            $mediaItems = $this->mediaRepository->findByIds(array_keys($missing));
+            foreach ($mediaItems as $media) {
+                $this->mediaCache[$media->getId()] = $media;
+                unset($missing[$media->getId()]);
+            }
+
+            if ($missing !== []) {
+                foreach (array_keys($missing) as $id) {
+                    $this->mediaCache[$id] = null;
+                }
+            }
+        }
+
+        $result = [];
+        foreach ($ids as $id) {
+            $media = $this->mediaCache[$id] ?? null;
+            if ($media instanceof Media) {
+                $result[$id] = $media;
+            }
+        }
+
+        return $result;
+    }
+
+    private function formatTakenAt(?Media $media): ?string
+    {
+        if (!$media instanceof Media) {
+            return null;
+        }
+
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeImmutable) {
+            return null;
+        }
+
+        return $takenAt->format(DateTimeInterface::ATOM);
+    }
+
     private function transformItem(MemoryFeedItem $item): array
     {
         $coverId = $item->getCoverMediaId();
         $members = $item->getMemberIds();
 
         $previewMembers = array_slice($members, 0, $this->previewImageCount);
+        $mediaIdsToLoad = $previewMembers;
+        if ($coverId !== null && !in_array($coverId, $mediaIdsToLoad, true)) {
+            $mediaIdsToLoad[] = $coverId;
+        }
+
         $memberPayload = [];
+        $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad);
         foreach ($previewMembers as $memberId) {
+            $media = $memberMediaMap[$memberId] ?? null;
+
             $memberPayload[] = [
-                'mediaId'   => $memberId,
-                'thumbnail' => $this->buildThumbnailUrl($memberId, $this->defaultMemberWidth),
+                'mediaId'        => $memberId,
+                'thumbnail'      => $this->buildThumbnailUrl($memberId, $this->defaultMemberWidth),
+                'aufgenommenAm'  => $this->formatTakenAt($media),
             ];
         }
+
+        $coverMedia = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
 
         return [
             'id'            => $this->createItemId($item),
@@ -322,6 +396,7 @@ final class FeedController
             'score'         => $item->getScore(),
             'coverMediaId'  => $coverId,
             'cover'         => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth) : null,
+            'coverAufgenommenAm' => $this->formatTakenAt($coverMedia),
             'mitglieder'    => $previewMembers,
             'galerie'       => $memberPayload,
             'zeitspanne'    => $this->extractTimeRange($item),

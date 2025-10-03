@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Http\Controller;
 
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
@@ -88,6 +89,25 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $entityManager     = $this->createMock(EntityManagerInterface::class);
 
+        $mediaOne   = new Media('/media/1.jpg', 'checksum-1', 100);
+        $mediaTwo   = new Media('/media/2.jpg', 'checksum-2', 110);
+        $mediaThree = new Media('/media/3.jpg', 'checksum-3', 120);
+
+        $idProperty = new \ReflectionProperty(Media::class, 'id');
+        $idProperty->setAccessible(true);
+        $idProperty->setValue($mediaOne, 1);
+        $idProperty->setValue($mediaTwo, 2);
+        $idProperty->setValue($mediaThree, 3);
+
+        $mediaOne->setTakenAt(new DateTimeImmutable('2024-01-01T10:00:00+00:00'));
+        $mediaTwo->setTakenAt(new DateTimeImmutable('2024-01-02T11:15:00+00:00'));
+        $mediaThree->setTakenAt(new DateTimeImmutable('2024-01-03T12:30:00+00:00'));
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2, 3])
+            ->willReturn([$mediaOne, $mediaTwo, $mediaThree]);
+
         $controller = new FeedController(
             $feedBuilder,
             $clusterRepo,
@@ -107,6 +127,12 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('items', $payload);
         self::assertCount(1, $payload['items']);
         self::assertSame('holiday_event', $payload['items'][0]['algorithmus']);
+        self::assertSame('2024-01-01T10:00:00+00:00', $payload['items'][0]['coverAufgenommenAm']);
+
+        $gallery = $payload['items'][0]['galerie'];
+        self::assertSame('2024-01-01T10:00:00+00:00', $gallery[0]['aufgenommenAm']);
+        self::assertSame('2024-01-02T11:15:00+00:00', $gallery[1]['aufgenommenAm']);
+        self::assertSame('2024-01-03T12:30:00+00:00', $gallery[2]['aufgenommenAm']);
 
         self::assertArrayHasKey('meta', $payload);
         $meta = $payload['meta'];
