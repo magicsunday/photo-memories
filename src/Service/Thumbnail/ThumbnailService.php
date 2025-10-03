@@ -19,19 +19,42 @@ use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
 /**
- * Thumbnail service that supports GD and Imagick fallback.
+ * Thumbnail service that generates JPEG thumbnails using Imagick or GD.
  */
 class ThumbnailService implements ThumbnailServiceInterface
 {
+    private const ORIENTATION_UNDEFINED = 0;
+    private const ORIENTATION_TOPLEFT   = 1;
+    private const ORIENTATION_TOPRIGHT  = 2;
+    private const ORIENTATION_BOTTOMRIGHT = 3;
+    private const ORIENTATION_BOTTOMLEFT  = 4;
+    private const ORIENTATION_LEFTTOP     = 5;
+    private const ORIENTATION_RIGHTTOP    = 6;
+    private const ORIENTATION_RIGHTBOTTOM = 7;
+    private const ORIENTATION_LEFTBOTTOM  = 8;
+
+    private const JPEG_QUALITY = 85;
+
+    /**
+     * Absolute path to the thumbnail output directory.
+     */
     private readonly string $thumbnailDir;
 
-    /** @var int[] sizes in px (width) */
+    /**
+     * @var int[] List of thumbnail widths that should be generated.
+     */
     private readonly array $sizes;
 
+    /**
+     * @param string $thumbnailDir Absolute path to the thumbnail directory.
+     * @param int[]  $sizes        Desired thumbnail widths (in pixels).
+     */
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024])
     {
         $this->thumbnailDir = $thumbnailDir;
         $this->sizes        = $sizes;
+
+        // Ensure the output directory exists before thumbnails are generated.
         if (!is_dir($this->thumbnailDir) && !mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
             throw new RuntimeException(sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir));
         }
@@ -40,87 +63,57 @@ class ThumbnailService implements ThumbnailServiceInterface
     /**
      * Generate thumbnails for a media file.
      *
-     * @return array map size => path
+     * @param string $filepath   Absolute path to the original media file.
+     * @param Media  $media      Media metadata containing orientation and checksum.
+     *
+     * @return array<int, string> Map of thumbnail width to created file path.
      */
     public function generateAll(string $filepath, Media $media): array
     {
         $orientation = $media->getOrientation();
         $checksum    = $media->getChecksum();
+        $hasImagick  = extension_loaded('imagick');
+        $hasGd       = function_exists('imagecreatefromstring');
 
-        if (extension_loaded('imagick')) {
+        // Abort early when no supported imaging library is available at all.
+        if (!$hasImagick && !$hasGd) {
+            throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
+        }
+
+        if ($hasImagick) {
             try {
                 return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
-            } catch (ImagickException | RuntimeException $exception) {
-                if (function_exists('imagecreatefromstring')) {
-                    try {
-                        return $this->generateThumbnailsWithGd(
-                            $filepath,
-                            $orientation,
-                            $this->sizes,
-                            $checksum,
-                            $media->getMime(),
-                        );
-                    } catch (RuntimeException $gdException) {
-                        throw $gdException;
-                    }
+            } catch (ImagickException $exception) {
+                if (!$hasGd) {
+                    throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails', 0, $exception);
                 }
 
-                if ($exception instanceof RuntimeException) {
-                    throw $exception;
-                }
-
-                throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails', 0, $exception);
+                // Imagick failed, therefore fall back to the GD implementation below.
             }
         }
 
-        if (function_exists('imagecreatefromstring')) {
+        if ($hasGd) {
             return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
         }
 
         throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
     }
 
-    private function generateWithImagick(string $filepath, int $width, ?int $orientation, string $checksum): ?string
-    {
-        $results = $this->generateThumbnailsWithImagick($filepath, $orientation, [$width], $checksum);
-
-        if (isset($results[$width])) {
-            return $results[$width];
-        }
-
-        if ($results === []) {
-            return null;
-        }
-
-        $paths = array_values($results);
-
-        return $paths[0] ?? null;
-    }
-
+    /**
+     * Creates a new Imagick instance. Kept separate for easier testing.
+     *
+     * @return Imagick
+     */
     protected function createImagick(): Imagick
     {
         return new Imagick();
     }
 
-    private function generateWithGd(string $filepath, int $width, ?int $orientation, string $checksum): ?string
-    {
-        $results = $this->generateThumbnailsWithGd($filepath, $orientation, [$width], $checksum);
-
-        if (isset($results[$width])) {
-            return $results[$width];
-        }
-
-        if ($results === []) {
-            return null;
-        }
-
-        $paths = array_values($results);
-
-        return $paths[0] ?? null;
-    }
-
     /**
-     * @param int[] $sizes
+     * @param string   $filepath   Absolute path to the original media file.
+     * @param int|null $orientation EXIF orientation value of the source media.
+     * @param int[]    $sizes        Desired thumbnail widths (in pixels).
+     * @param string   $checksum     Media checksum used for generating file names.
      *
      * @return array<int, string>
      */
@@ -149,6 +142,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     continue;
                 }
 
+                // Remember that this width was already generated to avoid duplicates.
                 $generatedKeys[$targetWidth] = true;
 
                 $clone = $this->cloneImagick($imagick);
@@ -167,6 +161,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     }
 
                     if ($clone->getImageAlphaChannel()) {
+                        // Flatten transparent images on a white background to avoid artefacts in the final JPEG file.
                         $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
                         $clone->clear();
                         $clone->destroy();
@@ -175,7 +170,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                     $clone->setImageFormat('jpeg');
                     $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
-                    $clone->setImageCompressionQuality(85);
+                    $clone->setImageCompressionQuality(self::JPEG_QUALITY);
 
                     $out         = $this->buildThumbnailPath($checksum, $targetWidth);
                     $writeResult = $clone->writeImage($out);
@@ -199,8 +194,11 @@ class ThumbnailService implements ThumbnailServiceInterface
     }
 
     /**
-     * @param int[]       $sizes
-     * @param string|null $mime
+     * @param string      $filepath   Absolute path to the original media file.
+     * @param int|null    $orientation EXIF orientation value of the source media.
+     * @param int[]       $sizes        Desired thumbnail widths (in pixels).
+     * @param string      $checksum     Media checksum used for generating file names.
+     * @param string|null $mime         Optional MIME type hint for GD loader selection.
      *
      * @return array<int, string>
      */
@@ -224,6 +222,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 $namespacedLoader  = __NAMESPACE__ . '\\' . $loader;
                 $selectedLoader    = null;
 
+                // Try to locate a project specific GD loader before using the global function.
                 if (function_exists($namespacedLoader)) {
                     $selectedLoader = $namespacedLoader;
                 } elseif (function_exists($loader)) {
@@ -242,6 +241,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
             }
 
+            // Fall back to the generic loader which can infer the format from the binary data.
             $src = @imagecreatefromstring($data);
         }
 
@@ -269,6 +269,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     continue;
                 }
 
+                // Remember that this width was already generated to avoid duplicates.
                 $generatedKeys[$newWidth] = true;
 
                 $newHeight = (int) round($newWidth / $ratio);
@@ -303,7 +304,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     }
 
                     $out         = $this->buildThumbnailPath($checksum, $newWidth);
-                    $writeResult = @imagejpeg($dst, $out, 85);
+                    $writeResult = @imagejpeg($dst, $out, self::JPEG_QUALITY);
                 } finally {
                     imagedestroy($dst);
                 }
@@ -321,101 +322,138 @@ class ThumbnailService implements ThumbnailServiceInterface
         }
     }
 
+    /**
+     * @param Imagick $imagick Imagick instance that should be cloned.
+     *
+     * @return Imagick
+     */
     protected function cloneImagick(Imagick $imagick): Imagick
     {
         return clone $imagick;
     }
 
+    /**
+     * Builds the target path for a generated thumbnail.
+     *
+     * @param string $checksum Media checksum used for naming.
+     * @param int    $width    Thumbnail width in pixels.
+     *
+     * @return string
+     */
     private function buildThumbnailPath(string $checksum, int $width): string
     {
         return $this->thumbnailDir . DIRECTORY_SEPARATOR . $checksum . '-' . $width . '.jpg';
     }
 
+    /**
+     * Applies the EXIF orientation to a GD image resource.
+     *
+     * @param GdImage   $image       GD image resource to transform.
+     * @param int|null  $orientation EXIF orientation value or null when unavailable.
+     *
+     * @return GdImage
+     */
     protected function applyOrientationWithGd(GdImage $image, ?int $orientation): GdImage
     {
-        if ($orientation === null || $orientation === 1) {
+        if ($orientation === null || $orientation === self::ORIENTATION_TOPLEFT) {
             return $image;
         }
 
         switch ($orientation) {
-            case 2:
+            case self::ORIENTATION_TOPRIGHT:
                 return $this->flipImage($image, IMG_FLIP_HORIZONTAL);
-            case 3:
+            case self::ORIENTATION_BOTTOMRIGHT:
                 return $this->rotateImage($image, 180);
-            case 4:
+            case self::ORIENTATION_BOTTOMLEFT:
                 return $this->flipImage($image, IMG_FLIP_VERTICAL);
-            case 5:
+            case self::ORIENTATION_LEFTTOP:
                 $image = $this->flipImage($image, IMG_FLIP_HORIZONTAL);
 
                 return $this->rotateImage($image, 90);
-            case 6:
+            case self::ORIENTATION_RIGHTTOP:
                 return $this->rotateImage($image, -90);
-            case 7:
+            case self::ORIENTATION_RIGHTBOTTOM:
                 $image = $this->flipImage($image, IMG_FLIP_HORIZONTAL);
 
                 return $this->rotateImage($image, -90);
-            case 8:
+            case self::ORIENTATION_LEFTBOTTOM:
                 return $this->rotateImage($image, 90);
         }
 
         return $image;
     }
 
+    /**
+     * Applies the EXIF orientation to an Imagick instance.
+     *
+     * @param Imagick   $imagick    Imagick instance to transform.
+     * @param int|null  $orientation EXIF orientation value or null when unavailable.
+     */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
-        if ($orientation !== null && $orientation >= 1 && $orientation <= 8) {
+        if ($orientation !== null && $orientation >= self::ORIENTATION_TOPLEFT && $orientation <= self::ORIENTATION_LEFTBOTTOM) {
             $imagick->setImageOrientation($orientation);
         }
 
         $this->applyOrientationWithLegacyImagick($imagick);
 
-        $imagick->setImageOrientation(Imagick::ORIENTATION_TOPLEFT);
+        $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
     }
 
     /**
      * Applies the orientation manually for Imagick versions lacking autoOrientImage().
+     *
+     * @param Imagick $imagick Imagick instance to transform.
      */
     private function applyOrientationWithLegacyImagick(Imagick $imagick): void
     {
         $orientation = $imagick->getImageOrientation();
 
         switch ($orientation) {
-            case Imagick::ORIENTATION_UNDEFINED:
-            case Imagick::ORIENTATION_TOPLEFT:
+            case self::ORIENTATION_UNDEFINED:
+            case self::ORIENTATION_TOPLEFT:
                 return;
-            case Imagick::ORIENTATION_TOPRIGHT:
+            case self::ORIENTATION_TOPRIGHT:
                 $imagick->flopImage();
 
                 return;
-            case Imagick::ORIENTATION_BOTTOMRIGHT:
+            case self::ORIENTATION_BOTTOMRIGHT:
                 $imagick->rotateImage(new ImagickPixel('none'), 180);
 
                 return;
-            case Imagick::ORIENTATION_BOTTOMLEFT:
+            case self::ORIENTATION_BOTTOMLEFT:
                 $imagick->flipImage();
 
                 return;
-            case Imagick::ORIENTATION_LEFTTOP:
+            case self::ORIENTATION_LEFTTOP:
                 $imagick->flopImage();
                 $imagick->rotateImage(new ImagickPixel('none'), 90);
 
                 return;
-            case Imagick::ORIENTATION_RIGHTTOP:
+            case self::ORIENTATION_RIGHTTOP:
                 $imagick->rotateImage(new ImagickPixel('none'), -90);
 
                 return;
-            case Imagick::ORIENTATION_RIGHTBOTTOM:
+            case self::ORIENTATION_RIGHTBOTTOM:
                 $imagick->flopImage();
                 $imagick->rotateImage(new ImagickPixel('none'), -90);
 
                 return;
-            case Imagick::ORIENTATION_LEFTBOTTOM:
+            case self::ORIENTATION_LEFTBOTTOM:
                 $imagick->rotateImage(new ImagickPixel('none'), 90);
 
                 return;
         }
     }
 
+    /**
+     * Rotates a GD image by the provided degrees.
+     *
+     * @param GdImage $image   GD image resource to rotate.
+     * @param float   $degrees Degrees to rotate (clockwise direction).
+     *
+     * @return GdImage
+     */
     private function rotateImage(GdImage $image, float $degrees): GdImage
     {
         $rotated = imagerotate($image, $degrees, 0);
@@ -428,6 +466,14 @@ class ThumbnailService implements ThumbnailServiceInterface
         return $rotated;
     }
 
+    /**
+     * Mirrors a GD image according to the provided mode.
+     *
+     * @param GdImage $image GD image resource to mirror.
+     * @param int     $mode  GD flip mode constant.
+     *
+     * @return GdImage
+     */
     private function flipImage(GdImage $image, int $mode): GdImage
     {
         if (function_exists('imageflip')) {
