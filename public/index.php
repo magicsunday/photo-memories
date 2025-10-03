@@ -45,6 +45,14 @@ try {
         $response   = $controller->feed($request);
     }
 
+    if ($response === null && $method === 'GET' && preg_match('#^/api/feed/([a-f0-9]{40})/video$#', $path, $matches) === 1) {
+        $itemId = $matches[1];
+
+        /** @var FeedController $controller */
+        $controller = $container->get(FeedController::class);
+        $response   = $controller->slideshow($itemId);
+    }
+
     if ($response === null && $method === 'GET' && preg_match('#^/api/media/(\d+)/thumbnail$#', $path, $matches) === 1) {
         $mediaId = (int) $matches[1];
 

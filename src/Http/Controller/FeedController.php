@@ -23,6 +23,7 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
@@ -65,6 +66,7 @@ final class FeedController
         private readonly ThumbnailPathResolver $thumbnailResolver,
         private readonly MediaRepository $mediaRepository,
         private readonly ThumbnailServiceInterface $thumbnailService,
+        private readonly SlideshowVideoManagerInterface $slideshowManager,
         private readonly EntityManagerInterface $entityManager,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
@@ -387,8 +389,11 @@ final class FeedController
 
         $coverMedia = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
 
+        $itemId = $this->createItemId($item);
+        $status = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
+
         return [
-            'id'            => $this->createItemId($item),
+            'id'            => $itemId,
             'algorithmus'   => $item->getAlgorithm(),
             'gruppe'        => $this->extractGroup($item),
             'titel'         => $item->getTitle(),
@@ -401,6 +406,7 @@ final class FeedController
             'galerie'       => $memberPayload,
             'zeitspanne'    => $this->extractTimeRange($item),
             'zusatzdaten'   => $item->getParams(),
+            'slideshow'     => $status->toArray(),
         ];
     }
 
@@ -541,5 +547,16 @@ final class FeedController
         }
 
         return false;
+    }
+    public function slideshow(string $itemId): JsonResponse|BinaryFileResponse
+    {
+        $path = $this->slideshowManager->resolveVideoPath($itemId);
+        if ($path === null) {
+            return new JsonResponse([
+                'error' => 'Slideshow video not available.',
+            ], 404);
+        }
+
+        return new BinaryFileResponse($path);
     }
 }
