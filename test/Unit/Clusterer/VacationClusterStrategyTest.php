@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
@@ -33,6 +34,7 @@ use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -150,11 +152,12 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         $tripStart = new DateTimeImmutable('2024-06-10 07:00:00', new DateTimeZone('UTC'));
+        $vacationDayById = [];
         foreach ($tracks as $dayIndex => $coordinates) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
             foreach ($coordinates as $pointIndex => $data) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($pointIndex * 4) . 'H'));
-                $items[] = $this->makeMediaFixture(
+                $media = $this->makeMediaFixture(
                     ++$id,
                     sprintf('vacation-%d-%d.jpg', $dayIndex, $pointIndex),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -165,10 +168,12 @@ final class VacationClusterStrategyTest extends TestCase
                         $media->setTimezoneOffsetMin(120);
                     }
                 );
+                $vacationDayById[$media->getId()] = $dayIndex;
+                $items[] = $media;
             }
 
             $nightTimestamp = $dayStart->setTime(23, 30, 0);
-            $items[] = $this->makeMediaFixture(
+            $nightMedia = $this->makeMediaFixture(
                 ++$id,
                 sprintf('vacation-night-%d.jpg', $dayIndex),
                 $nightTimestamp->format('Y-m-d H:i:s'),
@@ -179,6 +184,8 @@ final class VacationClusterStrategyTest extends TestCase
                     $media->setTimezoneOffsetMin(120);
                 }
             );
+            $vacationDayById[$nightMedia->getId()] = $dayIndex;
+            $items[] = $nightMedia;
         }
 
         $clusters = $strategy->cluster($items);
@@ -219,6 +226,22 @@ final class VacationClusterStrategyTest extends TestCase
 
         self::assertEqualsWithDelta($expectedDistanceKm, $params['max_distance_km'], 0.2);
         self::assertGreaterThanOrEqual($params['max_observed_distance_km'], $params['max_distance_km']);
+
+        $clamped = $this->clampMemberList($cluster->getMembers(), 20);
+
+        $coverage = [];
+        foreach ($clamped as $memberId) {
+            $day = $vacationDayById[$memberId] ?? null;
+            if ($day === null) {
+                continue;
+            }
+
+            $coverage[$day] = true;
+        }
+
+        for ($i = 0; $i < count($tracks); ++$i) {
+            self::assertArrayHasKey($i, $coverage);
+        }
     }
 
     #[Test]
@@ -1277,6 +1300,29 @@ final class VacationClusterStrategyTest extends TestCase
         $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
 
         return new VacationClusterStrategy($homeLocator, $dayBuilder, $segmentAssembler);
+    }
+
+    /**
+     * @param list<int> $memberIds
+     *
+     * @return list<int>
+     */
+    private function clampMemberList(array $memberIds, int $limit): array
+    {
+        $service = new ClusterPersistenceService(
+            $this->createStub(EntityManagerInterface::class),
+            250,
+            $limit,
+        );
+
+        $reflection = new ReflectionClass(ClusterPersistenceService::class);
+        $method     = $reflection->getMethod('clampMembers');
+        $method->setAccessible(true);
+
+        /** @var list<int> $result */
+        $result = $method->invoke($service, $memberIds);
+
+        return $result;
     }
 
     /**

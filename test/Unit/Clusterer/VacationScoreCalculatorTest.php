@@ -13,13 +13,16 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 
 /**
  * @covers \MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
@@ -81,15 +84,85 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
     }
 
+    #[Test]
+    public function buildDraftInterleavesMembersAcrossDays(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $calculator     = new VacationScoreCalculator(
+            locationHelper: $locationHelper,
+            holidayResolver: new NullHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+        );
+
+        $home = [
+            'lat' => 48.2082,
+            'lon' => 16.3738,
+            'radius_km' => 12.0,
+            'country' => 'at',
+            'timezone_offset' => 60,
+        ];
+
+        $start = new DateTimeImmutable('2024-08-10 08:00:00');
+        $days  = [];
+        $dayKeys = [];
+        $dayCount = 4;
+        for ($i = 0; $i < $dayCount; ++$i) {
+            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
+            $members = $this->makeMembersForDay($i, $dayDate, 7);
+            $dayKey  = $dayDate->format('Y-m-d');
+            $dayKeys[] = $dayKey;
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 12 + $i,
+                poiSamples: 16,
+                travelKm: 180.0,
+                timezoneOffset: 60,
+                hasAirport: $i === 0 || $i === $dayCount - 1,
+                spotCount: 3,
+                spotDwellSeconds: 5400 + ($i * 600),
+            );
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $memberIds = $draft->getMembers();
+        self::assertGreaterThan(20, count($memberIds));
+
+        $clamped = $this->clampMemberList($memberIds, 20);
+
+        $represented = [];
+        foreach ($clamped as $memberId) {
+            $dayIndex = intdiv($memberId - 100, 100);
+            $represented[$dayIndex] = true;
+        }
+
+        $expectedDays = [];
+        for ($i = 0; $i < $dayCount; ++$i) {
+            $expectedDays[] = $i;
+        }
+
+        $actualDays = array_keys($represented);
+        sort($actualDays);
+
+        self::assertSame($expectedDays, $actualDays);
+    }
+
     /**
      * @return list<Media>
      */
-    private function makeMembersForDay(int $index, DateTimeImmutable $base): array
+    private function makeMembersForDay(int $index, DateTimeImmutable $base, int $count = 3): array
     {
         $items = [];
-        for ($j = 0; $j < 3; ++$j) {
+        $baseId = 100 + ($index * 100);
+        for ($j = 0; $j < $count; ++$j) {
             $items[] = $this->makeMediaFixture(
-                id: 100 + ($index * 10) + $j,
+                id: $baseId + $j,
                 filename: sprintf('trip-day-%d-%d.jpg', $index, $j),
                 takenAt: $base->add(new DateInterval('PT' . ($j * 3) . 'H')),
                 lat: 38.7223 + ($index * 0.01) + ($j * 0.002),
@@ -101,6 +174,29 @@ final class VacationScoreCalculatorTest extends TestCase
         }
 
         return $items;
+    }
+
+    /**
+     * @param list<int> $memberIds
+     *
+     * @return list<int>
+     */
+    private function clampMemberList(array $memberIds, int $limit): array
+    {
+        $service = new ClusterPersistenceService(
+            $this->createStub(EntityManagerInterface::class),
+            250,
+            $limit,
+        );
+
+        $reflection = new ReflectionClass(ClusterPersistenceService::class);
+        $method     = $reflection->getMethod('clampMembers');
+        $method->setAccessible(true);
+
+        /** @var list<int> $result */
+        $result = $method->invoke($service, $memberIds);
+
+        return $result;
     }
 
     /**
