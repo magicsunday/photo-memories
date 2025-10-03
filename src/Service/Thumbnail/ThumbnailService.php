@@ -49,15 +49,23 @@ class ThumbnailService implements ThumbnailServiceInterface
         if (extension_loaded('imagick')) {
             try {
                 return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
-            } catch (ImagickException $exception) {
+            } catch (ImagickException | RuntimeException $exception) {
                 if (function_exists('imagecreatefromstring')) {
-                    return $this->generateThumbnailsWithGd(
-                        $filepath,
-                        $orientation,
-                        $this->sizes,
-                        $checksum,
-                        $media->getMime(),
-                    );
+                    try {
+                        return $this->generateThumbnailsWithGd(
+                            $filepath,
+                            $orientation,
+                            $this->sizes,
+                            $checksum,
+                            $media->getMime(),
+                        );
+                    } catch (RuntimeException $gdException) {
+                        throw $gdException;
+                    }
+                }
+
+                if ($exception instanceof RuntimeException) {
+                    throw $exception;
                 }
 
                 throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails', 0, $exception);
