@@ -192,11 +192,7 @@ final class ThumbnailServiceTest extends TestCase
         $imagick->expects(self::once())->method('setOption')->with('jpeg:preserve-settings', 'true')->willReturn(true);
         $imagick->expects(self::once())->method('readImage')->with($sourcePath . '[0]')->willReturn(true);
 
-        if (method_exists(Imagick::class, 'autoOrientImage')) {
-            $imagick->expects(self::once())->method('autoOrientImage')->willReturn(true);
-        } else {
-            $imagick->expects(self::once())->method('getImageOrientation')->willReturn(Imagick::ORIENTATION_TOPLEFT);
-        }
+        $imagick->expects(self::once())->method('getImageOrientation')->willReturn(Imagick::ORIENTATION_TOPLEFT);
 
         $imagick->expects(self::once())->method('setImageOrientation')->with(Imagick::ORIENTATION_TOPLEFT)->willReturn(true);
         $imagick->expects(self::once())->method('thumbnailImage')->with(200, 0)->willReturn(true);
