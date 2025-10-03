@@ -79,6 +79,29 @@ services:
         alias: MagicSunday\Memories\Service\Thumbnail\ThumbnailService
 
     ########################################
+    # Slideshow Videos
+    ########################################
+    MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator:
+        arguments:
+            $ffmpegBinary: '%memories.slideshow.ffmpeg_path%'
+            $slideDuration: '%memories.slideshow.image_duration_s%'
+            $transitionDuration: '%memories.slideshow.transition_duration_s%'
+            $width: '%memories.slideshow.video_width%'
+            $height: '%memories.slideshow.video_height%'
+
+    MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
+        alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
+
+    MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager:
+        arguments:
+            $videoDirectory: '%memories.slideshow.video_dir%'
+            $projectDirectory: '%kernel.project_dir%'
+            $slideDuration: '%memories.slideshow.image_duration_s%'
+
+    MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
+        alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
+
+    ########################################
     # Metadata Extractors & Enricher
     ########################################
     MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor:
