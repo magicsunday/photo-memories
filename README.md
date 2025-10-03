@@ -83,6 +83,13 @@ MEMORIES_PREFERRED_LOCALE=de
 
 Leave the variable unset to retain the previous behaviour of using the generic `name` tag provided by Overpass.
 
+## Thumbnail-Ausrichtung
+
+Die Thumbnail-Pipeline ignoriert EXIF-Orientierungsflags jetzt standardmäßig und erzeugt die verkleinerten JPEGs genau so, wie
+die Pixeldaten auf der Platte liegen. Falls du weiterhin automatische Rotationen anhand des Flags benötigst, setzt du in deiner
+`.env` den Schalter `MEMORIES_THUMBNAIL_APPLY_ORIENTATION=1`. Mit dem Standardwert `0` bleibt das frühere Verhalten deaktiviert,
+was insbesondere für bereits physisch gedrehte Bilder mit inkonsistentem Orientation-Tag Fehler vermeidet.
+
 ## Cluster-Konfiguration
 
 Die Persistierung der berechneten Cluster wird jetzt begrenzt, damit Feeds und Oberflächen nicht mit hunderten Medien pro Block

@@ -26,6 +26,7 @@ parameters:
 
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
+    memories.thumbnail.apply_orientation: '%env(default::bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
 
     # Consolidation Defaults
     memories.cluster.consolidate.min_score: 0.30

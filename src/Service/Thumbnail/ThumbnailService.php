@@ -46,13 +46,20 @@ class ThumbnailService implements ThumbnailServiceInterface
     private readonly array $sizes;
 
     /**
-     * @param string $thumbnailDir Absolute path to the thumbnail directory.
-     * @param int[]  $sizes        Desired thumbnail widths (in pixels).
+     * Whether thumbnails should apply the EXIF orientation.
      */
-    public function __construct(string $thumbnailDir, array $sizes = [320, 1024])
+    private readonly bool $applyOrientation;
+
+    /**
+     * @param string $thumbnailDir    Absolute path to the thumbnail directory.
+     * @param int[]  $sizes           Desired thumbnail widths (in pixels).
+     * @param bool   $applyOrientation Whether the EXIF orientation should be applied.
+     */
+    public function __construct(string $thumbnailDir, array $sizes = [320, 1024], bool $applyOrientation = false)
     {
         $this->thumbnailDir = $thumbnailDir;
         $this->sizes        = $sizes;
+        $this->applyOrientation = $applyOrientation;
 
         // Ensure the output directory exists before thumbnails are generated.
         if (!is_dir($this->thumbnailDir) && !mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
@@ -125,7 +132,9 @@ class ThumbnailService implements ThumbnailServiceInterface
             $imagick->setOption('jpeg:preserve-settings', 'true');
             $imagick->readImage($filepath . '[0]');
 
-            $this->applyOrientationWithImagick($imagick, $orientation);
+            if ($this->applyOrientation) {
+                $this->applyOrientationWithImagick($imagick, $orientation);
+            }
 
             $sourceWidth = $imagick->getImageWidth();
 
@@ -249,7 +258,9 @@ class ThumbnailService implements ThumbnailServiceInterface
             throw new RuntimeException(sprintf('Unable to create GD image from "%s".', $filepath));
         }
 
-        $src = $this->applyOrientationWithGd($src, $orientation);
+        if ($this->applyOrientation) {
+            $src = $this->applyOrientationWithGd($src, $orientation);
+        }
 
         $width  = imagesx($src);
         $height = imagesy($src);

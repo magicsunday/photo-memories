@@ -1530,7 +1530,7 @@ final class OrientationThumbnailServiceStub extends ThumbnailService
     {
         $this->orientationDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-orientation-' . uniqid('', true);
 
-        parent::__construct($this->orientationDir, [1]);
+        parent::__construct($this->orientationDir, [1], true);
     }
 
     public function __destruct()
