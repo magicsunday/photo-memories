@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Slideshow;
 
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
+use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -26,6 +27,7 @@ use function is_file;
 use function is_string;
 use function mkdir;
 use function sprintf;
+use function trim;
 use function unlink;
 
 use const DIRECTORY_SEPARATOR;
@@ -36,12 +38,17 @@ use const LOCK_EX;
  */
 final class SlideshowVideoManager implements SlideshowVideoManagerInterface
 {
+    private readonly ?string $configuredPhpBinary;
+
     public function __construct(
         private readonly string $videoDirectory,
         private readonly string $projectDirectory,
         private readonly float $slideDuration,
-        private readonly string $phpBinary = PHP_BINARY,
+        ?string $phpBinary,
+        private readonly PhpExecutableFinder $phpExecutableFinder,
     ) {
+        $phpBinary = is_string($phpBinary) ? trim($phpBinary) : null;
+        $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
     }
 
     /**
@@ -172,7 +179,7 @@ final class SlideshowVideoManager implements SlideshowVideoManagerInterface
         }
 
         $process = new Process([
-            $this->phpBinary,
+            $this->resolvePhpBinary(),
             $console,
             'slideshow:generate',
             $job->jobFile(),
@@ -197,5 +204,19 @@ final class SlideshowVideoManager implements SlideshowVideoManagerInterface
         if (file_exists($jobPath)) {
             unlink($jobPath);
         }
+    }
+
+    private function resolvePhpBinary(): string
+    {
+        if ($this->configuredPhpBinary !== null) {
+            return $this->configuredPhpBinary;
+        }
+
+        $phpBinary = $this->phpExecutableFinder->find(false);
+        if (!is_string($phpBinary) || $phpBinary === '') {
+            throw new ProcessRuntimeException('PHP CLI executable could not be located.');
+        }
+
+        return $phpBinary;
     }
 }
