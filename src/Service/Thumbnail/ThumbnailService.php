@@ -83,7 +83,17 @@ class ThumbnailService implements ThumbnailServiceInterface
     {
         $results = $this->generateThumbnailsWithImagick($filepath, $orientation, [$width], $checksum);
 
-        return $results[$width] ?? null;
+        if (isset($results[$width])) {
+            return $results[$width];
+        }
+
+        if ($results === []) {
+            return null;
+        }
+
+        $paths = array_values($results);
+
+        return $paths[0] ?? null;
     }
 
     protected function createImagick(): Imagick
@@ -95,7 +105,17 @@ class ThumbnailService implements ThumbnailServiceInterface
     {
         $results = $this->generateThumbnailsWithGd($filepath, $orientation, [$width], $checksum);
 
-        return $results[$width] ?? null;
+        if (isset($results[$width])) {
+            return $results[$width];
+        }
+
+        if ($results === []) {
+            return null;
+        }
+
+        $paths = array_values($results);
+
+        return $paths[0] ?? null;
     }
 
     /**
@@ -113,15 +133,30 @@ class ThumbnailService implements ThumbnailServiceInterface
 
             $this->applyOrientationWithImagick($imagick, $orientation);
 
-            $results = [];
+            $sourceWidth = $imagick->getImageWidth();
+
+            $results       = [];
+            $generatedKeys = [];
             foreach ($sizes as $size) {
+                $targetWidth = min($size, $sourceWidth);
+
+                if ($targetWidth <= 0) {
+                    continue;
+                }
+
+                if (isset($generatedKeys[$targetWidth])) {
+                    continue;
+                }
+
+                $generatedKeys[$targetWidth] = true;
+
                 $clone = $this->cloneImagick($imagick);
 
                 try {
-                    $resizeResult = $clone->thumbnailImage($size, 0);
+                    $resizeResult = $clone->thumbnailImage($targetWidth, 0);
 
                     if ($resizeResult === false) {
-                        throw new RuntimeException(sprintf('Unable to resize image for thumbnail width %d.', $size));
+                        throw new RuntimeException(sprintf('Unable to resize image for thumbnail width %d.', $targetWidth));
                     }
 
                     $clone->setImageBackgroundColor('white');
@@ -141,14 +176,14 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
                     $clone->setImageCompressionQuality(85);
 
-                    $out         = $this->buildThumbnailPath($checksum, $size);
+                    $out         = $this->buildThumbnailPath($checksum, $targetWidth);
                     $writeResult = $clone->writeImage($out);
 
                     if ($writeResult === false) {
                         throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
                     }
 
-                    $results[$size] = $out;
+                    $results[$targetWidth] = $out;
                 } finally {
                     $clone->clear();
                     $clone->destroy();
@@ -220,10 +255,26 @@ class ThumbnailService implements ThumbnailServiceInterface
         $ratio  = $height > 0 ? ($width / $height) : 1;
 
         try {
-            $results = [];
+            $results       = [];
+            $generatedKeys = [];
             foreach ($sizes as $size) {
-                $newWidth  = $size;
-                $newHeight = (int) round($size / $ratio);
+                $newWidth = min($size, $width);
+
+                if ($newWidth <= 0) {
+                    continue;
+                }
+
+                if (isset($generatedKeys[$newWidth])) {
+                    continue;
+                }
+
+                $generatedKeys[$newWidth] = true;
+
+                $newHeight = (int) round($newWidth / $ratio);
+
+                if ($newHeight <= 0) {
+                    continue;
+                }
                 $dst       = imagecreatetruecolor($newWidth, $newHeight);
 
                 if (!$dst instanceof GdImage) {
@@ -250,7 +301,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         throw new RuntimeException('Unable to resample image for thumbnail.');
                     }
 
-                    $out         = $this->buildThumbnailPath($checksum, $size);
+                    $out         = $this->buildThumbnailPath($checksum, $newWidth);
                     $writeResult = @imagejpeg($dst, $out, 85);
                 } finally {
                     imagedestroy($dst);
@@ -260,7 +311,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
                 }
 
-                $results[$size] = $out;
+                $results[$newWidth] = $out;
             }
 
             return $results;

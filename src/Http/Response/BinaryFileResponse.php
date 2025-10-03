@@ -70,6 +70,11 @@ final class BinaryFileResponse extends Response
         parent::__construct('', $status, $resolvedHeaders);
     }
 
+    public function getFilePath(): string
+    {
+        return $this->filePath;
+    }
+
     public function send(): void
     {
         if ($this->contentLoaded) {

@@ -259,8 +259,16 @@ final class FeedController
     private function resolveOrGenerateThumbnail(Media $media, int $width): ?string
     {
         $resolved = $this->thumbnailResolver->resolveBest($media, $width);
-        if (is_string($resolved) && $resolved !== $media->getPath()) {
-            return $resolved;
+        if (is_string($resolved)) {
+            if ($resolved !== $media->getPath()) {
+                return $resolved;
+            }
+
+            $existing = $media->getThumbnails();
+
+            if (is_array($existing) && $existing !== []) {
+                return $resolved;
+            }
         }
 
         try {
