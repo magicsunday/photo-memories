@@ -45,6 +45,28 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         return 'Medienbewertung';
     }
 
+    public function supports(ClusterDraft $cluster): bool
+    {
+        return false;
+    }
+
+    /**
+     * @param array<int, Media> $mediaMap
+     */
+    public function enrich(ClusterDraft $cluster, array $mediaMap): void
+    {
+    }
+
+    public function score(ClusterDraft $cluster): float
+    {
+        return 0.0;
+    }
+
+    public function weightKey(): string
+    {
+        return 'member_quality';
+    }
+
     /**
      * @param list<ClusterDraft> $drafts
      *
