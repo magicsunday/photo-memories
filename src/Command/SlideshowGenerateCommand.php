@@ -36,7 +36,6 @@ use const LOCK_EX;
 #[AsCommand(name: 'slideshow:generate', description: 'Erstellt ein Slideshow-Video für die angegebene Job-Datei.')]
 final class SlideshowGenerateCommand extends Command
 {
-
     public function __construct(private readonly SlideshowVideoGeneratorInterface $generator)
     {
         parent::__construct();

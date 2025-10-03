@@ -106,12 +106,17 @@ final class VacationScoreCalculatorTest extends TestCase
         $start = new DateTimeImmutable('2024-08-10 08:00:00');
         $days  = [];
         $dayKeys = [];
+        /** @var array<int, Media> $mediaIndex */
+        $mediaIndex = [];
         $dayCount = 4;
         for ($i = 0; $i < $dayCount; ++$i) {
             $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
             $members = $this->makeMembersForDay($i, $dayDate, 7);
             $dayKey  = $dayDate->format('Y-m-d');
             $dayKeys[] = $dayKey;
+            foreach ($members as $member) {
+                $mediaIndex[$member->getId()] = $member;
+            }
             $days[$dayKey] = $this->makeDaySummary(
                 date: $dayKey,
                 weekday: (int) $dayDate->format('N'),
@@ -151,6 +156,44 @@ final class VacationScoreCalculatorTest extends TestCase
         sort($actualDays);
 
         self::assertSame($expectedDays, $actualDays);
+
+        $remaining = array_slice($clamped, count($dayKeys));
+        self::assertNotSame([], $remaining);
+
+        $reflection = new ReflectionClass(VacationScoreCalculator::class);
+        $scoreMethod = $reflection->getMethod('evaluateMediaScore');
+        $scoreMethod->setAccessible(true);
+
+        /** @var list<array{id:int,score:float,timestamp:int}> $scored */
+        $scored = [];
+        foreach ($remaining as $memberId) {
+            $media = $mediaIndex[$memberId];
+            $takenAt = $media->getTakenAt();
+            /** @var float $score */
+            $score = $scoreMethod->invoke($calculator, $media);
+            $scored[] = [
+                'id' => $memberId,
+                'score' => $score,
+                'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
+            ];
+        }
+
+        $sorted = $scored;
+        usort($sorted, static function (array $a, array $b): int {
+            if ($a['score'] === $b['score']) {
+                if ($a['timestamp'] === $b['timestamp']) {
+                    return $a['id'] <=> $b['id'];
+                }
+
+                return $a['timestamp'] <=> $b['timestamp'];
+            }
+
+            return $a['score'] < $b['score'] ? 1 : -1;
+        });
+
+        $expectedOrder = array_map(static fn (array $entry): int => $entry['id'], $sorted);
+
+        self::assertSame($expectedOrder, $remaining);
     }
 
     /**
