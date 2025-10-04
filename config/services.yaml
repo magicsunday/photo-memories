@@ -147,6 +147,9 @@ services:
     MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor:
         arguments:
             $sampleSize: 320
+            $ffmpegBinary: '%env(default::string:FFMPEG_PATH)%'
+            $ffprobeBinary: '%env(string:FFPROBE_PATH)%'
+            $posterFrameSecond: '%memories.video.poster_frame_second%'
 
     MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface:
         alias: MagicSunday\Memories\Service\Metadata\HeuristicClipSceneTagModel

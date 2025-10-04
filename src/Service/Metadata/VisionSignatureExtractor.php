@@ -14,15 +14,28 @@ namespace MagicSunday\Memories\Service\Metadata;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
+use MagicSunday\Memories\Service\Metadata\Support\GdImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
+use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
+use Symfony\Component\Process\Process;
+use Throwable;
 
+use function array_fill;
 use function count;
+use function imagecolorat;
 use function is_file;
+use function is_numeric;
 use function is_string;
 use function log;
 use function max;
 use function min;
+use function round;
+use function sprintf;
+use function sys_get_temp_dir;
+use function tempnam;
+use function trim;
+use function unlink;
 use function sqrt;
 use function str_starts_with;
 
@@ -37,9 +50,24 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     public function __construct(
         private readonly MediaQualityAggregator $qualityAggregator,
         private int $sampleSize = 96, // square downsample for analysis
+        private string $ffmpegBinary = 'ffmpeg',
+        private string $ffprobeBinary = 'ffprobe',
+        private float $posterFrameSecond = 1.0,
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');
+        }
+
+        if ($this->posterFrameSecond < 0.0) {
+            throw new InvalidArgumentException('posterFrameSecond must be >= 0');
+        }
+
+        if ($this->ffmpegBinary === '') {
+            $this->ffmpegBinary = 'ffmpeg';
+        }
+
+        if ($this->ffprobeBinary === '') {
+            $this->ffprobeBinary = 'ffprobe';
         }
     }
 
@@ -47,45 +75,316 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     {
         $mime = $media->getMime();
 
-        return is_string($mime) && str_starts_with($mime, 'image/');
+        if (is_string($mime)) {
+            if (str_starts_with($mime, 'image/')) {
+                return true;
+            }
+
+            if (str_starts_with($mime, 'video/')) {
+                return true;
+            }
+        }
+
+        return $media->isVideo();
     }
 
     public function extract(string $filepath, Media $media): Media
     {
-        $src = $this->resolveImageSource($media) ?? $filepath;
-        if (!is_file($src)) {
+        $sourcePath = $filepath;
+        $posterPath = null;
+
+        if ($this->isVideoMedia($media)) {
+            $posterPath = $this->createPosterFrame($filepath);
+            if ($posterPath === null) {
+                return $media;
+            }
+
+            $sourcePath = $posterPath;
+        } else {
+            $resolved = $this->resolveImageSource($media);
+            if (is_string($resolved)) {
+                $sourcePath = $resolved;
+            }
+        }
+
+        if (!is_file($sourcePath)) {
+            if ($posterPath !== null && is_file($posterPath)) {
+                unlink($posterPath);
+            }
+
             return $media;
         }
 
-        $adapter = $this->createImageAdapter($src);
-        if (!$adapter instanceof ImageAdapterInterface) {
-            // gracefully skip if no backend available
+        try {
+            $adapter = $this->createImageAdapter($sourcePath);
+            if (!$adapter instanceof ImageAdapterInterface) {
+                return $media;
+            }
+
+            $rgbMatrix     = $this->rgbMatrixFromAdapter($adapter, $this->sampleSize, $this->sampleSize);
+            $lumaMatrix    = $this->lumaMatrixFromRgb($rgbMatrix);
+            $clippingShare = $this->saturationClipping($rgbMatrix);
+            $adapter->destroy();
+
+            // Brightness / contrast / entropy
+            [$brightness, $contrast, $entropy] = $this->lumaStats($lumaMatrix);
+
+            // Sharpness (Laplacian variance on luma)
+            $sharpness = $this->laplacianVariance($lumaMatrix);
+
+            // Optional: a simple proxy "colorfulness" via luma local contrast
+            $colorfulness = $this->localContrastProxy($lumaMatrix);
+
+            $media->setBrightness($brightness);
+            $media->setContrast($contrast);
+            $media->setEntropy($entropy);
+            $media->setSharpness($sharpness);
+            $media->setColorfulness($colorfulness);
+            $media->setQualityClipping($clippingShare);
+
+            $this->qualityAggregator->aggregate($media);
+
             return $media;
+        } finally {
+            if ($posterPath !== null && is_file($posterPath)) {
+                unlink($posterPath);
+            }
+        }
+    }
+
+    private function isVideoMedia(Media $media): bool
+    {
+        if ($media->isVideo()) {
+            return true;
         }
 
-        // Build grayscale matrix at fixed sample size (square)
-        $mat = $this->grayscaleMatrixFromAdapter($adapter, $this->sampleSize, $this->sampleSize);
-        $adapter->destroy();
+        $mime = $media->getMime();
 
-        // Brightness / contrast / entropy
-        [$brightness, $contrast, $entropy] = $this->lumaStats($mat);
+        return is_string($mime) && str_starts_with($mime, 'video/');
+    }
 
-        // Sharpness (Laplacian variance on luma)
-        $sharpness = $this->laplacianVariance($mat);
+    private function createPosterFrame(string $videoPath): ?string
+    {
+        if (!is_file($videoPath)) {
+            return null;
+        }
 
-        // Optional: a simple proxy "colorfulness" via luma local contrast
-        // (echte Farb-Varianz erfordert RGB; dieser Proxy ist robust & günstig)
-        $colorfulness = $this->localContrastProxy($mat);
+        $tempFile = tempnam(sys_get_temp_dir(), 'mem_poster_');
+        if (!is_string($tempFile)) {
+            return null;
+        }
 
-        $media->setBrightness($brightness);
-        $media->setContrast($contrast);
-        $media->setEntropy($entropy);
-        $media->setSharpness($sharpness);
-        $media->setColorfulness($colorfulness);
+        $posterPath = $tempFile . '.jpg';
+        if (is_file($tempFile)) {
+            unlink($tempFile);
+        }
 
-        $this->qualityAggregator->aggregate($media);
+        $targetTime = max(0.0, $this->posterFrameSecond);
+        $duration   = $this->probeVideoDuration($videoPath);
+        if ($duration !== null && $duration > 0.0 && $targetTime > $duration) {
+            $targetTime = max(0.0, $duration - 0.1);
+        }
 
-        return $media;
+        $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
+
+        if ($targetTime > 0.0) {
+            $command[] = '-ss';
+            $command[] = sprintf('%.3f', $targetTime);
+        }
+
+        $command[] = '-i';
+        $command[] = $videoPath;
+        $command[] = '-frames:v';
+        $command[] = '1';
+        $command[] = $posterPath;
+
+        $process = new Process($command);
+        $process->setTimeout(20.0);
+
+        try {
+            $process->run();
+        } catch (Throwable) {
+            if (is_file($posterPath)) {
+                unlink($posterPath);
+            }
+
+            return null;
+        }
+
+        if (!$process->isSuccessful() || !is_file($posterPath)) {
+            if (is_file($posterPath)) {
+                unlink($posterPath);
+            }
+
+            return null;
+        }
+
+        return $posterPath;
+    }
+
+    private function probeVideoDuration(string $videoPath): ?float
+    {
+        $process = new Process([
+            $this->ffprobeBinary,
+            '-v',
+            'error',
+            '-select_streams',
+            'v:0',
+            '-show_entries',
+            'format=duration',
+            '-of',
+            'default=noprint_wrappers=1:nokey=1',
+            $videoPath,
+        ]);
+        $process->setTimeout(10.0);
+
+        try {
+            $process->run();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (!$process->isSuccessful()) {
+            return null;
+        }
+
+        $output = $process->getOutput();
+        if ($output === '') {
+            $output = $process->getErrorOutput();
+        }
+
+        $output = trim($output);
+        if ($output === '') {
+            return null;
+        }
+
+        if (!is_numeric($output)) {
+            return null;
+        }
+
+        $duration = (float) $output;
+
+        return $duration > 0.0 ? $duration : null;
+    }
+
+    /**
+     * @return array<int, array<int, array{0: float, 1: float, 2: float}>>
+     */
+    private function rgbMatrixFromAdapter(ImageAdapterInterface $adapter, int $w, int $h): array
+    {
+        if ($adapter instanceof ImagickImageAdapter) {
+            $rgb = $adapter->exportRgbBytes($w, $h);
+            $out = [];
+            $idx = 0;
+
+            for ($y = 0; $y < $h; ++$y) {
+                $row = [];
+                for ($x = 0; $x < $w; ++$x) {
+                    $row[] = [
+                        (float) $rgb[$idx++],
+                        (float) $rgb[$idx++],
+                        (float) $rgb[$idx++],
+                    ];
+                }
+
+                $out[] = $row;
+            }
+
+            return $out;
+        }
+
+        $resized = $adapter->resize($w, $h);
+        $out     = [];
+
+        for ($y = 0; $y < $h; ++$y) {
+            $row = [];
+            for ($x = 0; $x < $w; ++$x) {
+                if ($resized instanceof GdImageAdapter) {
+                    $color = imagecolorat($resized->getNative(), $x, $y);
+                    $r     = (float) (($color >> 16) & 0xFF);
+                    $g     = (float) (($color >> 8) & 0xFF);
+                    $b     = (float) ($color & 0xFF);
+                } else {
+                    $l = $resized->getLuma($x, $y);
+                    $r = $l;
+                    $g = $l;
+                    $b = $l;
+                }
+
+                $row[] = [$r, $g, $b];
+            }
+
+            $out[] = $row;
+        }
+
+        $resized->destroy();
+
+        return $out;
+    }
+
+    /**
+     * @param array<int, array<int, array{0: float, 1: float, 2: float}>> $rgbMatrix
+     *
+     * @return array<int, array<int, float>>
+     */
+    private function lumaMatrixFromRgb(array $rgbMatrix): array
+    {
+        $out = [];
+
+        foreach ($rgbMatrix as $row) {
+            $lumaRow = [];
+            foreach ($row as [$r, $g, $b]) {
+                $lumaRow[] = 0.299 * $r + 0.587 * $g + 0.114 * $b;
+            }
+
+            $out[] = $lumaRow;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<int, array<int, array{0: float, 1: float, 2: float}>> $rgbMatrix
+     */
+    private function saturationClipping(array $rgbMatrix): ?float
+    {
+        $bins  = array_fill(0, 101, 0);
+        $total = 0;
+
+        foreach ($rgbMatrix as $row) {
+            foreach ($row as [$r, $g, $b]) {
+                $maxChannel = max($r, $g, $b);
+                $minChannel = min($r, $g, $b);
+
+                if ($maxChannel <= 0.0) {
+                    $bin = 0;
+                } else {
+                    $s   = ($maxChannel - $minChannel) / $maxChannel;
+                    $bin = (int) round($s * 100.0);
+                    if ($bin < 0) {
+                        $bin = 0;
+                    }
+
+                    if ($bin > 100) {
+                        $bin = 100;
+                    }
+                }
+
+                ++$bins[$bin];
+                ++$total;
+            }
+        }
+
+        if ($total === 0) {
+            return null;
+        }
+
+        $clipped = 0;
+        for ($i = 98; $i <= 100; ++$i) {
+            $clipped += $bins[$i];
+        }
+
+        return $clipped / $total;
     }
 
     /**

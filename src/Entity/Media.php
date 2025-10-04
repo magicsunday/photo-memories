@@ -411,6 +411,12 @@ class Media
     private ?float $colorfulness = null;
 
     /**
+     * Share of pixels affected by saturation clipping in the range [0,1].
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $qualityClipping = null;
+
+    /**
      * Aggregated quality score in the range [0,1].
      */
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
@@ -1728,6 +1734,26 @@ class Media
         $this->qualityNoise = $score === null
             ? null
             : max(0.0, min(1.0, $score));
+    }
+
+    /**
+     * Returns the share of pixels affected by saturation clipping.
+     */
+    public function getQualityClipping(): ?float
+    {
+        return $this->qualityClipping;
+    }
+
+    /**
+     * Sets the share of pixels affected by saturation clipping.
+     *
+     * @param float|null $share Share in the range [0,1].
+     */
+    public function setQualityClipping(?float $share): void
+    {
+        $this->qualityClipping = $share === null
+            ? null
+            : max(0.0, min(1.0, $share));
     }
 
     /**

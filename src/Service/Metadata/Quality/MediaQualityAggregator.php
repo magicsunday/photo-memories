@@ -15,8 +15,10 @@ use MagicSunday\Memories\Entity\Media;
 
 use function abs;
 use function log;
+use function implode;
 use function max;
 use function min;
+use function sprintf;
 
 /**
  * Aggregates per-media quality metrics into reusable summary scores.
@@ -30,6 +32,8 @@ final class MediaQualityAggregator
         private float $lowSharpnessThreshold = 0.30,
         private float $lowExposureThreshold = 0.25,
         private float $lowNoiseThreshold = 0.25,
+        private float $clippingLowQualityThreshold = 0.15,
+        private float $clippingPenaltyWeight = 0.5,
     ) {
     }
 
@@ -38,12 +42,20 @@ final class MediaQualityAggregator
         $resolutionScore = $this->resolutionScore($media);
         $sharpnessScore  = $this->clamp01($media->getSharpness());
         $noiseScore      = $this->isoScore($media->getIso());
+        $clippingShare   = $this->clamp01($media->getQualityClipping());
+
+        $media->setQualityClipping($clippingShare);
 
         $qualityScore = $this->weightedScore([
             [$resolutionScore, 0.45],
             [$sharpnessScore, 0.35],
             [$noiseScore, 0.20],
         ]);
+
+        if ($qualityScore !== null && $clippingShare !== null && $clippingShare > 0.0) {
+            $penaltyFactor = max(0.0, min(1.0, $this->clippingPenaltyWeight * $clippingShare));
+            $qualityScore  = max(0.0, $qualityScore * (1.0 - $penaltyFactor));
+        }
 
         $brightness      = $this->clamp01($media->getBrightness());
         $contrast        = $this->clamp01($media->getContrast());
@@ -78,7 +90,13 @@ final class MediaQualityAggregator
             $isLowQuality = true;
         }
 
+        if ($clippingShare !== null && $clippingShare > $this->clippingLowQualityThreshold) {
+            $isLowQuality = true;
+        }
+
         $media->setLowQuality($isLowQuality);
+
+        $this->appendQualitySummary($media, $isLowQuality, $sharpnessScore, $clippingShare);
     }
 
     private function weightedScore(array $components): ?float
@@ -153,5 +171,29 @@ final class MediaQualityAggregator
         $megapixels = ((float) $width * (float) $height) / 1_000_000.0;
 
         return $this->clamp01($megapixels / max(0.000001, $this->qualityBaselineMegapixels));
+    }
+
+    private function appendQualitySummary(Media $media, bool $isLowQuality, ?float $sharpnessScore, ?float $clippingShare): void
+    {
+        $parts = [sprintf('qlt=%s', $isLowQuality ? 'low' : 'ok')];
+
+        if ($sharpnessScore !== null) {
+            $parts[] = sprintf('sharp=%.2f', $sharpnessScore);
+        }
+
+        if ($clippingShare !== null) {
+            $parts[] = sprintf('clip=%.2f', $clippingShare);
+        }
+
+        $line     = implode('; ', $parts);
+        $existing = $media->getIndexLog();
+
+        if ($existing === null || $existing === '') {
+            $media->setIndexLog($line);
+
+            return;
+        }
+
+        $media->setIndexLog($existing . "\n" . $line);
     }
 }
