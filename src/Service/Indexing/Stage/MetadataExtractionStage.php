@@ -35,19 +35,28 @@ final class MetadataExtractionStage implements MediaIngestionStageInterface
 
         $media = $context->getMedia();
 
-        $media->setFeatureVersion(MetadataFeatureVersion::CURRENT);
-        $media->setIndexedAt(new DateTimeImmutable());
+        if ($context->isForce() === false
+            && $media->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION
+        ) {
+            return $context;
+        }
+
+        $media->setIndexLog(null);
 
         try {
             $media = $this->metadataExtractor->extract($context->getFilePath(), $media);
 
-            $media->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+            $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
             $media->setIndexedAt(new DateTimeImmutable());
-            $media->setIndexLog(null);
+
+            $log = $media->getIndexLog();
+            if ($log === null || $log === '') {
+                $media->setIndexLog(null);
+            }
 
             return $context->withMedia($media);
         } catch (Throwable $exception) {
-            $media->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+            $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
             $media->setIndexedAt(new DateTimeImmutable());
             $media->setIndexLog(sprintf('%s: %s', $exception::class, $exception->getMessage()));
 
