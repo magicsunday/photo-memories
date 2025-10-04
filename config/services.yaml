@@ -263,15 +263,43 @@ services:
 
     MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage: ~
 
-    MagicSunday\Memories\Service\Indexing\Stage\MetadataStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\TimeStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\GeoStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\QualityStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\FacesStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\SceneStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage: ~
-    MagicSunday\Memories\Service\Indexing\Stage\HashStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\MetadataStage:
+        arguments:
+            $exif: '@MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor'
+            $xmp: '@MagicSunday\Memories\Service\Metadata\XmpIptcExtractor'
+            $fileStat: '@MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor'
+            $filenameKeyword: '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
+            $appleHeuristics: '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
+            $ffprobe: '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage:
+        arguments:
+            $burstDetector: '@MagicSunday\Memories\Service\Metadata\BurstDetector'
+            $livePairLinker: '@MagicSunday\Memories\Service\Metadata\LivePairLinker'
+            $burstIndexExtractor: '@MagicSunday\Memories\Service\Metadata\BurstIndexExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\TimeStage:
+        arguments:
+            $normalizer: '@MagicSunday\Memories\Service\Metadata\TimeNormalizer'
+            $calendar: '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
+            $daypart: '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
+            $solar: '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
+    MagicSunday\Memories\Service\Indexing\Stage\GeoStage:
+        arguments:
+            $geo: '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
+    MagicSunday\Memories\Service\Indexing\Stage\QualityStage:
+        arguments:
+            $visionSignature: '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\FacesStage:
+        arguments:
+            $facePresenceDetector: '@MagicSunday\Memories\Service\Metadata\FacePresenceDetector'
+    MagicSunday\Memories\Service\Indexing\Stage\SceneStage:
+        arguments:
+            $sceneTagExtractor: '@MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage:
+        arguments:
+            $contentClassifier: '@MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\HashStage:
+        arguments:
+            $hash: '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
 
     MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
 
@@ -285,14 +313,14 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\MetadataStage'
-                - '@MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\TimeStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\GeoStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\QualityStage'
-                - '@MagicSunday\Memories\Service\Indexing\Stage\FacesStage'
-                - '@MagicSunday\Memories\Service\Indexing\Stage\SceneStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\HashStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\FacesStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\SceneStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
 
