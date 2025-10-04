@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
-use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
@@ -21,6 +20,7 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
+use ReflectionMethod;
 use ReflectionProperty;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -57,6 +57,48 @@ final class ExifMetadataExtractorTest extends TestCase
         self::assertSame($computedHeight, $media->getHeight());
         self::assertSame($expectedPortrait, $media->isPortrait());
         self::assertSame($expectedPanorama, $media->isPanorama());
+    }
+
+    #[Test]
+    public function normalizesUndefinedTagOffsetsToNamedKeys(): void
+    {
+        $extractor = new ExifMetadataExtractor([]);
+
+        $method = new ReflectionMethod($extractor, 'normalizeUndefinedTagOffsets');
+        $method->setAccessible(true);
+
+        $exif = [
+            'EXIF' => [
+                'UndefinedTag:0xA430' => 'Owner',
+                'UndefinedTag:0xA431' => 'BodySerial',
+                'UndefinedTag:0xA432' => ['24/1', '70/1', '0/1', '0/1'],
+                'UndefinedTag:0xA433' => 'Lens Corp.',
+                'UndefinedTag:0xA434' => 'Lens Model X',
+                'UndefinedTag:0xA435' => 'LensSerial',
+                'UndefinedTag:0xA460' => 2.2,
+                'UndefinedTag:0xA461' => 1,
+                'UndefinedTag:0xA462' => 2,
+                'UndefinedTag:0xA463' => '1/200',
+            ],
+            'GPS' => [
+                'UndefinedTag:0x001F' => 0.85,
+            ],
+        ];
+
+        /** @var array<string, mixed> $normalized */
+        $normalized = $method->invoke($extractor, $exif);
+
+        self::assertSame('Owner', $normalized['EXIF']['CameraOwnerName']);
+        self::assertSame('BodySerial', $normalized['EXIF']['BodySerialNumber']);
+        self::assertSame(['24/1', '70/1', '0/1', '0/1'], $normalized['EXIF']['LensSpecification']);
+        self::assertSame('Lens Corp.', $normalized['EXIF']['LensMake']);
+        self::assertSame('Lens Model X', $normalized['EXIF']['LensModel']);
+        self::assertSame('LensSerial', $normalized['EXIF']['LensSerialNumber']);
+        self::assertSame(2.2, $normalized['EXIF']['Gamma']);
+        self::assertSame(1, $normalized['EXIF']['CompositeImage']);
+        self::assertSame(2, $normalized['EXIF']['SourceImageNumberOfCompositeImage']);
+        self::assertSame('1/200', $normalized['EXIF']['SourceExposureTimesOfCompositeImage']);
+        self::assertSame(0.85, $normalized['GPS']['GPSHPositioningError']);
     }
 
     /**
@@ -139,7 +181,11 @@ final class ExifMetadataExtractorTest extends TestCase
 
         $processors = $reflection->getValue($extractor);
 
-        $normalized = DefaultExifValueAccessor::normalizeKeys($exif);
+        $method = new ReflectionMethod($extractor, 'normalizeUndefinedTagOffsets');
+        $method->setAccessible(true);
+
+        /** @var array<string, mixed> $normalized */
+        $normalized = $method->invoke($extractor, $exif);
 
         foreach ($processors as $processor) {
             $processor->process($normalized, $media);

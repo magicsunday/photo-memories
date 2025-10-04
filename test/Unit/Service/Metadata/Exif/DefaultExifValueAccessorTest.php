@@ -73,39 +73,4 @@ final class DefaultExifValueAccessorTest extends TestCase
 
         self::assertNull($result);
     }
-
-    public function testNormalizeKeysAddsAliasesForObservedUndefinedTags(): void
-    {
-        $exif = [
-            'EXIF' => [
-                'UndefinedTag:0xA430' => 'Owner',
-                'UndefinedTag:0xA431' => 'BodySerial',
-                'UndefinedTag:0xA432' => ['24/1', '70/1', '0/1', '0/1'],
-                'UndefinedTag:0xA433' => 'Lens Corp.',
-                'UndefinedTag:0xA434' => 'Lens Model X',
-                'UndefinedTag:0xA435' => 'LensSerial',
-                'UndefinedTag:0xA460' => 2.2,
-                'UndefinedTag:0xA461' => 1,
-                'UndefinedTag:0xA462' => 2,
-                'UndefinedTag:0xA463' => '1/200',
-            ],
-            'GPS' => [
-                'UndefinedTag:0x001F' => 0.85,
-            ],
-        ];
-
-        $normalized = DefaultExifValueAccessor::normalizeKeys($exif);
-
-        self::assertSame('Owner', $normalized['EXIF']['CameraOwnerName']);
-        self::assertSame('BodySerial', $normalized['EXIF']['BodySerialNumber']);
-        self::assertSame(['24/1', '70/1', '0/1', '0/1'], $normalized['EXIF']['LensSpecification']);
-        self::assertSame('Lens Corp.', $normalized['EXIF']['LensMake']);
-        self::assertSame('Lens Model X', $normalized['EXIF']['LensModel']);
-        self::assertSame('LensSerial', $normalized['EXIF']['LensSerialNumber']);
-        self::assertSame(2.2, $normalized['EXIF']['Gamma']);
-        self::assertSame(1, $normalized['EXIF']['CompositeImage']);
-        self::assertSame(2, $normalized['EXIF']['SourceImageNumberOfCompositeImage']);
-        self::assertSame('1/200', $normalized['EXIF']['SourceExposureTimesOfCompositeImage']);
-        self::assertSame(0.85, $normalized['GPS']['GPSHPositioningError']);
-    }
 }
