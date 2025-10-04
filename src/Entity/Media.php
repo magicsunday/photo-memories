@@ -1756,7 +1756,7 @@ class Media
      */
     public function setPhashPrefix(?string $v): void
     {
-        $this->phashPrefix = $v;
+        $this->phashPrefix = $v === null ? null : substr($v, 0, 16);
     }
 
     /**
