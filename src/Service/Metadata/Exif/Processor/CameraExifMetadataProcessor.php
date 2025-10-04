@@ -39,9 +39,7 @@ final class CameraExifMetadataProcessor implements ExifMetadataProcessorInterfac
             $media->setCameraModel($model);
         }
 
-        $lens = $this->accessor->strOrNull(
-            $exif['EXIF']['UndefinedTag:0xA434'] ?? ($exif['EXIF']['LensModel'] ?? null)
-        );
+        $lens = $this->accessor->strOrNull($exif['EXIF']['LensModel'] ?? null);
         if ($lens !== null) {
             $media->setLensModel($lens);
         }

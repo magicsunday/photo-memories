@@ -34,61 +34,6 @@ use function substr;
  */
 final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 {
-    /** Map PHP's "UndefinedTag" keys to their EXIF 2.31 names. */
-    private const array OFFSET_ALIASES = [
-        'UndefinedTag:0x9010' => 'OffsetTime',
-        'UndefinedTag:0x9011' => 'OffsetTimeOriginal',
-        'UndefinedTag:0x9012' => 'OffsetTimeDigitized',
-        'UndefinedTag:0x882A' => 'TimeZoneOffset', // fallback: some cams use 0x882A
-    ];
-
-    /**
-     * Recursively traverses the full EXIF array and, at every nesting level,
-     * adds friendly keys (OffsetTime*, TimeZoneOffset) next to any "UndefinedTag:*".
-     *
-     * @param array<string, mixed> $exif              Full EXIF array (with EXIF/IFD0/... sub-arrays)
-     * @param bool                 $preserveOriginal  If false, removes the original "UndefinedTag:*" keys
-     *
-     * @return array<string, mixed> Normalized EXIF array
-     */
-    public static function normalizeKeys(array $exif, bool $preserveOriginal = true): array
-    {
-        return self::normalizeNode($exif, $preserveOriginal);
-    }
-
-    /**
-     * @param array<string, mixed> $node
-     * @return array<string, mixed>
-     */
-    private static function normalizeNode(array $node, bool $preserveOriginal): array
-    {
-        // 1) Recurse into children first
-        foreach ($node as $key => $value) {
-            if (is_array($value)) {
-                /** @var array<string, mixed> $value */
-                $node[$key] = self::normalizeNode($value, $preserveOriginal);
-            }
-        }
-
-        // 2) Add aliases at this level (do not overwrite existing "nice" keys)
-        foreach (self::OFFSET_ALIASES as $ugly => $nice) {
-            if (array_key_exists($ugly, $node) && !array_key_exists($nice, $node)) {
-                $node[$nice] = $node[$ugly];
-            }
-        }
-
-        // 3) Optionally drop the original "UndefinedTag:*" keys
-        if ($preserveOriginal === false) {
-            foreach (self::OFFSET_ALIASES as $ugly => $nice) {
-                if (array_key_exists($ugly, $node)) {
-                    unset($node[$ugly]);
-                }
-            }
-        }
-
-        return $node;
-    }
-
     public function findDate(array $exif): ?DateTimeImmutable
     {
         $candidates = [
@@ -122,8 +67,6 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 
     public function parseOffsetMinutes(array $exif): ?int
     {
-        $exif = self::normalizeKeys($exif);
-
         $candidates = [
             $exif['EXIF']['OffsetTimeOriginal'] ?? null,
             $exif['EXIF']['OffsetTimeDigitized'] ?? null,
