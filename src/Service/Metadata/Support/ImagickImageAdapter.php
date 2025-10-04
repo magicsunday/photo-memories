@@ -47,12 +47,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
             try {
                 $im->autoOrient();
             } catch (Throwable) {
-                try {
-                    /** @phpstan-ignore-next-line */
-                    $im->autoOrientate();
-                } catch (Throwable) {
-                    // Ignore when neither orientation helper is available.
-                }
+                // Ignore when orientation helper is unavailable.
             }
 
             // Normalize to sRGB and 8-bit for stable luma
