@@ -25,7 +25,8 @@ parameters:
     memories.hash.phash_prefix_length: 16
 
     # Home configuration
-    memories.home.version_hash: '%env(default:home_config_v1:string:MEMORIES_HOME_VERSION_HASH)%'
+    env(MEMORIES_HOME_VERSION_HASH): 'home_config_v1'
+    memories.home.version_hash: '%env(string:MEMORIES_HOME_VERSION_HASH)%'
 
     # Geocoding Defaults
     memories.geocoding.nominatim.base_url: '%env(string:NOMINATIM_BASE_URL)%'
