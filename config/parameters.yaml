@@ -14,8 +14,10 @@ parameters:
     memories.video.ffprobe_binary_default: 'ffprobe'
     memories.video.ffprobe_path: "%env(default:memories.video.ffprobe_binary_default:FFPROBE_PATH)%"
 
-    memories.face_detection.binary: '%env(default::string:MEMORIES_FACE_DETECTOR_BIN)%'
-    memories.face_detection.cascade: '%env(default::string:MEMORIES_FACE_DETECTOR_CASCADE)%'
+    memories.face_detection.binary_default: ''
+    memories.face_detection.binary: "%env(default:memories.face_detection.binary_default:MEMORIES_FACE_DETECTOR_BIN)%"
+    memories.face_detection.cascade_default: ''
+    memories.face_detection.cascade: "%env(default:memories.face_detection.cascade_default:MEMORIES_FACE_DETECTOR_CASCADE)%"
     memories.face_detection.scale_factor: 1.1
     memories.face_detection.min_neighbors: 4
     memories.face_detection.min_size: 72
