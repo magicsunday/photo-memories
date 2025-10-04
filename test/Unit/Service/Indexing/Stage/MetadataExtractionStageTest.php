@@ -53,7 +53,7 @@ final class MetadataExtractionStageTest extends TestCase
         $result = $stage->process($context);
 
         self::assertSame($media, $result->getMedia());
-        self::assertSame(MetadataFeatureVersion::CURRENT, $media->getFeatureVersion());
+        self::assertSame(MetadataFeatureVersion::PIPELINE_VERSION, $media->getFeatureVersion());
         self::assertInstanceOf(DateTimeImmutable::class, $media->getIndexedAt());
         self::assertNull($media->getIndexLog());
     }
@@ -86,7 +86,7 @@ final class MetadataExtractionStageTest extends TestCase
         $result = $stage->process($context);
 
         self::assertSame($media, $result->getMedia());
-        self::assertSame(MetadataFeatureVersion::CURRENT, $media->getFeatureVersion());
+        self::assertSame(MetadataFeatureVersion::PIPELINE_VERSION, $media->getFeatureVersion());
         self::assertInstanceOf(DateTimeImmutable::class, $media->getIndexedAt());
 
         $log = $media->getIndexLog();
@@ -96,5 +96,118 @@ final class MetadataExtractionStageTest extends TestCase
 
         $buffer = $output->fetch();
         self::assertStringContainsString('Metadata extraction failed', $buffer);
+    }
+
+    #[Test]
+    public function skipsExtractionWhenFeatureVersionMatchesAndNotForced(): void
+    {
+        $media = $this->makeMedia(
+            id: 17,
+            path: '/library/already-indexed.jpg',
+        );
+        $indexedAt = new DateTimeImmutable('-1 day');
+        $media->setIndexedAt($indexedAt);
+        $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
+        $media->setIndexLog('keep this');
+
+        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor->expects(self::never())
+            ->method('extract');
+
+        $stage  = new MetadataExtractionStage($extractor);
+        $output = new BufferedOutput();
+
+        $context = MediaIngestionContext::create(
+            '/library/already-indexed.jpg',
+            false,
+            false,
+            false,
+            false,
+            $output,
+        )->withMedia($media);
+
+        $result = $stage->process($context);
+
+        self::assertSame($media, $result->getMedia());
+        self::assertSame($indexedAt, $media->getIndexedAt());
+        self::assertSame('keep this', $media->getIndexLog());
+    }
+
+    #[Test]
+    public function forcesExtractionWhenFlagIsSet(): void
+    {
+        $media = $this->makeMedia(
+            id: 21,
+            path: '/library/force.jpg',
+        );
+        $previousIndexedAt = new DateTimeImmutable('-2 days');
+        $media->setIndexedAt($previousIndexedAt);
+        $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
+        $media->setIndexLog('stale warning');
+
+        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('extract')
+            ->willReturnCallback(static function (string $file, Media $entity): Media {
+                return $entity;
+            });
+
+        $stage  = new MetadataExtractionStage($extractor);
+        $output = new BufferedOutput();
+
+        $context = MediaIngestionContext::create(
+            '/library/force.jpg',
+            true,
+            false,
+            false,
+            false,
+            $output,
+        )->withMedia($media);
+
+        $result = $stage->process($context);
+
+        self::assertSame($media, $result->getMedia());
+        self::assertSame(MetadataFeatureVersion::PIPELINE_VERSION, $media->getFeatureVersion());
+        $indexedAt = $media->getIndexedAt();
+        self::assertInstanceOf(DateTimeImmutable::class, $indexedAt);
+        self::assertNotSame($previousIndexedAt, $indexedAt);
+        self::assertNull($media->getIndexLog());
+    }
+
+    #[Test]
+    public function keepsWarningLogOnSuccessfulExtraction(): void
+    {
+        $media = $this->makeMedia(
+            id: 32,
+            path: '/library/warn.jpg',
+        );
+
+        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('extract')
+            ->willReturnCallback(static function (string $file, Media $entity): Media {
+                $entity->setIndexLog('warning: exif missing');
+
+                return $entity;
+            });
+
+        $stage  = new MetadataExtractionStage($extractor);
+        $output = new BufferedOutput();
+
+        $context = MediaIngestionContext::create(
+            '/library/warn.jpg',
+            false,
+            false,
+            false,
+            false,
+            $output,
+        )->withMedia($media);
+
+        $result = $stage->process($context);
+
+        self::assertSame($media, $result->getMedia());
+        self::assertSame(MetadataFeatureVersion::PIPELINE_VERSION, $media->getFeatureVersion());
+        self::assertInstanceOf(DateTimeImmutable::class, $media->getIndexedAt());
+        self::assertSame('warning: exif missing', $media->getIndexLog());
     }
 }
