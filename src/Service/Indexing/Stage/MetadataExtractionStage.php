@@ -11,60 +11,25 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
-use DateTimeImmutable;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
-use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
-use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
-use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
-use Throwable;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 
-use function sprintf;
-
-final class MetadataExtractionStage implements MediaIngestionStageInterface
+final class MetadataExtractionStage extends AbstractExtractorStage
 {
+    /**
+     * @param iterable<SingleMetadataExtractorInterface> $extractors
+     */
     public function __construct(
-        private readonly MetadataExtractorInterface $metadataExtractor,
+        private readonly iterable $extractors,
     ) {
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
-        if ($context->isSkipped() || $context->getMedia() === null) {
+        if ($this->shouldSkipExtraction($context)) {
             return $context;
         }
 
-        $media = $context->getMedia();
-
-        if ($context->isForce() === false
-            && $media->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION
-        ) {
-            return $context;
-        }
-
-        $media->setIndexLog(null);
-
-        try {
-            $media = $this->metadataExtractor->extract($context->getFilePath(), $media);
-
-            $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
-            $media->setIndexedAt(new DateTimeImmutable());
-
-            $log = $media->getIndexLog();
-            if ($log === null || $log === '') {
-                $media->setIndexLog(null);
-            }
-
-            return $context->withMedia($media);
-        } catch (Throwable $exception) {
-            $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
-            $media->setIndexedAt(new DateTimeImmutable());
-            $media->setIndexLog(sprintf('%s: %s', $exception::class, $exception->getMessage()));
-
-            $context->getOutput()->writeln(
-                sprintf('<error>Metadata extraction failed for %s: %s</error>', $context->getFilePath(), $exception->getMessage())
-            );
-
-            return $context->withMedia($media);
-        }
+        return $this->runExtractors($context, $this->extractors);
     }
 }

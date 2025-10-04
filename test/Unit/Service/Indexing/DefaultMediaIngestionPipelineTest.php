@@ -20,7 +20,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
-use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -78,7 +78,8 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->willReturn($repository);
         $entityManager->expects(self::never())->method('persist');
 
-        $metadataExtractor = $this->createMock(MetadataExtractorInterface::class);
+        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $metadataExtractor->expects(self::never())->method('supports');
         $metadataExtractor->expects(self::never())->method('extract');
 
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
@@ -115,7 +116,10 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $entityManager->expects(self::once())->method('flush');
         $entityManager->expects(self::never())->method('clear');
 
-        $metadataExtractor = $this->createMock(MetadataExtractorInterface::class);
+        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $metadataExtractor->expects(self::once())
+            ->method('supports')
+            ->willReturn(true);
         $metadataExtractor->expects(self::once())
             ->method('extract')
             ->willReturnCallback(static fn (string $file, Media $media): Media => $media);
@@ -141,7 +145,8 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $entityManager->expects(self::never())->method('getRepository');
         $entityManager->expects(self::never())->method('persist');
 
-        $metadataExtractor = $this->createMock(MetadataExtractorInterface::class);
+        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $metadataExtractor->expects(self::never())->method('supports');
         $metadataExtractor->expects(self::never())->method('extract');
 
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
@@ -156,7 +161,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
 
     private function createPipeline(
         EntityManagerInterface $entityManager,
-        MetadataExtractorInterface $metadataExtractor,
+        SingleMetadataExtractorInterface $metadataExtractor,
         ThumbnailServiceInterface $thumbnailService,
         ?array $imageExtensions,
         ?array $videoExtensions
@@ -164,7 +169,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
             new DuplicateHandlingStage($entityManager),
-            new MetadataExtractionStage($metadataExtractor),
+            new MetadataExtractionStage([$metadataExtractor]),
             new ThumbnailGenerationStage($thumbnailService),
             new PersistenceBatchStage($entityManager, 10),
         ]);

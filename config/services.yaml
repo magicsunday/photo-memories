@@ -110,17 +110,39 @@ services:
     MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor:
         arguments:
             $readExifForVideos: false
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 190 }
 
     MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface:
         alias: MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor
 
-    MagicSunday\Memories\Service\Metadata\XmpIptcExtractor: ~
+    MagicSunday\Memories\Service\Metadata\XmpIptcExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 180 }
 
-    MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor: ~
+    MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 160 }
 
-    MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor: ~
+    MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 150 }
 
-    MagicSunday\Memories\Service\Metadata\BurstIndexExtractor: ~
+    MagicSunday\Memories\Service\Metadata\BurstIndexExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 120 }
+
+    MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 170 }
+
+    MagicSunday\Memories\Service\Metadata\BurstDetector:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 140 }
+
+    MagicSunday\Memories\Service\Metadata\LivePairLinker:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 130 }
 
     MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher:
         arguments:
@@ -129,20 +151,30 @@ services:
             $homeRadiusKm: '%env(default::float:MEMORIES_HOME_RADIUS_KM)%'
             $homeVersionHash: '%memories.home.version_hash%'
             $cellDegrees: 0.01
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 110 }
 
     MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser: ~
 
     MagicSunday\Memories\Service\Metadata\TimeNormalizer:
         arguments:
             $defaultTimezone: '%memories.timezone.default%'
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 100 }
 
-    MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher: ~
+    MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 90 }
 
-    MagicSunday\Memories\Service\Metadata\DaypartEnricher: ~
+    MagicSunday\Memories\Service\Metadata\DaypartEnricher:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 80 }
 
     MagicSunday\Memories\Service\Metadata\SolarEnricher:
         arguments:
             $goldenMinutes: 60
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 70 }
 
     MagicSunday\Memories\Service\Metadata\Support\CommandLineFaceDetectionBackend:
         arguments:
@@ -162,12 +194,16 @@ services:
             $ffmpegBinary: '%memories.video.ffmpeg_path%'
             $ffprobeBinary: '%memories.video.ffprobe_path%'
             $posterFrameSecond: '%memories.video.poster_frame_second%'
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 60 }
 
     MagicSunday\Memories\Service\Metadata\FacePresenceDetector:
         arguments:
             $ffmpegBinary: '%memories.video.ffmpeg_path%'
             $ffprobeBinary: '%memories.video.ffprobe_path%'
             $posterFrameSecond: '%memories.video.poster_frame_second%'
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 50 }
 
     MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface:
         alias: MagicSunday\Memories\Service\Metadata\HeuristicClipSceneTagModel
@@ -176,13 +212,19 @@ services:
         arguments:
             $maxTags: 5
             $minScore: 0.2
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 40 }
 
-    MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor: ~
+    MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor:
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 30 }
 
     MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor:
         arguments:
             $ffprobePath: '%env(string:FFPROBE_PATH)%'
             $slowMoFpsThreshold: 100.0
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 20 }
 
     MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor:
         arguments:
@@ -192,29 +234,12 @@ services:
             $ffmpegBinary: '%memories.video.ffmpeg_path%'
             $ffprobeBinary: '%memories.video.ffprobe_path%'
             $posterFrameSecond: '%memories.video.poster_frame_second%'
+        tags:
+            - { name: 'memories.metadata_extractor', priority: 10 }
 
     MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor:
         arguments:
-            $extractors:
-                - '@MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\XmpIptcExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\BurstDetector'
-                - '@MagicSunday\Memories\Service\Metadata\LivePairLinker'
-                - '@MagicSunday\Memories\Service\Metadata\BurstIndexExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
-                - '@MagicSunday\Memories\Service\Metadata\TimeNormalizer'
-                - '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
-                - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
-                - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
-                - '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\FacePresenceDetector'
-                - '@MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
-                - '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
+            $extractors: !tagged_iterator 'memories.metadata_extractor'
 
     MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface:
         alias: MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor
@@ -238,7 +263,9 @@ services:
 
     MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage: ~
 
-    MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage:
+        arguments:
+            $extractors: !tagged_iterator 'memories.metadata_extractor'
 
     MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
 
