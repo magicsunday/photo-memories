@@ -16,6 +16,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+use function count;
 
 /**
  * Doctrine entity describing an imported photo or video including its metadata.
@@ -448,6 +449,18 @@ class Media
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $persons = null;
+
+    /**
+     * Flag indicating whether the media contains detected faces.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $hasFaces = false;
+
+    /**
+     * Number of detected or tagged faces associated with the media.
+     */
+    #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
+    private int $facesCount = 0;
 
     /**
      * Feature set describing the scene (labels, categories, etc.).
@@ -1699,6 +1712,47 @@ class Media
     public function setPersons(?array $v): void
     {
         $this->persons = $v;
+
+        $count = $v !== null ? count($v) : 0;
+
+        $this->hasFaces = $count > 0;
+        $this->facesCount = $count;
+    }
+
+    /**
+     * Returns whether the media contains detected faces.
+     */
+    public function hasFaces(): bool
+    {
+        return $this->hasFaces;
+    }
+
+    /**
+     * Sets whether the media contains detected faces.
+     *
+     * @param bool $value True when at least one face is detected.
+     */
+    public function setHasFaces(bool $value): void
+    {
+        $this->hasFaces = $value;
+    }
+
+    /**
+     * Returns the number of detected faces.
+     */
+    public function getFacesCount(): int
+    {
+        return $this->facesCount;
+    }
+
+    /**
+     * Stores the number of detected faces.
+     *
+     * @param int $count Total number of detected faces.
+     */
+    public function setFacesCount(int $count): void
+    {
+        $this->facesCount = $count;
     }
 
     /**
