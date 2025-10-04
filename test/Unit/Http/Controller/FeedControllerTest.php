@@ -123,7 +123,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([1, 2, 3])
+            ->with([1, 2, 3], false)
             ->willReturn([$mediaOne, $mediaTwo, $mediaThree]);
 
         $controller = new FeedController(
@@ -205,7 +205,7 @@ final class FeedControllerTest extends TestCase
         $mediaRepo = $this->createMock(MediaRepository::class);
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([42])
+            ->with([42], false)
             ->willReturn([$media]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -292,7 +292,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([99])
+            ->with([99], false)
             ->willReturn([$media]);
 
         $thumbnailService->expects(self::never())->method('generateAll');
@@ -330,7 +330,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([123])
+            ->with([123], false)
             ->willReturn([]);
 
         $controller = new FeedController(
@@ -376,7 +376,7 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([12])
+            ->with([12], false)
             ->willReturn([$media]);
 
         $thumbnailService->expects(self::once())

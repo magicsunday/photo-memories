@@ -376,7 +376,7 @@ final class InMemoryMediaLookup implements MemberMediaLookupInterface
     {
     }
 
-    public function findByIds(array $ids): array
+    public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         $result = [];
         foreach ($ids as $id) {

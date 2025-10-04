@@ -208,7 +208,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository->expects(self::once())
             ->method('findByIds')
-            ->with([1, 2])
+            ->with([1, 2], false)
             ->willReturn([$mediaOne, $mediaTwo]);
 
         $thumbnailResolver = new ThumbnailPathResolver();

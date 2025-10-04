@@ -108,6 +108,24 @@ Die Ingestion-Pipeline erweitert jeden `media`-Datensatz jetzt um strukturierte 
 
 Damit lassen sich fehlgeschlagene Läufe schneller erkennen und neu anstoßen, ohne auf externe Logs angewiesen zu sein. Nach einem `memories:index`-Lauf prüfst du die Spalten direkt in der Datenbank oder über deine Auswertungen; das Flag `needs_rotation` hilft beim gezielten Nachbearbeiten von Assets mit reiner Orientation-Markierung.
 
+## Datenbankindizes
+
+Damit Geocoding, Duplikatsuche und Video-Feeds auch bei großen Beständen performant bleiben, lohnt sich ein kurzer Blick auf die empfohlenen Indizes der Tabelle `media`:
+
+* `idx_media_geocell8` beschleunigt das Laden von GPS-Datensätzen nach Geohash-Zellen – die Geocoding-Workflows sortieren nun zuerst nach `geoCell8` und anschließend nach Aufnahmedatum.
+* `idx_media_phash_prefix` reduziert pHash-Suchen auf die relevanten Präfix-Buckets, bevor die Hamming-Distanz berechnet wird.
+* `idx_media_burst_taken` unterstützt Auswertungen innerhalb eines Burst-Stapels (z. B. wenn mehrere Serienaufnahmen synchronisiert werden sollen).
+* `idx_media_video_taken` hilft insbesondere bei videozentrierten Feeds: Repository-Abfragen filtern Videos explizit und lesen sie chronologisch nach `takenAt` ein.
+* `idx_media_location` deckt alle Abfragen ab, die nach vorhandenen Ortszuweisungen filtern (z. B. für POI-Aktualisierungen).
+
+Zusätzlich empfiehlt sich bei größeren Installationen ein kombinierter Index auf `noShow, lowQuality`. Damit beantwortet die Qualitätspipeline Rückfragen nach „versteckten“ oder minderwertigen Medien deutlich schneller, ohne die Feed-Generierung auszubremsen:
+
+```sql
+CREATE INDEX idx_media_noshow_lowquality ON media (noShow, lowQuality);
+```
+
+Passe die Empfehlung je nach Datenbankdialekt an (z. B. `CREATE INDEX` vs. `CREATE INDEX IF NOT EXISTS`).
+
 ## Cluster-Konfiguration
 
 Die Persistierung der berechneten Cluster wird jetzt begrenzt, damit Feeds und Oberflächen nicht mit hunderten Medien pro Block

@@ -23,5 +23,5 @@ interface MemberMediaLookupInterface
      *
      * @return list<Media>
      */
-    public function findByIds(array $ids): array;
+    public function findByIds(array $ids, bool $onlyVideos = false): array;
 }

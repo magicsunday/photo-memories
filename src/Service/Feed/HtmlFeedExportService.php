@@ -145,7 +145,10 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
             return null;
         }
 
-        $members = $this->mediaRepository->findByIds($memberIds);
+        $members = $this->mediaRepository->findByIds(
+            $memberIds,
+            $item->getAlgorithm() === 'video_stories'
+        );
 
         $coverId = $item->getCoverMediaId();
         usort($members, static function (Media $a, Media $b) use ($coverId): int {

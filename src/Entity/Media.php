@@ -27,6 +27,11 @@ use function count;
 #[ORM\Index(name: 'idx_checksum', fields: ['checksum'])]
 #[ORM\Index(name: 'idx_phash64', fields: ['phash64'])]
 #[ORM\Index(name: 'idx_live_pair_checksum', fields: ['livePairChecksum'])]
+#[ORM\Index(name: 'idx_media_geocell8', fields: ['geoCell8'])]
+#[ORM\Index(name: 'idx_media_phash_prefix', fields: ['phashPrefix'])]
+#[ORM\Index(name: 'idx_media_burst_taken', fields: ['burstUuid', 'takenAt'])]
+#[ORM\Index(name: 'idx_media_video_taken', fields: ['isVideo', 'takenAt'])]
+#[ORM\Index(name: 'idx_media_location', fields: ['location'])]
 class Media
 {
     /**
