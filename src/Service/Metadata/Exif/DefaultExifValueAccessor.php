@@ -36,10 +36,21 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 {
     /** Map PHP's "UndefinedTag" keys to their EXIF 2.31 names. */
     private const array OFFSET_ALIASES = [
+        'UndefinedTag:0x001F' => 'GPSHPositioningError',
+        'UndefinedTag:0xA430' => 'CameraOwnerName',
+        'UndefinedTag:0xA431' => 'BodySerialNumber',
+        'UndefinedTag:0xA432' => 'LensSpecification',
+        'UndefinedTag:0xA433' => 'LensMake',
+        'UndefinedTag:0xA434' => 'LensModel',
+        'UndefinedTag:0xA435' => 'LensSerialNumber',
         'UndefinedTag:0x9010' => 'OffsetTime',
         'UndefinedTag:0x9011' => 'OffsetTimeOriginal',
         'UndefinedTag:0x9012' => 'OffsetTimeDigitized',
         'UndefinedTag:0x882A' => 'TimeZoneOffset', // fallback: some cams use 0x882A
+        'UndefinedTag:0xA460' => 'Gamma',
+        'UndefinedTag:0xA461' => 'CompositeImage',
+        'UndefinedTag:0xA462' => 'SourceImageNumberOfCompositeImage',
+        'UndefinedTag:0xA463' => 'SourceExposureTimesOfCompositeImage',
     ];
 
     /**
