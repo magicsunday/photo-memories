@@ -17,15 +17,15 @@ use PHPUnit\Framework\Attributes\Test;
 final class MediaPhashPrefixTest extends TestCase
 {
     #[Test]
-    public function truncatesPhashPrefixToSixteenCharacters(): void
+    public function truncatesPhashPrefixToThirtyTwoCharacters(): void
     {
         $media = $this->makeMedia(
             id: 201,
             path: '/library/phash-prefix.jpg',
         );
 
-        $media->setPhashPrefix('0123456789abcdefcafebabe');
+        $media->setPhashPrefix('0123456789abcdefcafebabe112233445566');
 
-        self::assertSame('0123456789abcdef', $media->getPhashPrefix());
+        self::assertSame('0123456789abcdefcafebabe11223344', $media->getPhashPrefix());
     }
 }

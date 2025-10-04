@@ -449,17 +449,17 @@ class Media
     /**
      * Prefix of the perceptual hash for quick similarity checks.
      */
-    #[ORM\Column(type: Types::STRING, length: 16, nullable: true)]
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
     private ?string $phashPrefix = null;
 
     /**
-     * Complete perceptual hash of the media.
+     * Complete perceptual hash of the media (128-bit hexadecimal string).
      */
     #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
     private ?string $phash = null;
 
     /**
-     * Complete perceptual hash represented as an unsigned 64-bit integer.
+     * High 64 bits of the perceptual hash represented as an unsigned integer string.
      */
     #[ORM\Column(type: Types::BIGINT, nullable: true, options: ['unsigned' => true])]
     private ?string $phash64 = null;
@@ -827,7 +827,14 @@ class Media
      */
     public function setPhash(?string $phash): void
     {
-        $this->phash = $phash;
+        if ($phash === null) {
+            $this->phash = null;
+
+            return;
+        }
+
+        $hash = strtolower($phash);
+        $this->phash = substr($hash, 0, 32);
     }
 
     /**
@@ -1805,7 +1812,13 @@ class Media
      */
     public function setPhashPrefix(?string $v): void
     {
-        $this->phashPrefix = $v === null ? null : substr($v, 0, 16);
+        if ($v === null) {
+            $this->phashPrefix = null;
+
+            return;
+        }
+
+        $this->phashPrefix = substr(strtolower($v), 0, 32);
     }
 
     /**

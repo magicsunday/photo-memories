@@ -15,19 +15,19 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
+use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
 
 use function acos;
 use function array_fill;
 use function array_shift;
-use function bindec;
 use function ceil;
 use function cos;
 use function count;
-use function dechex;
 use function floor;
 use function hex2bin;
 use function is_file;
 use function is_string;
+use function max;
 use function min;
 use function sort;
 use function sprintf;
@@ -35,6 +35,7 @@ use function sqrt;
 use function str_pad;
 use function str_starts_with;
 use function strlen;
+use function strtolower;
 use function substr;
 use function unpack;
 
@@ -42,25 +43,46 @@ use const SORT_NUMERIC;
 use const STR_PAD_RIGHT;
 
 /**
- * Computes perceptual hashes (pHash 64-bit) plus aHash/dHash from a single
+ * Computes perceptual hashes (pHash 128-bit) plus aHash/dHash from a single
  * downsampled grayscale matrix. Uses a numerically stable 2D-DCT and a
- * proper median threshold (excluding DC) for pHash.
+ * proper median threshold (excluding DC) for pHash. Supports poster frame
+ * extraction for video assets via ffmpeg/ffprobe.
  */
 final readonly class PerceptualHashExtractor implements SingleMetadataExtractorInterface
 {
     use GdImageToolsTrait;
+    use VideoPosterFrameTrait;
 
     public function __construct(
-        private int $dctSampleSize = 32,   // NxN downsample for DCT (32 recommended)
-        private int $lowFreqSize = 8,      // use top-left 8x8 block
+        private int $dctSampleSize = 32,
+        private int $lowFreqSize = 16,
+        private int $phashPrefixLength = 16,
+        private string $ffmpegBinary = 'ffmpeg',
+        private string $ffprobeBinary = 'ffprobe',
+        private float $posterFrameSecond = 1.0,
     ) {
         if ($this->dctSampleSize < 16 || ($this->dctSampleSize & ($this->dctSampleSize - 1)) !== 0) {
-            // Power-of-two helps for cache reuse; 32 is a good compromise (speed/quality).
             throw new InvalidArgumentException('dctSampleSize must be a power of two >= 16');
         }
 
-        if ($this->lowFreqSize < 4 || $this->lowFreqSize > $this->dctSampleSize) {
-            throw new InvalidArgumentException('lowFreqSize must be in [4..dctSampleSize]');
+        if ($this->lowFreqSize < 12 || $this->lowFreqSize > $this->dctSampleSize) {
+            throw new InvalidArgumentException('lowFreqSize must be in [12..dctSampleSize] for 128-bit pHash');
+        }
+
+        if ($this->phashPrefixLength < 0 || $this->phashPrefixLength > 32) {
+            throw new InvalidArgumentException('phashPrefixLength must be within [0..32]');
+        }
+
+        if ($this->posterFrameSecond < 0.0) {
+            throw new InvalidArgumentException('posterFrameSecond must be >= 0');
+        }
+
+        if ($this->ffmpegBinary === '') {
+            $this->ffmpegBinary = 'ffmpeg';
+        }
+
+        if ($this->ffprobeBinary === '') {
+            $this->ffprobeBinary = 'ffprobe';
         }
     }
 
@@ -68,100 +90,163 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     {
         $mime = $media->getMime();
 
-        return is_string($mime) && str_starts_with($mime, 'image/');
+        if (is_string($mime)) {
+            if (str_starts_with($mime, 'image/')) {
+                return true;
+            }
+
+            if (str_starts_with($mime, 'video/')) {
+                return true;
+            }
+        }
+
+        return $media->isVideo();
     }
 
     public function extract(string $filepath, Media $media): Media
     {
-        $src = $this->resolveImageSource($media) ?? $filepath;
-        if (!is_file($src)) {
+        $sourcePath = $filepath;
+        $posterPath = null;
+
+        if ($this->isVideoMedia($media)) {
+            $posterPath = $this->createPosterFrame($filepath);
+            if (!is_string($posterPath) || !is_file($posterPath)) {
+                return $media;
+            }
+
+            $sourcePath = $posterPath;
+        } else {
+            $resolved = $this->resolveImageSource($media);
+            if (is_string($resolved)) {
+                $sourcePath = $resolved;
+            }
+        }
+
+        if (!is_file($sourcePath)) {
+            $this->cleanupPosterFrame($posterPath);
+
             return $media;
         }
 
-        $adapter = $this->createImageAdapter($src);
-        if (!$adapter instanceof ImageAdapterInterface) {
-            // No backend → keep previous behavior, but do not crash
+        try {
+            $adapter = $this->createImageAdapter($sourcePath);
+            if (!$adapter instanceof ImageAdapterInterface) {
+                return $media;
+            }
+
+            $mat = $this->grayscaleMatrixFromAdapter($adapter, $this->dctSampleSize, $this->dctSampleSize);
+            $adapter->destroy();
+
+            [$phashHex, $phash64] = $this->computePhash128($mat, $this->lowFreqSize);
+
+            $media->setAhash($this->computeAhash64($mat));
+            $media->setDhash($this->computeDhash64($mat));
+            $media->setPhash(strtolower($phashHex));
+
+            $prefixLength = max(0, min(32, $this->phashPrefixLength));
+            if ($prefixLength > 0) {
+                $media->setPhashPrefix(substr(strtolower($phashHex), 0, $prefixLength));
+            } else {
+                $media->setPhashPrefix(null);
+            }
+
+            $media->setPhash64($phash64);
+
             return $media;
+        } finally {
+            $this->cleanupPosterFrame($posterPath);
         }
-
-        // One grayscale downsample for all hashes
-        $mat = $this->grayscaleMatrixFromAdapter($adapter, $this->dctSampleSize, $this->dctSampleSize);
-        $adapter->destroy();
-
-        // pHash 64-bit
-        [$phashHex, $phashUint] = $this->computePhash64($mat, $this->lowFreqSize);
-
-        // Optional: derive simple aHash/dHash for QA/Debug (falls Media Felder hat)
-        $media->setAhash($this->computeAhash64($mat));
-        $media->setDhash($this->computeDhash64($mat));
-        $media->setPhash($phashHex);
-        $media->setPhashPrefix($phashHex);
-        $media->setPhash64($phashUint);
-
-        return $media;
     }
 
     /**
-     * pHash: 2D-DCT on NxN, take top-left kxk, threshold by median (excluding DC),
-     * set bit if coefficient > median (includes DC in comparison, classic 64-bit).
+     * @param array<int,array<int,float>> $g
      *
-     * @param array<int,array<int,float>> $g NxN grayscale in [0..255]
-     */
-    /**
      * @return array{0: string, 1: string}
      */
-    private function computePhash64(array $g, int $k): array
+    private function computePhash128(array $g, int $k): array
     {
         $n = count($g);
-        if ($n < $k || $n !== count($g[0])) {
-            return ['0000000000000000', '0'];
+        if ($n < 1 || $n !== count($g[0])) {
+            return ['00000000000000000000000000000000', '0'];
         }
 
-        // 1) 2D-DCT (type-II) with orthonormal normalization
+        $blockSize = min($k, $n);
+        if ($blockSize < 4) {
+            $blockSize = min(4, $n);
+        }
+
+        $bitCount = 128;
+        $maxBits  = $blockSize * $blockSize;
+        if ($maxBits < $bitCount) {
+            $bitCount = $maxBits;
+        }
+
         $dct = $this->dct2($g);
 
-        // 2) collect kxk block
         $coeffs   = [];
-        $coeffs[] = $dct[0][0]; // DC
-        for ($i = 0; $i < $k; ++$i) {
-            for ($j = 0; $j < $k; ++$j) {
+        $coeffs[] = $dct[0][0];
+        for ($i = 0; $i < $blockSize; ++$i) {
+            for ($j = 0; $j < $blockSize; ++$j) {
                 if ($i === 0 && $j === 0) {
-                    continue; // exclude DC from median set
+                    continue;
                 }
 
                 $coeffs[] = $dct[$i][$j];
             }
         }
 
-        // 3) median of non-DC coefficients
         $nonDc = $coeffs;
-        array_shift($nonDc); // drop DC
+        array_shift($nonDc);
         sort($nonDc, SORT_NUMERIC);
-        $mIdx   = (int) floor(count($nonDc) / 2);
-        $median = (float) ($nonDc[$mIdx] ?? 0.0);
+        $count  = count($nonDc);
+        $median = 0.0;
 
-        // 4) build 64-bit bitstring in row-major order over kxk (incl. DC, thresh by median)
-        $bits = '';
-        for ($i = 0; $i < $k; ++$i) {
-            for ($j = 0; $j < $k; ++$j) {
-                $c = $dct[$i][$j];
-                $bits .= ($c > $median) ? '1' : '0';
+        if ($count > 0) {
+            $mid = (int) floor($count / 2);
+            if (($count % 2) === 1) {
+                $median = (float) $nonDc[$mid];
+            } else {
+                $a      = (float) ($nonDc[$mid - 1] ?? 0.0);
+                $b      = (float) ($nonDc[$mid] ?? 0.0);
+                $median = ($a + $b) / 2.0;
             }
         }
 
-        // 5) 64 bits → 16 hex chars + unsigned integer string
-        $hex = $this->bitsToHex64($bits);
-        $bin = hex2bin($hex);
+        $bits       = '';
+        $positions  = $this->zigzagPositions($blockSize);
+        $bitCounter = 0;
 
+        foreach ($positions as [$i, $j]) {
+            $bits .= ($dct[$i][$j] > $median) ? '1' : '0';
+            ++$bitCounter;
+
+            if ($bitCounter >= $bitCount) {
+                break;
+            }
+        }
+
+        if ($bitCounter < $bitCount) {
+            $bits = str_pad($bits, $bitCount, '0', STR_PAD_RIGHT);
+        }
+
+        $hex128 = strtolower($this->bitsToHex($bits, $bitCount));
+
+        $bits64 = substr($bits, 0, 64);
+        if (strlen($bits64) < 64) {
+            $bits64 = str_pad($bits64, 64, '0', STR_PAD_RIGHT);
+        }
+
+        $hex64 = strtolower($this->bitsToHex($bits64, 64));
+        $bin   = hex2bin($hex64);
         if ($bin === false || strlen($bin) !== 8) {
-            return [$hex, '0'];
+            return [$hex128, '0'];
         }
 
         /** @var array{1:int}|false $packed */
         $packed = unpack('J', $bin);
         $value  = $packed[1] ?? 0;
 
-        return [$hex, sprintf('%u', $value)];
+        return [$hex128, sprintf('%u', $value)];
     }
 
     /**
@@ -190,7 +275,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             }
         }
 
-        return $this->bitsToHex64($bits);
+        return strtolower($this->bitsToHex($bits, 64));
     }
 
     /**
@@ -208,7 +293,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             }
         }
 
-        return $this->bitsToHex64($bits);
+        return strtolower($this->bitsToHex($bits, 64));
     }
 
     /**
@@ -223,7 +308,6 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $N    = count($g);
         $cosT = $this->cosTable($N);
 
-        // Rows DCT
         $tmp    = array_fill(0, $N, array_fill(0, $N, 0.0));
         $alpha0 = sqrt(1.0 / $N);
         $alpha  = sqrt(2.0 / $N);
@@ -239,7 +323,6 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             }
         }
 
-        // Columns DCT
         $out = array_fill(0, $N, array_fill(0, $N, 0.0));
         for ($v = 0; $v < $N; ++$v) {
             for ($u = 0; $u < $N; ++$u) {
@@ -321,20 +404,30 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     }
 
     /**
-     * Convert 64 bits ('0'/'1') into 16-char hex.
+     * @return array<int,array{0:int,1:int}>
      */
-    private function bitsToHex64(string $bits): string
+    private function zigzagPositions(int $size): array
     {
-        // ensure length is exactly 64
-        if (strlen($bits) !== 64) {
-            $bits = strlen($bits) > 64 ? substr($bits, 0, 64) : str_pad($bits, 64, '0', STR_PAD_RIGHT);
+        $positions = [];
+        $maxIndex  = $size - 1;
+
+        for ($sum = 0; $sum <= 2 * $maxIndex; ++$sum) {
+            $minRow = max(0, $sum - $maxIndex);
+            $maxRow = min($sum, $maxIndex);
+
+            if (($sum % 2) === 0) {
+                for ($row = $maxRow; $row >= $minRow; --$row) {
+                    $col          = $sum - $row;
+                    $positions[] = [$row, $col];
+                }
+            } else {
+                for ($row = $minRow; $row <= $maxRow; ++$row) {
+                    $col          = $sum - $row;
+                    $positions[] = [$row, $col];
+                }
+            }
         }
 
-        $hex = '';
-        for ($i = 0; $i < 64; $i += 4) {
-            $hex .= dechex(bindec(substr($bits, $i, 4)));
-        }
-
-        return $hex;
+        return $positions;
     }
 }

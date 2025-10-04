@@ -37,8 +37,8 @@ final class MediaRepositoryTest extends TestCase
             ->with(
                 self::callback(static fn (string $sql): bool => str_contains($sql, 'phashPrefix = :phashPrefix')),
                 [
-                    'phashHex'    => 'abcdef',
-                    'phashPrefix' => 'abcdef',
+                    'phashHex'    => 'abcdef0123456789',
+                    'phashPrefix' => 'abcdef0123456789',
                     'maxHamming'  => 3,
                     'limit'       => 5,
                 ],
@@ -64,9 +64,9 @@ final class MediaRepositoryTest extends TestCase
                 [Media::class, 11, null, null, $mediaB],
             ]);
 
-        $repository = new MediaRepository($em);
+        $repository = new MediaRepository($em, 16);
 
-        $result = $repository->findNearestByPhash('ABCDEF', 3, 5);
+        $result = $repository->findNearestByPhash('ABCDEF0123456789ABCDEF0123456789', 3, 5);
 
         self::assertCount(2, $result);
         self::assertSame($mediaA, $result[0]['media']);

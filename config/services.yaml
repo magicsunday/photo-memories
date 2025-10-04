@@ -147,8 +147,8 @@ services:
     MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor:
         arguments:
             $sampleSize: 320
-            $ffmpegBinary: '%env(default::string:FFMPEG_PATH)%'
-            $ffprobeBinary: '%env(string:FFPROBE_PATH)%'
+            $ffmpegBinary: '%memories.video.ffmpeg_path%'
+            $ffprobeBinary: '%memories.video.ffprobe_path%'
             $posterFrameSecond: '%memories.video.poster_frame_second%'
 
     MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface:
@@ -170,6 +170,10 @@ services:
         arguments:
             $dctSampleSize: '%memories.hash.dct_sample%'
             $lowFreqSize: '%memories.hash.lowfreq%'
+            $phashPrefixLength: '%memories.hash.phash_prefix_length%'
+            $ffmpegBinary: '%memories.video.ffmpeg_path%'
+            $ffprobeBinary: '%memories.video.ffprobe_path%'
+            $posterFrameSecond: '%memories.video.poster_frame_second%'
 
     MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor:
         arguments:
@@ -890,7 +894,9 @@ services:
 
     MagicSunday\Memories\Service\Feed\DefaultCoverPicker: ~
 
-    MagicSunday\Memories\Repository\MediaRepository: ~
+    MagicSunday\Memories\Repository\MediaRepository:
+        arguments:
+            $phashPrefixLength: '%memories.hash.phash_prefix_length%'
 
     MagicSunday\Memories\Service\Feed\MemoryFeedBuilder:
         arguments:

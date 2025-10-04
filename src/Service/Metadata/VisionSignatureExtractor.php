@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Metadata\Support\GdImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
+use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -32,10 +33,7 @@ use function max;
 use function min;
 use function round;
 use function sprintf;
-use function sys_get_temp_dir;
-use function tempnam;
 use function trim;
-use function unlink;
 use function sqrt;
 use function str_starts_with;
 
@@ -46,6 +44,7 @@ use function str_starts_with;
 final readonly class VisionSignatureExtractor implements SingleMetadataExtractorInterface
 {
     use GdImageToolsTrait;
+    use VideoPosterFrameTrait;
 
     public function __construct(
         private readonly MediaQualityAggregator $qualityAggregator,
@@ -108,9 +107,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         }
 
         if (!is_file($sourcePath)) {
-            if ($posterPath !== null && is_file($posterPath)) {
-                unlink($posterPath);
-            }
+            $this->cleanupPosterFrame($posterPath);
 
             return $media;
         }
@@ -146,125 +143,8 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
             return $media;
         } finally {
-            if ($posterPath !== null && is_file($posterPath)) {
-                unlink($posterPath);
-            }
+            $this->cleanupPosterFrame($posterPath);
         }
-    }
-
-    private function isVideoMedia(Media $media): bool
-    {
-        if ($media->isVideo()) {
-            return true;
-        }
-
-        $mime = $media->getMime();
-
-        return is_string($mime) && str_starts_with($mime, 'video/');
-    }
-
-    private function createPosterFrame(string $videoPath): ?string
-    {
-        if (!is_file($videoPath)) {
-            return null;
-        }
-
-        $tempFile = tempnam(sys_get_temp_dir(), 'mem_poster_');
-        if (!is_string($tempFile)) {
-            return null;
-        }
-
-        $posterPath = $tempFile . '.jpg';
-        if (is_file($tempFile)) {
-            unlink($tempFile);
-        }
-
-        $targetTime = max(0.0, $this->posterFrameSecond);
-        $duration   = $this->probeVideoDuration($videoPath);
-        if ($duration !== null && $duration > 0.0 && $targetTime > $duration) {
-            $targetTime = max(0.0, $duration - 0.1);
-        }
-
-        $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
-
-        if ($targetTime > 0.0) {
-            $command[] = '-ss';
-            $command[] = sprintf('%.3f', $targetTime);
-        }
-
-        $command[] = '-i';
-        $command[] = $videoPath;
-        $command[] = '-frames:v';
-        $command[] = '1';
-        $command[] = $posterPath;
-
-        $process = new Process($command);
-        $process->setTimeout(20.0);
-
-        try {
-            $process->run();
-        } catch (Throwable) {
-            if (is_file($posterPath)) {
-                unlink($posterPath);
-            }
-
-            return null;
-        }
-
-        if (!$process->isSuccessful() || !is_file($posterPath)) {
-            if (is_file($posterPath)) {
-                unlink($posterPath);
-            }
-
-            return null;
-        }
-
-        return $posterPath;
-    }
-
-    private function probeVideoDuration(string $videoPath): ?float
-    {
-        $process = new Process([
-            $this->ffprobeBinary,
-            '-v',
-            'error',
-            '-select_streams',
-            'v:0',
-            '-show_entries',
-            'format=duration',
-            '-of',
-            'default=noprint_wrappers=1:nokey=1',
-            $videoPath,
-        ]);
-        $process->setTimeout(10.0);
-
-        try {
-            $process->run();
-        } catch (Throwable) {
-            return null;
-        }
-
-        if (!$process->isSuccessful()) {
-            return null;
-        }
-
-        $output = $process->getOutput();
-        if ($output === '') {
-            $output = $process->getErrorOutput();
-        }
-
-        $output = trim($output);
-        if ($output === '') {
-            return null;
-        }
-
-        if (!is_numeric($output)) {
-            return null;
-        }
-
-        $duration = (float) $output;
-
-        return $duration > 0.0 ? $duration : null;
     }
 
     /**
