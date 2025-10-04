@@ -62,6 +62,18 @@ class Media
     private DateTimeImmutable $createdAt;
 
     /**
+     * Metadata feature version used during the last extraction run.
+     */
+    #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
+    private int $featureVersion = 0;
+
+    /**
+     * Timestamp when metadata extraction last ran for this media.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?DateTimeImmutable $indexedAt = null;
+
+    /**
      * MIME type describing the media payload (for example image/jpeg).
      */
     #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
@@ -228,6 +240,12 @@ class Media
      */
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $orientation = null;
+
+    /**
+     * Indicates whether downstream consumers need to rotate the asset.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $needsRotation = false;
 
     /**
      * Altitude relative to sea level in metres.
@@ -487,6 +505,12 @@ class Media
     private ?array $thumbnails = null;
 
     /**
+     * Log output of the last indexing run including errors.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $indexLog = null;
+
+    /**
      * Indicates whether the media still requires geocoding.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
@@ -552,6 +576,42 @@ class Media
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    /**
+     * Returns the metadata feature version used for the last extraction.
+     */
+    public function getFeatureVersion(): int
+    {
+        return $this->featureVersion;
+    }
+
+    /**
+     * Updates the metadata feature version used for the last extraction.
+     *
+     * @param int $featureVersion Metadata feature schema version.
+     */
+    public function setFeatureVersion(int $featureVersion): void
+    {
+        $this->featureVersion = $featureVersion;
+    }
+
+    /**
+     * Returns the timestamp of the most recent metadata extraction run.
+     */
+    public function getIndexedAt(): ?DateTimeImmutable
+    {
+        return $this->indexedAt;
+    }
+
+    /**
+     * Updates the timestamp of the most recent metadata extraction run.
+     *
+     * @param DateTimeImmutable|null $indexedAt Extraction completion timestamp.
+     */
+    public function setIndexedAt(?DateTimeImmutable $indexedAt): void
+    {
+        $this->indexedAt = $indexedAt;
     }
 
     /**
@@ -787,6 +847,24 @@ class Media
     }
 
     /**
+     * Returns the log output of the last indexing run.
+     */
+    public function getIndexLog(): ?string
+    {
+        return $this->indexLog;
+    }
+
+    /**
+     * Updates the log output of the last indexing run.
+     *
+     * @param string|null $indexLog Logged error details or null on success.
+     */
+    public function setIndexLog(?string $indexLog): void
+    {
+        $this->indexLog = $indexLog;
+    }
+
+    /**
      * Returns the timezone offset in minutes.
      */
     public function getTimezoneOffsetMin(): ?int
@@ -820,6 +898,24 @@ class Media
     public function setOrientation(?int $v): void
     {
         $this->orientation = $v;
+    }
+
+    /**
+     * Indicates whether the stored asset requires rotation based on metadata.
+     */
+    public function needsRotation(): bool
+    {
+        return $this->needsRotation;
+    }
+
+    /**
+     * Marks whether the stored asset requires rotation based on metadata.
+     *
+     * @param bool $needsRotation True if downstream consumers must rotate the asset.
+     */
+    public function setNeedsRotation(bool $needsRotation): void
+    {
+        $this->needsRotation = $needsRotation;
     }
 
     /**

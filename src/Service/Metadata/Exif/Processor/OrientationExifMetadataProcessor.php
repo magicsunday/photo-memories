@@ -32,6 +32,7 @@ final class OrientationExifMetadataProcessor implements ExifMetadataProcessorInt
         $orientation = $this->accessor->intOrNull($exif['IFD0']['Orientation'] ?? null);
         if ($orientation !== null) {
             $media->setOrientation($orientation);
+            $media->setNeedsRotation($orientation > 1);
         }
     }
 }
