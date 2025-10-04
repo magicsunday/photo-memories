@@ -126,6 +126,8 @@ CREATE INDEX idx_media_noshow_lowquality ON media (noShow, lowQuality);
 
 Passe die Empfehlung je nach Datenbankdialekt an (z. B. `CREATE INDEX` vs. `CREATE INDEX IF NOT EXISTS`).
 
+> **Hinweis:** Nach dem Update auf diese Version führst du einmal `bin/console doctrine:migrations:migrate` aus, damit alle neuen `media`-Indizes sowie die geänderte Spaltenlänge von `phashPrefix` in der Datenbank landen.
+
 ## Cluster-Konfiguration
 
 Die Persistierung der berechneten Cluster wird jetzt begrenzt, damit Feeds und Oberflächen nicht mit hunderten Medien pro Block
