@@ -35,7 +35,8 @@ readonly class ClusterRepository
         $qb = $this->em->createQueryBuilder()
             ->select('c')
             ->from(Cluster::class, 'c')
-            ->orderBy('c.createdAt', 'DESC')
+            ->orderBy('c.startAt', 'DESC')
+            ->addOrderBy('c.createdAt', 'DESC')
             ->setMaxResults($limit);
 
         $query = $qb->getQuery();

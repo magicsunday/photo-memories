@@ -11,26 +11,41 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
+use MagicSunday\Memories\Entity\Location;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
+use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+use function array_is_list;
 use function array_keys;
 use function array_key_exists;
+use function array_slice;
 use function array_unique;
 use function array_values;
-use function array_slice;
 use function count;
 use function is_array;
+use function is_float;
 use function is_int;
 use function is_numeric;
+use function is_string;
+use function json_encode;
+use function ksort;
+use function sha1;
+use function spl_object_id;
 
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
     public function __construct(
         private EntityManagerInterface $em,
+        private MemberMediaLookupInterface $mediaLookup,
+        private CoverPickerInterface $coverPicker,
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
         private int $maxMembers = 20,
@@ -92,6 +107,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 continue;
             }
 
+            $media = $this->hydrateMembers($members);
+            $metadata = $this->buildMetadata($d, $members, $media);
+
             // Construct and fill entity
             $entity = new Cluster(
                 $alg,
@@ -99,6 +117,19 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 $d->getCentroid(),
                 $members
             );
+
+            $entity->setStartAt($metadata['startAt']);
+            $entity->setEndAt($metadata['endAt']);
+            $entity->setMembersCount($metadata['membersCount']);
+            $entity->setPhotoCount($metadata['photoCount']);
+            $entity->setVideoCount($metadata['videoCount']);
+            $entity->setCover($metadata['cover']);
+            $entity->setLocation($metadata['location']);
+            $entity->setAlgorithmVersion($metadata['algorithmVersion']);
+            $entity->setConfigHash($metadata['configHash']);
+            $entity->setCentroidLat($metadata['centroidLat']);
+            $entity->setCentroidLon($metadata['centroidLon']);
+            $entity->setCentroidCell7($metadata['centroidCell7']);
 
             $this->em->persist($entity);
 
@@ -201,6 +232,290 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $this->em->clear();
 
         return $deleted;
+    }
+
+    /**
+     * @param list<int>   $memberIds
+     * @param list<Media> $media
+     *
+     * @return array{
+     *     startAt: ?DateTimeImmutable,
+     *     endAt: ?DateTimeImmutable,
+     *     membersCount: int,
+     *     photoCount: ?int,
+     *     videoCount: ?int,
+     *     cover: ?Media,
+     *     location: ?Location,
+     *     algorithmVersion: ?string,
+     *     configHash: ?string,
+     *     centroidLat: ?float,
+     *     centroidLon: ?float,
+     *     centroidCell7: ?string
+     * }
+     */
+    private function buildMetadata(ClusterDraft $draft, array $memberIds, array $media): array
+    {
+        $bounds = $this->resolveTemporalBounds($media);
+        $membersCount = count($memberIds);
+
+        $photoCount = null;
+        $videoCount = null;
+        if ($media !== []) {
+            $counts = $this->countMembersByKind($media);
+            $photoCount = $counts['photos'];
+            $videoCount = $counts['videos'];
+        }
+
+        $cover = $media !== [] ? $this->coverPicker->pickCover($media, $draft->getParams()) : null;
+        $location = $this->resolveDominantLocation($media);
+        $algorithmVersion = $this->resolveAlgorithmVersion($draft->getParams());
+        $configHash = $this->computeConfigHash($draft->getParams());
+
+        $centroid = $draft->getCentroid();
+        $centroidLat = $this->numericOrNull($centroid['lat'] ?? null);
+        $centroidLon = $this->numericOrNull($centroid['lon'] ?? null);
+        $centroidCell = null;
+        if ($centroidLat !== null && $centroidLon !== null) {
+            $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
+        }
+
+        $draft->setStartAt($bounds['start']);
+        $draft->setEndAt($bounds['end']);
+        $draft->setMembersCount($membersCount);
+        $draft->setPhotoCount($photoCount);
+        $draft->setVideoCount($videoCount);
+        $draft->setCoverMediaId($cover?->getId());
+        $draft->setLocation($location);
+        $draft->setAlgorithmVersion($algorithmVersion);
+        $draft->setConfigHash($configHash);
+        $draft->setCentroidLat($centroidLat);
+        $draft->setCentroidLon($centroidLon);
+        $draft->setCentroidCell7($centroidCell);
+
+        return [
+            'startAt' => $bounds['start'],
+            'endAt' => $bounds['end'],
+            'membersCount' => $membersCount,
+            'photoCount' => $photoCount,
+            'videoCount' => $videoCount,
+            'cover' => $cover,
+            'location' => $location,
+            'algorithmVersion' => $algorithmVersion,
+            'configHash' => $configHash,
+            'centroidLat' => $centroidLat,
+            'centroidLon' => $centroidLon,
+            'centroidCell7' => $centroidCell,
+        ];
+    }
+
+    /**
+     * @param list<int> $memberIds
+     *
+     * @return list<Media>
+     */
+    private function hydrateMembers(array $memberIds): array
+    {
+        if ($memberIds === []) {
+            return [];
+        }
+
+        $loaded = $this->mediaLookup->findByIds($memberIds);
+        if ($loaded === []) {
+            return [];
+        }
+
+        /** @var array<int, Media> $map */
+        $map = [];
+        foreach ($loaded as $media) {
+            $map[$media->getId()] = $media;
+        }
+
+        $ordered = [];
+        foreach ($memberIds as $id) {
+            $media = $map[$id] ?? null;
+            if ($media instanceof Media) {
+                $ordered[] = $media;
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @param list<Media> $media
+     *
+     * @return array{start:?DateTimeImmutable,end:?DateTimeImmutable}
+     */
+    private function resolveTemporalBounds(array $media): array
+    {
+        $start = null;
+        $end   = null;
+
+        foreach ($media as $item) {
+            $taken = $item->getTakenAt();
+            if (!$taken instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            if ($start === null || $taken < $start) {
+                $start = $taken;
+            }
+
+            if ($end === null || $taken > $end) {
+                $end = $taken;
+            }
+        }
+
+        return ['start' => $start, 'end' => $end];
+    }
+
+    /**
+     * @param list<Media> $media
+     *
+     * @return array{photos:int,videos:int}
+     */
+    private function countMembersByKind(array $media): array
+    {
+        $photos = 0;
+        $videos = 0;
+
+        foreach ($media as $item) {
+            if ($item->isVideo()) {
+                ++$videos;
+                continue;
+            }
+
+            ++$photos;
+        }
+
+        return ['photos' => $photos, 'videos' => $videos];
+    }
+
+    /**
+     * @param list<Media> $media
+     */
+    private function resolveDominantLocation(array $media): ?Location
+    {
+        $counts = [];
+
+        foreach ($media as $item) {
+            $location = $item->getLocation();
+            if (!$location instanceof Location) {
+                continue;
+            }
+
+            $id = $location->getId();
+            $key = $id !== null ? 'id_' . $id : 'obj_' . spl_object_id($location);
+
+            if (!isset($counts[$key])) {
+                $counts[$key] = ['location' => $location, 'count' => 0];
+            }
+
+            ++$counts[$key]['count'];
+        }
+
+        $dominant = null;
+        foreach ($counts as $entry) {
+            if ($dominant === null || $entry['count'] > $dominant['count']) {
+                $dominant = $entry;
+            }
+        }
+
+        return $dominant['location'] ?? null;
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     */
+    private function resolveAlgorithmVersion(array $params): ?string
+    {
+        $candidates = [
+            $params['algorithm_version'] ?? null,
+            $params['algorithmVersion'] ?? null,
+            $params['version'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                return $candidate;
+            }
+
+            if (is_int($candidate)) {
+                return (string) $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     */
+    private function computeConfigHash(array $params): ?string
+    {
+        if ($params === []) {
+            return null;
+        }
+
+        $normalized = $this->normaliseParamsForHash($params);
+        $encoded = json_encode($normalized);
+        if ($encoded === false) {
+            return null;
+        }
+
+        return sha1($encoded);
+    }
+
+    /**
+     * @param array<string|int, mixed> $value
+     *
+     * @return array<string|int, mixed>
+     */
+    private function normaliseParamsForHash(array $value): array
+    {
+        if (array_is_list($value)) {
+            foreach ($value as $index => $entry) {
+                if (is_array($entry)) {
+                    $value[$index] = $this->normaliseParamsForHash($entry);
+                }
+            }
+
+            return $value;
+        }
+
+        ksort($value);
+
+        foreach ($value as $key => $entry) {
+            if (is_array($entry)) {
+                $value[$key] = $this->normaliseParamsForHash($entry);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function numericOrNull($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_float($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
     }
 
     /**

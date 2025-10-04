@@ -18,7 +18,9 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
@@ -226,11 +228,7 @@ final class VacationScoreCalculatorTest extends TestCase
      */
     private function clampMemberList(array $memberIds, int $limit): array
     {
-        $service = new ClusterPersistenceService(
-            $this->createStub(EntityManagerInterface::class),
-            250,
-            $limit,
-        );
+        $service = $this->createPersistenceService($limit);
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $method     = $reflection->getMethod('clampMembers');
@@ -298,5 +296,23 @@ final class VacationScoreCalculatorTest extends TestCase
             'lastGpsMedia' => $last,
             'isSynthetic' => false,
         ];
+    }
+
+    private function createPersistenceService(int $maxMembers = 20): ClusterPersistenceService
+    {
+        $lookup = new class implements MemberMediaLookupInterface {
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                return [];
+            }
+        };
+
+        return new ClusterPersistenceService(
+            $this->createStub(EntityManagerInterface::class),
+            $lookup,
+            $this->createStub(CoverPickerInterface::class),
+            250,
+            $maxMembers,
+        );
     }
 }
