@@ -31,8 +31,8 @@ final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterf
 
     public function process(array $exif, Media $media): void
     {
-        $offset = $this->accessor->parseOffsetMinutes($exif);
         $takenAt = $this->accessor->findDate($exif);
+        $offset  = $this->accessor->parseOffsetMinutes($exif);
 
         if ($takenAt !== null) {
             if ($offset !== null) {
@@ -49,6 +49,7 @@ final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterf
         }
 
         $subSeconds = $this->accessor->intOrNull($exif['EXIF']['SubSecTimeOriginal'] ?? null);
+
         if ($subSeconds !== null) {
             $media->setSubSecOriginal($subSeconds);
         }
