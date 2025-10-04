@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function floor;
+use function hash;
 use function sprintf;
 
 /**
@@ -25,6 +26,8 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
     public function __construct(
         private float $homeLat,
         private float $homeLon,
+        private float $homeRadiusKm,
+        private string $homeVersionHash,
         private float $cellDegrees = 0.01,
     ) {
     }
@@ -36,14 +39,25 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
 
     public function extract(string $filepath, Media $media): Media
     {
-        $lat = (float) $media->getGpsLat();
-        $lon = (float) $media->getGpsLon();
+        $desiredHash = $this->computeHomeConfigHash();
+        $currentHash = $media->getHomeConfigHash();
 
-        $cell = $this->cellKey($lat, $lon, $this->cellDegrees);
-        $media->setGeoCell8($cell);
+        $shouldUpdateHomeMetrics = $desiredHash !== $currentHash
+            || $media->getGeoCell8() === null
+            || $media->getDistanceKmFromHome() === null;
 
-        $distM = MediaMath::haversineDistanceInMeters($this->homeLat, $this->homeLon, $lat, $lon);
-        $media->setDistanceKmFromHome($distM / 1000.0);
+        if ($shouldUpdateHomeMetrics) {
+            $lat = (float) $media->getGpsLat();
+            $lon = (float) $media->getGpsLon();
+
+            $cell = $this->cellKey($lat, $lon, $this->cellDegrees);
+            $media->setGeoCell8($cell);
+
+            $distM = MediaMath::haversineDistanceInMeters($this->homeLat, $this->homeLon, $lat, $lon);
+            $media->setDistanceKmFromHome($distM / 1000.0);
+
+            $media->setHomeConfigHash($desiredHash);
+        }
 
         $media->setNeedsGeocode($media->getLocation() === null);
 
@@ -56,5 +70,13 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
         $rlon = $gd * floor($lon / $gd);
 
         return sprintf('%.4f,%.4f', $rlat, $rlon);
+    }
+
+    private function computeHomeConfigHash(): string
+    {
+        return hash(
+            'sha256',
+            sprintf('%.8f|%.8f|%.8f|%s', $this->homeLat, $this->homeLon, $this->homeRadiusKm, $this->homeVersionHash)
+        );
     }
 }

@@ -296,6 +296,12 @@ class Media
     private ?float $distanceKmFromHome = null;
 
     /**
+     * Hash describing the configuration used for home distance calculations.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $homeConfigHash = null;
+
+    /**
      * Identifier linking related burst captures.
      */
     #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
@@ -1322,6 +1328,24 @@ class Media
     public function setDistanceKmFromHome(?float $v): void
     {
         $this->distanceKmFromHome = $v;
+    }
+
+    /**
+     * Returns the hash describing the home configuration.
+     */
+    public function getHomeConfigHash(): ?string
+    {
+        return $this->homeConfigHash;
+    }
+
+    /**
+     * Stores the hash describing the home configuration.
+     *
+     * @param string|null $hash Hash computed from the home parameters.
+     */
+    public function setHomeConfigHash(?string $hash): void
+    {
+        $this->homeConfigHash = $hash;
     }
 
     /**
