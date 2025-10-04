@@ -14,18 +14,24 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing\Stage;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
-use MagicSunday\Memories\Service\Indexing\Stage\AbstractExtractorStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
+use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
+use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
+use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Console\Output\BufferedOutput;
 
-final class MetadataExtractionStageTest extends TestCase
+final class MetadataStageTest extends TestCase
 {
     #[Test]
-    public function updatesIndexMetadataOnSuccess(): void
+    public function processUpdatesMetadataOnSuccess(): void
     {
         $media = $this->makeMedia(
             id: 42,
@@ -33,18 +39,25 @@ final class MetadataExtractionStageTest extends TestCase
         );
         $media->setIndexLog('stale entry');
 
-        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
-        $extractor->expects(self::once())
+        $exif = $this->createMock(ExifMetadataExtractor::class);
+        $exif->expects(self::once())
             ->method('supports')
             ->with('/library/image.jpg', $media)
             ->willReturn(true);
-        $extractor->expects(self::once())
+        $exif->expects(self::once())
             ->method('extract')
             ->with('/library/image.jpg', $media)
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $stage   = new TestExtractorStage([$extractor]);
-        $output  = new BufferedOutput();
+        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
+        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
+        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
+        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
+        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+
+        $stage  = new MetadataStage($exif, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
+        $output = new BufferedOutput();
+
         $context = MediaIngestionContext::create(
             '/library/image.jpg',
             false,
@@ -63,14 +76,14 @@ final class MetadataExtractionStageTest extends TestCase
     }
 
     #[Test]
-    public function writesFailureLogWhenExtractionThrows(): void
+    public function processLogsFailureWhenExtractorThrows(): void
     {
         $media = $this->makeMedia(
             id: 7,
             path: '/library/broken.jpg',
         );
 
-        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor = $this->createMock(ExifMetadataExtractor::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/broken.jpg', $media)
@@ -79,7 +92,13 @@ final class MetadataExtractionStageTest extends TestCase
             ->method('extract')
             ->willThrowException(new RuntimeException('boom'));
 
-        $stage  = new TestExtractorStage([$extractor]);
+        $xmp              = $this->createUnusedExtractor(XmpIptcExtractor::class);
+        $fileStat         = $this->createUnusedExtractor(FileStatMetadataExtractor::class);
+        $filenameKeyword  = $this->createUnusedExtractor(FilenameKeywordExtractor::class);
+        $appleHeuristics  = $this->createUnusedExtractor(AppleHeuristicsExtractor::class);
+        $ffprobe          = $this->createUnusedExtractor(FfprobeMetadataExtractor::class);
+
+        $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -99,15 +118,14 @@ final class MetadataExtractionStageTest extends TestCase
 
         $log = $media->getIndexLog();
         self::assertIsString($log);
-        self::assertStringContainsString('RuntimeException', $log);
-        self::assertStringContainsString('boom', $log);
+        self::assertSame('RuntimeException: boom', $log);
 
         $buffer = $output->fetch();
-        self::assertStringContainsString('Metadata extraction failed', $buffer);
+        self::assertStringContainsString('Metadata extraction failed for /library/broken.jpg: boom', $buffer);
     }
 
     #[Test]
-    public function skipsExtractionWhenFeatureVersionMatchesAndNotForced(): void
+    public function processSkipsWhenFeatureVersionMatchesAndNotForced(): void
     {
         $media = $this->makeMedia(
             id: 17,
@@ -118,12 +136,16 @@ final class MetadataExtractionStageTest extends TestCase
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexLog('keep this');
 
-        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
-        $extractor->expects(self::never())->method('supports');
-        $extractor->expects(self::never())
-            ->method('extract');
+        $extractors = [
+            $this->createUnusedExtractor(ExifMetadataExtractor::class),
+            $this->createUnusedExtractor(XmpIptcExtractor::class),
+            $this->createUnusedExtractor(FileStatMetadataExtractor::class),
+            $this->createUnusedExtractor(FilenameKeywordExtractor::class),
+            $this->createUnusedExtractor(AppleHeuristicsExtractor::class),
+            $this->createUnusedExtractor(FfprobeMetadataExtractor::class),
+        ];
 
-        $stage  = new TestExtractorStage([$extractor]);
+        $stage  = new MetadataStage(...$extractors);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -143,7 +165,7 @@ final class MetadataExtractionStageTest extends TestCase
     }
 
     #[Test]
-    public function forcesExtractionWhenFlagIsSet(): void
+    public function processRunsExtractorsWhenForceFlagSet(): void
     {
         $media = $this->makeMedia(
             id: 21,
@@ -154,18 +176,22 @@ final class MetadataExtractionStageTest extends TestCase
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexLog('stale warning');
 
-        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor = $this->createMock(ExifMetadataExtractor::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/force.jpg', $media)
             ->willReturn(true);
         $extractor->expects(self::once())
             ->method('extract')
-            ->willReturnCallback(static function (string $file, Media $entity): Media {
-                return $entity;
-            });
+            ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $stage  = new TestExtractorStage([$extractor]);
+        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
+        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
+        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
+        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
+        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+
+        $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -188,14 +214,14 @@ final class MetadataExtractionStageTest extends TestCase
     }
 
     #[Test]
-    public function keepsWarningLogOnSuccessfulExtraction(): void
+    public function processNormalizesEmptyLogToNull(): void
     {
         $media = $this->makeMedia(
             id: 32,
             path: '/library/warn.jpg',
         );
 
-        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor = $this->createMock(ExifMetadataExtractor::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/warn.jpg', $media)
@@ -203,12 +229,18 @@ final class MetadataExtractionStageTest extends TestCase
         $extractor->expects(self::once())
             ->method('extract')
             ->willReturnCallback(static function (string $file, Media $entity): Media {
-                $entity->setIndexLog('warning: exif missing');
+                $entity->setIndexLog('');
 
                 return $entity;
             });
 
-        $stage  = new TestExtractorStage([$extractor]);
+        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
+        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
+        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
+        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
+        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+
+        $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -225,30 +257,43 @@ final class MetadataExtractionStageTest extends TestCase
         self::assertSame($media, $result->getMedia());
         self::assertSame(MetadataFeatureVersion::PIPELINE_VERSION, $media->getFeatureVersion());
         self::assertInstanceOf(DateTimeImmutable::class, $media->getIndexedAt());
-        self::assertSame('warning: exif missing', $media->getIndexLog());
+        self::assertNull($media->getIndexLog());
     }
-}
 
-final class TestExtractorStage extends AbstractExtractorStage
-{
     /**
-     * @param iterable<SingleMetadataExtractorInterface> $extractors
+     * @template T of SingleMetadataExtractorInterface
+     *
+     * @param class-string<T> $class
+     *
+     * @return T&SingleMetadataExtractorInterface
      */
-    public function __construct(
-        private readonly iterable $extractors,
-    ) {
+    private function createRejectingExtractor(string $class): SingleMetadataExtractorInterface
+    {
+        $mock = $this->createMock($class);
+        $mock->expects(self::once())
+            ->method('supports')
+            ->willReturn(false);
+        $mock->expects(self::never())
+            ->method('extract');
+
+        return $mock;
     }
 
-    public function process(MediaIngestionContext $context): MediaIngestionContext
+    /**
+     * @template T of SingleMetadataExtractorInterface
+     *
+     * @param class-string<T> $class
+     *
+     * @return T&SingleMetadataExtractorInterface
+     */
+    private function createUnusedExtractor(string $class): SingleMetadataExtractorInterface
     {
-        if ($context->isSkipped()) {
-            return $context;
-        }
+        $mock = $this->createMock($class);
+        $mock->expects(self::never())
+            ->method('supports');
+        $mock->expects(self::never())
+            ->method('extract');
 
-        if ($this->shouldSkipExtraction($context)) {
-            return $context;
-        }
-
-        return $this->runExtractors($context, $this->extractors);
+        return $mock;
     }
 }

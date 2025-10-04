@@ -15,13 +15,39 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
-use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
-use MagicSunday\Memories\Service\Indexing\Stage\AbstractExtractorStage;
+use MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage;
+use MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
+use MagicSunday\Memories\Service\Indexing\Stage\FacesStage;
+use MagicSunday\Memories\Service\Indexing\Stage\GeoStage;
+use MagicSunday\Memories\Service\Indexing\Stage\HashStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
+use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
+use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
+use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
+use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
+use MagicSunday\Memories\Service\Metadata\BurstDetector;
+use MagicSunday\Memories\Service\Metadata\BurstIndexExtractor;
+use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
+use MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor;
+use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
+use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
+use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\FacePresenceDetector;
+use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
+use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
+use MagicSunday\Memories\Service\Metadata\LivePairLinker;
+use MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\SolarEnricher;
+use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
+use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
+use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -70,6 +96,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->getMock();
         $repository->expects(self::once())
             ->method('findOneBy')
+            ->with(['checksum' => $checksum])
             ->willReturn($media);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -78,15 +105,16 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->with(Media::class)
             ->willReturn($repository);
         $entityManager->expects(self::never())->method('persist');
-
-        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
-        $metadataExtractor->expects(self::never())->method('supports');
-        $metadataExtractor->expects(self::never())->method('extract');
+        $entityManager->expects(self::never())->method('flush');
+        $entityManager->expects(self::never())->method('clear');
 
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
+        $extractors = $this->createExtractorMap();
+        $this->expectNoExtractorInteractions($extractors);
+
+        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, false, $output);
 
@@ -95,10 +123,11 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     }
 
     #[Test]
-    public function processPersistsAndFlushesOnFinalize(): void
+    public function processPersistsMediaAndRunsExtractorsInOrder(): void
     {
-        $path   = $this->createTempFile('jpg', 'content');
-        $output = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
+        $path     = $this->createTempFile('jpg', 'content');
+        $checksum = (string) hash_file('sha256', $path);
+        $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
@@ -106,6 +135,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->getMock();
         $repository->expects(self::once())
             ->method('findOneBy')
+            ->with(['checksum' => $checksum])
             ->willReturn(null);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -113,27 +143,28 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->method('getRepository')
             ->with(Media::class)
             ->willReturn($repository);
-        $entityManager->expects(self::once())->method('persist');
-        $entityManager->expects(self::once())->method('flush');
-        $entityManager->expects(self::never())->method('clear');
-
-        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
-        $metadataExtractor->expects(self::once())
-            ->method('supports')
-            ->willReturn(true);
-        $metadataExtractor->expects(self::once())
-            ->method('extract')
-            ->willReturnCallback(static fn (string $file, Media $media): Media => $media);
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::isInstanceOf(Media::class));
+        $entityManager->expects(self::once())
+            ->method('flush');
+        $entityManager->expects(self::never())
+            ->method('clear');
 
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
+        $extractors = $this->createExtractorMap();
+        $callLog    = [];
+        $this->configureExtractorOrderExpectations($extractors, $callLog);
+
+        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, false, $output);
         $pipeline->finalize(false);
 
         self::assertInstanceOf(Media::class, $result);
+        self::assertSame($this->expectedExtractorOrder(), $callLog);
     }
 
     #[Test]
@@ -146,31 +177,180 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $entityManager->expects(self::never())->method('getRepository');
         $entityManager->expects(self::never())->method('persist');
 
-        $metadataExtractor = $this->createMock(SingleMetadataExtractorInterface::class);
-        $metadataExtractor->expects(self::never())->method('supports');
-        $metadataExtractor->expects(self::never())->method('extract');
-
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $thumbnailService->expects(self::never())->method('generateAll');
 
-        $pipeline = $this->createPipeline($entityManager, $metadataExtractor, $thumbnailService, ['jpg'], []);
+        $extractors = $this->createExtractorMap();
+        $this->expectNoExtractorInteractions($extractors);
+
+        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
 
         $result = $pipeline->process($path, false, false, false, true, $output);
 
         self::assertNull($result);
     }
 
+    /**
+     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
+     */
+    private function expectNoExtractorInteractions(array $extractors): void
+    {
+        foreach ($extractors as $group) {
+            foreach ($group as $mock) {
+                $mock->expects(self::never())->method('supports');
+                $mock->expects(self::never())->method('extract');
+            }
+        }
+    }
+
+    /**
+     * @param array<string, array<string, SingleMetadataExtractorInterface>> $extractors
+     * @param list<string>                                                   $callLog
+     */
+    private function configureExtractorOrderExpectations(array $extractors, array &$callLog): void
+    {
+        foreach ($this->expectedExtractorGroups() as $group => $names) {
+            foreach ($names as $name) {
+                $identifier = $group . '.' . $name;
+                $extractor  = $extractors[$group][$name];
+
+                $extractor->expects(self::once())
+                    ->method('supports')
+                    ->willReturnCallback(static function (string $file, Media $media) use (&$callLog, $identifier): bool {
+                        $callLog[] = $identifier . '.supports';
+
+                        return true;
+                    });
+                $extractor->expects(self::once())
+                    ->method('extract')
+                    ->willReturnCallback(static function (string $file, Media $media) use (&$callLog, $identifier): Media {
+                        $callLog[] = $identifier . '.extract';
+
+                        return $media;
+                    });
+            }
+        }
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function expectedExtractorGroups(): array
+    {
+        return [
+            'metadata' => ['exif', 'xmp', 'fileStat', 'filenameKeyword', 'appleHeuristics', 'ffprobe'],
+            'time'     => ['normalizer', 'calendar', 'daypart', 'solar'],
+            'geo'      => ['feature'],
+            'quality'  => ['vision'],
+            'content'  => ['classifier'],
+            'hash'     => ['perceptual'],
+            'burst'    => ['detector', 'livePair', 'index'],
+            'faces'    => ['detector'],
+            'scene'    => ['clip'],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function expectedExtractorOrder(): array
+    {
+        $order = [];
+        foreach ($this->expectedExtractorGroups() as $group => $names) {
+            foreach ($names as $name) {
+                $order[] = $group . '.' . $name . '.supports';
+                $order[] = $group . '.' . $name . '.extract';
+            }
+        }
+
+        return $order;
+    }
+
+    /**
+     * @return array<string, array<string, SingleMetadataExtractorInterface>>
+     */
+    private function createExtractorMap(): array
+    {
+        return [
+            'metadata' => [
+                'exif'             => $this->createMock(ExifMetadataExtractor::class),
+                'xmp'              => $this->createMock(XmpIptcExtractor::class),
+                'fileStat'         => $this->createMock(FileStatMetadataExtractor::class),
+                'filenameKeyword'  => $this->createMock(FilenameKeywordExtractor::class),
+                'appleHeuristics'  => $this->createMock(AppleHeuristicsExtractor::class),
+                'ffprobe'          => $this->createMock(FfprobeMetadataExtractor::class),
+            ],
+            'time' => [
+                'normalizer' => $this->createMock(TimeNormalizer::class),
+                'calendar'   => $this->createMock(CalendarFeatureEnricher::class),
+                'daypart'    => $this->createMock(DaypartEnricher::class),
+                'solar'      => $this->createMock(SolarEnricher::class),
+            ],
+            'geo' => [
+                'feature' => $this->createMock(GeoFeatureEnricher::class),
+            ],
+            'quality' => [
+                'vision' => $this->createMock(VisionSignatureExtractor::class),
+            ],
+            'content' => [
+                'classifier' => $this->createMock(ContentClassifierExtractor::class),
+            ],
+            'hash' => [
+                'perceptual' => $this->createMock(PerceptualHashExtractor::class),
+            ],
+            'burst' => [
+                'detector' => $this->createMock(BurstDetector::class),
+                'livePair' => $this->createMock(LivePairLinker::class),
+                'index'    => $this->createMock(BurstIndexExtractor::class),
+            ],
+            'faces' => [
+                'detector' => $this->createMock(FacePresenceDetector::class),
+            ],
+            'scene' => [
+                'clip' => $this->createMock(ClipSceneTagExtractor::class),
+            ],
+        ];
+    }
+
+    /**
+     * @param list<string>|null $imageExtensions
+     * @param list<string>|null $videoExtensions
+     */
     private function createPipeline(
         EntityManagerInterface $entityManager,
-        SingleMetadataExtractorInterface $metadataExtractor,
         ThumbnailServiceInterface $thumbnailService,
+        array $extractors,
         ?array $imageExtensions,
         ?array $videoExtensions
     ): DefaultMediaIngestionPipeline {
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
             new DuplicateHandlingStage($entityManager),
-            new PipelineTestExtractorStage([$metadataExtractor]),
+            new MetadataStage(
+                $extractors['metadata']['exif'],
+                $extractors['metadata']['xmp'],
+                $extractors['metadata']['fileStat'],
+                $extractors['metadata']['filenameKeyword'],
+                $extractors['metadata']['appleHeuristics'],
+                $extractors['metadata']['ffprobe'],
+            ),
+            new TimeStage(
+                $extractors['time']['normalizer'],
+                $extractors['time']['calendar'],
+                $extractors['time']['daypart'],
+                $extractors['time']['solar'],
+            ),
+            new GeoStage($extractors['geo']['feature']),
+            new QualityStage($extractors['quality']['vision']),
+            new ContentKindStage($extractors['content']['classifier']),
+            new HashStage($extractors['hash']['perceptual']),
+            new BurstLiveStage(
+                $extractors['burst']['detector'],
+                $extractors['burst']['livePair'],
+                $extractors['burst']['index'],
+            ),
+            new FacesStage($extractors['faces']['detector']),
+            new SceneStage($extractors['scene']['clip']),
             new ThumbnailGenerationStage($thumbnailService),
             new PersistenceBatchStage($entityManager, 10),
         ]);
@@ -183,29 +363,5 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $this->tempFiles[] = $path;
 
         return $path;
-    }
-}
-
-final class PipelineTestExtractorStage extends AbstractExtractorStage
-{
-    /**
-     * @param iterable<SingleMetadataExtractorInterface> $extractors
-     */
-    public function __construct(
-        private readonly iterable $extractors,
-    ) {
-    }
-
-    public function process(MediaIngestionContext $context): MediaIngestionContext
-    {
-        if ($context->isSkipped()) {
-            return $context;
-        }
-
-        if ($this->shouldSkipExtraction($context)) {
-            return $context;
-        }
-
-        return $this->runExtractors($context, $this->extractors);
     }
 }
