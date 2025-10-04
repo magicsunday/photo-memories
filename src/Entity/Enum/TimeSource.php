@@ -18,5 +18,6 @@ enum TimeSource: string
 {
     case EXIF = 'EXIF';
     case VIDEO_QUICKTIME = 'VIDEO_QUICKTIME';
+    case FILENAME = 'FILENAME';
     case FILE_MTIME = 'FILE_MTIME';
 }

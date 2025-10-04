@@ -128,6 +128,12 @@ services:
             $homeLon: '%env(float:MEMORIES_HOME_LON)%'
             $cellDegrees: 0.01
 
+    MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser: ~
+
+    MagicSunday\Memories\Service\Metadata\TimeNormalizer:
+        arguments:
+            $defaultTimezone: '%memories.timezone.default%'
+
     MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher: ~
 
     MagicSunday\Memories\Service\Metadata\DaypartEnricher: ~
@@ -170,6 +176,7 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\BurstIndexExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
+                - '@MagicSunday\Memories\Service\Metadata\TimeNormalizer'
                 - '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
