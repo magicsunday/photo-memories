@@ -23,8 +23,13 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_slice;
 use function count;
 use function implode;
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_string;
 use function max;
 use function number_format;
 use function sprintf;
@@ -141,6 +146,8 @@ final class FeedPreviewCommand extends Command
 
         foreach ($items as $it) {
             ++$idx;
+            $params = $it->getParams();
+            $tagColumn = $this->formatSceneTags($params['scene_tags'] ?? null);
             $rows[] = [
                 (string) $idx,
                 $it->getAlgorithm(),
@@ -150,16 +157,56 @@ final class FeedPreviewCommand extends Command
                 (string) count($it->getMemberIds()),
                 $it->getCoverMediaId() !== null ? (string) $it->getCoverMediaId() : '–',
                 $showMembers ? implode(',', $it->getMemberIds()) : '–',
+                $tagColumn,
             ];
         }
 
-        $io->table(
-            ['#', 'Strategie', 'Titel', 'Untertitel', 'Score', 'Anz.', 'Cover-ID', $showMembers ? 'Mitglieder' : '–'],
-            $rows
-        );
+        $headers = ['#', 'Strategie', 'Titel', 'Untertitel', 'Score', 'Anz.', 'Cover-ID'];
+        $headers[] = $showMembers ? 'Mitglieder' : '–';
+        $headers[] = 'Tags';
+
+        $io->table($headers, $rows);
 
         $io->success(sprintf('%d Feed-Items angezeigt.', count($items)));
 
         return Command::SUCCESS;
+}
+
+    /**
+     * @param mixed $value
+     */
+    private function formatSceneTags($value): string
+    {
+        if (!is_array($value)) {
+            return '–';
+        }
+
+        $parts = [];
+        foreach (array_slice($value, 0, 3) as $tag) {
+            if (!is_array($tag)) {
+                continue;
+            }
+
+            $label = $tag['label'] ?? null;
+            $score = $tag['score'] ?? null;
+
+            if (!is_string($label)) {
+                continue;
+            }
+
+            $text = $label;
+            if (is_float($score) || is_int($score)) {
+                $formatted = number_format((float) $score, 2, ',', '');
+                $text      = sprintf('%s (%s)', $label, $formatted);
+            }
+
+            $parts[] = $text;
+        }
+
+        if ($parts === []) {
+            return '–';
+        }
+
+        return implode(', ', $parts);
     }
 }

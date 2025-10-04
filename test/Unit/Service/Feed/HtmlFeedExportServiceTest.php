@@ -151,7 +151,21 @@ final class HtmlFeedExportServiceTest extends TestCase
             [1, 2],
         );
 
-        $feedItem = new MemoryFeedItem('algo', 'Titel', 'Untertitel', 1, [1, 2], 0.9, ['group' => 'familie']);
+        $feedItem = new MemoryFeedItem(
+            'algo',
+            'Titel',
+            'Untertitel',
+            1,
+            [1, 2],
+            0.9,
+            [
+                'group'       => 'familie',
+                'scene_tags'  => [
+                    ['label' => 'Familie', 'score' => 0.92],
+                    ['label' => 'Outdoor', 'score' => 0.81],
+                ],
+            ]
+        );
 
         $clusterRepository = $this->createMock(ClusterRepository::class);
         $clusterRepository->expects(self::once())
@@ -183,6 +197,10 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         $mediaOne = $this->makeMedia(1, $baseDir . '/media-1.jpg');
         $mediaOne->setThumbnails([512 => $thumbSource]);
+        $mediaOne->setSceneTags([
+            ['label' => 'Familie', 'score' => 0.92],
+            ['label' => 'Outdoor', 'score' => 0.81],
+        ]);
 
         $mediaTwo = $this->makeMedia(2, $baseDir . '/media-2.jpg');
         $mediaTwo->setThumbnails(null);
@@ -226,6 +244,9 @@ final class HtmlFeedExportServiceTest extends TestCase
         $indexHtml = file_get_contents($result->getIndexFilePath());
         self::assertStringContainsString('Titel', $indexHtml);
         self::assertStringContainsString('Untertitel', $indexHtml);
+        self::assertStringContainsString('Familie (0,92)', $indexHtml);
+        self::assertStringContainsString('Outdoor (0,81)', $indexHtml);
+        self::assertStringContainsString('Szene: Familie (0,92', $indexHtml);
     }
 
     private function createTempDir(): string
