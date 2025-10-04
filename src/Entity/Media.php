@@ -29,6 +29,7 @@ use function count;
         new ORM\Index(name: 'idx_checksum', columns: ['checksum']),
         new ORM\Index(name: 'idx_phash64', columns: ['phash64']),
         new ORM\Index(name: 'idx_live_pair_checksum', columns: ['livePairChecksum']),
+        new ORM\Index(name: 'idx_media_live_pair_id', columns: ['livePairMediaId']),
         new ORM\Index(name: 'idx_media_geocell8', columns: ['geoCell8']),
         new ORM\Index(name: 'idx_media_phash_prefix', columns: ['phashPrefix']),
         new ORM\Index(name: 'idx_media_burst_taken', columns: ['burstUuid', 'takenAt']),
