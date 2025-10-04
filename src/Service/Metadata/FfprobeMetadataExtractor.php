@@ -11,6 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use DateTimeImmutable;
+use DateTimeZone;
+use Exception;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 
 use function array_map;
@@ -19,12 +23,16 @@ use function count;
 use function escapeshellarg;
 use function escapeshellcmd;
 use function explode;
+use function intdiv;
+use function is_array;
 use function is_file;
 use function is_string;
+use function json_decode;
 use function shell_exec;
 use function sprintf;
 use function str_contains;
 use function str_starts_with;
+use function strtolower;
 
 final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
 {
@@ -81,7 +89,45 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             }
         }
 
+        if ($this->shouldExtractQuickTimeMetadata($media)) {
+            $this->applyQuickTimeMetadata($filepath, $media);
+        }
+
         return $media;
+    }
+
+    private function shouldExtractQuickTimeMetadata(Media $media): bool
+    {
+        $mime = $media->getMime();
+
+        return $mime !== null && strtolower($mime) === 'video/quicktime';
+    }
+
+    private function applyQuickTimeMetadata(string $filepath, Media $media): void
+    {
+        $currentSource = $media->getTimeSource();
+        if ($currentSource !== null && $currentSource !== TimeSource::FILE_MTIME) {
+            return;
+        }
+
+        $capture = $this->probeQuickTimeCapture($filepath);
+        if ($capture === null) {
+            return;
+        }
+
+        [$takenAt, $tzId] = $capture;
+
+        $media->setTakenAt($takenAt);
+        $media->setCapturedLocal($takenAt);
+        if ($tzId !== null) {
+            $media->setTzId($tzId);
+        }
+
+        if ($media->getTimezoneOffsetMin() === null) {
+            $media->setTimezoneOffsetMin(intdiv($takenAt->getOffset(), 60));
+        }
+
+        $media->setTimeSource(TimeSource::VIDEO_QUICKTIME);
     }
 
     private function parseFps(?string $v): ?float
@@ -107,5 +153,61 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         return (float) $v;
+    }
+
+    /**
+     * @return array{0: DateTimeImmutable, 1: ?string}|null
+     */
+    private function probeQuickTimeCapture(string $filepath): ?array
+    {
+        $cmd = sprintf(
+            '%s -v error -show_entries format_tags=creation_time:format_tags=com.apple.quicktime.creationdate -of json %s',
+            escapeshellcmd($this->ffprobePath),
+            escapeshellarg($filepath),
+        );
+
+        $out = @shell_exec($cmd);
+        if (!is_string($out) || $out === '') {
+            return null;
+        }
+
+        $data = json_decode($out, true);
+        if (!is_array($data)) {
+            return null;
+        }
+
+        $format = $data['format'] ?? null;
+        if (!is_array($format)) {
+            return null;
+        }
+
+        $tags = $format['tags'] ?? null;
+        if (!is_array($tags)) {
+            return null;
+        }
+
+        $candidates = [
+            $tags['com.apple.quicktime.creationdate'] ?? null,
+            $tags['creation_time'] ?? null,
+        ];
+
+        foreach ($candidates as $value) {
+            if (!is_string($value) || $value === '') {
+                continue;
+            }
+
+            try {
+                $instant = new DateTimeImmutable($value);
+            } catch (Exception) {
+                continue;
+            }
+
+            $timezone = $instant->getTimezone();
+            $tzName   = $timezone instanceof DateTimeZone ? $timezone->getName() : null;
+
+            return [$instant, $tzName];
+        }
+
+        return null;
     }
 }

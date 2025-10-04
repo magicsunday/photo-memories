@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 
 use function acos;
 use function asin;
@@ -33,39 +34,42 @@ use function sin;
 final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 {
     public function __construct(
+        private CaptureTimeResolver $captureTimeResolver,
         private int $goldenMinutes = 60,
     ) {
     }
 
     public function supports(string $filepath, Media $media): bool
     {
-        return $media->getTakenAt() instanceof DateTimeImmutable
+        return ($media->getTakenAt() instanceof DateTimeImmutable
+                || $media->getCapturedLocal() instanceof DateTimeImmutable)
             && $media->getGpsLat() !== null
             && $media->getGpsLon() !== null;
     }
 
     public function extract(string $filepath, Media $media): Media
     {
-        $t = $media->getTakenAt();
-        if (!$t instanceof DateTimeImmutable) {
+        $local = $this->captureTimeResolver->resolve($media);
+        if (!$local instanceof DateTimeImmutable) {
             return $media;
         }
 
         $lat = (float) $media->getGpsLat();
         $lon = (float) $media->getGpsLon();
 
-        $sunUtc = $this->sunTimesUtc($t, $lat, $lon);
+        $sunUtc = $this->sunTimesUtc($local, $lat, $lon);
         if ($sunUtc === null) {
             return $media;
         }
 
-        // Compare in "local time": add the EXIF offset minutes to both sides.
-        $offsetMin = $media->getTimezoneOffsetMin() ?? 0;
-        $offsetSec = $offsetMin * 60;
+        $offsetSec = $local->getOffset();
+        if ($offsetSec === 0 && $media->getTimezoneOffsetMin() !== null) {
+            $offsetSec = $media->getTimezoneOffsetMin() * 60;
+        }
 
         $sunriseLocal = $sunUtc['sunrise'] + $offsetSec;
         $sunsetLocal  = $sunUtc['sunset'] + $offsetSec;
-        $photoLocal   = $t->getTimestamp() + $offsetSec;
+        $photoLocal   = $local->getTimestamp();
 
         $delta    = $this->goldenMinutes * 60;
         $isGolden = ($photoLocal >= $sunriseLocal && $photoLocal <= ($sunriseLocal + $delta))

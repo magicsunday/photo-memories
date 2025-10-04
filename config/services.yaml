@@ -153,6 +153,7 @@ services:
             $extractors:
                 - '@MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\XmpIptcExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'

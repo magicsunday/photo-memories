@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata\Exif\Processor;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface;
@@ -34,14 +35,24 @@ final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterf
         $takenAt = $this->accessor->findDate($exif);
         $offset  = $this->accessor->parseOffsetMinutes($exif);
 
+        $timezone = null;
+
         if ($takenAt !== null) {
             if ($offset !== null) {
                 $absOffset = abs($offset);
                 $timezone = new DateTimeZone(sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv($absOffset, 60), $absOffset % 60));
-                $takenAt = new DateTimeImmutable($takenAt->format('Y-m-d H:i:s'), $timezone);
+                $takenAt  = new DateTimeImmutable($takenAt->format('Y-m-d H:i:s'), $timezone);
+            } else {
+                $timezone = $takenAt->getTimezone();
             }
 
             $media->setTakenAt($takenAt);
+            $media->setCapturedLocal($takenAt);
+            $media->setTimeSource(TimeSource::EXIF);
+
+            if ($timezone instanceof DateTimeZone && ($offset !== null || $media->getTzId() === null)) {
+                $media->setTzId($timezone->getName());
+            }
         }
 
         if ($offset !== null) {
