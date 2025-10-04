@@ -1662,7 +1662,9 @@ class Media
      */
     public function setQualityScore(?float $score): void
     {
-        $this->qualityScore = $score;
+        $this->qualityScore = $score === null
+            ? null
+            : max(0.0, min(1.0, $score));
     }
 
     /**
@@ -1680,7 +1682,9 @@ class Media
      */
     public function setQualityExposure(?float $score): void
     {
-        $this->qualityExposure = $score;
+        $this->qualityExposure = $score === null
+            ? null
+            : max(0.0, min(1.0, $score));
     }
 
     /**
@@ -1698,7 +1702,9 @@ class Media
      */
     public function setQualityNoise(?float $score): void
     {
-        $this->qualityNoise = $score;
+        $this->qualityNoise = $score === null
+            ? null
+            : max(0.0, min(1.0, $score));
     }
 
     /**
