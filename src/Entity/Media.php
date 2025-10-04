@@ -340,6 +340,24 @@ class Media
     private ?self $livePairMedia = null;
 
     /**
+     * Indicates whether the media represents a RAW capture.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isRaw = false;
+
+    /**
+     * Indicates whether the media container uses the HEIC format.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isHeic = false;
+
+    /**
+     * Indicates whether the media payload is encoded with HEVC.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $isHevc = false;
+
+    /**
      * Boolean flag indicating whether the media is a video clip.
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
@@ -1492,6 +1510,60 @@ class Media
     public function setLivePairMedia(?self $media): void
     {
         $this->livePairMedia = $media;
+    }
+
+    /**
+     * Indicates whether the media represents a RAW capture.
+     */
+    public function isRaw(): bool
+    {
+        return $this->isRaw;
+    }
+
+    /**
+     * Sets whether the media represents a RAW capture.
+     *
+     * @param bool $v True when the media is a RAW image.
+     */
+    public function setIsRaw(bool $v): void
+    {
+        $this->isRaw = $v;
+    }
+
+    /**
+     * Indicates whether the media uses the HEIC container format.
+     */
+    public function isHeic(): bool
+    {
+        return $this->isHeic;
+    }
+
+    /**
+     * Sets whether the media uses the HEIC container format.
+     *
+     * @param bool $v True when the media is stored as HEIC.
+     */
+    public function setIsHeic(bool $v): void
+    {
+        $this->isHeic = $v;
+    }
+
+    /**
+     * Indicates whether the media payload is encoded with HEVC.
+     */
+    public function isHevc(): bool
+    {
+        return $this->isHevc;
+    }
+
+    /**
+     * Sets whether the media payload is encoded with HEVC.
+     *
+     * @param bool $v True when the payload is encoded with HEVC.
+     */
+    public function setIsHevc(bool $v): void
+    {
+        $this->isHevc = $v;
     }
 
     /**

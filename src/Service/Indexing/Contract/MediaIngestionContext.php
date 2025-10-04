@@ -25,6 +25,9 @@ final class MediaIngestionContext
         private readonly OutputInterface $output,
         private readonly ?Media $media,
         private readonly ?string $detectedMime,
+        private readonly bool $detectedRaw,
+        private readonly bool $detectedHeic,
+        private readonly bool $detectedHevc,
         private readonly ?string $checksum,
         private readonly bool $skipped,
         private readonly ?string $skipMessage,
@@ -48,6 +51,9 @@ final class MediaIngestionContext
             $output,
             null,
             null,
+            false,
+            false,
+            false,
             null,
             false,
             null,
@@ -94,6 +100,21 @@ final class MediaIngestionContext
         return $this->detectedMime;
     }
 
+    public function isDetectedRaw(): bool
+    {
+        return $this->detectedRaw;
+    }
+
+    public function isDetectedHeic(): bool
+    {
+        return $this->detectedHeic;
+    }
+
+    public function isDetectedHevc(): bool
+    {
+        return $this->detectedHevc;
+    }
+
     public function getChecksum(): ?string
     {
         return $this->checksum;
@@ -109,8 +130,12 @@ final class MediaIngestionContext
         return $this->skipMessage;
     }
 
-    public function withDetectedMime(string $detectedMime): self
-    {
+    public function withDetectedMime(
+        string $detectedMime,
+        bool $isRaw = false,
+        bool $isHeic = false,
+        bool $isHevc = false,
+    ): self {
         return new self(
             $this->filePath,
             $this->force,
@@ -120,6 +145,9 @@ final class MediaIngestionContext
             $this->output,
             $this->media,
             $detectedMime,
+            $isRaw,
+            $isHeic,
+            $isHevc,
             $this->checksum,
             $this->skipped,
             $this->skipMessage,
@@ -137,6 +165,9 @@ final class MediaIngestionContext
             $this->output,
             $this->media,
             $this->detectedMime,
+            $this->detectedRaw,
+            $this->detectedHeic,
+            $this->detectedHevc,
             $checksum,
             $this->skipped,
             $this->skipMessage,
@@ -154,6 +185,9 @@ final class MediaIngestionContext
             $this->output,
             $media,
             $this->detectedMime,
+            $this->detectedRaw,
+            $this->detectedHeic,
+            $this->detectedHevc,
             $this->checksum,
             $this->skipped,
             $this->skipMessage,
@@ -171,6 +205,9 @@ final class MediaIngestionContext
             $this->output,
             $this->media,
             $this->detectedMime,
+            $this->detectedRaw,
+            $this->detectedHeic,
+            $this->detectedHevc,
             $this->checksum,
             true,
             $message,

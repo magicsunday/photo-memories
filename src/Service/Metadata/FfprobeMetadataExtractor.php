@@ -17,6 +17,7 @@ use Exception;
 use Closure;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
 
 use function array_key_exists;
 use function array_pad;
@@ -88,6 +89,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             $codec = $primaryStream['codec_name'] ?? null;
             if (is_string($codec) && $codec !== '') {
                 $media->setVideoCodec($codec);
+                if (MediaFormatGuesser::isHevcCodec($codec)) {
+                    $media->setIsHevc(true);
+                }
             }
 
             $fps = $this->parseFps(is_string($primaryStream['avg_frame_rate'] ?? null) ? $primaryStream['avg_frame_rate'] : null);
