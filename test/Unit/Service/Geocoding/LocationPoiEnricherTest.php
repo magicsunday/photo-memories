@@ -316,6 +316,18 @@ final class LocationPoiEnricherTest extends TestCase
             boundingBox: null,
             category: null,
             type: null,
+            attribution: null,
+            licence: null,
+            refreshedAt: null,
+            confidence: null,
+            accuracyRadiusMeters: null,
+            timezone: null,
+            osmType: null,
+            osmId: null,
+            wikidataId: null,
+            wikipedia: null,
+            altNames: null,
+            extraTags: null,
         );
     }
 
