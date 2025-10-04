@@ -15,6 +15,8 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\CameraExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\CompositeImageExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
@@ -135,6 +137,49 @@ final class ExifMetadataExtractorTest extends TestCase
         self::assertSame(2.5, $media->getGpsAccuracyM());
     }
 
+    #[Test]
+    public function storesCameraAndCompositeMetadataFromAliases(): void
+    {
+        $media = $this->makeMedia(
+            id: 2,
+            path: '/fixtures/exif/camera-composite.jpg',
+        );
+
+        $exif = [
+            'IFD0' => [
+                'Make'  => 'Fujifilm',
+                'Model' => 'X-T5',
+            ],
+            'EXIF' => [
+                'CameraOwnerName'                => 'Jane Doe',
+                'BodySerialNumber'               => 'FUJI123456',
+                'LensMake'                       => 'Fujinon',
+                'LensModel'                      => 'XF 16-80mm F4 R OIS WR',
+                'LensSpecification'              => ['16/1', '80/1', '40/10', '40/10'],
+                'LensSerialNumber'               => 'FUJILENS001',
+                'CompositeImage'                 => 2,
+                'SourceImageNumberOfCompositeImage'   => 4,
+                'SourceExposureTimesOfCompositeImage' => '1/200;1/60;1/30;1/15',
+            ],
+        ];
+
+        $extractor = new ExifMetadataExtractor($this->createProcessors());
+
+        $this->runProcessors($extractor, $exif, $media);
+
+        self::assertSame('Fujifilm', $media->getCameraMake());
+        self::assertSame('X-T5', $media->getCameraModel());
+        self::assertSame('Jane Doe', $media->getCameraOwner());
+        self::assertSame('FUJI123456', $media->getCameraBodySerial());
+        self::assertSame('Fujinon', $media->getLensMake());
+        self::assertSame('XF 16-80mm F4 R OIS WR', $media->getLensModel());
+        self::assertSame('16-80mm f/4', $media->getLensSpecification());
+        self::assertSame('FUJILENS001', $media->getLensSerialNumber());
+        self::assertSame(2, $media->getCompositeImage());
+        self::assertSame(4, $media->getCompositeImageSourceCount());
+        self::assertSame('1/200;1/60;1/30;1/15', $media->getCompositeImageExposureTimes());
+    }
+
     /**
      * @return iterable<string, array{int, int, ?bool, ?bool}>
      */
@@ -167,10 +212,14 @@ final class ExifMetadataExtractorTest extends TestCase
      */
     private function createProcessors(): array
     {
+        $accessor = new DefaultExifValueAccessor();
+
         $processors = [
             new DimensionsExifMetadataProcessor(),
             new AspectFlagExifMetadataProcessor(),
-            new GpsExifMetadataProcessor(new DefaultExifValueAccessor()),
+            new CameraExifMetadataProcessor($accessor),
+            new CompositeImageExifMetadataProcessor($accessor),
+            new GpsExifMetadataProcessor($accessor),
         ];
 
         usort(
