@@ -18,7 +18,6 @@ use function class_exists;
 use function count;
 use function extension_loaded;
 use function is_file;
-use function method_exists;
 use function round;
 
 /**
@@ -45,20 +44,23 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
             $im = new Imagick($path);
 
             // Auto-orient according to EXIF
-            if (method_exists($im, 'autoOrient')) {
+            try {
                 $im->autoOrient();
-            } elseif (method_exists($im, 'autoOrientate')) {
-                /** @phpstan-ignore-next-line */
-                $im->autoOrientate();
+            } catch (Throwable) {
+                // Ignore when orientation helper is unavailable.
             }
 
             // Normalize to sRGB and 8-bit for stable luma
-            if (method_exists($im, 'setImageColorspace')) {
+            try {
                 $im->setImageColorspace(Imagick::COLORSPACE_SRGB);
+            } catch (Throwable) {
+                // Fallback gracefully when color space normalization is unavailable.
             }
 
-            if (method_exists($im, 'setImageDepth')) {
+            try {
                 $im->setImageDepth(8);
+            } catch (Throwable) {
+                // Older Imagick builds may not allow adjusting the bit depth.
             }
 
             return new self($im);

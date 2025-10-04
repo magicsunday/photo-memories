@@ -22,7 +22,6 @@ use function is_file;
 use function is_string;
 use function log;
 use function max;
-use function method_exists;
 use function min;
 use function sqrt;
 use function str_starts_with;
@@ -82,9 +81,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         $media->setContrast($contrast);
         $media->setEntropy($entropy);
         $media->setSharpness($sharpness);
-        if (method_exists($media, 'setColorfulness')) {
-            $media->setColorfulness($colorfulness);
-        }
+        $media->setColorfulness($colorfulness);
 
         $this->qualityAggregator->aggregate($media);
 

@@ -15,6 +15,7 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -132,7 +133,7 @@ abstract class TestCase extends BaseTestCase
         int $size = 1024,
         ?string $checksum = null,
     ): Media {
-        $factory = (static fn (string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media {
+        $factory = (static fn (string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media implements PersonTaggedMediaInterface {
             /**
              * @var list<int>
              */
