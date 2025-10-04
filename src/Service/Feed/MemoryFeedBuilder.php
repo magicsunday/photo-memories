@@ -19,7 +19,9 @@ use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 
+use function array_filter;
 use function array_map;
+use function array_values;
 use function count;
 use function is_array;
 use function is_string;
@@ -136,6 +138,15 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             // 4) resolve Media + pick cover
             $members = $this->mediaRepo->findByIds($c->getMembers());
+            if ($members === []) {
+                continue;
+            }
+
+            $members = array_values(array_filter(
+                $members,
+                static fn (Media $media): bool => $media->isNoShow() === false,
+            ));
+
             if ($members === []) {
                 continue;
             }
