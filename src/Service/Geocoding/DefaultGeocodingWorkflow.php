@@ -192,8 +192,12 @@ final class DefaultGeocodingWorkflow
             ->andWhere('m.gpsLon IS NOT NULL')
             ->orderBy('m.takenAt', 'ASC');
 
-        if (!$options->processAllMedia() && !$options->refreshPois()) {
-            $qb->andWhere('m.location IS NULL');
+        if (!$options->processAllMedia()) {
+            if ($options->refreshPois()) {
+                $qb->andWhere('m.location IS NOT NULL');
+            } else {
+                $qb->andWhere('m.needsGeocode = true');
+            }
         }
 
         $limit = $options->getLimit();

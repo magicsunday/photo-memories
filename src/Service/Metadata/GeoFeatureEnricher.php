@@ -45,6 +45,8 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
         $distM = MediaMath::haversineDistanceInMeters($this->homeLat, $this->homeLon, $lat, $lon);
         $media->setDistanceKmFromHome($distM / 1000.0);
 
+        $media->setNeedsGeocode($media->getLocation() === null);
+
         return $media;
     }
 
