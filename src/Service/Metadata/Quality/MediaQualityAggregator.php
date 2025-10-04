@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata\Quality;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function abs;
 use function log;
@@ -185,15 +186,7 @@ final class MediaQualityAggregator
             $parts[] = sprintf('clip=%.2f', $clippingShare);
         }
 
-        $line     = implode('; ', $parts);
-        $existing = $media->getIndexLog();
-
-        if ($existing === null || $existing === '') {
-            $media->setIndexLog($line);
-
-            return;
-        }
-
-        $media->setIndexLog($existing . "\n" . $line);
+        $line = implode('; ', $parts);
+        IndexLogHelper::append($media, $line);
     }
 }

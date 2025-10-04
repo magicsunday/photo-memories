@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser;
+use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function filemtime;
 use function intdiv;
@@ -135,14 +136,7 @@ final class TimeNormalizer implements SingleMetadataExtractorInterface
             $offset !== null ? sprintf('%+d', $offset) : 'n/a',
         );
 
-        $existing = $media->getIndexLog();
-        if ($existing === null || $existing === '') {
-            $media->setIndexLog($summary);
-
-            return;
-        }
-
-        $media->setIndexLog($existing . "\n" . $summary);
+        IndexLogHelper::append($media, $summary);
     }
 
     private function defaultTimezone(): DateTimeZone
