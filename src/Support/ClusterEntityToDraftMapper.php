@@ -63,12 +63,27 @@ final class ClusterEntityToDraftMapper
             $centroid  = $e->getCentroid();
             $members   = $this->normalizeMembers($e->getMembers());
 
-            $out[] = new ClusterDraft(
+            $draft = new ClusterDraft(
                 algorithm: $algorithm,
                 params: $params,
                 centroid: $centroid,
                 members: $members
             );
+
+            $draft->setStartAt($e->getStartAt());
+            $draft->setEndAt($e->getEndAt());
+            $draft->setMembersCount($e->getMembersCount());
+            $draft->setPhotoCount($e->getPhotoCount());
+            $draft->setVideoCount($e->getVideoCount());
+            $draft->setCoverMediaId($e->getCover()?->getId());
+            $draft->setLocation($e->getLocation());
+            $draft->setAlgorithmVersion($e->getAlgorithmVersion());
+            $draft->setConfigHash($e->getConfigHash());
+            $draft->setCentroidLat($e->getCentroidLat());
+            $draft->setCentroidLon($e->getCentroidLon());
+            $draft->setCentroidCell7($e->getCentroidCell7());
+
+            $out[] = $draft;
         }
 
         return $out;

@@ -64,16 +64,17 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         // 1) filter
         $filtered = [];
         foreach ($clusters as $c) {
-            $score   = (float) ($c->getParams()['score'] ?? 0.0);
-            $members = $c->getMembers();
+            $score        = (float) ($c->getParams()['score'] ?? 0.0);
+            $membersCount = $c->getMembersCount();
             if ($score < $this->minScore) {
                 continue;
             }
 
-            if (count($members) < $this->minMembers) {
+            if ($membersCount < $this->minMembers) {
                 continue;
             }
 
+            $members = $c->getMembers();
             $filtered[] = $c;
         }
 
@@ -158,8 +159,21 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            $cover   = $this->coverPicker->pickCover($members, $c->getParams());
-            $coverId = $cover?->getId();
+            $coverId = $c->getCoverMediaId();
+            $cover   = null;
+            if ($coverId !== null) {
+                foreach ($members as $member) {
+                    if ($member->getId() === $coverId) {
+                        $cover = $member;
+                        break;
+                    }
+                }
+            }
+
+            if ($cover === null) {
+                $cover   = $this->coverPicker->pickCover($members, $c->getParams());
+                $coverId = $cover?->getId();
+            }
 
             $members = $this->sortMembersByTakenAt($members, $coverId);
             $memberIds = array_map(static function (Media $media): int {

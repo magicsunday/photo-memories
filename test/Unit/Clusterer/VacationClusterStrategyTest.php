@@ -37,6 +37,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
+use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -368,11 +369,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $stage->process([$draft]);
 
-        $service = new ClusterPersistenceService(
-            $this->createStub(EntityManagerInterface::class),
-            250,
-            20,
-        );
+        $service = $this->createPersistenceService();
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $resolve = $reflection->getMethod('resolveOrderedMembers');
@@ -1468,11 +1465,7 @@ final class VacationClusterStrategyTest extends TestCase
      */
     private function clampMemberList(array $memberIds, int $limit): array
     {
-        $service = new ClusterPersistenceService(
-            $this->createStub(EntityManagerInterface::class),
-            250,
-            $limit,
-        );
+        $service = $this->createPersistenceService($limit);
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $method     = $reflection->getMethod('clampMembers');
@@ -1497,5 +1490,23 @@ final class VacationClusterStrategyTest extends TestCase
             });
 
         return $resolver;
+    }
+
+    private function createPersistenceService(int $maxMembers = 20): ClusterPersistenceService
+    {
+        $lookup = new class implements MemberMediaLookupInterface {
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                return [];
+            }
+        };
+
+        return new ClusterPersistenceService(
+            $this->createStub(EntityManagerInterface::class),
+            $lookup,
+            $this->createStub(CoverPickerInterface::class),
+            250,
+            $maxMembers,
+        );
     }
 }
