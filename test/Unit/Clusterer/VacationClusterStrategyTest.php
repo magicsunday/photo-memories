@@ -337,7 +337,7 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function findByIds(array $ids): array
+            public function findByIds(array $ids, bool $onlyVideos = false): array
             {
                 $result = [];
                 foreach ($ids as $id) {

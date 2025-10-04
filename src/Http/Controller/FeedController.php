@@ -312,7 +312,7 @@ final class FeedController
      *
      * @return array<int, Media>
      */
-    private function loadMediaMap(array $ids): array
+    private function loadMediaMap(array $ids, bool $onlyVideos = false): array
     {
         if ($ids === []) {
             return [];
@@ -326,7 +326,7 @@ final class FeedController
         }
 
         if ($missing !== []) {
-            $mediaItems = $this->mediaRepository->findByIds(array_keys($missing));
+            $mediaItems = $this->mediaRepository->findByIds(array_keys($missing), $onlyVideos);
             foreach ($mediaItems as $media) {
                 $this->mediaCache[$media->getId()] = $media;
                 unset($missing[$media->getId()]);
@@ -375,8 +375,9 @@ final class FeedController
             $mediaIdsToLoad[] = $coverId;
         }
 
-        $memberPayload = [];
-        $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad);
+        $onlyVideos     = $item->getAlgorithm() === 'video_stories';
+        $memberPayload  = [];
+        $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad, $onlyVideos);
         foreach ($previewMembers as $memberId) {
             $media = $memberMediaMap[$memberId] ?? null;
 

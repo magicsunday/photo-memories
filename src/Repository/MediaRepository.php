@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 
 use function strtolower;
+use function substr;
 use function trim;
 
 /**
@@ -31,10 +32,11 @@ readonly class MediaRepository implements MemberMediaLookupInterface
 
     /**
      * @param list<int> $ids
+     * @param bool      $onlyVideos
      *
      * @return list<Media>
      */
-    public function findByIds(array $ids): array
+    public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         if ($ids === []) {
             return [];
@@ -46,6 +48,11 @@ readonly class MediaRepository implements MemberMediaLookupInterface
             ->where('m.id IN (:ids)')
             ->andWhere('m.noShow = false')
             ->setParameter('ids', $ids);
+
+        if ($onlyVideos) {
+            $qb->andWhere('m.isVideo = true')
+                ->orderBy('m.takenAt', 'ASC');
+        }
 
         $q = $qb->getQuery();
 
@@ -69,8 +76,10 @@ readonly class MediaRepository implements MemberMediaLookupInterface
 
         $limit = $limit < 1 ? 1 : $limit;
 
-        $conn = $this->em->getConnection();
-        $sql  = <<<'SQL'
+        $conn        = $this->em->getConnection();
+        $phashPrefix = substr($phashHex, 0, 32);
+
+        $sql = <<<'SQL'
 SELECT id,
        BIT_COUNT(
            CAST(CONV(HEX(phash64), 16, 10) AS UNSIGNED) ^
@@ -79,6 +88,7 @@ SELECT id,
 FROM media
 WHERE phash64 IS NOT NULL
   AND noShow = 0
+  AND (phashPrefix = :phashPrefix OR :phashPrefix = '')
 HAVING hamming <= :maxHamming
 ORDER BY hamming ASC, id ASC
 LIMIT :limit
@@ -88,11 +98,13 @@ SQL;
             $sql,
             [
                 'phashHex'   => $phashHex,
+                'phashPrefix'=> $phashPrefix,
                 'maxHamming' => $maxHamming,
                 'limit'      => $limit,
             ],
             [
                 'phashHex'   => ParameterType::STRING,
+                'phashPrefix'=> ParameterType::STRING,
                 'maxHamming' => ParameterType::INTEGER,
                 'limit'      => ParameterType::INTEGER,
             ]

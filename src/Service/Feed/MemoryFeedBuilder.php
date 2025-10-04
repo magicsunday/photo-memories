@@ -141,7 +141,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             // 4) resolve Media + pick cover
-            $members = $this->mediaRepo->findByIds($c->getMembers());
+            $members = $this->mediaRepo->findByIds(
+                $c->getMembers(),
+                $c->getAlgorithm() === 'video_stories'
+            );
             if ($members === []) {
                 continue;
             }

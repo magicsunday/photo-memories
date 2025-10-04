@@ -35,16 +35,18 @@ final class MediaRepositoryTest extends TestCase
             ->expects(self::once())
             ->method('fetchAllAssociative')
             ->with(
-                self::callback(static fn (string $sql): bool => str_contains($sql, 'BIT_COUNT')),
+                self::callback(static fn (string $sql): bool => str_contains($sql, 'phashPrefix = :phashPrefix')),
                 [
-                    'phashHex'   => 'abcdef',
-                    'maxHamming' => 3,
-                    'limit'      => 5,
+                    'phashHex'    => 'abcdef',
+                    'phashPrefix' => 'abcdef',
+                    'maxHamming'  => 3,
+                    'limit'       => 5,
                 ],
                 [
-                    'phashHex'   => ParameterType::STRING,
-                    'maxHamming' => ParameterType::INTEGER,
-                    'limit'      => ParameterType::INTEGER,
+                    'phashHex'    => ParameterType::STRING,
+                    'phashPrefix' => ParameterType::STRING,
+                    'maxHamming'  => ParameterType::INTEGER,
+                    'limit'       => ParameterType::INTEGER,
                 ]
             )
             ->willReturn([

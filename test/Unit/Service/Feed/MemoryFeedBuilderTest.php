@@ -42,7 +42,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $mediaRepository
             ->expects(self::once())
             ->method('findByIds')
-            ->with([1, 2])
+            ->with([1, 2], false)
             ->willReturn([$visible, $hidden]);
 
         $builder = new MemoryFeedBuilder(

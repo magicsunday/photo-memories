@@ -190,7 +190,8 @@ final class DefaultGeocodingWorkflow
             ->from(Media::class, 'm')
             ->where('m.gpsLat IS NOT NULL')
             ->andWhere('m.gpsLon IS NOT NULL')
-            ->orderBy('m.takenAt', 'ASC');
+            ->orderBy('m.geoCell8', 'ASC')
+            ->addOrderBy('m.takenAt', 'ASC');
 
         if (!$options->processAllMedia()) {
             if ($options->refreshPois()) {
