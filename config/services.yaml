@@ -242,7 +242,9 @@ services:
 
     MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
 
-    MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage:
+        arguments:
+            $batchSize: '%memories.index.batch_size%'
 
     MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
         arguments:

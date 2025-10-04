@@ -12,19 +12,22 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
 use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use Symfony\Component\Console\Output\OutputInterface;
 
 final class PersistenceBatchStage implements FinalizableMediaIngestionStageInterface
 {
-    private const BATCH_SIZE = 10;
-
     private int $batchCount = 0;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly int $batchSize,
     ) {
+        if ($batchSize <= 0) {
+            throw new InvalidArgumentException('Batch size must be greater than zero.');
+        }
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
@@ -42,7 +45,7 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
         $this->entityManager->persist($context->getMedia());
         ++$this->batchCount;
 
-        if ($this->batchCount >= self::BATCH_SIZE) {
+        if ($this->batchCount >= $this->batchSize) {
             $this->entityManager->flush();
             $this->entityManager->clear();
             $this->batchCount = 0;

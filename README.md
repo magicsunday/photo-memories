@@ -108,6 +108,10 @@ Die Ingestion-Pipeline erweitert jeden `media`-Datensatz jetzt um strukturierte 
 
 Damit lassen sich fehlgeschlagene Läufe schneller erkennen und neu anstoßen, ohne auf externe Logs angewiesen zu sein. Nach einem `memories:index`-Lauf prüfst du die Spalten direkt in der Datenbank oder über deine Auswertungen; das Flag `needs_rotation` hilft beim gezielten Nachbearbeiten von Assets mit reiner Orientation-Markierung.
 
+## Konfigurierbare Batch-Größe beim Persistieren
+
+Die Persistence-Stage bündelt die Schreibvorgänge gegen die Datenbank ab sofort über den Parameter `memories.index.batch_size`. Der Standardwert `500` liegt in `config/parameters.yaml` und lässt sich bei Bedarf in deiner `config/services.yaml` bzw. per Umgebungsvariable (`MEMORIES_INDEX_BATCH_SIZE`) überschreiben. Erst wenn so viele Medien persistiert wurden, stoßen `flush()` und `clear()` einen neuen Commit-Zyklus an; mit kleineren Werten behältst du bei speicherarmen Umgebungen die Kontrolle, größere Werte reduzieren den Datenbank-Overhead bei Masseningestion.
+
 ## Datenbankindizes
 
 Damit Geocoding, Duplikatsuche und Video-Feeds auch bei großen Beständen performant bleiben, lohnt sich ein kurzer Blick auf die empfohlenen Indizes der Tabelle `media`:
