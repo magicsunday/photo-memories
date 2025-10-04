@@ -31,7 +31,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private int $defaultBatchSize = 250,
+        private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
         private int $maxMembers = 20,
     ) {

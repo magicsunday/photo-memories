@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class PersistenceBatchStage implements FinalizableMediaIngestionStageInterface
 {
-    private const BATCH_SIZE = 50;
+    private const BATCH_SIZE = 10;
 
     private int $batchCount = 0;
 

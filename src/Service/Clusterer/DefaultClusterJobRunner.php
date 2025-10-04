@@ -146,7 +146,7 @@ final class DefaultClusterJobRunner implements ClusterJobRunnerInterface
         } else {
             $persisted = $this->persistence->persistBatched(
                 $drafts,
-                250,
+                10,
                 function (int $persistedInBatch) use (&$persisted, $persistHandle, $persistStart): void {
                     $persisted += $persistedInBatch;
                     $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));

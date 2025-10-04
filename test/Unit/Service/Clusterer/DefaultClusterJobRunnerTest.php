@@ -137,7 +137,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence->expects(self::once())
             ->method('persistBatched')
             ->willReturnCallback(function (array $persistedDrafts, int $batchSize, ?callable $callback): int {
-                self::assertSame(250, $batchSize);
+                self::assertSame(10, $batchSize);
                 self::assertCount(1, $persistedDrafts);
                 self::assertNotNull($callback);
                 $callback(1);
