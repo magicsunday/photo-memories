@@ -93,6 +93,10 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
             $media->setMime($detectedMime);
         }
 
+        $media->setIsRaw($context->isDetectedRaw());
+        $media->setIsHeic($context->isDetectedHeic());
+        $media->setIsHevc($context->isDetectedHevc());
+
         return $context
             ->withChecksum($checksum)
             ->withMedia($media);

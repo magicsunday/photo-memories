@@ -47,6 +47,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertTrue($media->isSlowMo());
             self::assertSame(90.0, $media->getVideoRotationDeg());
             self::assertTrue($media->getVideoHasStabilization());
+            self::assertFalse($media->isHevc());
 
             $streams = $media->getVideoStreams();
             self::assertIsArray($streams);
@@ -101,6 +102,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertFalse($media->isSlowMo());
             self::assertSame(-90.0, $media->getVideoRotationDeg());
             self::assertNull($media->getVideoHasStabilization());
+            self::assertTrue($media->isHevc());
 
             $streams = $media->getVideoStreams();
             self::assertIsArray($streams);

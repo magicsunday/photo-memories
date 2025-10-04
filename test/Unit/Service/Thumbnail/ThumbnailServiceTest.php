@@ -343,6 +343,100 @@ final class ThumbnailServiceTest extends TestCase
     }
 
     #[Test]
+    public function doesNotFallbackToGdWhenImagickFailsForHeic(): void
+    {
+        if (!extension_loaded('imagick')) {
+            self::markTestSkipped('Imagick extension is required for this test.');
+        }
+
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            self::markTestSkipped('GD extension with JPEG support is required for this test.');
+        }
+
+        $thumbnailDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-' . uniqid('', true);
+        if (!@mkdir($thumbnailDir) && !is_dir($thumbnailDir)) {
+            self::fail('Unable to create thumbnail directory.');
+        }
+
+        $sourceDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-thumb-source-' . uniqid('', true);
+        if (!@mkdir($sourceDir) && !is_dir($sourceDir)) {
+            self::fail('Unable to create thumbnail source directory.');
+        }
+
+        $sourcePath = $sourceDir . DIRECTORY_SEPARATOR . 'source.heic';
+        $image      = imagecreatetruecolor(160, 120);
+        $color      = imagecolorallocate($image, 120, 130, 140);
+        imagefilledrectangle($image, 0, 0, 159, 119, $color);
+        imagejpeg($image, $sourcePath);
+        imagedestroy($image);
+
+        $media = new Media($sourcePath, hash('sha256', 'heic-source'), 2048);
+        $media->setMime('image/heic');
+        $media->setIsHeic(true);
+
+        $imagick = $this->createMock(Imagick::class);
+        $imagick->expects(self::once())->method('setOption')->with('jpeg:preserve-settings', 'true')->willReturn(true);
+        $imagick->expects(self::once())->method('readImage')->with($sourcePath . '[0]')->willReturn(true);
+        $imagick->expects(self::once())->method('getImageWidth')->willReturn(160);
+        $imagick->expects(self::once())->method('thumbnailImage')->with(160, 0)->willReturn(false);
+        $imagick->expects(self::once())->method('clear');
+        $imagick->expects(self::once())->method('destroy');
+
+        $service = new class ($thumbnailDir, [320], $imagick) extends ThumbnailService {
+            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
+            {
+                parent::__construct($thumbnailDir, $sizes);
+            }
+
+            protected function createImagick(): Imagick
+            {
+                return $this->imagick;
+            }
+
+            protected function cloneImagick(Imagick $imagick): Imagick
+            {
+                return $imagick;
+            }
+        };
+
+        self::resetLastGdLoader();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Imagick is required to create thumbnails for RAW/HEIC media');
+
+        try {
+            $service->generateAll($sourcePath, $media);
+        } catch (RuntimeException $exception) {
+            self::assertSame('Imagick is required to create thumbnails for RAW/HEIC media', $exception->getMessage());
+            self::assertNull(self::getLastGdLoader());
+
+            throw $exception;
+        } finally {
+            self::resetLastGdLoader();
+
+            if (is_file($sourcePath)) {
+                @unlink($sourcePath);
+            }
+
+            if (is_dir($sourceDir)) {
+                foreach (glob($sourceDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($sourceDir);
+            }
+
+            if (is_dir($thumbnailDir)) {
+                foreach (glob($thumbnailDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                    @unlink($file);
+                }
+
+                @rmdir($thumbnailDir);
+            }
+        }
+    }
+
+    #[Test]
     public function generatedThumbnailsNeverExceedSourceWidth(): void
     {
         if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {

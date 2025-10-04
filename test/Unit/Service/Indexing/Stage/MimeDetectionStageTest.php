@@ -26,15 +26,18 @@ use function unlink;
 
 final class MimeDetectionStageTest extends TestCase
 {
-    private ?string $tempFile = null;
+    /** @var list<string> */
+    private array $tempFiles = [];
 
     protected function tearDown(): void
     {
-        if ($this->tempFile !== null && is_file($this->tempFile)) {
-            unlink($this->tempFile);
+        foreach ($this->tempFiles as $tempFile) {
+            if (is_file($tempFile)) {
+                unlink($tempFile);
+            }
         }
 
-        $this->tempFile = null;
+        $this->tempFiles = [];
 
         parent::tearDown();
     }
@@ -59,11 +62,64 @@ final class MimeDetectionStageTest extends TestCase
         self::assertTrue($result->isSkipped());
     }
 
+    #[Test]
+    public function processSetsFormatFlagsFromExtensions(): void
+    {
+        $stage = new MimeDetectionStage();
+
+        $heicPath = $this->createTempFile('heic', 'heic-fixture');
+        $heicContext = MediaIngestionContext::create(
+            $heicPath,
+            false,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        );
+
+        $heicResult = $stage->process($heicContext);
+
+        self::assertTrue($heicResult->isDetectedHeic());
+        self::assertFalse($heicResult->isDetectedRaw());
+        self::assertFalse($heicResult->isDetectedHevc());
+
+        $rawPath = $this->createTempFile('dng', 'raw-fixture');
+        $rawContext = MediaIngestionContext::create(
+            $rawPath,
+            false,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        );
+
+        $rawResult = $stage->process($rawContext);
+
+        self::assertTrue($rawResult->isDetectedRaw());
+        self::assertFalse($rawResult->isDetectedHeic());
+
+        $hevcPath = $this->createTempFile('hevc', 'video-fixture');
+        $hevcContext = MediaIngestionContext::create(
+            $hevcPath,
+            false,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        );
+
+        $hevcResult = $stage->process($hevcContext);
+
+        self::assertTrue($hevcResult->isDetectedHevc());
+        self::assertFalse($hevcResult->isDetectedRaw());
+        self::assertFalse($hevcResult->isDetectedHeic());
+    }
+
     private function createTempFile(string $extension, string $content): string
     {
         $path = sys_get_temp_dir() . '/memories-stage-' . uniqid('', true) . '.' . $extension;
         file_put_contents($path, $content);
-        $this->tempFile = $path;
+        $this->tempFiles[] = $path;
 
         return $path;
     }

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
+use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
 use finfo;
 use Throwable;
 
@@ -59,8 +60,9 @@ final class MimeDetectionStage implements MediaIngestionStageInterface
             return $context;
         }
 
-        $mime = $this->detectMime($context->getFilePath());
-        $context = $context->withDetectedMime($mime);
+        $mime  = $this->detectMime($context->getFilePath());
+        $flags = $this->detectFormatFlags($context->getFilePath(), $mime);
+        $context = $context->withDetectedMime($mime, $flags['isRaw'], $flags['isHeic'], $flags['isHevc']);
 
         if ($context->isStrictMime() && $this->isMimeConsistent($context->getFilePath(), $mime) === false) {
             return $context->markSkipped();
@@ -117,6 +119,29 @@ final class MimeDetectionStage implements MediaIngestionStageInterface
         $ext = strtolower((string) pathinfo($filepath, PATHINFO_EXTENSION));
 
         return $ext !== '' && in_array($ext, $this->videoExtensions, true);
+    }
+
+    /**
+     * @return array{isRaw: bool, isHeic: bool, isHevc: bool}
+     */
+    private function detectFormatFlags(string $filepath, string $mime): array
+    {
+        $extension = strtolower((string) pathinfo($filepath, PATHINFO_EXTENSION));
+
+        $isRaw = MediaFormatGuesser::isRawFromMime($mime)
+            || MediaFormatGuesser::isRawFromExtension($extension);
+
+        $isHeic = MediaFormatGuesser::isHeicFromMime($mime)
+            || MediaFormatGuesser::isHeicFromExtension($extension);
+
+        $isHevc = MediaFormatGuesser::isHevcFromMime($mime)
+            || MediaFormatGuesser::isHevcFromExtension($extension);
+
+        return [
+            'isRaw'  => $isRaw,
+            'isHeic' => $isHeic,
+            'isHevc' => $isHevc,
+        ];
     }
 
     /**

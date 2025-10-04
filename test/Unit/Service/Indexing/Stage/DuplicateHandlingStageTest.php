@@ -198,6 +198,54 @@ final class DuplicateHandlingStageTest extends TestCase
         self::assertSame($fastHash, $media->getFastChecksumXxhash64());
     }
 
+    #[Test]
+    public function processAppliesDetectedFormatFlagsToMedia(): void
+    {
+        $filepath = $this->createTempFile('heic', 'format-flags');
+        $checksum = (string) hash_file('sha256', $filepath);
+        $fastHash = 'abcdefabcdefabcd';
+
+        $repository = $this->getMockBuilder(EntityRepository::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['findOneBy'])
+            ->getMock();
+        $repository->expects(self::exactly(2))
+            ->method('findOneBy')
+            ->willReturn(null);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('getRepository')
+            ->with(Media::class)
+            ->willReturn($repository);
+
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($filepath)
+            ->willReturn($fastHash);
+
+        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $context = MediaIngestionContext::create(
+            $filepath,
+            false,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        )->withDetectedMime('image/heic', true, true, true);
+
+        $result = $stage->process($context);
+
+        $media = $result->getMedia();
+        self::assertInstanceOf(Media::class, $media);
+        self::assertTrue($media->isRaw());
+        self::assertTrue($media->isHeic());
+        self::assertTrue($media->isHevc());
+        self::assertSame('image/heic', $media->getMime());
+        self::assertSame($checksum, $media->getChecksum());
+    }
+
     private function createTempFile(string $extension, string $content): string
     {
         $path = sys_get_temp_dir() . '/memories-stage-' . uniqid('', true) . '.' . $extension;

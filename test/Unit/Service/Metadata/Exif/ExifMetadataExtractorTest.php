@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataP
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\CameraExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\CompositeImageExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\FormatFlagExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
@@ -61,6 +62,44 @@ final class ExifMetadataExtractorTest extends TestCase
         self::assertSame($computedHeight, $media->getHeight());
         self::assertSame($expectedPortrait, $media->isPortrait());
         self::assertSame($expectedPanorama, $media->isPanorama());
+    }
+
+    #[Test]
+    public function setsFormatFlagsFromFileType(): void
+    {
+        $extractor = new ExifMetadataExtractor($this->createProcessors());
+
+        $heicMedia = $this->makeMedia(
+            id: 11,
+            path: '/fixtures/exif/heic.heic',
+        );
+        $heicExif = [
+            'FILE' => ['FileType' => 'HEIC'],
+        ];
+        $this->runProcessors($extractor, $heicExif, $heicMedia);
+        self::assertTrue($heicMedia->isHeic());
+        self::assertFalse($heicMedia->isRaw());
+
+        $rawMedia = $this->makeMedia(
+            id: 12,
+            path: '/fixtures/exif/raw.cr3',
+        );
+        $rawExif = [
+            'FILE' => ['FileType' => 'CR3'],
+        ];
+        $this->runProcessors($extractor, $rawExif, $rawMedia);
+        self::assertTrue($rawMedia->isRaw());
+        self::assertFalse($rawMedia->isHeic());
+
+        $hevcMedia = $this->makeMedia(
+            id: 13,
+            path: '/fixtures/exif/video.mov',
+        );
+        $hevcExif = [
+            'FILE' => ['FileType' => 'HEVC'],
+        ];
+        $this->runProcessors($extractor, $hevcExif, $hevcMedia);
+        self::assertTrue($hevcMedia->isHevc());
     }
 
     #[Test]
@@ -215,6 +254,7 @@ final class ExifMetadataExtractorTest extends TestCase
         $accessor = new DefaultExifValueAccessor();
 
         $processors = [
+            new FormatFlagExifMetadataProcessor($accessor),
             new DimensionsExifMetadataProcessor(),
             new AspectFlagExifMetadataProcessor(),
             new CameraExifMetadataProcessor($accessor),

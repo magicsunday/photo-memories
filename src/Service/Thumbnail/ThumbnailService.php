@@ -82,16 +82,25 @@ class ThumbnailService implements ThumbnailServiceInterface
         $checksum    = $media->getChecksum();
         $hasImagick  = extension_loaded('imagick');
         $hasGd       = function_exists('imagecreatefromstring');
+        $requiresImagick = $media->isRaw() || $media->isHeic();
 
         // Abort early when no supported imaging library is available at all.
         if (!$hasImagick && !$hasGd) {
             throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
         }
 
+        if ($requiresImagick && !$hasImagick) {
+            throw new RuntimeException('Imagick is required to create thumbnails for RAW/HEIC media');
+        }
+
         if ($hasImagick) {
             try {
                 return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
             } catch (ImagickException $exception) {
+                if ($requiresImagick) {
+                    throw new RuntimeException('Imagick is required to create thumbnails for RAW/HEIC media', 0, $exception);
+                }
+
                 if (!$hasGd) {
                     throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails', 0, $exception);
                 }
@@ -100,7 +109,7 @@ class ThumbnailService implements ThumbnailServiceInterface
             }
         }
 
-        if ($hasGd) {
+        if ($hasGd && !$requiresImagick) {
             return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
         }
 
