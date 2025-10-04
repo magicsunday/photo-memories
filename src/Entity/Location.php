@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Entity;
 
+use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -21,6 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'location')]
 #[ORM\UniqueConstraint(name: 'uniq_loc_provider', columns: ['provider', 'providerPlaceId'])]
 #[ORM\Index(name: 'idx_loc_cell', columns: ['cell'])]
+#[ORM\Index(name: 'idx_loc_country_city', columns: ['countryCode', 'city'])]
 class Location
 {
     /**
@@ -148,6 +150,88 @@ class Location
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $pois = null;
+
+    /**
+     * Attribution string required by the provider.
+     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
+    private ?string $attribution = null;
+
+    /**
+     * Licence string provided by the geocoding service.
+     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
+    private ?string $licence = null;
+
+    /**
+     * Timestamp when the location metadata was last refreshed.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?DateTimeImmutable $refreshedAt = null;
+
+    /**
+     * Indicates that the metadata should be refreshed from the provider.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $stale = false;
+
+    /**
+     * Provider supplied confidence/importance score.
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $confidence = null;
+
+    /**
+     * Estimated accuracy radius in meters.
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $accuracyRadiusMeters = null;
+
+    /**
+     * Timezone identifier for the resolved location.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $timezone = null;
+
+    /**
+     * OpenStreetMap element type.
+     */
+    #[ORM\Column(type: Types::STRING, length: 16, nullable: true)]
+    private ?string $osmType = null;
+
+    /**
+     * OpenStreetMap element identifier.
+     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
+    private ?string $osmId = null;
+
+    /**
+     * Wikidata identifier reference.
+     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
+    private ?string $wikidataId = null;
+
+    /**
+     * Wikipedia article reference.
+     */
+    #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
+    private ?string $wikipedia = null;
+
+    /**
+     * Alternative names keyed by qualifier or locale.
+     *
+     * @var array<string, string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $altNames = null;
+
+    /**
+     * Additional provider specific tags.
+     *
+     * @var array<string, string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $extraTags = null;
 
     /**
      * @param string $provider        Geocoding provider name.
@@ -565,6 +649,248 @@ class Location
     public function setPois(?array $pois): Location
     {
         $this->pois = $pois;
+
+        return $this;
+    }
+
+    /**
+     * Returns the attribution string for the location.
+     */
+    public function getAttribution(): ?string
+    {
+        return $this->attribution;
+    }
+
+    /**
+     * Sets the attribution string for the location.
+     */
+    public function setAttribution(?string $attribution): Location
+    {
+        $this->attribution = $attribution;
+
+        return $this;
+    }
+
+    /**
+     * Returns the licence string supplied by the provider.
+     */
+    public function getLicence(): ?string
+    {
+        return $this->licence;
+    }
+
+    /**
+     * Sets the licence string supplied by the provider.
+     */
+    public function setLicence(?string $licence): Location
+    {
+        $this->licence = $licence;
+
+        return $this;
+    }
+
+    /**
+     * Returns the timestamp when the metadata was last refreshed.
+     */
+    public function getRefreshedAt(): ?DateTimeImmutable
+    {
+        return $this->refreshedAt;
+    }
+
+    /**
+     * Sets the timestamp when the metadata was last refreshed.
+     */
+    public function setRefreshedAt(?DateTimeImmutable $refreshedAt): Location
+    {
+        $this->refreshedAt = $refreshedAt;
+
+        return $this;
+    }
+
+    /**
+     * Indicates whether the metadata should be refreshed.
+     */
+    public function isStale(): bool
+    {
+        return $this->stale;
+    }
+
+    /**
+     * Marks the metadata as stale or up to date.
+     */
+    public function setStale(bool $stale): Location
+    {
+        $this->stale = $stale;
+
+        return $this;
+    }
+
+    /**
+     * Returns the provider supplied confidence value.
+     */
+    public function getConfidence(): ?float
+    {
+        return $this->confidence;
+    }
+
+    /**
+     * Sets the provider supplied confidence value.
+     */
+    public function setConfidence(?float $confidence): Location
+    {
+        $this->confidence = $confidence;
+
+        return $this;
+    }
+
+    /**
+     * Returns the estimated accuracy radius in meters.
+     */
+    public function getAccuracyRadiusMeters(): ?float
+    {
+        return $this->accuracyRadiusMeters;
+    }
+
+    /**
+     * Sets the estimated accuracy radius in meters.
+     */
+    public function setAccuracyRadiusMeters(?float $accuracyRadiusMeters): Location
+    {
+        $this->accuracyRadiusMeters = $accuracyRadiusMeters;
+
+        return $this;
+    }
+
+    /**
+     * Returns the timezone identifier.
+     */
+    public function getTimezone(): ?string
+    {
+        return $this->timezone;
+    }
+
+    /**
+     * Sets the timezone identifier.
+     */
+    public function setTimezone(?string $timezone): Location
+    {
+        $this->timezone = $timezone;
+
+        return $this;
+    }
+
+    /**
+     * Returns the OSM element type.
+     */
+    public function getOsmType(): ?string
+    {
+        return $this->osmType;
+    }
+
+    /**
+     * Sets the OSM element type.
+     */
+    public function setOsmType(?string $osmType): Location
+    {
+        $this->osmType = $osmType;
+
+        return $this;
+    }
+
+    /**
+     * Returns the OSM element identifier.
+     */
+    public function getOsmId(): ?string
+    {
+        return $this->osmId;
+    }
+
+    /**
+     * Sets the OSM element identifier.
+     */
+    public function setOsmId(?string $osmId): Location
+    {
+        $this->osmId = $osmId;
+
+        return $this;
+    }
+
+    /**
+     * Returns the Wikidata identifier.
+     */
+    public function getWikidataId(): ?string
+    {
+        return $this->wikidataId;
+    }
+
+    /**
+     * Sets the Wikidata identifier.
+     */
+    public function setWikidataId(?string $wikidataId): Location
+    {
+        $this->wikidataId = $wikidataId;
+
+        return $this;
+    }
+
+    /**
+     * Returns the Wikipedia reference string.
+     */
+    public function getWikipedia(): ?string
+    {
+        return $this->wikipedia;
+    }
+
+    /**
+     * Sets the Wikipedia reference string.
+     */
+    public function setWikipedia(?string $wikipedia): Location
+    {
+        $this->wikipedia = $wikipedia;
+
+        return $this;
+    }
+
+    /**
+     * Returns alternative names keyed by qualifier or locale.
+     *
+     * @return array<string, string>|null
+     */
+    public function getAltNames(): ?array
+    {
+        return $this->altNames;
+    }
+
+    /**
+     * Stores alternative names keyed by qualifier or locale.
+     *
+     * @param array<string, string>|null $altNames
+     */
+    public function setAltNames(?array $altNames): Location
+    {
+        $this->altNames = $altNames;
+
+        return $this;
+    }
+
+    /**
+     * Returns provider specific extra tags.
+     *
+     * @return array<string, string>|null
+     */
+    public function getExtraTags(): ?array
+    {
+        return $this->extraTags;
+    }
+
+    /**
+     * Stores provider specific extra tags.
+     *
+     * @param array<string, string>|null $extraTags
+     */
+    public function setExtraTags(?array $extraTags): Location
+    {
+        $this->extraTags = $extraTags;
 
         return $this;
     }

@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use DateTimeImmutable;
+use Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
@@ -59,6 +61,7 @@ final class LocationResolver implements PoiEnsurerInterface
                 }
             }
 
+            $this->applyGeocodeMetadata($loc, $g);
             $this->maybeEnrich($loc, $g);
 
             return $loc;
@@ -74,6 +77,7 @@ final class LocationResolver implements PoiEnsurerInterface
         ]);
         if ($existing instanceof Location) {
             $this->cacheByKey[$key] = $existing;
+            $this->applyGeocodeMetadata($existing, $g);
             $this->maybeEnrich($existing, $g);
 
             return $existing;
@@ -87,6 +91,7 @@ final class LocationResolver implements PoiEnsurerInterface
             if ($this->similar($cand, $g)) {
                 // absichtlich NICHT unter $key cachen (anderer providerPlaceId),
                 // damit wir keinen falschen „alias“ aufbauen.
+                $this->applyGeocodeMetadata($cand, $g);
                 $this->maybeEnrich($cand, $g);
 
                 return $cand;
@@ -102,19 +107,7 @@ final class LocationResolver implements PoiEnsurerInterface
             lon: $g->lon,
             cell: $cell
         );
-
-        $loc->setCountryCode($g->countryCode);
-        $loc->setCountry($g->country);
-        $loc->setState($g->state);
-        $loc->setCounty($g->county);
-        $loc->setCity($g->city ?? $g->town ?? $g->village);
-        $loc->setSuburb($g->suburb ?? $g->neighbourhood);
-        $loc->setPostcode($g->postcode);
-        $loc->setRoad($g->road);
-        $loc->setHouseNumber($g->houseNumber);
-        $loc->setCategory($g->category);
-        $loc->setType($g->type);
-        $loc->setBoundingBox($g->boundingBox);
+        $this->applyGeocodeMetadata($loc, $g);
 
         $this->maybeEnrich($loc, $g);
 
@@ -217,7 +210,19 @@ final class LocationResolver implements PoiEnsurerInterface
             houseNumber: $location->getHouseNumber(),
             boundingBox: $location->getBoundingBox(),
             category: $location->getCategory(),
-            type: $location->getType()
+            type: $location->getType(),
+            attribution: $location->getAttribution(),
+            licence: $location->getLicence(),
+            refreshedAt: $location->getRefreshedAt(),
+            confidence: $location->getConfidence(),
+            accuracyRadiusMeters: $location->getAccuracyRadiusMeters(),
+            timezone: $location->getTimezone(),
+            osmType: $location->getOsmType(),
+            osmId: $location->getOsmId(),
+            wikidataId: $location->getWikidataId(),
+            wikipedia: $location->getWikipedia(),
+            altNames: $location->getAltNames(),
+            extraTags: $location->getExtraTags(),
         );
     }
 
@@ -234,6 +239,49 @@ final class LocationResolver implements PoiEnsurerInterface
         $usedNetwork = $this->poiEnricher->enrich($location, $geocode);
         if ($usedNetwork) {
             $this->lastUsedNetwork = true;
+        }
+    }
+
+    private function applyGeocodeMetadata(Location $location, GeocodeResult $geocode): void
+    {
+        $location->setDisplayName($geocode->displayName);
+        $location->setCountryCode($geocode->countryCode !== null ? strtoupper($geocode->countryCode) : null);
+        $location->setCountry($geocode->country);
+        $location->setState($geocode->state);
+        $location->setCounty($geocode->county);
+        $location->setCity($geocode->city ?? $geocode->town ?? $geocode->village);
+        $location->setSuburb($geocode->suburb ?? $geocode->neighbourhood);
+        $location->setPostcode($geocode->postcode);
+        $location->setRoad($geocode->road);
+        $location->setHouseNumber($geocode->houseNumber);
+        $location->setCategory($geocode->category);
+        $location->setType($geocode->type);
+        $location->setBoundingBox($geocode->boundingBox);
+        $location->setAttribution($geocode->attribution);
+        $location->setLicence($geocode->licence);
+        $location->setConfidence($geocode->confidence);
+        $location->setAccuracyRadiusMeters($geocode->accuracyRadiusMeters);
+        $location->setTimezone($geocode->timezone);
+        $location->setOsmType($geocode->osmType);
+        $location->setOsmId($geocode->osmId);
+        $location->setWikidataId($geocode->wikidataId);
+        $location->setWikipedia($geocode->wikipedia);
+        $location->setAltNames($geocode->altNames);
+        $location->setExtraTags($geocode->extraTags);
+        $location->setRefreshedAt($this->resolveRefreshedAt($geocode));
+        $location->setStale(false);
+    }
+
+    private function resolveRefreshedAt(GeocodeResult $geocode): ?DateTimeImmutable
+    {
+        if ($geocode->refreshedAt instanceof DateTimeImmutable) {
+            return $geocode->refreshedAt;
+        }
+
+        try {
+            return new DateTimeImmutable();
+        } catch (Exception) {
+            return null;
         }
     }
 }

@@ -11,11 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use DateTimeImmutable;
+use Exception;
+use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function count;
 use function is_array;
+use function is_numeric;
 use function is_string;
+use function max;
 use function number_format;
 use function strtoupper;
 
@@ -50,7 +55,8 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
                 'lon'            => number_format($lon, 8, '.', ''),
                 'zoom'           => (string) $this->zoom,
                 'addressdetails' => '1',
-                'namedetails'    => '0',
+                'namedetails'    => '1',
+                'extratags'      => '1',
             ],
             'timeout' => 10.0,
         ]);
@@ -81,6 +87,26 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
             }
         }
 
+        $extraTags = $this->stringMap($data['extratags'] ?? null);
+        $altNames  = $this->stringMap($data['namedetails'] ?? null);
+
+        $attribution = $this->s($data['attribution'] ?? ($data['powered_by'] ?? null));
+        $licence     = $this->s($data['licence'] ?? null);
+        $confidence  = isset($data['importance']) ? (float) $data['importance'] : null;
+        $osmType     = $this->s($data['osm_type'] ?? null);
+        $osmId       = isset($data['osm_id']) ? (string) $data['osm_id'] : null;
+        $timezone    = $this->s($data['timezone'] ?? ($extraTags['timezone'] ?? null));
+        $wikidataId  = $this->s($extraTags['wikidata'] ?? ($data['wikidata'] ?? null));
+        $wikipedia   = $this->s($extraTags['wikipedia'] ?? ($data['wikipedia'] ?? null));
+
+        $accuracy = $this->accuracyRadius($bbox, (float) $latS, (float) $lonS);
+
+        try {
+            $refreshedAt = new DateTimeImmutable();
+        } catch (Exception) {
+            $refreshedAt = null;
+        }
+
         return new GeocodeResult(
             provider: 'nominatim',
             providerPlaceId: $placeId,
@@ -101,12 +127,78 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
             houseNumber: $this->s($addr['house_number'] ?? null),
             boundingBox: $bbox,
             category: $this->s($data['category'] ?? null),
-            type: $this->s($data['type'] ?? null)
+            type: $this->s($data['type'] ?? null),
+            attribution: $attribution,
+            licence: $licence,
+            refreshedAt: $refreshedAt,
+            confidence: $confidence,
+            accuracyRadiusMeters: $accuracy,
+            timezone: $timezone,
+            osmType: $osmType,
+            osmId: $osmId,
+            wikidataId: $wikidataId,
+            wikipedia: $wikipedia,
+            altNames: $altNames,
+            extraTags: $extraTags,
         );
     }
 
     private function s(mixed $v): ?string
     {
         return is_string($v) && $v !== '' ? $v : null;
+    }
+
+    /**
+     * @param list<float>|null $bbox
+     */
+    private function accuracyRadius(?array $bbox, float $lat, float $lon): ?float
+    {
+        if (!is_array($bbox) || count($bbox) !== 4) {
+            return null;
+        }
+
+        [$south, $north, $west, $east] = $bbox;
+        if (!is_numeric($south) || !is_numeric($north) || !is_numeric($west) || !is_numeric($east)) {
+            return null;
+        }
+
+        $distances = [
+            MediaMath::haversineDistanceInMeters($lat, $lon, (float) $north, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, (float) $south, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, (float) $east),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, (float) $west),
+        ];
+
+        $radius = max($distances);
+        if (!is_numeric($radius)) {
+            return null;
+        }
+
+        $radiusFloat = (float) $radius;
+
+        return $radiusFloat > 0.0 ? $radiusFloat : null;
+    }
+
+    /**
+     * @return array<string,string>|null
+     */
+    private function stringMap(mixed $value): ?array
+    {
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $map = [];
+        foreach ($value as $k => $v) {
+            if (is_string($k) && is_string($v) && $v !== '') {
+                $map[$k] = $v;
+            }
+        }
+
+        if ($map === []) {
+            return null;
+        }
+
+        return $map;
     }
 }
