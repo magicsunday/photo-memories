@@ -202,5 +202,6 @@ parameters:
     memories.slideshow.video_width: 1280
     memories.slideshow.video_height: 720
     memories.slideshow.ffmpeg_path: 'ffmpeg'
-    memories.slideshow.php_binary: '%env(default:php:string:MEMORIES_PHP_BINARY)%'
+    memories.slideshow.php_binary_default: 'php'
+    memories.slideshow.php_binary: "%env(default:memories.slideshow.php_binary_default:MEMORIES_PHP_BINARY)%"
 
