@@ -15,8 +15,8 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage;
-use MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -33,13 +33,17 @@ final class MetadataExtractionStageTest extends TestCase
         );
         $media->setIndexLog('stale entry');
 
-        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('supports')
+            ->with('/library/image.jpg', $media)
+            ->willReturn(true);
         $extractor->expects(self::once())
             ->method('extract')
             ->with('/library/image.jpg', $media)
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $stage   = new MetadataExtractionStage($extractor);
+        $stage   = new MetadataExtractionStage([$extractor]);
         $output  = new BufferedOutput();
         $context = MediaIngestionContext::create(
             '/library/image.jpg',
@@ -66,12 +70,16 @@ final class MetadataExtractionStageTest extends TestCase
             path: '/library/broken.jpg',
         );
 
-        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('supports')
+            ->with('/library/broken.jpg', $media)
+            ->willReturn(true);
         $extractor->expects(self::once())
             ->method('extract')
             ->willThrowException(new RuntimeException('boom'));
 
-        $stage  = new MetadataExtractionStage($extractor);
+        $stage  = new MetadataExtractionStage([$extractor]);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -110,11 +118,12 @@ final class MetadataExtractionStageTest extends TestCase
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexLog('keep this');
 
-        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor->expects(self::never())->method('supports');
         $extractor->expects(self::never())
             ->method('extract');
 
-        $stage  = new MetadataExtractionStage($extractor);
+        $stage  = new MetadataExtractionStage([$extractor]);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -145,14 +154,18 @@ final class MetadataExtractionStageTest extends TestCase
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexLog('stale warning');
 
-        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('supports')
+            ->with('/library/force.jpg', $media)
+            ->willReturn(true);
         $extractor->expects(self::once())
             ->method('extract')
             ->willReturnCallback(static function (string $file, Media $entity): Media {
                 return $entity;
             });
 
-        $stage  = new MetadataExtractionStage($extractor);
+        $stage  = new MetadataExtractionStage([$extractor]);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
@@ -182,7 +195,11 @@ final class MetadataExtractionStageTest extends TestCase
             path: '/library/warn.jpg',
         );
 
-        $extractor = $this->createMock(MetadataExtractorInterface::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
+        $extractor->expects(self::once())
+            ->method('supports')
+            ->with('/library/warn.jpg', $media)
+            ->willReturn(true);
         $extractor->expects(self::once())
             ->method('extract')
             ->willReturnCallback(static function (string $file, Media $entity): Media {
@@ -191,7 +208,7 @@ final class MetadataExtractionStageTest extends TestCase
                 return $entity;
             });
 
-        $stage  = new MetadataExtractionStage($extractor);
+        $stage  = new MetadataExtractionStage([$extractor]);
         $output = new BufferedOutput();
 
         $context = MediaIngestionContext::create(
