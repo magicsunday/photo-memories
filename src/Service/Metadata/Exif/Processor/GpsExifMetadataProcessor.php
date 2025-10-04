@@ -47,6 +47,10 @@ final class GpsExifMetadataProcessor implements ExifMetadataProcessorInterface
             $media->setGpsAlt($metadata->altitude);
         }
 
+        if ($metadata->horizontalAccuracyMeters !== null) {
+            $media->setGpsAccuracyM($metadata->horizontalAccuracyMeters);
+        }
+
         if ($metadata->speedMetersPerSecond !== null) {
             $media->setGpsSpeedMps($metadata->speedMetersPerSecond);
         }

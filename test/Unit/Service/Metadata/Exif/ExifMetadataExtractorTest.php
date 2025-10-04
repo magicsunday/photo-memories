@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
+use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -101,6 +103,34 @@ final class ExifMetadataExtractorTest extends TestCase
         self::assertSame(0.85, $normalized['GPS']['GPSHPositioningError']);
     }
 
+    #[Test]
+    public function storesGpsAccuracyFromNormalizedAlias(): void
+    {
+        $media = $this->makeMedia(
+            id: 1,
+            path: '/fixtures/exif/accuracy.jpg',
+            configure: static function (Media $value): void {
+                $value->setMime('image/jpeg');
+            },
+        );
+
+        $exif = [
+            'GPS' => [
+                'GPSLatitude'             => ['52/1', '30/1', '0/1'],
+                'GPSLatitudeRef'          => 'N',
+                'GPSLongitude'            => ['13/1', '24/1', '0/1'],
+                'GPSLongitudeRef'         => 'E',
+                'UndefinedTag:0x001F'     => '5/2',
+            ],
+        ];
+
+        $extractor = new ExifMetadataExtractor($this->createProcessors());
+
+        $this->runProcessors($extractor, $exif, $media);
+
+        self::assertSame(2.5, $media->getGpsAccuracyM());
+    }
+
     /**
      * @return iterable<string, array{int, int, ?bool, ?bool}>
      */
@@ -136,6 +166,7 @@ final class ExifMetadataExtractorTest extends TestCase
         $processors = [
             new DimensionsExifMetadataProcessor(),
             new AspectFlagExifMetadataProcessor(),
+            new GpsExifMetadataProcessor(new DefaultExifValueAccessor()),
         ];
 
         usort(
