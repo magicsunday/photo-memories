@@ -1,0 +1,26 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "h264",
+      "codec_type": "video",
+      "avg_frame_rate": "120/1",
+      "tags": {
+        "rotate": "90"
+      },
+      "side_data_list": [
+        {
+          "side_data_type": "Display Matrix",
+          "rotation": "90"
+        },
+        {
+          "side_data_type": "Camera Motion",
+          "stabilization": "on"
+        }
+      ]
+    }
+  ],
+  "format": {
+    "duration": "12.345"
+  }
+}
