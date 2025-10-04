@@ -52,6 +52,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
             $loc = $this->cellCache[$cell];
             $this->ensurePois($loc, $forceRefreshPois);
             $media->setLocation($loc);
+            $media->setNeedsGeocode(false);
 
             return $loc;
         }
@@ -62,6 +63,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
             $this->cellCache[$cell] = $fromIndex;
             $this->ensurePois($fromIndex, $forceRefreshPois);
             $media->setLocation($fromIndex);
+            $media->setNeedsGeocode(false);
 
             return $fromIndex;
         }
@@ -84,6 +86,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         $this->lastNetworkCalls = $networkCalls;
 
         $media->setLocation($loc);
+        $media->setNeedsGeocode(false);
 
         return $loc;
     }

@@ -32,6 +32,9 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
         $mediaA = new Media('a.jpg', 'hash-a', 100);
         $mediaB = new Media('b.jpg', 'hash-b', 200);
 
+        $mediaA->setNeedsGeocode(true);
+        $mediaB->setNeedsGeocode(true);
+
         $location = new Location('nominatim', '1', 'Berlin', 1.0, 2.0, 'cell');
 
         $linker = new class($location, $mediaA, $mediaB) implements MediaLocationLinkerInterface {
@@ -54,12 +57,16 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
                 if ($this->invocations === 0) {
                     Assert::assertSame($this->first, $media);
+                    Assert::assertTrue($media->needsGeocode());
+                    $media->setLocation($this->location);
+                    $media->setNeedsGeocode(false);
                     ++$this->invocations;
 
                     return $this->location;
                 }
 
                 Assert::assertSame($this->second, $media);
+                Assert::assertTrue($media->needsGeocode());
                 ++$this->invocations;
 
                 return null;
@@ -79,6 +86,8 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
         self::assertSame(1, $summary->getLinked());
         self::assertSame(1, $summary->getNetworkCalls());
         self::assertSame([$location], $summary->getLocationsForPoiUpdate());
+        self::assertFalse($mediaA->needsGeocode());
+        self::assertTrue($mediaB->needsGeocode());
     }
 
     #[Test]
@@ -88,6 +97,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
         $entityManager->expects(self::never())->method('flush');
 
         $media = new Media('c.jpg', 'hash-c', 300);
+        $media->setNeedsGeocode(true);
         $location = (new Location('nominatim', '2', 'Hamburg', 1.0, 2.0, 'cell'))->setPois([['name' => 'Alster']]);
 
         $linker = new class($media, $location) implements MediaLocationLinkerInterface {
@@ -107,6 +117,9 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
                 $this->linked = true;
 
+                $media->setLocation($this->location);
+                $media->setNeedsGeocode(false);
+
                 return $this->location;
             }
 
@@ -123,5 +136,6 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
         $summary = $processor->process([$media], true, true, new NullOutput());
 
         self::assertSame([$location], $summary->getLocationsForPoiUpdate());
+        self::assertFalse($media->needsGeocode());
     }
 }

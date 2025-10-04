@@ -408,6 +408,12 @@ class Media
     private ?array $thumbnails = null;
 
     /**
+     * Indicates whether the media still requires geocoding.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $needsGeocode = false;
+
+    /**
      * Optional location entity representing the geocoded place.
      */
     #[ORM\ManyToOne(targetEntity: Location::class)]
@@ -1495,6 +1501,24 @@ class Media
     public function setFeatures(?array $v): void
     {
         $this->features = $v;
+    }
+
+    /**
+     * Returns whether the media requires geocoding.
+     */
+    public function needsGeocode(): bool
+    {
+        return $this->needsGeocode;
+    }
+
+    /**
+     * Marks the media as requiring or not requiring geocoding.
+     *
+     * @param bool $needsGeocode True if geocoding is still required.
+     */
+    public function setNeedsGeocode(bool $needsGeocode): void
+    {
+        $this->needsGeocode = $needsGeocode;
     }
 
     /**
