@@ -166,7 +166,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new DuplicateHandlingStage($entityManager),
             new MetadataExtractionStage($metadataExtractor),
             new ThumbnailGenerationStage($thumbnailService),
-            new PersistenceBatchStage($entityManager),
+            new PersistenceBatchStage($entityManager, 10),
         ]);
     }
 

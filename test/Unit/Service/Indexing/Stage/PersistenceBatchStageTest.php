@@ -33,7 +33,7 @@ final class PersistenceBatchStageTest extends TestCase
         $entityManager->expects(self::once())->method('flush');
         $entityManager->expects(self::never())->method('clear');
 
-        $stage = new PersistenceBatchStage($entityManager);
+        $stage = new PersistenceBatchStage($entityManager, 10);
         $context = MediaIngestionContext::create(
             'file',
             false,
@@ -56,7 +56,7 @@ final class PersistenceBatchStageTest extends TestCase
         $entityManager->expects(self::never())->method('persist');
 
         $output  = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
-        $stage   = new PersistenceBatchStage($entityManager);
+        $stage   = new PersistenceBatchStage($entityManager, 10);
         $context = MediaIngestionContext::create(
             'file',
             false,
@@ -70,5 +70,31 @@ final class PersistenceBatchStageTest extends TestCase
 
         self::assertStringContainsString(' (dry-run) ', $output->fetch());
         self::assertSame($context, $result);
+    }
+
+    #[Test]
+    public function processFlushesAfterConfiguredBatchSize(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::exactly(3))->method('persist');
+        $entityManager->expects(self::exactly(2))->method('flush');
+        $entityManager->expects(self::once())->method('clear');
+
+        $stage = new PersistenceBatchStage($entityManager, 2);
+
+        for ($index = 0; $index < 3; ++$index) {
+            $context = MediaIngestionContext::create(
+                'file-' . $index,
+                false,
+                false,
+                false,
+                false,
+                new NullOutput()
+            )->withMedia(new Media('file-' . $index, 'checksum-' . $index, $index));
+
+            $stage->process($context);
+        }
+
+        $stage->finalize(MediaIngestionContext::create('', false, false, false, false, new NullOutput()));
     }
 }
