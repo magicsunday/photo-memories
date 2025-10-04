@@ -352,6 +352,30 @@ class Media
     private ?float $colorfulness = null;
 
     /**
+     * Aggregated quality score in the range [0,1].
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $qualityScore = null;
+
+    /**
+     * Aggregated exposure score in the range [0,1].
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $qualityExposure = null;
+
+    /**
+     * Aggregated noise score (higher means cleaner image).
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $qualityNoise = null;
+
+    /**
+     * Flag indicating whether the media falls below quality thresholds.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $lowQuality = false;
+
+    /**
      * Prefix of the perceptual hash for quick similarity checks.
      */
     #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
@@ -1387,6 +1411,76 @@ class Media
     public function setColorfulness(?float $v): void
     {
         $this->colorfulness = $v;
+    }
+
+    /**
+     * Returns the aggregated quality score.
+     */
+    public function getQualityScore(): ?float
+    {
+        return $this->qualityScore;
+    }
+
+    /**
+     * Sets the aggregated quality score.
+     *
+     * @param float|null $score Quality score in the range [0,1].
+     */
+    public function setQualityScore(?float $score): void
+    {
+        $this->qualityScore = $score;
+    }
+
+    /**
+     * Returns the aggregated exposure score.
+     */
+    public function getQualityExposure(): ?float
+    {
+        return $this->qualityExposure;
+    }
+
+    /**
+     * Sets the aggregated exposure score.
+     *
+     * @param float|null $score Exposure score in the range [0,1].
+     */
+    public function setQualityExposure(?float $score): void
+    {
+        $this->qualityExposure = $score;
+    }
+
+    /**
+     * Returns the aggregated noise score.
+     */
+    public function getQualityNoise(): ?float
+    {
+        return $this->qualityNoise;
+    }
+
+    /**
+     * Sets the aggregated noise score.
+     *
+     * @param float|null $score Noise score in the range [0,1].
+     */
+    public function setQualityNoise(?float $score): void
+    {
+        $this->qualityNoise = $score;
+    }
+
+    /**
+     * Indicates whether the media falls below the configured quality thresholds.
+     */
+    public function isLowQuality(): bool
+    {
+        return $this->lowQuality;
+    }
+
+    /**
+     * Marks the media as low quality.
+     */
+    public function setLowQuality(bool $lowQuality): void
+    {
+        $this->lowQuality = $lowQuality;
     }
 
     /**

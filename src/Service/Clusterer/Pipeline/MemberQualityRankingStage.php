@@ -244,27 +244,37 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         ?float $avgSharpness,
         ?float $avgIso,
     ): float {
-        $resolution = $this->resolveResolutionScore($media);
-        if ($resolution === null) {
-            $resolution = $avgResolution;
+        $score = $media->getQualityScore();
+
+        if ($score === null) {
+            $resolution = $this->resolveResolutionScore($media);
+            if ($resolution === null) {
+                $resolution = $avgResolution;
+            }
+
+            $sharpness = $media->getSharpness();
+            $sharpness = $sharpness !== null ? $this->clamp01($sharpness) : $avgSharpness;
+
+            $isoScore = $media->getQualityNoise();
+            if ($isoScore !== null) {
+                $isoScore = $this->clamp01($isoScore);
+            } else {
+                $isoValue = $media->getIso();
+                if ($isoValue !== null && $isoValue > 0) {
+                    $isoScore = $this->normalizeIso($isoValue);
+                } elseif ($avgIso !== null) {
+                    $isoScore = $avgIso;
+                }
+            }
+
+            $score = $this->combineScores([
+                [$resolution, 0.45],
+                [$sharpness, 0.35],
+                [$isoScore ?? null, 0.20],
+            ], $avgQuality ?? 0.0);
+        } else {
+            $score = $this->clamp01($score);
         }
-
-        $sharpness = $media->getSharpness();
-        $sharpness = $sharpness !== null ? $this->clamp01($sharpness) : $avgSharpness;
-
-        $isoValue = $media->getIso();
-        $isoScore = null;
-        if ($isoValue !== null && $isoValue > 0) {
-            $isoScore = $this->normalizeIso($isoValue);
-        } elseif ($avgIso !== null) {
-            $isoScore = $avgIso;
-        }
-
-        $score = $this->combineScores([
-            [$resolution, 0.45],
-            [$sharpness, 0.35],
-            [$isoScore, 0.20],
-        ], $avgQuality ?? 0.0);
 
         if ($avgQuality !== null && $avgQuality > 0.0) {
             $relative = $this->clamp01($score / max(0.0001, $avgQuality));
@@ -276,17 +286,25 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
     private function computeAestheticComponent(Media $media, ?float $avgAesthetics): float
     {
-        $brightness = $media->getBrightness();
-        $contrast   = $media->getContrast();
-        $entropy    = $media->getEntropy();
-        $color      = $media->getColorfulness();
+        $entropy = $media->getEntropy();
+        $color   = $media->getColorfulness();
 
-        $score = $this->combineScores([
-            [$brightness !== null ? $this->balancedScore($this->clamp01($brightness), 0.55, 0.35) : null, 0.30],
-            [$contrast !== null ? $this->clamp01($contrast) : null, 0.20],
-            [$entropy !== null ? $this->clamp01($entropy) : null, 0.25],
-            [$color !== null ? $this->clamp01($color) : null, 0.25],
-        ], $avgAesthetics ?? 0.0);
+        $components = [];
+        $exposure   = $media->getQualityExposure();
+        if ($exposure !== null) {
+            $components[] = [$this->clamp01($exposure), 0.50];
+        } else {
+            $brightness = $media->getBrightness();
+            $contrast   = $media->getContrast();
+
+            $components[] = [$brightness !== null ? $this->balancedScore($this->clamp01($brightness), 0.55, 0.35) : null, 0.30];
+            $components[] = [$contrast !== null ? $this->clamp01($contrast) : null, 0.20];
+        }
+
+        $components[] = [$entropy !== null ? $this->clamp01($entropy) : null, 0.25];
+        $components[] = [$color !== null ? $this->clamp01($color) : null, 0.25];
+
+        $score = $this->combineScores($components, $avgAesthetics ?? 0.0);
 
         if ($avgAesthetics !== null && $avgAesthetics > 0.0) {
             $relative = $this->clamp01($score / max(0.0001, $avgAesthetics));
