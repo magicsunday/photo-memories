@@ -121,18 +121,18 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             $seenDhash = [];
             /** @var array<string,int> $seenBurst */
             $seenBurst = [];
+            /** @var array<int,int> $positions */
+            $positions = [];
 
-            foreach ($members as $memberId) {
+            $visibleMembers = [];
+            foreach ($members as $idx => $memberId) {
                 $media = $mediaMap[(int) $memberId] ?? null;
                 if (!$media instanceof Media) {
-                    $details[(string) $memberId] = [
-                        'score'       => 0.0,
-                        'quality'     => 0.0,
-                        'aesthetics'  => 0.0,
-                        'penalty'     => 0.0,
-                    ];
                     continue;
                 }
+
+                $visibleMembers[]           = (int) $memberId;
+                $positions[(int) $memberId] = $idx;
 
                 $qualityScore    = $this->computeQualityComponent($media, $avgQuality, $avgResolution, $avgSharpness, $avgIso);
                 $aestheticScore  = $this->computeAestheticComponent($media, $avgAesthetics);
@@ -151,12 +151,41 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 ];
             }
 
-            $positions = [];
-            foreach ($members as $idx => $memberId) {
-                $positions[(int) $memberId] = $idx;
+            if ($visibleMembers === []) {
+                $draft->setParam('member_quality', [
+                    'ordered' => [],
+                    'members' => [],
+                    'quality_ranked' => [
+                        'ordered' => [],
+                        'members' => [],
+                    ],
+                    'summary' => [
+                        'quality_avg'        => $avgQuality,
+                        'aesthetics_avg'     => $avgAesthetics,
+                        'quality_resolution' => $avgResolution,
+                        'quality_sharpness'  => $avgSharpness,
+                        'quality_iso'        => $avgIso,
+                    ],
+                    'weights' => [
+                        'quality'    => $this->qualityWeight,
+                        'aesthetics' => $this->aestheticWeight,
+                        'duplicates' => [
+                            'phash' => $this->phashPenalty,
+                            'dhash' => $this->dhashPenalty,
+                            'burst' => $this->burstPenalty,
+                        ],
+                    ],
+                ]);
+
+                ++$processed;
+                if ($progress !== null && ($processed % 200) === 0) {
+                    $progress($processed, $total);
+                }
+
+                continue;
             }
 
-            $qualityOrdered = $members;
+            $qualityOrdered = $visibleMembers;
             usort($qualityOrdered, function (int $a, int $b) use ($details, $positions): int {
                 $detailA = $details[(string) $a]['score'] ?? 0.0;
                 $detailB = $details[(string) $b]['score'] ?? 0.0;
@@ -181,7 +210,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             }
 
             $draft->setParam('member_quality', [
-                'ordered' => array_values($members),
+                'ordered' => $visibleMembers,
                 'members' => $details,
                 'quality_ranked' => [
                     'ordered' => $qualityOrdered,
@@ -231,6 +260,10 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
         $map = [];
         foreach ($this->mediaLookup->findByIds($ids) as $media) {
+            if ($media->isNoShow()) {
+                continue;
+            }
+
             $map[$media->getId()] = $media;
         }
 

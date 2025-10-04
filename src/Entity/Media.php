@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 
 /**
@@ -322,6 +323,12 @@ class Media
     private ?bool $isPanorama = null;
 
     /**
+     * Categorised content kind describing non-standard assets.
+     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, enumType: ContentKind::class)]
+    private ?ContentKind $contentKind = null;
+
+    /**
      * Calculated sharpness score used for quality metrics.
      */
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
@@ -374,6 +381,12 @@ class Media
      */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
     private bool $lowQuality = false;
+
+    /**
+     * Marker indicating whether the media should be hidden from downstream feeds.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $noShow = false;
 
     /**
      * Prefix of the perceptual hash for quick similarity checks.
@@ -1324,6 +1337,24 @@ class Media
     }
 
     /**
+     * Returns the assigned content kind.
+     */
+    public function getContentKind(): ?ContentKind
+    {
+        return $this->contentKind;
+    }
+
+    /**
+     * Assigns the content kind.
+     *
+     * @param ContentKind|null $contentKind Categorised content kind.
+     */
+    public function setContentKind(?ContentKind $contentKind): void
+    {
+        $this->contentKind = $contentKind;
+    }
+
+    /**
      * Returns the calculated sharpness score.
      */
     public function getSharpness(): ?float
@@ -1481,6 +1512,24 @@ class Media
     public function setLowQuality(bool $lowQuality): void
     {
         $this->lowQuality = $lowQuality;
+    }
+
+    /**
+     * Indicates whether the media should be hidden from downstream feeds.
+     */
+    public function isNoShow(): bool
+    {
+        return $this->noShow;
+    }
+
+    /**
+     * Marks the media as hidden for downstream feeds.
+     *
+     * @param bool $noShow True to exclude the media from feeds.
+     */
+    public function setNoShow(bool $noShow): void
+    {
+        $this->noShow = $noShow;
     }
 
     /**

@@ -256,6 +256,60 @@ final class MemberQualityRankingStageTest extends TestCase
         self::assertSame(0.2, $members['303']['quality']);
     }
 
+    #[Test]
+    public function skipsMembersMarkedAsHidden(): void
+    {
+        $lookup = new InMemoryMediaLookup([
+            401 => $this->buildMedia(
+                id: 401,
+                width: 4000,
+                height: 3000,
+                sharpness: 0.8,
+                iso: 200,
+                brightness: 0.55,
+                contrast: 0.62,
+                entropy: 0.58,
+                colorfulness: 0.60,
+                phash: 'visible-phash',
+                dhash: 'visible-dhash',
+                burstUuid: null,
+            ),
+            402 => $this->buildMedia(
+                id: 402,
+                width: 3000,
+                height: 2000,
+                sharpness: 0.7,
+                iso: 160,
+                brightness: 0.50,
+                contrast: 0.58,
+                entropy: 0.55,
+                colorfulness: 0.52,
+                phash: 'hidden-phash',
+                dhash: 'hidden-dhash',
+                burstUuid: null,
+                noShow: true,
+            ),
+        ]);
+
+        $stage = new MemberQualityRankingStage($lookup, 12.0);
+
+        $draft = new ClusterDraft(
+            algorithm: 'test',
+            params: [],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [401, 402],
+        );
+
+        $stage->process([$draft]);
+
+        $meta = $draft->getParams()['member_quality'];
+
+        self::assertSame([401], $meta['ordered']);
+        self::assertSame([401], $meta['quality_ranked']['ordered']);
+        self::assertArrayHasKey('401', $meta['members']);
+        self::assertArrayNotHasKey('402', $meta['members']);
+    }
+
     private function buildMedia(
         int $id,
         int $width,
@@ -273,6 +327,7 @@ final class MemberQualityRankingStageTest extends TestCase
         ?float $qualityExposure = null,
         ?float $qualityNoise = null,
         bool $lowQuality = false,
+        bool $noShow = false,
     ): Media {
         $media = new Media(path: 'media-' . $id . '.jpg', checksum: 'checksum-' . $id, size: 1024);
 
@@ -296,6 +351,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $media->setQualityExposure($qualityExposure);
         $media->setQualityNoise($qualityNoise);
         $media->setLowQuality($lowQuality);
+        $media->setNoShow($noShow);
 
         return $media;
     }
@@ -318,7 +374,7 @@ final class InMemoryMediaLookup implements MemberMediaLookupInterface
         $result = [];
         foreach ($ids as $id) {
             $media = $this->map[$id] ?? null;
-            if ($media instanceof Media) {
+            if ($media instanceof Media && $media->isNoShow() === false) {
                 $result[] = $media;
             }
         }

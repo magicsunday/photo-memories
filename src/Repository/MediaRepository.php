@@ -39,6 +39,7 @@ readonly class MediaRepository implements MemberMediaLookupInterface
             ->select('m')
             ->from(Media::class, 'm')
             ->where('m.id IN (:ids)')
+            ->andWhere('m.noShow = false')
             ->setParameter('ids', $ids);
 
         $q = $qb->getQuery();

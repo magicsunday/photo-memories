@@ -138,6 +138,8 @@ services:
         arguments:
             $sampleSize: 320
 
+    MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor: ~
+
     MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor:
         arguments:
             $ffprobePath: '%env(string:FFPROBE_PATH)%'
@@ -161,6 +163,7 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
 
