@@ -263,9 +263,15 @@ services:
 
     MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage: ~
 
-    MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage:
-        arguments:
-            $extractors: !tagged_iterator 'memories.metadata_extractor'
+    MagicSunday\Memories\Service\Indexing\Stage\MetadataStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\TimeStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\GeoStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\QualityStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\FacesStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\SceneStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage: ~
+    MagicSunday\Memories\Service\Indexing\Stage\HashStage: ~
 
     MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
 
@@ -278,7 +284,15 @@ services:
             $stages:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage'
-                - '@MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\MetadataStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\TimeStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\GeoStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\QualityStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\FacesStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\SceneStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\HashStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
 

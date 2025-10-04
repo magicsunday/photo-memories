@@ -15,8 +15,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
+use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
+use MagicSunday\Memories\Service\Indexing\Stage\AbstractExtractorStage;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
-use MagicSunday\Memories\Service\Indexing\Stage\MetadataExtractionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
@@ -169,7 +170,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
             new DuplicateHandlingStage($entityManager),
-            new MetadataExtractionStage([$metadataExtractor]),
+            new PipelineTestExtractorStage([$metadataExtractor]),
             new ThumbnailGenerationStage($thumbnailService),
             new PersistenceBatchStage($entityManager, 10),
         ]);
@@ -182,5 +183,29 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $this->tempFiles[] = $path;
 
         return $path;
+    }
+}
+
+final class PipelineTestExtractorStage extends AbstractExtractorStage
+{
+    /**
+     * @param iterable<SingleMetadataExtractorInterface> $extractors
+     */
+    public function __construct(
+        private readonly iterable $extractors,
+    ) {
+    }
+
+    public function process(MediaIngestionContext $context): MediaIngestionContext
+    {
+        if ($context->isSkipped()) {
+            return $context;
+        }
+
+        if ($this->shouldSkipExtraction($context)) {
+            return $context;
+        }
+
+        return $this->runExtractors($context, $this->extractors);
     }
 }
