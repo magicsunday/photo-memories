@@ -14,18 +14,22 @@ namespace MagicSunday\Memories\Service\Metadata;
 use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
+use Closure;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 
-use function array_map;
+use function array_key_exists;
 use function array_pad;
-use function count;
 use function escapeshellarg;
 use function escapeshellcmd;
 use function explode;
 use function intdiv;
+use function is_bool;
+use function is_float;
+use function is_int;
 use function is_array;
 use function is_file;
+use function is_numeric;
 use function is_string;
 use function json_decode;
 use function shell_exec;
@@ -33,12 +37,14 @@ use function sprintf;
 use function str_contains;
 use function str_starts_with;
 use function strtolower;
+use function trim;
 
 final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
         private string $ffprobePath = 'ffprobe',
         private float $slowMoFpsThreshold = 100.0,
+        private ?Closure $processRunner = null,
     ) {
     }
 
@@ -57,35 +63,52 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         $cmd = sprintf(
-            '%s -v error -select_streams v:0 -show_entries stream=codec_name,avg_frame_rate -show_entries format=duration -of default=nw=1:nk=1 %s',
+            '%s -v error -select_streams v -show_entries stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration -of json %s',
             escapeshellcmd($this->ffprobePath),
             escapeshellarg($filepath)
         );
-        $out = @shell_exec($cmd);
-        if (!is_string($out) || $out === '') {
+        $out = $this->runCommand($cmd);
+        if ($out === null) {
             return $media;
         }
 
-        $lines = array_map('trim', explode("\n", $out));
-        if (count($lines) >= 3) {
-            $codec = $lines[0] !== '' ? $lines[0] : null;
-            $fps   = $this->parseFps($lines[1] ?? null);
-            $dur   = $this->parseFloat($lines[2] ?? null);
+        $payload = json_decode($out, true);
+        if (!is_array($payload)) {
+            return $media;
+        }
 
-            if ($codec !== null) {
+        $streamsRaw = $payload['streams'] ?? null;
+        $format     = $payload['format'] ?? null;
+
+        $normalisedStreams = $this->normaliseStreams($streamsRaw);
+        $media->setVideoStreams($normalisedStreams !== [] ? $normalisedStreams : null);
+
+        $primaryStream = $this->firstStream($streamsRaw);
+        if ($primaryStream !== null) {
+            $codec = $primaryStream['codec_name'] ?? null;
+            if (is_string($codec) && $codec !== '') {
                 $media->setVideoCodec($codec);
             }
 
+            $fps = $this->parseFps(is_string($primaryStream['avg_frame_rate'] ?? null) ? $primaryStream['avg_frame_rate'] : null);
             if ($fps !== null) {
                 $media->setVideoFps($fps);
-            }
-
-            if ($dur !== null) {
-                $media->setVideoDurationS($dur);
-            }
-
-            if ($fps !== null) {
                 $media->setIsSlowMo($fps >= $this->slowMoFpsThreshold);
+            }
+
+            $rotation = $this->parseStreamRotation($primaryStream);
+            if ($rotation !== null) {
+                $media->setVideoRotationDeg($rotation);
+            }
+
+            $stabilised = $this->parseStreamStabilisation($primaryStream['side_data_list'] ?? null);
+            $media->setVideoHasStabilization($stabilised);
+        }
+
+        if (is_array($format)) {
+            $duration = $this->parseFloat($format['duration'] ?? null);
+            if ($duration !== null) {
+                $media->setVideoDurationS($duration);
             }
         }
 
@@ -94,6 +117,219 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         return $media;
+    }
+
+    private function runCommand(string $command): ?string
+    {
+        $runner = $this->processRunner;
+        $result = $runner !== null ? $runner($command) : @shell_exec($command);
+
+        if (!is_string($result)) {
+            return null;
+        }
+
+        return trim($result) === '' ? null : $result;
+    }
+
+    /**
+     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     *
+     * @return array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>
+     */
+    private function normaliseStreams(?array $streams): array
+    {
+        if ($streams === null) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($streams as $stream) {
+            if (!is_array($stream)) {
+                continue;
+            }
+
+            $result[] = $this->normaliseNestedArray($stream);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     *
+     * @return array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>|null
+     */
+    private function firstStream(?array $streams): ?array
+    {
+        if ($streams === null) {
+            return null;
+        }
+
+        foreach ($streams as $stream) {
+            if (is_array($stream)) {
+                return $stream;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $stream
+     */
+    private function parseStreamRotation(array $stream): ?float
+    {
+        $tags = $stream['tags'] ?? null;
+        if (is_array($tags)) {
+            $rotation = $this->parseFloat($tags['rotate'] ?? null);
+            if ($rotation !== null) {
+                return $rotation;
+            }
+        }
+
+        $sideData = $stream['side_data_list'] ?? null;
+        if (!is_array($sideData)) {
+            return null;
+        }
+
+        foreach ($sideData as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            foreach (['rotation', 'Rotation', 'angle', 'Angle'] as $rotationKey) {
+                if (array_key_exists($rotationKey, $entry)) {
+                    $value = $this->parseFloat($entry[$rotationKey]);
+                    if ($value !== null) {
+                        return $value;
+                    }
+                }
+            }
+
+            $displayMatrix = $entry['displaymatrix'] ?? $entry['display_matrix'] ?? null;
+            if (is_array($displayMatrix)) {
+                $value = $this->parseFloat($displayMatrix['rotation'] ?? $displayMatrix['Rotation'] ?? null);
+                if ($value !== null) {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $sideData
+     */
+    private function parseStreamStabilisation(?array $sideData): ?bool
+    {
+        if ($sideData === null) {
+            return null;
+        }
+
+        foreach ($sideData as $entry) {
+            $value = $this->extractStabilisationFromEntry(is_array($entry) ? $entry : null);
+            if ($value !== null) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $entry
+     */
+    private function extractStabilisationFromEntry(?array $entry): ?bool
+    {
+        if ($entry === null) {
+            return null;
+        }
+
+        $type = $entry['side_data_type'] ?? null;
+        if (is_string($type)) {
+            $normalisedType = strtolower($type);
+            if ($normalisedType === 'camera motion' || $normalisedType === 'camera_motion') {
+                return true;
+            }
+        }
+
+        foreach (['stabilization', 'stabilisation', 'has_stabilization', 'hasStabilization'] as $key) {
+            if (array_key_exists($key, $entry)) {
+                $value = $this->normaliseBoolean($entry[$key]);
+                if ($value !== null) {
+                    return $value;
+                }
+            }
+        }
+
+        foreach ($entry as $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+
+            $nested = $this->extractStabilisationFromEntry($value);
+            if ($nested !== null) {
+                return $nested;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $value
+     *
+     * @return array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>
+     */
+    private function normaliseNestedArray(array $value): array
+    {
+        $result = [];
+
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $result[$key] = $this->normaliseNestedArray($item);
+
+                continue;
+            }
+
+            if (is_string($item) || is_int($item) || is_float($item) || is_bool($item) || $item === null) {
+                $result[$key] = $item;
+            }
+        }
+
+        return $result;
+    }
+
+    private function normaliseBoolean(null|string|int|float|bool $value): ?bool
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (float) $value !== 0.0;
+        }
+
+        $normalised = strtolower(trim((string) $value));
+        if ($normalised === '') {
+            return null;
+        }
+
+        if (is_numeric($normalised)) {
+            return (float) $normalised !== 0.0;
+        }
+
+        return match ($normalised) {
+            'true', 'yes', 'on', 'enabled', 'stabilized', 'stabilised' => true,
+            'false', 'no', 'off', 'disabled' => false,
+            default => null,
+        };
     }
 
     private function shouldExtractQuickTimeMetadata(Media $media): bool
@@ -146,10 +382,19 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         return (float) $v;
     }
 
-    private function parseFloat(?string $v): ?float
+    private function parseFloat(null|string|int|float $v): ?float
     {
-        if ($v === null || $v === '') {
+        if ($v === null) {
             return null;
+        }
+
+        if (is_string($v)) {
+            $trimmed = trim($v);
+            if ($trimmed === '') {
+                return null;
+            }
+
+            return (float) $trimmed;
         }
 
         return (float) $v;
@@ -166,8 +411,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             escapeshellarg($filepath),
         );
 
-        $out = @shell_exec($cmd);
-        if (!is_string($out) || $out === '') {
+        $out = $this->runCommand($cmd);
+        if ($out === null) {
             return null;
         }
 

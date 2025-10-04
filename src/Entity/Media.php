@@ -370,6 +370,26 @@ class Media
     private ?bool $isSlowMo = null;
 
     /**
+     * Rotation derived from ffprobe metadata in degrees.
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $videoRotationDeg = null;
+
+    /**
+     * Indicates whether stabilisation metadata is present for the video stream.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, nullable: true)]
+    private ?bool $videoHasStabilization = null;
+
+    /**
+     * Normalised ffprobe stream metadata for downstream consumers.
+     *
+     * @var array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $videoStreams = null;
+
+    /**
      * Flag indicating whether the media is portrait oriented.
      */
     #[ORM\Column(type: Types::BOOLEAN, nullable: true)]
@@ -1562,6 +1582,62 @@ class Media
     public function setIsSlowMo(?bool $v): void
     {
         $this->isSlowMo = $v;
+    }
+
+    /**
+     * Returns the video rotation in degrees.
+     */
+    public function getVideoRotationDeg(): ?float
+    {
+        return $this->videoRotationDeg;
+    }
+
+    /**
+     * Sets the video rotation in degrees.
+     *
+     * @param float|null $rotationDeg Rotation to apply clockwise.
+     */
+    public function setVideoRotationDeg(?float $rotationDeg): void
+    {
+        $this->videoRotationDeg = $rotationDeg;
+    }
+
+    /**
+     * Indicates whether stabilisation metadata is present for the video stream.
+     */
+    public function getVideoHasStabilization(): ?bool
+    {
+        return $this->videoHasStabilization;
+    }
+
+    /**
+     * Sets whether stabilisation metadata is present for the video stream.
+     *
+     * @param bool|null $hasStabilization True when stabilisation information exists.
+     */
+    public function setVideoHasStabilization(?bool $hasStabilization): void
+    {
+        $this->videoHasStabilization = $hasStabilization;
+    }
+
+    /**
+     * Provides the normalised ffprobe stream metadata.
+     *
+     * @return array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null
+     */
+    public function getVideoStreams(): ?array
+    {
+        return $this->videoStreams;
+    }
+
+    /**
+     * Stores the normalised ffprobe stream metadata.
+     *
+     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     */
+    public function setVideoStreams(?array $streams): void
+    {
+        $this->videoStreams = $streams;
     }
 
     /**

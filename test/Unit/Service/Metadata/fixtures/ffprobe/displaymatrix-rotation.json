@@ -1,0 +1,21 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "hevc",
+      "codec_type": "video",
+      "avg_frame_rate": "30/1",
+      "side_data_list": [
+        {
+          "side_data_type": "Display Matrix",
+          "displaymatrix": {
+            "rotation": "-90"
+          }
+        }
+      ]
+    }
+  ],
+  "format": {
+    "duration": "5.0"
+  }
+}
