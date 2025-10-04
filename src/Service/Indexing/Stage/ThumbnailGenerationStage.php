@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
+use MagicSunday\Memories\Support\IndexLogHelper;
 use Throwable;
 
 use function sprintf;
@@ -35,9 +36,10 @@ final class ThumbnailGenerationStage implements MediaIngestionStageInterface
             $thumbnails = $this->thumbnailService->generateAll($context->getFilePath(), $context->getMedia());
             $context->getMedia()->setThumbnails($thumbnails);
         } catch (Throwable $exception) {
-            $context->getOutput()->writeln(
-                sprintf('<error>Thumbnail generation failed for %s: %s</error>', $context->getFilePath(), $exception->getMessage())
-            );
+            $message = sprintf('Thumbnail generation failed for %s: %s', $context->getFilePath(), $exception->getMessage());
+
+            $context->getOutput()->writeln(sprintf('<error>%s</error>', $message));
+            IndexLogHelper::append($context->getMedia(), $message);
         }
 
         return $context;
