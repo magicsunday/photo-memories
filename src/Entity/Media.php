@@ -22,16 +22,22 @@ use function count;
  * Doctrine entity describing an imported photo or video including its metadata.
  */
 #[ORM\Entity]
-#[ORM\Table(name: 'media')]
-#[ORM\Index(name: 'idx_taken_at', fields: ['takenAt'])]
-#[ORM\Index(name: 'idx_checksum', fields: ['checksum'])]
-#[ORM\Index(name: 'idx_phash64', fields: ['phash64'])]
-#[ORM\Index(name: 'idx_live_pair_checksum', fields: ['livePairChecksum'])]
-#[ORM\Index(name: 'idx_media_geocell8', fields: ['geoCell8'])]
-#[ORM\Index(name: 'idx_media_phash_prefix', fields: ['phashPrefix'])]
-#[ORM\Index(name: 'idx_media_burst_taken', fields: ['burstUuid', 'takenAt'])]
-#[ORM\Index(name: 'idx_media_video_taken', fields: ['isVideo', 'takenAt'])]
-#[ORM\Index(name: 'idx_media_location', fields: ['location'])]
+#[ORM\Table(
+    name: 'media',
+    indexes: [
+        new ORM\Index(name: 'idx_taken_at', columns: ['takenAt']),
+        new ORM\Index(name: 'idx_checksum', columns: ['checksum']),
+        new ORM\Index(name: 'idx_phash64', columns: ['phash64']),
+        new ORM\Index(name: 'idx_live_pair_checksum', columns: ['livePairChecksum']),
+        new ORM\Index(name: 'idx_media_geocell8', columns: ['geoCell8']),
+        new ORM\Index(name: 'idx_media_phash_prefix', columns: ['phashPrefix']),
+        new ORM\Index(name: 'idx_media_burst_taken', columns: ['burstUuid', 'takenAt']),
+        new ORM\Index(name: 'idx_media_video_taken', columns: ['isVideo', 'takenAt']),
+        new ORM\Index(name: 'idx_media_location', columns: ['location_id']),
+        new ORM\Index(name: 'idx_media_needs_geocode', columns: ['needsGeocode']),
+        new ORM\Index(name: 'idx_media_candidate', columns: ['noShow', 'lowQuality', 'takenAt']),
+    ]
+)]
 class Media
 {
     /**
@@ -430,7 +436,7 @@ class Media
     /**
      * Prefix of the perceptual hash for quick similarity checks.
      */
-    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
+    #[ORM\Column(type: Types::STRING, length: 16, nullable: true)]
     private ?string $phashPrefix = null;
 
     /**
@@ -810,7 +816,7 @@ class Media
     {
         $this->phash = $phash;
 
-        $this->phashPrefix = $phash === null ? null : substr($phash, 0, 32);
+        $this->phashPrefix = $phash === null ? null : substr($phash, 0, 16);
     }
 
     /**
