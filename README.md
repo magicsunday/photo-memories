@@ -154,3 +154,5 @@ Die Vision-Pipeline speichert jetzt voraggregierte Qualitätsmetriken direkt am 
 * Rausch-Score `< 0.25`
 
 Alle Score-Werte bewegen sich zwischen `0` und `1`, wobei `1` den bestmöglichen Zustand beschreibt. Die Cluster-Heuristiken greifen bevorzugt auf diese aggregierten Zahlen zu; fehlen sie, bleiben die Rohmetriken (Auflösung, Schärfe, ISO, Helligkeit usw.) als Fallback erhalten.
+
+Für die Berechnung der Qualitätsmetriken und Posterframes greift der Indexer standardmäßig auf die Binaries `ffmpeg` und `ffprobe` aus dem `PATH` zu. Solltest du abweichende Installationspfade verwenden, setzt du die Umgebungsvariablen `FFMPEG_PATH` bzw. `FFPROBE_PATH` oder überschreibst die zugehörigen Symfony-Parameter `memories.video.ffmpeg_path` und `memories.video.ffprobe_path` in deiner Konfiguration. Beide Parameter bringen nun ohne weitere Anpassungen lauffähige Standardwerte mit.
