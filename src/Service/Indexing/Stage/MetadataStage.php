@@ -12,13 +12,14 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
 use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class MetadataStage extends AbstractExtractorStage
 {
@@ -28,12 +29,18 @@ final class MetadataStage extends AbstractExtractorStage
     private readonly iterable $extractors;
 
     public function __construct(
-        ExifMetadataExtractor $exif,
-        XmpIptcExtractor $xmp,
-        FileStatMetadataExtractor $fileStat,
-        FilenameKeywordExtractor $filenameKeyword,
-        AppleHeuristicsExtractor $appleHeuristics,
-        FfprobeMetadataExtractor $ffprobe,
+        #[Autowire(service: ExifMetadataExtractor::class)]
+        SingleMetadataExtractorInterface $exif,
+        #[Autowire(service: XmpIptcExtractor::class)]
+        SingleMetadataExtractorInterface $xmp,
+        #[Autowire(service: FileStatMetadataExtractor::class)]
+        SingleMetadataExtractorInterface $fileStat,
+        #[Autowire(service: FilenameKeywordExtractor::class)]
+        SingleMetadataExtractorInterface $filenameKeyword,
+        #[Autowire(service: AppleHeuristicsExtractor::class)]
+        SingleMetadataExtractorInterface $appleHeuristics,
+        #[Autowire(service: FfprobeMetadataExtractor::class)]
+        SingleMetadataExtractorInterface $ffprobe,
     ) {
         $this->extractors = [
             $exif,

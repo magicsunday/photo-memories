@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class ContentKindStage extends AbstractExtractorStage
 {
@@ -22,8 +23,10 @@ final class ContentKindStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
-    public function __construct(ContentClassifierExtractor $contentClassifier)
-    {
+    public function __construct(
+        #[Autowire(service: ContentClassifierExtractor::class)]
+        SingleMetadataExtractorInterface $contentClassifier,
+    ) {
         $this->extractors = [$contentClassifier];
     }
 

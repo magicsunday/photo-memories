@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Metadata\BurstDetector;
 use MagicSunday\Memories\Service\Metadata\BurstIndexExtractor;
 use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class BurstLiveStage extends AbstractExtractorStage
 {
@@ -25,9 +26,12 @@ final class BurstLiveStage extends AbstractExtractorStage
     private readonly iterable $extractors;
 
     public function __construct(
-        BurstDetector $burstDetector,
-        LivePairLinker $livePairLinker,
-        BurstIndexExtractor $burstIndexExtractor,
+        #[Autowire(service: BurstDetector::class)]
+        SingleMetadataExtractorInterface $burstDetector,
+        #[Autowire(service: LivePairLinker::class)]
+        SingleMetadataExtractorInterface $livePairLinker,
+        #[Autowire(service: BurstIndexExtractor::class)]
+        SingleMetadataExtractorInterface $burstIndexExtractor,
     ) {
         $this->extractors = [
             $burstDetector,

@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser;
@@ -155,7 +156,12 @@ final class TimeNormalizerTest extends TestCase
         $media = $this->makeMedia(
             id: 5,
             path: '/library/IMG_20230812_101112.jpg',
+            takenAt: '2024-08-12T10:11:12+00:00',
+            location: new Location('nominatim', 'rome-1', 'Roma', 41.902782, 12.496366, 'u6h1'),
         );
+        $media->setTimeSource(TimeSource::FILENAME);
+        $media->setTzId(null);
+        $media->setCapturedLocal(null);
         $media->setGpsLat(41.902782);
         $media->setGpsLon(12.496366);
 

@@ -858,14 +858,14 @@ final class ThumbnailServiceTest extends TestCase
         $service = new ThumbnailService($thumbnailDir, [200]);
         $missingPath = $thumbnailDir . DIRECTORY_SEPARATOR . 'missing.jpg';
 
-        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
         $method->setAccessible(true);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath));
 
         try {
-            $method->invoke($service, $missingPath, 200, null, hash('sha256', 'missing'));
+            $method->invoke($service, $missingPath, null, [200], hash('sha256', 'missing'), null);
         } finally {
             if (is_dir($thumbnailDir)) {
                 @rmdir($thumbnailDir);
@@ -892,14 +892,14 @@ final class ThumbnailServiceTest extends TestCase
 
         $service = new ThumbnailService($thumbnailDir, [200]);
 
-        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
         $method->setAccessible(true);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(sprintf('Unable to create GD image from "%s".', $sourcePath));
 
         try {
-            $method->invoke($service, $sourcePath, 200, null, hash('sha256', 'invalid'));
+            $method->invoke($service, $sourcePath, null, [200], hash('sha256', 'invalid'), null);
         } finally {
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);
@@ -938,7 +938,7 @@ final class ThumbnailServiceTest extends TestCase
         $media = new Media($sourcePath, hash('sha256', 'source'), 1024);
         $media->setOrientation(6);
 
-        $service        = new ThumbnailService($thumbnailDir, [200]);
+        $service        = new ThumbnailService($thumbnailDir, [200], true);
         $thumbnailPath  = null;
 
         try {
@@ -1003,14 +1003,14 @@ final class ThumbnailServiceTest extends TestCase
             self::fail('Unable to relocate thumbnail directory.');
         }
 
-        $method = new ReflectionMethod(ThumbnailService::class, 'generateWithGd');
+        $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
         $method->setAccessible(true);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessageMatches('/Unable to create thumbnail/');
 
         try {
-        $method->invoke($service, $sourcePath, 200, $media->getOrientation(), $media->getChecksum());
+        $method->invoke($service, $sourcePath, $media->getOrientation(), [200], $media->getChecksum(), $media->getMime());
         } finally {
             if (is_file($sourcePath)) {
                 @unlink($sourcePath);

@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class TimeStage extends AbstractExtractorStage
 {
@@ -26,10 +27,14 @@ final class TimeStage extends AbstractExtractorStage
     private readonly iterable $extractors;
 
     public function __construct(
-        TimeNormalizer $normalizer,
-        CalendarFeatureEnricher $calendar,
-        DaypartEnricher $daypart,
-        SolarEnricher $solar,
+        #[Autowire(service: TimeNormalizer::class)]
+        SingleMetadataExtractorInterface $normalizer,
+        #[Autowire(service: CalendarFeatureEnricher::class)]
+        SingleMetadataExtractorInterface $calendar,
+        #[Autowire(service: DaypartEnricher::class)]
+        SingleMetadataExtractorInterface $daypart,
+        #[Autowire(service: SolarEnricher::class)]
+        SingleMetadataExtractorInterface $solar,
     ) {
         $this->extractors = [
             $normalizer,

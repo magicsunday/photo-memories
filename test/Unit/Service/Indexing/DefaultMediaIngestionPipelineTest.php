@@ -28,26 +28,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
 use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
-use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
-use MagicSunday\Memories\Service\Metadata\BurstDetector;
-use MagicSunday\Memories\Service\Metadata\BurstIndexExtractor;
-use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
-use MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor;
-use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
-use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
-use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FacePresenceDetector;
-use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
-use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
-use MagicSunday\Memories\Service\Metadata\LivePairLinker;
-use MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
-use MagicSunday\Memories\Service\Metadata\SolarEnricher;
-use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
-use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
-use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -160,7 +141,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
 
         $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
 
-        $result = $pipeline->process($path, false, false, false, false, $output);
+        $result = $pipeline->process($path, true, false, false, false, $output);
         $pipeline->finalize(false);
 
         self::assertInstanceOf(Media::class, $result);
@@ -273,41 +254,41 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     {
         return [
             'metadata' => [
-                'exif'             => $this->createMock(ExifMetadataExtractor::class),
-                'xmp'              => $this->createMock(XmpIptcExtractor::class),
-                'fileStat'         => $this->createMock(FileStatMetadataExtractor::class),
-                'filenameKeyword'  => $this->createMock(FilenameKeywordExtractor::class),
-                'appleHeuristics'  => $this->createMock(AppleHeuristicsExtractor::class),
-                'ffprobe'          => $this->createMock(FfprobeMetadataExtractor::class),
+                'exif'             => $this->createMock(SingleMetadataExtractorInterface::class),
+                'xmp'              => $this->createMock(SingleMetadataExtractorInterface::class),
+                'fileStat'         => $this->createMock(SingleMetadataExtractorInterface::class),
+                'filenameKeyword'  => $this->createMock(SingleMetadataExtractorInterface::class),
+                'appleHeuristics'  => $this->createMock(SingleMetadataExtractorInterface::class),
+                'ffprobe'          => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'time' => [
-                'normalizer' => $this->createMock(TimeNormalizer::class),
-                'calendar'   => $this->createMock(CalendarFeatureEnricher::class),
-                'daypart'    => $this->createMock(DaypartEnricher::class),
-                'solar'      => $this->createMock(SolarEnricher::class),
+                'normalizer' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'calendar'   => $this->createMock(SingleMetadataExtractorInterface::class),
+                'daypart'    => $this->createMock(SingleMetadataExtractorInterface::class),
+                'solar'      => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'geo' => [
-                'feature' => $this->createMock(GeoFeatureEnricher::class),
+                'feature' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'quality' => [
-                'vision' => $this->createMock(VisionSignatureExtractor::class),
+                'vision' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'content' => [
-                'classifier' => $this->createMock(ContentClassifierExtractor::class),
+                'classifier' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'hash' => [
-                'perceptual' => $this->createMock(PerceptualHashExtractor::class),
+                'perceptual' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'burst' => [
-                'detector' => $this->createMock(BurstDetector::class),
-                'livePair' => $this->createMock(LivePairLinker::class),
-                'index'    => $this->createMock(BurstIndexExtractor::class),
+                'detector' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'livePair' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'index'    => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'faces' => [
-                'detector' => $this->createMock(FacePresenceDetector::class),
+                'detector' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'scene' => [
-                'clip' => $this->createMock(ClipSceneTagExtractor::class),
+                'clip' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
         ];
     }

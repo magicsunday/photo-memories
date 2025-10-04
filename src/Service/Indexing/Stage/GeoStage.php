@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class GeoStage extends AbstractExtractorStage
 {
@@ -22,8 +23,10 @@ final class GeoStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
-    public function __construct(GeoFeatureEnricher $geo)
-    {
+    public function __construct(
+        #[Autowire(service: GeoFeatureEnricher::class)]
+        SingleMetadataExtractorInterface $geo,
+    ) {
         $this->extractors = [$geo];
     }
 
