@@ -22,6 +22,7 @@ final readonly class GpsMetadata
         public ?float $altitude,
         public ?float $speedMetersPerSecond,
         public ?float $courseDegrees,
+        public ?float $horizontalAccuracyMeters,
     ) {
     }
 }

@@ -211,8 +211,16 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
         }
 
         $course = $this->floatOrRational($gps['GPSTrack'] ?? null);
+        $horizontalAccuracy = $this->floatOrRational($gps['GPSHPositioningError'] ?? null);
 
-        return new GpsMetadata($latitude, $longitude, $altitude, $speed, $course);
+        return new GpsMetadata(
+            $latitude,
+            $longitude,
+            $altitude,
+            $speed,
+            $course,
+            $horizontalAccuracy,
+        );
     }
 
     private function looksLikeExifDate(string $value): bool
