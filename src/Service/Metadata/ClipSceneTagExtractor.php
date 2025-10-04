@@ -45,6 +45,10 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
 
     public function supports(string $filepath, Media $media): bool
     {
+        if ($media->isNoShow() || $media->isLowQuality()) {
+            return false;
+        }
+
         $mime = $media->getMime();
         if ($mime === null) {
             return true;

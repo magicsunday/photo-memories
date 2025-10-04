@@ -80,6 +80,18 @@ final class ClipSceneTagExtractorTest extends TestCase
     }
 
     #[Test]
+    public function supportsSkipsNoShowMedia(): void
+    {
+        $extractor = new ClipSceneTagExtractor(new HeuristicClipSceneTagModel());
+
+        $media = new Media('hidden.jpg', 'hidden', 128);
+        $media->setMime('image/jpeg');
+        $media->setNoShow(true);
+
+        self::assertFalse($extractor->supports('hidden.jpg', $media));
+    }
+
+    #[Test]
     public function extractClearsTagsWhenScoresAreTooLow(): void
     {
         $model = new class implements VisionSceneTagModelInterface {
