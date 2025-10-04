@@ -11,12 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Repository;
 
+use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -99,5 +103,77 @@ final class MediaRepositoryTest extends TestCase
         $result = $repository->findLivePairCandidate(' checksum ', ' candidate-video.mov ');
 
         self::assertSame($candidate, $result);
+    }
+
+    #[Test]
+    public function findIndexingCandidatesAppliesMetadataFiltersAndLimit(): void
+    {
+        $media = $this->makeMedia(30, 'candidate.jpg');
+
+        $query = $this->createMock(AbstractQuery::class);
+        $query
+            ->expects(self::once())
+            ->method('getResult')
+            ->willReturn([$media]);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
+        $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
+        $qb->expects(self::once())->method('where')->with('m.noShow = false')->willReturn($qb);
+        $qb->expects(self::once())->method('andWhere')->with('m.indexedAt IS NULL OR m.featureVersion < :pipelineVersion')->willReturn($qb);
+        $qb->expects(self::once())->method('setParameter')->with('pipelineVersion', MetadataFeatureVersion::PIPELINE_VERSION)->willReturn($qb);
+        $qb->expects(self::once())->method('orderBy')->with('m.id', 'ASC')->willReturn($qb);
+        $qb->expects(self::once())->method('setMaxResults')->with(5)->willReturn($qb);
+        $qb->expects(self::once())->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+
+        $repository = new MediaRepository($em);
+
+        $result = $repository->findIndexingCandidates(5);
+
+        self::assertSame([$media], $result);
+    }
+
+    #[Test]
+    public function findGoodCandidatesByDateRangeFiltersByWindowAndQuality(): void
+    {
+        $media = $this->makeMedia(42, 'range.jpg');
+
+        $from = new DateTimeImmutable('2023-01-01T00:00:00+00:00');
+        $to   = new DateTimeImmutable('2023-01-31T23:59:59+00:00');
+
+        $query = $this->createMock(AbstractQuery::class);
+        $query
+            ->expects(self::once())
+            ->method('getResult')
+            ->willReturn([$media]);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
+        $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
+        $qb->expects(self::once())->method('where')->with('m.noShow = false')->willReturn($qb);
+        $qb->expects(self::exactly(2))->method('andWhere')->withConsecutive(
+            ['m.lowQuality = false'],
+            ['m.takenAt BETWEEN :from AND :to'],
+        )->willReturn($qb);
+        $qb->expects(self::exactly(2))->method('setParameter')->withConsecutive(
+            ['from', $from],
+            ['to', $to],
+        )->willReturn($qb);
+        $qb->expects(self::once())->method('orderBy')->with('m.takenAt', 'ASC')->willReturn($qb);
+        $qb->expects(self::once())->method('addOrderBy')->with('m.id', 'ASC')->willReturn($qb);
+        $qb->expects(self::once())->method('setMaxResults')->with(1)->willReturn($qb);
+        $qb->expects(self::once())->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+
+        $repository = new MediaRepository($em);
+
+        $result = $repository->findGoodCandidatesByDateRange($from, $to, 0);
+
+        self::assertSame([$media], $result);
     }
 }
