@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Exif;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
+use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\AspectFlagExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
@@ -138,8 +139,10 @@ final class ExifMetadataExtractorTest extends TestCase
 
         $processors = $reflection->getValue($extractor);
 
+        $normalized = DefaultExifValueAccessor::normalizeKeys($exif);
+
         foreach ($processors as $processor) {
-            $processor->process($exif, $media);
+            $processor->process($normalized, $media);
         }
     }
 }

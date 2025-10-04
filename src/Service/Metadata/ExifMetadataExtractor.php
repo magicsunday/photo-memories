@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
+use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Throwable;
 
@@ -72,6 +73,8 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         if ($exif === false) {
             return $media;
         }
+
+        $exif = DefaultExifValueAccessor::normalizeKeys($exif);
 
         foreach ($this->processors as $processor) {
             $processor->process($exif, $media);
