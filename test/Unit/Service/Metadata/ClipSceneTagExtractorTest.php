@@ -54,6 +54,8 @@ final class ClipSceneTagExtractorTest extends TestCase
         self::assertSame('Outdoor', $tags[2]['label']);
         self::assertEqualsWithDelta(0.72, $tags[2]['score'], 0.0001);
 
+        self::assertSame('scene=Porträt(0.76),Strand(0.74),Outdoor(0.72)', $result->getIndexLog());
+
         $features = $result->getFeatures();
         self::assertIsArray($features);
         self::assertSame('summer', $features['season']);
@@ -98,6 +100,32 @@ final class ClipSceneTagExtractorTest extends TestCase
         $result = $extractor->extract('d.jpg', $media);
 
         self::assertNull($result->getSceneTags());
+    }
+
+    #[Test]
+    public function extractAppendsSceneSummaryToExistingLog(): void
+    {
+        $model = new class implements VisionSceneTagModelInterface {
+            public function predict(string $filepath, Media $media): array
+            {
+                return [
+                    'beach'  => 0.82,
+                    'sunset' => 0.64,
+                ];
+            }
+        };
+
+        $media = new Media('scene2.jpg', 'checksum-scene2', 2048);
+        $media->setMime('image/jpeg');
+        $media->setIndexLog('time=exif; tz=UTC; off=+0');
+
+        $extractor = new ClipSceneTagExtractor($model, maxTags: 2, minScore: 0.2);
+        $result    = $extractor->extract('/tmp/scene2.jpg', $media);
+
+        self::assertSame(
+            "time=exif; tz=UTC; off=+0\nscene=beach(0.82),sunset(0.64)",
+            $result->getIndexLog()
+        );
     }
 }
 

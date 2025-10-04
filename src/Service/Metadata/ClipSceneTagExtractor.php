@@ -13,12 +13,15 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function array_slice;
 use function arsort;
+use function implode;
 use function is_float;
 use function is_int;
 use function is_string;
+use function sprintf;
 use function str_starts_with;
 
 /**
@@ -62,6 +65,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         }
 
         $media->setSceneTags($tags);
+        IndexLogHelper::append($media, $this->formatSceneSummary($tags));
 
         return $media;
     }
@@ -119,6 +123,20 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         }
 
         return $result;
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $tags
+     */
+    private function formatSceneSummary(array $tags): string
+    {
+        $parts = [];
+
+        foreach ($tags as $tag) {
+            $parts[] = sprintf('%s(%.2f)', $tag['label'], $tag['score']);
+        }
+
+        return sprintf('scene=%s', implode(',', $parts));
     }
 }
 
