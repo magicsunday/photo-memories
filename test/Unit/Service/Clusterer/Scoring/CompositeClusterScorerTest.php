@@ -151,6 +151,7 @@ final class CompositeClusterScorerTest extends TestCase
             $media->setColorfulness(0.85);
             $media->setCameraModel('Canon EOS');
             $media->setPhash('abcd1234efgh5678');
+            $media->setPhashPrefix('abcd1234efgh5678');
         };
 
         return [

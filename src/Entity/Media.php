@@ -816,8 +816,6 @@ class Media
     public function setPhash(?string $phash): void
     {
         $this->phash = $phash;
-
-        $this->phashPrefix = $phash === null ? null : substr($phash, 0, 16);
     }
 
     /**

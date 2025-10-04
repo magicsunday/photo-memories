@@ -348,6 +348,7 @@ final class MemberQualityRankingStageTest extends TestCase
         $media->setEntropy($entropy);
         $media->setColorfulness($colorfulness);
         $media->setPhash($phash);
+        $media->setPhashPrefix($phash);
         if ($phash64 !== null) {
             $media->setPhash64($phash64);
         }

@@ -117,6 +117,7 @@ final class PhashSimilarityStrategyTest extends TestCase
             location: $location,
             configure: static function (Media $media) use ($phash): void {
                 $media->setPhash($phash);
+                $media->setPhashPrefix($phash);
             },
         );
     }

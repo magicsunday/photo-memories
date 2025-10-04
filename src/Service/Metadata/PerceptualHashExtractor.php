@@ -94,9 +94,8 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         // Optional: derive simple aHash/dHash for QA/Debug (falls Media Felder hat)
         $media->setAhash($this->computeAhash64($mat));
         $media->setDhash($this->computeDhash64($mat));
-
         $media->setPhash($phashHex);
-
+        $media->setPhashPrefix($phashHex);
         $media->setPhash64($phashUint);
 
         return $media;

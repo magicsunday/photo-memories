@@ -322,6 +322,7 @@ final class VacationClusterStrategyTest extends TestCase
                 }
 
                 $media->setPhash(sprintf('day-%d-phash-%d', $day, $offset));
+                $media->setPhashPrefix(sprintf('day-%d-phash-%d', $day, $offset));
                 $media->setDhash(sprintf('day-%d-dhash-%d', $day, $offset));
                 $media->setBurstUuid(sprintf('day-%d-burst-%d', $day, $offset));
 
