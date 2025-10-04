@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Command;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -82,6 +83,7 @@ final class IndexCommand extends Command
         }
 
         $output->writeln(sprintf('Starte Indexierung: <info>%s</info>', $path));
+        $output->writeln(sprintf('Metadaten-Feature-Version: <info>%d</info>', MetadataFeatureVersion::CURRENT));
         $output->writeln($withThumbs ? '<comment>Thumbnails werden erzeugt.</comment>' : '<comment>Thumbnails werden nicht erzeugt (Option --thumbnails verwenden).</comment>');
         if ($strictMime) {
             $output->writeln('<comment>Strikter MIME-Check ist aktiv.</comment>');

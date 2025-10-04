@@ -97,6 +97,17 @@ die Pixeldaten auf der Platte liegen. Falls du weiterhin automatische Rotationen
 `.env` den Schalter `MEMORIES_THUMBNAIL_APPLY_ORIENTATION=1`. Mit dem Standardwert `0` bleibt das frühere Verhalten deaktiviert,
 was insbesondere für bereits physisch gedrehte Bilder mit inkonsistentem Orientation-Tag Fehler vermeidet.
 
+## Index-Metadaten & Fehlerdiagnose
+
+Die Ingestion-Pipeline erweitert jeden `media`-Datensatz jetzt um strukturierte Index-Metadaten:
+
+* `feature_version` (`INT`) speichert die Versionsnummer der Metadaten-Extraktion. Die CLI gibt diese Zahl beim Start von `memories:index` aus, sodass du sofort siehst, welche Feature-Revision aktiv ist.
+* `indexed_at` (`DATETIME`) hält fest, wann die letzte Extraktion abgeschlossen wurde.
+* `index_log` (`TEXT`) enthält eine detaillierte Fehlermeldung, falls ein Extraktor eine Exception wirft. Erfolgreiche Durchläufe leeren das Feld automatisch.
+* `needs_rotation` (`BOOL`) markiert Medien, bei denen Clients weiterhin eine Drehung anhand der EXIF-Orientation anwenden müssen.
+
+Damit lassen sich fehlgeschlagene Läufe schneller erkennen und neu anstoßen, ohne auf externe Logs angewiesen zu sein. Nach einem `memories:index`-Lauf prüfst du die Spalten direkt in der Datenbank oder über deine Auswertungen; das Flag `needs_rotation` hilft beim gezielten Nachbearbeiten von Assets mit reiner Orientation-Markierung.
+
 ## Cluster-Konfiguration
 
 Die Persistierung der berechneten Cluster wird jetzt begrenzt, damit Feeds und Oberflächen nicht mit hunderten Medien pro Block
