@@ -92,6 +92,8 @@ services:
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
 
+    Symfony\Component\Process\PhpExecutableFinder: ~
+
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager:
         arguments:
             $videoDirectory: '%memories.slideshow.video_dir%'
