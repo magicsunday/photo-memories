@@ -14,6 +14,8 @@ Der neue HTTP-Einstiegspunkt unter `public/index.php` liefert zwei Dinge:
 
 Unter `public/app/` liegt eine schlanke SPA (Vanilla JS + Vite), die den Feed lädt, Filter per UI anbietet und Cover-Galerien animiert darstellt. Die Anwendung läuft sowohl gegen den lokalen PHP-Server als auch gegen den Vite-Entwicklungsserver.
 
+> **Hinweis:** Die SPA respektiert die Umgebungsvariable `MEMORIES_HOME_VERSION_HASH`, um clientseitige Caches zu steuern. Wird sie nicht gesetzt, greift automatisch der Fallback-Wert `home_config_v1` aus `config/parameters.yaml`.
+
 ### Rückblick-Videos
 
 Jeder Rückblick erhält optional ein automatisch generiertes Video, das die Vorschaubilder in einer Sequenz mit Überblendungen zeigt. Die Generierung erfolgt asynchron über den neuen Konsolenbefehl `slideshow:generate`, der intern durch den HTTP-Controller angestoßen wird. Bereits erzeugte Videos landen standardmäßig im Verzeichnis `public/videos/` (konfigurierbar über die Umgebungsvariable `MEMORIES_SLIDESHOW_DIR`) und werden beim nächsten Abruf wiederverwendet, sodass keine unnötige Rechenzeit entsteht.
