@@ -71,6 +71,8 @@ final class ExifMetadataExtractorTest extends TestCase
 
         $exif = [
             'EXIF' => [
+                'UndefinedTag:0x882A' => [120, 120],
+                'UndefinedTag:0xA420' => 'unique-image-id',
                 'UndefinedTag:0xA430' => 'Owner',
                 'UndefinedTag:0xA431' => 'BodySerial',
                 'UndefinedTag:0xA432' => ['24/1', '70/1', '0/1', '0/1'],
@@ -90,6 +92,8 @@ final class ExifMetadataExtractorTest extends TestCase
         /** @var array<string, mixed> $normalized */
         $normalized = $method->invoke($extractor, $exif);
 
+        self::assertSame([120, 120], $normalized['EXIF']['TimeZoneOffset']);
+        self::assertSame('unique-image-id', $normalized['EXIF']['ImageUniqueID']);
         self::assertSame('Owner', $normalized['EXIF']['CameraOwnerName']);
         self::assertSame('BodySerial', $normalized['EXIF']['BodySerialNumber']);
         self::assertSame(['24/1', '70/1', '0/1', '0/1'], $normalized['EXIF']['LensSpecification']);
