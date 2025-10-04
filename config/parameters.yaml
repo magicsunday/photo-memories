@@ -24,6 +24,8 @@ parameters:
     memories.geocoding.overpass.allowed_pois: []
     memories.localization.preferred_locale: '%env(default::string:MEMORIES_PREFERRED_LOCALE)%'
 
+    memories.timezone.default: 'UTC'
+
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
     memories.thumbnail.apply_orientation: '%env(default::bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
