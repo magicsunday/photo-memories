@@ -204,4 +204,3 @@ parameters:
     memories.slideshow.ffmpeg_path: 'ffmpeg'
     memories.slideshow.php_binary_default: 'php'
     memories.slideshow.php_binary: "%env(default:memories.slideshow.php_binary_default:MEMORIES_PHP_BINARY)%"
-
