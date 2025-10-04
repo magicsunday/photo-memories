@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing\Stage;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Test\TestCase;
@@ -50,12 +51,15 @@ final class DuplicateHandlingStageTest extends TestCase
         $checksum = (string) hash_file('sha256', $filepath);
         $media    = new Media($filepath, $checksum, 1);
 
+        $fastHash = '4c3d2b1a0f0e0d0c';
+
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['findOneBy'])
             ->getMock();
         $repository->expects(self::once())
             ->method('findOneBy')
+            ->with(['fastChecksumXxhash64' => $fastHash])
             ->willReturn($media);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -64,7 +68,13 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with(Media::class)
             ->willReturn($repository);
 
-        $stage = new DuplicateHandlingStage($entityManager);
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($filepath)
+            ->willReturn($fastHash);
+
+        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,
@@ -78,20 +88,36 @@ final class DuplicateHandlingStageTest extends TestCase
 
         self::assertTrue($result->isSkipped());
         self::assertNull($result->getMedia());
+        self::assertSame($fastHash, $media->getFastChecksumXxhash64());
     }
 
     #[Test]
     public function processCreatesMediaWhenNoExistingEntryFound(): void
     {
         $filepath = $this->createTempFile('jpg', 'fresh');
+        $checksum = (string) hash_file('sha256', $filepath);
+        $fastHash = '1234567890abcdef';
 
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['findOneBy'])
             ->getMock();
-        $repository->expects(self::once())
+        $repository->expects(self::exactly(2))
             ->method('findOneBy')
-            ->willReturn(null);
+            ->willReturnCallback(function (array $criteria) use ($fastHash, $checksum): ?Media {
+                static $call = 0;
+                ++$call;
+
+                if ($call === 1) {
+                    self::assertSame(['fastChecksumXxhash64' => $fastHash], $criteria);
+
+                    return null;
+                }
+
+                self::assertSame(['checksum' => $checksum], $criteria);
+
+                return null;
+            });
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())
@@ -99,7 +125,13 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with(Media::class)
             ->willReturn($repository);
 
-        $stage = new DuplicateHandlingStage($entityManager);
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($filepath)
+            ->willReturn($fastHash);
+
+        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,
@@ -114,7 +146,56 @@ final class DuplicateHandlingStageTest extends TestCase
         self::assertFalse($result->isSkipped());
         self::assertNotNull($result->getChecksum());
         self::assertInstanceOf(Media::class, $result->getMedia());
+        self::assertSame($checksum, $result->getChecksum());
+        self::assertSame($fastHash, $result->getMedia()?->getFastChecksumXxhash64());
         self::assertSame('image/jpeg', $result->getMedia()?->getMime());
+    }
+
+    #[Test]
+    public function processReusesExistingMediaWhenForceEnabled(): void
+    {
+        $filepath = $this->createTempFile('jpg', 'existing-force');
+        $checksum = (string) hash_file('sha256', $filepath);
+        $fastHash = 'abcdefabcdefabcd';
+        $media    = new Media($filepath, $checksum, 1);
+
+        $repository = $this->getMockBuilder(EntityRepository::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['findOneBy'])
+            ->getMock();
+        $repository->expects(self::once())
+            ->method('findOneBy')
+            ->with(['fastChecksumXxhash64' => $fastHash])
+            ->willReturn($media);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('getRepository')
+            ->with(Media::class)
+            ->willReturn($repository);
+
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($filepath)
+            ->willReturn($fastHash);
+
+        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $context = MediaIngestionContext::create(
+            $filepath,
+            true,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        );
+
+        $result = $stage->process($context);
+
+        self::assertFalse($result->isSkipped());
+        self::assertSame($checksum, $result->getChecksum());
+        self::assertSame($media, $result->getMedia());
+        self::assertSame($fastHash, $media->getFastChecksumXxhash64());
     }
 
     private function createTempFile(string $extension, string $content): string

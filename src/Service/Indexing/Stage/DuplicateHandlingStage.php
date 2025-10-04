@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -25,6 +26,7 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly FastHashGeneratorInterface $fastHashGenerator,
     ) {
     }
 
@@ -32,6 +34,15 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
     {
         if ($context->isSkipped()) {
             return $context;
+        }
+
+        $fastChecksum = $this->fastHashGenerator->hash($context->getFilePath());
+        if ($fastChecksum === null) {
+            $context->getOutput()->writeln(
+                sprintf('<error>Could not compute fast checksum for file: %s</error>', $context->getFilePath())
+            );
+
+            return $context->markSkipped();
         }
 
         $checksum = @hash_file('sha256', $context->getFilePath());
@@ -44,7 +55,19 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
         }
 
         $repository = $this->entityManager->getRepository(Media::class);
-        $existing   = $repository->findOneBy(['checksum' => $checksum]);
+        $existing   = $repository->findOneBy(['fastChecksumXxhash64' => $fastChecksum]);
+
+        if ($existing instanceof Media && $existing->getChecksum() !== $checksum) {
+            $existing = null;
+        }
+
+        if ($existing === null) {
+            $existing = $repository->findOneBy(['checksum' => $checksum]);
+        }
+
+        if ($existing instanceof Media) {
+            $existing->setFastChecksumXxhash64($fastChecksum);
+        }
 
         if ($existing instanceof Media && $context->isForce() === false) {
             $context->getOutput()->writeln(
@@ -60,6 +83,10 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
             $checksum,
             filesize($context->getFilePath()) ?: 0,
         );
+
+        if ($existing === null) {
+            $media->setFastChecksumXxhash64($fastChecksum);
+        }
 
         $detectedMime = $context->getDetectedMime();
         if ($detectedMime !== null) {
