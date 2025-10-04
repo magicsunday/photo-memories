@@ -126,6 +126,8 @@ services:
         arguments:
             $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
             $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeRadiusKm: '%env(default::float:MEMORIES_HOME_RADIUS_KM)%'
+            $homeVersionHash: '%memories.home.version_hash%'
             $cellDegrees: 0.01
 
     MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser: ~

@@ -10,6 +10,9 @@ parameters:
     memories.hash.dct_sample: 32
     memories.hash.lowfreq: 8
 
+    # Home configuration
+    memories.home.version_hash: '%env(default::string:MEMORIES_HOME_VERSION_HASH)%'
+
     # Geocoding Defaults
     memories.geocoding.nominatim.base_url: '%env(string:NOMINATIM_BASE_URL)%'
     memories.geocoding.nominatim.email:    '%env(string:NOMINATIM_EMAIL)%'
