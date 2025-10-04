@@ -15,6 +15,7 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\TestCase as BaseTestCase;
@@ -56,7 +57,11 @@ abstract class TestCase extends BaseTestCase
         $this->assignId($media, $id);
 
         if ($takenAt !== null) {
-            $media->setTakenAt($this->normaliseDateTime($takenAt));
+            $normalised = $this->normaliseDateTime($takenAt);
+            $media->setTakenAt($normalised);
+            $media->setCapturedLocal($normalised);
+            $media->setTimeSource(TimeSource::EXIF);
+            $media->setTzId($normalised->getTimezone()->getName());
         }
 
         if ($lat !== null) {

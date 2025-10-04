@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Http\Controller;
 
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Http\Controller\FeedController;
@@ -101,9 +102,24 @@ final class FeedControllerTest extends TestCase
         $idProperty->setValue($mediaTwo, 2);
         $idProperty->setValue($mediaThree, 3);
 
-        $mediaOne->setTakenAt(new DateTimeImmutable('2024-01-01T10:00:00+00:00'));
-        $mediaTwo->setTakenAt(new DateTimeImmutable('2024-01-02T11:15:00+00:00'));
-        $mediaThree->setTakenAt(new DateTimeImmutable('2024-01-03T12:30:00+00:00'));
+        $mediaOneTakenAt   = new DateTimeImmutable('2024-01-01T10:00:00+00:00');
+        $mediaTwoTakenAt   = new DateTimeImmutable('2024-01-02T11:15:00+00:00');
+        $mediaThreeTakenAt = new DateTimeImmutable('2024-01-03T12:30:00+00:00');
+
+        $mediaOne->setTakenAt($mediaOneTakenAt);
+        $mediaOne->setCapturedLocal($mediaOneTakenAt);
+        $mediaOne->setTimeSource(TimeSource::EXIF);
+        $mediaOne->setTzId('UTC');
+
+        $mediaTwo->setTakenAt($mediaTwoTakenAt);
+        $mediaTwo->setCapturedLocal($mediaTwoTakenAt);
+        $mediaTwo->setTimeSource(TimeSource::EXIF);
+        $mediaTwo->setTzId('UTC');
+
+        $mediaThree->setTakenAt($mediaThreeTakenAt);
+        $mediaThree->setCapturedLocal($mediaThreeTakenAt);
+        $mediaThree->setTimeSource(TimeSource::EXIF);
+        $mediaThree->setTzId('UTC');
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')

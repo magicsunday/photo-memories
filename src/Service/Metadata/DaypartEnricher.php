@@ -12,28 +12,29 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
-use DateTimeZone;
-use Exception;
 use MagicSunday\Memories\Entity\Media;
-
-use function sprintf;
+use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 
 final class DaypartEnricher implements SingleMetadataExtractorInterface
 {
+    public function __construct(private readonly CaptureTimeResolver $captureTimeResolver)
+    {
+    }
+
     public function supports(string $filepath, Media $media): bool
     {
-        return $media->getTakenAt() instanceof DateTimeImmutable;
+        return $media->getTakenAt() instanceof DateTimeImmutable
+            || $media->getCapturedLocal() instanceof DateTimeImmutable;
     }
 
     public function extract(string $filepath, Media $media): Media
     {
-        $t = $media->getTakenAt();
-        if (!$t instanceof DateTimeImmutable) {
+        $local = $this->captureTimeResolver->resolve($media);
+        if (!$local instanceof DateTimeImmutable) {
             return $media;
         }
 
-        $local = $this->withOffsetTimezone($t, $media->getTimezoneOffsetMin());
-        $h     = (int) $local->format('G');
+        $h = (int) $local->format('G');
 
         $part = match (true) {
             $h >= 6 && $h <= 10  => 'morning',
@@ -47,26 +48,5 @@ final class DaypartEnricher implements SingleMetadataExtractorInterface
         $media->setFeatures($features);
 
         return $media;
-    }
-
-    private function withOffsetTimezone(DateTimeImmutable $instant, ?int $offsetMinutes): DateTimeImmutable
-    {
-        if ($offsetMinutes === null) {
-            return $instant;
-        }
-
-        $sign      = $offsetMinutes >= 0 ? '+' : '-';
-        $abs       = $offsetMinutes < 0 ? -$offsetMinutes : $offsetMinutes;
-        $hours     = intdiv($abs, 60);
-        $minutes   = $abs % 60;
-        $tzSpec    = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
-
-        try {
-            $tz = new DateTimeZone($tzSpec);
-        } catch (Exception) {
-            return $instant;
-        }
-
-        return $instant->setTimezone($tz);
     }
 }

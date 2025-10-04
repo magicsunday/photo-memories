@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 
 /**
  * Doctrine entity describing an imported photo or video including its metadata.
@@ -67,6 +68,24 @@ class Media
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeImmutable $takenAt = null;
+
+    /**
+     * Source system that provided the capture timestamp.
+     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true, enumType: TimeSource::class)]
+    private ?TimeSource $timeSource = null;
+
+    /**
+     * Timezone identifier associated with the capture event.
+     */
+    #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
+    private ?string $tzId = null;
+
+    /**
+     * Capture timestamp expressed in local wall time.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?DateTimeImmutable $capturedLocal = null;
 
     /**
      * Timezone offset in minutes derived from the capture moment.
@@ -484,6 +503,54 @@ class Media
     public function setTakenAt(?DateTimeImmutable $takenAt): void
     {
         $this->takenAt = $takenAt;
+    }
+
+    /**
+     * Returns the origin of the capture timestamp.
+     */
+    public function getTimeSource(): ?TimeSource
+    {
+        return $this->timeSource;
+    }
+
+    /**
+     * Sets the origin of the capture timestamp.
+     */
+    public function setTimeSource(?TimeSource $timeSource): void
+    {
+        $this->timeSource = $timeSource;
+    }
+
+    /**
+     * Returns the timezone identifier of the capture event.
+     */
+    public function getTzId(): ?string
+    {
+        return $this->tzId;
+    }
+
+    /**
+     * Sets the timezone identifier of the capture event.
+     */
+    public function setTzId(?string $tzId): void
+    {
+        $this->tzId = $tzId;
+    }
+
+    /**
+     * Returns the capture timestamp expressed in local wall time.
+     */
+    public function getCapturedLocal(): ?DateTimeImmutable
+    {
+        return $this->capturedLocal;
+    }
+
+    /**
+     * Sets the capture timestamp expressed in local wall time.
+     */
+    public function setCapturedLocal(?DateTimeImmutable $capturedLocal): void
+    {
+        $this->capturedLocal = $capturedLocal;
     }
 
     /**
