@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 
@@ -35,6 +36,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     use GdImageToolsTrait;
 
     public function __construct(
+        private readonly MediaQualityAggregator $qualityAggregator,
         private int $sampleSize = 96, // square downsample for analysis
     ) {
         if ($this->sampleSize < 16) {
@@ -83,6 +85,8 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         if (method_exists($media, 'setColorfulness')) {
             $media->setColorfulness($colorfulness);
         }
+
+        $this->qualityAggregator->aggregate($media);
 
         return $media;
     }

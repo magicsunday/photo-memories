@@ -1,0 +1,73 @@
+<?php
+
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
+declare(strict_types=1);
+
+namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Quality;
+
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
+use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\Test;
+use ReflectionProperty;
+
+final class MediaQualityAggregatorTest extends TestCase
+{
+    #[Test]
+    public function aggregatesQualityMetrics(): void
+    {
+        $media = $this->createMedia(1);
+        $media->setWidth(6000);
+        $media->setHeight(4000);
+        $media->setSharpness(0.9);
+        $media->setIso(100);
+        $media->setBrightness(0.55);
+        $media->setContrast(0.65);
+
+        $aggregator = new MediaQualityAggregator();
+        $aggregator->aggregate($media);
+
+        self::assertNotNull($media->getQualityScore());
+        self::assertEqualsWithDelta(0.9364, $media->getQualityScore(), 0.0005);
+        self::assertEqualsWithDelta(0.86, $media->getQualityExposure(), 0.0005);
+        self::assertEqualsWithDelta(0.8571, $media->getQualityNoise(), 0.0005);
+        self::assertFalse($media->isLowQuality());
+    }
+
+    #[Test]
+    public function flagsLowQualityMediaWhenThresholdsViolated(): void
+    {
+        $media = $this->createMedia(2);
+        $media->setWidth(800);
+        $media->setHeight(600);
+        $media->setSharpness(0.2);
+        $media->setIso(3200);
+        $media->setBrightness(0.10);
+        $media->setContrast(0.20);
+
+        $aggregator = new MediaQualityAggregator();
+        $aggregator->aggregate($media);
+
+        self::assertTrue($media->isLowQuality());
+        self::assertEqualsWithDelta(0.1166, $media->getQualityScore(), 0.0005);
+        self::assertEqualsWithDelta(0.08, $media->getQualityExposure(), 0.0005);
+        self::assertEqualsWithDelta(0.1429, $media->getQualityNoise(), 0.0005);
+    }
+
+    private function createMedia(int $id): Media
+    {
+        $media = new Media(path: 'media-' . $id . '.jpg', checksum: 'checksum-' . $id, size: 1024);
+
+        $ref = new ReflectionProperty(Media::class, 'id');
+        $ref->setAccessible(true);
+        $ref->setValue($media, $id);
+
+        return $media;
+    }
+}

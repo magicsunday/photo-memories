@@ -25,7 +25,7 @@ final class MemberQualityRankingStageTest extends TestCase
     public function sortsMembersByComputedQualityScore(): void
     {
         $lookup = new InMemoryMediaLookup([
-            101 => $this->makeMedia(
+            101 => $this->buildMedia(
                 id: 101,
                 width: 6000,
                 height: 4000,
@@ -39,7 +39,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 dhash: 'd-high',
                 burstUuid: null,
             ),
-            102 => $this->makeMedia(
+            102 => $this->buildMedia(
                 id: 102,
                 width: 3200,
                 height: 2400,
@@ -53,7 +53,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 dhash: 'd-mid',
                 burstUuid: null,
             ),
-            103 => $this->makeMedia(
+            103 => $this->buildMedia(
                 id: 103,
                 width: 1600,
                 height: 1200,
@@ -107,7 +107,7 @@ final class MemberQualityRankingStageTest extends TestCase
     public function penalisesDuplicateHashesWithinCluster(): void
     {
         $lookup = new InMemoryMediaLookup([
-            201 => $this->makeMedia(
+            201 => $this->buildMedia(
                 id: 201,
                 width: 5400,
                 height: 3600,
@@ -121,7 +121,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 dhash: 'unique-dhash',
                 burstUuid: null,
             ),
-            202 => $this->makeMedia(
+            202 => $this->buildMedia(
                 id: 202,
                 width: 4800,
                 height: 3200,
@@ -135,7 +135,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 dhash: 'duplicate-dhash',
                 burstUuid: 'burst-1',
             ),
-            203 => $this->makeMedia(
+            203 => $this->buildMedia(
                 id: 203,
                 width: 4800,
                 height: 3200,
@@ -175,10 +175,88 @@ final class MemberQualityRankingStageTest extends TestCase
         self::assertSame([201, 202, 203], $meta['quality_ranked']['ordered']);
         self::assertSame(0.0, $members['202']['penalty']);
         self::assertGreaterThan($members['202']['penalty'], $members['203']['penalty']);
-        self::assertGreaterThan($members['202']['score'], $members['203']['score']);
+        self::assertGreaterThan($members['203']['score'], $members['202']['score']);
     }
 
-    private function makeMedia(
+    #[Test]
+    public function prefersPreAggregatedQualityScoresWhenAvailable(): void
+    {
+        $lookup = new InMemoryMediaLookup([
+            301 => $this->buildMedia(
+                id: 301,
+                width: 1,
+                height: 1,
+                sharpness: 0.0,
+                iso: 0,
+                brightness: 0.0,
+                contrast: 0.0,
+                entropy: 0.0,
+                colorfulness: 0.0,
+                phash: null,
+                dhash: null,
+                burstUuid: null,
+                qualityScore: 0.9,
+                qualityExposure: 0.8,
+                qualityNoise: 0.7,
+            ),
+            302 => $this->buildMedia(
+                id: 302,
+                width: 1,
+                height: 1,
+                sharpness: 0.0,
+                iso: 0,
+                brightness: 0.0,
+                contrast: 0.0,
+                entropy: 0.0,
+                colorfulness: 0.0,
+                phash: null,
+                dhash: null,
+                burstUuid: null,
+                qualityScore: 0.6,
+                qualityExposure: 0.6,
+                qualityNoise: 0.5,
+            ),
+            303 => $this->buildMedia(
+                id: 303,
+                width: 1,
+                height: 1,
+                sharpness: 0.0,
+                iso: 0,
+                brightness: 0.0,
+                contrast: 0.0,
+                entropy: 0.0,
+                colorfulness: 0.0,
+                phash: null,
+                dhash: null,
+                burstUuid: null,
+                qualityScore: 0.2,
+                qualityExposure: 0.4,
+                qualityNoise: 0.3,
+            ),
+        ]);
+
+        $stage = new MemberQualityRankingStage($lookup, 12.0);
+
+        $draft = new ClusterDraft(
+            algorithm: 'test',
+            params: [],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [301, 302, 303],
+        );
+
+        $stage->process([$draft]);
+
+        $meta     = $draft->getParams()['member_quality'];
+        $ordered  = $meta['quality_ranked']['ordered'];
+        $members  = $meta['members'];
+
+        self::assertSame([301, 302, 303], $ordered);
+        self::assertSame(0.9, $members['301']['quality']);
+        self::assertSame(0.6, $members['302']['quality']);
+        self::assertSame(0.2, $members['303']['quality']);
+    }
+
+    private function buildMedia(
         int $id,
         int $width,
         int $height,
@@ -191,6 +269,10 @@ final class MemberQualityRankingStageTest extends TestCase
         ?string $phash,
         ?string $dhash,
         ?string $burstUuid,
+        ?float $qualityScore = null,
+        ?float $qualityExposure = null,
+        ?float $qualityNoise = null,
+        bool $lowQuality = false,
     ): Media {
         $media = new Media(path: 'media-' . $id . '.jpg', checksum: 'checksum-' . $id, size: 1024);
 
@@ -209,6 +291,11 @@ final class MemberQualityRankingStageTest extends TestCase
         $media->setPhash($phash);
         $media->setDhash($dhash);
         $media->setBurstUuid($burstUuid);
+
+        $media->setQualityScore($qualityScore);
+        $media->setQualityExposure($qualityExposure);
+        $media->setQualityNoise($qualityNoise);
+        $media->setLowQuality($lowQuality);
 
         return $media;
     }

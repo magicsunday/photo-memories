@@ -105,3 +105,15 @@ Medien pro Cluster maximal gespeichert werden. Für eine abweichende Konfigurati
 `.env` oder über einen passenden Symfony-Parameter überschreiben (`memories.cluster.persistence.max_members`).
 Die Auswahl innerhalb dieses Limits wird nun vorab nach einem qualitätsbasierten Score sortiert: Auflösungs- und Schärfedaten, ISO-Normalisierung sowie die ästhetischen Kenngrößen aus den Medien fließen gemeinsam mit den von der `QualityClusterScoreHeuristic` berechneten Aggregaten in die Bewertung ein. Wiederholte Aufnahmen mit identischem `phash`, `dhash` oder identischer `burstUuid` werden pro Treffer stärker abgewertet, sodass die auf %memories.cluster.persistence.max_members% (= `MEMORIES_CLUSTER_MAX_MEMBERS`) begrenzte Top-Auswahl bevorzugt einzigartige Motive enthält.
 Bei Urlaubsclustern wird die Reihenfolge zusätzlich über Tages-Slots ausbalanciert. Pro Abschnitt wandert das bestbewertete Foto nach vorn, bevor die restlichen Kandidaten folgen. Dadurch bleiben nach dem Clamping weiterhin alle Reisetage im Feed, und die Cover-Auswahl in Vorschau sowie Export spiegelt die zeitliche Dramaturgie der Reise wider.
+
+### Qualitätsaggregation
+
+Die Vision-Pipeline speichert jetzt voraggregierte Qualitätsmetriken direkt am `media`-Datensatz. Aus Auflösung, Schärfe, ISO-Normalisierung sowie den Helligkeits- und Kontrastmessungen entstehen die drei neuen Felder `quality_score`, `quality_exposure` und `quality_noise` (alle `FLOAT`). Zusätzlich markiert das Flag `low_quality` (`BOOL`) problematische Aufnahmen. Ein Bild gilt als niedrigwertig, sobald einer der folgenden Werte unterschritten wird:
+
+* Gesamtqualität `< 0.35`
+* Effektive Auflösung `< 0.30`
+* Schärfe `< 0.30`
+* Belichtungs-Score `< 0.25`
+* Rausch-Score `< 0.25`
+
+Alle Score-Werte bewegen sich zwischen `0` und `1`, wobei `1` den bestmöglichen Zustand beschreibt. Die Cluster-Heuristiken greifen bevorzugt auf diese aggregierten Zahlen zu; fehlen sie, bleiben die Rohmetriken (Auflösung, Schärfe, ISO, Helligkeit usw.) als Fallback erhalten.
