@@ -17,7 +17,9 @@ use Doctrine\Persistence\ObjectRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 
+use function strlen;
 use function strtolower;
+use function str_pad;
 use function substr;
 use function trim;
 
@@ -26,8 +28,11 @@ use function trim;
  */
 readonly class MediaRepository implements MemberMediaLookupInterface
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em, private int $phashPrefixLength = 16)
     {
+        if ($this->phashPrefixLength < 0) {
+            $this->phashPrefixLength = 0;
+        }
     }
 
     /**
@@ -77,7 +82,12 @@ readonly class MediaRepository implements MemberMediaLookupInterface
         $limit = $limit < 1 ? 1 : $limit;
 
         $conn        = $this->em->getConnection();
-        $phashPrefix = substr($phashHex, 0, 32);
+        $prefixLength = $this->phashPrefixLength > 32 ? 32 : $this->phashPrefixLength;
+        $phashPrefix  = $prefixLength > 0 ? substr($phashHex, 0, $prefixLength) : '';
+        $phash64Hex   = substr($phashHex, 0, 16);
+        if (strlen($phash64Hex) < 16) {
+            $phash64Hex = str_pad($phash64Hex, 16, '0', STR_PAD_RIGHT);
+        }
 
         $sql = <<<'SQL'
 SELECT id,
@@ -97,7 +107,7 @@ SQL;
         $rows = $conn->fetchAllAssociative(
             $sql,
             [
-                'phashHex'   => $phashHex,
+                'phashHex'   => $phash64Hex,
                 'phashPrefix'=> $phashPrefix,
                 'maxHamming' => $maxHamming,
                 'limit'      => $limit,

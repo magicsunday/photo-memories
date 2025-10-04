@@ -6,11 +6,14 @@ parameters:
     memories.index.video_ext: []
 #    memories.index.video_ext: ['mp4','m4v','mov','3gp','3g2','avi','mkv','webm']
 
-    memories.video.poster_frame_second: 1.0
+    memories.video.poster_frame_second: 1.5
+    memories.video.ffmpeg_path: '%env(default::string:FFMPEG_PATH)%'
+    memories.video.ffprobe_path: '%env(default::string:FFPROBE_PATH)%'
 
     # Hash Defaults
     memories.hash.dct_sample: 32
-    memories.hash.lowfreq: 8
+    memories.hash.lowfreq: 16
+    memories.hash.phash_prefix_length: 16
 
     # Home configuration
     memories.home.version_hash: '%env(default::string:MEMORIES_HOME_VERSION_HASH)%'
