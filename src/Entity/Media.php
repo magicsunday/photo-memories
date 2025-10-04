@@ -111,10 +111,40 @@ class Media
     private ?string $cameraMake = null;
 
     /**
+     * Registered camera owner stored in the EXIF metadata.
+     */
+    #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
+    private ?string $cameraOwner = null;
+
+    /**
+     * Serial number of the camera body.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $cameraBodySerial = null;
+
+    /**
+     * Lens manufacturer name.
+     */
+    #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
+    private ?string $lensMake = null;
+
+    /**
      * Lens model used during capture, if available.
      */
     #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
     private ?string $lensModel = null;
+
+    /**
+     * Normalized lens specification range, for example 24-70mm f/2.8-4.
+     */
+    #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
+    private ?string $lensSpecification = null;
+
+    /**
+     * Serial number of the attached lens.
+     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
+    private ?string $lensSerialNumber = null;
 
     /**
      * Focal length in millimetres derived from metadata.
@@ -139,6 +169,24 @@ class Media
      */
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
     private ?float $exposureTimeS = null;
+
+    /**
+     * Composite image indicator as defined by the EXIF specification.
+     */
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $compositeImage = null;
+
+    /**
+     * Number of source images contributing to the composite capture.
+     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $compositeImageSourceCount = null;
+
+    /**
+     * Exposure times of the source images composing the final media.
+     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
+    private ?string $compositeImageExposureTimes = null;
 
     /**
      * ISO sensitivity value.
@@ -621,6 +669,60 @@ class Media
     }
 
     /**
+     * Returns the registered camera owner.
+     */
+    public function getCameraOwner(): ?string
+    {
+        return $this->cameraOwner;
+    }
+
+    /**
+     * Sets the registered camera owner.
+     *
+     * @param string|null $v Camera owner name.
+     */
+    public function setCameraOwner(?string $v): void
+    {
+        $this->cameraOwner = $v;
+    }
+
+    /**
+     * Returns the camera body serial number.
+     */
+    public function getCameraBodySerial(): ?string
+    {
+        return $this->cameraBodySerial;
+    }
+
+    /**
+     * Sets the camera body serial number.
+     *
+     * @param string|null $v Serial number string.
+     */
+    public function setCameraBodySerial(?string $v): void
+    {
+        $this->cameraBodySerial = $v;
+    }
+
+    /**
+     * Returns the lens manufacturer name.
+     */
+    public function getLensMake(): ?string
+    {
+        return $this->lensMake;
+    }
+
+    /**
+     * Sets the lens manufacturer name.
+     *
+     * @param string|null $v Lens manufacturer name.
+     */
+    public function setLensMake(?string $v): void
+    {
+        $this->lensMake = $v;
+    }
+
+    /**
      * Returns the lens model information.
      */
     public function getLensModel(): ?string
@@ -636,6 +738,42 @@ class Media
     public function setLensModel(?string $v): void
     {
         $this->lensModel = $v;
+    }
+
+    /**
+     * Returns the normalized lens specification.
+     */
+    public function getLensSpecification(): ?string
+    {
+        return $this->lensSpecification;
+    }
+
+    /**
+     * Sets the normalized lens specification.
+     *
+     * @param string|null $v Lens specification description.
+     */
+    public function setLensSpecification(?string $v): void
+    {
+        $this->lensSpecification = $v;
+    }
+
+    /**
+     * Returns the lens serial number.
+     */
+    public function getLensSerialNumber(): ?string
+    {
+        return $this->lensSerialNumber;
+    }
+
+    /**
+     * Sets the lens serial number.
+     *
+     * @param string|null $v Serial number string.
+     */
+    public function setLensSerialNumber(?string $v): void
+    {
+        $this->lensSerialNumber = $v;
     }
 
     /**
@@ -708,6 +846,60 @@ class Media
     public function setExposureTimeS(?float $v): void
     {
         $this->exposureTimeS = $v;
+    }
+
+    /**
+     * Returns the composite image flag value.
+     */
+    public function getCompositeImage(): ?int
+    {
+        return $this->compositeImage;
+    }
+
+    /**
+     * Sets the composite image flag value.
+     *
+     * @param int|null $v Composite image indicator.
+     */
+    public function setCompositeImage(?int $v): void
+    {
+        $this->compositeImage = $v;
+    }
+
+    /**
+     * Returns the number of source images for the composite capture.
+     */
+    public function getCompositeImageSourceCount(): ?int
+    {
+        return $this->compositeImageSourceCount;
+    }
+
+    /**
+     * Sets the number of source images for the composite capture.
+     *
+     * @param int|null $v Source image count.
+     */
+    public function setCompositeImageSourceCount(?int $v): void
+    {
+        $this->compositeImageSourceCount = $v;
+    }
+
+    /**
+     * Returns the recorded source exposure times for the composite.
+     */
+    public function getCompositeImageExposureTimes(): ?string
+    {
+        return $this->compositeImageExposureTimes;
+    }
+
+    /**
+     * Sets the recorded source exposure times for the composite.
+     *
+     * @param string|null $v Exposure times description.
+     */
+    public function setCompositeImageExposureTimes(?string $v): void
+    {
+        $this->compositeImageExposureTimes = $v;
     }
 
     /**
