@@ -17,6 +17,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 
+use function log;
+
 final class MediaQualityAggregatorTest extends TestCase
 {
     #[Test]
@@ -58,6 +60,35 @@ final class MediaQualityAggregatorTest extends TestCase
         self::assertEqualsWithDelta(0.1166, $media->getQualityScore(), 0.0005);
         self::assertEqualsWithDelta(0.08, $media->getQualityExposure(), 0.0005);
         self::assertEqualsWithDelta(0.1429, $media->getQualityNoise(), 0.0005);
+    }
+
+    #[Test]
+    public function appliesClippingPenaltyAndLogsSummary(): void
+    {
+        $media = $this->createMedia(3);
+        $media->setWidth(6000);
+        $media->setHeight(4000);
+        $media->setSharpness(0.6);
+        $media->setIso(200);
+        $media->setBrightness(0.55);
+        $media->setContrast(0.5);
+        $media->setQualityClipping(0.2);
+        $media->setIndexLog('time=exif; tz=UTC; off=+0');
+
+        $aggregator = new MediaQualityAggregator();
+        $aggregator->aggregate($media);
+
+        $expectedNoise = 1.0 - (log(200.0 / 50.0) / log(6400.0 / 50.0));
+        $baseScore     = (1.0 * 0.45) + (0.6 * 0.35) + ($expectedNoise * 0.20);
+        $expectedScore = ($baseScore / (0.45 + 0.35 + 0.20)) * (1.0 - (0.5 * 0.2));
+
+        self::assertEqualsWithDelta($expectedScore, $media->getQualityScore() ?? 0.0, 0.0005);
+        self::assertTrue($media->isLowQuality());
+        self::assertEqualsWithDelta(0.2, $media->getQualityClipping() ?? 0.0, 0.0005);
+
+        $log = $media->getIndexLog();
+        self::assertNotNull($log);
+        self::assertStringContainsString("qlt=low; sharp=0.60; clip=0.20", $log);
     }
 
     private function createMedia(int $id): Media

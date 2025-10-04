@@ -7,6 +7,8 @@
 # Composer
 vendor/
 bin/
+!test/Unit/Service/Metadata/fixtures/bin/
+!test/Unit/Service/Metadata/fixtures/bin/**
 logs/
 log/
 composer.lock

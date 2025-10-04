@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Minimal ffmpeg stub used during unit tests to emit a JPEG poster frame.
+ */
+
+$args = $_SERVER['argv'];
+if (count($args) < 2) {
+    fwrite(STDERR, "missing output path\n");
+    exit(1);
+}
+
+$output = $args[count($args) - 1];
+
+$image = imagecreatetruecolor(8, 8);
+$red   = imagecolorallocate($image, 255, 0, 0);
+imagefilledrectangle($image, 0, 0, 7, 7, $red);
+
+if (imagejpeg($image, $output) !== true) {
+    fwrite(STDERR, "failed to write poster\n");
+    imagedestroy($image);
+    exit(1);
+}
+
+imagedestroy($image);
+exit(0);

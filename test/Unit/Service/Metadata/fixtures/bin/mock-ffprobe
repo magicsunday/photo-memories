@@ -1,0 +1,8 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Minimal ffprobe stub used during unit tests.
+ */
+
+fwrite(STDOUT, "2.0\n");
