@@ -120,6 +120,8 @@ services:
 
     MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor: ~
 
+    MagicSunday\Memories\Service\Metadata\BurstIndexExtractor: ~
+
     MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher:
         arguments:
             $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
@@ -158,6 +160,7 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\BurstIndexExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'

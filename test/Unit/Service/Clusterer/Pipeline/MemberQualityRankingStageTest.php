@@ -118,6 +118,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.63,
                 colorfulness: 0.68,
                 phash: 'unique-phash',
+                phash64: '1001',
                 dhash: 'unique-dhash',
                 burstUuid: null,
             ),
@@ -132,6 +133,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.60,
                 colorfulness: 0.66,
                 phash: 'duplicate-phash',
+                phash64: '2002',
                 dhash: 'duplicate-dhash',
                 burstUuid: 'burst-1',
             ),
@@ -146,6 +148,7 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.60,
                 colorfulness: 0.66,
                 phash: 'duplicate-phash',
+                phash64: '2002',
                 dhash: 'duplicate-dhash',
                 burstUuid: 'burst-1',
             ),
@@ -321,8 +324,9 @@ final class MemberQualityRankingStageTest extends TestCase
         float $entropy,
         float $colorfulness,
         ?string $phash,
-        ?string $dhash,
-        ?string $burstUuid,
+        ?string $phash64 = null,
+        ?string $dhash = null,
+        ?string $burstUuid = null,
         ?float $qualityScore = null,
         ?float $qualityExposure = null,
         ?float $qualityNoise = null,
@@ -344,6 +348,9 @@ final class MemberQualityRankingStageTest extends TestCase
         $media->setEntropy($entropy);
         $media->setColorfulness($colorfulness);
         $media->setPhash($phash);
+        if ($phash64 !== null) {
+            $media->setPhash64($phash64);
+        }
         $media->setDhash($dhash);
         $media->setBurstUuid($burstUuid);
 

@@ -24,6 +24,8 @@ use MagicSunday\Memories\Entity\Enum\TimeSource;
 #[ORM\Table(name: 'media')]
 #[ORM\Index(name: 'idx_taken_at', fields: ['takenAt'])]
 #[ORM\Index(name: 'idx_checksum', fields: ['checksum'])]
+#[ORM\Index(name: 'idx_phash64', fields: ['phash64'])]
+#[ORM\Index(name: 'idx_live_pair_checksum', fields: ['livePairChecksum'])]
 class Media
 {
     /**
@@ -269,6 +271,12 @@ class Media
     private ?string $burstUuid = null;
 
     /**
+     * Sequential index of the media within its burst group.
+     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $burstIndex = null;
+
+    /**
      * Fractional capture seconds extracted from EXIF metadata.
      */
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
@@ -279,6 +287,13 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
     private ?string $livePairChecksum = null;
+
+    /**
+     * Linked media item that forms a live photo pair.
+     */
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'livePairMediaId', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?self $livePairMedia = null;
 
     /**
      * Boolean flag indicating whether the media is a video clip.
@@ -399,6 +414,12 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
     private ?string $phash = null;
+
+    /**
+     * Complete perceptual hash represented as an unsigned 64-bit integer.
+     */
+    #[ORM\Column(type: Types::BIGINT, nullable: true, options: ['unsigned' => true])]
+    private ?string $phash64 = null;
 
     /**
      * Difference hash of the media preview.
@@ -702,6 +723,26 @@ class Media
     public function setPhash(?string $phash): void
     {
         $this->phash = $phash;
+
+        $this->phashPrefix = $phash === null ? null : substr($phash, 0, 32);
+    }
+
+    /**
+     * Returns the perceptual hash as an unsigned 64-bit integer string.
+     */
+    public function getPhash64(): ?string
+    {
+        return $this->phash64;
+    }
+
+    /**
+     * Stores the perceptual hash as an unsigned 64-bit integer string.
+     *
+     * @param string|null $value Unsigned integer representation of the pHash.
+     */
+    public function setPhash64(?string $value): void
+    {
+        $this->phash64 = $value;
     }
 
     /**
@@ -1175,6 +1216,24 @@ class Media
     }
 
     /**
+     * Returns the burst index within the sequence.
+     */
+    public function getBurstIndex(): ?int
+    {
+        return $this->burstIndex;
+    }
+
+    /**
+     * Sets the burst index within the sequence.
+     *
+     * @param int|null $v Zero-based or metadata-derived burst index.
+     */
+    public function setBurstIndex(?int $v): void
+    {
+        $this->burstIndex = $v;
+    }
+
+    /**
      * Returns the sub-second capture component.
      */
     public function getSubSecOriginal(): ?int
@@ -1208,6 +1267,22 @@ class Media
     public function setLivePairChecksum(?string $v): void
     {
         $this->livePairChecksum = $v;
+    }
+
+    /**
+     * Returns the associated live-pair media entity, if available.
+     */
+    public function getLivePairMedia(): ?self
+    {
+        return $this->livePairMedia;
+    }
+
+    /**
+     * Links the media entity with its live photo counterpart.
+     */
+    public function setLivePairMedia(?self $media): void
+    {
+        $this->livePairMedia = $media;
     }
 
     /**
