@@ -41,6 +41,9 @@ services:
     MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface:
         alias: MagicSunday\Memories\Utility\DefaultPoiScorer
 
+    MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface:
+        alias: MagicSunday\Memories\Service\Hash\Xxhash64FileHasher
+
     MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface:
         alias: MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner
 

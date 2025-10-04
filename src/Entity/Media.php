@@ -27,6 +27,7 @@ use function count;
     indexes: [
         new ORM\Index(name: 'idx_taken_at', columns: ['takenAt']),
         new ORM\Index(name: 'idx_checksum', columns: ['checksum']),
+        new ORM\Index(name: 'idx_fast_checksum_xxhash64', columns: ['fastChecksumXxhash64']),
         new ORM\Index(name: 'idx_phash64', columns: ['phash64']),
         new ORM\Index(name: 'idx_live_pair_checksum', columns: ['livePairChecksum']),
         new ORM\Index(name: 'idx_media_live_pair_id', columns: ['livePairMediaId']),
@@ -60,6 +61,12 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 64, unique: true)]
     private string $checksum;
+
+    /**
+     * Fast hash representing the binary payload using the xxHash64 algorithm.
+     */
+    #[ORM\Column(type: Types::STRING, length: 16, nullable: true)]
+    private ?string $fastChecksumXxhash64 = null;
 
     /**
      * File size in bytes.
@@ -584,6 +591,24 @@ class Media
     public function getChecksum(): string
     {
         return $this->checksum;
+    }
+
+    /**
+     * Returns the fast checksum generated via xxHash64.
+     */
+    public function getFastChecksumXxhash64(): ?string
+    {
+        return $this->fastChecksumXxhash64;
+    }
+
+    /**
+     * Updates the fast checksum generated via xxHash64.
+     *
+     * @param string|null $fastChecksumXxhash64 Fast checksum value.
+     */
+    public function setFastChecksumXxhash64(?string $fastChecksumXxhash64): void
+    {
+        $this->fastChecksumXxhash64 = $fastChecksumXxhash64;
     }
 
     /**

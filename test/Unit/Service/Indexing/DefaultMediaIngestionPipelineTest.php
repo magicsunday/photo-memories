@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
 use MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage;
@@ -71,13 +72,15 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $media    = new Media($path, $checksum, (int) filesize($path));
         $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
+        $fastHash = 'feedfacecafe1234';
+
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['findOneBy'])
             ->getMock();
         $repository->expects(self::once())
             ->method('findOneBy')
-            ->with(['checksum' => $checksum])
+            ->with(['fastChecksumXxhash64' => $fastHash])
             ->willReturn($media);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
@@ -95,12 +98,26 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $extractors = $this->createExtractorMap();
         $this->expectNoExtractorInteractions($extractors);
 
-        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($path)
+            ->willReturn($fastHash);
+
+        $pipeline = $this->createPipeline(
+            $entityManager,
+            $thumbnailService,
+            $extractors,
+            ['jpg'],
+            [],
+            $fastHashGenerator
+        );
 
         $result = $pipeline->process($path, false, false, false, false, $output);
 
         self::assertNull($result);
         self::assertStringContainsString('Übersprungen', $output->fetch());
+        self::assertSame($fastHash, $media->getFastChecksumXxhash64());
     }
 
     #[Test]
@@ -110,14 +127,28 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $checksum = (string) hash_file('sha256', $path);
         $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
+        $fastHash = '1122334455667788';
+
         $repository = $this->getMockBuilder(EntityRepository::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['findOneBy'])
             ->getMock();
-        $repository->expects(self::once())
+        $repository->expects(self::exactly(2))
             ->method('findOneBy')
-            ->with(['checksum' => $checksum])
-            ->willReturn(null);
+            ->willReturnCallback(function (array $criteria) use ($fastHash, $checksum): ?Media {
+                static $call = 0;
+                ++$call;
+
+                if ($call === 1) {
+                    self::assertSame(['fastChecksumXxhash64' => $fastHash], $criteria);
+
+                    return null;
+                }
+
+                self::assertSame(['checksum' => $checksum], $criteria);
+
+                return null;
+            });
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())
@@ -139,12 +170,26 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $callLog    = [];
         $this->configureExtractorOrderExpectations($extractors, $callLog);
 
-        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($path)
+            ->willReturn($fastHash);
+
+        $pipeline = $this->createPipeline(
+            $entityManager,
+            $thumbnailService,
+            $extractors,
+            ['jpg'],
+            [],
+            $fastHashGenerator
+        );
 
         $result = $pipeline->process($path, true, false, false, false, $output);
         $pipeline->finalize(false);
 
         self::assertInstanceOf(Media::class, $result);
+        self::assertSame($fastHash, $result->getFastChecksumXxhash64());
         self::assertSame($this->expectedExtractorOrder(), $callLog);
     }
 
@@ -164,7 +209,17 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $extractors = $this->createExtractorMap();
         $this->expectNoExtractorInteractions($extractors);
 
-        $pipeline = $this->createPipeline($entityManager, $thumbnailService, $extractors, ['jpg'], []);
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::never())->method('hash');
+
+        $pipeline = $this->createPipeline(
+            $entityManager,
+            $thumbnailService,
+            $extractors,
+            ['jpg'],
+            [],
+            $fastHashGenerator
+        );
 
         $result = $pipeline->process($path, false, false, false, true, $output);
 
@@ -302,11 +357,14 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         ThumbnailServiceInterface $thumbnailService,
         array $extractors,
         ?array $imageExtensions,
-        ?array $videoExtensions
+        ?array $videoExtensions,
+        ?FastHashGeneratorInterface $fastHashGenerator = null
     ): DefaultMediaIngestionPipeline {
+        $fastHashGenerator ??= $this->createMock(FastHashGeneratorInterface::class);
+
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
-            new DuplicateHandlingStage($entityManager),
+            new DuplicateHandlingStage($entityManager, $fastHashGenerator),
             new MetadataStage(
                 $extractors['metadata']['exif'],
                 $extractors['metadata']['xmp'],
