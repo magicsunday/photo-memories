@@ -77,7 +77,11 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
         }
 
         $media->setKeywords($keywords !== [] ? $keywords : null);
+
+        $personCount = count($persons);
         $media->setPersons($persons !== [] ? $persons : null);
+        $media->setHasFaces($personCount > 0);
+        $media->setFacesCount($personCount);
 
         return $media;
     }
