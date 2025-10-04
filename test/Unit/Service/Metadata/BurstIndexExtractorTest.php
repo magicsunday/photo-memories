@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\BurstIndexExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,35 +19,21 @@ use PHPUnit\Framework\Attributes\Test;
 final class BurstIndexExtractorTest extends TestCase
 {
     #[Test]
-    public function usesSubSecondComponentAndLinksLivePair(): void
+    public function usesSubSecondComponent(): void
     {
         $media = $this->makeMedia(1, 'movie.mov', configure: static function (Media $media): void {
             $media->setMime('video/quicktime');
             $media->setBurstUuid('burst-uuid');
             $media->setSubSecOriginal(42);
-            $media->setLivePairChecksum('pair-checksum');
         });
 
-        $counterpart = $this->makeMedia(2, 'photo.heic', configure: static function (Media $media): void {
-            $media->setMime('image/heic');
-        });
-
-        $repository = $this->createMock(MediaRepository::class);
-        $repository
-            ->expects(self::once())
-            ->method('findLivePairCandidate')
-            ->with('pair-checksum', $media->getPath())
-            ->willReturn($counterpart);
-
-        $extractor = new BurstIndexExtractor($repository);
+        $extractor = new BurstIndexExtractor();
 
         self::assertTrue($extractor->supports($media->getPath(), $media));
 
         $result = $extractor->extract($media->getPath(), $media);
 
         self::assertSame(42, $result->getBurstIndex());
-        self::assertSame($counterpart, $result->getLivePairMedia());
-        self::assertSame($result, $counterpart->getLivePairMedia());
     }
 
     #[Test]
@@ -59,10 +44,7 @@ final class BurstIndexExtractorTest extends TestCase
             $media->setBurstUuid('burst-uuid');
         });
 
-        $repository = $this->createMock(MediaRepository::class);
-        $repository->expects(self::never())->method('findLivePairCandidate');
-
-        $extractor = new BurstIndexExtractor($repository);
+        $extractor = new BurstIndexExtractor();
 
         $result = $extractor->extract($media->getPath(), $media);
 

@@ -183,6 +183,8 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\BurstDetector'
+                - '@MagicSunday\Memories\Service\Metadata\LivePairLinker'
                 - '@MagicSunday\Memories\Service\Metadata\BurstIndexExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\TimeNormalizer'

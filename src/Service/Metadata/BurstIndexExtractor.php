@@ -12,25 +12,20 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Repository\MediaRepository;
-
 use function is_string;
 use function ltrim;
 use function pathinfo;
-use function preg_replace;
 use function preg_match;
+use function preg_replace;
 use function str_starts_with;
 
 use const PATHINFO_FILENAME;
 
 /**
- * Derives burst indices and links live photo pairs.
+ * Derives burst indices from existing metadata.
  */
 final class BurstIndexExtractor implements SingleMetadataExtractorInterface
 {
-    public function __construct(private readonly MediaRepository $mediaRepository)
-    {
-    }
 
     public function supports(string $filepath, Media $media): bool
     {
@@ -45,8 +40,6 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
         if ($index !== null) {
             $media->setBurstIndex($index);
         }
-
-        $this->linkLivePair($media);
 
         return $media;
     }
@@ -80,24 +73,6 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
         }
 
         return null;
-    }
-
-    private function linkLivePair(Media $media): void
-    {
-        $checksum = $media->getLivePairChecksum();
-        if ($checksum === null || $checksum === '') {
-            return;
-        }
-
-        $counterpart = $this->mediaRepository->findLivePairCandidate($checksum, $media->getPath());
-        if (!$counterpart instanceof Media) {
-            return;
-        }
-
-        $media->setLivePairMedia($counterpart);
-        if ($counterpart->getLivePairMedia() === null) {
-            $counterpart->setLivePairMedia($media);
-        }
     }
 
     private function normaliseIndex(string $digits): int
