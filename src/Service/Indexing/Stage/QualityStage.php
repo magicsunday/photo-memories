@@ -13,19 +13,26 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
 
-final class MetadataExtractionStage extends AbstractExtractorStage
+final class QualityStage extends AbstractExtractorStage
 {
     /**
-     * @param iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
-    public function __construct(
-        private readonly iterable $extractors,
-    ) {
+    private readonly iterable $extractors;
+
+    public function __construct(VisionSignatureExtractor $visionSignature)
+    {
+        $this->extractors = [$visionSignature];
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
+        if ($context->isSkipped()) {
+            return $context;
+        }
+
         if ($this->shouldSkipExtraction($context)) {
             return $context;
         }
