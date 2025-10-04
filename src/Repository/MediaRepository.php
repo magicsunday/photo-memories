@@ -11,11 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Repository;
 
+use DateTimeImmutable;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 
 use function strlen;
 use function strtolower;
@@ -143,6 +145,57 @@ SQL;
         }
 
         return $result;
+    }
+
+    /**
+     * @return list<Media>
+     */
+    public function findIndexingCandidates(int $limit): array
+    {
+        $maxResults = $limit < 1 ? 1 : $limit;
+
+        $qb = $this->em->createQueryBuilder();
+        $qb->select('m')
+            ->from(Media::class, 'm')
+            ->where('m.noShow = false')
+            ->andWhere('m.indexedAt IS NULL OR m.featureVersion < :pipelineVersion')
+            ->setParameter('pipelineVersion', MetadataFeatureVersion::PIPELINE_VERSION)
+            ->orderBy('m.id', 'ASC')
+            ->setMaxResults($maxResults);
+
+        $query = $qb->getQuery();
+
+        /** @var list<Media> $items */
+        $items = $query->getResult();
+
+        return $items;
+    }
+
+    /**
+     * @return list<Media>
+     */
+    public function findGoodCandidatesByDateRange(DateTimeImmutable $from, DateTimeImmutable $to, int $limit): array
+    {
+        $maxResults = $limit < 1 ? 1 : $limit;
+
+        $qb = $this->em->createQueryBuilder();
+        $qb->select('m')
+            ->from(Media::class, 'm')
+            ->where('m.noShow = false')
+            ->andWhere('m.lowQuality = false')
+            ->andWhere('m.takenAt BETWEEN :from AND :to')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->orderBy('m.takenAt', 'ASC')
+            ->addOrderBy('m.id', 'ASC')
+            ->setMaxResults($maxResults);
+
+        $query = $qb->getQuery();
+
+        /** @var list<Media> $items */
+        $items = $query->getResult();
+
+        return $items;
     }
 
     /**
