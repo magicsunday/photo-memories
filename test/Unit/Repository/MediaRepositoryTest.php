@@ -14,10 +14,10 @@ namespace MagicSunday\Memories\Test\Unit\Repository;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
-use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Query;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
@@ -110,9 +110,11 @@ final class MediaRepositoryTest extends TestCase
     {
         $media = $this->makeMedia(30, 'candidate.jpg');
 
-        $query = $this->createMock(AbstractQuery::class);
-        $query
-            ->expects(self::once())
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getMock();
+        $query->expects(self::once())
             ->method('getResult')
             ->willReturn([$media]);
 
@@ -144,9 +146,11 @@ final class MediaRepositoryTest extends TestCase
         $from = new DateTimeImmutable('2023-01-01T00:00:00+00:00');
         $to   = new DateTimeImmutable('2023-01-31T23:59:59+00:00');
 
-        $query = $this->createMock(AbstractQuery::class);
-        $query
-            ->expects(self::once())
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getMock();
+        $query->expects(self::once())
             ->method('getResult')
             ->willReturn([$media]);
 
@@ -154,14 +158,29 @@ final class MediaRepositoryTest extends TestCase
         $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
         $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
         $qb->expects(self::once())->method('where')->with('m.noShow = false')->willReturn($qb);
-        $qb->expects(self::exactly(2))->method('andWhere')->withConsecutive(
-            ['m.lowQuality = false'],
-            ['m.takenAt BETWEEN :from AND :to'],
-        )->willReturn($qb);
-        $qb->expects(self::exactly(2))->method('setParameter')->withConsecutive(
+        $andWhereExpectations = ['m.lowQuality = false', 'm.takenAt BETWEEN :from AND :to'];
+        $qb->expects(self::exactly(2))
+            ->method('andWhere')
+            ->willReturnCallback(static function (string $condition) use (&$andWhereExpectations, $qb): QueryBuilder {
+                $expected = array_shift($andWhereExpectations);
+                self::assertSame($expected, $condition);
+
+                return $qb;
+            });
+
+        $parameterExpectations = [
             ['from', $from],
             ['to', $to],
-        )->willReturn($qb);
+        ];
+        $qb->expects(self::exactly(2))
+            ->method('setParameter')
+            ->willReturnCallback(static function (string $name, mixed $value) use (&$parameterExpectations, $qb): QueryBuilder {
+                $expected = array_shift($parameterExpectations);
+                self::assertSame($expected[0], $name);
+                self::assertSame($expected[1], $value);
+
+                return $qb;
+            });
         $qb->expects(self::once())->method('orderBy')->with('m.takenAt', 'ASC')->willReturn($qb);
         $qb->expects(self::once())->method('addOrderBy')->with('m.id', 'ASC')->willReturn($qb);
         $qb->expects(self::once())->method('setMaxResults')->with(1)->willReturn($qb);

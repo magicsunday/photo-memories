@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\FacePresenceDetector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class FacesStage extends AbstractExtractorStage
 {
@@ -22,8 +23,10 @@ final class FacesStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
-    public function __construct(FacePresenceDetector $facePresenceDetector)
-    {
+    public function __construct(
+        #[Autowire(service: FacePresenceDetector::class)]
+        SingleMetadataExtractorInterface $facePresenceDetector,
+    ) {
         $this->extractors = [$facePresenceDetector];
     }
 

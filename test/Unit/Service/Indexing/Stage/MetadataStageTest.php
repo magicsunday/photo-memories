@@ -15,14 +15,8 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
-use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
-use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
-use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
-use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -39,7 +33,7 @@ final class MetadataStageTest extends TestCase
         );
         $media->setIndexLog('stale entry');
 
-        $exif = $this->createMock(ExifMetadataExtractor::class);
+        $exif = $this->createMock(SingleMetadataExtractorInterface::class);
         $exif->expects(self::once())
             ->method('supports')
             ->with('/library/image.jpg', $media)
@@ -49,11 +43,11 @@ final class MetadataStageTest extends TestCase
             ->with('/library/image.jpg', $media)
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
-        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
-        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
-        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
-        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+        $xmp              = $this->createRejectingExtractor();
+        $fileStat         = $this->createRejectingExtractor();
+        $filenameKeyword  = $this->createRejectingExtractor();
+        $appleHeuristics  = $this->createRejectingExtractor();
+        $ffprobe          = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($exif, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -83,7 +77,7 @@ final class MetadataStageTest extends TestCase
             path: '/library/broken.jpg',
         );
 
-        $extractor = $this->createMock(ExifMetadataExtractor::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/broken.jpg', $media)
@@ -92,11 +86,11 @@ final class MetadataStageTest extends TestCase
             ->method('extract')
             ->willThrowException(new RuntimeException('boom'));
 
-        $xmp              = $this->createUnusedExtractor(XmpIptcExtractor::class);
-        $fileStat         = $this->createUnusedExtractor(FileStatMetadataExtractor::class);
-        $filenameKeyword  = $this->createUnusedExtractor(FilenameKeywordExtractor::class);
-        $appleHeuristics  = $this->createUnusedExtractor(AppleHeuristicsExtractor::class);
-        $ffprobe          = $this->createUnusedExtractor(FfprobeMetadataExtractor::class);
+        $xmp              = $this->createUnusedExtractor();
+        $fileStat         = $this->createUnusedExtractor();
+        $filenameKeyword  = $this->createUnusedExtractor();
+        $appleHeuristics  = $this->createUnusedExtractor();
+        $ffprobe          = $this->createUnusedExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -137,12 +131,12 @@ final class MetadataStageTest extends TestCase
         $media->setIndexLog('keep this');
 
         $extractors = [
-            $this->createUnusedExtractor(ExifMetadataExtractor::class),
-            $this->createUnusedExtractor(XmpIptcExtractor::class),
-            $this->createUnusedExtractor(FileStatMetadataExtractor::class),
-            $this->createUnusedExtractor(FilenameKeywordExtractor::class),
-            $this->createUnusedExtractor(AppleHeuristicsExtractor::class),
-            $this->createUnusedExtractor(FfprobeMetadataExtractor::class),
+            $this->createUnusedExtractor(),
+            $this->createUnusedExtractor(),
+            $this->createUnusedExtractor(),
+            $this->createUnusedExtractor(),
+            $this->createUnusedExtractor(),
+            $this->createUnusedExtractor(),
         ];
 
         $stage  = new MetadataStage(...$extractors);
@@ -176,7 +170,7 @@ final class MetadataStageTest extends TestCase
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexLog('stale warning');
 
-        $extractor = $this->createMock(ExifMetadataExtractor::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/force.jpg', $media)
@@ -185,11 +179,11 @@ final class MetadataStageTest extends TestCase
             ->method('extract')
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
-        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
-        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
-        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
-        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+        $xmp              = $this->createRejectingExtractor();
+        $fileStat         = $this->createRejectingExtractor();
+        $filenameKeyword  = $this->createRejectingExtractor();
+        $appleHeuristics  = $this->createRejectingExtractor();
+        $ffprobe          = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -221,7 +215,7 @@ final class MetadataStageTest extends TestCase
             path: '/library/warn.jpg',
         );
 
-        $extractor = $this->createMock(ExifMetadataExtractor::class);
+        $extractor = $this->createMock(SingleMetadataExtractorInterface::class);
         $extractor->expects(self::once())
             ->method('supports')
             ->with('/library/warn.jpg', $media)
@@ -234,11 +228,11 @@ final class MetadataStageTest extends TestCase
                 return $entity;
             });
 
-        $xmp              = $this->createRejectingExtractor(XmpIptcExtractor::class);
-        $fileStat         = $this->createRejectingExtractor(FileStatMetadataExtractor::class);
-        $filenameKeyword  = $this->createRejectingExtractor(FilenameKeywordExtractor::class);
-        $appleHeuristics  = $this->createRejectingExtractor(AppleHeuristicsExtractor::class);
-        $ffprobe          = $this->createRejectingExtractor(FfprobeMetadataExtractor::class);
+        $xmp              = $this->createRejectingExtractor();
+        $fileStat         = $this->createRejectingExtractor();
+        $filenameKeyword  = $this->createRejectingExtractor();
+        $appleHeuristics  = $this->createRejectingExtractor();
+        $ffprobe          = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -260,16 +254,9 @@ final class MetadataStageTest extends TestCase
         self::assertNull($media->getIndexLog());
     }
 
-    /**
-     * @template T of SingleMetadataExtractorInterface
-     *
-     * @param class-string<T> $class
-     *
-     * @return T&SingleMetadataExtractorInterface
-     */
-    private function createRejectingExtractor(string $class): SingleMetadataExtractorInterface
+    private function createRejectingExtractor(): SingleMetadataExtractorInterface
     {
-        $mock = $this->createMock($class);
+        $mock = $this->createMock(SingleMetadataExtractorInterface::class);
         $mock->expects(self::once())
             ->method('supports')
             ->willReturn(false);
@@ -279,16 +266,9 @@ final class MetadataStageTest extends TestCase
         return $mock;
     }
 
-    /**
-     * @template T of SingleMetadataExtractorInterface
-     *
-     * @param class-string<T> $class
-     *
-     * @return T&SingleMetadataExtractorInterface
-     */
-    private function createUnusedExtractor(string $class): SingleMetadataExtractorInterface
+    private function createUnusedExtractor(): SingleMetadataExtractorInterface
     {
-        $mock = $this->createMock($class);
+        $mock = $this->createMock(SingleMetadataExtractorInterface::class);
         $mock->expects(self::never())
             ->method('supports');
         $mock->expects(self::never())

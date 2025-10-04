@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class QualityStage extends AbstractExtractorStage
 {
@@ -22,8 +23,10 @@ final class QualityStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
-    public function __construct(VisionSignatureExtractor $visionSignature)
-    {
+    public function __construct(
+        #[Autowire(service: VisionSignatureExtractor::class)]
+        SingleMetadataExtractorInterface $visionSignature,
+    ) {
         $this->extractors = [$visionSignature];
     }
 

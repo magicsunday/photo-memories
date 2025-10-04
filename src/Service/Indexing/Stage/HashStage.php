@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final class HashStage extends AbstractExtractorStage
 {
@@ -22,8 +23,10 @@ final class HashStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
-    public function __construct(PerceptualHashExtractor $hash)
-    {
+    public function __construct(
+        #[Autowire(service: PerceptualHashExtractor::class)]
+        SingleMetadataExtractorInterface $hash,
+    ) {
         $this->extractors = [$hash];
     }
 
