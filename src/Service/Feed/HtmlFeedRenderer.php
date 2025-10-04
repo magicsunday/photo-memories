@@ -11,10 +11,15 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
+use function array_slice;
 use function htmlspecialchars;
 use function implode;
+use function is_array;
+use function is_float;
+use function is_int;
 use function is_string;
 use function number_format;
+use function sprintf;
 
 use const ENT_QUOTES;
 use const ENT_SUBSTITUTE;
@@ -68,8 +73,13 @@ HTML;
 
     /**
      * @param list<array{
-     *   title:string, subtitle:string, algorithm:string, group?:string, score:float,
-     *   images:list<array{href:string, alt:string}>
+     *   title:string,
+     *   subtitle:string,
+     *   algorithm:string,
+     *   group?:string,
+     *   score:float,
+     *   images:list<array{href:string, alt:string}>,
+     *   sceneTags?:list<array{label:string, score:float}>
      * }> $cards
      */
     private function renderCards(array $cards): string
@@ -91,7 +101,33 @@ HTML;
 
             $chips[] = "<span class=\"chip\">{$alg}</span>";
             $chips[] = "<span class=\"chip\">Score {$score}</span>";
-            $meta    = implode("\n      ", $chips);
+
+            $sceneTags = $c['sceneTags'] ?? null;
+            if (is_array($sceneTags)) {
+                foreach (array_slice($sceneTags, 0, 3) as $tag) {
+                    if (!is_array($tag)) {
+                        continue;
+                    }
+
+                    $label = $tag['label'] ?? null;
+                    $scoreTag = $tag['score'] ?? null;
+
+                    if (!is_string($label)) {
+                        continue;
+                    }
+
+                    $text = $label;
+                    if (is_float($scoreTag) || is_int($scoreTag)) {
+                        $formatted = number_format((float) $scoreTag, 2, ',', '');
+                        $text      = sprintf('%s (%s)', $label, $formatted);
+                    }
+
+                    $safe = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $chips[] = "<span class=\"chip chip-tag\">{$safe}</span>";
+                }
+            }
+
+            $meta = implode("\n      ", $chips);
 
             $images = $this->renderImages($c['images']);
 
@@ -150,8 +186,9 @@ body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .titles h2{margin:0;font-size:18px}
 .titles .muted{margin:2px 0 0;color:#9aa0a6;font-size:14px}
-.meta{display:flex;gap:6px;align-items:center}
+.meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e2228;color:#c8ccd2;font-size:12px;border:1px solid #2a2f36}
+.chip-tag{background:#16242c;border-color:#27414d;color:#9bd1e3}
 .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 @media (max-width:720px){.thumbs{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:480px){.thumbs{grid-template-columns:repeat(2,1fr)}}

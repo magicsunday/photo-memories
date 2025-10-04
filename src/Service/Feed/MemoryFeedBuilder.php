@@ -21,9 +21,13 @@ use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 
 use function array_filter;
 use function array_map;
+use function array_slice;
 use function array_values;
+use function arsort;
 use function count;
 use function is_array;
+use function is_float;
+use function is_int;
 use function is_string;
 use function sprintf;
 use function usort;
@@ -163,6 +167,14 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $title    = $this->titleGen->makeTitle($c);
             $subtitle = $this->titleGen->makeSubtitle($c);
 
+            $params = $c->getParams();
+            if (!isset($params['scene_tags'])) {
+                $aggregated = $this->aggregateSceneTags($members, 5);
+                if ($aggregated !== []) {
+                    $params['scene_tags'] = $aggregated;
+                }
+            }
+
             $result[] = new MemoryFeedItem(
                 algorithm: $alg,
                 title: $title,
@@ -170,7 +182,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 coverMediaId: $coverId,
                 memberIds: $memberIds,
                 score: (float) ($c->getParams()['score'] ?? 0.0),
-                params: $c->getParams()
+                params: $params
             );
 
             $dayCount[$dayKey] = $cap + 1;
@@ -227,5 +239,68 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         });
 
         return $members;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return list<array{label: string, score: float}>
+     */
+    private function aggregateSceneTags(array $members, int $limit): array
+    {
+        /** @var array<string, float> $scores */
+        $scores = [];
+
+        foreach ($members as $media) {
+            $tags = $media->getSceneTags();
+            if (!is_array($tags)) {
+                continue;
+            }
+
+            foreach ($tags as $tag) {
+                if (!is_array($tag)) {
+                    continue;
+                }
+
+                $label = $tag['label'] ?? null;
+                $score = $tag['score'] ?? null;
+
+                if (!is_string($label)) {
+                    continue;
+                }
+
+                if (!is_float($score) && !is_int($score)) {
+                    continue;
+                }
+
+                $value = (float) $score;
+                if ($value < 0.0) {
+                    $value = 0.0;
+                }
+
+                if ($value > 1.0) {
+                    $value = 1.0;
+                }
+
+                $existing = $scores[$label] ?? 0.0;
+                if ($value > $existing) {
+                    $scores[$label] = $value;
+                }
+            }
+        }
+
+        if ($scores === []) {
+            return [];
+        }
+
+        arsort($scores);
+        $scores = array_slice($scores, 0, $limit, true);
+
+        $result = [];
+        foreach ($scores as $label => $score) {
+            $result[] = ['label' => $label, 'score' => $score];
+        }
+
+        return $result;
     }
 }

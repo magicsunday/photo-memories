@@ -26,10 +26,16 @@ use function basename;
 use function copy;
 use function count;
 use function file_put_contents;
+use function implode;
+use function is_array;
 use function is_dir;
 use function is_file;
-use function mkdir;
+use function is_float;
+use function is_int;
 use function is_string;
+use function mkdir;
+use function number_format;
+use function sprintf;
 use function symlink;
 use function usort;
 
@@ -182,7 +188,7 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
 
             $images[] = [
                 'href' => $href,
-                'alt'  => basename($media->getPath()),
+                'alt'  => $this->buildAltText($media),
             ];
         }
 
@@ -192,6 +198,8 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
 
         $params = $item->getParams();
         $group  = $params['group'] ?? null;
+
+        $sceneTags = $this->normalizeSceneTags($params['scene_tags'] ?? null);
 
         $card = [
             'title'     => $item->getTitle(),
@@ -203,6 +211,10 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
 
         if (is_string($group) && $group !== '') {
             $card['group'] = $group;
+        }
+
+        if ($sceneTags !== []) {
+            $card['sceneTags'] = $sceneTags;
         }
 
         return $card;
@@ -224,5 +236,82 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
         }
 
         return 0;
+    }
+
+    private function buildAltText(Media $media): string
+    {
+        $tags = $media->getSceneTags();
+        if (is_array($tags)) {
+            $parts = [];
+            foreach (array_slice($tags, 0, 3) as $tag) {
+                if (!is_array($tag)) {
+                    continue;
+                }
+
+                $label = $tag['label'] ?? null;
+                $score = $tag['score'] ?? null;
+
+                if (!is_string($label)) {
+                    continue;
+                }
+
+                $text = $label;
+                if (is_float($score) || is_int($score)) {
+                    $formatted = number_format((float) $score, 2, ',', '');
+                    $text      = sprintf('%s (%s)', $label, $formatted);
+                }
+
+                $parts[] = $text;
+            }
+
+            if ($parts !== []) {
+                return 'Szene: ' . implode(', ', $parts);
+            }
+        }
+
+        return basename($media->getPath());
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return list<array{label: string, score: float}>
+     */
+    private function normalizeSceneTags($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $tag) {
+            if (!is_array($tag)) {
+                continue;
+            }
+
+            $label = $tag['label'] ?? null;
+            $score = $tag['score'] ?? null;
+
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if (!is_float($score) && !is_int($score)) {
+                continue;
+            }
+
+            $valueScore = (float) $score;
+            if ($valueScore < 0.0) {
+                $valueScore = 0.0;
+            }
+
+            if ($valueScore > 1.0) {
+                $valueScore = 1.0;
+            }
+
+            $result[] = ['label' => $label, 'score' => $valueScore];
+        }
+
+        return $result;
     }
 }

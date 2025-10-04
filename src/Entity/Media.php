@@ -465,10 +465,18 @@ class Media
     /**
      * Feature set describing the scene (labels, categories, etc.).
      *
-     * @var array<int, string>|null
+     * @var array<string, scalar|array|null>|null
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $features = null;
+
+    /**
+     * Highest confidence scene tags derived from vision models.
+     *
+     * @var list<array{label: string, score: float}>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $sceneTags = null;
 
     /**
      * Generated thumbnails mapped by size identifier.
@@ -1773,6 +1781,26 @@ class Media
     public function setFeatures(?array $v): void
     {
         $this->features = $v;
+    }
+
+    /**
+     * Provides the list of scene tags with their confidence scores.
+     *
+     * @return list<array{label: string, score: float}>|null
+     */
+    public function getSceneTags(): ?array
+    {
+        return $this->sceneTags;
+    }
+
+    /**
+     * Stores the computed scene tags.
+     *
+     * @param list<array{label: string, score: float}>|null $tags
+     */
+    public function setSceneTags(?array $tags): void
+    {
+        $this->sceneTags = $tags;
     }
 
     /**

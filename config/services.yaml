@@ -140,6 +140,14 @@ services:
         arguments:
             $sampleSize: 320
 
+    MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface:
+        alias: MagicSunday\Memories\Service\Metadata\HeuristicClipSceneTagModel
+
+    MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor:
+        arguments:
+            $maxTags: 5
+            $minScore: 0.2
+
     MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor: ~
 
     MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor:
@@ -166,6 +174,7 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
