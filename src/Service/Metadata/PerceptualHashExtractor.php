@@ -25,16 +25,19 @@ use function cos;
 use function count;
 use function dechex;
 use function floor;
+use function hex2bin;
 use function is_file;
 use function is_string;
 use function method_exists;
 use function min;
 use function sort;
+use function sprintf;
 use function sqrt;
 use function str_pad;
 use function str_starts_with;
 use function strlen;
 use function substr;
+use function unpack;
 
 use const SORT_NUMERIC;
 use const STR_PAD_RIGHT;
@@ -87,7 +90,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         $adapter->destroy();
 
         // pHash 64-bit
-        $phash = $this->computePhash64($mat, $this->lowFreqSize);
+        [$phashHex, $phashUint] = $this->computePhash64($mat, $this->lowFreqSize);
 
         // Optional: derive simple aHash/dHash for QA/Debug (falls Media Felder hat)
         if (method_exists($media, 'setAhash')) {
@@ -98,7 +101,11 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             $media->setDhash($this->computeDhash64($mat));
         }
 
-        $media->setPhash($phash);
+        $media->setPhash($phashHex);
+
+        if (method_exists($media, 'setPhash64')) {
+            $media->setPhash64($phashUint);
+        }
 
         return $media;
     }
@@ -109,11 +116,14 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
      *
      * @param array<int,array<int,float>> $g NxN grayscale in [0..255]
      */
-    private function computePhash64(array $g, int $k): string
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function computePhash64(array $g, int $k): array
     {
         $n = count($g);
         if ($n < $k || $n !== count($g[0])) {
-            return '0000000000000000';
+            return ['0000000000000000', '0'];
         }
 
         // 1) 2D-DCT (type-II) with orthonormal normalization
@@ -148,8 +158,19 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             }
         }
 
-        // 5) 64 bits → 16 hex chars
-        return $this->bitsToHex64($bits);
+        // 5) 64 bits → 16 hex chars + unsigned integer string
+        $hex = $this->bitsToHex64($bits);
+        $bin = hex2bin($hex);
+
+        if ($bin === false || strlen($bin) !== 8) {
+            return [$hex, '0'];
+        }
+
+        /** @var array{1:int}|false $packed */
+        $packed = unpack('J', $bin);
+        $value  = $packed[1] ?? 0;
+
+        return [$hex, sprintf('%u', $value)];
     }
 
     /**

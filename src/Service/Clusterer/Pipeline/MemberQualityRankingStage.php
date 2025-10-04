@@ -21,6 +21,7 @@ use function array_map;
 use function array_values;
 use function count;
 use function max;
+use function is_string;
 use function usort;
 
 /**
@@ -354,11 +355,21 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
      */
     private function computeDuplicatePenalty(Media $media, array &$seenPhash, array &$seenDhash, array &$seenBurst): float
     {
-        $penalty  = $this->registerDuplicate($this->stringOrNull($media->getPhash()), $seenPhash, $this->phashPenalty);
+        $penalty  = $this->registerDuplicate($this->phashDuplicateKey($media), $seenPhash, $this->phashPenalty);
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getDhash()), $seenDhash, $this->dhashPenalty);
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getBurstUuid()), $seenBurst, $this->burstPenalty);
 
         return $penalty > 0.9 ? 0.9 : $penalty;
+    }
+
+    private function phashDuplicateKey(Media $media): ?string
+    {
+        $hash64 = $media->getPhash64();
+        if (is_string($hash64) && $hash64 !== '') {
+            return $hash64;
+        }
+
+        return $this->stringOrNull($media->getPhash());
     }
 
     /**
