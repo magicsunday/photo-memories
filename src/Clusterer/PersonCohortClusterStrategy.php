@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -22,12 +23,12 @@ use function array_merge;
 use function count;
 use function implode;
 use function ksort;
-use function method_exists;
 use function sort;
 
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
- * Requires Media to expose person tags via getPersonIds() -> list<int>.
+ * Requires media objects to implement {@see PersonTaggedMediaInterface} to
+ * provide stable person identifiers.
  */
 final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
@@ -67,7 +68,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $buckets     = [];
         $withPersons = $this->filterTimestampedItemsBy(
             $items,
-            static fn (Media $m): bool => method_exists($m, 'getPersonIds')
+            static fn (Media $m): bool => $m instanceof PersonTaggedMediaInterface
         );
 
         if ($withPersons === []) {
@@ -76,8 +77,8 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
         // Phase 1: bucket by persons signature per day
         foreach ($withPersons as $m) {
-            /** @var list<int> $persons */
-            $persons = (array) $m->getPersonIds();
+            /** @var PersonTaggedMediaInterface $m */
+            $persons = $m->getPersonIds();
             if (count($persons) < $this->minPersons) {
                 continue;
             }

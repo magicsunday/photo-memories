@@ -28,7 +28,6 @@ use function floor;
 use function hex2bin;
 use function is_file;
 use function is_string;
-use function method_exists;
 use function min;
 use function sort;
 use function sprintf;
@@ -93,19 +92,12 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         [$phashHex, $phashUint] = $this->computePhash64($mat, $this->lowFreqSize);
 
         // Optional: derive simple aHash/dHash for QA/Debug (falls Media Felder hat)
-        if (method_exists($media, 'setAhash')) {
-            $media->setAhash($this->computeAhash64($mat));
-        }
-
-        if (method_exists($media, 'setDhash')) {
-            $media->setDhash($this->computeDhash64($mat));
-        }
+        $media->setAhash($this->computeAhash64($mat));
+        $media->setDhash($this->computeDhash64($mat));
 
         $media->setPhash($phashHex);
 
-        if (method_exists($media, 'setPhash64')) {
-            $media->setPhash64($phashUint);
-        }
+        $media->setPhash64($phashUint);
 
         return $media;
     }

@@ -17,6 +17,7 @@ use ImagickException;
 use ImagickPixel;
 use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
+use Throwable;
 
 /**
  * Thumbnail service that generates JPEG thumbnails using Imagick or GD.
@@ -165,8 +166,12 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                     $clone->setImageBackgroundColor('white');
 
-                    if (method_exists($clone, 'setImageAlphaChannel')) {
+                    try {
                         $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+                    } catch (ImagickException) {
+                        // Older Imagick builds may not support manipulating the alpha channel explicitly.
+                    } catch (Throwable) {
+                        // Ignore missing support for setImageAlphaChannel on legacy Imagick versions.
                     }
 
                     if ($clone->getImageAlphaChannel()) {

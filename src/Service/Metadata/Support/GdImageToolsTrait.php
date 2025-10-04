@@ -19,7 +19,6 @@ use function dechex;
 use function is_array;
 use function is_file;
 use function is_string;
-use function method_exists;
 use function sort;
 use function str_repeat;
 use function strlen;
@@ -112,9 +111,7 @@ trait GdImageToolsTrait
     private function grayscaleMatrixFromAdapter(ImageAdapterInterface $src, int $w, int $h): array
     {
         // Imagick Fast-Path: ein Export statt 1024 getLuma()-Aufrufe
-        if ($src instanceof ImagickImageAdapter
-            && method_exists($src, 'exportRgbBytes')
-        ) {
+        if ($src instanceof ImagickImageAdapter) {
             $rgb = $src->exportRgbBytes($w, $h); // length = w*h*3
             $out = [];
             $idx = 0;

@@ -21,7 +21,6 @@ use function array_key_first;
 use function arsort;
 use function implode;
 use function is_string;
-use function method_exists;
 use function strcmp;
 use function strtolower;
 use function trim;
@@ -51,7 +50,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         $county  = $location->getCounty();
         $state   = $location->getState();
         $country = $location->getCountry();
-        $cell    = method_exists($location, 'getCell') ? $location->getCell() : null;
+        $cell    = $location->getCell();
 
         if ($suburb !== null) {
             $parts[] = 'suburb:' . $suburb;
