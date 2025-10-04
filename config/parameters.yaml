@@ -10,6 +10,13 @@ parameters:
     memories.video.ffmpeg_path: '%env(default::string:FFMPEG_PATH)%'
     memories.video.ffprobe_path: '%env(default::string:FFPROBE_PATH)%'
 
+    memories.face_detection.binary: '%env(default::string:MEMORIES_FACE_DETECTOR_BIN)%'
+    memories.face_detection.cascade: '%env(default::string:MEMORIES_FACE_DETECTOR_CASCADE)%'
+    memories.face_detection.scale_factor: 1.1
+    memories.face_detection.min_neighbors: 4
+    memories.face_detection.min_size: 72
+    memories.face_detection.timeout: 10.0
+
     # Hash Defaults
     memories.hash.dct_sample: 32
     memories.hash.lowfreq: 16

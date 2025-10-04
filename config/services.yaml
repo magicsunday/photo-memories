@@ -144,9 +144,27 @@ services:
         arguments:
             $goldenMinutes: 60
 
+    MagicSunday\Memories\Service\Metadata\Support\CommandLineFaceDetectionBackend:
+        arguments:
+            $binary: '%memories.face_detection.binary%'
+            $cascadePath: '%memories.face_detection.cascade%'
+            $scaleFactor: '%memories.face_detection.scale_factor%'
+            $minNeighbors: '%memories.face_detection.min_neighbors%'
+            $minSize: '%memories.face_detection.min_size%'
+            $timeout: '%memories.face_detection.timeout%'
+
+    MagicSunday\Memories\Service\Metadata\Support\FaceDetectionBackendInterface:
+        alias: MagicSunday\Memories\Service\Metadata\Support\CommandLineFaceDetectionBackend
+
     MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor:
         arguments:
             $sampleSize: 320
+            $ffmpegBinary: '%memories.video.ffmpeg_path%'
+            $ffprobeBinary: '%memories.video.ffprobe_path%'
+            $posterFrameSecond: '%memories.video.poster_frame_second%'
+
+    MagicSunday\Memories\Service\Metadata\FacePresenceDetector:
+        arguments:
             $ffmpegBinary: '%memories.video.ffmpeg_path%'
             $ffprobeBinary: '%memories.video.ffprobe_path%'
             $posterFrameSecond: '%memories.video.poster_frame_second%'
@@ -192,6 +210,7 @@ services:
                 - '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
                 - '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'
+                - '@MagicSunday\Memories\Service\Metadata\FacePresenceDetector'
                 - '@MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor'
                 - '@MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor'
