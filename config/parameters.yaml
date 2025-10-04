@@ -9,8 +9,10 @@ parameters:
     memories.index.batch_size: '%env(int:MEMORIES_INDEX_BATCH_SIZE)%'
 
     memories.video.poster_frame_second: 1.5
-    memories.video.ffmpeg_path: '%env(default:ffmpeg:FFMPEG_PATH)%'
-    memories.video.ffprobe_path: '%env(default:ffprobe:FFPROBE_PATH)%'
+    memories.video.ffmpeg_binary_default: 'ffmpeg'
+    memories.video.ffmpeg_path: "%env(default:memories.video.ffmpeg_binary_default:FFMPEG_PATH)%"
+    memories.video.ffprobe_binary_default: 'ffprobe'
+    memories.video.ffprobe_path: "%env(default:memories.video.ffprobe_binary_default:FFPROBE_PATH)%"
 
     memories.face_detection.binary: '%env(default::string:MEMORIES_FACE_DETECTOR_BIN)%'
     memories.face_detection.cascade: '%env(default::string:MEMORIES_FACE_DETECTOR_CASCADE)%'
