@@ -558,6 +558,7 @@ services:
             $minHomeShare: 0.62
             $minItemsPerDay: 3
             $minItemsTotal: 6
+            $homeVersionHash: '%memories.home.version_hash%'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.at_home_weekend_cluster_strategy%' }
 
@@ -569,6 +570,7 @@ services:
             $minHomeShare: 0.60
             $minItemsPerDay: 3
             $minItemsTotal: 5
+            $homeVersionHash: '%memories.home.version_hash%'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.at_home_weekday_cluster_strategy%' }
 

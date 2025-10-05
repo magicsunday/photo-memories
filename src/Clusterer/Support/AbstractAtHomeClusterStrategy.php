@@ -23,6 +23,9 @@ use function array_map;
 use function assert;
 use function count;
 use function sort;
+use function hash;
+use function hash_equals;
+use function sprintf;
 
 use const SORT_STRING;
 
@@ -39,6 +42,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
      */
     private readonly array $allowedWeekdayLookup;
 
+    private ?string $expectedHomeConfigHash = null;
+
     /**
      * @param list<int> $allowedWeekdays
      */
@@ -52,6 +57,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItemsPerDay,
         private readonly int $minItemsTotal,
         private readonly LocalTimeHelper $localTimeHelper,
+        private readonly string $homeVersionHash = '',
     ) {
         if ($this->algorithm === '') {
             throw new InvalidArgumentException('algorithm must not be empty.');
@@ -147,14 +153,9 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                     continue;
                 }
 
-                $distance = MediaMath::haversineDistanceInMeters(
-                    (float) $lat,
-                    (float) $lon,
-                    $this->homeLat,
-                    $this->homeLon,
-                );
+                $distanceKm = $this->distanceKmFromHome($media, (float) $lat, (float) $lon);
 
-                if ($distance <= $this->homeRadiusMeters) {
+                if ($distanceKm <= $this->homeRadiusMeters / 1000.0) {
                     $within[] = $media;
                 }
             }
@@ -237,5 +238,61 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         $flush();
 
         return $clusters;
+    }
+
+    private function distanceKmFromHome(Media $media, float $lat, float $lon): float
+    {
+        $cachedDistance = $media->getDistanceKmFromHome();
+        if ($cachedDistance !== null && $this->isHomeConfigFresh($media)) {
+            return $cachedDistance;
+        }
+
+        $distanceMeters = MediaMath::haversineDistanceInMeters(
+            $lat,
+            $lon,
+            $this->homeLat,
+            $this->homeLon,
+        );
+
+        return $distanceMeters / 1000.0;
+    }
+
+    private function isHomeConfigFresh(Media $media): bool
+    {
+        $expectedHash = $this->computeHomeConfigHash();
+        if ($expectedHash === null) {
+            return false;
+        }
+
+        $currentHash = $media->getHomeConfigHash();
+        if ($currentHash === null) {
+            return false;
+        }
+
+        return hash_equals($expectedHash, $currentHash);
+    }
+
+    private function computeHomeConfigHash(): ?string
+    {
+        if ($this->homeLat === null || $this->homeLon === null) {
+            return null;
+        }
+
+        if ($this->expectedHomeConfigHash !== null) {
+            return $this->expectedHomeConfigHash;
+        }
+
+        $this->expectedHomeConfigHash = hash(
+            'sha256',
+            sprintf(
+                '%.8f|%.8f|%.8f|%s',
+                $this->homeLat,
+                $this->homeLon,
+                $this->homeRadiusMeters / 1000.0,
+                $this->homeVersionHash,
+            ),
+        );
+
+        return $this->expectedHomeConfigHash;
     }
 }

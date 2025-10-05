@@ -21,6 +21,8 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekendClusterStrategyTest extends TestCase
 {
+    private const HOME_VERSION_HASH = 'test-home-version';
+
     #[Test]
     public function clustersWeekendSessionsWithinHomeRadius(): void
     {
@@ -32,6 +34,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             minHomeShare: 0.6,
             minItemsPerDay: 2,
             minItemsTotal: 4,
+            homeVersionHash: self::HOME_VERSION_HASH,
         );
 
         $mediaItems = [
@@ -46,6 +49,22 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             // Weekday entry that should be ignored entirely
             $this->createMedia(307, '2023-04-10 07:45:00', 52.5203, 13.4053),
         ];
+
+        $hash = $this->computeHomeConfigHash(52.5200, 13.4050, 400.0);
+        $mediaItems[0]->setDistanceKmFromHome(0.08);
+        $mediaItems[0]->setHomeConfigHash($hash);
+        $mediaItems[1]->setDistanceKmFromHome(0.12);
+        $mediaItems[1]->setHomeConfigHash($hash);
+        $mediaItems[2]->setDistanceKmFromHome(2.50);
+        $mediaItems[2]->setHomeConfigHash($hash);
+        $mediaItems[3]->setDistanceKmFromHome(0.15);
+        $mediaItems[3]->setHomeConfigHash($hash);
+        $mediaItems[4]->setDistanceKmFromHome(0.11);
+        $mediaItems[4]->setHomeConfigHash($hash);
+        $mediaItems[5]->setDistanceKmFromHome(3.10);
+        $mediaItems[5]->setHomeConfigHash($hash);
+        $mediaItems[6]->setDistanceKmFromHome(0.05);
+        $mediaItems[6]->setHomeConfigHash($hash);
 
         $clusters = $strategy->cluster($mediaItems);
 
@@ -78,6 +97,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             minHomeShare: 0.7,
             minItemsPerDay: 2,
             minItemsTotal: 4,
+            homeVersionHash: self::HOME_VERSION_HASH,
         );
 
         $mediaItems = [
@@ -106,6 +126,20 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
                     'isWeekend' => $weekday >= 6,
                 ]);
             },
+        );
+    }
+
+    private function computeHomeConfigHash(float $homeLat, float $homeLon, float $homeRadiusMeters): string
+    {
+        return hash(
+            'sha256',
+            sprintf(
+                '%.8f|%.8f|%.8f|%s',
+                $homeLat,
+                $homeLon,
+                $homeRadiusMeters / 1000.0,
+                self::HOME_VERSION_HASH,
+            ),
         );
     }
 }

@@ -21,6 +21,8 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekdayClusterStrategyTest extends TestCase
 {
+    private const HOME_VERSION_HASH = 'test-home-version';
+
     #[Test]
     public function clustersConsecutiveWeekdaysWithinHomeRadius(): void
     {
@@ -32,6 +34,7 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
             minHomeShare: 0.6,
             minItemsPerDay: 2,
             minItemsTotal: 4,
+            homeVersionHash: self::HOME_VERSION_HASH,
         );
 
         $mediaItems = [
@@ -42,6 +45,20 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
             $this->createMedia(105, '2023-04-04 08:20:00', 52.5198, 13.4048),
             $this->createMedia(106, '2023-04-08 10:00:00', 52.5200, 13.4050),
         ];
+
+        $hash = $this->computeHomeConfigHash(52.5200, 13.4050, 500.0);
+        $mediaItems[0]->setDistanceKmFromHome(0.12);
+        $mediaItems[0]->setHomeConfigHash($hash);
+        $mediaItems[1]->setDistanceKmFromHome(0.18);
+        $mediaItems[1]->setHomeConfigHash($hash);
+        $mediaItems[2]->setDistanceKmFromHome(1.80);
+        $mediaItems[2]->setHomeConfigHash($hash);
+        $mediaItems[3]->setDistanceKmFromHome(0.10);
+        $mediaItems[3]->setHomeConfigHash($hash);
+        $mediaItems[4]->setDistanceKmFromHome(0.16);
+        $mediaItems[4]->setHomeConfigHash($hash);
+        $mediaItems[5]->setDistanceKmFromHome(0.05);
+        $mediaItems[5]->setHomeConfigHash($hash);
 
         $clusters = $strategy->cluster($mediaItems);
 
@@ -85,6 +102,20 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+        );
+    }
+
+    private function computeHomeConfigHash(float $homeLat, float $homeLon, float $homeRadiusMeters): string
+    {
+        return hash(
+            'sha256',
+            sprintf(
+                '%.8f|%.8f|%.8f|%s',
+                $homeLat,
+                $homeLon,
+                $homeRadiusMeters / 1000.0,
+                self::HOME_VERSION_HASH,
+            ),
         );
     }
 }
