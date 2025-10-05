@@ -33,7 +33,7 @@ use function usort;
  */
 final readonly class BurstDetector implements SingleMetadataExtractorInterface
 {
-    public function __construct(private MediaRepository $mediaRepository)
+    public function __construct(private readonly MediaRepository $mediaRepository)
     {
     }
 

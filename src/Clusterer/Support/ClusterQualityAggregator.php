@@ -22,7 +22,7 @@ use function min;
  */
 final class ClusterQualityAggregator
 {
-    public function __construct(private float $qualityBaselineMegapixels = 12.0)
+    public function __construct(private readonly float $qualityBaselineMegapixels = 12.0)
     {
     }
 
