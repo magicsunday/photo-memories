@@ -48,6 +48,7 @@ final class FileStatMetadataExtractor implements SingleMetadataExtractorInterfac
         $media->setCapturedLocal($takenAt);
         $media->setTzId($timezoneName);
         $media->setTimeSource(TimeSource::FILE_MTIME);
+        $media->setTzConfidence(0.2);
 
         return $media;
     }

@@ -71,6 +71,7 @@ final class TimeNormalizer implements SingleMetadataExtractorInterface
                 $media->setCapturedLocal($parsed);
                 $media->setTimeSource(TimeSource::FILENAME);
                 $media->setTzId($parsed->getTimezone()->getName());
+                $this->promoteTzConfidence($media, 0.4);
 
                 return;
             }
@@ -83,6 +84,7 @@ final class TimeNormalizer implements SingleMetadataExtractorInterface
                 $media->setCapturedLocal($fileInstant);
                 $media->setTzId($fileInstant->getTimezone()->getName());
                 $media->setTimeSource(TimeSource::FILE_MTIME);
+                $this->promoteTzConfidence($media, 0.2);
             }
         }
     }
@@ -116,6 +118,7 @@ final class TimeNormalizer implements SingleMetadataExtractorInterface
             if ($media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
             }
+            $this->promoteTzConfidence($media, 0.2);
         }
 
         if ($media->getTimezoneOffsetMin() === null) {
@@ -145,6 +148,15 @@ final class TimeNormalizer implements SingleMetadataExtractorInterface
             return new DateTimeZone($this->defaultTimezone);
         } catch (Exception) {
             return new DateTimeZone('UTC');
+        }
+    }
+
+    private function promoteTzConfidence(Media $media, float $confidence): void
+    {
+        $current = $media->getTzConfidence();
+
+        if ($current === null || $confidence > $current) {
+            $media->setTzConfidence($confidence);
         }
     }
 }

@@ -47,7 +47,10 @@ final class CaptureTimeResolver
     {
         $capturedLocal = $media->getCapturedLocal();
         if ($capturedLocal instanceof DateTimeImmutable) {
-            return $capturedLocal;
+            $confidence = $media->getTzConfidence();
+            if ($confidence !== null && $confidence >= 0.8) {
+                return $capturedLocal;
+            }
         }
 
         $takenAt = $media->getTakenAt();
@@ -55,12 +58,23 @@ final class CaptureTimeResolver
             return null;
         }
 
-        $timezone = $this->determineTimezone($media, $takenAt);
-        if ($timezone instanceof DateTimeZone) {
+        $determined = $this->determineTimezone($media, $takenAt);
+        if ($determined !== null) {
+            $timezone = $determined['timezone'];
+            $source   = $determined['source'];
+
             $local = $takenAt->setTimezone($timezone);
             $media->setCapturedLocal($local);
             if ($media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
+            }
+
+            if ($source === 'tzId') {
+                if ($media->getTzConfidence() === null) {
+                    $this->promoteTzConfidence($media, 0.9);
+                }
+            } else {
+                $this->promoteTzConfidence($media, 0.8);
             }
 
             return $local;
@@ -74,20 +88,26 @@ final class CaptureTimeResolver
                 $media->setTzId($local->getTimezone()->getName());
             }
 
+            $this->promoteTzConfidence($media, 1.0);
+
             return $local;
         }
 
         $media->setCapturedLocal($takenAt);
+        $this->promoteTzConfidence($media, 0.2);
 
         return $takenAt;
     }
 
-    private function determineTimezone(Media $media, DateTimeImmutable $takenAt): ?DateTimeZone
+    /**
+     * @return array{timezone: DateTimeZone, source: 'tzId'|'resolver'}|null
+     */
+    private function determineTimezone(Media $media, DateTimeImmutable $takenAt): ?array
     {
         $tzId = $media->getTzId();
         if (is_string($tzId) && $tzId !== '') {
             try {
-                return new DateTimeZone($tzId);
+                return ['timezone' => new DateTimeZone($tzId), 'source' => 'tzId'];
             } catch (Exception) {
                 $media->setTzId(null);
             }
@@ -99,7 +119,9 @@ final class CaptureTimeResolver
         }
 
         try {
-            return $this->timezoneResolver->resolveMediaTimezone($media, $takenAt, $this->home);
+            $timezone = $this->timezoneResolver->resolveMediaTimezone($media, $takenAt, $this->home);
+
+            return ['timezone' => $timezone, 'source' => 'resolver'];
         } catch (Exception) {
             return null;
         }
@@ -120,5 +142,14 @@ final class CaptureTimeResolver
         }
 
         return $instant->setTimezone($timezone);
+    }
+
+    private function promoteTzConfidence(Media $media, float $confidence): void
+    {
+        $current = $media->getTzConfidence();
+
+        if ($current === null || $confidence > $current) {
+            $media->setTzConfidence($confidence);
+        }
     }
 }

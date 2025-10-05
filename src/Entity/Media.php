@@ -17,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use function count;
+use function max;
+use function min;
 
 /**
  * Doctrine entity describing an imported photo or video including its metadata.
@@ -115,6 +117,12 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 128, nullable: true)]
     private ?string $tzId = null;
+
+    /**
+     * Confidence score (0..1) describing the accuracy of the timezone metadata.
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $tzConfidence = null;
 
     /**
      * Capture timestamp expressed in local wall time.
@@ -767,6 +775,30 @@ class Media
     public function setTzId(?string $tzId): void
     {
         $this->tzId = $tzId;
+    }
+
+    /**
+     * Returns the confidence score assigned to the timezone metadata.
+     */
+    public function getTzConfidence(): ?float
+    {
+        return $this->tzConfidence;
+    }
+
+    /**
+     * Updates the confidence score assigned to the timezone metadata.
+     *
+     * @param float|null $tzConfidence Confidence level between 0.0 and 1.0.
+     */
+    public function setTzConfidence(?float $tzConfidence): void
+    {
+        if ($tzConfidence === null) {
+            $this->tzConfidence = null;
+
+            return;
+        }
+
+        $this->tzConfidence = max(0.0, min(1.0, $tzConfidence));
     }
 
     /**
