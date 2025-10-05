@@ -37,6 +37,7 @@ use function str_starts_with;
 use function strlen;
 use function strtolower;
 use function substr;
+use function trim;
 use function unpack;
 
 use const SORT_NUMERIC;
@@ -53,12 +54,15 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     use GdImageToolsTrait;
     use VideoPosterFrameTrait;
 
+    private string $ffmpegBinary;
+    private string $ffprobeBinary;
+
     public function __construct(
         private int $dctSampleSize = 32,
         private int $lowFreqSize = 16,
         private int $phashPrefixLength = 16,
-        private string $ffmpegBinary = 'ffmpeg',
-        private string $ffprobeBinary = 'ffprobe',
+        string $ffmpegBinary = 'ffmpeg',
+        string $ffprobeBinary = 'ffprobe',
         private float $posterFrameSecond = 1.0,
     ) {
         if ($this->dctSampleSize < 16 || ($this->dctSampleSize & ($this->dctSampleSize - 1)) !== 0) {
@@ -77,13 +81,18 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             throw new InvalidArgumentException('posterFrameSecond must be >= 0');
         }
 
-        if ($this->ffmpegBinary === '') {
-            $this->ffmpegBinary = 'ffmpeg';
+        $normalizedFfmpegBinary = trim($ffmpegBinary);
+        if ($normalizedFfmpegBinary === '') {
+            $normalizedFfmpegBinary = 'ffmpeg';
         }
 
-        if ($this->ffprobeBinary === '') {
-            $this->ffprobeBinary = 'ffprobe';
+        $normalizedFfprobeBinary = trim($ffprobeBinary);
+        if ($normalizedFfprobeBinary === '') {
+            $normalizedFfprobeBinary = 'ffprobe';
         }
+
+        $this->ffmpegBinary = $normalizedFfmpegBinary;
+        $this->ffprobeBinary = $normalizedFfprobeBinary;
     }
 
     public function supports(string $filepath, Media $media): bool
