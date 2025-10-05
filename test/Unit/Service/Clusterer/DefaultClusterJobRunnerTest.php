@@ -22,6 +22,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -87,7 +88,9 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
         $mediaOne  = new Media('one.jpg', 'checksum-one', 1);
+        $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
         $mediaTwo  = new Media('two.jpg', 'checksum-two', 1);
+        $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -174,7 +177,9 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
         $mediaOne  = new Media('dry-one.jpg', 'checksum-dry-one', 1);
+        $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
         $mediaTwo  = new Media('dry-two.jpg', 'checksum-dry-two', 1);
+        $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -227,6 +232,57 @@ final class DefaultClusterJobRunnerTest extends TestCase
         self::assertSame(2, $result->getPersistedCount());
         self::assertSame(0, $result->getDeletedCount());
         self::assertTrue($result->isDryRun());
+    }
+
+    #[Test]
+    public function runStopsWhenReplaceAndFeatureVersionIsOutdated(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $countQb    = $this->createQueryBuilderMock(['select', 'from', 'andWhere', 'setParameter', 'getQuery']);
+        $countQuery = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getSingleScalarResult'])
+            ->getMock();
+        $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('1');
+        $countQb->method('getQuery')->willReturn($countQuery);
+
+        $listQb   = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $media    = new Media('outdated.jpg', 'checksum-outdated', 1);
+        $listQuery = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['toIterable'])
+            ->getMock();
+        $listQuery->expects(self::once())->method('toIterable')->willReturn([$media]);
+        $listQb->method('getQuery')->willReturn($listQuery);
+
+        $entityManager->expects(self::exactly(2))
+            ->method('createQueryBuilder')
+            ->willReturnOnConsecutiveCalls($countQb, $listQb);
+
+        $clusterer = $this->createMock(HybridClustererInterface::class);
+        $clusterer->expects(self::never())->method('countStrategies');
+        $clusterer->expects(self::never())->method('build');
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::never())->method('consolidate');
+
+        $persistence = $this->createMock(ClusterPersistenceInterface::class);
+        $persistence->expects(self::never())->method('deleteByAlgorithms');
+        $persistence->expects(self::never())->method('persistBatched');
+
+        $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
+        $options = new ClusterJobOptions(false, null, null, true);
+
+        $result = $runner->run($options, new NullProgressReporter());
+
+        self::assertSame(1, $result->getTotalMediaCount());
+        self::assertSame(1, $result->getLoadedMediaCount());
+        self::assertSame(0, $result->getDraftCount());
+        self::assertSame(0, $result->getConsolidatedCount());
+        self::assertSame(0, $result->getPersistedCount());
+        self::assertSame(0, $result->getDeletedCount());
+        self::assertFalse($result->isDryRun());
     }
 
     /**
