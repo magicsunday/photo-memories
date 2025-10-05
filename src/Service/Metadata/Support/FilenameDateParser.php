@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
 
+use function array_find;
 use function basename;
 use function pathinfo;
 use function preg_match;
@@ -38,29 +39,41 @@ final class FilenameDateParser
             '/(?:IMG|DSC|VID|MOV|PXL|PHOTO)[_-]?(\d{4})(\d{2})(\d{2})[_-]?(\d{2})(\d{2})(\d{2})/i',
         ];
 
-        foreach ($patterns as $pattern) {
-            $matches = [];
-            if (preg_match($pattern, $stem, $matches) !== 1) {
-                continue;
-            }
+        /** @var DateTimeImmutable|null $dateTime */
+        $dateTime = null;
 
-            $date = sprintf(
-                '%s-%s-%s %s:%s:%s',
-                $matches[1],
-                $matches[2],
-                $matches[3],
-                $matches[4],
-                $matches[5],
-                $matches[6],
-            );
+        $matchedPattern = array_find(
+            $patterns,
+            function (string $pattern) use ($stem, $timezone, &$dateTime): bool {
+                $matches = [];
+                if (preg_match($pattern, $stem, $matches) !== 1) {
+                    return false;
+                }
 
-            try {
-                return new DateTimeImmutable($date, $timezone);
-            } catch (Exception) {
-                continue;
+                $date = sprintf(
+                    '%s-%s-%s %s:%s:%s',
+                    $matches[1],
+                    $matches[2],
+                    $matches[3],
+                    $matches[4],
+                    $matches[5],
+                    $matches[6],
+                );
+
+                try {
+                    $dateTime = new DateTimeImmutable($date, $timezone);
+                } catch (Exception) {
+                    return false;
+                }
+
+                return true;
             }
+        );
+
+        if ($matchedPattern === null) {
+            return null;
         }
 
-        return null;
+        return $dateTime;
     }
 }

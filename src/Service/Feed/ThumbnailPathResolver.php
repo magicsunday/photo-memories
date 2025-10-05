@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Feed;
 
 use MagicSunday\Memories\Entity\Media;
 
+use function array_find;
 use function array_values;
 use function basename;
 use function is_array;
@@ -73,10 +74,14 @@ final class ThumbnailPathResolver
             // Or treat as list of paths
             $values = array_values($thumbs);
             sort($values, SORT_STRING);
-            foreach ($values as $p) {
-                if (is_string($p) && is_file($p)) {
-                    return $p;
-                }
+
+            $match = array_find(
+                $values,
+                static fn (mixed $path): bool => is_string($path) && is_file($path)
+            );
+
+            if (is_string($match)) {
+                return $match;
             }
         }
 
