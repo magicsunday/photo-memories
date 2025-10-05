@@ -13,19 +13,25 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 
-use function array_map;
+use function array_values;
 use function basename;
 use function count;
 use function dirname;
 use function file_get_contents;
 use function implode;
+use function in_array;
+use function is_dir;
 use function is_file;
 use function is_string;
 use function pathinfo;
 use function preg_match;
+use function scandir;
 use function sha1;
+use function sort;
 use function str_starts_with;
+use function strtolower;
 
+use const PATHINFO_EXTENSION;
 use const PATHINFO_FILENAME;
 
 /**
@@ -82,26 +88,69 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
 
     private function calcLivePairChecksum(string $path): ?string
     {
-        $dir   = dirname($path);
-        $base  = pathinfo($path, PATHINFO_FILENAME);
-        $cands = [
-            $dir . '/' . $base . '.mov',
-            $dir . '/' . $base . '.MP4',
-            $dir . '/' . $base . '.heic',
-            $dir . '/' . $base . '.HEIC',
-        ];
-        /** @var list<string> $have */
-        $have = [];
-        foreach ($cands as $c) {
-            if (is_file($c)) {
-                $have[] = $c;
-            }
-        }
-
-        if (count($have) < 2) {
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
             return null;
         }
 
-        return sha1(implode('|', array_map(static fn (string $f): string => basename($f), $have)));
+        $base = pathinfo($path, PATHINFO_FILENAME);
+        if ($base === '') {
+            return null;
+        }
+
+        $allowedExtensions = ['jpg', 'jpeg', 'heic', 'mov', 'mp4'];
+        $targetBase        = strtolower($base);
+
+        /** @var array<string, string> $basenames */
+        $basenames = [];
+
+        if (is_file($path)) {
+            $originExt = pathinfo($path, PATHINFO_EXTENSION);
+            if ($originExt !== '' && in_array(strtolower($originExt), $allowedExtensions, true)) {
+                $basename               = basename($path);
+                $basenames[$basename] = $basename;
+            }
+        }
+
+        $entries = @scandir($dir);
+        if ($entries === false) {
+            return null;
+        }
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $candidate = $dir . '/' . $entry;
+            if (!is_file($candidate)) {
+                continue;
+            }
+
+            $candidateBase = pathinfo($entry, PATHINFO_FILENAME);
+            $candidateExt  = pathinfo($entry, PATHINFO_EXTENSION);
+            if ($candidateBase === '' || $candidateExt === '') {
+                continue;
+            }
+
+            if (strtolower($candidateBase) !== $targetBase) {
+                continue;
+            }
+
+            if (!in_array(strtolower($candidateExt), $allowedExtensions, true)) {
+                continue;
+            }
+
+            $basenames[$entry] = $entry;
+        }
+
+        if (count($basenames) < 2) {
+            return null;
+        }
+
+        $filenames = array_values($basenames);
+        sort($filenames, SORT_STRING);
+
+        return sha1(implode('|', $filenames));
     }
 }
