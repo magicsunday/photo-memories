@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Support\AbstractAtHomeClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 
 /**
  * Clusters home-based weekend sessions: Saturday/Sunday where most photos are within a home radius.
@@ -19,13 +20,13 @@ use MagicSunday\Memories\Clusterer\Support\AbstractAtHomeClusterStrategy;
 final class AtHomeWeekendClusterStrategy extends AbstractAtHomeClusterStrategy
 {
     public function __construct(
+        LocalTimeHelper $localTimeHelper,
         ?float $homeLat = null,
         ?float $homeLon = null,
         float $homeRadiusMeters = 300.0,
         float $minHomeShare = 0.7,
         int $minItemsPerDay = 4,
         int $minItemsTotal = 6,
-        string $timezone = 'Europe/Berlin',
     ) {
         parent::__construct(
             algorithm: 'at_home_weekend',
@@ -36,7 +37,7 @@ final class AtHomeWeekendClusterStrategy extends AbstractAtHomeClusterStrategy
             minHomeShare: $minHomeShare,
             minItemsPerDay: $minItemsPerDay,
             minItemsTotal: $minItemsTotal,
-            timezone: $timezone,
+            localTimeHelper: $localTimeHelper,
         );
     }
 }

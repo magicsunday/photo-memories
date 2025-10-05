@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,7 +25,10 @@ final class DayAlbumClusterStrategyTest extends TestCase
     #[Test]
     public function groupsMediaByLocalCalendarDay(): void
     {
-        $strategy = new DayAlbumClusterStrategy(timezone: 'America/Los_Angeles', minItemsPerDay: 2);
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('America/Los_Angeles'),
+            minItemsPerDay: 2,
+        );
 
         $mediaItems = [
             $this->createMedia(101, '2022-06-01 23:30:00', 34.0522, -118.2437),
@@ -59,7 +63,10 @@ final class DayAlbumClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenNoDayMeetsMinimumItemCount(): void
     {
-        $strategy = new DayAlbumClusterStrategy(timezone: 'UTC', minItemsPerDay: 3);
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('UTC'),
+            minItemsPerDay: 3,
+        );
 
         $mediaItems = [
             $this->createMedia(201, '2022-08-01 09:00:00', 52.5, 13.4),
@@ -67,6 +74,26 @@ final class DayAlbumClusterStrategyTest extends TestCase
         ];
 
         self::assertSame([], $strategy->cluster($mediaItems));
+    }
+
+    #[Test]
+    public function honoursCapturedLocalWhenDifferentFromFallback(): void
+    {
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            minItemsPerDay: 2,
+        );
+
+        $mediaItems = [
+            $this->createShiftedMedia(501, '2023-01-01 07:30:00', '2022-12-31 23:30:00'),
+            $this->createShiftedMedia(502, '2023-01-01 07:50:00', '2022-12-31 23:50:00'),
+            $this->createShiftedMedia(503, '2023-01-01 08:30:00', '2023-01-01 00:30:00'),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        self::assertSame([501, 502], $clusters[0]->getMembers());
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
@@ -77,6 +104,24 @@ final class DayAlbumClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+            configure: static function (Media $media): void {
+                $media->setCapturedLocal(null);
+                $media->setTimezoneOffsetMin(-420);
+            },
+        );
+    }
+
+    private function createShiftedMedia(int $id, string $takenAtUtc, string $capturedLocal): Media
+    {
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: sprintf('day-album-%d-shifted.jpg', $id),
+            takenAt: $takenAtUtc,
+            configure: static function (Media $media) use ($capturedLocal): void {
+                $local = new DateTimeImmutable($capturedLocal, new DateTimeZone('America/Los_Angeles'));
+                $media->setCapturedLocal($local);
+                $media->setTimezoneOffsetMin(-480);
+            },
         );
     }
 }

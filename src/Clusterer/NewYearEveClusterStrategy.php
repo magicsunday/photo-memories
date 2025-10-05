@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -30,7 +30,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
     use MediaFilterTrait;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
+        private LocalTimeHelper $localTimeHelper,
         /** Hours considered NYE party window (local, 24h). */
         private int $startHour = 20,
         private int $endHour = 2,
@@ -58,17 +58,14 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
         /** @var array<int, list<Media>> $byYear */
         $byYear = [];
 
         $nyeItems = $this->filterTimestampedItemsBy(
             $items,
-            function (Media $m) use ($tz): bool {
-                $takenAt = $m->getTakenAt();
-                assert($takenAt instanceof DateTimeImmutable);
-                $local = $takenAt->setTimezone($tz);
+            function (Media $m): bool {
+                $local = $this->localTimeHelper->resolve($m);
+                assert($local instanceof DateTimeImmutable);
                 $md    = $local->format('m-d');
                 $hour  = (int) $local->format('G');
 
@@ -78,9 +75,8 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
         );
 
         foreach ($nyeItems as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $local = $t->setTimezone($tz);
+            $local = $this->localTimeHelper->resolve($m);
+            assert($local instanceof DateTimeImmutable);
             $y     = (int) $local->format('Y');
 
             $byYear[$y] ??= [];

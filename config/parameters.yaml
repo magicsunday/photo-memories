@@ -47,6 +47,7 @@ parameters:
     memories.localization.preferred_locale: '%env(default::string:MEMORIES_PREFERRED_LOCALE)%'
 
     memories.timezone.default: 'UTC'
+    memories.cluster.timezone.default: 'Europe/Berlin'
 
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]

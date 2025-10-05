@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -30,7 +30,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
+        private LocalTimeHelper $localTimeHelper,
         private int $minItemsPerDay = 8,
     ) {
         if ($this->minItemsPerDay < 1) {
@@ -50,8 +50,6 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
         /** @var list<Media> $timestamped */
         $timestamped = $this->filterTimestampedItems($items);
 
@@ -59,9 +57,8 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         $byDay = [];
 
         foreach ($timestamped as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $local = $t->setTimezone($tz);
+            $local = $this->localTimeHelper->resolve($m);
+            assert($local instanceof DateTimeImmutable);
             $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;

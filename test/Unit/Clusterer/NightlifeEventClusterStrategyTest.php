@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
     public function clustersNightSessionsWithCompactGpsSpread(): void
     {
         $strategy = new NightlifeEventClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             timeGapSeconds: 3 * 3600,
             radiusMeters: 400.0,
             minItemsPerRun: 5,
@@ -59,7 +60,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
     public function rejectsRunsExceedingSpatialRadius(): void
     {
         $strategy = new NightlifeEventClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             timeGapSeconds: 3 * 3600,
             radiusMeters: 50.0,
             minItemsPerRun: 5,

@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Support;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
@@ -51,7 +50,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         private readonly float $minHomeShare,
         private readonly int $minItemsPerDay,
         private readonly int $minItemsTotal,
-        private readonly string $timezone,
+        private readonly LocalTimeHelper $localTimeHelper,
     ) {
         if ($this->algorithm === '') {
             throw new InvalidArgumentException('algorithm must not be empty.');
@@ -104,8 +103,6 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $tz = new DateTimeZone($this->timezone);
-
         /** @var list<Media> $timestamped */
         $timestamped = $this->filterTimestampedItems($items);
 
@@ -113,10 +110,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         $byDay = [];
 
         foreach ($timestamped as $media) {
-            $takenAt = $media->getTakenAt();
-            assert($takenAt instanceof DateTimeImmutable);
-
-            $local = $takenAt->setTimezone($tz);
+            $local = $this->localTimeHelper->resolve($media);
+            assert($local instanceof DateTimeImmutable);
             $dow   = (int) $local->format('N');
             if (!isset($this->allowedWeekdayLookup[$dow])) {
                 continue;

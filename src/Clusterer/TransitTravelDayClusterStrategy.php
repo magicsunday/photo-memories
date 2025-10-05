@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -31,7 +31,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
     use MediaFilterTrait;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
+        private LocalTimeHelper $localTimeHelper,
         private float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
         private int $minItemsPerDay = 5,
@@ -57,8 +57,6 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
         $timestampedGpsItems = $this->filterTimestampedGpsItems($items);
 
         if ($timestampedGpsItems === []) {
@@ -69,9 +67,8 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         $byDay = [];
 
         foreach ($timestampedGpsItems as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $local = $t->setTimezone($tz);
+            $local = $this->localTimeHelper->resolve($m);
+            assert($local instanceof DateTimeImmutable);
             $key   = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
