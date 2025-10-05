@@ -57,6 +57,53 @@ final class PanoramaClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($items));
     }
 
+    #[Test]
+    public function acceptsFlaggedPanoramaEvenWithLowAspectRatio(): void
+    {
+        $strategy = new PanoramaClusterStrategy(
+            minAspect: 2.4,
+            sessionGapSeconds: 1800,
+            minItemsPerRun: 3,
+        );
+
+        $start = new DateTimeImmutable('2024-06-03 12:00:00', new DateTimeZone('UTC'));
+        $items = [];
+        for ($i = 0; $i < 3; ++$i) {
+            $items[] = $this->createFlaggedPanorama(
+                4100 + $i,
+                $start->add(new DateInterval('PT' . ($i * 600) . 'S')),
+                true,
+                2200,
+                1600,
+            );
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        self::assertSame([4100, 4101, 4102], $clusters[0]->getMembers());
+    }
+
+    #[Test]
+    public function rejectsPhotosExplicitlyMarkedAsNonPanorama(): void
+    {
+        $strategy = new PanoramaClusterStrategy();
+
+        $start = new DateTimeImmutable('2024-06-04 12:00:00', new DateTimeZone('UTC'));
+        $items = [];
+        for ($i = 0; $i < 3; ++$i) {
+            $items[] = $this->createFlaggedPanorama(
+                4200 + $i,
+                $start->add(new DateInterval('PT' . ($i * 600) . 'S')),
+                false,
+                4800,
+                1500,
+            );
+        }
+
+        self::assertSame([], $strategy->cluster($items));
+    }
+
     private function createPanorama(int $id, DateTimeImmutable $takenAt): Media
     {
         return $this->makeMediaFixture(
@@ -82,6 +129,25 @@ final class PanoramaClusterStrategyTest extends TestCase
             configure: static function (Media $media): void {
                 $media->setWidth(2000);
                 $media->setHeight(1500);
+            },
+        );
+    }
+
+    private function createFlaggedPanorama(
+        int $id,
+        DateTimeImmutable $takenAt,
+        bool $flag,
+        int $width,
+        int $height,
+    ): Media {
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: sprintf('flagged-%d.jpg', $id),
+            takenAt: $takenAt,
+            configure: static function (Media $media) use ($flag, $width, $height): void {
+                $media->setWidth($width);
+                $media->setHeight($height);
+                $media->setIsPanorama($flag);
             },
         );
     }
