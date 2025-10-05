@@ -33,6 +33,8 @@ final class BurstClusterStrategyTest extends TestCase
             $this->createMedia(3004, '2023-04-15 10:03:00', 52.5203, 13.4053),
         ];
 
+        $mediaItems[2]->setBurstRepresentative(true);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
@@ -40,7 +42,7 @@ final class BurstClusterStrategyTest extends TestCase
 
         self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('burst', $cluster->getAlgorithm());
-        self::assertSame([3002, 3001, 3003, 3004], $cluster->getMembers());
+        self::assertSame([3003, 3002, 3001, 3004], $cluster->getMembers());
 
         $params        = $cluster->getParams();
         $expectedRange = [
@@ -48,10 +50,11 @@ final class BurstClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2023-04-15 10:03:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $params['time_range']);
+        self::assertSame(3003, $params['representative_media_id']);
 
         $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta(52.52015, $centroid['lat'], 0.0001);
-        self::assertEqualsWithDelta(13.40515, $centroid['lon'], 0.0001);
+        self::assertEqualsWithDelta(52.5202, $centroid['lat'], 0.0001);
+        self::assertEqualsWithDelta(13.4052, $centroid['lon'], 0.0001);
     }
 
     #[Test]
@@ -88,6 +91,61 @@ final class BurstClusterStrategyTest extends TestCase
         ];
 
         self::assertSame([], $strategy->cluster($mediaItems));
+    }
+
+    #[Test]
+    public function groupsItemsWithBurstUuidDespiteLargeGaps(): void
+    {
+        $strategy = new BurstClusterStrategy(maxGapSeconds: 30, maxMoveMeters: 10.0, minItemsPerBurst: 3);
+
+        $burstUuid  = 'burst-uuid-42';
+        $mediaItems = [
+            $this->createMedia(6001, '2024-01-05 12:00:00', 48.1374, 11.5755),
+            $this->createMedia(6002, '2024-01-05 12:10:00', 48.1380, 11.5760),
+            $this->createMedia(6003, '2024-01-05 12:20:00', 48.1390, 11.5770),
+        ];
+
+        foreach ($mediaItems as $index => $media) {
+            $media->setBurstUuid($burstUuid);
+            $media->setBurstIndex($index);
+        }
+
+        $mediaItems[0]->setBurstRepresentative(true);
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame([6001, 6002, 6003], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertSame($burstUuid, $params['burst_uuid']);
+        self::assertSame(6001, $params['representative_media_id']);
+
+        $centroid = $cluster->getCentroid();
+        self::assertEqualsWithDelta(48.1374, $centroid['lat'], 0.0001);
+        self::assertEqualsWithDelta(11.5755, $centroid['lon'], 0.0001);
+    }
+
+    #[Test]
+    public function usesHeuristicFallbackWhenBurstMetadataMissing(): void
+    {
+        $strategy = new BurstClusterStrategy(maxGapSeconds: 45, maxMoveMeters: 80.0, minItemsPerBurst: 2);
+
+        $mediaItems = [
+            $this->createMedia(7001, '2023-09-10 08:00:10', 35.6895, 139.6917),
+            $this->createMedia(7002, '2023-09-10 08:00:40', 35.6896, 139.6918),
+            $this->createMedia(7003, '2023-09-10 08:05:30', 35.6897, 139.6919),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame([7001, 7002], $cluster->getMembers());
+        self::assertNull($cluster->getParams()['representative_media_id']);
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media

@@ -17,7 +17,9 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_filter;
 use function array_map;
+use function array_values;
 use function assert;
 use function count;
 use function usort;
@@ -74,28 +76,110 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
             static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt()
         );
 
-        /** @var list<list<Media>> $sessions */
-        $sessions = [];
-        /** @var list<Media> $current */
-        $current = [];
+        /** @var array<string, list<Media>> $metadataBuckets */
+        $metadataBuckets = [];
+        /** @var list<Media> $ungrouped */
+        $ungrouped = [];
 
-        foreach ($timestamped as $i => $media) {
-            if ($i === 0) {
-                $current[] = $media;
+        foreach ($timestamped as $media) {
+            $burstUuid = $media->getBurstUuid();
+            if ($burstUuid !== null) {
+                $metadataBuckets[$burstUuid] ??= [];
+                $metadataBuckets[$burstUuid][] = $media;
                 continue;
             }
 
-            $prev = $timestamped[$i - 1];
+            $ungrouped[] = $media;
+        }
+
+        $drafts = [];
+
+        foreach ($this->filterGroupsByMinItems($metadataBuckets, $this->minItemsPerBurst) as $burstUuid => $members) {
+            $drafts[] = $this->makeDraft($members, $burstUuid);
+        }
+
+        foreach ($this->buildHeuristicSessions($ungrouped) as $members) {
+            $drafts[] = $this->makeDraft($members, null);
+        }
+
+        usort(
+            $drafts,
+            static function (ClusterDraft $a, ClusterDraft $b): int {
+                $aRange = $a->getParams()['time_range'] ?? null;
+                $bRange = $b->getParams()['time_range'] ?? null;
+
+                if ($aRange === null || $bRange === null) {
+                    return 0;
+                }
+
+                return ($aRange['from'] ?? 0) <=> ($bRange['from'] ?? 0);
+            }
+        );
+
+        return $drafts;
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    private function makeDraft(array $members, ?string $burstUuid): ClusterDraft
+    {
+        $orderedMembers = $this->sortMembers($members);
+
+        $representatives = array_values(array_filter(
+            $orderedMembers,
+            static fn (Media $media): bool => $media->isBurstRepresentative() === true
+        ));
+
+        $centroidSource = $representatives !== [] ? $representatives : $orderedMembers;
+        $centroid       = MediaMath::centroid($centroidSource);
+
+        $representative = $representatives[0] ?? null;
+
+        $params = [
+            'time_range' => MediaMath::timeRange($orderedMembers),
+            'representative_media_id' => $representative?->getId(),
+        ];
+
+        if ($burstUuid !== null) {
+            $params['burst_uuid'] = $burstUuid;
+        }
+
+        return new ClusterDraft(
+            algorithm: $this->name(),
+            params: $params,
+            centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
+            members: array_map(static fn (Media $m): int => $m->getId(), $orderedMembers)
+        );
+    }
+
+    /**
+     * @param list<Media> $items
+     *
+     * @return list<list<Media>>
+     */
+    private function buildHeuristicSessions(array $items): array
+    {
+        $count = count($items);
+        if ($count === 0) {
+            return [];
+        }
+
+        /** @var list<list<Media>> $sessions */
+        $sessions = [];
+        /** @var list<Media> $current */
+        $current = [$items[0]];
+
+        for ($i = 1; $i < $count; ++$i) {
+            $media = $items[$i];
+            $prev  = $items[$i - 1];
 
             $currTakenAt = $media->getTakenAt();
             $prevTakenAt = $prev->getTakenAt();
             assert($currTakenAt instanceof DateTimeImmutable);
             assert($prevTakenAt instanceof DateTimeImmutable);
 
-            $timeOk = MediaMath::secondsBetween(
-                $currTakenAt,
-                $prevTakenAt
-            ) <= $this->maxGapSeconds;
+            $timeOk = MediaMath::secondsBetween($currTakenAt, $prevTakenAt) <= $this->maxGapSeconds;
 
             $distOk = true;
             $lat1   = $prev->getGpsLat();
@@ -120,28 +204,47 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
             $sessions[] = $current;
         }
 
-        $eligible = $this->filterListsByMinItems($sessions, $this->minItemsPerBurst);
-
-        return array_map(
-            fn (array $members): ClusterDraft => $this->makeDraft($members),
-            $eligible
-        );
+        return $this->filterListsByMinItems($sessions, $this->minItemsPerBurst);
     }
 
     /**
      * @param list<Media> $members
+     *
+     * @return list<Media>
      */
-    private function makeDraft(array $members): ClusterDraft
+    private function sortMembers(array $members): array
     {
-        $centroid = MediaMath::centroid($members);
+        usort(
+            $members,
+            static function (Media $a, Media $b): int {
+                $repPriorityA = $a->isBurstRepresentative() === true ? 0 : 1;
+                $repPriorityB = $b->isBurstRepresentative() === true ? 0 : 1;
 
-        return new ClusterDraft(
-            algorithm: $this->name(),
-            params: [
-                'time_range' => MediaMath::timeRange($members),
-            ],
-            centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: array_map(static fn (Media $m): int => $m->getId(), $members)
+                if ($repPriorityA !== $repPriorityB) {
+                    return $repPriorityA <=> $repPriorityB;
+                }
+
+                $indexA = $a->getBurstIndex();
+                $indexB = $b->getBurstIndex();
+
+                if ($indexA !== null && $indexB !== null && $indexA !== $indexB) {
+                    return $indexA <=> $indexB;
+                }
+
+                $takenA = $a->getTakenAt();
+                $takenB = $b->getTakenAt();
+
+                if ($takenA instanceof DateTimeImmutable && $takenB instanceof DateTimeImmutable) {
+                    $timeCompare = $takenA->getTimestamp() <=> $takenB->getTimestamp();
+                    if ($timeCompare !== 0) {
+                        return $timeCompare;
+                    }
+                }
+
+                return $a->getId() <=> $b->getId();
+            }
         );
+
+        return $members;
     }
 }
