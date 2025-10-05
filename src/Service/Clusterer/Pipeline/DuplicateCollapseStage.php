@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
+use function array_map;
 use function array_values;
 use function count;
 
@@ -64,10 +65,10 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         }
 
         /** @var list<list<int>> $normalized */
-        $normalized = [];
-        foreach ($drafts as $draft) {
-            $normalized[] = $this->normalizeMembers($draft->getMembers());
-        }
+        $normalized = array_map(
+            static fn (ClusterDraft $draft): array => $this->normalizeMembers($draft->getMembers()),
+            $drafts,
+        );
 
         /** @var array<string,int> $winnerByFingerprint */
         $winnerByFingerprint = [];
@@ -92,11 +93,14 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
             $progress($total, $total);
         }
 
+        /** @var list<int> $winners */
+        $winners = array_values($winnerByFingerprint);
+
         /** @var list<ClusterDraft> $result */
-        $result = [];
-        foreach ($winnerByFingerprint as $idx) {
-            $result[] = $drafts[$idx];
-        }
+        $result = array_map(
+            static fn (int $index): ClusterDraft => $drafts[$index],
+            $winners,
+        );
 
         return $result;
     }
