@@ -20,7 +20,7 @@ use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
  */
 final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
 {
-    public function __construct(private readonly CaptureTimeResolver $captureTimeResolver)
+    public function __construct(private CaptureTimeResolver $captureTimeResolver)
     {
     }
 
