@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Utility;
 
 use MagicSunday\Memories\Entity\Media;
 
+use function array_key_first;
+use function count;
 use function is_array;
 use function is_bool;
 use function is_string;
@@ -78,6 +80,52 @@ final class CalendarFeatureHelper
             'season'    => $season,
             'isWeekend' => $isWeekend,
             'isHoliday' => $isHoliday,
+            'holidayId' => $holidayId,
+        ];
+    }
+
+    /**
+     * Aggregates the calendar flags for a list of media entries.
+     *
+     * @param list<Media> $items
+     *
+     * @return array{isWeekend: ?bool, holidayId: ?string}
+     */
+    public static function summarize(array $items): array
+    {
+        $weekendTrue  = 0;
+        $weekendFalse = 0;
+        $holidayIds   = [];
+
+        foreach ($items as $media) {
+            $features = self::extract($media);
+            $isWeekend = $features['isWeekend'];
+            if ($isWeekend === true) {
+                ++$weekendTrue;
+            } elseif ($isWeekend === false) {
+                ++$weekendFalse;
+            }
+
+            $holidayId = $features['holidayId'];
+            if ($holidayId !== null) {
+                $holidayIds[$holidayId] = true;
+            }
+        }
+
+        $isWeekend = null;
+        if ($weekendTrue > 0 && $weekendFalse === 0) {
+            $isWeekend = true;
+        } elseif ($weekendFalse > 0 && $weekendTrue === 0) {
+            $isWeekend = false;
+        }
+
+        $holidayId = null;
+        if (count($holidayIds) === 1) {
+            $holidayId = (string) array_key_first($holidayIds);
+        }
+
+        return [
+            'isWeekend' => $isWeekend,
             'holidayId' => $holidayId,
         ];
     }

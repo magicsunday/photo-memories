@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 
 use function array_map;
 use function assert;
@@ -202,11 +203,20 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             $centroid  = MediaMath::centroid($members);
             $timeRange = MediaMath::timeRange($members);
 
+            $params = ['time_range' => $timeRange];
+
+            $calendar = CalendarFeatureHelper::summarize($members);
+            if ($calendar['isWeekend'] !== null) {
+                $params['isWeekend'] = $calendar['isWeekend'];
+            }
+
+            if ($calendar['holidayId'] !== null) {
+                $params['holidayId'] = $calendar['holidayId'];
+            }
+
             $clusters[] = new ClusterDraft(
                 algorithm: $this->algorithm,
-                params: [
-                    'time_range' => $timeRange,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: array_map(static fn (Media $media): int => $media->getId(), $members),
             );

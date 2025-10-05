@@ -15,10 +15,15 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
+use function array_key_first;
+use function count;
+use function is_string;
+use function trim;
 
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -94,6 +99,15 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
                 $params['place'] = $label;
             }
 
+            $metadata = $this->summarizeStableMetadata($group);
+            if ($metadata['lensModel'] !== null) {
+                $params['lensModel'] = $metadata['lensModel'];
+            }
+
+            if ($metadata['contentKind'] !== null) {
+                $params['contentKind'] = $metadata['contentKind'];
+            }
+
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
@@ -103,5 +117,39 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
         }
 
         return $drafts;
+    }
+
+    /**
+     * @param list<Media> $group
+     *
+     * @return array{lensModel: ?string, contentKind: ?string}
+     */
+    private function summarizeStableMetadata(array $group): array
+    {
+        $lensModels   = [];
+        $contentKinds = [];
+
+        foreach ($group as $media) {
+            $lensModel = $media->getLensModel();
+            if (is_string($lensModel)) {
+                $normalized = trim($lensModel);
+                if ($normalized !== '') {
+                    $lensModels[$normalized] = true;
+                }
+            }
+
+            $contentKind = $media->getContentKind();
+            if ($contentKind instanceof ContentKind) {
+                $contentKinds[$contentKind->value] = true;
+            }
+        }
+
+        $stableLens   = count($lensModels) === 1 ? (string) array_key_first($lensModels) : null;
+        $stableKind   = count($contentKinds) === 1 ? (string) array_key_first($contentKinds) : null;
+
+        return [
+            'lensModel'   => $stableLens,
+            'contentKind' => $stableKind,
+        ];
     }
 }

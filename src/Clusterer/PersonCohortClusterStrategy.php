@@ -20,10 +20,17 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
 use function array_merge;
+use function array_keys;
 use function count;
 use function implode;
+use function is_array;
+use function is_string;
 use function ksort;
+use function mb_strtolower;
 use function sort;
+use function strcasecmp;
+use function trim;
+use function usort;
 
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
@@ -160,11 +167,55 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     {
         $centroid = MediaMath::centroid($members);
 
+        $personIdSet = [];
+        $labelSet    = [];
+
+        foreach ($members as $media) {
+            foreach ($this->personSignatureHelper->personIds($media) as $personId) {
+                $personIdSet[$personId] = true;
+            }
+
+            $labels = $media->getPersons();
+            if (!is_array($labels)) {
+                continue;
+            }
+
+            foreach ($labels as $label) {
+                if (!is_string($label)) {
+                    continue;
+                }
+
+                $normalized = trim($label);
+                if ($normalized === '') {
+                    continue;
+                }
+
+                $key = mb_strtolower($normalized);
+                $labelSet[$key] ??= $normalized;
+            }
+        }
+
+        $persons = array_map(static fn (int|string $value): int => (int) $value, array_keys($personIdSet));
+        sort($persons);
+
+        $personLabels = array_values($labelSet);
+        usort($personLabels, static fn (string $a, string $b): int => strcasecmp($a, $b));
+
+        $params = [
+            'time_range' => MediaMath::timeRange($members),
+        ];
+
+        if ($persons !== []) {
+            $params['persons'] = $persons;
+        }
+
+        if ($personLabels !== []) {
+            $params['person_labels'] = $personLabels;
+        }
+
         return new ClusterDraft(
             algorithm: $this->name(),
-            params: [
-                'time_range' => MediaMath::timeRange($members),
-            ],
+            params: $params,
             centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
             members: array_map(static fn (Media $m): int => $m->getId(), $members)
         );

@@ -14,9 +14,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 
 use function assert;
 use function substr;
@@ -29,13 +31,18 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
         private int $minItemsPerDay = 8,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -78,6 +85,22 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
                 'year'       => (int) substr($key, 0, 4),
                 'time_range' => $time,
             ];
+
+            $calendar = CalendarFeatureHelper::summarize($members);
+            if ($calendar['isWeekend'] !== null) {
+                $params['isWeekend'] = $calendar['isWeekend'];
+            }
+
+            if ($calendar['holidayId'] !== null) {
+                $params['holidayId'] = $calendar['holidayId'];
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($members);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
 
             $tags = $this->collectDominantTags($members);
             if ($tags !== []) {

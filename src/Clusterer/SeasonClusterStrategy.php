@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
@@ -31,13 +32,18 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         // Minimum members per (season, year) bucket.
         private int $minItemsPerSeason = 20,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerSeason < 1) {
             throw new InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -84,6 +90,13 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
                 'year'       => $yearInt,
                 'time_range' => $time,
             ];
+
+            $qualityParams = $this->qualityAggregator->buildParams($members);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
 
             $tags = $this->collectDominantTags($members);
             if ($tags !== []) {

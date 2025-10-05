@@ -53,6 +53,10 @@ final class PersonCohortClusterStrategyTest extends TestCase
 
         self::assertSame('people_cohort', $cluster->getAlgorithm());
         self::assertSame([1700, 1701, 1702, 1703, 1704], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertSame([1, 2, 3], $params['persons']);
+        self::assertArrayNotHasKey('person_labels', $params);
     }
 
     #[Test]
@@ -132,6 +136,10 @@ final class PersonCohortClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         self::assertSame([2000, 2001, 2002, 2003], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertArrayHasKey('persons', $params);
+        self::assertSame(['Alice', 'Bob'], $params['person_labels']);
     }
 
     /**

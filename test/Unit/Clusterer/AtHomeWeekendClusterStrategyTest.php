@@ -60,6 +60,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2023-04-09 12:20:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $cluster->getParams()['time_range']);
+        self::assertTrue($cluster->getParams()['isWeekend']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.52, $centroid['lat'], 0.0002);
@@ -99,6 +100,12 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+            configure: static function (Media $media) use ($takenAt): void {
+                $weekday = (int) (new DateTimeImmutable($takenAt, new DateTimeZone('UTC')))->format('N');
+                $media->setFeatures([
+                    'isWeekend' => $weekday >= 6,
+                ]);
+            },
         );
     }
 }
