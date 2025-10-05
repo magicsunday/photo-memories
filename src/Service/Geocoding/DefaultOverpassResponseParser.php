@@ -74,6 +74,9 @@ final readonly class DefaultOverpassResponseParser implements OverpassResponsePa
 
             $names = $selection['names'];
             $name  = $this->poiNameExtractor->extract($names);
+            if ($name === null) {
+                continue;
+            }
 
             $pois[$id] = [
                 'id'             => $id,

@@ -114,6 +114,7 @@ final class DefaultOverpassResponseParserTest extends TestCase
                     'lon'  => 3.21,
                     'tags' => [
                         'tourism' => 'attraction',
+                        'name'    => 'First Attraction',
                     ],
                 ],
                 [
@@ -123,12 +124,54 @@ final class DefaultOverpassResponseParserTest extends TestCase
                     'lon'  => 3.22,
                     'tags' => [
                         'tourism' => 'viewpoint',
+                        'name'    => 'Second Viewpoint',
                     ],
                 ],
             ],
         ];
 
         $pois = $parser->parse($payload, 1.23, 3.21, 1);
+
+        self::assertCount(1, $pois);
+        self::assertSame('node/1', $pois[0]['id']);
+    }
+
+    #[Test]
+    public function skipsElementsWithoutName(): void
+    {
+        $configuration = new OverpassTagConfiguration();
+        $parser        = new DefaultOverpassResponseParser(
+            new OverpassElementFilter(),
+            new OverpassTagSelector($configuration),
+            new OverpassPrimaryTagResolver($configuration),
+            new PoiNameExtractor(),
+        );
+
+        $payload = [
+            'elements' => [
+                [
+                    'type' => 'node',
+                    'id'   => 1,
+                    'lat'  => 1.23,
+                    'lon'  => 3.21,
+                    'tags' => [
+                        'tourism' => 'attraction',
+                        'name'    => 'Named Attraction',
+                    ],
+                ],
+                [
+                    'type' => 'node',
+                    'id'   => 2,
+                    'lat'  => 1.25,
+                    'lon'  => 3.25,
+                    'tags' => [
+                        'tourism' => 'museum',
+                    ],
+                ],
+            ],
+        ];
+
+        $pois = $parser->parse($payload, 1.23, 3.21, null);
 
         self::assertCount(1, $pois);
         self::assertSame('node/1', $pois[0]['id']);
