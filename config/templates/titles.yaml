@@ -99,6 +99,9 @@ de:
     #   - {{ place_city }} (optional): Dominante Stadt im Cluster
     #   - {{ place_region }} (optional): Dominante Region/Bundesland
     #   - {{ place_country }} (optional): Dominantes Land
+    #   - {{ countries }} (optional): Liste eindeutiger Länder (nur bei Multi-Länder-Reisen; Fallback wenn place_country unklar ist)
+    #   - {{ primaryStaypointCity }} (optional): Stadt des längsten Aufenthalts-Staypoints
+    #   - {{ primaryStaypoint }} (optional): Struktur mit Koordinaten und Verweildauer des Haupt-Staypoints
     vacation:
         title: "{{ classification_label }} – {{ place_country }}"
         subtitle: "{{ start_date }} – {{ end_date }}"

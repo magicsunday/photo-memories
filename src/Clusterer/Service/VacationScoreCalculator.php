@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
@@ -29,6 +30,7 @@ use function array_slice;
 use function count;
 use function explode;
 use function implode;
+use function is_string;
 use function in_array;
 use function log;
 use function max;
@@ -37,6 +39,7 @@ use function preg_replace;
 use function round;
 use function sort;
 use function str_replace;
+use function trim;
 use function ucwords;
 use function usort;
 
@@ -101,6 +104,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $spotDwellSeconds        = 0;
         $weekendHolidayDays      = 0;
         $awayDays                = 0;
+        $primaryStaypoint        = null;
+        $primaryStaypointDayKey  = null;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -160,6 +165,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $spotClusterCount += $summary['spotCount'];
                 $spotDwellSeconds += $summary['spotDwellSeconds'];
 
+                foreach ($summary['staypoints'] as $staypoint) {
+                    if ($primaryStaypoint === null || $staypoint['dwell'] > $primaryStaypoint['dwell']) {
+                        $primaryStaypoint       = $staypoint;
+                        $primaryStaypointDayKey = $key;
+                    }
+                }
+
                 if ($summary['spotCount'] >= 2) {
                     ++$multiSpotDays;
                 }
@@ -196,10 +208,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $centroid['lon'],
         ) / 1000.0;
 
-        $countries = [];
+        $countryList = [];
         if ($countryCodes !== []) {
-            $countries = array_keys($countryCodes);
-            sort($countries, SORT_STRING);
+            $countryList = array_keys($countryCodes);
+            sort($countryList, SORT_STRING);
         }
 
         $timezones = [];
@@ -215,7 +227,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $lastDay     = $days[$dayKeys[$dayCount - 1]];
         $airportFlag = $firstDay['hasAirportPoi'] || $lastDay['hasAirportPoi'];
 
-        $countryChange  = $countries !== [] && (count($countries) > 1 || ($home['country'] !== null && !in_array($home['country'], $countries, true)));
+        $countryChange  = $countryList !== [] && (count($countryList) > 1 || ($home['country'] !== null && !in_array($home['country'], $countryList, true)));
         $timezoneChange = $timezones !== [] && (count($timezones) > 1 || ($home['timezone_offset'] !== null && !in_array($home['timezone_offset'], $timezones, true)));
 
         $spotDwellHours      = $spotDwellSeconds / 3600.0;
@@ -284,6 +296,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'day_trip'   => 'Tagesausflug',
         ];
 
+        $countries = count($countryList) > 1 ? $countryList : [];
+
         $params = [
             'classification'           => $classification,
             'classification_label'     => $classificationLabels[$classification] ?? 'Reise',
@@ -313,18 +327,61 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'timezones'                => $timezones,
         ];
 
+        $primaryStaypointCity     = null;
+        $primaryStaypointRegion   = null;
+        $primaryStaypointCountry  = null;
+        $staypointMembers         = [];
+        $primaryStaypointMetadata = null;
+
+        if ($primaryStaypoint !== null) {
+            if ($primaryStaypointDayKey !== null) {
+                $staypointMembers = $dayMembers[$primaryStaypointDayKey] ?? [];
+            }
+
+            $primaryStaypointMetadata = [
+                'lat'           => (float) $primaryStaypoint['lat'],
+                'lon'           => (float) $primaryStaypoint['lon'],
+                'start'         => (int) $primaryStaypoint['start'],
+                'end'           => (int) $primaryStaypoint['end'],
+                'dwell_seconds' => (int) $primaryStaypoint['dwell'],
+            ];
+
+            $staypointComponents = $this->staypointLocationComponents($primaryStaypoint, $staypointMembers);
+
+            $cityComponent = $staypointComponents['city'] ?? null;
+            if ($cityComponent !== null) {
+                $cityLabel = $this->formatLocationComponent($cityComponent);
+                if ($cityLabel !== '') {
+                    $primaryStaypointCity = $cityLabel;
+                }
+            }
+
+            $regionComponent = $staypointComponents['region'] ?? null;
+            if ($regionComponent !== null) {
+                $regionLabel = $this->formatLocationComponent($regionComponent);
+                if ($regionLabel !== '') {
+                    $primaryStaypointRegion = $regionLabel;
+                }
+            }
+
+            $countryComponent = $staypointComponents['country'] ?? null;
+            if ($countryComponent !== null) {
+                $countryLabel = $this->formatLocationComponent($countryComponent);
+                if ($countryLabel !== '') {
+                    $primaryStaypointCountry = $countryLabel;
+                }
+            }
+        }
+
         if ($placeComponents !== []) {
             $city    = $placeComponents['city'] ?? null;
             $region  = $placeComponents['region'] ?? null;
             $country = $placeComponents['country'] ?? null;
 
-            $locationParts = [];
-
             if ($city !== null) {
                 $cityLabel = $this->formatLocationComponent($city);
                 if ($cityLabel !== '') {
                     $params['place_city'] = $cityLabel;
-                    $locationParts[]      = $cityLabel;
                 }
             }
 
@@ -332,9 +389,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $regionLabel = $this->formatLocationComponent($region);
                 if ($regionLabel !== '') {
                     $params['place_region'] = $regionLabel;
-                    if (!in_array($regionLabel, $locationParts, true)) {
-                        $locationParts[] = $regionLabel;
-                    }
                 }
             }
 
@@ -342,15 +396,34 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $countryLabel = $this->formatLocationComponent($country);
                 if ($countryLabel !== '') {
                     $params['place_country'] = $countryLabel;
-                    if (!in_array($countryLabel, $locationParts, true)) {
-                        $locationParts[] = $countryLabel;
-                    }
                 }
             }
+        }
 
-            if ($locationParts !== []) {
-                $params['place_location'] = implode(', ', $locationParts);
+        if ($primaryStaypointMetadata !== null) {
+            $params['primaryStaypoint'] = $primaryStaypointMetadata;
+        }
+
+        if ($primaryStaypointCountry !== null) {
+            $params['primaryStaypointCountry'] = $primaryStaypointCountry;
+        }
+
+        if ($primaryStaypointRegion !== null) {
+            $params['primaryStaypointRegion'] = $primaryStaypointRegion;
+        }
+
+        if ($primaryStaypointCity !== null) {
+            $params['primaryStaypointCity'] = $primaryStaypointCity;
+
+            $placeCityValue = $params['place_city'] ?? null;
+            if (!is_string($placeCityValue) || $placeCityValue === '') {
+                $params['place_city'] = $primaryStaypointCity;
             }
+        }
+
+        $locationParts = $this->extractLocationParts($params);
+        if ($locationParts !== []) {
+            $params['place_location'] = implode(', ', $locationParts);
         }
 
         if ($place !== null) {
@@ -588,6 +661,113 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $megapixels = ((float) $width * (float) $height) / 1_000_000.0;
 
         return $this->clamp01($megapixels / max(0.000001, self::QUALITY_BASELINE_MEGAPIXELS));
+    }
+
+    /**
+     * @param array{lat:float,lon:float,start:int,end:int,dwell:int} $staypoint
+     * @param list<Media>                                            $members
+     *
+     * @return array{city?:string,region?:string,country?:string}
+     */
+    private function staypointLocationComponents(array $staypoint, array $members): array
+    {
+        if ($members === []) {
+            return [];
+        }
+
+        $matched = [];
+
+        foreach ($members as $member) {
+            $takenAt = $member->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $timestamp = $takenAt->getTimestamp();
+            if ($timestamp < $staypoint['start'] || $timestamp > $staypoint['end']) {
+                continue;
+            }
+
+            $matched[] = $member;
+        }
+
+        if ($matched === []) {
+            $matched = $members;
+        }
+
+        $components = $this->locationHelper->majorityLocationComponents($matched);
+        if ($components !== []) {
+            return $components;
+        }
+
+        return $this->fallbackLocationComponents($matched);
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return array{city?:string,region?:string,country?:string}
+     */
+    private function fallbackLocationComponents(array $members): array
+    {
+        $components = [];
+
+        foreach ($members as $member) {
+            $location = $member->getLocation();
+            if (!$location instanceof Location) {
+                continue;
+            }
+
+            if (!isset($components['city'])) {
+                $city = $location->getCity();
+                if ($city !== null && trim($city) !== '') {
+                    $components['city'] = $city;
+                }
+            }
+
+            if (!isset($components['region'])) {
+                $region = $location->getState();
+                if ($region !== null && trim($region) !== '') {
+                    $components['region'] = $region;
+                }
+            }
+
+            if (!isset($components['country'])) {
+                $country = $location->getCountry();
+                if ($country !== null && trim($country) !== '') {
+                    $components['country'] = $country;
+                }
+            }
+
+            if (isset($components['city'], $components['region'], $components['country'])) {
+                break;
+            }
+        }
+
+        return $components;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return list<string>
+     */
+    private function extractLocationParts(array $params): array
+    {
+        $parts = [];
+
+        foreach (['place_city', 'place_region', 'place_country'] as $key) {
+            $value = $params[$key] ?? null;
+            if (!is_string($value) || $value === '') {
+                continue;
+            }
+
+            if (!in_array($value, $parts, true)) {
+                $parts[] = $value;
+            }
+        }
+
+        return $parts;
     }
 
     private function clamp01(?float $value): float

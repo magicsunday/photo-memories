@@ -116,6 +116,6 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertSame('vacation', $params['classification']);
         self::assertSame(6, $params['away_days']);
         self::assertEqualsCanonicalizing([0, 60], $params['timezones']);
-        self::assertSame(['pt'], $params['countries']);
+        self::assertSame([], $params['countries']);
     }
 }

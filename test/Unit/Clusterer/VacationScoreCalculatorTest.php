@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
@@ -54,8 +55,33 @@ final class VacationScoreCalculatorTest extends TestCase
         $days  = [];
         for ($i = 0; $i < 3; ++$i) {
             $dayDate       = $start->add(new DateInterval('P' . $i . 'D'));
-            $members       = $this->makeMembersForDay($i, $dayDate);
+            $isSpain       = $i === 1;
+            $countryCode   = $isSpain ? 'es' : 'pt';
+            $countryName   = $isSpain ? 'Spanien' : 'Portugal';
+            $cityName      = $isSpain ? 'Madrid' : 'Lissabon';
+            $location      = $this->makeLocation(
+                providerPlaceId: sprintf('trip-%d', $i),
+                displayName: sprintf('%s, %s', $cityName, $countryName),
+                lat: 38.7223 + ($i * 0.01),
+                lon: -9.1393 + ($i * 0.01),
+                city: $cityName,
+                country: $countryName,
+                configure: static function (Location $loc) use ($countryCode): void {
+                    $loc->setCountryCode(strtoupper($countryCode));
+                }
+            );
+
+            $members = $this->makeMembersForDay($i, $dayDate, location: $location);
             $dayKey        = $dayDate->format('Y-m-d');
+            $staypointStart = $dayDate->setTime(9, 0);
+            $staypoints     = [[
+                'lat'   => $location->getLat(),
+                'lon'   => $location->getLon(),
+                'start' => $staypointStart->getTimestamp(),
+                'end'   => $staypointStart->modify('+6 hours')->getTimestamp(),
+                'dwell' => 14400 - ($i * 1200),
+            ]];
+            $countryCodes = [$countryCode => true];
             $days[$dayKey] = $this->makeDaySummary(
                 date: $dayKey,
                 weekday: (int) $dayDate->format('N'),
@@ -69,6 +95,8 @@ final class VacationScoreCalculatorTest extends TestCase
                 hasAirport: $i === 0 || $i === 2,
                 spotCount: 2,
                 spotDwellSeconds: 7200 + ($i * 1800),
+                countryCodes: $countryCodes,
+                staypoints: $staypoints,
             );
         }
 
@@ -79,11 +107,17 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('vacation', $params['classification']);
         self::assertSame(3, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
-        self::assertContains('pt', $params['countries']);
+        self::assertSame(['es', 'pt'], $params['countries']);
         self::assertGreaterThan(8.0, $params['score']);
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
+        self::assertSame('Lissabon', $params['primaryStaypointCity']);
+        self::assertSame('Lissabon', $params['place_city']);
+        self::assertSame('Portugal', $params['primaryStaypointCountry']);
+        self::assertSame('Lissabon, Portugal', $params['place_location']);
+        self::assertArrayHasKey('primaryStaypoint', $params);
+        self::assertSame(14400, $params['primaryStaypoint']['dwell_seconds']);
     }
 
     #[Test]
@@ -201,10 +235,20 @@ final class VacationScoreCalculatorTest extends TestCase
     /**
      * @return list<Media>
      */
-    private function makeMembersForDay(int $index, DateTimeImmutable $base, int $count = 3): array
+    private function makeMembersForDay(int $index, DateTimeImmutable $base, int $count = 3, ?Location $location = null): array
     {
         $items  = [];
         $baseId = 100 + ($index * 100);
+        $loc    = $location;
+        if ($loc === null) {
+            $loc = $this->makeLocation(
+                providerPlaceId: sprintf('auto-%d', $index),
+                displayName: 'Auto-Lokation',
+                lat: 38.7223 + ($index * 0.01),
+                lon: -9.1393 + ($index * 0.01),
+            );
+        }
+
         for ($j = 0; $j < $count; ++$j) {
             $items[] = $this->makeMediaFixture(
                 id: $baseId + $j,
@@ -212,6 +256,7 @@ final class VacationScoreCalculatorTest extends TestCase
                 takenAt: $base->add(new DateInterval('PT' . ($j * 3) . 'H')),
                 lat: 38.7223 + ($index * 0.01) + ($j * 0.002),
                 lon: -9.1393 + ($index * 0.01) + ($j * 0.002),
+                location: $loc,
                 configure: static function (Media $media): void {
                     $media->setTimezoneOffsetMin(0);
                 }
@@ -259,6 +304,8 @@ final class VacationScoreCalculatorTest extends TestCase
         bool $hasAirport,
         int $spotCount,
         int $spotDwellSeconds,
+        array $countryCodes = ['pt' => true],
+        array $staypoints = [],
     ): array {
         $first = $gpsMembers[0];
         $last  = $gpsMembers[count($gpsMembers) - 1];
@@ -270,7 +317,7 @@ final class VacationScoreCalculatorTest extends TestCase
             'maxDistanceKm'           => 180.0,
             'avgDistanceKm'           => 95.0,
             'travelKm'                => $travelKm,
-            'countryCodes'            => ['pt' => true],
+            'countryCodes'            => $countryCodes,
             'timezoneOffsets'         => [$timezoneOffset => count($gpsMembers)],
             'localTimezoneIdentifier' => 'Europe/Lisbon',
             'localTimezoneOffset'     => $timezoneOffset,
@@ -288,7 +335,7 @@ final class VacationScoreCalculatorTest extends TestCase
             'spotCount'               => $spotCount,
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => $spotDwellSeconds,
-            'staypoints'              => [],
+            'staypoints'              => $staypoints,
             'baseLocation'            => null,
             'baseAway'                => $baseAway,
             'awayByDistance'          => true,
@@ -314,5 +361,77 @@ final class VacationScoreCalculatorTest extends TestCase
             250,
             $maxMembers,
         );
+    }
+    #[Test]
+    public function buildDraftOmitsCountriesForSingleCountryTrip(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $calculator     = new VacationScoreCalculator(
+            locationHelper: $locationHelper,
+            holidayResolver: new NullHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $start = new DateTimeImmutable('2024-05-10 09:00:00');
+        $days  = [];
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
+            $location  = $this->makeLocation(
+                providerPlaceId: sprintf('single-%d', $i),
+                displayName: 'Lissabon, Portugal',
+                lat: 38.7223 + ($i * 0.005),
+                lon: -9.1393 + ($i * 0.005),
+                city: 'Lissabon',
+                country: 'Portugal',
+                configure: static function (Location $loc): void {
+                    $loc->setCountryCode('PT');
+                }
+            );
+
+            $members       = $this->makeMembersForDay($i, $dayDate, location: $location);
+            $dayKey        = $dayDate->format('Y-m-d');
+            $staypointBase = $dayDate->setTime(10, 0);
+            $staypoints    = [[
+                'lat'   => $location->getLat(),
+                'lon'   => $location->getLon(),
+                'start' => $staypointBase->getTimestamp(),
+                'end'   => $staypointBase->modify('+5 hours')->getTimestamp(),
+                'dwell' => 18000,
+            ]];
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 10 + $i,
+                poiSamples: 12,
+                travelKm: 90.0,
+                timezoneOffset: 0,
+                hasAirport: $i === 0,
+                spotCount: 2,
+                spotDwellSeconds: 5400 + ($i * 600),
+                countryCodes: ['pt' => true],
+                staypoints: $staypoints,
+            );
+        }
+
+        $draft = $calculator->buildDraft(array_keys($days), $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params = $draft->getParams();
+        self::assertSame([], $params['countries']);
+        self::assertTrue($params['country_change']);
+        self::assertSame('Lissabon', $params['primaryStaypointCity']);
     }
 }
