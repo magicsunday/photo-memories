@@ -21,7 +21,6 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-use function assert;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;

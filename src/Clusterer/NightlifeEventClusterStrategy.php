@@ -19,7 +19,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function assert;
 use function array_any;
 use function array_map;
 use function array_values;
