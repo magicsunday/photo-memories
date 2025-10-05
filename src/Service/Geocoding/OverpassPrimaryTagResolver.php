@@ -20,7 +20,7 @@ use function is_string;
  */
 final readonly class OverpassPrimaryTagResolver implements OverpassPrimaryTagResolverInterface
 {
-    public function __construct(private OverpassTagConfiguration $configuration)
+    public function __construct(private readonly OverpassTagConfiguration $configuration)
     {
     }
 

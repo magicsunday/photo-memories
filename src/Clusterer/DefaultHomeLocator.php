@@ -37,11 +37,11 @@ final class DefaultHomeLocator implements HomeLocatorInterface
     private const int NIGHT_END_HOUR = 6;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
-        private float $defaultHomeRadiusKm = 15.0,
-        private ?float $homeLat = null,
-        private ?float $homeLon = null,
-        private ?float $homeRadiusKm = null,
+        private readonly string $timezone = 'Europe/Berlin',
+        private readonly float $defaultHomeRadiusKm = 15.0,
+        private readonly ?float $homeLat = null,
+        private readonly ?float $homeLon = null,
+        private readonly ?float $homeRadiusKm = null,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');

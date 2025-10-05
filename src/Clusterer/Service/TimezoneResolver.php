@@ -31,7 +31,7 @@ final class TimezoneResolver implements TimezoneResolverInterface
         createTimezoneFromOffset as private traitCreateTimezoneFromOffset;
     }
 
-    public function __construct(private string $timezone = 'Europe/Berlin')
+    public function __construct(private readonly string $timezone = 'Europe/Berlin')
     {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');

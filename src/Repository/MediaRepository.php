@@ -33,7 +33,7 @@ use function trim;
  */
 readonly class MediaRepository implements MemberMediaLookupInterface
 {
-    public function __construct(private EntityManagerInterface $em, private int $phashPrefixLength = 16)
+    public function __construct(private readonly EntityManagerInterface $em, private int $phashPrefixLength = 16)
     {
         if ($this->phashPrefixLength < 0) {
             $this->phashPrefixLength = 0;

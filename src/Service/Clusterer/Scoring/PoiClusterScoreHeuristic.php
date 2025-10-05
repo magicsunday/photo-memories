@@ -22,7 +22,7 @@ use function is_numeric;
 final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     /** @param array<string,float> $poiCategoryBoosts */
-    public function __construct(private array $poiCategoryBoosts = [])
+    public function __construct(private readonly array $poiCategoryBoosts = [])
     {
     }
 
