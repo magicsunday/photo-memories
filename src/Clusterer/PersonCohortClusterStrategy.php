@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -27,17 +27,18 @@ use function sort;
 
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
- * Requires media objects to implement {@see PersonTaggedMediaInterface} to
- * provide stable person identifiers.
  */
 final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
+    private PersonSignatureHelper $personSignatureHelper;
+
     public function __construct(
         private int $minPersons = 2,
         private int $minItemsTotal = 5,
         private int $windowDays = 14,
+        ?PersonSignatureHelper $personSignatureHelper = null,
     ) {
         if ($this->minPersons < 1) {
             throw new InvalidArgumentException('minPersons must be >= 1.');
@@ -50,6 +51,8 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         if ($this->windowDays < 0) {
             throw new InvalidArgumentException('windowDays must be >= 0.');
         }
+
+        $this->personSignatureHelper = $personSignatureHelper ?? new PersonSignatureHelper();
     }
 
     public function name(): string
@@ -65,20 +68,16 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     public function cluster(array $items): array
     {
         /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
-        $buckets     = [];
-        $withPersons = $this->filterTimestampedItemsBy(
-            $items,
-            static fn (Media $m): bool => $m instanceof PersonTaggedMediaInterface
-        );
+        $buckets = [];
+        $candidates = $this->filterTimestampedItems($items);
 
-        if ($withPersons === []) {
+        if ($candidates === []) {
             return [];
         }
 
         // Phase 1: bucket by persons signature per day
-        foreach ($withPersons as $m) {
-            /** @var PersonTaggedMediaInterface $m */
-            $persons = $m->getPersonIds();
+        foreach ($candidates as $m) {
+            $persons = $this->personSignatureHelper->personIds($m);
             if (count($persons) < $this->minPersons) {
                 continue;
             }

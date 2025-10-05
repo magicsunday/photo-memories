@@ -581,6 +581,7 @@ services:
             $minPersons: 2
             $minItemsTotal: 4
             $windowDays: 10
+            $personSignatureHelper: '@MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.person_cohort_cluster_strategy%' }
 
