@@ -37,26 +37,22 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
         $keys = array_keys($days);
         foreach ($keys as $index => $key) {
-            $summary     = &$days[$key];
             $nextKey     = $keys[$index + 1] ?? null;
+            $summary     = $days[$key];
             $nextSummary = $nextKey !== null ? $days[$nextKey] : null;
 
             $timezone = $this->timezoneResolver->resolveSummaryTimezone($summary, $home);
             $baseLocation = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
-            $summary['baseLocation'] = $baseLocation;
+            $days[$key]['baseLocation'] = $baseLocation;
 
             if ($baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km']) {
-                $summary['baseAway'] = true;
+                $days[$key]['baseAway'] = true;
             }
 
             if ($summary['avgDistanceKm'] > $home['radius_km']) {
-                $summary['awayByDistance'] = true;
+                $days[$key]['awayByDistance'] = true;
             }
-
-            unset($summary);
         }
-
-        unset($summary);
 
         $baseFlags     = [];
         $distanceFlags = [];
