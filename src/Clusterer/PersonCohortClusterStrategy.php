@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -71,7 +72,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     public function cluster(array $items): array
     {

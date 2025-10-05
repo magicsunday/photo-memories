@@ -21,6 +21,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
+use function count;
 use function is_string;
 use function str_starts_with;
 use function usort;
@@ -97,7 +98,7 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             $centroid = $this->computeCentroid($members);
             $time     = $this->computeTimeRange($members);
 
-            $videoCount            = \count($members);
+            $videoCount            = count($members);
             $videoDurationTotal    = 0.0;
             $videoSlowMoCount      = 0;
             $videoStabilizedCount  = 0;

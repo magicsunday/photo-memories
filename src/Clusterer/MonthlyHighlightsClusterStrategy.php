@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
@@ -54,7 +55,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
-     * @throws \DateInvalidTimeZoneException
+     * @throws DateInvalidTimeZoneException
      */
     public function cluster(array $items): array
     {

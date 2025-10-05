@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
@@ -71,7 +72,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
      * @param int $d
      *
      * @return array{bool, ?string}
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     private function isGermanHoliday(int $y, int $m, int $d): array
     {

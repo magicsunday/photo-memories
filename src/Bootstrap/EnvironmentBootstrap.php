@@ -16,6 +16,7 @@ use Symfony\Component\Dotenv\Dotenv;
 use Throwable;
 
 use function dirname;
+use function is_string;
 
 /**
  * Selects and loads the applicable .env file from the available application roots.
@@ -47,7 +48,7 @@ final class EnvironmentBootstrap
 
         // 1) Current working directory
         $cwd = getcwd();
-        if (\is_string($cwd) && $cwd !== '') {
+        if (is_string($cwd) && $cwd !== '') {
             $candidates[] = $cwd . DIRECTORY_SEPARATOR . '.env';
         }
 

@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateInvalidTimeZoneException;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
@@ -31,7 +33,7 @@ use function strtolower;
 /**
  * Default implementation that derives the home location from timestamped media.
  */
-final class DefaultHomeLocator implements HomeLocatorInterface
+final readonly class DefaultHomeLocator implements HomeLocatorInterface
 {
     private const int NIGHT_START_HOUR = 22;
 
@@ -69,8 +71,8 @@ final class DefaultHomeLocator implements HomeLocatorInterface
      * @param list<Media> $items
      *
      * @return null|array
-     * @throws \DateInvalidTimeZoneException
-     * @throws \DateMalformedStringException
+     * @throws DateInvalidTimeZoneException
+     * @throws DateMalformedStringException
      */
     public function determineHome(array $items): ?array
     {

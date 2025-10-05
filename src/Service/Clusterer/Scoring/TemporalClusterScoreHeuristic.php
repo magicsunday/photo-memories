@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
 use function count;
+use function is_array;
 
 /**
  * Class TemporalClusterScoreHeuristic
@@ -70,7 +71,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
     private function computeTemporalMetrics(array $mediaItems, int $members, ?array $timeRange, array $cached): array
     {
         $duration = $cached['duration_seconds'] ?? null;
-        if ($duration === null && \is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
+        if ($duration === null && is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
             $duration = max(0, $timeRange['to'] - $timeRange['from']);
         }
 

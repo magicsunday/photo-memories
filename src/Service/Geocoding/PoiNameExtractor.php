@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\Contract\PoiNameExtractorInterface;
 
+use function array_find;
+
 /**
  * Class PoiNameExtractor
  */
@@ -25,16 +27,20 @@ final class PoiNameExtractor implements PoiNameExtractorInterface
             return $default;
         }
 
-        foreach ($names['localized'] as $name) {
-            if ($name !== '') {
-                return $name;
-            }
+        $localized = array_find(
+            $names['localized'],
+            static fn ($name): bool => $name !== ''
+        );
+        if ($localized !== null) {
+            return $localized;
         }
 
-        foreach ($names['alternates'] as $alternate) {
-            if ($alternate !== '') {
-                return $alternate;
-            }
+        $alternate = array_find(
+            $names['alternates'],
+            static fn ($alternate): bool => $alternate !== ''
+        );
+        if ($alternate !== null) {
+            return $alternate;
         }
 
         return null;

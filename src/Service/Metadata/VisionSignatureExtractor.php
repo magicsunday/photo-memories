@@ -155,7 +155,12 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     }
 
     /**
+     * @param ImageAdapterInterface $adapter
+     * @param int                   $w
+     * @param int                   $h
+     *
      * @return array<int, array<int, array{0: float, 1: float, 2: float}>>
+     * @throws \ImagickException
      */
     private function rgbMatrixFromAdapter(ImageAdapterInterface $adapter, int $w, int $h): array
     {

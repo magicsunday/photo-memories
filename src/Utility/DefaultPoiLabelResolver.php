@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Utility;
 
 use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 
+use function array_find;
 use function array_keys;
 use function explode;
 use function is_array;
@@ -67,11 +68,24 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
     {
         $localized = $names['localized'] ?? [];
         if (is_array($localized) && $localized !== []) {
-            foreach ($this->preferredLocaleKeys as $key) {
-                $value = $localized[$key] ?? null;
-                if (is_string($value) && $value !== '') {
-                    return $value;
+            $preferredLocaleValue = null;
+            $preferredLocaleKey   = array_find(
+                $this->preferredLocaleKeys,
+                function (string $key) use ($localized, &$preferredLocaleValue): bool {
+                    $value = $localized[$key] ?? null;
+
+                    if (!is_string($value) || $value === '') {
+                        return false;
+                    }
+
+                    $preferredLocaleValue = $value;
+
+                    return true;
                 }
+            );
+
+            if ($preferredLocaleKey !== null) {
+                return $preferredLocaleValue;
             }
         }
 
@@ -81,19 +95,25 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
         }
 
         if (is_array($localized)) {
-            foreach ($localized as $value) {
-                if (is_string($value) && $value !== '') {
-                    return $value;
-                }
+            $firstLocalized = array_find(
+                $localized,
+                static fn ($value): bool => is_string($value) && $value !== ''
+            );
+
+            if (is_string($firstLocalized)) {
+                return $firstLocalized;
             }
         }
 
         $alternates = $names['alternates'] ?? [];
         if (is_array($alternates)) {
-            foreach ($alternates as $alternate) {
-                if (is_string($alternate) && $alternate !== '') {
-                    return $alternate;
-                }
+            $firstAlternate = array_find(
+                $alternates,
+                static fn ($alternate): bool => is_string($alternate) && $alternate !== ''
+            );
+
+            if (is_string($firstAlternate)) {
+                return $firstAlternate;
             }
         }
 

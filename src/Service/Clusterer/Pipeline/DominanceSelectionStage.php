@@ -15,6 +15,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
+use function array_fill_keys;
 use function array_keys;
 use function array_map;
 use function count;
@@ -90,10 +91,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         /** @var list<string> $order */
         $order = $this->keepOrder;
         /** @var array<string,bool> $seen */
-        $seen = [];
-        foreach ($order as $algorithm) {
-            $seen[$algorithm] = true;
-        }
+        $seen = array_fill_keys($order, true);
 
         foreach (array_keys($byAlgorithm) as $algorithm) {
             if (isset($seen[$algorithm])) {

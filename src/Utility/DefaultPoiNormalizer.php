@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Utility;
 
 use MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface;
 
+use function array_find;
 use function array_keys;
 use function is_array;
 use function is_string;
@@ -142,16 +143,20 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             return $default;
         }
 
-        foreach ($names['localized'] as $value) {
-            if (is_string($value) && $value !== '') {
-                return $value;
-            }
+        $localized = array_find(
+            $names['localized'],
+            static fn ($value): bool => is_string($value) && $value !== ''
+        );
+        if (is_string($localized)) {
+            return $localized;
         }
 
-        foreach ($names['alternates'] as $alternate) {
-            if (is_string($alternate) && $alternate !== '') {
-                return $alternate;
-            }
+        $alternate = array_find(
+            $names['alternates'],
+            static fn ($value): bool => is_string($value) && $value !== ''
+        );
+        if (is_string($alternate)) {
+            return $alternate;
         }
 
         return null;

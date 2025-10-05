@@ -32,7 +32,7 @@ use const SORT_STRING;
 /**
  * Class OverpassTagSelector
  */
-final class OverpassTagSelector implements OverpassTagSelectorInterface
+final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
 {
     /**
      * Additional tags that are preserved even if they are not a category key.

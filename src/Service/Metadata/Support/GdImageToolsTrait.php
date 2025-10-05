@@ -106,7 +106,12 @@ trait GdImageToolsTrait
     /**
      * Build a grayscale luma matrix by first resizing to (w×h).
      *
+     * @param ImageAdapterInterface $src
+     * @param int                   $w
+     * @param int                   $h
+     *
      * @return array<int, array<int, float>> Matrix [y][x] with luma [0..255]
+     * @throws \ImagickException
      */
     private function grayscaleMatrixFromAdapter(ImageAdapterInterface $src, int $w, int $h): array
     {

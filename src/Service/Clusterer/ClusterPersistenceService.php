@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+use function array_find;
 use function array_is_list;
 use function array_keys;
 use function array_key_exists;
@@ -238,8 +239,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param list<int>   $memberIds
-     * @param list<Media> $media
+     * @param ClusterDraft $draft
+     * @param list<int>    $memberIds
+     * @param list<Media>  $media
      *
      * @return array{
      *     startAt: ?DateTimeImmutable,
@@ -255,6 +257,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      *     centroidLon: ?float,
      *     centroidCell7: ?string
      * }
+     * @throws \JsonException
      */
     private function buildMetadata(ClusterDraft $draft, array $memberIds, array $media): array
     {
@@ -438,14 +441,17 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $params['version'] ?? null,
         ];
 
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && $candidate !== '') {
-                return $candidate;
-            }
+        $candidate = array_find(
+            $candidates,
+            static fn ($value): bool => (is_string($value) && $value !== '') || is_int($value)
+        );
 
-            if (is_int($candidate)) {
-                return (string) $candidate;
-            }
+        if (is_string($candidate)) {
+            return $candidate;
+        }
+
+        if (is_int($candidate)) {
+            return (string) $candidate;
         }
 
         return null;
@@ -453,6 +459,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     /**
      * @param array<string, scalar|array|null> $params
+     *
+     * @return null|string
+     * @throws \JsonException
      */
     private function computeConfigHash(array $params): ?string
     {

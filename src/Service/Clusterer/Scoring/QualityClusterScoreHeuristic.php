@@ -17,7 +17,7 @@ use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 /**
  * Class QualityClusterScoreHeuristic
  */
-final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
+final readonly class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function __construct(private readonly ClusterQualityAggregator $qualityAggregator)
     {

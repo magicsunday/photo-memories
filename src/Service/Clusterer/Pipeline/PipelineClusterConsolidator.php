@@ -23,7 +23,7 @@ final readonly class PipelineClusterConsolidator implements ClusterConsolidatorI
     /**
      * @param iterable<ClusterConsolidationStageInterface> $stages
      */
-    public function __construct(private readonly iterable $stages)
+    public function __construct(private iterable $stages)
     {
     }
 

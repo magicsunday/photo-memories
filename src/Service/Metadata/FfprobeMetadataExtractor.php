@@ -413,7 +413,10 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
+     * @param string $filepath
+     *
      * @return array{0: DateTimeImmutable, 1: ?string}|null
+     * @throws \JsonException
      */
     private function probeQuickTimeCapture(string $filepath): ?array
     {

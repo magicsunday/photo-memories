@@ -12,6 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateInterval;
+use DateInvalidOperationException;
+use DateInvalidTimeZoneException;
+use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
@@ -54,9 +57,9 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
-     * @throws \DateInvalidOperationException
-     * @throws \DateInvalidTimeZoneException
-     * @throws \DateMalformedStringException
+     * @throws DateInvalidOperationException
+     * @throws DateInvalidTimeZoneException
+     * @throws DateMalformedStringException
      */
     public function cluster(array $items): array
     {

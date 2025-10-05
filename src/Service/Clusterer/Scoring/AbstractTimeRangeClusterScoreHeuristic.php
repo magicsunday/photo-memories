@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
@@ -33,9 +34,11 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
     }
 
     /**
+     * @param ClusterDraft      $cluster
      * @param array<int, Media> $mediaMap
      *
      * @return array{from:int,to:int}|null
+     * @throws DateMalformedStringException
      */
     protected function ensureTimeRange(ClusterDraft $cluster, array $mediaMap): ?array
     {
@@ -59,7 +62,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
      * @param array{from:int,to:int}|null $range
      *
      * @return bool
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     protected function isValidTimeRange(?array $range): bool
     {
@@ -79,9 +82,11 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
     }
 
     /**
+     * @param ClusterDraft      $cluster
      * @param array<int, Media> $mediaMap
      *
      * @return array{from:int,to:int}|null
+     * @throws DateMalformedStringException
      */
     private function computeTimeRangeFromMembers(ClusterDraft $cluster, array $mediaMap): ?array
     {

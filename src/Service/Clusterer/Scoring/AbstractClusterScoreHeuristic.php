@@ -15,6 +15,9 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
 use function abs;
+use function array_filter;
+use function array_map;
+use function array_values;
 use function is_numeric;
 use function is_string;
 use function log;
@@ -35,13 +38,17 @@ abstract class AbstractClusterScoreHeuristic implements ClusterScoreHeuristicInt
      */
     protected function collectMediaItems(ClusterDraft $cluster, array $mediaMap): array
     {
-        $items = [];
-        foreach ($cluster->getMembers() as $id) {
-            $media = $mediaMap[$id] ?? null;
-            if ($media instanceof Media) {
-                $items[] = $media;
-            }
-        }
+        /** @var list<Media|null> $mapped */
+        $mapped = array_map(
+            static fn (int $id): ?Media => $mediaMap[$id] ?? null,
+            $cluster->getMembers(),
+        );
+
+        /** @var list<Media> $items */
+        $items = array_values(array_filter(
+            $mapped,
+            static fn (?Media $media): bool => $media instanceof Media,
+        ));
 
         return $items;
     }

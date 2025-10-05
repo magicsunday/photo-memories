@@ -21,7 +21,10 @@ use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use RuntimeException;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function array_filter;
+use function array_map;
 use function array_slice;
+use function array_values;
 use function basename;
 use function copy;
 use function count;
@@ -42,7 +45,7 @@ use function usort;
 /**
  * Class HtmlFeedExportService
  */
-final class HtmlFeedExportService implements FeedExportServiceInterface
+final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 {
     private const string FEED_TITLE = 'Rückblick – Für dich';
 
@@ -93,18 +96,20 @@ final class HtmlFeedExportService implements FeedExportServiceInterface
             $items = array_slice($items, 0, $request->getMaxItems());
         }
 
-        $cards             = [];
         $copiedFileCount   = 0;
         $skippedThumbCount = 0;
 
-        foreach ($items as $item) {
-            $cardData = $this->createCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
-            if ($cardData === null) {
-                continue;
-            }
+        /** @var list<array<string, mixed>|null> $cardCandidates */
+        $cardCandidates = array_map(
+            fn (MemoryFeedItem $item): ?array => $this->createCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount),
+            $items,
+        );
 
-            $cards[] = $cardData;
-        }
+        /** @var list<array<string, mixed>> $cards */
+        $cards = array_values(array_filter(
+            $cardCandidates,
+            static fn (?array $cardData): bool => $cardData !== null,
+        ));
 
         if ($cards === []) {
             $io->warning('Keine Bilder für die HTML-Ausgabe gefunden.');

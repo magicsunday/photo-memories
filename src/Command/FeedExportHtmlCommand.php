@@ -35,7 +35,7 @@ use function sprintf;
     name: 'memories:feed:export-html',
     description: 'Erzeugt eine HTML-Vorschau des Rückblick-Feeds (statisch, mit Lazy-Loading).'
 )]
-final class FeedExportHtmlCommand extends Command
+final readonly class FeedExportHtmlCommand extends Command
 {
     public function __construct(
         private readonly FeedExportServiceInterface $exportService,
