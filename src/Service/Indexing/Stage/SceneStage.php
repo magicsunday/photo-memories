@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Class SceneStage
  */
-final class SceneStage extends AbstractExtractorStage
+final readonly class SceneStage extends AbstractExtractorStage
 {
     /**
      * @var iterable<SingleMetadataExtractorInterface> $extractors

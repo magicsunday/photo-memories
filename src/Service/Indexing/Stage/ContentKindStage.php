@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Class ContentKindStage
  */
-final class ContentKindStage extends AbstractExtractorStage
+final readonly class ContentKindStage extends AbstractExtractorStage
 {
     /**
      * @var iterable<SingleMetadataExtractorInterface> $extractors

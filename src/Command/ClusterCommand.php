@@ -33,7 +33,7 @@ use function sprintf;
     name: 'memories:cluster',
     description: 'Erstellt Erinnerungs-Cluster anhand konfigurierter Strategien.'
 )]
-final class ClusterCommand extends Command
+final readonly class ClusterCommand extends Command
 {
     public function __construct(private readonly ClusterJobRunnerInterface $runner)
     {

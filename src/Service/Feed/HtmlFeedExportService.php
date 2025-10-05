@@ -42,7 +42,7 @@ use function usort;
 /**
  * Class HtmlFeedExportService
  */
-final class HtmlFeedExportService implements FeedExportServiceInterface
+final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 {
     private const string FEED_TITLE = 'Rückblick – Für dich';
 

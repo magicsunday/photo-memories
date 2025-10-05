@@ -20,7 +20,7 @@ use function min;
 /**
  * Aggregates per-media quality metrics for cluster level annotations.
  */
-final class ClusterQualityAggregator
+final readonly class ClusterQualityAggregator
 {
     public function __construct(private readonly float $qualityBaselineMegapixels = 12.0)
     {

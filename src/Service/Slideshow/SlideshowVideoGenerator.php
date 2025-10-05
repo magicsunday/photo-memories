@@ -28,7 +28,7 @@ use function trim;
 /**
  * FFmpeg based slideshow generator.
  */
-final class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
+final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
 {
     /**
      * Default list of transition names used when no custom set is provided.

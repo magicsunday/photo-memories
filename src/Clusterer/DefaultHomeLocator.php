@@ -30,7 +30,7 @@ use function strtolower;
 /**
  * Default implementation that derives the home location from timestamped media.
  */
-final class DefaultHomeLocator implements HomeLocatorInterface
+final readonly class DefaultHomeLocator implements HomeLocatorInterface
 {
     private const int NIGHT_START_HOUR = 22;
 
