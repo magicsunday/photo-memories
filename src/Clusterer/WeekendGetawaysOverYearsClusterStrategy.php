@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_key_first;
@@ -32,8 +33,8 @@ use function sort;
 use function strcmp;
 use function usort;
 
-use const SORT_STRING;
 use const SORT_NUMERIC;
+use const SORT_STRING;
 
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
@@ -184,8 +185,8 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                     continue;
                 }
 
-                // must include weekend day (Sat/Sun)
-                if (!$this->containsWeekendDay($r['days'])) {
+                // must include weekend day (Sat/Sun) detected via features or fallback calendar logic
+                if (!$this->runContainsWeekend($r)) {
                     continue;
                 }
 
@@ -245,6 +246,38 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                 members: array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
             ),
         ];
+    }
+
+    /**
+     * @param array{days: list<string>, items: list<Media>} $run
+     */
+    private function runContainsWeekend(array $run): bool
+    {
+        /** @var list<Media> $items */
+        $items = $run['items'];
+
+        $hasFeatureData = false;
+
+        foreach ($items as $media) {
+            $calendarFeatures = CalendarFeatureHelper::extract($media);
+            $isWeekend        = $calendarFeatures['isWeekend'];
+
+            if ($isWeekend === null) {
+                continue;
+            }
+
+            $hasFeatureData = true;
+
+            if ($isWeekend) {
+                return true;
+            }
+        }
+
+        if ($hasFeatureData) {
+            return false;
+        }
+
+        return $this->containsWeekendDay($run['days']);
     }
 
     /**

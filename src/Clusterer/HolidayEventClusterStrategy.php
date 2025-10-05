@@ -16,11 +16,16 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
 use function assert;
 use function explode;
+use function ctype_digit;
+use function mb_strtolower;
+use function strrpos;
+use function substr;
 
 /**
  * Builds clusters for German (federal) holidays per year (no state-specific).
@@ -57,14 +62,12 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         $groups = [];
 
         foreach ($timestamped as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $name = Calendar::germanFederalHolidayName($t);
-            if ($name === null) {
+            $holiday = $this->resolveHolidayInfo($m);
+            if ($holiday === null) {
                 continue;
             }
 
-            $key = $t->format('Y') . ':' . $name . ':' . $t->format('Y-m-d');
+            $key = $holiday['year'] . ':' . $holiday['name'] . ':' . $holiday['date'];
             $groups[$key] ??= [];
             $groups[$key][] = $m;
         }
@@ -94,5 +97,92 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         return $out;
+    }
+
+    /**
+     * @return array{year: int, name: string, date: string}|null
+     */
+    private function resolveHolidayInfo(Media $media): ?array
+    {
+        $takenAt = $media->getTakenAt();
+        assert($takenAt instanceof DateTimeImmutable);
+
+        $calendarFeatures = CalendarFeatureHelper::extract($media);
+        if ($calendarFeatures['isHoliday'] === true && $calendarFeatures['holidayId'] !== null) {
+            $parsed = $this->parseHolidayId($calendarFeatures['holidayId']);
+            if ($parsed !== null) {
+                $name = $this->holidayNameFromCode($parsed['code']);
+                if ($name === null) {
+                    $name = Calendar::germanFederalHolidayName($takenAt);
+                }
+
+                if ($name !== null) {
+                    return [
+                        'year' => $parsed['year'],
+                        'name' => $name,
+                        'date' => $takenAt->format('Y-m-d'),
+                    ];
+                }
+            }
+        }
+
+        $name = Calendar::germanFederalHolidayName($takenAt);
+        if ($name === null) {
+            return null;
+        }
+
+        return [
+            'year' => (int) $takenAt->format('Y'),
+            'name' => $name,
+            'date' => $takenAt->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * @return array{code: string, year: int}|null
+     */
+    private function parseHolidayId(string $holidayId): ?array
+    {
+        $pos = strrpos($holidayId, '-');
+        if ($pos === false) {
+            return null;
+        }
+
+        $yearPart = substr($holidayId, $pos + 1);
+        if ($yearPart === false) {
+            return null;
+        }
+
+        if (!ctype_digit($yearPart)) {
+            return null;
+        }
+
+        $year = (int) $yearPart;
+        if ($year <= 0) {
+            return null;
+        }
+
+        $code = substr($holidayId, 0, $pos);
+        if (!is_string($code) || $code === '') {
+            return null;
+        }
+
+        return ['code' => $code, 'year' => $year];
+    }
+
+    private function holidayNameFromCode(string $code): ?string
+    {
+        return match (mb_strtolower($code)) {
+            'de-newyear'     => 'Neujahr',
+            'de-labour'      => 'Tag der Arbeit',
+            'de-unity'       => 'Tag der Deutschen Einheit',
+            'de-xmas1'       => '1. Weihnachtstag',
+            'de-xmas2'       => '2. Weihnachtstag',
+            'de-goodfriday'  => 'Karfreitag',
+            'de-eastermon'   => 'Ostermontag',
+            'de-ascension'   => 'Christi Himmelfahrt',
+            'de-whitmonday'  => 'Pfingstmontag',
+            default          => null,
+        };
     }
 }

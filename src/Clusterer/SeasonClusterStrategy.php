@@ -15,11 +15,13 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
 use function assert;
 use function explode;
+use function mb_strtolower;
 
 /**
  * Groups media by meteorological seasons per year (DE).
@@ -57,22 +59,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         $groups = [];
 
         foreach ($timestamped as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $month = (int) $t->format('n');
-            $year  = (int) $t->format('Y');
-
-            $season = match (true) {
-                $month >= 3 && $month <= 5  => 'Frühling',
-                $month >= 6 && $month <= 8  => 'Sommer',
-                $month >= 9 && $month <= 11 => 'Herbst',
-                default                     => 'Winter',
-            };
-
-            // Winter: Dezember gehört zum Winter des Folgejahres (2024-12 ⇒ Winter 2025)
-            if ($season === 'Winter' && $month === 12) {
-                ++$year;
-            }
+            [$season, $year] = $this->resolveSeasonAndYear($m);
 
             $key = $year . ':' . $season;
             $groups[$key] ??= [];
@@ -105,5 +92,67 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         }
 
         return $out;
+}
+
+    /**
+     * @return array{0: string, 1: int}
+     */
+    private function resolveSeasonAndYear(Media $media): array
+    {
+        $takenAt = $media->getTakenAt();
+        assert($takenAt instanceof DateTimeImmutable);
+
+        $month = (int) $takenAt->format('n');
+        $year  = (int) $takenAt->format('Y');
+
+        $calendarFeatures = CalendarFeatureHelper::extract($media);
+        $seasonLabel      = $this->normaliseSeason($calendarFeatures['season']);
+
+        if ($seasonLabel !== null) {
+            if ($this->isWinterSeason($calendarFeatures['season']) && $month === 12) {
+                ++$year;
+            }
+
+            return [$seasonLabel, $year];
+        }
+
+        $seasonLabel = match (true) {
+            $month >= 3 && $month <= 5  => 'Frühling',
+            $month >= 6 && $month <= 8  => 'Sommer',
+            $month >= 9 && $month <= 11 => 'Herbst',
+            default                     => 'Winter',
+        };
+
+        if ($seasonLabel === 'Winter' && $month === 12) {
+            ++$year;
+        }
+
+        return [$seasonLabel, $year];
+    }
+
+    private function normaliseSeason(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = mb_strtolower($value);
+
+        return match ($normalized) {
+            'winter'    => 'Winter',
+            'spring', 'frühling' => 'Frühling',
+            'summer', 'sommer'   => 'Sommer',
+            'autumn', 'fall', 'herbst' => 'Herbst',
+            default => null,
+        };
+    }
+
+    private function isWinterSeason(?string $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        return mb_strtolower($value) === 'winter';
     }
 }

@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
@@ -23,6 +24,7 @@ use function array_values;
 use function assert;
 use function count;
 use function usort;
+use function mb_strtolower;
 
 /**
  * Aggregates each season across multiple years into a memory
@@ -65,15 +67,8 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         $groups = [];
 
         foreach ($timestamped as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
-            $month  = (int) $t->format('n');
-            $season = match (true) {
-                $month >= 3 && $month <= 5  => 'Frühling',
-                $month >= 6 && $month <= 8  => 'Sommer',
-                $month >= 9 && $month <= 11 => 'Herbst',
-                default                     => 'Winter',
-            };
+            $season = $this->resolveSeason($m);
+
             $groups[$season] ??= [];
             $groups[$season][] = $m;
         }
@@ -111,5 +106,43 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         }
 
         return $out;
+}
+
+    private function resolveSeason(Media $media): string
+    {
+        $takenAt = $media->getTakenAt();
+        assert($takenAt instanceof DateTimeImmutable);
+
+        $month            = (int) $takenAt->format('n');
+        $calendarFeatures = CalendarFeatureHelper::extract($media);
+        $seasonLabel      = $this->normaliseSeason($calendarFeatures['season']);
+
+        if ($seasonLabel !== null) {
+            return $seasonLabel;
+        }
+
+        return match (true) {
+            $month >= 3 && $month <= 5  => 'Frühling',
+            $month >= 6 && $month <= 8  => 'Sommer',
+            $month >= 9 && $month <= 11 => 'Herbst',
+            default                     => 'Winter',
+        };
+    }
+
+    private function normaliseSeason(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = mb_strtolower($value);
+
+        return match ($normalized) {
+            'winter'    => 'Winter',
+            'spring', 'frühling' => 'Frühling',
+            'summer', 'sommer'   => 'Sommer',
+            'autumn', 'fall', 'herbst' => 'Herbst',
+            default => null,
+        };
     }
 }
