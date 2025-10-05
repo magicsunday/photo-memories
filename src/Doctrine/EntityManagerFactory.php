@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Doctrine;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
 use MagicSunday\Memories\Entity\Cluster;
@@ -36,16 +37,22 @@ final class EntityManagerFactory
      *
      * @throws DbalException
      */
-    public function create(): EntityManager
+    public function create(): EntityManagerInterface
     {
         // Connection params (MariaDB/MySQL)
+        $host     = getenv('MARIADB_HOST');
+        $port     = getenv('MARIADB_PORT');
+        $user     = getenv('MARIADB_USER');
+        $password = getenv('MARIADB_PASSWORD');
+        $dbname   = getenv('MARIADB_DATABASE');
+
         $dbParams = [
             'driver'        => 'pdo_mysql',
-            'host'          => getenv('MARIADB_HOST') !== false ? (string) getenv('MARIADB_HOST') : 'database',
-            'port'          => (int) (getenv('MARIADB_PORT') !== false ? (string) getenv('MARIADB_PORT') : '3306'),
-            'user'          => getenv('MARIADB_USER') !== false ? (string) getenv('MARIADB_USER') : 'memories',
-            'password'      => getenv('MARIADB_PASSWORD') !== false ? (string) getenv('MARIADB_PASSWORD') : 'memories',
-            'dbname'        => getenv('MARIADB_DATABASE') !== false ? (string) getenv('MARIADB_DATABASE') : 'memories',
+            'host'          => $host === false ? 'database' : $host,
+            'port'          => $port === false ? 3306 : (int) $port,
+            'user'          => $user === false ? 'memories' : $user,
+            'password'      => $password === false ? 'memories' : $password,
+            'dbname'        => $dbname === false ? 'memories' : $dbname,
             'charset'       => 'utf8mb4',
             'driverOptions' => [
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'",
@@ -67,7 +74,7 @@ final class EntityManagerFactory
         return $em;
     }
 
-    private function ensureSchema(EntityManager $em): void
+    private function ensureSchema(EntityManagerInterface $em): void
     {
         $classes = [
             Media::class,
