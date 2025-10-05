@@ -16,8 +16,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class VideoStoriesClusterStrategyTest extends TestCase
@@ -27,6 +29,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         $strategy = new VideoStoriesClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 2,
         );
 
@@ -36,8 +39,20 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         $slowMoFlags   = [true, false, null];
         $stabilisation = [true, false, true];
 
+        $munich = $this->makeLocation(
+            providerPlaceId: 'video-munich',
+            displayName: 'München Innenstadt',
+            lat: 48.1371,
+            lon: 11.5753,
+            city: 'Munich',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Bayern');
+            },
+        );
+
         for ($i = 0; $i < 3; ++$i) {
-            $video = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
+            $video = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')), $munich);
 
             $duration = $durations[$i];
             if ($duration !== null) {
@@ -87,12 +102,19 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             ['label' => 'Filmabend', 'score' => 0.88],
         ], $params['scene_tags']);
         self::assertSame(['Filmabend'], $params['keywords']);
+        self::assertSame('munich', $params['place_city']);
+        self::assertSame('germany', $params['place_country']);
+        self::assertArrayHasKey('place', $params);
+        self::assertNotSame('', $params['place']);
     }
 
     #[Test]
     public function ignoresNonVideoMedia(): void
     {
-        $strategy = new VideoStoriesClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new VideoStoriesClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $items = [
             $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00', new DateTimeZone('UTC'))),
@@ -107,6 +129,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         $strategy = new VideoStoriesClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 1,
         );
 
@@ -137,6 +160,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     {
         $strategy = new VideoStoriesClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 1,
         );
 
@@ -154,7 +178,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster([$nonVideo]));
     }
 
-    private function createVideo(int $id, DateTimeImmutable $takenAt): Media
+    private function createVideo(int $id, DateTimeImmutable $takenAt, ?Location $location = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -166,6 +190,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
                 $media->setMime('video/mp4');
             },
             size: 4096,
+            location: $location,
         );
     }
 

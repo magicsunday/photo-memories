@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class HolidayEventClusterStrategyTest extends TestCase
@@ -22,15 +24,42 @@ final class HolidayEventClusterStrategyTest extends TestCase
     #[Test]
     public function groupsItemsByHolidayPerYear(): void
     {
-        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 3);
+        $strategy = new HolidayEventClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerHoliday: 3,
+        );
+
+        $berlinChristmas = $this->makeLocation(
+            providerPlaceId: 'berlin-xmas',
+            displayName: 'Weihnachtsmarkt Berlin',
+            lat: 52.5200,
+            lon: 13.4050,
+            city: 'Berlin',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Berlin');
+            },
+        );
+
+        $munichChristmas = $this->makeLocation(
+            providerPlaceId: 'munich-xmas',
+            displayName: 'Weihnachtsmarkt München',
+            lat: 48.1351,
+            lon: 11.5820,
+            city: 'Munich',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Bavaria');
+            },
+        );
 
         $mediaItems = [
-            $this->createMedia(1, '2023-12-25 09:00:00', 52.5, 13.4),
-            $this->createMedia(2, '2023-12-25 10:00:00', 52.5005, 13.401),
-            $this->createMedia(3, '2023-12-25 12:00:00', 52.499, 13.402),
-            $this->createMedia(4, '2024-12-25 09:30:00', 48.1, 11.6),
-            $this->createMedia(5, '2024-12-25 10:30:00', 48.1005, 11.6005),
-            $this->createMedia(6, '2024-12-25 11:00:00', 48.1009, 11.6010),
+            $this->createMedia(1, '2023-12-25 09:00:00', 52.5, 13.4, $berlinChristmas),
+            $this->createMedia(2, '2023-12-25 10:00:00', 52.5005, 13.401, $berlinChristmas),
+            $this->createMedia(3, '2023-12-25 12:00:00', 52.499, 13.402, $berlinChristmas),
+            $this->createMedia(4, '2024-12-25 09:30:00', 48.1, 11.6, $munichChristmas),
+            $this->createMedia(5, '2024-12-25 10:30:00', 48.1005, 11.6005, $munichChristmas),
+            $this->createMedia(6, '2024-12-25 11:00:00', 48.1009, 11.6010, $munichChristmas),
             $this->createMedia(7, '2023-05-01 09:15:00', 49.0, 12.0),
         ];
 
@@ -52,6 +81,10 @@ final class HolidayEventClusterStrategyTest extends TestCase
             ['label' => 'Weihnachten', 'score' => 0.95],
         ], $first->getParams()['scene_tags']);
         self::assertSame(['Weihnachten'], $first->getParams()['keywords']);
+        self::assertArrayHasKey('place', $first->getParams());
+        self::assertNotSame('', $first->getParams()['place']);
+        self::assertSame('berlin', $first->getParams()['place_city']);
+        self::assertSame('germany', $first->getParams()['place_country']);
 
         $second = $clusters[1];
         self::assertSame(2024, $second->getParams()['year']);
@@ -61,7 +94,10 @@ final class HolidayEventClusterStrategyTest extends TestCase
     #[Test]
     public function filtersGroupsBelowMinimumCount(): void
     {
-        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 4);
+        $strategy = new HolidayEventClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerHoliday: 4,
+        );
 
         $mediaItems = [
             $this->createMedia(11, '2023-10-03 08:00:00', 52.0, 13.0),
@@ -75,7 +111,10 @@ final class HolidayEventClusterStrategyTest extends TestCase
     #[Test]
     public function featureDrivenHolidayGroupingMatchesFallback(): void
     {
-        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 2);
+        $strategy = new HolidayEventClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerHoliday: 2,
+        );
 
         $items = [
             $this->createMedia(201, '2024-03-29 09:00:00', 50.0, 8.0),
@@ -96,7 +135,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
         self::assertSame($fallbackClusters, $featureClusters);
     }
 
-    private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
+    private function createMedia(int $id, string $takenAt, float $lat, float $lon, ?Location $location = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -105,6 +144,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             size: 2048,
+            location: $location,
         );
     }
 

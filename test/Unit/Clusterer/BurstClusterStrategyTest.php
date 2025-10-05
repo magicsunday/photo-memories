@@ -15,8 +15,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class BurstClusterStrategyTest extends TestCase
@@ -24,13 +26,43 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function clustersSequentialShotsWithinGapAndDistance(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 120, maxMoveMeters: 100.0, minItemsPerBurst: 3);
+        $strategy = new BurstClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 120,
+            maxMoveMeters: 100.0,
+            minItemsPerBurst: 3,
+        );
+
+        $burstLocation = $this->makeLocation(
+            providerPlaceId: 'burst-museum',
+            displayName: 'Museum Island',
+            lat: 52.5202,
+            lon: 13.4052,
+            city: 'Berlin',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Berlin');
+                $location->setPois([
+                    [
+                        'name'  => 'Museum Island',
+                        'names' => [
+                            'default'    => 'Museum Island',
+                            'localized'  => ['de' => 'Museumsinsel'],
+                            'alternates' => [],
+                        ],
+                        'categoryKey'   => 'tourism',
+                        'categoryValue' => 'museum',
+                        'tags'          => ['wikidata' => 'Q1234'],
+                    ],
+                ]);
+            },
+        );
 
         $mediaItems = [
-            $this->createMedia(3001, '2023-04-15 10:01:10', 52.5201, 13.4051),
-            $this->createMedia(3002, '2023-04-15 10:00:05', 52.5200, 13.4050),
-            $this->createMedia(3003, '2023-04-15 10:02:20', 52.5202, 13.4052),
-            $this->createMedia(3004, '2023-04-15 10:03:00', 52.5203, 13.4053),
+            $this->createMedia(3001, '2023-04-15 10:01:10', 52.5201, 13.4051, $burstLocation),
+            $this->createMedia(3002, '2023-04-15 10:00:05', 52.5200, 13.4050, $burstLocation),
+            $this->createMedia(3003, '2023-04-15 10:02:20', 52.5202, 13.4052, $burstLocation),
+            $this->createMedia(3004, '2023-04-15 10:03:00', 52.5203, 13.4053, $burstLocation),
         ];
 
         $mediaItems[2]->setBurstRepresentative(true);
@@ -59,6 +91,15 @@ final class BurstClusterStrategyTest extends TestCase
             ['label' => 'Serienaufnahme', 'score' => 0.8],
         ], $params['scene_tags']);
         self::assertSame(['Serienaufnahme'], $params['keywords']);
+        self::assertSame('Museum Island', $params['place']);
+        self::assertSame('berlin', $params['place_city']);
+        self::assertSame('berlin', $params['place_region']);
+        self::assertSame('germany', $params['place_country']);
+        self::assertSame('berlin, germany', $params['place_location']);
+        self::assertSame('Museum Island', $params['poi_label']);
+        self::assertSame('tourism', $params['poi_category_key']);
+        self::assertSame('museum', $params['poi_category_value']);
+        self::assertSame(['wikidata' => 'Q1234'], $params['poi_tags']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.5202, $centroid['lat'], 0.0001);
@@ -68,7 +109,12 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function breaksSequenceWhenGapExceedsThreshold(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 60, maxMoveMeters: 100.0, minItemsPerBurst: 3);
+        $strategy = new BurstClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 60,
+            maxMoveMeters: 100.0,
+            minItemsPerBurst: 3,
+        );
 
         $mediaItems = [
             $this->createMedia(4001, '2023-04-15 09:00:00', 40.7127, -74.0061),
@@ -90,7 +136,12 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenNoBurstReachesMinimumSize(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 90, maxMoveMeters: 50.0, minItemsPerBurst: 4);
+        $strategy = new BurstClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 90,
+            maxMoveMeters: 50.0,
+            minItemsPerBurst: 4,
+        );
 
         $mediaItems = [
             $this->createMedia(5001, '2023-07-20 14:00:00', 34.0521, -118.2436),
@@ -104,7 +155,12 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function groupsItemsWithBurstUuidDespiteLargeGaps(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 30, maxMoveMeters: 10.0, minItemsPerBurst: 3);
+        $strategy = new BurstClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 30,
+            maxMoveMeters: 10.0,
+            minItemsPerBurst: 3,
+        );
 
         $burstUuid  = 'burst-uuid-42';
         $mediaItems = [
@@ -139,7 +195,12 @@ final class BurstClusterStrategyTest extends TestCase
     #[Test]
     public function usesHeuristicFallbackWhenBurstMetadataMissing(): void
     {
-        $strategy = new BurstClusterStrategy(maxGapSeconds: 45, maxMoveMeters: 80.0, minItemsPerBurst: 2);
+        $strategy = new BurstClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 45,
+            maxMoveMeters: 80.0,
+            minItemsPerBurst: 2,
+        );
 
         $mediaItems = [
             $this->createMedia(7001, '2023-09-10 08:00:10', 35.6895, 139.6917),
@@ -156,7 +217,7 @@ final class BurstClusterStrategyTest extends TestCase
         self::assertNull($cluster->getParams()['representative_media_id']);
     }
 
-    private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
+    private function createMedia(int $id, string $takenAt, float $lat, float $lon, ?Location $location = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -164,6 +225,7 @@ final class BurstClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+            location: $location,
         );
     }
 }

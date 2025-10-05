@@ -13,9 +13,11 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
@@ -29,9 +31,11 @@ use function usort;
 final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterLocationMetadataTrait;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
+        private LocationHelper $locationHelper,
         private float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
         private int $minItemsPerDay = 5,
@@ -117,12 +121,14 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             $centroid = MediaMath::centroid($list);
             $time     = MediaMath::timeRange($list);
 
+            $params = $this->appendLocationMetadata($list, [
+                'distance_km' => $dayDistanceKm[$day],
+                'time_range'  => $time,
+            ]);
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'distance_km' => $dayDistanceKm[$day],
-                    'time_range'  => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
