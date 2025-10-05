@@ -21,6 +21,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_any;
 use function array_key_first;
 use function array_keys;
 use function array_map;
@@ -260,19 +261,24 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         $hasFeatureData = false;
 
-        foreach ($items as $media) {
-            $calendarFeatures = CalendarFeatureHelper::extract($media);
-            $isWeekend        = $calendarFeatures['isWeekend'];
+        $hasWeekendFeature = array_any(
+            $items,
+            static function (Media $media) use (&$hasFeatureData): bool {
+                $calendarFeatures = CalendarFeatureHelper::extract($media);
+                $isWeekend        = $calendarFeatures['isWeekend'];
 
-            if ($isWeekend === null) {
-                continue;
+                if ($isWeekend === null) {
+                    return false;
+                }
+
+                $hasFeatureData = true;
+
+                return $isWeekend;
             }
+        );
 
-            $hasFeatureData = true;
-
-            if ($isWeekend) {
-                return true;
-            }
+        if ($hasWeekendFeature) {
+            return true;
         }
 
         if ($hasFeatureData) {
@@ -289,19 +295,19 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     {
         $tz = new DateTimeZone('UTC');
 
-        foreach ($days as $d) {
-            $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $d . ' 12:00:00', $tz);
-            if (!$date instanceof DateTimeImmutable) {
-                continue;
-            }
+        return array_any(
+            $days,
+            static function (string $day) use ($tz): bool {
+                $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $day . ' 12:00:00', $tz);
+                if (!$date instanceof DateTimeImmutable) {
+                    return false;
+                }
 
-            $dow = (int) $date->format('N'); // 1..7
-            if ($dow === 6 || $dow === 7) {
-                return true;
-            }
-        }
+                $dow = (int) $date->format('N'); // 1..7
 
-        return false;
+                return $dow === 6 || $dow === 7;
+            }
+        );
     }
 
     /**
