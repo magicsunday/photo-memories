@@ -44,8 +44,8 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         $base = count($keepOrder);
-        for ($index = 0; $index < $base; ++$index) {
-            $this->priorityMap[$keepOrder[$index]] = $base - $index;
+        foreach ($keepOrder as $index => $algorithm) {
+            $this->priorityMap[$algorithm] = $base - $index;
         }
     }
 

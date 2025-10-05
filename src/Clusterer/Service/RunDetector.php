@@ -74,8 +74,7 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         $countKeys = count($keys);
-        for ($i = 0; $i < $countKeys; ++$i) {
-            $key = $keys[$i];
+        foreach ($keys as $i => $key) {
             if ($isAwayCandidate[$key] ?? false) {
                 continue;
             }

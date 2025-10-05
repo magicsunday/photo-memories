@@ -25,6 +25,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function abs;
 use function array_keys;
 use function array_map;
+use function array_slice;
 use function count;
 use function explode;
 use function implode;
@@ -416,9 +417,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $interleaved[] = $first;
             }
 
-            $queueCount = count($queue);
-            for ($index = 1; $index < $queueCount; ++$index) {
-                $media = $queue[$index];
+            $remaining = array_slice($queue, 1);
+            foreach ($remaining as $media) {
                 $takenAt = $media->getTakenAt();
                 $leftovers[] = [
                     'media' => $media,
@@ -515,10 +515,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $winners[] = $winner;
             }
 
-            $entryCount = count($entries);
-            for ($i = 1; $i < $entryCount; ++$i) {
-                $fallback[] = $entries[$i];
-            }
+            $fallback = [...$fallback, ...array_slice($entries, 1)];
         }
 
         usort($winners, static function (array $a, array $b): int {

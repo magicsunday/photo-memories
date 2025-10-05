@@ -124,8 +124,8 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         /** @var array<int,list<int>> $adj */
         $adj    = array_fill(0, $n, []);
         $hashes = [];
-        for ($i = 0; $i < $n; ++$i) {
-            $hashes[$i] = (string) $items[$i]->getPhash();
+        foreach ($items as $index => $item) {
+            $hashes[$index] = (string) $item->getPhash();
         }
 
         for ($i = 0; $i < $n; ++$i) {
@@ -139,14 +139,14 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
         $seen = array_fill(0, $n, false);
         $out  = [];
-        for ($i = 0; $i < $n; ++$i) {
-            if ($seen[$i]) {
+        foreach ($items as $index => $_item) {
+            if ($seen[$index]) {
                 continue;
             }
 
             // BFS
-            $queue    = [$i];
-            $seen[$i] = true;
+            $queue    = [$index];
+            $seen[$index] = true;
             $comp     = [];
             while ($queue !== []) {
                 $v = array_shift($queue);

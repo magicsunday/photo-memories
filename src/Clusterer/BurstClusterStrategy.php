@@ -182,9 +182,13 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         /** @var list<Media> $current */
         $current = [$items[0]];
 
-        for ($i = 1; $i < $count; ++$i) {
-            $media = $items[$i];
-            $prev  = $items[$i - 1];
+        $previous = $items[0];
+        foreach ($items as $index => $media) {
+            if ($index === 0) {
+                continue;
+            }
+
+            $prev = $previous;
 
             $currTakenAt = $media->getTakenAt();
             $prevTakenAt = $prev->getTakenAt();
@@ -205,11 +209,14 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 
             if ($timeOk && $distOk) {
                 $current[] = $media;
+                $previous  = $media;
                 continue;
             }
 
             $sessions[] = $current;
             $current    = [$media];
+            $previous   = $media;
+            continue;
         }
 
         if ($current !== []) {

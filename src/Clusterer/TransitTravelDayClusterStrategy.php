@@ -88,16 +88,27 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                 $sorted = $list;
                 usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-                $distKm = 0.0;
-                for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
-                    $p = $sorted[$i - 1];
-                    $q = $sorted[$i];
+                $distKm  = 0.0;
+                $previous = null;
+                foreach ($sorted as $index => $current) {
+                    if ($index === 0) {
+                        $previous = $current;
+                        continue;
+                    }
+
+                    if (!$previous instanceof Media) {
+                        $previous = $current;
+                        continue;
+                    }
+
                     $distKm += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
+                        (float) $previous->getGpsLat(),
+                        (float) $previous->getGpsLon(),
+                        (float) $current->getGpsLat(),
+                        (float) $current->getGpsLon()
                     ) / 1000.0;
+
+                    $previous = $current;
                 }
 
                 if ($distKm < $this->minTravelKm) {

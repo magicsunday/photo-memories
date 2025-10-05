@@ -143,12 +143,10 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
         unset($clone);
 
         // normalisieren auf ints 0..255
-        $out    = [];
-        $outLen = count($buf);
+        $out = [];
 
-        for ($i = 0; $i < $outLen; ++$i) {
-            $v     = $buf[$i];
-            $out[] = (int) (is_float($v) ? round($v) : $v);
+        foreach ($buf as $value) {
+            $out[] = (int) (is_float($value) ? round($value) : $value);
         }
 
         /** @var list<int> $out */

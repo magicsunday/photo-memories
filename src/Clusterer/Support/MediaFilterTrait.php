@@ -219,19 +219,19 @@ trait MediaFilterTrait
             return $neighbors;
         };
 
-        for ($i = 0; $i < $count; ++$i) {
-            if ($labels[$i] !== null) {
+        foreach ($coordinates as $index => $_coordinate) {
+            if ($labels[$index] !== null) {
                 continue;
             }
 
-            $neighbors = $regionQuery($coordinates, $i, $radiusMeters);
+            $neighbors = $regionQuery($coordinates, $index, $radiusMeters);
             if (count($neighbors) < $minSamples) {
-                $labels[$i] = -1;
+                $labels[$index] = -1;
                 continue;
             }
 
-            $labels[$i] = $clusterId;
-            $queue      = $neighbors;
+            $labels[$index] = $clusterId;
+            $queue          = $neighbors;
             for ($queueIndex = 0; $queueIndex < count($queue); ++$queueIndex) {
                 $neighborIndex = $queue[$queueIndex];
 

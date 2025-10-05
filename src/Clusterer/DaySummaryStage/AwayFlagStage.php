@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 
 use function array_keys;
+use function array_slice;
 use function count;
 
 /**
@@ -102,13 +103,17 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             return $flags;
         }
 
-        for ($i = 1; $i < $count - 1; ++$i) {
-            $prev = $flags[$keys[$i - 1]];
-            $curr = $flags[$keys[$i]];
-            $next = $flags[$keys[$i + 1]];
+        foreach ($keys as $index => $key) {
+            if ($index === 0 || $index === $count - 1) {
+                continue;
+            }
+
+            $prev = $flags[$keys[$index - 1]];
+            $curr = $flags[$key];
+            $next = $flags[$keys[$index + 1]];
 
             if ($curr === false && $prev === true && $next === true) {
-                $flags[$keys[$i]] = true;
+                $flags[$key] = true;
             }
         }
 
@@ -135,8 +140,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         if ($first !== null && $last !== null && $last > $first) {
-            for ($i = $first; $i <= $last; ++$i) {
-                $flags[$keys[$i]] = true;
+            foreach (array_slice($keys, $first, $last - $first + 1) as $key) {
+                $flags[$key] = true;
             }
         }
 
@@ -154,16 +159,15 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
     {
         $count = count($orderedKeys);
 
-        for ($i = 0; $i < $count; ++$i) {
-            $key     = $orderedKeys[$i];
+        foreach ($orderedKeys as $index => $key) {
             $summary = $days[$key];
 
             if ($summary['isSynthetic'] === false) {
                 continue;
             }
 
-            $prev = $i > 0 ? $flags[$orderedKeys[$i - 1]] : null;
-            $next = $i + 1 < $count ? $flags[$orderedKeys[$i + 1]] : null;
+            $prev = $index > 0 ? $flags[$orderedKeys[$index - 1]] : null;
+            $next = $index + 1 < $count ? $flags[$orderedKeys[$index + 1]] : null;
 
             if ($prev === true || $next === true) {
                 $flags[$key] = true;

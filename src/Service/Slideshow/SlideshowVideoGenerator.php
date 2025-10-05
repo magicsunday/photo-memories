@@ -176,16 +176,21 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
 
         $transitionCount = count($this->transitions);
-        $current = '[s0]';
-        $offset  = max(0.1, $this->slideDuration);
+        $current         = '[s0]';
+        $offset          = max(0.1, $this->slideDuration);
+        $imageCount      = count($images);
 
-        for ($index = 1; $index < count($images); $index++) {
+        foreach (array_keys($images) as $index) {
+            if ($index === 0) {
+                continue;
+            }
+
             $transition = $this->transitions[($index - 1) % $transitionCount] ?? 'fade';
             if ($transition === '') {
                 $transition = 'fade';
             }
 
-            $targetLabel = $index === count($images) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
+            $targetLabel = $index === $imageCount - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[] = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
                 $current,

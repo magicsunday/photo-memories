@@ -65,13 +65,13 @@ final class GeoDbscanHelper
         $clusters    = [];
         $clusterId   = -1;
 
-        for ($i = 0; $i < $count; ++$i) {
-            if ($visited[$i] === true) {
+        foreach ($points as $index => $_point) {
+            if ($visited[$index] === true) {
                 continue;
             }
 
-            $visited[$i] = true;
-            $neighbors   = $this->regionQuery($points, $i, $epsKm);
+            $visited[$index] = true;
+            $neighbors       = $this->regionQuery($points, $index, $epsKm);
 
             if (count($neighbors) + 1 < $minSamples) {
                 continue;
@@ -82,7 +82,7 @@ final class GeoDbscanHelper
 
             $this->expandCluster(
                 $points,
-                $i,
+                $index,
                 $neighbors,
                 $clusterId,
                 $epsKm,
@@ -124,12 +124,11 @@ final class GeoDbscanHelper
         $count     = count($points);
         $origin    = $points[$pointIndex];
 
-        for ($i = 0; $i < $count; ++$i) {
-            if ($i === $pointIndex) {
+        foreach ($points as $index => $candidate) {
+            if ($index === $pointIndex) {
                 continue;
             }
 
-            $candidate = $points[$i];
             $distance  = MediaMath::haversineDistanceInMeters(
                 $origin['lat'],
                 $origin['lon'],
@@ -138,7 +137,7 @@ final class GeoDbscanHelper
             );
 
             if ($distance <= $epsKm * 1000.0) {
-                $neighbors[] = $i;
+                $neighbors[] = $index;
             }
         }
 

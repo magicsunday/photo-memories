@@ -20,6 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function count;
 use function is_array;
 use function iterator_to_array;
+use function range;
 use function spl_object_id;
 use function usleep;
 
@@ -70,7 +71,7 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
                 $networkCalls += $networkCallsForMedia;
 
                 if ($this->delayMs > 0) {
-                    for ($i = 0; $i < $networkCallsForMedia; ++$i) {
+                    foreach (range(1, $networkCallsForMedia) as $_) {
                         usleep($this->delayMs * 1000);
                     }
                 }
