@@ -415,6 +415,6 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         $firstKey = array_key_first($counts);
 
-        return $firstKey instanceof string ? $firstKey : null;
+        return is_string($firstKey) ? $firstKey : null;
     }
 }
