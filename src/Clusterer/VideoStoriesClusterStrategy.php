@@ -59,9 +59,17 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
         $videoItems = $this->filterTimestampedItemsBy(
             $items,
             static function (Media $m): bool {
-                $mime = $m->getMime();
+                if ($m->isVideo() === true) {
+                    return true;
+                }
 
-                return is_string($mime) && str_starts_with($mime, 'video/');
+                if ($m->isVideo() === false && $m->getIndexedAt() === null) {
+                    $mime = $m->getMime();
+
+                    return is_string($mime) && str_starts_with($mime, 'video/');
+                }
+
+                return false;
             }
         );
 
