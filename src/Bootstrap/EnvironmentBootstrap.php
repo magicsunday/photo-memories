@@ -17,6 +17,14 @@ use Throwable;
 
 use function dirname;
 
+/**
+ * Selects and loads the applicable .env file from the available application roots.
+ *
+ * The loader considers the current working directory, the directory of a running
+ * PHAR archive, and the project root to determine the first readable candidate.
+ * Side effects: delegates to Dotenv::bootEnv() for cascading .env variants and
+ * utilises Phar::running() to discover packaged execution contexts.
+ */
 final class EnvironmentBootstrap
 {
     /**
