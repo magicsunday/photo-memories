@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Http\Response;
 
+use function array_map;
 use function explode;
 use function header;
 use function http_response_code;
@@ -105,10 +106,10 @@ class Response
 
     private function normalizeHeaderName(string $name): string
     {
-        $parts = explode('-', $name);
-        foreach ($parts as $index => $part) {
-            $parts[$index] = strtoupper($part[0]) . strtolower(substr($part, 1));
-        }
+        $parts = array_map(
+            static fn (string $part): string => strtoupper($part[0]) . strtolower(substr($part, 1)),
+            explode('-', $name),
+        );
 
         return implode('-', $parts);
     }
