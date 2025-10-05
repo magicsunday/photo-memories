@@ -16,6 +16,7 @@ use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -39,11 +40,12 @@ use const SORT_STRING;
  */
 final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterLocationMetadataTrait;
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private LocationHelper $locHelper,
+        private LocationHelper $locationHelper,
         private float $gridDegrees = 0.01, // ~1.1 km in lat
         private string $timezone = 'Europe/Berlin',
         private int $minItemsPerDay = 4,
@@ -168,11 +170,8 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                     'time_range' => $time,
                 ];
 
-                $label = $this->locHelper->majorityLabel($members);
-
-                if ($label !== null) {
-                    $params['place'] = $label;
-                }
+                $label  = $this->locationHelper->majorityLabel($members);
+                $params = $this->appendLocationMetadata($members, $params);
 
                 $draft = new ClusterDraft(
                     algorithm: 'first_visit_place',

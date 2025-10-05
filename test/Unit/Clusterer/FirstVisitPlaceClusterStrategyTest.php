@@ -28,7 +28,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     {
         $helper   = LocationHelper::createDefault();
         $strategy = new FirstVisitPlaceClusterStrategy(
-            locHelper: $helper,
+            locationHelper: $helper,
             gridDegrees: 0.01,
             timezone: 'Europe/Berlin',
             minItemsPerDay: 4,
@@ -72,7 +72,17 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         self::assertSame('first_visit_place', $cluster->getAlgorithm());
-        self::assertSame('Innsbruck', $cluster->getParams()['place']);
+        $params = $cluster->getParams();
+
+        self::assertArrayHasKey('place', $params);
+        self::assertArrayHasKey('place_city', $params);
+        self::assertArrayHasKey('place_country', $params);
+        self::assertArrayHasKey('place_location', $params);
+
+        self::assertSame('Innsbruck', $params['place']);
+        self::assertSame('innsbruck', $params['place_city']);
+        self::assertSame('austria', $params['place_country']);
+        self::assertSame('innsbruck, austria', $params['place_location']);
         self::assertSame(
             [1200, 1201, 1202, 1203, 1210, 1211, 1212, 1213],
             $cluster->getMembers()
@@ -84,7 +94,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
     {
         $helper   = LocationHelper::createDefault();
         $strategy = new FirstVisitPlaceClusterStrategy(
-            locHelper: $helper,
+            locationHelper: $helper,
             gridDegrees: 0.01,
             timezone: 'Europe/Berlin',
             minItemsPerDay: 4,
