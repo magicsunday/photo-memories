@@ -38,6 +38,13 @@ final class YearInReviewClusterStrategyTest extends TestCase
             $this->createMedia(604, '2020-03-20 11:45:00', 48.1374, 11.5756),
         ];
 
+        foreach ([0, 1, 2, 3] as $index) {
+            $this->assignTags($mediaItems[$index], [
+                ['label' => 'Reise', 'score' => 0.82 + ($index * 0.01)],
+                ['label' => 'Stadt', 'score' => 0.7],
+            ], ['Jahresrückblick', 'Reisen']);
+        }
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
@@ -55,6 +62,15 @@ final class YearInReviewClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2021-10-02 14:15:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $params['time_range']);
+        self::assertArrayHasKey('scene_tags', $params);
+        self::assertArrayHasKey('keywords', $params);
+        $sceneTags = $params['scene_tags'];
+        self::assertCount(2, $sceneTags);
+        self::assertSame('Reise', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.85, $sceneTags[0]['score'], 0.0001);
+        self::assertSame('Stadt', $sceneTags[1]['label']);
+        self::assertEqualsWithDelta(0.7, $sceneTags[1]['score'], 0.0001);
+        self::assertSame(['Jahresrückblick', 'Reisen'], $params['keywords']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.5203, $centroid['lat'], 0.0001);
@@ -84,5 +100,15 @@ final class YearInReviewClusterStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 }

@@ -13,13 +13,12 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
-use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
-use function array_map;
 use function array_values;
 use function assert;
 use function count;
@@ -33,6 +32,7 @@ use function mb_strtolower;
 final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private int $minYears = 3,
@@ -90,18 +90,25 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
             }
 
             usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
+            $centroid = $this->computeCentroid($list);
+            $time     = $this->computeTimeRange($list);
+
+            $params = [
+                'label'      => $season . ' im Laufe der Jahre',
+                'years'      => array_values(array_keys($years)),
+                'time_range' => $time,
+            ];
+
+            $tags = $this->collectDominantTags($list);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'label'      => $season . ' im Laufe der Jahre',
-                    'years'      => array_values(array_keys($years)),
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: $this->toMemberIds($list)
             );
         }
 

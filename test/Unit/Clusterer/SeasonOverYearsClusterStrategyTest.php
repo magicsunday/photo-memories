@@ -37,15 +37,32 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(7, '2021-12-05 14:00:00'),
         ];
 
+        foreach ([0, 1, 2, 3, 4, 5] as $index) {
+            $this->assignTags($mediaItems[$index], [
+                ['label' => 'Sommer', 'score' => 0.88 - ($index * 0.02)],
+                ['label' => 'Outdoor', 'score' => 0.7],
+            ], ['Sommer', 'Urlaub']);
+        }
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
         self::assertSame('season_over_years', $cluster->getAlgorithm());
-        self::assertSame('Sommer im Laufe der Jahre', $cluster->getParams()['label']);
+        $params = $cluster->getParams();
+        self::assertSame('Sommer im Laufe der Jahre', $params['label']);
         self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
-        self::assertContains(2021, $cluster->getParams()['years']);
+        self::assertContains(2021, $params['years']);
+        self::assertArrayHasKey('scene_tags', $params);
+        self::assertArrayHasKey('keywords', $params);
+        $sceneTags = $params['scene_tags'];
+        self::assertCount(2, $sceneTags);
+        self::assertSame('Sommer', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.88, $sceneTags[0]['score'], 0.0001);
+        self::assertSame('Outdoor', $sceneTags[1]['label']);
+        self::assertEqualsWithDelta(0.7, $sceneTags[1]['score'], 0.0001);
+        self::assertSame(['Sommer', 'Urlaub'], $params['keywords']);
     }
 
     #[Test]
@@ -101,6 +118,16 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             filename: sprintf('season-over-years-%d.jpg', $id),
             takenAt: $takenAt,
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 
     /**

@@ -42,8 +42,21 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
                 $mediaItems = [];
                 $id         = 1;
                 foreach ([2019, 2020, 2021] as $year) {
-                    $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
-                    $mediaItems[] = $this->createMedia($id++, $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00'));
+                    $morning = $this->createMedia($id++, $this->dateString($year, $month, $day, '09:00:00'));
+                    $this->assignTags($morning, [
+                        ['label' => 'Feier', 'score' => 0.8 + (($year - 2019) * 0.02)],
+                        ['label' => 'Freunde', 'score' => 0.7],
+                    ], ['Jubiläum', 'Freunde']);
+                    $mediaItems[] = $morning;
+
+                    $evening = $this->createMedia(
+                        $id++,
+                        $this->dateString($year, $month, $day + ($year === 2020 ? 1 : 0), '14:30:00')
+                    );
+                    $this->assignTags($evening, [
+                        ['label' => 'Feier', 'score' => 0.75],
+                    ], ['Jubiläum']);
+                    $mediaItems[] = $evening;
                 }
 
                 $mediaItems[] = $this->createMedia($id++, $this->dateString(2022, $month, $day + 5, '10:00:00'));
@@ -59,7 +72,17 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 
                 self::assertSame('on_this_day_over_years', $cluster->getAlgorithm());
                 self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
-                self::assertGreaterThanOrEqual(3, count($cluster->getParams()['years']));
+                $params = $cluster->getParams();
+                self::assertGreaterThanOrEqual(3, count($params['years']));
+                self::assertArrayHasKey('scene_tags', $params);
+                self::assertArrayHasKey('keywords', $params);
+                $sceneTags = $params['scene_tags'];
+                self::assertCount(2, $sceneTags);
+                self::assertSame('Feier', $sceneTags[0]['label']);
+                self::assertEqualsWithDelta(0.84, $sceneTags[0]['score'], 0.0001);
+                self::assertSame('Freunde', $sceneTags[1]['label']);
+                self::assertEqualsWithDelta(0.7, $sceneTags[1]['score'], 0.0001);
+                self::assertSame(['Jubiläum', 'Freunde'], $params['keywords']);
 
                 return true;
             }
@@ -114,5 +137,15 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
             filename: sprintf('on-this-day-%d.jpg', $id),
             takenAt: $takenAt,
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 }
