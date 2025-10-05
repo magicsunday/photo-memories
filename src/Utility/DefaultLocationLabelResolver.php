@@ -88,22 +88,41 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         $poi = $this->poiContextAnalyzer->resolvePrimaryPoi($location);
         if ($poi !== null) {
             $label = $this->poiLabelResolver->preferredLabel($poi);
-            if (is_string($label) && $label !== '') {
-                return $label;
+            if (is_string($label)) {
+                $normalizedLabel = trim($label);
+                if ($normalizedLabel !== '') {
+                    return $normalizedLabel;
+                }
+            }
+        }
+
+        $components = [
+            $location->getCity(),
+            $location->getCounty(),
+            $location->getState(),
+            $location->getCountry(),
+        ];
+
+        foreach ($components as $component) {
+            if (!is_string($component)) {
+                continue;
+            }
+
+            $normalizedComponent = trim($component);
+            if ($normalizedComponent !== '') {
+                return $normalizedComponent;
             }
         }
 
         $label = $this->poiContextAnalyzer->bestLabelForLocation($location);
-        if (is_string($label) && $label !== '') {
-            return $label;
+        if (is_string($label)) {
+            $normalizedLabel = trim($label);
+            if ($normalizedLabel !== '') {
+                return $normalizedLabel;
+            }
         }
 
-        $city    = $location->getCity();
-        $county  = $location->getCounty();
-        $state   = $location->getState();
-        $country = $location->getCountry();
-
-        return (($city ?? $county) ?? $state) ?? $country;
+        return null;
     }
 
     public function localityKeyForMedia(Media $media): ?string
@@ -120,7 +139,23 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     {
         $poiContext = $this->poiContextAnalyzer->majorityPoiContext($members);
         if ($poiContext !== null) {
-            return $poiContext['label'];
+            $label = $poiContext['label'] ?? null;
+            if (is_string($label)) {
+                $normalizedLabel = trim($label);
+                if ($normalizedLabel !== '') {
+                    $categoryValue = $poiContext['categoryValue'] ?? null;
+                    if (!is_string($categoryValue)) {
+                        return $normalizedLabel;
+                    }
+
+                    $normalizedCategory = trim($categoryValue);
+                    if ($normalizedCategory === ''
+                        || strtolower($normalizedLabel) !== strtolower($normalizedCategory)
+                    ) {
+                        return $normalizedLabel;
+                    }
+                }
+            }
         }
 
         /** @var array<string,int> $count */

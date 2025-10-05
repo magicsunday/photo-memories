@@ -210,4 +210,43 @@ final class LocationHelperTest extends TestCase
 
         self::assertSame('Altes Rathaus', $helper->displayLabel($location));
     }
+
+    #[Test]
+    public function fallsBackToCityWhenPoiHasOnlyCategory(): void
+    {
+        $helper = LocationHelper::createDefault();
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'poi-monument-1',
+            displayName: 'Monument Square',
+            lat: 50.9795,
+            lon: 11.3235,
+            city: 'Weimar',
+            configure: static function (Location $loc): void {
+                $loc->setPois([
+                    [
+                        'id'    => 'node/301',
+                        'name'  => null,
+                        'names' => [
+                            'default'    => null,
+                            'localized'  => [],
+                            'alternates' => [],
+                        ],
+                        'categoryKey'    => 'historic',
+                        'categoryValue'  => 'monument',
+                        'distanceMeters' => 25.0,
+                        'tags'           => [
+                            'historic' => 'monument',
+                        ],
+                    ],
+                ]);
+            },
+        );
+
+        self::assertSame('Weimar', $helper->displayLabel($location));
+
+        $media = $this->makeMedia(1, '/monument.jpg', location: $location);
+
+        self::assertSame('Weimar', $helper->majorityLabel([$media]));
+    }
 }
