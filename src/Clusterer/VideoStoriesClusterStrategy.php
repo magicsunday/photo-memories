@@ -14,11 +14,10 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
 use function assert;
 use function is_string;
 use function str_starts_with;
@@ -30,6 +29,7 @@ use function usort;
 final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
@@ -90,8 +90,8 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
         foreach ($eligibleDays as $members) {
             usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
+            $centroid = $this->computeCentroid($members);
+            $time     = $this->computeTimeRange($members);
 
             $videoCount            = count($members);
             $videoDurationTotal    = 0.0;
@@ -135,11 +135,16 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
                 $params['video_stabilized_count'] = $videoStabilizedCount;
             }
 
+            $tags = $this->collectDominantTags($members);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: $this->toMemberIds($members)
             );
         }
 

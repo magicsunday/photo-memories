@@ -34,6 +34,11 @@ final class HolidayEventClusterStrategyTest extends TestCase
             $this->createMedia(7, '2023-05-01 09:15:00', 49.0, 12.0),
         ];
 
+        $mediaItems[0]->setSceneTags([
+            ['label' => 'Weihnachten', 'score' => 0.95],
+        ]);
+        $mediaItems[0]->setKeywords(['Weihnachten']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(2, $clusters);
@@ -43,6 +48,10 @@ final class HolidayEventClusterStrategyTest extends TestCase
         self::assertSame(2023, $first->getParams()['year']);
         self::assertSame('1. Weihnachtstag', $first->getParams()['holiday_name']);
         self::assertSame([1, 2, 3], $first->getMembers());
+        self::assertSame([
+            ['label' => 'Weihnachten', 'score' => 0.95],
+        ], $first->getParams()['scene_tags']);
+        self::assertSame(['Weihnachten'], $first->getParams()['keywords']);
 
         $second = $clusters[1];
         self::assertSame(2024, $second->getParams()['year']);

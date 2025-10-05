@@ -13,13 +13,12 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
-use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
 use function assert;
 use function explode;
 use function ctype_digit;
@@ -34,6 +33,7 @@ use function substr;
 final readonly class HolidayEventClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private int $minItemsPerHoliday = 8,
@@ -80,19 +80,26 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
 
         foreach ($eligibleGroups as $key => $members) {
             [$yearStr, $name] = explode(':', $key, 3);
-            $centroid         = MediaMath::centroid($members);
-            $time             = MediaMath::timeRange($members);
+            $centroid         = $this->computeCentroid($members);
+            $time             = $this->computeTimeRange($members);
+
+            $params = [
+                'year'         => (int) $yearStr,
+                'holiday'      => 1.0,
+                'holiday_name' => $name,
+                'time_range'   => $time,
+            ];
+
+            $tags = $this->collectDominantTags($members);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params   : [
-                    'year'         => (int) $yearStr,
-                    'holiday'      => 1.0,
-                    'holiday_name' => $name,
-                    'time_range'   => $time,
-                ],
+                params   : $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: $this->toMemberIds($members)
             );
         }
 

@@ -49,6 +49,11 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
                     $this->createMedia(7, $anchor->setDate($noiseYear, $nextMonth, 1)->setTime(7, 0)),
                 ];
 
+                $mediaItems[0]->setSceneTags([
+                    ['label' => 'Frühlingsausflug', 'score' => 0.82],
+                ]);
+                $mediaItems[0]->setKeywords(['Frühlingsausflug']);
+
                 $clusters = $strategy->cluster($mediaItems);
 
                 if (!$isStable()) {
@@ -61,6 +66,10 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
                 self::assertSame('this_month_over_years', $cluster->getAlgorithm());
                 self::assertSame([1, 2, 3, 4, 5, 6], $cluster->getMembers());
                 self::assertSame($month, $cluster->getParams()['month']);
+                self::assertSame([
+                    ['label' => 'Frühlingsausflug', 'score' => 0.82],
+                ], $cluster->getParams()['scene_tags']);
+                self::assertSame(['Frühlingsausflug'], $cluster->getParams()['keywords']);
 
                 return true;
             }

@@ -48,6 +48,11 @@ final class AnniversaryClusterStrategyTest extends TestCase
             $this->createMedia(1103, '2020-03-10 11:10:00', $munich, 48.1373, 11.5755),
         ];
 
+        $mediaItems[0]->setSceneTags([
+            ['label' => 'Familienfest', 'score' => 0.9],
+        ]);
+        $mediaItems[0]->setKeywords(['Jubiläum']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
@@ -59,6 +64,10 @@ final class AnniversaryClusterStrategyTest extends TestCase
 
         $params = $cluster->getParams();
         self::assertSame('Berlin', $params['place']);
+        self::assertSame([
+            ['label' => 'Familienfest', 'score' => 0.9],
+        ], $params['scene_tags']);
+        self::assertSame(['Jubiläum'], $params['keywords']);
 
         $expectedRange = [
             'from' => (new DateTimeImmutable('2019-01-05 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),

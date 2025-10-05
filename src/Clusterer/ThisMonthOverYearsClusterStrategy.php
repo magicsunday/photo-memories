@@ -14,12 +14,11 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
-use function array_map;
 use function array_values;
 use function assert;
 use function count;
@@ -31,6 +30,7 @@ use function usort;
 final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private string $timezone = 'Europe/Berlin',
@@ -97,19 +97,26 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
 
         usort($picked, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-        $centroid = MediaMath::centroid($picked);
-        $time     = MediaMath::timeRange($picked);
+        $centroid = $this->computeCentroid($picked);
+        $time     = $this->computeTimeRange($picked);
+
+        $params = [
+            'month'      => $mon,
+            'years'      => array_values(array_keys($years)),
+            'time_range' => $time,
+        ];
+
+        $tags = $this->collectDominantTags($picked);
+        if ($tags !== []) {
+            $params = [...$params, ...$tags];
+        }
 
         return [
             new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'month'      => $mon,
-                    'years'      => array_values(array_keys($years)),
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $picked)
+                members: $this->toMemberIds($picked)
             ),
         ];
     }

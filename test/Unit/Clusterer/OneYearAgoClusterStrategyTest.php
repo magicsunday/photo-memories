@@ -44,6 +44,11 @@ final class OneYearAgoClusterStrategyTest extends TestCase
                     $this->createMedia(5, $anchorBase->modify('+5 days')),
                 ];
 
+                $mediaItems[0]->setSceneTags([
+                    ['label' => 'Jahresrückblick', 'score' => 0.85],
+                ]);
+                $mediaItems[0]->setKeywords(['Jahresrückblick']);
+
                 $clusters = $strategy->cluster($mediaItems);
 
                 if (!$isStable()) {
@@ -56,6 +61,10 @@ final class OneYearAgoClusterStrategyTest extends TestCase
                 self::assertSame('one_year_ago', $cluster->getAlgorithm());
                 self::assertSame([1, 2, 3, 4], $cluster->getMembers());
                 self::assertArrayHasKey('time_range', $cluster->getParams());
+                self::assertSame([
+                    ['label' => 'Jahresrückblick', 'score' => 0.85],
+                ], $cluster->getParams()['scene_tags']);
+                self::assertSame(['Jahresrückblick'], $cluster->getParams()['keywords']);
 
                 return true;
             }
