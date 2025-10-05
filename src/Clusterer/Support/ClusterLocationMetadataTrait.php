@@ -17,6 +17,11 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function implode;
 use function in_array;
 use function is_string;
+use function mb_convert_case;
+use function mb_strtolower;
+use function trim;
+
+use const MB_CASE_TITLE;
 
 /**
  * Provides helper functionality to enrich cluster parameters with location metadata.
@@ -36,8 +41,11 @@ trait ClusterLocationMetadataTrait
     private function appendLocationMetadata(array $members, array $params): array
     {
         $place = $this->locationHelper->majorityLabel($members);
-        if (is_string($place) && $place !== '') {
-            $params['place'] = $place;
+        if (is_string($place)) {
+            $normalizedPlace = $this->normalizeLocationComponent($place);
+            if ($normalizedPlace !== '') {
+                $params['place'] = $normalizedPlace;
+            }
         }
 
         $components = $this->locationHelper->majorityLocationComponents($members);
@@ -45,26 +53,35 @@ trait ClusterLocationMetadataTrait
             $locationParts = [];
 
             $city = $components['city'] ?? null;
-            if (is_string($city) && $city !== '') {
-                $params['place_city'] = $city;
-                if (!in_array($city, $locationParts, true)) {
-                    $locationParts[] = $city;
+            if (is_string($city)) {
+                $normalizedCity = $this->normalizeLocationComponent($city);
+                if ($normalizedCity !== '') {
+                    $params['place_city'] = $normalizedCity;
+                    if (!in_array($normalizedCity, $locationParts, true)) {
+                        $locationParts[] = $normalizedCity;
+                    }
                 }
             }
 
             $region = $components['region'] ?? null;
-            if (is_string($region) && $region !== '') {
-                $params['place_region'] = $region;
-                if (!in_array($region, $locationParts, true)) {
-                    $locationParts[] = $region;
+            if (is_string($region)) {
+                $normalizedRegion = $this->normalizeLocationComponent($region);
+                if ($normalizedRegion !== '') {
+                    $params['place_region'] = $normalizedRegion;
+                    if (!in_array($normalizedRegion, $locationParts, true)) {
+                        $locationParts[] = $normalizedRegion;
+                    }
                 }
             }
 
             $country = $components['country'] ?? null;
-            if (is_string($country) && $country !== '') {
-                $params['place_country'] = $country;
-                if (!in_array($country, $locationParts, true)) {
-                    $locationParts[] = $country;
+            if (is_string($country)) {
+                $normalizedCountry = $this->normalizeLocationComponent($country);
+                if ($normalizedCountry !== '') {
+                    $params['place_country'] = $normalizedCountry;
+                    if (!in_array($normalizedCountry, $locationParts, true)) {
+                        $locationParts[] = $normalizedCountry;
+                    }
                 }
             }
 
@@ -97,5 +114,20 @@ trait ClusterLocationMetadataTrait
         }
 
         return $params;
+    }
+
+    private function normalizeLocationComponent(string $value): string
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $lowerCase = mb_strtolower($trimmed, 'UTF-8');
+        if ($trimmed === $lowerCase) {
+            return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return $trimmed;
     }
 }

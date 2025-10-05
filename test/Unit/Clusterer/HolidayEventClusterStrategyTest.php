@@ -83,8 +83,8 @@ final class HolidayEventClusterStrategyTest extends TestCase
         self::assertSame(['Weihnachten'], $first->getParams()['keywords']);
         self::assertArrayHasKey('place', $first->getParams());
         self::assertNotSame('', $first->getParams()['place']);
-        self::assertSame('berlin', $first->getParams()['place_city']);
-        self::assertSame('germany', $first->getParams()['place_country']);
+        self::assertSame('Berlin', $first->getParams()['place_city']);
+        self::assertSame('Germany', $first->getParams()['place_country']);
 
         $second = $clusters[1];
         self::assertSame(2024, $second->getParams()['year']);

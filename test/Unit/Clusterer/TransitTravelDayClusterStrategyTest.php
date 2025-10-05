@@ -77,8 +77,8 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertGreaterThanOrEqual(60.0, $cluster->getParams()['distance_km']);
         self::assertArrayHasKey('place', $cluster->getParams());
         self::assertNotSame('', $cluster->getParams()['place']);
-        self::assertSame('frankfurt', $cluster->getParams()['place_city']);
-        self::assertSame('germany', $cluster->getParams()['place_country']);
+        self::assertSame('Frankfurt', $cluster->getParams()['place_city']);
+        self::assertSame('Germany', $cluster->getParams()['place_country']);
     }
 
     #[Test]

@@ -80,9 +80,9 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
         self::assertArrayHasKey('place_location', $params);
 
         self::assertSame('Innsbruck', $params['place']);
-        self::assertSame('innsbruck', $params['place_city']);
-        self::assertSame('austria', $params['place_country']);
-        self::assertSame('innsbruck, austria', $params['place_location']);
+        self::assertSame('Innsbruck', $params['place_city']);
+        self::assertSame('Austria', $params['place_country']);
+        self::assertSame('Innsbruck, Austria', $params['place_location']);
         self::assertSame(
             [1200, 1201, 1202, 1203, 1210, 1211, 1212, 1213],
             $cluster->getMembers()
