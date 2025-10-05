@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Integration\Service\Geocoding;
 
+use BadMethodCallException;
 use MagicSunday\Memories\Service\Geocoding\DefaultOverpassQueryBuilder;
 use MagicSunday\Memories\Service\Geocoding\DefaultOverpassResponseParser;
 use MagicSunday\Memories\Service\Geocoding\OverpassClient;
@@ -32,7 +33,7 @@ final class OverpassClientTest extends TestCase
     {
         $configuration = new OverpassTagConfiguration([
             [
-                'tourism' => ['attraction'],
+                'tourism'  => ['attraction'],
                 'historic' => ['castle', 'ruins'],
             ],
             [
@@ -101,7 +102,7 @@ final class RecordingHttpClient implements HttpClientInterface
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        $data          = $options['body']['data'] ?? null;
+        $data            = $options['body']['data'] ?? null;
         $this->lastQuery = is_string($data) ? $data : '';
 
         return $this->response;
@@ -109,7 +110,7 @@ final class RecordingHttpClient implements HttpClientInterface
 
     public function stream($responses, ?float $timeout = null): ResponseStreamInterface
     {
-        throw new \BadMethodCallException('Not implemented.');
+        throw new BadMethodCallException('Not implemented.');
     }
 
     public function withOptions(array $options): static

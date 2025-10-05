@@ -17,12 +17,12 @@ use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class QualityStage
+ * Class QualityStage.
  */
 final class QualityStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 

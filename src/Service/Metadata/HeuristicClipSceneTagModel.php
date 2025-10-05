@@ -15,7 +15,6 @@ use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 
 use function is_array;
-use function is_bool;
 use function is_string;
 use function max;
 use function min;
@@ -277,4 +276,3 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         return $value;
     }
 }
-

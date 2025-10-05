@@ -28,8 +28,8 @@ use function is_array;
 use function is_float;
 use function is_int;
 use function is_string;
-use function strtolower;
 use function str_contains;
+use function strtolower;
 use function usort;
 
 /**
@@ -76,7 +76,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             function (Media $m): bool {
                 $local = $this->localTimeHelper->resolve($m);
                 assert($local instanceof DateTimeImmutable);
-                $h     = (int) $local->format('G');
+                $h = (int) $local->format('G');
 
                 return ($h >= 20) || ($h <= 4);
             }
@@ -218,7 +218,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
      */
     private function collectSceneTags(array $run): array
     {
-        $keywords = ['night', 'club', 'party', 'concert', 'festival', 'bar', 'pub', 'dj', 'dance'];
+        $keywords  = ['night', 'club', 'party', 'concert', 'festival', 'bar', 'pub', 'dj', 'dance'];
         $collected = [];
 
         foreach ($run as $media) {

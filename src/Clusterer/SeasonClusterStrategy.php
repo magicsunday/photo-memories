@@ -112,7 +112,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         }
 
         return $out;
-}
+    }
 
     /**
      * @return array{0: string, 1: int}
@@ -159,9 +159,9 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         $normalized = mb_strtolower($value);
 
         return match ($normalized) {
-            'winter'    => 'Winter',
+            'winter' => 'Winter',
             'spring', 'frühling' => 'Frühling',
-            'summer', 'sommer'   => 'Sommer',
+            'summer', 'sommer' => 'Sommer',
             'autumn', 'fall', 'herbst' => 'Herbst',
             default => null,
         };

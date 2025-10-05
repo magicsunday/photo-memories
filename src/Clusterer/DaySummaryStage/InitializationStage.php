@@ -81,8 +81,8 @@ final readonly class InitializationStage implements DaySummaryStageInterface
      */
     public function __construct(
         private TimezoneResolverInterface $timezoneResolver,
-        private PoiClassifierInterface    $poiClassifier,
-        private string                    $timezone = 'Europe/Berlin',
+        private PoiClassifierInterface $poiClassifier,
+        private string $timezone = 'Europe/Berlin',
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -90,7 +90,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, DaySummary> $days
+     * @param array<string, DaySummary>                                                       $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return array<string, DaySummary>
@@ -155,7 +155,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
                 ];
             }
 
-            $summary = &$summaries[$date];
+            $summary              = &$summaries[$date];
             $summary['members'][] = $media;
             ++$summary['photoCount'];
 
@@ -208,8 +208,8 @@ final readonly class InitializationStage implements DaySummaryStageInterface
         $summaries = $this->ensureContinuousDayRange($summaries);
 
         foreach ($summaries as &$summary) {
-            $offset = $this->timezoneResolver->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
-            $summary['localTimezoneOffset'] = $offset;
+            $offset                             = $this->timezoneResolver->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
+            $summary['localTimezoneOffset']     = $offset;
             $summary['localTimezoneIdentifier'] = $this->timezoneResolver->determineLocalTimezoneIdentifier(
                 $summary['timezoneIdentifierVotes'],
                 $home,
@@ -228,6 +228,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
      * @param array<string, DaySummary> $days
      *
      * @return array<string, DaySummary>
+     *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */
@@ -266,6 +267,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
 
     /**
      * @return DaySummary
+     *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */

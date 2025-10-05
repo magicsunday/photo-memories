@@ -28,7 +28,7 @@ use function strlen;
 use function substr;
 
 /**
- * Class PhashSimilarityStrategy
+ * Class PhashSimilarityStrategy.
  */
 final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 {

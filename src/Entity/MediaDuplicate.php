@@ -24,10 +24,10 @@ use InvalidArgumentException;
     name             : 'media_duplicate',
     indexes          : [
         new ORM\Index(name: 'idx_media_duplicate_left', columns: ['media_left_id']),
-        new ORM\Index(name: 'idx_media_duplicate_right', columns: ['media_right_id'])
+        new ORM\Index(name: 'idx_media_duplicate_right', columns: ['media_right_id']),
     ],
     uniqueConstraints: [
-        new ORM\UniqueConstraint(name: 'uniq_media_duplicate_pair', columns: ['media_left_id', 'media_right_id'])
+        new ORM\UniqueConstraint(name: 'uniq_media_duplicate_pair', columns: ['media_left_id', 'media_right_id']),
     ]
 )]
 final class MediaDuplicate
@@ -73,7 +73,7 @@ final class MediaDuplicate
     private ?DateTimeImmutable $updatedAt = null;
 
     /**
-     * @throws InvalidArgumentException When the distance is negative or the media references are identical.
+     * @throws InvalidArgumentException when the distance is negative or the media references are identical
      */
     public function __construct(Media $leftMedia, Media $rightMedia, int $distance)
     {
@@ -126,7 +126,7 @@ final class MediaDuplicate
     /**
      * Updates the stored Hamming distance.
      *
-     * @throws InvalidArgumentException When the provided distance is negative.
+     * @throws InvalidArgumentException when the provided distance is negative
      */
     public function setDistance(int $distance): void
     {

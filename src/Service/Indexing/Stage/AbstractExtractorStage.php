@@ -21,7 +21,7 @@ use Throwable;
 use function sprintf;
 
 /**
- * Class AbstractExtractorStage
+ * Class AbstractExtractorStage.
  */
 abstract class AbstractExtractorStage implements MediaIngestionStageInterface
 {

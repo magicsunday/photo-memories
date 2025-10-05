@@ -18,8 +18,8 @@ use Symfony\Component\Process\Process;
 use Throwable;
 
 use function fclose;
-use function file_get_contents;
 use function file_exists;
+use function file_get_contents;
 use function file_put_contents;
 use function fopen;
 use function is_dir;
@@ -41,18 +41,18 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private ?string $configuredPhpBinary;
 
     public function __construct(
-        private string              $videoDirectory,
-        private string              $projectDirectory,
-        private float               $slideDuration,
-        ?string                     $phpBinary,
+        private string $videoDirectory,
+        private string $projectDirectory,
+        private float $slideDuration,
+        ?string $phpBinary,
         private PhpExecutableFinder $phpExecutableFinder,
     ) {
-        $phpBinary = is_string($phpBinary) ? trim($phpBinary) : null;
+        $phpBinary                 = is_string($phpBinary) ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
     }
 
     /**
-     * @param list<int>       $memberIds
+     * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
     public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus
@@ -114,7 +114,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     }
 
     /**
-     * @param list<int>       $memberIds
+     * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      *
      * @return list<string>

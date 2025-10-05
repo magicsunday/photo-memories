@@ -15,8 +15,8 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function abs;
-use function log;
 use function implode;
+use function log;
 use function max;
 use function min;
 use function sprintf;
@@ -94,7 +94,7 @@ final class MediaQualityAggregator
 
     private function weightedScore(array $components): ?float
     {
-        $sum = 0.0;
+        $sum       = 0.0;
         $weightSum = 0.0;
 
         foreach ($components as [$value, $weight]) {

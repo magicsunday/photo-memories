@@ -117,6 +117,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
      * @param int $h
      *
      * @return list<int> Flat array [R,G,B, R,G,B, ...] in 0..255, length = w*h*3
+     *
      * @throws ImagickException
      */
     public function exportRgbBytes(int $w, int $h): array

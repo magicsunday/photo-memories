@@ -24,14 +24,14 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
+use function file_exists;
+use function rename;
 use function sprintf;
 use function strtotime;
 use function sys_get_temp_dir;
 use function tempnam;
-use function rename;
 use function touch;
 use function unlink;
-use function file_exists;
 
 final class TimeNormalizerTest extends TestCase
 {
@@ -154,7 +154,7 @@ final class TimeNormalizerTest extends TestCase
     #[Test]
     public function resolvesTimezoneFromResolver(): void
     {
-        $rome = new DateTimeZone('Europe/Rome');
+        $rome       = new DateTimeZone('Europe/Rome');
         $normalizer = $this->createNormalizer(resolvedTimezone: $rome, defaultTimezone: 'UTC');
 
         $media = $this->makeMedia(
@@ -180,7 +180,7 @@ final class TimeNormalizerTest extends TestCase
 
     private function createNormalizer(
         ?DateTimeZone $resolvedTimezone = null,
-        string $defaultTimezone = 'UTC'
+        string $defaultTimezone = 'UTC',
     ): TimeNormalizer {
         $timezoneResolver = new class($resolvedTimezone) implements TimezoneResolverInterface {
             public function __construct(private readonly ?DateTimeZone $timezone)

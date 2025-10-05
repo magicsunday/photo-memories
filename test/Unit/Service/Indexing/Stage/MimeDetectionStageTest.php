@@ -26,7 +26,7 @@ use function unlink;
 
 final class MimeDetectionStageTest extends TestCase
 {
-    /** @var list<string> $tempFiles */
+    /** @var list<string> */
     private array $tempFiles = [];
 
     protected function tearDown(): void
@@ -67,7 +67,7 @@ final class MimeDetectionStageTest extends TestCase
     {
         $stage = new MimeDetectionStage();
 
-        $heicPath = $this->createTempFile('heic', 'heic-fixture');
+        $heicPath    = $this->createTempFile('heic', 'heic-fixture');
         $heicContext = MediaIngestionContext::create(
             $heicPath,
             false,
@@ -83,7 +83,7 @@ final class MimeDetectionStageTest extends TestCase
         self::assertFalse($heicResult->isDetectedRaw());
         self::assertFalse($heicResult->isDetectedHevc());
 
-        $rawPath = $this->createTempFile('dng', 'raw-fixture');
+        $rawPath    = $this->createTempFile('dng', 'raw-fixture');
         $rawContext = MediaIngestionContext::create(
             $rawPath,
             false,
@@ -98,7 +98,7 @@ final class MimeDetectionStageTest extends TestCase
         self::assertTrue($rawResult->isDetectedRaw());
         self::assertFalse($rawResult->isDetectedHeic());
 
-        $hevcPath = $this->createTempFile('hevc', 'video-fixture');
+        $hevcPath    = $this->createTempFile('hevc', 'video-fixture');
         $hevcContext = MediaIngestionContext::create(
             $hevcPath,
             false,

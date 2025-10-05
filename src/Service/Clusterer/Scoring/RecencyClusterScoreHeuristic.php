@@ -18,11 +18,11 @@ use function min;
 use function time;
 
 /**
- * Class RecencyClusterScoreHeuristic
+ * Class RecencyClusterScoreHeuristic.
  */
 final class RecencyClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
-    /** @var callable():int $timeProvider */
+    /** @var callable():int */
     private $timeProvider;
 
     private int $now = 0;

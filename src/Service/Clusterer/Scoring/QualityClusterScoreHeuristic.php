@@ -15,7 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 
 /**
- * Class QualityClusterScoreHeuristic
+ * Class QualityClusterScoreHeuristic.
  */
 final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {

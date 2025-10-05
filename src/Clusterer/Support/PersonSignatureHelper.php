@@ -29,7 +29,7 @@ use function trim;
 final class PersonSignatureHelper
 {
     /**
-     * @var array<string, int> $cache
+     * @var array<string, int>
      */
     private array $cache = [];
 
@@ -70,7 +70,7 @@ final class PersonSignatureHelper
 
     private function hashPerson(string $name): int
     {
-        $hash = substr(hash('sha256', $name), 0, 15);
+        $hash  = substr(hash('sha256', $name), 0, 15);
         $value = intval($hash, 16);
 
         if ($value < 1) {

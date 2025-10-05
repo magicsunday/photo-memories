@@ -12,17 +12,17 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer;
 
 /**
- * Class ClusterJobResult
+ * Class ClusterJobResult.
  */
 final readonly class ClusterJobResult
 {
     public function __construct(
-        private int  $totalMediaCount,
-        private int  $loadedMediaCount,
-        private int  $draftCount,
-        private int  $consolidatedCount,
-        private int  $persistedCount,
-        private int  $deletedCount,
+        private int $totalMediaCount,
+        private int $loadedMediaCount,
+        private int $draftCount,
+        private int $consolidatedCount,
+        private int $persistedCount,
+        private int $deletedCount,
         private bool $dryRun,
     ) {
     }

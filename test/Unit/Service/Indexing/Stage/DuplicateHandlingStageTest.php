@@ -79,7 +79,7 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with($filepath)
             ->willReturn($fastHash);
 
-        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $stage   = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,
@@ -129,7 +129,7 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with($filepath)
             ->willReturn($fastHash);
 
-        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $stage   = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,
@@ -188,7 +188,7 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with($filepath)
             ->willReturn($fastHash);
 
-        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $stage   = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,
@@ -237,7 +237,7 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with($filepath)
             ->willReturn($fastHash);
 
-        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $stage   = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             true,
@@ -282,7 +282,7 @@ final class DuplicateHandlingStageTest extends TestCase
             ->with($filepath)
             ->willReturn($fastHash);
 
-        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $stage   = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
         $context = MediaIngestionContext::create(
             $filepath,
             false,

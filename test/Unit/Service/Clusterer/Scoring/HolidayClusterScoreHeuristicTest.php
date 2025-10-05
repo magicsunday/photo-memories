@@ -23,7 +23,7 @@ final class HolidayClusterScoreHeuristicTest extends TestCase
     #[Test]
     public function enrichMarksHolidayRange(): void
     {
-        $resolver = new class() implements HolidayResolverInterface {
+        $resolver = new class implements HolidayResolverInterface {
             public function isHoliday(DateTimeImmutable $day): bool
             {
                 return $day->format('Y-m-d') === '2024-12-25';
@@ -42,7 +42,7 @@ final class HolidayClusterScoreHeuristicTest extends TestCase
             params: [
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-12-25 08:00:00'))->getTimestamp(),
-                    'to' => (new DateTimeImmutable('2024-12-25 18:00:00'))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-12-25 18:00:00'))->getTimestamp(),
                 ],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],

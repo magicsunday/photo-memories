@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Http\Response;
 
+use RuntimeException;
+
 use function array_map;
 use function explode;
 use function header;
@@ -21,14 +23,13 @@ use function readfile;
 use function strtolower;
 use function strtoupper;
 use function substr;
-use RuntimeException;
 
 /**
  * Simple HTTP response abstraction.
  */
 class Response
 {
-    /** @var array<string,string> $headers */
+    /** @var array<string,string> */
     private array $headers;
 
     public function __construct(

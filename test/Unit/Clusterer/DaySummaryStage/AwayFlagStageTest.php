@@ -40,10 +40,10 @@ final class AwayFlagStageTest extends TestCase
         $awayStage        = new AwayFlagStage($timezoneResolver, new BaseLocationResolver());
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -60,11 +60,11 @@ final class AwayFlagStageTest extends TestCase
             },
         );
 
-        $items = [];
+        $items     = [];
         $homeStart = new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $homeStart->add(new DateInterval('PT' . ($i * 2) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 10 + $i,
                 sprintf('home-%d.jpg', $i),
                 $timestamp,
@@ -80,7 +80,7 @@ final class AwayFlagStageTest extends TestCase
         $awayStart = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('America/New_York'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $awayStart->add(new DateInterval('PT' . ($i * 3) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 20 + $i,
                 sprintf('away-%d.jpg', $i),
                 $timestamp,

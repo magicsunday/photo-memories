@@ -28,7 +28,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 {
     use StageSupportTrait;
 
-    /** @var array<string,int> $priorityMap */
+    /** @var array<string,int> */
     private array $priorityMap = [];
 
     /**
@@ -103,7 +103,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         /** @var list<int> $selected */
-        $selected = [];
+        $selected  = [];
         $processed = 0;
 
         foreach ($order as $algorithm) {

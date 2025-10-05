@@ -17,8 +17,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_get_contents;
-use function sys_get_temp_dir;
 use function str_repeat;
+use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
 
@@ -27,7 +27,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
     #[Test]
     public function extractsRotationFromTagAndDetectsStabilisation(): void
     {
-        $fixture = $this->loadFixture('rotate-stabilised.json');
+        $fixture   = $this->loadFixture('rotate-stabilised.json');
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (string $command): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
@@ -55,19 +55,19 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertSame(
                 [
                     [
-                        'index' => 0,
-                        'codec_name' => 'h264',
-                        'codec_type' => 'video',
+                        'index'          => 0,
+                        'codec_name'     => 'h264',
+                        'codec_type'     => 'video',
                         'avg_frame_rate' => '120/1',
-                        'tags' => ['rotate' => '90'],
+                        'tags'           => ['rotate' => '90'],
                         'side_data_list' => [
                             [
                                 'side_data_type' => 'Display Matrix',
-                                'rotation' => '90',
+                                'rotation'       => '90',
                             ],
                             [
                                 'side_data_type' => 'Camera Motion',
-                                'stabilization' => 'on',
+                                'stabilization'  => 'on',
                             ],
                         ],
                     ],
@@ -82,7 +82,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
     #[Test]
     public function extractsDisplayMatrixRotationWithoutStabilisation(): void
     {
-        $fixture = $this->loadFixture('displaymatrix-rotation.json');
+        $fixture   = $this->loadFixture('displaymatrix-rotation.json');
         $extractor = new FfprobeMetadataExtractor(processRunner: static fn (string $command): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
@@ -110,14 +110,14 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertSame(
                 [
                     [
-                        'index' => 0,
-                        'codec_name' => 'hevc',
-                        'codec_type' => 'video',
+                        'index'          => 0,
+                        'codec_name'     => 'hevc',
+                        'codec_type'     => 'video',
                         'avg_frame_rate' => '30/1',
                         'side_data_list' => [
                             [
                                 'side_data_type' => 'Display Matrix',
-                                'displaymatrix' => [
+                                'displaymatrix'  => [
                                     'rotation' => '-90',
                                 ],
                             ],
@@ -133,7 +133,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
 
     private function loadFixture(string $filename): string
     {
-        $path = __DIR__ . '/fixtures/ffprobe/' . $filename;
+        $path     = __DIR__ . '/fixtures/ffprobe/' . $filename;
         $contents = file_get_contents($path);
         if ($contents === false) {
             self::fail('Unable to load ffprobe fixture: ' . $filename);

@@ -23,13 +23,13 @@ final class DimensionsExifMetadataProcessor implements ExifMetadataProcessorInte
 {
     public function process(array $exif, Media $media): void
     {
-        $width = $media->getWidth();
+        $width  = $media->getWidth();
         $height = $media->getHeight();
         if ($width !== null && $height !== null && $width > 0 && $height > 0) {
             return;
         }
 
-        $computedWidth = isset($exif['COMPUTED']['Width']) ? (int) $exif['COMPUTED']['Width'] : null;
+        $computedWidth  = isset($exif['COMPUTED']['Width']) ? (int) $exif['COMPUTED']['Width'] : null;
         $computedHeight = isset($exif['COMPUTED']['Height']) ? (int) $exif['COMPUTED']['Height'] : null;
 
         if ($width === null && $computedWidth !== null && $computedWidth > 0) {

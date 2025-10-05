@@ -22,7 +22,7 @@ use MagicSunday\Memories\Entity\Location;
 final class LocationCellIndex
 {
     /**
-     * @var array<string,int> $cellToId cell -> location id
+     * @var array<string,int> cell -> location id
      */
     private array $cellToId = [];
 

@@ -16,8 +16,8 @@ namespace MagicSunday\Memories\Entity\Enum;
  */
 enum TimeSource: string
 {
-    case EXIF = 'EXIF';
+    case EXIF            = 'EXIF';
     case VIDEO_QUICKTIME = 'VIDEO_QUICKTIME';
-    case FILENAME = 'FILENAME';
-    case FILE_MTIME = 'FILE_MTIME';
+    case FILENAME        = 'FILENAME';
+    case FILE_MTIME      = 'FILE_MTIME';
 }

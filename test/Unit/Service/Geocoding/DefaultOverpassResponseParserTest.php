@@ -41,20 +41,20 @@ final class DefaultOverpassResponseParserTest extends TestCase
                     'lat'  => 1.23,
                     'lon'  => 3.21,
                     'tags' => [
-                        'name'    => 'Example Park',
-                        'tourism' => 'attraction',
+                        'name'     => 'Example Park',
+                        'tourism'  => 'attraction',
                         'alt_name' => 'Alt One;Alt Two',
-                        'name:de' => 'Beispielpark',
+                        'name:de'  => 'Beispielpark',
                         'wikidata' => 'Q123',
                     ],
                 ],
                 [
-                    'type' => 'way',
-                    'id'   => 2,
+                    'type'   => 'way',
+                    'id'     => 2,
                     'center' => ['lat' => 1.24, 'lon' => 3.22],
-                    'tags' => [
-                        'tourism' => 'viewpoint',
-                        'name:en' => 'Cliff View',
+                    'tags'   => [
+                        'tourism'  => 'viewpoint',
+                        'name:en'  => 'Cliff View',
                         'alt_name' => 'Lookout',
                     ],
                 ],
@@ -72,7 +72,7 @@ final class DefaultOverpassResponseParserTest extends TestCase
         self::assertSame('attraction', $first['categoryValue']);
         self::assertSame(
             [
-                'tourism' => 'attraction',
+                'tourism'  => 'attraction',
                 'wikidata' => 'Q123',
             ],
             $first['tags']

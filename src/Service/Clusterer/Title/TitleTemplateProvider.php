@@ -33,7 +33,7 @@ use function is_string;
  */
 final class TitleTemplateProvider
 {
-    /** @var array<string, array<string, array{title:string,subtitle?:string}>> $templates */
+    /** @var array<string, array<string, array{title:string,subtitle?:string}>> */
     private array $templates = [];
 
     public function __construct(
@@ -45,14 +45,14 @@ final class TitleTemplateProvider
 
     private function load(): void
     {
-        $resolvedPath = $this->configPath;
+        $resolvedPath  = $this->configPath;
         $searchedPaths = [$this->configPath];
 
         if (!is_file($resolvedPath)) {
             $pharPath = Phar::running(false);
 
             if ($pharPath !== '') {
-                $fallbackPath = 'phar://' . $pharPath . '/config/templates/titles.yaml';
+                $fallbackPath    = 'phar://' . $pharPath . '/config/templates/titles.yaml';
                 $searchedPaths[] = $fallbackPath;
 
                 if (is_file($fallbackPath)) {

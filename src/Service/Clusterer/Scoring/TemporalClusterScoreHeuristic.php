@@ -19,7 +19,7 @@ use function count;
 use function is_array;
 
 /**
- * Class TemporalClusterScoreHeuristic
+ * Class TemporalClusterScoreHeuristic.
  */
 final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {

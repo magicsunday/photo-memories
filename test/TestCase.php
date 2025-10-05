@@ -135,7 +135,7 @@ abstract class TestCase extends BaseTestCase
     ): Media {
         $factory = (static fn (string $mediaPath, string $mediaChecksum, int $mediaSize): Media => new class($mediaPath, $mediaChecksum, $mediaSize, $personIds) extends Media implements PersonTaggedMediaInterface {
             /**
-             * @var list<int> $personIds
+             * @var list<int>
              */
             private readonly array $personIds;
 

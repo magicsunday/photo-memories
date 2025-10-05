@@ -1,8 +1,4 @@
-<?php 
-
-
-
-
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -20,6 +16,8 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Http\Request;
 use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Http\Response\JsonResponse;
@@ -30,12 +28,10 @@ use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
-use MagicSunday\Memories\Feed\MemoryFeedItem;
-use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
-use function array_filter;
 use function array_fill_keys;
+use function array_filter;
 use function array_flip;
 use function array_intersect_key;
 use function array_key_exists;
@@ -65,7 +61,7 @@ use const SORT_STRING;
 final class FeedController
 {
     /**
-     * @var array<int, Media|null> $mediaCache
+     * @var array<int, Media|null>
      */
     private array $mediaCache = [];
 
@@ -171,13 +167,12 @@ final class FeedController
         );
 
         $meta = [
-            'erstelltAm'          =>
-                (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-            'gesamtVerfuegbar'    => count($items),
-            'anzahlGeliefert'     => count($data),
+            'erstelltAm'            => (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+            'gesamtVerfuegbar'      => count($items),
+            'anzahlGeliefert'       => count($data),
             'verfuegbareStrategien' => $availableStrategies,
             'verfuegbareGruppen'    => $availableGroups,
-            'filter'              => [
+            'filter'                => [
                 'score'     => $minScore,
                 'strategie' => $strategy,
                 'datum'     => $filterDate?->format('Y-m-d'),
@@ -398,9 +393,9 @@ final class FeedController
             $media = $memberMediaMap[$memberId] ?? null;
 
             $memberPayload[] = [
-                'mediaId'        => $memberId,
-                'thumbnail'      => $this->buildThumbnailUrl($memberId, $this->defaultMemberWidth),
-                'aufgenommenAm'  => $this->formatTakenAt($media),
+                'mediaId'       => $memberId,
+                'thumbnail'     => $this->buildThumbnailUrl($memberId, $this->defaultMemberWidth),
+                'aufgenommenAm' => $this->formatTakenAt($media),
             ];
         }
 
@@ -410,20 +405,20 @@ final class FeedController
         $status = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
 
         return [
-            'id'            => $itemId,
-            'algorithmus'   => $item->getAlgorithm(),
-            'gruppe'        => $this->extractGroup($item),
-            'titel'         => $item->getTitle(),
-            'untertitel'    => $item->getSubtitle(),
-            'score'         => $item->getScore(),
-            'coverMediaId'  => $coverId,
-            'cover'         => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth) : null,
+            'id'                 => $itemId,
+            'algorithmus'        => $item->getAlgorithm(),
+            'gruppe'             => $this->extractGroup($item),
+            'titel'              => $item->getTitle(),
+            'untertitel'         => $item->getSubtitle(),
+            'score'              => $item->getScore(),
+            'coverMediaId'       => $coverId,
+            'cover'              => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth) : null,
             'coverAufgenommenAm' => $this->formatTakenAt($coverMedia),
-            'mitglieder'    => $previewMembers,
-            'galerie'       => $memberPayload,
-            'zeitspanne'    => $this->extractTimeRange($item),
-            'zusatzdaten'   => $item->getParams(),
-            'slideshow'     => $status->toArray(),
+            'mitglieder'         => $previewMembers,
+            'galerie'            => $memberPayload,
+            'zeitspanne'         => $this->extractTimeRange($item),
+            'zusatzdaten'        => $item->getParams(),
+            'slideshow'          => $status->toArray(),
         ];
     }
 
@@ -471,12 +466,12 @@ final class FeedController
 
         $result = [];
         if (is_numeric($from)) {
-            $fromDate = (new DateTimeImmutable('@' . $from))->setTimezone(new DateTimeZone('Europe/Berlin'));
+            $fromDate      = (new DateTimeImmutable('@' . $from))->setTimezone(new DateTimeZone('Europe/Berlin'));
             $result['von'] = $fromDate->format(DateTimeInterface::ATOM);
         }
 
         if (is_numeric($to)) {
-            $toDate = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
+            $toDate        = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
             $result['bis'] = $toDate->format(DateTimeInterface::ATOM);
         }
 
@@ -565,6 +560,7 @@ final class FeedController
 
         return false;
     }
+
     public function slideshow(string $itemId): JsonResponse|BinaryFileResponse
     {
         $path = $this->slideshowManager->resolveVideoPath($itemId);

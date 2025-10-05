@@ -32,8 +32,8 @@ use function str_starts_with;
 final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInterface
 {
     /**
-     * @param int   $maxTags  Maximum number of scene tags to persist.
-     * @param float $minScore Minimum confidence required to accept a tag.
+     * @param int   $maxTags  maximum number of scene tags to persist
+     * @param float $minScore minimum confidence required to accept a tag
      */
     public function __construct(
         private VisionSceneTagModelInterface $model,
@@ -143,4 +143,3 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         return sprintf('scene=%s', implode(',', $parts));
     }
 }
-

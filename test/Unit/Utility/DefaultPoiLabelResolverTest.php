@@ -23,10 +23,10 @@ final class DefaultPoiLabelResolverTest extends TestCase
         $resolver = new DefaultPoiLabelResolver('de-DE');
 
         $label = $resolver->preferredLabel([
-            'name'          => 'Central Park',
-            'names'         => [
-                'default'    => 'Central Park',
-                'localized'  => [
+            'name'  => 'Central Park',
+            'names' => [
+                'default'   => 'Central Park',
+                'localized' => [
                     'en'    => 'Central Park',
                     'de-de' => 'Zentralpark',
                 ],
@@ -46,8 +46,8 @@ final class DefaultPoiLabelResolverTest extends TestCase
         $resolver = new DefaultPoiLabelResolver('fr');
 
         $label = $resolver->preferredLabel([
-            'name'          => 'City Museum',
-            'names'         => [
+            'name'  => 'City Museum',
+            'names' => [
                 'default'    => null,
                 'localized'  => [],
                 'alternates' => [],

@@ -22,9 +22,9 @@ final class MetadataFeatureVersion
      * Version identifiers per metadata extraction module.
      */
     public const array MODULE_VERSIONS = [
-        'core' => 1,
-        'exif' => 1,
-        'xmp' => 1,
+        'core'   => 1,
+        'exif'   => 1,
+        'xmp'    => 1,
         'vision' => 1,
     ];
 

@@ -97,6 +97,7 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
      * @param string            $phash
      *
      * @return list<Media>
+     *
      * @throws Exception
      * @throws ORMException
      * @throws OptimisticLockException

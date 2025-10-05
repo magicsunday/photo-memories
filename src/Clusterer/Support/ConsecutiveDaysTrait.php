@@ -23,7 +23,7 @@ trait ConsecutiveDaysTrait
     {
         $timezone = new DateTimeZone('UTC');
 
-        $first = DateTimeImmutable::createFromFormat('!Y-m-d', $a, $timezone);
+        $first  = DateTimeImmutable::createFromFormat('!Y-m-d', $a, $timezone);
         $second = DateTimeImmutable::createFromFormat('!Y-m-d', $b, $timezone);
 
         if ($first === false || $second === false) {

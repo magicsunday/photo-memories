@@ -24,7 +24,7 @@ final class PoiClassifierTest extends TestCase
         $location   = $this->makeLocation('poi-sample', 'Sample', 47.0, 10.0);
         $location->setPois([
             [
-                'categoryKey' => 'tourism',
+                'categoryKey'   => 'tourism',
                 'categoryValue' => 'zoo',
             ],
         ]);
@@ -39,9 +39,9 @@ final class PoiClassifierTest extends TestCase
         $location   = $this->makeLocation('tourism', 'Art Museum', 48.1, 11.5);
         $location->setPois([
             [
-                'categoryKey' => 'amenity',
+                'categoryKey'   => 'amenity',
                 'categoryValue' => 'arts_centre',
-                'tags' => [
+                'tags'          => [
                     'tourism' => 'museum',
                 ],
             ],

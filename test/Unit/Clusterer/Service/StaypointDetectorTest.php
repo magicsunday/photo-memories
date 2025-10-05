@@ -27,7 +27,7 @@ final class StaypointDetectorTest extends TestCase
         $timezone = new DateTimeZone('UTC');
         $start    = new DateTimeImmutable('2024-05-10 09:00:00', $timezone);
 
-        $media = [];
+        $media   = [];
         $media[] = $this->makeMediaFixture(1, 'staypoint-1.jpg', $start, 48.2082, 16.3738);
         $media[] = $this->makeMediaFixture(
             2,
@@ -63,7 +63,7 @@ final class StaypointDetectorTest extends TestCase
         $timezone = new DateTimeZone('UTC');
         $start    = new DateTimeImmutable('2024-05-11 12:00:00', $timezone);
 
-        $media = [];
+        $media   = [];
         $media[] = $this->makeMediaFixture(10, 'short-visit-1.jpg', $start, 51.0504, 13.7373);
         $media[] = $this->makeMediaFixture(
             11,

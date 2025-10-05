@@ -57,6 +57,7 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     *
      * @throws DateInvalidOperationException
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException

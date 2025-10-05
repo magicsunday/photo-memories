@@ -28,15 +28,15 @@ use function microtime;
 use function sprintf;
 
 /**
- * Class DefaultClusterJobRunner
+ * Class DefaultClusterJobRunner.
  */
 final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterface
 {
     public function __construct(
-        private EntityManagerInterface       $entityManager,
-        private HybridClustererInterface     $clusterer,
+        private EntityManagerInterface $entityManager,
+        private HybridClustererInterface $clusterer,
         private ClusterConsolidatorInterface $consolidator,
-        private ClusterPersistenceInterface  $persistence,
+        private ClusterPersistenceInterface $persistence,
     ) {
     }
 
@@ -69,11 +69,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
 
         /** @var list<Media> $items */
-        $items = [];
+        $items      = [];
         $loadHandle = $progressReporter->create('Medien laden', '📥 Einlesen', $total);
         $loadStart  = microtime(true);
         foreach ($listQb->getQuery()->toIterable() as $row) {
-            $items[] = $row;
+            $items[]   = $row;
             $processed = count($items);
             $loadHandle->setRate($this->formatRate($processed, $loadStart, 'Medien'));
             $loadHandle->advance();

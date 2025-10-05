@@ -23,7 +23,7 @@ final class DefaultOverpassQueryBuilderTest extends TestCase
     {
         $configuration = new OverpassTagConfiguration([
             [
-                'tourism' => ['attraction'],
+                'tourism'  => ['attraction'],
                 'historic' => ['castle', 'ruins'],
             ],
             [

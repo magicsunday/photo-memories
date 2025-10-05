@@ -12,10 +12,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Support;
 
 use MagicSunday\Memories\Entity\Media;
-
 use MagicSunday\Memories\Utility\LocationHelper;
-use function in_array;
+
 use function implode;
+use function in_array;
 use function is_string;
 
 /**
@@ -28,7 +28,7 @@ use function is_string;
 trait ClusterLocationMetadataTrait
 {
     /**
-     * @param list<Media>           $members
+     * @param list<Media>          $members
      * @param array<string, mixed> $params
      *
      * @return array<string, mixed>

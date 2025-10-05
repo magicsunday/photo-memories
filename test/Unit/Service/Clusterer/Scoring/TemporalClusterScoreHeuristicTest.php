@@ -33,7 +33,7 @@ final class TemporalClusterScoreHeuristicTest extends TestCase
             params: [
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-01-01 10:00:00'))->getTimestamp(),
-                    'to' => (new DateTimeImmutable('2024-01-01 12:00:00'))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-01-01 12:00:00'))->getTimestamp(),
                 ],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],

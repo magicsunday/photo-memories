@@ -12,17 +12,17 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 /**
- * Class GeocodeCommandOptions
+ * Class GeocodeCommandOptions.
  */
 final readonly class GeocodeCommandOptions
 {
     public function __construct(
-        private bool    $dryRun,
-        private ?int    $limit,
-        private bool    $processAll,
+        private bool $dryRun,
+        private ?int $limit,
+        private bool $processAll,
         private ?string $city,
-        private bool    $missingPois,
-        private bool    $refreshPois,
+        private bool $missingPois,
+        private bool $refreshPois,
     ) {
     }
 

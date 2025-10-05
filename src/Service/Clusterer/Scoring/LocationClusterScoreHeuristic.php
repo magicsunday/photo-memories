@@ -18,7 +18,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function count;
 
 /**
- * Class LocationClusterScoreHeuristic
+ * Class LocationClusterScoreHeuristic.
  */
 final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {

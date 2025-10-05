@@ -49,7 +49,7 @@ final class FilterNormalizationStage implements ClusterConsolidationStageInterfa
         }
 
         /** @var list<ClusterDraft> $kept */
-        $kept = [];
+        $kept  = [];
         $index = 0;
         foreach ($drafts as $draft) {
             ++$index;

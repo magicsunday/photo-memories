@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Location;
+
 use function count;
 
 /**
@@ -29,21 +30,21 @@ final class ClusterDraft
     /**
      * Raw configuration parameters provided by the clustering strategy.
      *
-     * @var array<string, int|float|string|bool|array|null> $params
+     * @var array<string, int|float|string|bool|array|null>
      */
     private array $params;
 
     /**
      * Geographic centroid coordinates (latitude/longitude pair).
      *
-     * @var array{lat: float, lon: float} $centroid
+     * @var array{lat: float, lon: float}
      */
     private readonly array $centroid;
 
     /**
      * Ordered identifiers of media entities that belong to the cluster.
      *
-     * @var list<int> $members
+     * @var list<int>
      */
     private readonly array $members;
 
@@ -150,8 +151,8 @@ final class ClusterDraft
     /**
      * Overrides a single configuration parameter on the draft.
      *
-     * @param string                               $key   Name of the parameter to override.
-     * @param int|float|string|bool|array|null     $value Updated parameter value.
+     * @param string                           $key   name of the parameter to override
+     * @param int|float|string|bool|array|null $value updated parameter value
      */
     public function setParam(string $key, int|float|string|bool|array|null $value): void
     {
@@ -191,7 +192,7 @@ final class ClusterDraft
     /**
      * Sets the timestamp of the first media item.
      *
-     * @param DateTimeImmutable|null $startAt Timestamp of the first item in the cluster.
+     * @param DateTimeImmutable|null $startAt timestamp of the first item in the cluster
      */
     public function setStartAt(?DateTimeImmutable $startAt): void
     {
@@ -211,7 +212,7 @@ final class ClusterDraft
     /**
      * Sets the timestamp of the last media item.
      *
-     * @param DateTimeImmutable|null $endAt Timestamp of the last item in the cluster.
+     * @param DateTimeImmutable|null $endAt timestamp of the last item in the cluster
      */
     public function setEndAt(?DateTimeImmutable $endAt): void
     {
@@ -231,7 +232,7 @@ final class ClusterDraft
     /**
      * Updates the cached number of members.
      *
-     * @param int $count Number of members associated with the cluster.
+     * @param int $count number of members associated with the cluster
      */
     public function setMembersCount(int $count): void
     {
@@ -251,7 +252,7 @@ final class ClusterDraft
     /**
      * Sets how many photos belong to the cluster.
      *
-     * @param int|null $count Number of photos.
+     * @param int|null $count number of photos
      */
     public function setPhotoCount(?int $count): void
     {
@@ -271,7 +272,7 @@ final class ClusterDraft
     /**
      * Sets how many videos belong to the cluster.
      *
-     * @param int|null $count Number of videos.
+     * @param int|null $count number of videos
      */
     public function setVideoCount(?int $count): void
     {
@@ -291,7 +292,7 @@ final class ClusterDraft
     /**
      * Sets the identifier of the cover media item.
      *
-     * @param int|null $mediaId Identifier of the media entity used as cover.
+     * @param int|null $mediaId identifier of the media entity used as cover
      */
     public function setCoverMediaId(?int $mediaId): void
     {
@@ -311,7 +312,7 @@ final class ClusterDraft
     /**
      * Sets the location associated with the cluster.
      *
-     * @param Location|null $location Location assigned to the cluster.
+     * @param Location|null $location location assigned to the cluster
      */
     public function setLocation(?Location $location): void
     {
@@ -331,7 +332,7 @@ final class ClusterDraft
     /**
      * Sets the algorithm version that produced the cluster.
      *
-     * @param string|null $version Algorithm version label.
+     * @param string|null $version algorithm version label
      */
     public function setAlgorithmVersion(?string $version): void
     {
@@ -351,7 +352,7 @@ final class ClusterDraft
     /**
      * Sets the configuration hash used during clustering.
      *
-     * @param string|null $hash Hash of the configuration snapshot.
+     * @param string|null $hash hash of the configuration snapshot
      */
     public function setConfigHash(?string $hash): void
     {
@@ -371,7 +372,7 @@ final class ClusterDraft
     /**
      * Sets the cached latitude of the centroid.
      *
-     * @param float|null $lat Latitude of the centroid.
+     * @param float|null $lat latitude of the centroid
      */
     public function setCentroidLat(?float $lat): void
     {
@@ -391,7 +392,7 @@ final class ClusterDraft
     /**
      * Sets the cached longitude of the centroid.
      *
-     * @param float|null $lon Longitude of the centroid.
+     * @param float|null $lon longitude of the centroid
      */
     public function setCentroidLon(?float $lon): void
     {
@@ -411,7 +412,7 @@ final class ClusterDraft
     /**
      * Sets the S2 cell identifier of the centroid.
      *
-     * @param string|null $cell S2 cell identifier with level 7 precision.
+     * @param string|null $cell S2 cell identifier with level 7 precision
      */
     public function setCentroidCell7(?string $cell): void
     {

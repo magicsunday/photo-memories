@@ -72,6 +72,7 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
      * @param int $d
      *
      * @return array{bool, ?string}
+     *
      * @throws DateMalformedStringException
      */
     private function isGermanHoliday(int $y, int $m, int $d): array

@@ -26,9 +26,9 @@ final class PoiClusterScoreHeuristicTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [
-                'poi_label' => 'Brandenburger Tor',
+                'poi_label'        => 'Brandenburger Tor',
                 'poi_category_key' => 'tourism',
-                'poi_tags' => ['wikidata' => 'Q64'],
+                'poi_tags'         => ['wikidata' => 'Q64'],
             ],
             centroid: ['lat' => 52.5163, 'lon' => 13.3777],
             members: [],

@@ -125,11 +125,11 @@ final class DeviceSimilarityStrategyTest extends TestCase
 
         $membersByDevice = [];
         foreach ($clusters as $cluster) {
-            $params = $cluster->getParams();
+            $params                             = $cluster->getParams();
             $membersByDevice[$params['device']] = $cluster->getMembers();
         }
 
-        $aliceFirstBody = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-123';
+        $aliceFirstBody  = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-123';
         $aliceSecondBody = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-456';
         $bobBody         = 'Fujifilm X-T5 – Besitzer: Bob, Seriennummer: SN-123';
 

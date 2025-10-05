@@ -22,12 +22,12 @@ use function is_array;
 use function iterator_to_array;
 
 /**
- * Class DefaultMediaIngestionPipeline
+ * Class DefaultMediaIngestionPipeline.
  */
 final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipelineInterface
 {
     /**
-     * @var list<MediaIngestionStageInterface> $stages
+     * @var list<MediaIngestionStageInterface>
      */
     private array $stages;
 
@@ -45,7 +45,7 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
         bool $dryRun,
         bool $withThumbnails,
         bool $strictMime,
-        OutputInterface $output
+        OutputInterface $output,
     ): ?Media {
         $context = MediaIngestionContext::create($filepath, $force, $dryRun, $withThumbnails, $strictMime, $output);
 

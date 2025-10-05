@@ -70,7 +70,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     /**
      * @param list<Media> $items
      *
-     * @return null|array
+     * @return array|null
+     *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */
@@ -81,7 +82,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         if ($this->homeLat !== null && $this->homeLon !== null) {
             $radius = $this->homeRadiusKm ?? $this->defaultHomeRadiusKm;
 
-            $country = null;
+            $country      = null;
             $locationInfo = $tz->getLocation();
             if (is_array($locationInfo)) {
                 $countryCode = $locationInfo['country_code'] ?? null;
@@ -90,7 +91,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                 }
             }
 
-            $offsetSeconds = (new DateTimeImmutable('now', $tz))->getOffset();
+            $offsetSeconds  = (new DateTimeImmutable('now', $tz))->getOffset();
             $timezoneOffset = intdiv($offsetSeconds, 60);
 
             return [
@@ -212,7 +213,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             }
         }
 
-        $offsets = $clusters[$bestKey]['offsets'];
+        $offsets        = $clusters[$bestKey]['offsets'];
         $timezoneOffset = null;
         if ($offsets !== []) {
             $maxOffsetCount = 0;

@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\Test;
 use function file_put_contents;
 use function imagecolorallocate;
 use function imagecreatetruecolor;
+use function imagedestroy;
 use function imagefilledrectangle;
 use function imagejpeg;
-use function imagedestroy;
 use function is_file;
 use function strlen;
 use function substr;
@@ -122,7 +122,7 @@ final class PerceptualHashExtractorTest extends TestCase
         $image = imagecreatetruecolor(64, 64);
         for ($y = 0; $y < 64; ++$y) {
             for ($x = 0; $x < 64; ++$x) {
-                $gray = (int) (($x + $y) % 256);
+                $gray  = (int) (($x + $y) % 256);
                 $color = imagecolorallocate($image, $gray, $gray, $gray);
                 imagefilledrectangle($image, $x, $y, $x, $y, $color);
             }

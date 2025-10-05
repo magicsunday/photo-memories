@@ -22,9 +22,9 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 
+use function str_pad;
 use function strlen;
 use function strtolower;
-use function str_pad;
 use function substr;
 use function trim;
 
@@ -82,6 +82,7 @@ readonly class MediaRepository implements MemberMediaLookupInterface
      * @param int    $limit
      *
      * @return list<array{media: Media, distance: int}>
+     *
      * @throws Exception
      * @throws ORMException
      * @throws OptimisticLockException
@@ -98,13 +99,13 @@ readonly class MediaRepository implements MemberMediaLookupInterface
             1
         );
 
-        $conn        = $this->em->getConnection();
+        $conn         = $this->em->getConnection();
         $prefixLength = min(
             $this->phashPrefixLength,
             32
         );
-        $phashPrefix  = $prefixLength > 0 ? substr($phashHex, 0, $prefixLength) : '';
-        $phash64Hex   = substr($phashHex, 0, 16);
+        $phashPrefix = $prefixLength > 0 ? substr($phashHex, 0, $prefixLength) : '';
+        $phash64Hex  = substr($phashHex, 0, 16);
         if (strlen($phash64Hex) < 16) {
             $phash64Hex = str_pad($phash64Hex, 16, '0');
         }
@@ -127,16 +128,16 @@ SQL;
         $rows = $conn->fetchAllAssociative(
             $sql,
             [
-                'phashHex'   => $phash64Hex,
-                'phashPrefix'=> $phashPrefix,
-                'maxHamming' => $maxHamming,
-                'limit'      => $limit,
+                'phashHex'    => $phash64Hex,
+                'phashPrefix' => $phashPrefix,
+                'maxHamming'  => $maxHamming,
+                'limit'       => $limit,
             ],
             [
-                'phashHex'   => ParameterType::STRING,
-                'phashPrefix'=> ParameterType::STRING,
-                'maxHamming' => ParameterType::INTEGER,
-                'limit'      => ParameterType::INTEGER,
+                'phashHex'    => ParameterType::STRING,
+                'phashPrefix' => ParameterType::STRING,
+                'maxHamming'  => ParameterType::INTEGER,
+                'limit'       => ParameterType::INTEGER,
             ]
         );
 

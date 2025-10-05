@@ -33,7 +33,7 @@ final class PersistenceBatchStageTest extends TestCase
         $entityManager->expects(self::once())->method('flush');
         $entityManager->expects(self::never())->method('clear');
 
-        $stage = new PersistenceBatchStage($entityManager, 10);
+        $stage   = new PersistenceBatchStage($entityManager, 10);
         $context = MediaIngestionContext::create(
             'file',
             false,

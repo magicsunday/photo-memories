@@ -15,13 +15,13 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 
 /**
- * Class NullProgressReporter
+ * Class NullProgressReporter.
  */
 final class NullProgressReporter implements ProgressReporterInterface
 {
     public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
     {
-        return new class() implements ProgressHandleInterface {
+        return new class implements ProgressHandleInterface {
             public function advance(int $step = 1): void
             {
             }

@@ -35,7 +35,7 @@ final class VacationScoreCalculatorTest extends TestCase
     public function buildDraftScoresMultiDayTripAsVacation(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator = new VacationScoreCalculator(
+        $calculator     = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             holidayResolver: new NullHolidayResolver(),
             timezone: 'Europe/Berlin',
@@ -43,19 +43,19 @@ final class VacationScoreCalculatorTest extends TestCase
         );
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
         $start = new DateTimeImmutable('2024-04-01 09:00:00');
-        $days = [];
+        $days  = [];
         for ($i = 0; $i < 3; ++$i) {
-            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
-            $members = $this->makeMembersForDay($i, $dayDate);
-            $dayKey = $dayDate->format('Y-m-d');
+            $dayDate       = $start->add(new DateInterval('P' . $i . 'D'));
+            $members       = $this->makeMembersForDay($i, $dayDate);
+            $dayKey        = $dayDate->format('Y-m-d');
             $days[$dayKey] = $this->makeDaySummary(
                 date: $dayKey,
                 weekday: (int) $dayDate->format('N'),
@@ -98,23 +98,23 @@ final class VacationScoreCalculatorTest extends TestCase
         );
 
         $home = [
-            'lat' => 48.2082,
-            'lon' => 16.3738,
-            'radius_km' => 12.0,
-            'country' => 'at',
+            'lat'             => 48.2082,
+            'lon'             => 16.3738,
+            'radius_km'       => 12.0,
+            'country'         => 'at',
             'timezone_offset' => 60,
         ];
 
-        $start = new DateTimeImmutable('2024-08-10 08:00:00');
-        $days  = [];
+        $start   = new DateTimeImmutable('2024-08-10 08:00:00');
+        $days    = [];
         $dayKeys = [];
         /** @var array<int, Media> $mediaIndex */
         $mediaIndex = [];
-        $dayCount = 4;
+        $dayCount   = 4;
         for ($i = 0; $i < $dayCount; ++$i) {
-            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
-            $members = $this->makeMembersForDay($i, $dayDate, 7);
-            $dayKey  = $dayDate->format('Y-m-d');
+            $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
+            $members   = $this->makeMembersForDay($i, $dayDate, 7);
+            $dayKey    = $dayDate->format('Y-m-d');
             $dayKeys[] = $dayKey;
             foreach ($members as $member) {
                 $mediaIndex[$member->getId()] = $member;
@@ -145,7 +145,7 @@ final class VacationScoreCalculatorTest extends TestCase
 
         $represented = [];
         foreach ($clamped as $memberId) {
-            $dayIndex = intdiv($memberId - 100, 100);
+            $dayIndex               = intdiv($memberId - 100, 100);
             $represented[$dayIndex] = true;
         }
 
@@ -162,20 +162,20 @@ final class VacationScoreCalculatorTest extends TestCase
         $remaining = array_slice($clamped, count($dayKeys));
         self::assertNotSame([], $remaining);
 
-        $reflection = new ReflectionClass(VacationScoreCalculator::class);
+        $reflection  = new ReflectionClass(VacationScoreCalculator::class);
         $scoreMethod = $reflection->getMethod('evaluateMediaScore');
         $scoreMethod->setAccessible(true);
 
         /** @var list<array{id:int,score:float,timestamp:int}> $scored */
         $scored = [];
         foreach ($remaining as $memberId) {
-            $media = $mediaIndex[$memberId];
+            $media   = $mediaIndex[$memberId];
             $takenAt = $media->getTakenAt();
             /** @var float $score */
-            $score = $scoreMethod->invoke($calculator, $media);
+            $score    = $scoreMethod->invoke($calculator, $media);
             $scored[] = [
-                'id' => $memberId,
-                'score' => $score,
+                'id'        => $memberId,
+                'score'     => $score,
                 'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
             ];
         }
@@ -203,7 +203,7 @@ final class VacationScoreCalculatorTest extends TestCase
      */
     private function makeMembersForDay(int $index, DateTimeImmutable $base, int $count = 3): array
     {
-        $items = [];
+        $items  = [];
         $baseId = 100 + ($index * 100);
         for ($j = 0; $j < $count; ++$j) {
             $items[] = $this->makeMediaFixture(
@@ -261,40 +261,40 @@ final class VacationScoreCalculatorTest extends TestCase
         int $spotDwellSeconds,
     ): array {
         $first = $gpsMembers[0];
-        $last = $gpsMembers[count($gpsMembers) - 1];
+        $last  = $gpsMembers[count($gpsMembers) - 1];
 
         return [
-            'date' => $date,
-            'members' => $members,
-            'gpsMembers' => $gpsMembers,
-            'maxDistanceKm' => 180.0,
-            'avgDistanceKm' => 95.0,
-            'travelKm' => $travelKm,
-            'countryCodes' => ['pt' => true],
-            'timezoneOffsets' => [$timezoneOffset => count($gpsMembers)],
+            'date'                    => $date,
+            'members'                 => $members,
+            'gpsMembers'              => $gpsMembers,
+            'maxDistanceKm'           => 180.0,
+            'avgDistanceKm'           => 95.0,
+            'travelKm'                => $travelKm,
+            'countryCodes'            => ['pt' => true],
+            'timezoneOffsets'         => [$timezoneOffset => count($gpsMembers)],
             'localTimezoneIdentifier' => 'Europe/Lisbon',
-            'localTimezoneOffset' => $timezoneOffset,
-            'tourismHits' => $tourismHits,
-            'poiSamples' => $poiSamples,
-            'tourismRatio' => 0.6,
-            'hasAirportPoi' => $hasAirport,
-            'weekday' => $weekday,
-            'photoCount' => count($members),
-            'densityZ' => 1.4,
-            'isAwayCandidate' => $baseAway,
-            'sufficientSamples' => true,
-            'spotClusters' => [$gpsMembers],
-            'spotNoise' => [],
-            'spotCount' => $spotCount,
-            'spotNoiseSamples' => 0,
-            'spotDwellSeconds' => $spotDwellSeconds,
-            'staypoints' => [],
-            'baseLocation' => null,
-            'baseAway' => $baseAway,
-            'awayByDistance' => true,
-            'firstGpsMedia' => $first,
-            'lastGpsMedia' => $last,
-            'isSynthetic' => false,
+            'localTimezoneOffset'     => $timezoneOffset,
+            'tourismHits'             => $tourismHits,
+            'poiSamples'              => $poiSamples,
+            'tourismRatio'            => 0.6,
+            'hasAirportPoi'           => $hasAirport,
+            'weekday'                 => $weekday,
+            'photoCount'              => count($members),
+            'densityZ'                => 1.4,
+            'isAwayCandidate'         => $baseAway,
+            'sufficientSamples'       => true,
+            'spotClusters'            => [$gpsMembers],
+            'spotNoise'               => [],
+            'spotCount'               => $spotCount,
+            'spotNoiseSamples'        => 0,
+            'spotDwellSeconds'        => $spotDwellSeconds,
+            'staypoints'              => [],
+            'baseLocation'            => null,
+            'baseAway'                => $baseAway,
+            'awayByDistance'          => true,
+            'firstGpsMedia'           => $first,
+            'lastGpsMedia'            => $last,
+            'isSynthetic'             => false,
         ];
     }
 

@@ -23,7 +23,7 @@ use function is_string;
 use function log;
 
 /**
- * Class AbstractClusterScoreHeuristic
+ * Class AbstractClusterScoreHeuristic.
  */
 abstract class AbstractClusterScoreHeuristic implements ClusterScoreHeuristicInterface
 {

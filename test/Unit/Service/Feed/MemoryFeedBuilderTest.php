@@ -59,7 +59,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [
-                'score' => 0.5,
+                'score'      => 0.5,
                 'time_range' => ['to' => 1],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],

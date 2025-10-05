@@ -28,7 +28,7 @@ final class MetadataQaInspectorTest extends TestCase
     public function logsMissingFlagsWhenEnrichersSupport(): void
     {
         $inspector = $this->createInspector();
-        $media      = $this->makeMediaFixture(
+        $media     = $this->makeMediaFixture(
             id: 1,
             filename: 'qa-metadata.jpg',
             takenAt: new DateTimeImmutable('2023-06-01 08:00:00', new DateTimeZone('UTC')),
@@ -49,7 +49,7 @@ final class MetadataQaInspectorTest extends TestCase
     public function skipsLoggingWhenFlagsArePresent(): void
     {
         $inspector = $this->createInspector();
-        $media      = $this->makeMediaFixture(
+        $media     = $this->makeMediaFixture(
             id: 2,
             filename: 'qa-metadata-present.jpg',
             takenAt: new DateTimeImmutable('2023-06-02 08:00:00', new DateTimeZone('UTC')),
@@ -58,7 +58,7 @@ final class MetadataQaInspectorTest extends TestCase
         );
         $media->setTimezoneOffsetMin(120);
         $media->setFeatures([
-            'daypart' => 'morning',
+            'daypart'      => 'morning',
             'isGoldenHour' => true,
         ]);
 

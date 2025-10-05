@@ -28,10 +28,9 @@ use function is_array;
 use function is_float;
 use function is_int;
 use function is_string;
-use function strtolower;
 use function str_contains;
+use function strtolower;
 use function usort;
-
 
 /**
  * Heuristic "Golden Hour" clusters around morning/evening hours.
@@ -162,7 +161,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
      */
     private function collectSceneTags(array $run): array
     {
-        $keywords = ['sunset', 'sunrise', 'dawn', 'dusk', 'golden'];
+        $keywords  = ['sunset', 'sunrise', 'dawn', 'dusk', 'golden'];
         $collected = [];
 
         foreach ($run as $media) {

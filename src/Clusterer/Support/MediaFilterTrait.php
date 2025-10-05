@@ -206,7 +206,7 @@ trait MediaFilterTrait
         $radiusMeters = $radiusKm * 1000.0;
 
         $regionQuery = static function (array $points, int $index, float $radius): array {
-            $neighbors = [];
+            $neighbors     = [];
             [$latA, $lonA] = $points[$index];
 
             foreach ($points as $idx => [$latB, $lonB]) {

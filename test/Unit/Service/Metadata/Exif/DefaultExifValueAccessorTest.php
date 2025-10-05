@@ -46,7 +46,7 @@ final class DefaultExifValueAccessorTest extends TestCase
         $result = $accessor->parseOffsetMinutes([
             'EXIF' => [
                 'OffsetTimeOriginal' => '   ',
-                'OffsetTime'        => " -0530\0",
+                'OffsetTime'         => " -0530\0",
             ],
         ]);
 
@@ -80,10 +80,10 @@ final class DefaultExifValueAccessorTest extends TestCase
         $accessor = new DefaultExifValueAccessor();
 
         $metadata = $accessor->gpsFromExif([
-            'GPSLatitude'        => ['52/1', '30/1', '0/1'],
-            'GPSLatitudeRef'     => 'N',
-            'GPSLongitude'       => ['13/1', '24/1', '0/1'],
-            'GPSLongitudeRef'    => 'E',
+            'GPSLatitude'          => ['52/1', '30/1', '0/1'],
+            'GPSLatitudeRef'       => 'N',
+            'GPSLongitude'         => ['13/1', '24/1', '0/1'],
+            'GPSLongitudeRef'      => 'E',
             'GPSHPositioningError' => '5/2',
         ]);
 

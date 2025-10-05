@@ -66,7 +66,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         foreach ($timestamped as $m) {
             $local = $this->localTimeHelper->resolve($m);
             assert($local instanceof DateTimeImmutable);
-            $key   = $local->format('Y-m-d');
+            $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }

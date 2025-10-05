@@ -15,11 +15,11 @@ use MagicSunday\Memories\Bootstrap\EnvironmentBootstrap;
 use Phar;
 use RuntimeException;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function class_exists;
 use function dirname;

@@ -33,10 +33,12 @@ final class ClusterPersistenceServiceTest extends TestCase
     #[Test]
     public function persistBatchedComputesMetadata(): void
     {
-        $media = $this->buildMediaSet();
+        $media  = $this->buildMediaSet();
         $lookup = new class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media) {}
+            public function __construct(private readonly array $media)
+            {
+            }
 
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {
@@ -93,7 +95,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         $draft = new ClusterDraft(
             algorithm: 'demo',
             params: [
-                'version' => '2024.1',
+                'version'        => '2024.1',
                 'member_quality' => ['ordered' => [2, 1, 3]],
             ],
             centroid: ['lat' => 48.123456, 'lon' => 11.654321],

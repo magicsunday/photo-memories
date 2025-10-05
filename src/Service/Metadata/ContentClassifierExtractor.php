@@ -171,6 +171,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         }
 
         $colorfulness = $media->getColorfulness();
+
         return !($colorfulness !== null && $colorfulness > 0.45);
     }
 
@@ -253,7 +254,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
             ContentKind::DOCUMENT,
             ContentKind::MAP,
             ContentKind::SCREEN_RECORDING => true,
-            default => false,
+            default                       => false,
         };
     }
 
@@ -262,7 +263,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
      */
     private function tokensFromMedia(Media $media, string $filepath): array
     {
-        $tokens = [];
+        $tokens   = [];
         $features = $media->getFeatures();
         if (is_array($features)) {
             $pathTokens = $features['pathTokens'] ?? null;

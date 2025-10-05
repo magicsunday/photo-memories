@@ -24,11 +24,11 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
 {
     use StageSupportTrait;
 
-    /** @var array<string,int> $priorityMap */
+    /** @var array<string,int> */
     private array $priorityMap = [];
 
     /**
-     * @param list<string>        $keepOrder
+     * @param list<string>         $keepOrder
      * @param array<string,string> $algorithmGroups
      */
     public function __construct(
@@ -71,7 +71,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string}> $items */
         $items = [];
         foreach ($drafts as $draft) {
-            $members  = $this->normalizeMembers($draft->getMembers());
+            $members = $this->normalizeMembers($draft->getMembers());
             $items[] = [
                 'draft'    => $draft,
                 'members'  => $members,
@@ -101,7 +101,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         /** @var array<string,array<int,int>> $assignments */
         $assignments = [];
         /** @var list<ClusterDraft> $result */
-        $result = [];
+        $result    = [];
         $processed = 0;
 
         foreach ($items as $item) {

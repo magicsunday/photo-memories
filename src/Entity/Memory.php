@@ -79,8 +79,8 @@ class Memory
     private DateTimeImmutable $createdAt;
 
     /**
-     * @param string $title Display title.
-     * @param float  $score Initial relevance score.
+     * @param string $title display title
+     * @param float  $score initial relevance score
      */
     public function __construct(string $title, float $score = 0.0)
     {
@@ -94,7 +94,7 @@ class Memory
     /**
      * Returns the memory identifier.
      *
-     * @return int Memory identifier.
+     * @return int memory identifier
      */
     public function getId(): int
     {
@@ -104,7 +104,7 @@ class Memory
     /**
      * Returns the memory title.
      *
-     * @return string Memory title.
+     * @return string memory title
      */
     public function getTitle(): string
     {
@@ -114,7 +114,7 @@ class Memory
     /**
      * Updates the summary text.
      *
-     * @param string|null $summary Summary text.
+     * @param string|null $summary summary text
      */
     public function setSummary(?string $summary): void
     {
@@ -124,7 +124,7 @@ class Memory
     /**
      * Returns the summary text.
      *
-     * @return string|null Summary text or null when not set.
+     * @return string|null summary text or null when not set
      */
     public function getSummary(): ?string
     {
@@ -134,7 +134,7 @@ class Memory
     /**
      * Associates the memory with a cluster.
      *
-     * @param int|null $clusterId Identifier of the cluster.
+     * @param int|null $clusterId identifier of the cluster
      */
     public function setClusterId(?int $clusterId): void
     {
@@ -144,7 +144,7 @@ class Memory
     /**
      * Returns the associated cluster identifier.
      *
-     * @return int|null Identifier of the cluster or null if none linked.
+     * @return int|null identifier of the cluster or null if none linked
      */
     public function getClusterId(): ?int
     {
@@ -154,7 +154,7 @@ class Memory
     /**
      * Updates the relevance score.
      *
-     * @param float $score Relevance score value.
+     * @param float $score relevance score value
      */
     public function setScore(float $score): void
     {
@@ -164,7 +164,7 @@ class Memory
     /**
      * Returns the relevance score.
      *
-     * @return float Relevance score value.
+     * @return float relevance score value
      */
     public function getScore(): float
     {
@@ -174,7 +174,7 @@ class Memory
     /**
      * Updates the preview HTML snippet.
      *
-     * @param string|null $html Preview markup.
+     * @param string|null $html preview markup
      */
     public function setPreviewHtml(?string $html): void
     {
@@ -184,7 +184,7 @@ class Memory
     /**
      * Returns the preview HTML snippet.
      *
-     * @return string|null Preview markup or null when not generated.
+     * @return string|null preview markup or null when not generated
      */
     public function getPreviewHtml(): ?string
     {
@@ -194,7 +194,7 @@ class Memory
     /**
      * Sets the memory start timestamp.
      *
-     * @param DateTimeImmutable|null $dt Start timestamp.
+     * @param DateTimeImmutable|null $dt start timestamp
      */
     public function setStartAt(?DateTimeImmutable $dt): void
     {
@@ -204,7 +204,7 @@ class Memory
     /**
      * Sets the memory end timestamp.
      *
-     * @param DateTimeImmutable|null $dt End timestamp.
+     * @param DateTimeImmutable|null $dt end timestamp
      */
     public function setEndAt(?DateTimeImmutable $dt): void
     {
@@ -214,7 +214,7 @@ class Memory
     /**
      * Returns the memory start timestamp.
      *
-     * @return DateTimeImmutable|null Start timestamp.
+     * @return DateTimeImmutable|null start timestamp
      */
     public function getStartAt(): ?DateTimeImmutable
     {
@@ -224,7 +224,7 @@ class Memory
     /**
      * Returns the memory end timestamp.
      *
-     * @return DateTimeImmutable|null End timestamp.
+     * @return DateTimeImmutable|null end timestamp
      */
     public function getEndAt(): ?DateTimeImmutable
     {
@@ -234,7 +234,7 @@ class Memory
     /**
      * Returns the creation timestamp of the memory entity.
      *
-     * @return DateTimeImmutable Creation timestamp.
+     * @return DateTimeImmutable creation timestamp
      */
     public function getCreatedAt(): DateTimeImmutable
     {

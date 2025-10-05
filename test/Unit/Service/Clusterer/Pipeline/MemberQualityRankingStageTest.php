@@ -249,9 +249,9 @@ final class MemberQualityRankingStageTest extends TestCase
 
         $stage->process([$draft]);
 
-        $meta     = $draft->getParams()['member_quality'];
-        $ordered  = $meta['quality_ranked']['ordered'];
-        $members  = $meta['members'];
+        $meta    = $draft->getParams()['member_quality'];
+        $ordered = $meta['quality_ranked']['ordered'];
+        $members = $meta['members'];
 
         self::assertSame([301, 302, 303], $ordered);
         self::assertSame(0.9, $members['301']['quality']);

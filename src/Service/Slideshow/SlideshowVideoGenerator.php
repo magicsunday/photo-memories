@@ -148,7 +148,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function buildMultiImageCommand(array $images, string $output): array
     {
-        $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
+        $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
         $durationWithOverlap = max(0.1, $this->slideDuration + $this->transitionDuration);
 
         foreach ($images as $image) {
@@ -176,17 +176,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
 
         $transitionCount = count($this->transitions);
-        $current = '[s0]';
-        $offset  = max(0.1, $this->slideDuration);
+        $current         = '[s0]';
+        $offset          = max(0.1, $this->slideDuration);
 
-        for ($index = 1; $index < count($images); $index++) {
+        for ($index = 1; $index < count($images); ++$index) {
             $transition = $this->transitions[($index - 1) % $transitionCount] ?? 'fade';
             if ($transition === '') {
                 $transition = 'fade';
             }
 
             $targetLabel = $index === count($images) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
-            $filters[] = sprintf(
+            $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
                 $current,
                 $index,

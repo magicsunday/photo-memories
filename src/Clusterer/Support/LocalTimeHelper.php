@@ -54,11 +54,11 @@ final readonly class LocalTimeHelper
 
     private function createOffsetTimezone(int $offsetMinutes): DateTimeZone
     {
-        $sign           = $offsetMinutes >= 0 ? '+' : '-';
-        $absolute       = abs($offsetMinutes);
-        $hours          = intdiv($absolute, 60);
-        $minutes        = $absolute % 60;
-        $formattedZone  = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
+        $sign          = $offsetMinutes >= 0 ? '+' : '-';
+        $absolute      = abs($offsetMinutes);
+        $hours         = intdiv($absolute, 60);
+        $minutes       = $absolute % 60;
+        $formattedZone = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
 
         return new DateTimeZone($formattedZone);
     }

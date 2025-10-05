@@ -43,11 +43,11 @@ final class MetadataStageTest extends TestCase
             ->with('/library/image.jpg', $media)
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $xmp              = $this->createRejectingExtractor();
-        $fileStat         = $this->createRejectingExtractor();
-        $filenameKeyword  = $this->createRejectingExtractor();
-        $appleHeuristics  = $this->createRejectingExtractor();
-        $ffprobe          = $this->createRejectingExtractor();
+        $xmp             = $this->createRejectingExtractor();
+        $fileStat        = $this->createRejectingExtractor();
+        $filenameKeyword = $this->createRejectingExtractor();
+        $appleHeuristics = $this->createRejectingExtractor();
+        $ffprobe         = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($exif, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -86,11 +86,11 @@ final class MetadataStageTest extends TestCase
             ->method('extract')
             ->willThrowException(new RuntimeException('boom'));
 
-        $xmp              = $this->createUnusedExtractor();
-        $fileStat         = $this->createUnusedExtractor();
-        $filenameKeyword  = $this->createUnusedExtractor();
-        $appleHeuristics  = $this->createUnusedExtractor();
-        $ffprobe          = $this->createUnusedExtractor();
+        $xmp             = $this->createUnusedExtractor();
+        $fileStat        = $this->createUnusedExtractor();
+        $filenameKeyword = $this->createUnusedExtractor();
+        $appleHeuristics = $this->createUnusedExtractor();
+        $ffprobe         = $this->createUnusedExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -179,11 +179,11 @@ final class MetadataStageTest extends TestCase
             ->method('extract')
             ->willReturnCallback(static fn (string $file, Media $entity): Media => $entity);
 
-        $xmp              = $this->createRejectingExtractor();
-        $fileStat         = $this->createRejectingExtractor();
-        $filenameKeyword  = $this->createRejectingExtractor();
-        $appleHeuristics  = $this->createRejectingExtractor();
-        $ffprobe          = $this->createRejectingExtractor();
+        $xmp             = $this->createRejectingExtractor();
+        $fileStat        = $this->createRejectingExtractor();
+        $filenameKeyword = $this->createRejectingExtractor();
+        $appleHeuristics = $this->createRejectingExtractor();
+        $ffprobe         = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();
@@ -228,11 +228,11 @@ final class MetadataStageTest extends TestCase
                 return $entity;
             });
 
-        $xmp              = $this->createRejectingExtractor();
-        $fileStat         = $this->createRejectingExtractor();
-        $filenameKeyword  = $this->createRejectingExtractor();
-        $appleHeuristics  = $this->createRejectingExtractor();
-        $ffprobe          = $this->createRejectingExtractor();
+        $xmp             = $this->createRejectingExtractor();
+        $fileStat        = $this->createRejectingExtractor();
+        $filenameKeyword = $this->createRejectingExtractor();
+        $appleHeuristics = $this->createRejectingExtractor();
+        $ffprobe         = $this->createRejectingExtractor();
 
         $stage  = new MetadataStage($extractor, $xmp, $fileStat, $filenameKeyword, $appleHeuristics, $ffprobe);
         $output = new BufferedOutput();

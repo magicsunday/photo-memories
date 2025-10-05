@@ -27,7 +27,7 @@ use function is_string;
 use function sprintf;
 
 /**
- * Class ClusterCommand
+ * Class ClusterCommand.
  */
 #[AsCommand(
     name: 'memories:cluster',
@@ -86,7 +86,7 @@ final class ClusterCommand extends Command
         $options = new ClusterJobOptions($dryRun, $limitValue, $sinceValue, $replace);
 
         $progressReporter = new ConsoleProgressReporter($io, $output);
-        $result            = $this->runner->run($options, $progressReporter);
+        $result           = $this->runner->run($options, $progressReporter);
 
         if ($result->getTotalMediaCount() === 0) {
             $io->warning('Keine Medien gefunden.');

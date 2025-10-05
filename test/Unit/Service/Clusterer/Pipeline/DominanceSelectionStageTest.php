@@ -27,10 +27,10 @@ final class DominanceSelectionStageTest extends TestCase
             keepOrder: ['primary', 'secondary'],
         );
 
-        $primaryWinner = $this->createDraft('primary', 0.8, [1, 2, 3]);
+        $primaryWinner    = $this->createDraft('primary', 0.8, [1, 2, 3]);
         $secondaryOverlap = $this->createDraft('secondary', 0.95, [2, 3, 4]);
-        $tertiary = $this->createDraft('tertiary', 0.7, [10, 11]);
-        $secondaryUnique = $this->createDraft('secondary', 0.6, [5, 6, 7]);
+        $tertiary         = $this->createDraft('tertiary', 0.7, [10, 11]);
+        $secondaryUnique  = $this->createDraft('secondary', 0.6, [5, 6, 7]);
 
         $result = $stage->process([
             $primaryWinner,

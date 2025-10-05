@@ -32,7 +32,7 @@ final class DensityClusterScoreHeuristicTest extends TestCase
             params: [
                 'time_range' => [
                     'from' => 1_700_000_000,
-                    'to' => 1_700_000_600,
+                    'to'   => 1_700_000_600,
                 ],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],

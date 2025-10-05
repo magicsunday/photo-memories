@@ -15,7 +15,7 @@ use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 
 /**
- * Interface ClusterJobRunnerInterface
+ * Interface ClusterJobRunnerInterface.
  */
 interface ClusterJobRunnerInterface
 {

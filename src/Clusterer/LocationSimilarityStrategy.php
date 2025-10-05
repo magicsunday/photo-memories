@@ -24,7 +24,7 @@ use function count;
 use function usort;
 
 /**
- * Class LocationSimilarityStrategy
+ * Class LocationSimilarityStrategy.
  */
 final readonly class LocationSimilarityStrategy implements ClusterStrategyInterface
 {

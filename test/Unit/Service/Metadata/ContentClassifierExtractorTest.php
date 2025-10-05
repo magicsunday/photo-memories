@@ -25,7 +25,7 @@ final class ContentClassifierExtractorTest extends TestCase
     {
         $media = $this->buildMedia(10, 'image/png', 1284, 2778);
         $media->setFeatures([
-            'pathTokens' => ['2025', 'Screenshot'],
+            'pathTokens'   => ['2025', 'Screenshot'],
             'filenameHint' => 'normal',
         ]);
         $media->setSharpness(0.1);

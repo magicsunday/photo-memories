@@ -15,16 +15,16 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
 /**
- * Interface HybridClustererInterface
+ * Interface HybridClustererInterface.
  */
 interface HybridClustererInterface
 {
     public function countStrategies(): int;
 
     /**
-     * @param list<Media>                      $items
-     * @param callable(string,int,int):void    $onStart
-     * @param callable(string,int,int):void    $onDone
+     * @param list<Media>                   $items
+     * @param callable(string,int,int):void $onStart
+     * @param callable(string,int,int):void $onDone
      *
      * @return list<ClusterDraft>
      */

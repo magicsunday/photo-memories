@@ -12,17 +12,17 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Feed;
 
 /**
- * Class FeedExportResult
+ * Class FeedExportResult.
  */
 final readonly class FeedExportResult
 {
     public function __construct(
-        private string  $outputDirectory,
-        private string  $imageDirectory,
+        private string $outputDirectory,
+        private string $imageDirectory,
         private ?string $indexFilePath,
-        private int     $copiedFileCount,
-        private int     $skippedNoThumbnailCount,
-        private int     $cardCount,
+        private int $copiedFileCount,
+        private int $skippedNoThumbnailCount,
+        private int $cardCount,
     ) {
     }
 

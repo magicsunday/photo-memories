@@ -65,6 +65,7 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */

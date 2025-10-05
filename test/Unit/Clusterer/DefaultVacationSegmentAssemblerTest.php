@@ -14,18 +14,18 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
-use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
-use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
+use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
+use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
-use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
@@ -42,7 +42,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
     public function detectSegmentsMergesDstTransitionDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $homeLocator = new DefaultHomeLocator(
+        $homeLocator    = new DefaultHomeLocator(
             timezone: 'Europe/Berlin',
             defaultHomeRadiusKm: 12.0,
             homeLat: 52.5200,
@@ -51,7 +51,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         );
 
         $timezoneResolver = new TimezoneResolver('Europe/Berlin');
-        $dayBuilder = new DefaultDaySummaryBuilder([
+        $dayBuilder       = new DefaultDaySummaryBuilder([
             new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin'),
             new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 2),
             new DensityStage(),
@@ -59,7 +59,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         ]);
 
         $transportExtender = new TransportDayExtender();
-        $runDetector = new RunDetector(
+        $runDetector       = new RunDetector(
             transportDayExtender: $transportExtender,
             minAwayDistanceKm: 80.0,
             minItemsPerDay: 2,
@@ -80,15 +80,15 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         });
 
         $items = [];
-        $id = 1000;
+        $id    = 1000;
 
         $tripStart = new DateTimeImmutable('2024-03-29 09:00:00', new DateTimeZone('Europe/Berlin'));
-        $offsets = [0, 0, 60, 60, 60];
+        $offsets   = [0, 0, 60, 60, 60];
         foreach ($offsets as $dayIndex => $offset) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
             for ($photo = 0; $photo < 4; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 6) . 'H'));
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('trip-day-%d-%d.jpg', $dayIndex, $photo),
                     $timestamp,
@@ -105,7 +105,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         $home = $homeLocator->determineHome($items);
         self::assertNotNull($home);
 
-        $days = $dayBuilder->buildDaySummaries($items, $home);
+        $days     = $dayBuilder->buildDaySummaries($items, $home);
         $clusters = $assembler->detectSegments($days, $home);
 
         self::assertCount(1, $clusters);

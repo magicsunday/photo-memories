@@ -17,12 +17,12 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class GeoStage
+ * Class GeoStage.
  */
 final class GeoStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 

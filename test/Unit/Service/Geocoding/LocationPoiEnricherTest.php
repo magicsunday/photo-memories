@@ -218,7 +218,7 @@ final class LocationPoiEnricherTest extends TestCase
         $ids = array_map(static fn (array $poi): string => $poi['id'], $pois);
         self::assertSame(['node/10', 'node/11', 'node/12'], $ids);
 
-        $categoryKeys = array_map(static fn (array $poi): ?string => $poi['categoryKey'], $pois);
+        $categoryKeys   = array_map(static fn (array $poi): ?string => $poi['categoryKey'], $pois);
         $categoryValues = array_map(static fn (array $poi): ?string => $poi['categoryValue'], $pois);
 
         self::assertSame(['tourism', 'tourism', 'man_made'], $categoryKeys);
@@ -343,7 +343,7 @@ final class LocationPoiEnricherTest extends TestCase
 final class FakeHttpClient implements HttpClientInterface
 {
     /**
-     * @var list<FakeHttpResponse> $responses
+     * @var list<FakeHttpResponse>
      */
     private array $responses;
 

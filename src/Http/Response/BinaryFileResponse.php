@@ -31,7 +31,7 @@ use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
 /**
- * Class BinaryFileResponse
+ * Class BinaryFileResponse.
  */
 final class BinaryFileResponse extends Response
 {
@@ -153,8 +153,8 @@ final class BinaryFileResponse extends Response
             return $map[$extension];
         }
 
-        $finfo     = new finfo(FILEINFO_MIME_TYPE);
-        $detected  = $finfo->file($filePath);
+        $finfo    = new finfo(FILEINFO_MIME_TYPE);
+        $detected = $finfo->file($filePath);
 
         if (is_string($detected) && $detected !== '') {
             return $detected;

@@ -27,8 +27,8 @@ final class IndexLogHelper
     /**
      * Appends a line to the media index log, inserting a newline when required.
      *
-     * @param Media  $media Media entity whose index log should be updated.
-     * @param string $line  Line that should be appended to the log.
+     * @param Media  $media media entity whose index log should be updated
+     * @param string $line  line that should be appended to the log
      */
     public static function append(Media $media, string $line): void
     {
@@ -52,4 +52,3 @@ final class IndexLogHelper
         $media->setIndexLog($existing . "\n" . $line);
     }
 }
-

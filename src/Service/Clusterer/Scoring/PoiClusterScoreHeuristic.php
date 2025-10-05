@@ -17,7 +17,7 @@ use function is_array;
 use function is_numeric;
 
 /**
- * Class PoiClusterScoreHeuristic
+ * Class PoiClusterScoreHeuristic.
  */
 final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {

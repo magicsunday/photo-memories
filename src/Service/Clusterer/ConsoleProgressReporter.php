@@ -24,12 +24,12 @@ use function microtime;
 use function sprintf;
 
 /**
- * Class ConsoleProgressReporter
+ * Class ConsoleProgressReporter.
  */
 final readonly class ConsoleProgressReporter implements ProgressReporterInterface
 {
     public function __construct(
-        private SymfonyStyle    $io,
+        private SymfonyStyle $io,
         private OutputInterface $output,
     ) {
     }
@@ -44,7 +44,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
         return new readonly class($section, $bar) implements ProgressHandleInterface {
             public function __construct(
                 private ConsoleSectionOutput $section,
-                private ProgressBar          $bar,
+                private ProgressBar $bar,
             ) {
             }
 

@@ -17,12 +17,12 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class ContentKindStage
+ * Class ContentKindStage.
  */
 final class ContentKindStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 

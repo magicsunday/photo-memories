@@ -169,4 +169,3 @@ final class ClipSceneTagExtractorTest extends TestCase
         self::assertEqualsWithDelta(0.0, $tags[1]['score'], 0.0001);
     }
 }
-

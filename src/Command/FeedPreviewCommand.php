@@ -144,9 +144,9 @@ final class FeedPreviewCommand extends Command
 
         foreach ($items as $it) {
             ++$idx;
-            $params = $it->getParams();
+            $params    = $it->getParams();
             $tagColumn = $this->formatSceneTags($params['scene_tags'] ?? null);
-            $rows[] = [
+            $rows[]    = [
                 (string) $idx,
                 $it->getAlgorithm(),
                 $it->getTitle(),
@@ -159,7 +159,7 @@ final class FeedPreviewCommand extends Command
             ];
         }
 
-        $headers = ['#', 'Strategie', 'Titel', 'Untertitel', 'Score', 'Anz.', 'Cover-ID'];
+        $headers   = ['#', 'Strategie', 'Titel', 'Untertitel', 'Score', 'Anz.', 'Cover-ID'];
         $headers[] = $showMembers ? 'Mitglieder' : '–';
         $headers[] = 'Tags';
 
@@ -168,7 +168,7 @@ final class FeedPreviewCommand extends Command
         $io->success(sprintf('%d Feed-Items angezeigt.', count($items)));
 
         return Command::SUCCESS;
-}
+    }
 
     /**
      * @param array|bool|float|int|string|null $value

@@ -15,8 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaDuplicateRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
@@ -27,19 +27,19 @@ use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\FacesStage;
 use MagicSunday\Memories\Service\Indexing\Stage\GeoStage;
 use MagicSunday\Memories\Service\Indexing\Stage\HashStage;
-use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
+use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
 use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
 use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
 use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
-use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
-use MagicSunday\Memories\Service\Metadata\SolarEnricher;
+use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
@@ -58,7 +58,7 @@ use function unlink;
 final class DefaultMediaIngestionPipelineTest extends TestCase
 {
     /**
-     * @var list<string> $tempFiles
+     * @var list<string>
      */
     private array $tempFiles = [];
 
@@ -83,7 +83,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $media    = new Media($path, $checksum, (int) filesize($path));
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexedAt(new DateTimeImmutable('-1 minute'));
-        $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
+        $output = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
         $fastHash = 'feedfacecafe1234';
 
@@ -386,12 +386,12 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
     {
         return [
             'metadata' => [
-                'exif'             => $this->createMock(SingleMetadataExtractorInterface::class),
-                'xmp'              => $this->createMock(SingleMetadataExtractorInterface::class),
-                'fileStat'         => $this->createMock(SingleMetadataExtractorInterface::class),
-                'filenameKeyword'  => $this->createMock(SingleMetadataExtractorInterface::class),
-                'appleHeuristics'  => $this->createMock(SingleMetadataExtractorInterface::class),
-                'ffprobe'          => $this->createMock(SingleMetadataExtractorInterface::class),
+                'exif'            => $this->createMock(SingleMetadataExtractorInterface::class),
+                'xmp'             => $this->createMock(SingleMetadataExtractorInterface::class),
+                'fileStat'        => $this->createMock(SingleMetadataExtractorInterface::class),
+                'filenameKeyword' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'appleHeuristics' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'ffprobe'         => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'time' => [
                 'normalizer' => $this->createMock(SingleMetadataExtractorInterface::class),

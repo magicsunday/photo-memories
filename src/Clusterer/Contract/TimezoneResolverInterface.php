@@ -31,14 +31,14 @@ interface TimezoneResolverInterface
      * Resolves the timezone for a day summary.
      *
      * @param array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>} $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}           $home
      */
     public function resolveSummaryTimezone(array $summary, array $home): DateTimeZone;
 
     /**
      * Computes the preferred local timezone offset from vote counts.
      *
-     * @param array<int,int> $offsetVotes
+     * @param array<int,int>                                                                          $offsetVotes
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int;
@@ -46,7 +46,7 @@ interface TimezoneResolverInterface
     /**
      * Chooses the best timezone identifier for a day summary.
      *
-     * @param array<string,int> $identifierVotes
+     * @param array<string,int>                                                                       $identifierVotes
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function determineLocalTimezoneIdentifier(

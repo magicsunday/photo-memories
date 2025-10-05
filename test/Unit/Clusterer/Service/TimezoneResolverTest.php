@@ -28,10 +28,10 @@ final class TimezoneResolverTest extends TestCase
         $media->setTimezoneOffsetMin(-120);
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -43,11 +43,11 @@ final class TimezoneResolverTest extends TestCase
     public function determineLocalTimezoneOffsetFallsBackToHome(): void
     {
         $resolver = new TimezoneResolver('Europe/Berlin');
-        $home = [
-            'lat' => 48.0,
-            'lon' => 11.0,
-            'radius_km' => 10.0,
-            'country' => 'de',
+        $home     = [
+            'lat'             => 48.0,
+            'lon'             => 11.0,
+            'radius_km'       => 10.0,
+            'country'         => 'de',
             'timezone_offset' => 120,
         ];
 
@@ -62,11 +62,11 @@ final class TimezoneResolverTest extends TestCase
     public function determineLocalTimezoneIdentifierHonoursVotesAndFallbacks(): void
     {
         $resolver = new TimezoneResolver('Europe/Berlin');
-        $home = [
-            'lat' => 34.0,
-            'lon' => -118.0,
-            'radius_km' => 20.0,
-            'country' => 'us',
+        $home     = [
+            'lat'             => 34.0,
+            'lon'             => -118.0,
+            'radius_km'       => 20.0,
+            'country'         => 'us',
             'timezone_offset' => -480,
         ];
 
@@ -84,18 +84,18 @@ final class TimezoneResolverTest extends TestCase
     public function resolveSummaryTimezoneUsesIdentifier(): void
     {
         $resolver = new TimezoneResolver('Europe/Berlin');
-        $home = [
-            'lat' => 35.0,
-            'lon' => 139.0,
-            'radius_km' => 15.0,
-            'country' => 'jp',
+        $home     = [
+            'lat'             => 35.0,
+            'lon'             => 139.0,
+            'radius_km'       => 15.0,
+            'country'         => 'jp',
             'timezone_offset' => 540,
         ];
 
         $summary = [
             'localTimezoneIdentifier' => 'Asia/Tokyo',
-            'localTimezoneOffset' => 540,
-            'timezoneOffsets' => [540 => 3],
+            'localTimezoneOffset'     => 540,
+            'timezoneOffsets'         => [540 => 3],
         ];
 
         $timezone = $resolver->resolveSummaryTimezone($summary, $home);

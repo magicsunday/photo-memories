@@ -22,7 +22,7 @@ final class RecencyClusterScoreHeuristicTest extends TestCase
     #[Test]
     public function enrichCalculatesRecencyRelativeToNow(): void
     {
-        $now = (new DateTimeImmutable('2024-02-01 00:00:00'))->getTimestamp();
+        $now       = (new DateTimeImmutable('2024-02-01 00:00:00'))->getTimestamp();
         $heuristic = new RecencyClusterScoreHeuristic(
             timeRangeMinSamples: 3,
             timeRangeMinCoverage: 0.6,
@@ -35,7 +35,7 @@ final class RecencyClusterScoreHeuristicTest extends TestCase
             params: [
                 'time_range' => [
                     'from' => (new DateTimeImmutable('2024-01-01 00:00:00'))->getTimestamp(),
-                    'to' => (new DateTimeImmutable('2024-01-02 00:00:00'))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-01-02 00:00:00'))->getTimestamp(),
                 ],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
@@ -45,7 +45,7 @@ final class RecencyClusterScoreHeuristicTest extends TestCase
         $heuristic->prepare([], []);
         $heuristic->enrich($cluster, []);
 
-        $params = $cluster->getParams();
+        $params   = $cluster->getParams();
         $expected = 1.0 - (30.0 / 365.0);
         self::assertEqualsWithDelta($expected, $params['recency'], 1e-6);
         self::assertEqualsWithDelta($expected, $heuristic->score($cluster), 1e-6);

@@ -16,29 +16,29 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
-use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
-use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
-use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
+use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
+use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
+use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
+use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
-use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
-use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
-use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
+use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -50,7 +50,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver([
@@ -67,7 +67,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('home-berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany', suburb: 'Mitte', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -101,13 +101,13 @@ final class VacationClusterStrategyTest extends TestCase
             ]);
         });
 
-        $id = 1000;
+        $id        = 1000;
         $startHome = new DateTimeImmutable('2024-05-20 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 8; ++$i) {
             $day = $startHome->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-day-%d-%d.jpg', $i, $sample),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -154,13 +154,13 @@ final class VacationClusterStrategyTest extends TestCase
             ],
         ];
 
-        $tripStart = new DateTimeImmutable('2024-06-10 07:00:00', new DateTimeZone('UTC'));
+        $tripStart       = new DateTimeImmutable('2024-06-10 07:00:00', new DateTimeZone('UTC'));
         $vacationDayById = [];
         foreach ($tracks as $dayIndex => $coordinates) {
             $dayStart = $tripStart->add(new DateInterval('P' . $dayIndex . 'D'));
             foreach ($coordinates as $pointIndex => $data) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($pointIndex * 4) . 'H'));
-                $media = $this->makeMediaFixture(
+                $media     = $this->makeMediaFixture(
                     ++$id,
                     sprintf('vacation-%d-%d.jpg', $dayIndex, $pointIndex),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -172,11 +172,11 @@ final class VacationClusterStrategyTest extends TestCase
                     }
                 );
                 $vacationDayById[$media->getId()] = $dayIndex;
-                $items[] = $media;
+                $items[]                          = $media;
             }
 
             $nightTimestamp = $dayStart->setTime(23, 30, 0);
-            $nightMedia = $this->makeMediaFixture(
+            $nightMedia     = $this->makeMediaFixture(
                 ++$id,
                 sprintf('vacation-night-%d.jpg', $dayIndex),
                 $nightTimestamp->format('Y-m-d H:i:s'),
@@ -188,7 +188,7 @@ final class VacationClusterStrategyTest extends TestCase
                 }
             );
             $vacationDayById[$nightMedia->getId()] = $dayIndex;
-            $items[] = $nightMedia;
+            $items[]                               = $nightMedia;
         }
 
         $clusters = $strategy->cluster($items);
@@ -219,7 +219,7 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
 
-        $centroid = $cluster->getCentroid();
+        $centroid           = $cluster->getCentroid();
         $expectedDistanceKm = MediaMath::haversineDistanceInMeters(
             52.5200,
             13.4050,
@@ -257,7 +257,7 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         /** @var array<int,int> $dayByMember */
-        $dayByMember = [];
+        $dayByMember      = [];
         $maxMembersPerDay = 0;
         foreach ($dayMembers as $day => $ids) {
             $count = count($ids);
@@ -279,7 +279,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $mediaById = [];
+        $mediaById     = [];
         $baseTimestamp = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
         foreach ($dayMembers as $day => $ids) {
             foreach ($ids as $offset => $id) {
@@ -372,7 +372,7 @@ final class VacationClusterStrategyTest extends TestCase
         $service = $this->createPersistenceService();
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
-        $resolve = $reflection->getMethod('resolveOrderedMembers');
+        $resolve    = $reflection->getMethod('resolveOrderedMembers');
         $resolve->setAccessible(true);
 
         /** @var list<int> $resolved */
@@ -403,7 +403,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -502,7 +502,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function classifiesRegionalWeekendAsShortTrip(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(['2024-07-05']),
@@ -513,7 +513,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('home-hamburg', 'Hamburg, Germany', 53.5511, 9.9937, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -538,13 +538,13 @@ final class VacationClusterStrategyTest extends TestCase
             $loc->setState('Schleswig-Holstein');
         });
 
-        $id = 2000;
+        $id            = 2000;
         $homeSeedStart = new DateTimeImmutable('2024-07-04 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 2; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('weekend-home-%d-%d.jpg', $i, $sample),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -561,7 +561,7 @@ final class VacationClusterStrategyTest extends TestCase
         $weekendStart = new DateTimeImmutable('2024-07-06 09:00:00', new DateTimeZone('UTC'));
         for ($day = 0; $day < 2; ++$day) {
             $dayStart = $weekendStart->add(new DateInterval('P' . $day . 'D'));
-            $items[] = $this->makeMediaFixture(
+            $items[]  = $this->makeMediaFixture(
                 ++$id,
                 sprintf('weekend-trip-%d-0.jpg', $day),
                 $dayStart->format('Y-m-d H:i:s'),
@@ -584,7 +584,7 @@ final class VacationClusterStrategyTest extends TestCase
                 }
             );
             $nightShot = $dayStart->setTime(22, 45, 0);
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 ++$id,
                 sprintf('weekend-night-%d.jpg', $day),
                 $nightShot->format('Y-m-d H:i:s'),
@@ -601,7 +601,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
-        $params = $cluster->getParams();
+        $params  = $cluster->getParams();
 
         self::assertSame('vacation', $cluster->getAlgorithm());
         self::assertSame('vacation', $params['classification']);
@@ -624,9 +624,9 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function awardsHolidayBonusOnWeekdays(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper       = LocationHelper::createDefault();
         $holidayDates = ['2024-12-23', '2024-12-24'];
-        $strategy = $this->makeStrategy(
+        $strategy     = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver($holidayDates),
             timezone: 'UTC',
@@ -636,7 +636,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('holiday-home', 'Hamburg, Germany', 53.5511, 9.9937, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -660,13 +660,13 @@ final class VacationClusterStrategyTest extends TestCase
             $loc->setCategory('residential');
         });
 
-        $id = 4000;
+        $id            = 4000;
         $homeSeedStart = new DateTimeImmutable('2024-12-20 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('holiday-home-%d-%d.jpg', $i, $sample),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -683,7 +683,7 @@ final class VacationClusterStrategyTest extends TestCase
         $tripStart = new DateTimeImmutable('2024-12-23 09:00:00', new DateTimeZone('UTC'));
         for ($day = 0; $day < 2; ++$day) {
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
-            $items[] = $this->makeMediaFixture(
+            $items[]  = $this->makeMediaFixture(
                 ++$id,
                 sprintf('holiday-trip-%d-0.jpg', $day),
                 $dayStart->format('Y-m-d H:i:s'),
@@ -706,7 +706,7 @@ final class VacationClusterStrategyTest extends TestCase
                 }
             );
             $nightShot = $dayStart->setTime(22, 45, 0);
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 ++$id,
                 sprintf('holiday-night-%d.jpg', $day),
                 $nightShot->format('Y-m-d H:i:s'),
@@ -723,7 +723,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
-        $params = $cluster->getParams();
+        $params  = $cluster->getParams();
 
         self::assertSame('vacation', $params['classification']);
         self::assertSame(3, $params['weekend_holiday_days']);
@@ -738,7 +738,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function includesAirportBufferDayAtSegmentEdges(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -749,7 +749,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('home-berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -774,13 +774,13 @@ final class VacationClusterStrategyTest extends TestCase
             ]);
         });
 
-        $id = 5000;
+        $id            = 5000;
         $homeSeedStart = new DateTimeImmutable('2024-07-01 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 5; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-before-%d-%d.jpg', $i, $sample),
                     $timestamp,
@@ -799,7 +799,7 @@ final class VacationClusterStrategyTest extends TestCase
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
             for ($photo = 0; $photo < 3; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 3) . 'H'));
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('trip-%d-%d.jpg', $day, $photo),
                     $timestamp,
@@ -813,7 +813,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
 
             $nightTimestamp = $dayStart->setTime(23, 15, 0);
-            $items[] = $this->makeMediaFixture(
+            $items[]        = $this->makeMediaFixture(
                 ++$id,
                 sprintf('trip-night-%d.jpg', $day),
                 $nightTimestamp,
@@ -829,7 +829,7 @@ final class VacationClusterStrategyTest extends TestCase
         $returnDay = new DateTimeImmutable('2024-07-12 08:00:00', new DateTimeZone('UTC'));
         for ($photo = 0; $photo < 2; ++$photo) {
             $timestamp = $returnDay->add(new DateInterval('PT' . ($photo * 2) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 ++$id,
                 sprintf('airport-%d.jpg', $photo),
                 $timestamp,
@@ -847,7 +847,7 @@ final class VacationClusterStrategyTest extends TestCase
             $day = $homeReturn->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-after-%d-%d.jpg', $i, $sample),
                     $timestamp,
@@ -878,7 +878,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function keepsSparsePhotoDaysWithinVacationRuns(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -889,7 +889,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('home-munich', 'Munich, Germany', 48.137, 11.575, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -908,13 +908,13 @@ final class VacationClusterStrategyTest extends TestCase
             ]);
         });
 
-        $id = 6000;
+        $id            = 6000;
         $homeSeedStart = new DateTimeImmutable('2024-06-01 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 4; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-seed-%d-%d.jpg', $i, $sample),
                     $timestamp,
@@ -928,15 +928,15 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $tripStart = new DateTimeImmutable('2024-06-10 08:00:00', new DateTimeZone('UTC'));
+        $tripStart      = new DateTimeImmutable('2024-06-10 08:00:00', new DateTimeZone('UTC'));
         $sparsePhotoIds = [];
         for ($day = 0; $day < 3; ++$day) {
-            $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
+            $dayStart   = $tripStart->add(new DateInterval('P' . $day . 'D'));
             $photoCount = $day === 1 ? 2 : 4;
 
             for ($photo = 0; $photo < $photoCount; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 4) . 'H'));
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('trip-%d-%d.jpg', $day, $photo),
                     $timestamp,
@@ -955,7 +955,7 @@ final class VacationClusterStrategyTest extends TestCase
 
             if ($day !== 1) {
                 $nightTimestamp = $dayStart->setTime(22, 45, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]        = $this->makeMediaFixture(
                     ++$id,
                     sprintf('trip-night-%d.jpg', $day),
                     $nightTimestamp,
@@ -988,7 +988,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function recognisesMultiSpotExplorationWithinTrip(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -999,7 +999,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items        = [];
         $homeLocation = $this->makeLocation('home-berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany', configure: static function (Location $loc): void {
             $loc->setCountryCode('DE');
             $loc->setCategory('residential');
@@ -1057,13 +1057,13 @@ final class VacationClusterStrategyTest extends TestCase
             ]);
         });
 
-        $id = 9000;
+        $id            = 9000;
         $homeSeedStart = new DateTimeImmutable('2024-04-10 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeSeedStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-pre-%d-%d.jpg', $i, $sample),
                     $timestamp->format('Y-m-d H:i:s'),
@@ -1111,7 +1111,7 @@ final class VacationClusterStrategyTest extends TestCase
                 $baseHour = $clusterIndex === 0 ? 9 : 14;
                 foreach ($clusterData['points'] as $pointIndex => $coordinates) {
                     $timestamp = $dayStart->setTime($baseHour, 0, 0)->add(new DateInterval('PT' . ($pointIndex * 30) . 'M'));
-                    $items[] = $this->makeMediaFixture(
+                    $items[]   = $this->makeMediaFixture(
                         ++$id,
                         sprintf('trip-%d-%d-%d.jpg', $dayIndex, $clusterIndex, $pointIndex),
                         $timestamp->format('Y-m-d H:i:s'),
@@ -1125,10 +1125,10 @@ final class VacationClusterStrategyTest extends TestCase
                 }
             }
 
-            $nightLocation = $clustersForDay[1]['location'];
-            $nightPoint    = $clustersForDay[1]['points'][1];
+            $nightLocation  = $clustersForDay[1]['location'];
+            $nightPoint     = $clustersForDay[1]['points'][1];
             $nightTimestamp = $dayStart->setTime(22, 30, 0);
-            $items[] = $this->makeMediaFixture(
+            $items[]        = $this->makeMediaFixture(
                 ++$id,
                 sprintf('trip-night-%d.jpg', $dayIndex),
                 $nightTimestamp->format('Y-m-d H:i:s'),
@@ -1144,7 +1144,7 @@ final class VacationClusterStrategyTest extends TestCase
         $returnNight = new DateTimeImmutable('2024-04-18 22:15:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $returnNight->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 ++$id,
                 sprintf('home-post-%d.jpg', $i),
                 $timestamp->format('Y-m-d H:i:s'),
@@ -1176,7 +1176,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function keepsDstTransitionWithinSingleVacationRun(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -1199,14 +1199,14 @@ final class VacationClusterStrategyTest extends TestCase
         });
 
         $items = [];
-        $id = 6000;
+        $id    = 6000;
 
         $homeBaseline = new DateTimeImmutable('2024-03-24 09:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 3; ++$i) {
             $day = $homeBaseline->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-before-%d-%d.jpg', $i, $sample),
                     $timestamp,
@@ -1220,7 +1220,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $tripStart = new DateTimeImmutable('2024-03-30 09:00:00', new DateTimeZone('Europe/Berlin'));
+        $tripStart   = new DateTimeImmutable('2024-03-30 09:00:00', new DateTimeZone('Europe/Berlin'));
         $lastNightId = null;
         for ($day = 0; $day < 4; ++$day) {
             $dayStart = $tripStart->add(new DateInterval('P' . $day . 'D'));
@@ -1238,8 +1238,8 @@ final class VacationClusterStrategyTest extends TestCase
             );
 
             $nightTimestamp = $dayStart->setTime(22, 30, 0);
-            $nightId = ++$id;
-            $items[] = $this->makeMediaFixture(
+            $nightId        = ++$id;
+            $items[]        = $this->makeMediaFixture(
                 $nightId,
                 sprintf('trip-night-%d.jpg', $day),
                 $nightTimestamp,
@@ -1261,7 +1261,7 @@ final class VacationClusterStrategyTest extends TestCase
             $day = $returnBaseline->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-after-%d-%d.jpg', $i, $sample),
                     $timestamp,
@@ -1293,7 +1293,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresExtremeGpsOutliersWhenScoringAwayDays(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -1333,7 +1333,7 @@ final class VacationClusterStrategyTest extends TestCase
         );
 
         $items = [];
-        $id = 9000;
+        $id    = 9000;
         $start = new DateTimeImmutable('2024-08-01 09:00:00', new DateTimeZone('UTC'));
 
         for ($day = 0; $day < 3; ++$day) {
@@ -1341,7 +1341,7 @@ final class VacationClusterStrategyTest extends TestCase
 
             for ($photo = 0; $photo < 3; ++$photo) {
                 $timestamp = $dayStart->add(new DateInterval('PT' . ($photo * 3) . 'H'));
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     ++$id,
                     sprintf('home-%d-%d.jpg', $day, $photo),
                     $timestamp,
@@ -1355,7 +1355,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
 
             $outlierTimestamp = $dayStart->setTime(12, 0, 0);
-            $items[] = $this->makeMediaFixture(
+            $items[]          = $this->makeMediaFixture(
                 ++$id,
                 sprintf('outlier-%d.jpg', $day),
                 $outlierTimestamp,
@@ -1376,7 +1376,7 @@ final class VacationClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenHomeCannotBeDerived(): void
     {
-        $helper = LocationHelper::createDefault();
+        $helper   = LocationHelper::createDefault();
         $strategy = $this->makeStrategy(
             locationHelper: $helper,
             holidayResolver: $this->createHolidayResolver(),
@@ -1387,7 +1387,7 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: 3,
         );
 
-        $items = [];
+        $items    = [];
         $location = $this->makeLocation('no-home', 'Anywhere', 48.2082, 16.3738, country: 'Austria', configure: static function (Location $loc): void {
             $loc->setCountryCode('AT');
             $loc->setCategory('tourism');
@@ -1396,7 +1396,7 @@ final class VacationClusterStrategyTest extends TestCase
         $base = new DateTimeImmutable('2024-08-10 12:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 4; ++$i) {
             $timestamp = $base->add(new DateInterval('P' . $i . 'D'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 3000 + $i,
                 sprintf('no-home-%d.jpg', $i),
                 $timestamp->format('Y-m-d H:i:s'),
@@ -1432,7 +1432,7 @@ final class VacationClusterStrategyTest extends TestCase
         );
 
         $timezoneResolver = new TimezoneResolver($timezone);
-        $dayBuilder = new DefaultDaySummaryBuilder([
+        $dayBuilder       = new DefaultDaySummaryBuilder([
             new InitializationStage($timezoneResolver, new PoiClassifier(), $timezone),
             new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), $gpsOutlierRadiusKm, $gpsOutlierMinSamples, $minItemsPerDay),
             new DensityStage(),
@@ -1440,7 +1440,7 @@ final class VacationClusterStrategyTest extends TestCase
         ]);
 
         $transportExtender = new TransportDayExtender();
-        $runDetector = new RunDetector(
+        $runDetector       = new RunDetector(
             transportDayExtender: $transportExtender,
             minAwayDistanceKm: $minAwayDistanceKm,
             minItemsPerDay: $minItemsPerDay,

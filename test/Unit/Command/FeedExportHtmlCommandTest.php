@@ -20,8 +20,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Tester\CommandTester;
 
 use function sys_get_temp_dir;
 use function uniqid;
@@ -58,12 +58,12 @@ final class FeedExportHtmlCommandTest extends TestCase
         $outputDir = sys_get_temp_dir() . '/memories-export-' . uniqid('', true);
 
         $tester->execute([
-            '--limit-clusters' => '25',
-            '--max-items'      => '5',
-            '--images-per-item'=> '2',
-            '--thumb-width'    => '320',
-            '--symlink'        => true,
-            'out-dir'          => $outputDir,
+            '--limit-clusters'  => '25',
+            '--max-items'       => '5',
+            '--images-per-item' => '2',
+            '--thumb-width'     => '320',
+            '--symlink'         => true,
+            'out-dir'           => $outputDir,
         ]);
 
         $tester->assertCommandIsSuccessful();

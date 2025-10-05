@@ -34,10 +34,10 @@ final class GpsMetricsStageTest extends TestCase
         $gpsStage         = new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 2);
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -45,7 +45,7 @@ final class GpsMetricsStageTest extends TestCase
         $start = new DateTimeImmutable('2024-04-01 08:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $start->add(new DateInterval('PT' . ($i * 2) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 100 + $i,
                 sprintf('day-%d.jpg', $i),
                 $timestamp,

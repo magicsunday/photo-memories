@@ -40,7 +40,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
         $linker = new class($location, $mediaA, $mediaB) implements MediaLocationLinkerInterface {
             private int $invocations = 0;
 
-            /** @var list<int> $networkCalls */
+            /** @var list<int> */
             private array $networkCalls = [1, 0];
 
             public function __construct(

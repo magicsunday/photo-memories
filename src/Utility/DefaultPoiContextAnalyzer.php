@@ -91,9 +91,9 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
                     }
                 }
 
-                $nameLeft = $left['data']['name'] ?? '';
+                $nameLeft  = $left['data']['name'] ?? '';
                 $nameRight = $right['data']['name'] ?? '';
-                $cmp = strcmp($nameLeft, $nameRight);
+                $cmp       = strcmp($nameLeft, $nameRight);
                 if ($cmp !== 0) {
                     return $cmp;
                 }

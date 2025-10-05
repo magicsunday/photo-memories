@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use ImagickException;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
@@ -49,10 +50,10 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
     public function __construct(
         private MediaQualityAggregator $qualityAggregator,
-        private int                    $sampleSize = 96, // square downsample for analysis
-        string                         $ffmpegBinary = 'ffmpeg',
-        string                         $ffprobeBinary = 'ffprobe',
-        private float                  $posterFrameSecond = 1.0,
+        private int $sampleSize = 96, // square downsample for analysis
+        string $ffmpegBinary = 'ffmpeg',
+        string $ffprobeBinary = 'ffprobe',
+        private float $posterFrameSecond = 1.0,
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');
@@ -160,7 +161,8 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
      * @param int                   $h
      *
      * @return array<int, array<int, array{0: float, 1: float, 2: float}>>
-     * @throws \ImagickException
+     *
+     * @throws ImagickException
      */
     private function rgbMatrixFromAdapter(ImageAdapterInterface $adapter, int $w, int $h): array
     {

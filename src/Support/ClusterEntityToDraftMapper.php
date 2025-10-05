@@ -32,7 +32,7 @@ final class ClusterEntityToDraftMapper
      * Lookup table that maps the configured clustering algorithm to a logical
      * group name used by the UI.
      *
-     * @var array<string, string> $algorithmGroups
+     * @var array<string, string>
      */
     private array $algorithmGroups = [];
 
@@ -42,14 +42,14 @@ final class ClusterEntityToDraftMapper
     private string $defaultAlgorithmGroup;
 
     /**
-     * @param array<string, string> $algorithmGroups Configuration that maps the algorithm identifier
-     *                                               to the human-readable group label.
-     * @param string                $defaultGroup    Optional default group name used when neither the
-     *                                               entity nor configuration defines a mapping.
+     * @param array<string, string> $algorithmGroups configuration that maps the algorithm identifier
+     *                                               to the human-readable group label
+     * @param string                $defaultGroup    optional default group name used when neither the
+     *                                               entity nor configuration defines a mapping
      */
     public function __construct(
         array $algorithmGroups = [],
-        string $defaultGroup = 'default'
+        string $defaultGroup = 'default',
     ) {
         $this->defaultAlgorithmGroup = $defaultGroup;
 
@@ -61,16 +61,15 @@ final class ClusterEntityToDraftMapper
 
             $this->algorithmGroups[$algorithm] = $group;
         }
-
     }
 
     /**
      * Converts a list of persisted cluster entities into their in-memory draft
      * representation.
      *
-     * @param list<Cluster> $entities The clusters retrieved from the persistence layer.
+     * @param list<Cluster> $entities the clusters retrieved from the persistence layer
      *
-     * @return list<ClusterDraft> The mapped draft objects used by the strategies.
+     * @return list<ClusterDraft> the mapped draft objects used by the strategies
      */
     public function mapMany(array $entities): array
     {
@@ -114,9 +113,9 @@ final class ClusterEntityToDraftMapper
      * Normalizes the list of member media identifiers by removing duplicates
      * and sorting the values numerically.
      *
-     * @param list<int> $members The raw member identifier list from the entity.
+     * @param list<int> $members the raw member identifier list from the entity
      *
-     * @return list<int> The normalized list of unique member identifiers.
+     * @return list<int> the normalized list of unique member identifiers
      */
     private function normalizeMembers(array $members): array
     {
@@ -130,9 +129,9 @@ final class ClusterEntityToDraftMapper
      * Resolves the group name for the provided algorithm, falling back to the
      * configured default when no mapping exists.
      *
-     * @param string $algorithm Name of the algorithm stored on the entity.
+     * @param string $algorithm name of the algorithm stored on the entity
      *
-     * @return string The resolved group name.
+     * @return string the resolved group name
      */
     private function resolveGroup(string $algorithm): string
     {

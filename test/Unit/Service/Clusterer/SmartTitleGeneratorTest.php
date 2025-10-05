@@ -31,7 +31,7 @@ use function unlink;
 #[CoversClass(ClusterDraft::class)]
 final class SmartTitleGeneratorTest extends TestCase
 {
-    /** @var list<string> $tempFiles */
+    /** @var list<string> */
     private array $tempFiles = [];
 
     protected function tearDown(): void
@@ -88,10 +88,10 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'vacation',
             params: [
-                'place'        => 'Hamburg',
-                'place_city'   => 'Hamburg',
+                'place'         => 'Hamburg',
+                'place_city'    => 'Hamburg',
                 'place_country' => 'Germany',
-                'time_range' => [
+                'time_range'    => [
                     'from' => (new DateTimeImmutable('2024-07-05 00:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-07-07 21:59:59', new DateTimeZone('UTC')))->getTimestamp(),
                 ],

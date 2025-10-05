@@ -13,9 +13,9 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -81,7 +81,7 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
         foreach ($videoItems as $m) {
             $local = $this->localTimeHelper->resolve($m);
             assert($local instanceof DateTimeImmutable);
-            $key   = $local->format('Y-m-d');
+            $key = $local->format('Y-m-d');
             $byDay[$key] ??= [];
             $byDay[$key][] = $m;
         }
@@ -98,10 +98,10 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             $centroid = $this->computeCentroid($members);
             $time     = $this->computeTimeRange($members);
 
-            $videoCount            = count($members);
-            $videoDurationTotal    = 0.0;
-            $videoSlowMoCount      = 0;
-            $videoStabilizedCount  = 0;
+            $videoCount           = count($members);
+            $videoDurationTotal   = 0.0;
+            $videoSlowMoCount     = 0;
+            $videoStabilizedCount = 0;
 
             foreach ($members as $member) {
                 $videoDuration = $member->getVideoDurationS();

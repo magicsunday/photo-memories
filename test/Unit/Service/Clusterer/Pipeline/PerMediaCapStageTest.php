@@ -25,15 +25,15 @@ final class PerMediaCapStageTest extends TestCase
             perMediaCap: 1,
             keepOrder: ['primary', 'secondary'],
             algorithmGroups: [
-                'primary' => 'stories',
+                'primary'   => 'stories',
                 'secondary' => 'stories',
-                'annot' => 'annotations',
+                'annot'     => 'annotations',
             ],
             defaultAlgorithmGroup: 'default',
         );
 
-        $primary   = $this->createDraft('primary', 0.9, [1, 2]);
-        $secondary = $this->createDraft('secondary', 0.8, [2, 3]);
+        $primary    = $this->createDraft('primary', 0.9, [1, 2]);
+        $secondary  = $this->createDraft('secondary', 0.8, [2, 3]);
         $annotation = $this->createDraft('annot', 0.7, [2, 4]);
 
         $result = $stage->process([

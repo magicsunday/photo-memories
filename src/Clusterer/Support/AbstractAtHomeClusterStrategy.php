@@ -16,15 +16,15 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
+use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
 use function assert;
 use function count;
-use function sort;
 use function hash;
 use function hash_equals;
+use function sort;
 use function sprintf;
 
 use const SORT_STRING;
@@ -38,7 +38,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
 
     /**
-     * @var array<int, true> $allowedWeekdayLookup
+     * @var array<int, true>
      */
     private readonly array $allowedWeekdayLookup;
 
@@ -119,7 +119,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         foreach ($timestamped as $media) {
             $local = $this->localTimeHelper->resolve($media);
             assert($local instanceof DateTimeImmutable);
-            $dow   = (int) $local->format('N');
+            $dow = (int) $local->format('N');
             if (!isset($this->allowedWeekdayLookup[$dow])) {
                 continue;
             }

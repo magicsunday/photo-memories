@@ -109,7 +109,7 @@ HTML;
                         continue;
                     }
 
-                    $label = $tag['label'] ?? null;
+                    $label    = $tag['label'] ?? null;
                     $scoreTag = $tag['score'] ?? null;
 
                     if (!is_string($label)) {
@@ -122,7 +122,7 @@ HTML;
                         $text      = sprintf('%s (%s)', $label, $formatted);
                     }
 
-                    $safe = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $safe    = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                     $chips[] = "<span class=\"chip chip-tag\">$safe</span>";
                 }
             }

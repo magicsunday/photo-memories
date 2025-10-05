@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInt
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\Value\GpsMetadata;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+
 use function is_array;
 
 /**

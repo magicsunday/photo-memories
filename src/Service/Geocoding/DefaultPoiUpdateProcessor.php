@@ -27,7 +27,7 @@ use function substr;
 use function trim;
 
 /**
- * Class DefaultPoiUpdateProcessor
+ * Class DefaultPoiUpdateProcessor.
  */
 final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInterface
 {
@@ -36,8 +36,8 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
      */
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private PoiEnsurerInterface    $locationResolver,
-        private int                    $batchSize = 10,
+        private PoiEnsurerInterface $locationResolver,
+        private int $batchSize = 10,
     ) {
     }
 

@@ -90,7 +90,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             $normalizedFfprobeBinary = 'ffprobe';
         }
 
-        $this->ffmpegBinary = $normalizedFfmpegBinary;
+        $this->ffmpegBinary  = $normalizedFfmpegBinary;
         $this->ffprobeBinary = $normalizedFfprobeBinary;
     }
 
@@ -432,12 +432,12 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
             if (($sum % 2) === 0) {
                 for ($row = $maxRow; $row >= $minRow; --$row) {
-                    $col          = $sum - $row;
+                    $col         = $sum - $row;
                     $positions[] = [$row, $col];
                 }
             } else {
                 for ($row = $minRow; $row <= $maxRow; ++$row) {
-                    $col          = $sum - $row;
+                    $col         = $sum - $row;
                     $positions[] = [$row, $col];
                 }
             }

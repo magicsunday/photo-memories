@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Utility;
 
 use InvalidArgumentException;
+
 use function strlen;
 
 /**
@@ -24,9 +25,9 @@ final class GeoHash
     /**
      * Encodes the provided latitude and longitude into a GeoHash.
      *
-     * @param float $latitude  Latitude in decimal degrees.
-     * @param float $longitude Longitude in decimal degrees.
-     * @param int   $precision Desired GeoHash length.
+     * @param float $latitude  latitude in decimal degrees
+     * @param float $longitude longitude in decimal degrees
+     * @param int   $precision desired GeoHash length
      */
     public static function encode(float $latitude, float $longitude, int $precision): string
     {
@@ -42,12 +43,12 @@ final class GeoHash
             throw new InvalidArgumentException('Longitude must be within the range -180 to 180 degrees.');
         }
 
-        $geohash = '';
+        $geohash     = '';
         $latInterval = [-90.0, 90.0];
         $lonInterval = [-180.0, 180.0];
-        $isEven = true;
-        $bit = 0;
-        $ch = 0;
+        $isEven      = true;
+        $bit         = 0;
+        $ch          = 0;
 
         while (strlen($geohash) < $precision) {
             if ($isEven) {
@@ -71,13 +72,13 @@ final class GeoHash
             $isEven = !$isEven;
 
             if ($bit < 4) {
-                $bit++;
+                ++$bit;
                 continue;
             }
 
             $geohash .= self::BASE32[$ch];
             $bit = 0;
-            $ch = 0;
+            $ch  = 0;
         }
 
         return $geohash;

@@ -34,12 +34,12 @@ final class CameraExifMetadataProcessorTest extends TestCase
                 'Model' => 'Canon EOS 5D Mark IV',
             ],
             'EXIF' => [
-                'CameraOwnerName'                => 'Rico Sonntag',
-                'BodySerialNumber'               => '123ABC456',
-                'LensMake'                       => 'Canon',
-                'LensModel'                      => 'EF 24-70mm f/2.8L II USM',
-                'LensSerialNumber'               => 'LN987654321',
-                'LensSpecification'              => ['24/1', '70/1', '28/10', '40/10'],
+                'CameraOwnerName'   => 'Rico Sonntag',
+                'BodySerialNumber'  => '123ABC456',
+                'LensMake'          => 'Canon',
+                'LensModel'         => 'EF 24-70mm f/2.8L II USM',
+                'LensSerialNumber'  => 'LN987654321',
+                'LensSpecification' => ['24/1', '70/1', '28/10', '40/10'],
             ],
         ];
 

@@ -13,10 +13,11 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Entity\Location;
 use Symfony\Component\Console\Style\SymfonyStyle;
+
 use function sprintf;
 
 /**
- * Class GeocodingResultSummary
+ * Class GeocodingResultSummary.
  */
 final readonly class GeocodingResultSummary
 {
@@ -24,9 +25,9 @@ final readonly class GeocodingResultSummary
      * @param list<Location> $locationsForPoiUpdate
      */
     public function __construct(
-        private int   $processed,
-        private int   $linked,
-        private int   $networkCalls,
+        private int $processed,
+        private int $linked,
+        private int $networkCalls,
         private array $locationsForPoiUpdate,
     ) {
     }

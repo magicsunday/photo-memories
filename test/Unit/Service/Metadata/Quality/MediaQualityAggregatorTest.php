@@ -106,7 +106,7 @@ final class MediaQualityAggregatorTest extends TestCase
 
         $log = $media->getIndexLog();
         self::assertNotNull($log);
-        self::assertStringContainsString("qlt=low; sharp=0.60; clip=0.20", $log);
+        self::assertStringContainsString('qlt=low; sharp=0.60; clip=0.20', $log);
     }
 
     private function createMedia(int $id): Media

@@ -22,7 +22,7 @@ use function is_numeric;
 use function sprintf;
 
 /**
- * Class AbstractTimeRangeClusterScoreHeuristic
+ * Class AbstractTimeRangeClusterScoreHeuristic.
  */
 abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
@@ -38,6 +38,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
      * @param array<int, Media> $mediaMap
      *
      * @return array{from:int,to:int}|null
+     *
      * @throws DateMalformedStringException
      */
     protected function ensureTimeRange(ClusterDraft $cluster, array $mediaMap): ?array
@@ -62,6 +63,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
      * @param array{from:int,to:int}|null $range
      *
      * @return bool
+     *
      * @throws DateMalformedStringException
      */
     protected function isValidTimeRange(?array $range): bool
@@ -86,6 +88,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
      * @param array<int, Media> $mediaMap
      *
      * @return array{from:int,to:int}|null
+     *
      * @throws DateMalformedStringException
      */
     private function computeTimeRangeFromMembers(ClusterDraft $cluster, array $mediaMap): ?array

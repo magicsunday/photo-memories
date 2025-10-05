@@ -19,9 +19,9 @@ interface FastHashGeneratorInterface
     /**
      * Computes a fast hash for the provided file path.
      *
-     * @param string $filePath Absolute path to the file that should be hashed.
+     * @param string $filePath absolute path to the file that should be hashed
      *
-     * @return string|null The computed hash value or null if hashing failed.
+     * @return string|null the computed hash value or null if hashing failed
      */
     public function hash(string $filePath): ?string;
 }

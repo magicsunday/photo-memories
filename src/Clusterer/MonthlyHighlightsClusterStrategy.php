@@ -55,6 +55,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     *
      * @throws DateInvalidTimeZoneException
      */
     public function cluster(array $items): array

@@ -234,12 +234,12 @@ class Location
     private ?array $extraTags = null;
 
     /**
-     * @param string $provider        Geocoding provider name.
-     * @param string $providerPlaceId Unique provider identifier.
-     * @param string $displayName     Human friendly label.
-     * @param float  $lat             Latitude component.
-     * @param float  $lon             Longitude component.
-     * @param string $cell            Spatial cell key for grouping.
+     * @param string $provider        geocoding provider name
+     * @param string $providerPlaceId unique provider identifier
+     * @param string $displayName     human friendly label
+     * @param float  $lat             latitude component
+     * @param float  $lon             longitude component
+     * @param string $cell            spatial cell key for grouping
      */
     public function __construct(
         string $provider,
@@ -260,7 +260,7 @@ class Location
     /**
      * Returns the database identifier once persisted.
      *
-     * @return int|null Identifier assigned by Doctrine or null for new entities.
+     * @return int|null identifier assigned by Doctrine or null for new entities
      */
     public function getId(): ?int
     {
@@ -270,7 +270,7 @@ class Location
     /**
      * Returns the origin provider.
      *
-     * @return string Provider name.
+     * @return string provider name
      */
     public function getProvider(): string
     {
@@ -280,7 +280,7 @@ class Location
     /**
      * Returns the provider specific identifier.
      *
-     * @return string Provider specific place identifier.
+     * @return string provider specific place identifier
      */
     public function getProviderPlaceId(): string
     {
@@ -290,7 +290,7 @@ class Location
     /**
      * Returns the latitude of the location.
      *
-     * @return float Latitude in decimal degrees.
+     * @return float latitude in decimal degrees
      */
     public function getLat(): float
     {
@@ -300,7 +300,7 @@ class Location
     /**
      * Returns the longitude of the location.
      *
-     * @return float Longitude in decimal degrees.
+     * @return float longitude in decimal degrees
      */
     public function getLon(): float
     {
@@ -310,7 +310,7 @@ class Location
     /**
      * Returns the spatial cell identifier.
      *
-     * @return string Spatial cell hash.
+     * @return string spatial cell hash
      */
     public function getCell(): string
     {
@@ -320,7 +320,7 @@ class Location
     /**
      * Returns the display label for the location.
      *
-     * @return string Human readable label.
+     * @return string human readable label
      */
     public function getDisplayName(): string
     {
@@ -330,7 +330,7 @@ class Location
     /**
      * Updates the display label.
      *
-     * @param string $displayName Human readable label.
+     * @param string $displayName human readable label
      *
      * @return Location
      */
@@ -344,7 +344,7 @@ class Location
     /**
      * Returns the ISO country code.
      *
-     * @return string|null ISO alpha-2 code or null when unavailable.
+     * @return string|null ISO alpha-2 code or null when unavailable
      */
     public function getCountryCode(): ?string
     {
@@ -354,7 +354,7 @@ class Location
     /**
      * Sets the ISO country code.
      *
-     * @param string|null $countryCode ISO alpha-2 code.
+     * @param string|null $countryCode ISO alpha-2 code
      *
      * @return Location
      */
@@ -368,7 +368,7 @@ class Location
     /**
      * Returns the resolved country name.
      *
-     * @return string|null Country name or null when unknown.
+     * @return string|null country name or null when unknown
      */
     public function getCountry(): ?string
     {
@@ -378,7 +378,7 @@ class Location
     /**
      * Sets the country name.
      *
-     * @param string|null $country Country name.
+     * @param string|null $country country name
      *
      * @return Location
      */
@@ -392,7 +392,7 @@ class Location
     /**
      * Returns the state or region.
      *
-     * @return string|null State or region name.
+     * @return string|null state or region name
      */
     public function getState(): ?string
     {
@@ -402,7 +402,7 @@ class Location
     /**
      * Sets the state or region.
      *
-     * @param string|null $state State or region name.
+     * @param string|null $state state or region name
      *
      * @return Location
      */
@@ -416,7 +416,7 @@ class Location
     /**
      * Returns the county information.
      *
-     * @return string|null County or administrative district name.
+     * @return string|null county or administrative district name
      */
     public function getCounty(): ?string
     {
@@ -426,7 +426,7 @@ class Location
     /**
      * Sets the county information.
      *
-     * @param string|null $county County or administrative district name.
+     * @param string|null $county county or administrative district name
      *
      * @return Location
      */
@@ -440,7 +440,7 @@ class Location
     /**
      * Returns the city component of the address.
      *
-     * @return string|null City name.
+     * @return string|null city name
      */
     public function getCity(): ?string
     {
@@ -450,7 +450,7 @@ class Location
     /**
      * Sets the city component of the address.
      *
-     * @param string|null $city City name.
+     * @param string|null $city city name
      *
      * @return Location
      */
@@ -464,7 +464,7 @@ class Location
     /**
      * Returns the suburb or neighbourhood.
      *
-     * @return string|null Suburb or neighbourhood name.
+     * @return string|null suburb or neighbourhood name
      */
     public function getSuburb(): ?string
     {
@@ -474,7 +474,7 @@ class Location
     /**
      * Sets the suburb or neighbourhood.
      *
-     * @param string|null $suburb Suburb or neighbourhood name.
+     * @param string|null $suburb suburb or neighbourhood name
      *
      * @return Location
      */
@@ -488,7 +488,7 @@ class Location
     /**
      * Returns the postal code.
      *
-     * @return string|null Postal code string.
+     * @return string|null postal code string
      */
     public function getPostcode(): ?string
     {
@@ -498,7 +498,7 @@ class Location
     /**
      * Sets the postal code.
      *
-     * @param string|null $postcode Postal code string.
+     * @param string|null $postcode postal code string
      *
      * @return Location
      */
@@ -512,7 +512,7 @@ class Location
     /**
      * Returns the road name.
      *
-     * @return string|null Road or street name.
+     * @return string|null road or street name
      */
     public function getRoad(): ?string
     {
@@ -522,7 +522,7 @@ class Location
     /**
      * Sets the road name.
      *
-     * @param string|null $road Road or street name.
+     * @param string|null $road road or street name
      *
      * @return Location
      */
@@ -536,7 +536,7 @@ class Location
     /**
      * Returns the house number or building identifier.
      *
-     * @return string|null House number or building identifier.
+     * @return string|null house number or building identifier
      */
     public function getHouseNumber(): ?string
     {
@@ -546,7 +546,7 @@ class Location
     /**
      * Sets the house number or building identifier.
      *
-     * @param string|null $houseNumber House number or building identifier.
+     * @param string|null $houseNumber house number or building identifier
      *
      * @return Location
      */
@@ -560,7 +560,7 @@ class Location
     /**
      * Returns the broad location category.
      *
-     * @return string|null Category label.
+     * @return string|null category label
      */
     public function getCategory(): ?string
     {
@@ -570,7 +570,7 @@ class Location
     /**
      * Sets the broad location category.
      *
-     * @param string|null $category Category label.
+     * @param string|null $category category label
      *
      * @return Location
      */
@@ -584,7 +584,7 @@ class Location
     /**
      * Returns the specific place type.
      *
-     * @return string|null Type label.
+     * @return string|null type label
      */
     public function getType(): ?string
     {
@@ -594,7 +594,7 @@ class Location
     /**
      * Sets the specific place type.
      *
-     * @param string|null $type Type label.
+     * @param string|null $type type label
      *
      * @return Location
      */

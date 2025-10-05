@@ -22,8 +22,8 @@ use function array_keys;
 use function array_values;
 use function assert;
 use function count;
-use function usort;
 use function mb_strtolower;
+use function usort;
 
 /**
  * Aggregates each season across multiple years into a memory
@@ -113,7 +113,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         }
 
         return $out;
-}
+    }
 
     private function resolveSeason(Media $media): string
     {
@@ -145,9 +145,9 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         $normalized = mb_strtolower($value);
 
         return match ($normalized) {
-            'winter'    => 'Winter',
+            'winter' => 'Winter',
             'spring', 'frühling' => 'Frühling',
-            'summer', 'sommer'   => 'Sommer',
+            'summer', 'sommer' => 'Sommer',
             'autumn', 'fall', 'herbst' => 'Herbst',
             default => null,
         };

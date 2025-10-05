@@ -29,16 +29,16 @@ use function sprintf;
 final class CaptureTimeResolver
 {
     /**
-     * @param TimezoneResolverInterface $timezoneResolver
+     * @param TimezoneResolverInterface                                                               $timezoneResolver
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function __construct(
         private readonly TimezoneResolverInterface $timezoneResolver,
         private array $home = [
-            'lat' => 0.0,
-            'lon' => 0.0,
-            'radius_km' => 0.0,
-            'country' => null,
+            'lat'             => 0.0,
+            'lon'             => 0.0,
+            'radius_km'       => 0.0,
+            'country'         => null,
             'timezone_offset' => null,
         ],
     ) {
@@ -130,11 +130,11 @@ final class CaptureTimeResolver
 
     private function applyOffset(DateTimeImmutable $instant, int $offsetMinutes): DateTimeImmutable
     {
-        $sign = $offsetMinutes >= 0 ? '+' : '-';
-        $abs  = abs($offsetMinutes);
-        $hours = intdiv($abs, 60);
+        $sign    = $offsetMinutes >= 0 ? '+' : '-';
+        $abs     = abs($offsetMinutes);
+        $hours   = intdiv($abs, 60);
         $minutes = $abs % 60;
-        $spec = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
+        $spec    = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
 
         try {
             $timezone = new DateTimeZone($spec);

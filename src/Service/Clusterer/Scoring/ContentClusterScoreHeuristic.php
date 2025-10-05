@@ -21,7 +21,7 @@ use function mb_strtolower;
 use function min;
 
 /**
- * Class ContentClusterScoreHeuristic
+ * Class ContentClusterScoreHeuristic.
  */
 final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {

@@ -24,7 +24,7 @@ use function spl_object_id;
 use function usleep;
 
 /**
- * Class DefaultMediaGeocodingProcessor
+ * Class DefaultMediaGeocodingProcessor.
  */
 final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingProcessorInterface
 {
@@ -32,11 +32,11 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
      * @param positive-int $batchSize
      */
     public function __construct(
-        private EntityManagerInterface       $entityManager,
+        private EntityManagerInterface $entityManager,
         private MediaLocationLinkerInterface $linker,
-        private string                       $locale,
-        private int                          $delayMs = 1200,
-        private int                          $batchSize = 10,
+        private string $locale,
+        private int $delayMs = 1200,
+        private int $batchSize = 10,
     ) {
     }
 
@@ -50,9 +50,9 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
         $progressBar->setMessage('Starte …');
         $progressBar->start();
 
-        $processed       = 0;
-        $linked          = 0;
-        $networkCalls    = 0;
+        $processed    = 0;
+        $linked       = 0;
+        $networkCalls = 0;
         /** @var array<int,Location> $uniqueLocations */
         $uniqueLocations = [];
 

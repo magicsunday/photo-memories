@@ -55,10 +55,10 @@ final class SlideshowJobTest extends TestCase
             $tmp,
             json_encode(
                 [
-                    'id' => 'abc',
+                    'id'     => 'abc',
                     'output' => '/tmp/out.mp4',
-                    'lock' => '/tmp/out.mp4.lock',
-                    'error' => '/tmp/out.mp4.error',
+                    'lock'   => '/tmp/out.mp4.lock',
+                    'error'  => '/tmp/out.mp4.error',
                     'images' => [],
                 ],
                 JSON_THROW_ON_ERROR

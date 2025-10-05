@@ -31,17 +31,17 @@ final class OverpassTagConfiguration
         ['tourism' => ['attraction', 'viewpoint', 'museum', 'gallery']],
         ['historic' => ['monument', 'castle', 'memorial']],
         ['man_made' => ['tower', 'lighthouse']],
-        ['leisure' => ['park', 'garden']],
-        ['natural' => ['peak', 'cliff']],
+        ['leisure'  => ['park', 'garden']],
+        ['natural'  => ['peak', 'cliff']],
     ];
 
     /**
-     * @var list<array<string,list<string>>> $allowedTagCombinations
+     * @var list<array<string,list<string>>>
      */
     private array $allowedTagCombinations;
 
     /**
-     * @var array<string,list<string>> $allowedTagMap
+     * @var array<string,list<string>>
      */
     private array $allowedTagMap;
 

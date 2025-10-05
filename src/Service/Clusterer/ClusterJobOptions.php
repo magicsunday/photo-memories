@@ -14,15 +14,15 @@ namespace MagicSunday\Memories\Service\Clusterer;
 use DateTimeImmutable;
 
 /**
- * Class ClusterJobOptions
+ * Class ClusterJobOptions.
  */
 final readonly class ClusterJobOptions
 {
     public function __construct(
-        private bool               $dryRun,
-        private ?int               $limit,
+        private bool $dryRun,
+        private ?int $limit,
         private ?DateTimeImmutable $since,
-        private bool               $replace,
+        private bool $replace,
     ) {
     }
 

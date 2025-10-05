@@ -19,7 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 interface SlideshowVideoManagerInterface
 {
     /**
-     * @param list<int>       $memberIds
+     * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
     public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus;

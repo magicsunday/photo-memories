@@ -1,5 +1,4 @@
-<?php 
-
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -16,7 +15,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 
 /**
- * Class HolidayClusterScoreHeuristic
+ * Class HolidayClusterScoreHeuristic.
  */
 final class HolidayClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Contract;
 
 /**
- * Interface FinalizableMediaIngestionStageInterface
+ * Interface FinalizableMediaIngestionStageInterface.
  */
 interface FinalizableMediaIngestionStageInterface extends MediaIngestionStageInterface
 {

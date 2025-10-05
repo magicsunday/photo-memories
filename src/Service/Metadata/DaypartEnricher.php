@@ -16,7 +16,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 
 /**
- * Class DaypartEnricher
+ * Class DaypartEnricher.
  */
 final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
 {

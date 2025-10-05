@@ -17,12 +17,12 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class HashStage
+ * Class HashStage.
  */
 final class HashStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 

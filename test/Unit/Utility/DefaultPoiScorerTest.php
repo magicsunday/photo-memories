@@ -23,8 +23,8 @@ final class DefaultPoiScorerTest extends TestCase
         $scorer = new DefaultPoiScorer();
 
         $tourism = [
-            'name'          => 'City Museum',
-            'names'         => [
+            'name'  => 'City Museum',
+            'names' => [
                 'default'    => 'City Museum',
                 'localized'  => [],
                 'alternates' => [],
@@ -38,8 +38,8 @@ final class DefaultPoiScorerTest extends TestCase
         ];
 
         $parking = [
-            'name'          => 'Parking Lot',
-            'names'         => [
+            'name'  => 'Parking Lot',
+            'names' => [
                 'default'    => 'Parking Lot',
                 'localized'  => [],
                 'alternates' => [],
@@ -63,8 +63,8 @@ final class DefaultPoiScorerTest extends TestCase
         $scorer = new DefaultPoiScorer();
 
         $poi = [
-            'name'          => 'City Museum',
-            'names'         => [
+            'name'  => 'City Museum',
+            'names' => [
                 'default'    => 'City Museum',
                 'localized'  => [],
                 'alternates' => [],

@@ -22,7 +22,6 @@ use RuntimeException;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_filter;
-use function array_map;
 use function array_slice;
 use function array_values;
 use function basename;
@@ -43,7 +42,7 @@ use function symlink;
 use function usort;
 
 /**
- * Class HtmlFeedExportService
+ * Class HtmlFeedExportService.
  */
 final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 {

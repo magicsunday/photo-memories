@@ -49,10 +49,12 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
             }
 
             $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
+
             return $largestStaypoint ?? $sleepProxy;
         }
 
         $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
+
         return $largestStaypoint ?? $this->fallbackBaseLocation(
             $summary,
             $home
@@ -95,10 +97,10 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $best = $candidates[0];
 
         return [
-            'lat'          => $best['lat'],
-            'lon'          => $best['lon'],
-            'distance_km'  => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
-            'source'       => 'staypoint',
+            'lat'         => $best['lat'],
+            'lon'         => $best['lon'],
+            'distance_km' => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
+            'source'      => 'staypoint',
         ];
     }
 

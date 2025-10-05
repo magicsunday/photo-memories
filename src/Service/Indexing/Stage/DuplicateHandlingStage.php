@@ -24,12 +24,12 @@ use function hash_file;
 use function sprintf;
 
 /**
- * Class DuplicateHandlingStage
+ * Class DuplicateHandlingStage.
  */
 final readonly class DuplicateHandlingStage implements MediaIngestionStageInterface
 {
     public function __construct(
-        private EntityManagerInterface     $entityManager,
+        private EntityManagerInterface $entityManager,
         private FastHashGeneratorInterface $fastHashGenerator,
     ) {
     }

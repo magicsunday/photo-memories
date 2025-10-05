@@ -31,7 +31,7 @@ readonly class MediaDuplicateRepository
     /**
      * Records or updates the perceptual distance between two media entities.
      *
-     * @throws InvalidArgumentException When the provided media references are identical or the distance is invalid.
+     * @throws InvalidArgumentException when the provided media references are identical or the distance is invalid
      */
     public function recordDistance(Media $first, Media $second, int $distance): MediaDuplicate
     {

@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+
 use function in_array;
 use function pathinfo;
 use function strtolower;
@@ -26,12 +27,12 @@ use const PATHINFO_EXTENSION;
 final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterface
 {
     /**
-     * @var list<string> $imageExtensions
+     * @var list<string>
      */
     private readonly array $imageExtensions;
 
     /**
-     * @var list<string> $videoExtensions
+     * @var list<string>
      */
     private readonly array $videoExtensions;
 

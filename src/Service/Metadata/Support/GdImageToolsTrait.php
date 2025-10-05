@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Support;
 
+use ImagickException;
 use MagicSunday\Memories\Entity\Media;
 
 use function array_values;
@@ -111,7 +112,8 @@ trait GdImageToolsTrait
      * @param int                   $h
      *
      * @return array<int, array<int, float>> Matrix [y][x] with luma [0..255]
-     * @throws \ImagickException
+     *
+     * @throws ImagickException
      */
     private function grayscaleMatrixFromAdapter(ImageAdapterInterface $src, int $w, int $h): array
     {

@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 /**
- * Interface ReverseGeocoderInterface
+ * Interface ReverseGeocoderInterface.
  */
 interface ReverseGeocoderInterface
 {

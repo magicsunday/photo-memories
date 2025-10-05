@@ -57,9 +57,9 @@ final readonly class SlideshowVideoStatus
     public function toArray(): array
     {
         $payload = [
-            'status'                => $this->status,
-            'meldung'               => $this->message,
-            'dauerProBildSekunden'  => round($this->secondsPerImage, 2),
+            'status'               => $this->status,
+            'meldung'              => $this->message,
+            'dauerProBildSekunden' => round($this->secondsPerImage, 2),
         ];
 
         if ($this->url !== null) {

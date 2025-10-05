@@ -14,11 +14,11 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
+use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
@@ -37,17 +37,17 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     public function groupsMediaByLocalTimezoneAcrossOffsets(): void
     {
         $timezoneResolver = new TimezoneResolver('UTC');
-        $builder = $this->createBuilder(
+        $builder          = $this->createBuilder(
             $timezoneResolver,
             timezone: 'UTC',
             minItemsPerDay: 1,
         );
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -125,17 +125,17 @@ final class DefaultDaySummaryBuilderTest extends TestCase
     public function marksDaysAwayFromHomeWhenBaseLocationIsFar(): void
     {
         $timezoneResolver = new TimezoneResolver('UTC');
-        $builder = $this->createBuilder(
+        $builder          = $this->createBuilder(
             $timezoneResolver,
             timezone: 'UTC',
             minItemsPerDay: 2,
         );
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -152,11 +152,11 @@ final class DefaultDaySummaryBuilderTest extends TestCase
             },
         );
 
-        $items = [];
+        $items   = [];
         $homeDay = new DateTimeImmutable('2024-06-01 09:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $homeDay->add(new DateInterval('PT' . ($i * 2) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 100 + $i,
                 sprintf('home-%d.jpg', $i),
                 $timestamp,
@@ -172,7 +172,7 @@ final class DefaultDaySummaryBuilderTest extends TestCase
         $awayDay = new DateTimeImmutable('2024-06-02 12:00:00', new DateTimeZone('UTC'));
         for ($i = 0; $i < 3; ++$i) {
             $timestamp = $awayDay->add(new DateInterval('PT' . ($i * 3) . 'H'));
-            $items[] = $this->makeMediaFixture(
+            $items[]   = $this->makeMediaFixture(
                 200 + $i,
                 sprintf('away-%d.jpg', $i),
                 $timestamp,
@@ -195,7 +195,7 @@ final class DefaultDaySummaryBuilderTest extends TestCase
 
         self::assertArrayHasKey('baseAway', $days['2024-06-02']);
         self::assertTrue($days['2024-06-02']['baseAway']);
-}
+    }
 
     private function createBuilder(
         TimezoneResolver $timezoneResolver,

@@ -19,38 +19,38 @@ use DateTimeImmutable;
 final readonly class GeocodeResult
 {
     /**
-     * @param string                     $provider            Provider identifier (for example, "nominatim").
-     * @param string                     $providerPlaceId     Provider specific place identifier.
-     * @param float                      $lat                 Latitude in decimal degrees.
-     * @param float                      $lon                 Longitude in decimal degrees.
-     * @param string                     $displayName         Human readable label.
-     * @param string|null                $countryCode         ISO country code when available.
-     * @param string|null                $country             Country name.
-     * @param string|null                $state               State or region name.
-     * @param string|null                $county              County or administrative district.
-     * @param string|null                $city                City name.
-     * @param string|null                $town                Town name as provided by the geocoder.
-     * @param string|null                $village             Village or hamlet name.
-     * @param string|null                $suburb              Suburb designation.
-     * @param string|null                $neighbourhood       Neighbourhood designation.
-     * @param string|null                $postcode            Postal code.
-     * @param string|null                $road                Street or road name.
-     * @param string|null                $houseNumber         House number.
-     * @param list<float>|null           $boundingBox         Bounding box [south, north, west, east].
-     * @param string|null                $category            Provider category.
-     * @param string|null                $type                Provider type (for example, "city").
-     * @param string|null                $attribution         Attribution required by the provider.
-     * @param string|null                $licence             Licence string supplied by the provider.
-     * @param DateTimeImmutable|null     $refreshedAt         Timestamp when the result was retrieved.
-     * @param float|null                 $confidence          Provider supplied confidence/importance score.
-     * @param float|null                 $accuracyRadiusMeters Accuracy radius estimate in meters.
-     * @param string|null                $timezone            Timezone identifier when known.
-     * @param string|null                $osmType             OSM element type (node/way/relation).
-     * @param string|null                $osmId               OSM element identifier.
-     * @param string|null                $wikidataId          Wikidata reference identifier.
-     * @param string|null                $wikipedia           Wikipedia reference string.
-     * @param array<string,string>|null  $altNames            Alternative names keyed by language or qualifier.
-     * @param array<string,string>|null  $extraTags           Additional provider tags.
+     * @param string                    $provider             provider identifier (for example, "nominatim")
+     * @param string                    $providerPlaceId      provider specific place identifier
+     * @param float                     $lat                  latitude in decimal degrees
+     * @param float                     $lon                  longitude in decimal degrees
+     * @param string                    $displayName          human readable label
+     * @param string|null               $countryCode          ISO country code when available
+     * @param string|null               $country              country name
+     * @param string|null               $state                state or region name
+     * @param string|null               $county               county or administrative district
+     * @param string|null               $city                 city name
+     * @param string|null               $town                 town name as provided by the geocoder
+     * @param string|null               $village              village or hamlet name
+     * @param string|null               $suburb               suburb designation
+     * @param string|null               $neighbourhood        neighbourhood designation
+     * @param string|null               $postcode             postal code
+     * @param string|null               $road                 street or road name
+     * @param string|null               $houseNumber          house number
+     * @param list<float>|null          $boundingBox          bounding box [south, north, west, east]
+     * @param string|null               $category             provider category
+     * @param string|null               $type                 provider type (for example, "city")
+     * @param string|null               $attribution          attribution required by the provider
+     * @param string|null               $licence              licence string supplied by the provider
+     * @param DateTimeImmutable|null    $refreshedAt          timestamp when the result was retrieved
+     * @param float|null                $confidence           provider supplied confidence/importance score
+     * @param float|null                $accuracyRadiusMeters accuracy radius estimate in meters
+     * @param string|null               $timezone             timezone identifier when known
+     * @param string|null               $osmType              OSM element type (node/way/relation)
+     * @param string|null               $osmId                OSM element identifier
+     * @param string|null               $wikidataId           wikidata reference identifier
+     * @param string|null               $wikipedia            wikipedia reference string
+     * @param array<string,string>|null $altNames             alternative names keyed by language or qualifier
+     * @param array<string,string>|null $extraTags            additional provider tags
      */
     public function __construct(
         public string $provider,

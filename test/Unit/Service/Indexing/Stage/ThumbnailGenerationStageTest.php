@@ -43,4 +43,3 @@ final class ThumbnailGenerationStageTest extends TestCase
         self::assertSame('Thumbnail generation failed for /tmp/file.jpg: Generation failed', $media->getIndexLog());
     }
 }
-

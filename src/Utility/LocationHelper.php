@@ -29,11 +29,11 @@ final readonly class LocationHelper implements LocationLabelResolverInterface, P
 
     public static function createDefault(?string $preferredLocale = null): self
     {
-        $poiNormalizer   = new DefaultPoiNormalizer();
+        $poiNormalizer    = new DefaultPoiNormalizer();
         $poiLabelResolver = new DefaultPoiLabelResolver($preferredLocale);
-        $poiScorer       = new DefaultPoiScorer();
-        $poiAnalyzer     = new DefaultPoiContextAnalyzer($poiNormalizer, $poiScorer, $poiLabelResolver);
-        $labelResolver   = new DefaultLocationLabelResolver($poiAnalyzer, $poiLabelResolver);
+        $poiScorer        = new DefaultPoiScorer();
+        $poiAnalyzer      = new DefaultPoiContextAnalyzer($poiNormalizer, $poiScorer, $poiLabelResolver);
+        $labelResolver    = new DefaultLocationLabelResolver($poiAnalyzer, $poiLabelResolver);
 
         return new self($labelResolver, $poiAnalyzer);
     }

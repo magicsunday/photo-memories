@@ -19,9 +19,9 @@ use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_keys;
 use function array_map;
 use function array_merge;
-use function array_keys;
 use function count;
 use function implode;
 use function is_array;
@@ -72,12 +72,13 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     *
      * @throws DateMalformedStringException
      */
     public function cluster(array $items): array
     {
         /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
-        $buckets = [];
+        $buckets    = [];
         $candidates = $this->filterTimestampedItems($items);
 
         if ($candidates === []) {

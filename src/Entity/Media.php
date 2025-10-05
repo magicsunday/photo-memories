@@ -16,6 +16,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+
 use function count;
 use function max;
 use function min;
@@ -431,7 +432,7 @@ class Media
     /**
      * Normalised ffprobe stream metadata for downstream consumers.
      *
-     * @var array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $videoStreams
+     * @var array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $videoStreams
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $videoStreams = null;
@@ -622,15 +623,15 @@ class Media
     private ?Location $location = null;
 
     /**
-     * @param string $path     Absolute filesystem path to the asset.
-     * @param string $checksum Binary hash for deduplication.
-     * @param int    $size     File size in bytes.
+     * @param string $path     absolute filesystem path to the asset
+     * @param string $checksum binary hash for deduplication
+     * @param int    $size     file size in bytes
      */
     public function __construct(string $path, string $checksum, int $size)
     {
-        $this->path      = $path;
-        $this->checksum  = $checksum;
-        $this->size      = $size;
+        $this->path     = $path;
+        $this->checksum = $checksum;
+        $this->size     = $size;
 
         // Use the current timestamp to record when the media was first catalogued.
         $this->createdAt = new DateTimeImmutable();
@@ -671,7 +672,7 @@ class Media
     /**
      * Updates the fast checksum generated via xxHash64.
      *
-     * @param string|null $fastChecksumXxhash64 Fast checksum value.
+     * @param string|null $fastChecksumXxhash64 fast checksum value
      */
     public function setFastChecksumXxhash64(?string $fastChecksumXxhash64): void
     {
@@ -705,7 +706,7 @@ class Media
     /**
      * Updates the metadata feature version used for the last extraction.
      *
-     * @param int $featureVersion Metadata feature schema version.
+     * @param int $featureVersion metadata feature schema version
      */
     public function setFeatureVersion(int $featureVersion): void
     {
@@ -723,7 +724,7 @@ class Media
     /**
      * Updates the timestamp of the most recent metadata extraction run.
      *
-     * @param DateTimeImmutable|null $indexedAt Extraction completion timestamp.
+     * @param DateTimeImmutable|null $indexedAt extraction completion timestamp
      */
     public function setIndexedAt(?DateTimeImmutable $indexedAt): void
     {
@@ -741,7 +742,7 @@ class Media
     /**
      * Sets the MIME type of the media.
      *
-     * @param string|null $mime MIME type (for example image/jpeg).
+     * @param string|null $mime MIME type (for example image/jpeg)
      */
     public function setMime(?string $mime): void
     {
@@ -759,7 +760,7 @@ class Media
     /**
      * Sets the capture timestamp of the media.
      *
-     * @param DateTimeImmutable|null $takenAt Capture time from metadata.
+     * @param DateTimeImmutable|null $takenAt capture time from metadata
      */
     public function setTakenAt(?DateTimeImmutable $takenAt): void
     {
@@ -849,7 +850,7 @@ class Media
     /**
      * Sets the pixel width of the media.
      *
-     * @param int|null $width Width in pixels.
+     * @param int|null $width width in pixels
      */
     public function setWidth(?int $width): void
     {
@@ -867,7 +868,7 @@ class Media
     /**
      * Sets the pixel height of the media.
      *
-     * @param int|null $height Height in pixels.
+     * @param int|null $height height in pixels
      */
     public function setHeight(?int $height): void
     {
@@ -885,7 +886,7 @@ class Media
     /**
      * Sets the latitude coordinate.
      *
-     * @param float|null $gpsLat Latitude in decimal degrees.
+     * @param float|null $gpsLat latitude in decimal degrees
      */
     public function setGpsLat(?float $gpsLat): void
     {
@@ -903,7 +904,7 @@ class Media
     /**
      * Sets the longitude coordinate.
      *
-     * @param float|null $gpsLon Longitude in decimal degrees.
+     * @param float|null $gpsLon longitude in decimal degrees
      */
     public function setGpsLon(?float $gpsLon): void
     {
@@ -921,7 +922,7 @@ class Media
     /**
      * Sets the camera model.
      *
-     * @param string|null $cameraModel Camera model name.
+     * @param string|null $cameraModel camera model name
      */
     public function setCameraModel(?string $cameraModel): void
     {
@@ -939,7 +940,7 @@ class Media
     /**
      * Stores the perceptual hash of the media.
      *
-     * @param string|null $phash Perceptual hash value.
+     * @param string|null $phash perceptual hash value
      */
     public function setPhash(?string $phash): void
     {
@@ -949,7 +950,7 @@ class Media
             return;
         }
 
-        $hash = strtolower($phash);
+        $hash        = strtolower($phash);
         $this->phash = substr($hash, 0, 32);
     }
 
@@ -964,7 +965,7 @@ class Media
     /**
      * Stores the perceptual hash as an unsigned 64-bit integer string.
      *
-     * @param string|null $value Unsigned integer representation of the pHash.
+     * @param string|null $value unsigned integer representation of the pHash
      */
     public function setPhash64(?string $value): void
     {
@@ -984,7 +985,7 @@ class Media
     /**
      * Sets the generated thumbnails mapping.
      *
-     * @param array<string, string>|null $thumbnails Thumbnails indexed by label.
+     * @param array<string, string>|null $thumbnails thumbnails indexed by label
      */
     public function setThumbnails(?array $thumbnails): void
     {
@@ -1002,7 +1003,7 @@ class Media
     /**
      * Updates the log output of the last indexing run.
      *
-     * @param string|null $indexLog Logged error details or null on success.
+     * @param string|null $indexLog logged error details or null on success
      */
     public function setIndexLog(?string $indexLog): void
     {
@@ -1020,7 +1021,7 @@ class Media
     /**
      * Sets the timezone offset in minutes.
      *
-     * @param int|null $v Offset in minutes relative to UTC.
+     * @param int|null $v offset in minutes relative to UTC
      */
     public function setTimezoneOffsetMin(?int $v): void
     {
@@ -1038,7 +1039,7 @@ class Media
     /**
      * Sets the EXIF orientation value.
      *
-     * @param int|null $v EXIF orientation.
+     * @param int|null $v EXIF orientation
      */
     public function setOrientation(?int $v): void
     {
@@ -1056,7 +1057,7 @@ class Media
     /**
      * Marks whether the stored asset requires rotation based on metadata.
      *
-     * @param bool $needsRotation True if downstream consumers must rotate the asset.
+     * @param bool $needsRotation true if downstream consumers must rotate the asset
      */
     public function setNeedsRotation(bool $needsRotation): void
     {
@@ -1074,7 +1075,7 @@ class Media
     /**
      * Sets the camera manufacturer name.
      *
-     * @param string|null $v Manufacturer name.
+     * @param string|null $v manufacturer name
      */
     public function setCameraMake(?string $v): void
     {
@@ -1092,7 +1093,7 @@ class Media
     /**
      * Sets the registered camera owner.
      *
-     * @param string|null $v Camera owner name.
+     * @param string|null $v camera owner name
      */
     public function setCameraOwner(?string $v): void
     {
@@ -1110,7 +1111,7 @@ class Media
     /**
      * Sets the camera body serial number.
      *
-     * @param string|null $v Serial number string.
+     * @param string|null $v serial number string
      */
     public function setCameraBodySerial(?string $v): void
     {
@@ -1128,7 +1129,7 @@ class Media
     /**
      * Sets the lens manufacturer name.
      *
-     * @param string|null $v Lens manufacturer name.
+     * @param string|null $v lens manufacturer name
      */
     public function setLensMake(?string $v): void
     {
@@ -1146,7 +1147,7 @@ class Media
     /**
      * Sets the lens model information.
      *
-     * @param string|null $v Lens model name.
+     * @param string|null $v lens model name
      */
     public function setLensModel(?string $v): void
     {
@@ -1164,7 +1165,7 @@ class Media
     /**
      * Sets the normalized lens specification.
      *
-     * @param string|null $v Lens specification description.
+     * @param string|null $v lens specification description
      */
     public function setLensSpecification(?string $v): void
     {
@@ -1182,7 +1183,7 @@ class Media
     /**
      * Sets the lens serial number.
      *
-     * @param string|null $v Serial number string.
+     * @param string|null $v serial number string
      */
     public function setLensSerialNumber(?string $v): void
     {
@@ -1200,7 +1201,7 @@ class Media
     /**
      * Sets the focal length in millimetres.
      *
-     * @param float|null $v Focal length in millimetres.
+     * @param float|null $v focal length in millimetres
      */
     public function setFocalLengthMm(?float $v): void
     {
@@ -1218,7 +1219,7 @@ class Media
     /**
      * Sets the 35 mm equivalent focal length.
      *
-     * @param int|null $v Focal length in 35 mm equivalent.
+     * @param int|null $v focal length in 35 mm equivalent
      */
     public function setFocalLength35mm(?int $v): void
     {
@@ -1236,7 +1237,7 @@ class Media
     /**
      * Sets the aperture value.
      *
-     * @param float|null $v Aperture value (f-stop).
+     * @param float|null $v aperture value (f-stop)
      */
     public function setApertureF(?float $v): void
     {
@@ -1254,7 +1255,7 @@ class Media
     /**
      * Sets the exposure time in seconds.
      *
-     * @param float|null $v Exposure time in seconds.
+     * @param float|null $v exposure time in seconds
      */
     public function setExposureTimeS(?float $v): void
     {
@@ -1272,7 +1273,7 @@ class Media
     /**
      * Sets the composite image flag value.
      *
-     * @param int|null $v Composite image indicator.
+     * @param int|null $v composite image indicator
      */
     public function setCompositeImage(?int $v): void
     {
@@ -1290,7 +1291,7 @@ class Media
     /**
      * Sets the number of source images for the composite capture.
      *
-     * @param int|null $v Source image count.
+     * @param int|null $v source image count
      */
     public function setCompositeImageSourceCount(?int $v): void
     {
@@ -1308,7 +1309,7 @@ class Media
     /**
      * Sets the recorded source exposure times for the composite.
      *
-     * @param string|null $v Exposure times description.
+     * @param string|null $v exposure times description
      */
     public function setCompositeImageExposureTimes(?string $v): void
     {
@@ -1326,7 +1327,7 @@ class Media
     /**
      * Sets the ISO sensitivity value.
      *
-     * @param int|null $v ISO value.
+     * @param int|null $v ISO value
      */
     public function setIso(?int $v): void
     {
@@ -1344,7 +1345,7 @@ class Media
     /**
      * Updates the flash fired flag.
      *
-     * @param bool|null $v Whether the flash fired.
+     * @param bool|null $v whether the flash fired
      */
     public function setFlashFired(?bool $v): void
     {
@@ -1362,7 +1363,7 @@ class Media
     /**
      * Sets the GPS altitude in metres.
      *
-     * @param float|null $v Altitude in metres.
+     * @param float|null $v altitude in metres
      */
     public function setGpsAlt(?float $v): void
     {
@@ -1380,7 +1381,7 @@ class Media
     /**
      * Sets the GPS accuracy in metres.
      *
-     * @param float|null $v Accuracy in metres.
+     * @param float|null $v accuracy in metres
      */
     public function setGpsAccuracyM(?float $v): void
     {
@@ -1398,7 +1399,7 @@ class Media
     /**
      * Sets the heading direction in degrees.
      *
-     * @param float|null $v Heading in degrees.
+     * @param float|null $v heading in degrees
      */
     public function setGpsHeadingDeg(?float $v): void
     {
@@ -1416,7 +1417,7 @@ class Media
     /**
      * Sets the speed in metres per second.
      *
-     * @param float|null $v Speed in metres per second.
+     * @param float|null $v speed in metres per second
      */
     public function setGpsSpeedMps(?float $v): void
     {
@@ -1434,7 +1435,7 @@ class Media
     /**
      * Sets the GeoHash cell identifier.
      *
-     * @param string|null $v GeoHash string with eight characters.
+     * @param string|null $v geoHash string with eight characters
      */
     public function setGeoCell8(?string $v): void
     {
@@ -1452,7 +1453,7 @@ class Media
     /**
      * Sets the GeoHash with seven characters.
      *
-     * @param string|null $v GeoHash string with seven characters.
+     * @param string|null $v geoHash string with seven characters
      */
     public function setGeohash7(?string $v): void
     {
@@ -1470,7 +1471,7 @@ class Media
     /**
      * Sets the GeoHash with five characters.
      *
-     * @param string|null $v GeoHash string with five characters.
+     * @param string|null $v geoHash string with five characters
      */
     public function setGeohash5(?string $v): void
     {
@@ -1488,7 +1489,7 @@ class Media
     /**
      * Sets the distance from home in kilometres.
      *
-     * @param float|null $v Distance in kilometres.
+     * @param float|null $v distance in kilometres
      */
     public function setDistanceKmFromHome(?float $v): void
     {
@@ -1506,7 +1507,7 @@ class Media
     /**
      * Stores the hash describing the home configuration.
      *
-     * @param string|null $hash Hash computed from the home parameters.
+     * @param string|null $hash hash computed from the home parameters
      */
     public function setHomeConfigHash(?string $hash): void
     {
@@ -1524,7 +1525,7 @@ class Media
     /**
      * Sets the burst identifier.
      *
-     * @param string|null $v Burst UUID shared across frames.
+     * @param string|null $v burst UUID shared across frames
      */
     public function setBurstUuid(?string $v): void
     {
@@ -1542,7 +1543,7 @@ class Media
     /**
      * Sets the burst index within the sequence.
      *
-     * @param int|null $v Zero-based or metadata-derived burst index.
+     * @param int|null $v zero-based or metadata-derived burst index
      */
     public function setBurstIndex(?int $v): void
     {
@@ -1576,7 +1577,7 @@ class Media
     /**
      * Sets the sub-second capture component.
      *
-     * @param int|null $v Fractional seconds of capture time.
+     * @param int|null $v fractional seconds of capture time
      */
     public function setSubSecOriginal(?int $v): void
     {
@@ -1594,7 +1595,7 @@ class Media
     /**
      * Sets the checksum of the paired live photo.
      *
-     * @param string|null $v Checksum of the linked live photo.
+     * @param string|null $v checksum of the linked live photo
      */
     public function setLivePairChecksum(?string $v): void
     {
@@ -1628,7 +1629,7 @@ class Media
     /**
      * Sets whether the media represents a RAW capture.
      *
-     * @param bool $v True when the media is a RAW image.
+     * @param bool $v true when the media is a RAW image
      */
     public function setIsRaw(bool $v): void
     {
@@ -1646,7 +1647,7 @@ class Media
     /**
      * Sets whether the media uses the HEIC container format.
      *
-     * @param bool $v True when the media is stored as HEIC.
+     * @param bool $v true when the media is stored as HEIC
      */
     public function setIsHeic(bool $v): void
     {
@@ -1664,7 +1665,7 @@ class Media
     /**
      * Sets whether the media payload is encoded with HEVC.
      *
-     * @param bool $v True when the payload is encoded with HEVC.
+     * @param bool $v true when the payload is encoded with HEVC
      */
     public function setIsHevc(bool $v): void
     {
@@ -1682,7 +1683,7 @@ class Media
     /**
      * Sets whether the media is a video.
      *
-     * @param bool $v True if the media is a video.
+     * @param bool $v true if the media is a video
      */
     public function setIsVideo(bool $v): void
     {
@@ -1700,7 +1701,7 @@ class Media
     /**
      * Sets the video duration in seconds.
      *
-     * @param float|null $v Video duration in seconds.
+     * @param float|null $v video duration in seconds
      */
     public function setVideoDurationS(?float $v): void
     {
@@ -1718,7 +1719,7 @@ class Media
     /**
      * Sets the video frame rate.
      *
-     * @param float|null $v Video frames per second.
+     * @param float|null $v video frames per second
      */
     public function setVideoFps(?float $v): void
     {
@@ -1736,7 +1737,7 @@ class Media
     /**
      * Sets the video codec name.
      *
-     * @param string|null $v Video codec identifier.
+     * @param string|null $v video codec identifier
      */
     public function setVideoCodec(?string $v): void
     {
@@ -1754,7 +1755,7 @@ class Media
     /**
      * Sets whether the video is a slow motion clip.
      *
-     * @param bool|null $v True when the video is slow motion.
+     * @param bool|null $v true when the video is slow motion
      */
     public function setIsSlowMo(?bool $v): void
     {
@@ -1772,7 +1773,7 @@ class Media
     /**
      * Sets the video rotation in degrees.
      *
-     * @param float|null $rotationDeg Rotation to apply clockwise.
+     * @param float|null $rotationDeg rotation to apply clockwise
      */
     public function setVideoRotationDeg(?float $rotationDeg): void
     {
@@ -1790,7 +1791,7 @@ class Media
     /**
      * Sets whether stabilisation metadata is present for the video stream.
      *
-     * @param bool|null $hasStabilization True when stabilisation information exists.
+     * @param bool|null $hasStabilization true when stabilisation information exists
      */
     public function setVideoHasStabilization(?bool $hasStabilization): void
     {
@@ -1800,7 +1801,7 @@ class Media
     /**
      * Provides the normalised ffprobe stream metadata.
      *
-     * @return array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null
+     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null
      */
     public function getVideoStreams(): ?array
     {
@@ -1810,7 +1811,7 @@ class Media
     /**
      * Stores the normalised ffprobe stream metadata.
      *
-     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
      */
     public function setVideoStreams(?array $streams): void
     {
@@ -1828,7 +1829,7 @@ class Media
     /**
      * Sets whether the media is portrait oriented.
      *
-     * @param bool|null $v True if the media is portrait.
+     * @param bool|null $v true if the media is portrait
      */
     public function setIsPortrait(?bool $v): void
     {
@@ -1846,7 +1847,7 @@ class Media
     /**
      * Sets whether the media is a panorama capture.
      *
-     * @param bool|null $v True if the media is a panorama.
+     * @param bool|null $v true if the media is a panorama
      */
     public function setIsPanorama(?bool $v): void
     {
@@ -1864,7 +1865,7 @@ class Media
     /**
      * Assigns the content kind.
      *
-     * @param ContentKind|null $contentKind Categorised content kind.
+     * @param ContentKind|null $contentKind categorised content kind
      */
     public function setContentKind(?ContentKind $contentKind): void
     {
@@ -1882,7 +1883,7 @@ class Media
     /**
      * Sets the calculated sharpness score.
      *
-     * @param float|null $v Sharpness score.
+     * @param float|null $v sharpness score
      */
     public function setSharpness(?float $v): void
     {
@@ -1900,7 +1901,7 @@ class Media
     /**
      * Sets the calculated brightness value.
      *
-     * @param float|null $v Brightness value.
+     * @param float|null $v brightness value
      */
     public function setBrightness(?float $v): void
     {
@@ -1918,7 +1919,7 @@ class Media
     /**
      * Sets the calculated contrast value.
      *
-     * @param float|null $v Contrast value.
+     * @param float|null $v contrast value
      */
     public function setContrast(?float $v): void
     {
@@ -1936,7 +1937,7 @@ class Media
     /**
      * Sets the calculated entropy score.
      *
-     * @param float|null $v Entropy score.
+     * @param float|null $v entropy score
      */
     public function setEntropy(?float $v): void
     {
@@ -1954,7 +1955,7 @@ class Media
     /**
      * Sets the calculated colorfulness score.
      *
-     * @param float|null $v Colorfulness score.
+     * @param float|null $v colorfulness score
      */
     public function setColorfulness(?float $v): void
     {
@@ -1972,7 +1973,7 @@ class Media
     /**
      * Sets the aggregated quality score.
      *
-     * @param float|null $score Quality score in the range [0,1].
+     * @param float|null $score quality score in the range [0,1]
      */
     public function setQualityScore(?float $score): void
     {
@@ -1992,7 +1993,7 @@ class Media
     /**
      * Sets the aggregated exposure score.
      *
-     * @param float|null $score Exposure score in the range [0,1].
+     * @param float|null $score exposure score in the range [0,1]
      */
     public function setQualityExposure(?float $score): void
     {
@@ -2012,7 +2013,7 @@ class Media
     /**
      * Sets the aggregated noise score.
      *
-     * @param float|null $score Noise score in the range [0,1].
+     * @param float|null $score noise score in the range [0,1]
      */
     public function setQualityNoise(?float $score): void
     {
@@ -2032,7 +2033,7 @@ class Media
     /**
      * Sets the share of pixels affected by saturation clipping.
      *
-     * @param float|null $share Share in the range [0,1].
+     * @param float|null $share share in the range [0,1]
      */
     public function setQualityClipping(?float $share): void
     {
@@ -2068,7 +2069,7 @@ class Media
     /**
      * Marks the media as hidden for downstream feeds.
      *
-     * @param bool $noShow True to exclude the media from feeds.
+     * @param bool $noShow true to exclude the media from feeds
      */
     public function setNoShow(bool $noShow): void
     {
@@ -2086,7 +2087,7 @@ class Media
     /**
      * Sets the perceptual hash prefix.
      *
-     * @param string|null $v Prefix of the perceptual hash.
+     * @param string|null $v prefix of the perceptual hash
      */
     public function setPhashPrefix(?string $v): void
     {
@@ -2116,7 +2117,7 @@ class Media
     /**
      * Sets the difference hash.
      *
-     * @param string|null $v Difference hash value.
+     * @param string|null $v difference hash value
      */
     public function setDhash(?string $v): void
     {
@@ -2134,7 +2135,7 @@ class Media
     /**
      * Sets the average hash.
      *
-     * @param string|null $v Average hash value.
+     * @param string|null $v average hash value
      */
     public function setAhash(?string $v): void
     {
@@ -2154,7 +2155,7 @@ class Media
     /**
      * Sets the keyword list.
      *
-     * @param array<int, string>|null $v Keywords describing the media.
+     * @param array<int, string>|null $v keywords describing the media
      */
     public function setKeywords(?array $v): void
     {
@@ -2174,7 +2175,7 @@ class Media
     /**
      * Sets the list of persons.
      *
-     * @param array<int, string>|null $v Persons associated with the media.
+     * @param array<int, string>|null $v persons associated with the media
      */
     public function setPersons(?array $v): void
     {
@@ -2182,7 +2183,7 @@ class Media
 
         $count = $v !== null ? count($v) : 0;
 
-        $this->hasFaces = $count > 0;
+        $this->hasFaces   = $count > 0;
         $this->facesCount = $count;
     }
 
@@ -2197,7 +2198,7 @@ class Media
     /**
      * Sets whether the media contains detected faces.
      *
-     * @param bool $value True when at least one face is detected.
+     * @param bool $value true when at least one face is detected
      */
     public function setHasFaces(bool $value): void
     {
@@ -2215,7 +2216,7 @@ class Media
     /**
      * Stores the number of detected faces.
      *
-     * @param int $count Total number of detected faces.
+     * @param int $count total number of detected faces
      */
     public function setFacesCount(int $count): void
     {
@@ -2235,7 +2236,7 @@ class Media
     /**
      * Sets the feature list.
      *
-     * @param array<int, string>|null $v Features describing the scene.
+     * @param array<int, string>|null $v features describing the scene
      */
     public function setFeatures(?array $v): void
     {
@@ -2273,7 +2274,7 @@ class Media
     /**
      * Marks the media as requiring or not requiring geocoding.
      *
-     * @param bool $needsGeocode True if geocoding is still required.
+     * @param bool $needsGeocode true if geocoding is still required
      */
     public function setNeedsGeocode(bool $needsGeocode): void
     {
@@ -2291,7 +2292,7 @@ class Media
     /**
      * Associates a location entity with the media.
      *
-     * @param Location|null $location Geocoded location for the capture.
+     * @param Location|null $location geocoded location for the capture
      */
     public function setLocation(?Location $location): void
     {

@@ -22,7 +22,7 @@ use function sprintf;
  */
 final class MediaLocationLinker implements MediaLocationLinkerInterface
 {
-    /** @var array<string,Location> $cellCache in-run cache: cell -> Location (managed) */
+    /** @var array<string,Location> in-run cache: cell -> Location (managed) */
     private array $cellCache = [];
 
     private int $lastNetworkCalls = 0;

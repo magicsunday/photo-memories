@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -171,7 +171,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $coverId = $cover?->getId();
             }
 
-            $members = $this->sortMembersByTakenAt($members, $coverId);
+            $members   = $this->sortMembersByTakenAt($members, $coverId);
             $memberIds = array_map(static function (Media $media): int {
                 return $media->getId();
             }, $members);

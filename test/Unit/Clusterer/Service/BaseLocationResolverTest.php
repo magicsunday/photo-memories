@@ -41,8 +41,8 @@ final class BaseLocationResolverTest extends TestCase
         );
 
         $summary = [
-            'date'         => '2024-07-01',
-            'staypoints'   => [[
+            'date'       => '2024-07-01',
+            'staypoints' => [[
                 'lat'   => 48.1371,
                 'lon'   => 11.5754,
                 'start' => $startMedia->getTakenAt()?->getTimestamp() ?? 0,
@@ -55,16 +55,16 @@ final class BaseLocationResolverTest extends TestCase
         ];
 
         $nextSummary = [
-            'date'         => '2024-07-02',
-            'staypoints'   => [],
+            'date'          => '2024-07-02',
+            'staypoints'    => [],
             'firstGpsMedia' => null,
         ];
 
         $home = [
-            'lat'          => 52.5200,
-            'lon'          => 13.4050,
-            'radius_km'    => 12.0,
-            'country'      => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -99,24 +99,24 @@ final class BaseLocationResolverTest extends TestCase
         );
 
         $summary = [
-            'date'         => '2024-08-05',
-            'staypoints'   => [],
+            'date'          => '2024-08-05',
+            'staypoints'    => [],
             'firstGpsMedia' => $lastMedia,
             'lastGpsMedia'  => $lastMedia,
             'gpsMembers'    => [$lastMedia],
         ];
 
         $nextSummary = [
-            'date'         => '2024-08-06',
-            'staypoints'   => [],
+            'date'          => '2024-08-06',
+            'staypoints'    => [],
             'firstGpsMedia' => $nextFirst,
         ];
 
         $home = [
-            'lat'          => 52.5200,
-            'lon'          => 13.4050,
-            'radius_km'    => 10.0,
-            'country'      => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 10.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 

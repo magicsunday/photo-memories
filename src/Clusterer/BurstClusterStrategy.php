@@ -142,7 +142,7 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         $representative = $representatives[0] ?? null;
 
         $params = [
-            'time_range' => $this->computeTimeRange($orderedMembers),
+            'time_range'              => $this->computeTimeRange($orderedMembers),
             'representative_media_id' => $representative?->getId(),
         ];
 

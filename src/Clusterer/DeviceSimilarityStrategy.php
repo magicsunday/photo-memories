@@ -19,8 +19,8 @@ use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-use function assert;
 use function array_key_first;
+use function assert;
 use function count;
 use function implode;
 use function is_string;
@@ -31,7 +31,7 @@ use function substr;
 use function trim;
 
 /**
- * Class DeviceSimilarityStrategy
+ * Class DeviceSimilarityStrategy.
  */
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
@@ -70,7 +70,7 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
 
         $ingest = function (Media $m, string $date) use (&$groups, &$devices): void {
             $descriptor = $this->buildDeviceDescriptor($m);
-            $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
+            $locKey     = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
 
             $key = $descriptor['key'] . '|' . $date . '|' . $locKey;
             $groups[$key] ??= [];
@@ -223,8 +223,8 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             }
         }
 
-        $stableLens   = count($lensModels) === 1 ? (string) array_key_first($lensModels) : null;
-        $stableKind   = count($contentKinds) === 1 ? (string) array_key_first($contentKinds) : null;
+        $stableLens = count($lensModels) === 1 ? (string) array_key_first($lensModels) : null;
+        $stableKind = count($contentKinds) === 1 ? (string) array_key_first($contentKinds) : null;
 
         return [
             'lensModel'   => $stableLens,

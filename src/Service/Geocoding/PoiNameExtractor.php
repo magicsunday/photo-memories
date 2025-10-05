@@ -16,7 +16,7 @@ use MagicSunday\Memories\Service\Geocoding\Contract\PoiNameExtractorInterface;
 use function array_find;
 
 /**
- * Class PoiNameExtractor
+ * Class PoiNameExtractor.
  */
 final class PoiNameExtractor implements PoiNameExtractorInterface
 {

@@ -19,12 +19,12 @@ use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class TimeStage
+ * Class TimeStage.
  */
 final class TimeStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 
@@ -70,5 +70,4 @@ final class TimeStage extends AbstractExtractorStage
 
         return $context->withMedia($media);
     }
-
 }

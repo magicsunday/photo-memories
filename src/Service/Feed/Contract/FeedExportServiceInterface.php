@@ -16,7 +16,7 @@ use MagicSunday\Memories\Service\Feed\FeedExportResult;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Interface FeedExportServiceInterface
+ * Interface FeedExportServiceInterface.
  */
 interface FeedExportServiceInterface
 {

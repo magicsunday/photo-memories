@@ -17,7 +17,7 @@ use function strlen;
 use function strtolower;
 
 /**
- * Trait PathTokensTrait
+ * Trait PathTokensTrait.
  */
 trait PathTokensTrait
 {

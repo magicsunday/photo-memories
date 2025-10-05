@@ -20,7 +20,7 @@ use Throwable;
 use function sprintf;
 
 /**
- * Class ThumbnailGenerationStage
+ * Class ThumbnailGenerationStage.
  */
 final readonly class ThumbnailGenerationStage implements MediaIngestionStageInterface
 {

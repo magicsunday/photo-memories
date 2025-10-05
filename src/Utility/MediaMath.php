@@ -116,6 +116,7 @@ final class MediaMath
      * @param int         $minValidYear
      *
      * @return array{from:int,to:int}|null
+     *
      * @throws DateMalformedStringException
      */
     public static function timeRangeReliable(

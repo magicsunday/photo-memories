@@ -30,10 +30,10 @@ use function usort;
  */
 final class CompositeClusterScorer
 {
-    /** @var list<ClusterScoreHeuristicInterface> $heuristics */
+    /** @var list<ClusterScoreHeuristicInterface> */
     private array $heuristics;
 
-    /** @var array<string,string> $algorithmGroups */
+    /** @var array<string,string> */
     private array $algorithmGroups = [];
 
     /**
@@ -82,7 +82,6 @@ final class CompositeClusterScorer
 
             $this->algorithmGroups[$algorithm] = $group;
         }
-
     }
 
     /**
@@ -116,7 +115,7 @@ final class CompositeClusterScorer
 
             $algorithm = $cluster->getAlgorithm();
             $cluster->setParam('group', $this->resolveGroup($algorithm));
-            $boost     = $this->algorithmBoosts[$algorithm] ?? 1.0;
+            $boost = $this->algorithmBoosts[$algorithm] ?? 1.0;
             if ($boost !== 1.0) {
                 $score *= $boost;
                 $cluster->setParam('score_algorithm_boost', $boost);

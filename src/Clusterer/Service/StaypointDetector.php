@@ -32,7 +32,7 @@ final class StaypointDetector implements StaypointDetectorInterface
         }
 
         $staypoints = [];
-        $i = 0;
+        $i          = 0;
 
         while ($i < $count - 1) {
             $startMedia = $gpsMembers[$i];
@@ -79,7 +79,7 @@ final class StaypointDetector implements StaypointDetectorInterface
                 continue;
             }
 
-            $segment = array_slice($gpsMembers, $i, $endIndex - $i + 1);
+            $segment  = array_slice($gpsMembers, $i, $endIndex - $i + 1);
             $endMedia = $segment[count($segment) - 1];
             $endTime  = $endMedia->getTakenAt();
 

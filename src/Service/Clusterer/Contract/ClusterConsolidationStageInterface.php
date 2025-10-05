@@ -26,7 +26,7 @@ interface ClusterConsolidationStageInterface
     /**
      * Processes the given drafts and returns the transformed result.
      *
-     * @param list<ClusterDraft> $drafts
+     * @param list<ClusterDraft>                      $drafts
      * @param callable(int $done, int $max):void|null $progress
      *
      * @return list<ClusterDraft>

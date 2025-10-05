@@ -28,8 +28,8 @@ final class FaceDetectionResult
             throw new InvalidArgumentException('facesCount must be greater or equal to zero.');
         }
 
-        $this->available   = $available;
-        $this->facesCount  = $facesCount;
+        $this->available  = $available;
+        $this->facesCount = $facesCount;
     }
 
     public static function unavailable(): self

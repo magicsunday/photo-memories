@@ -1,7 +1,5 @@
 <?php
 
-
-
 /**
  * This file is part of the package magicsunday/photo-memories.
  *
@@ -46,7 +44,7 @@ use const SORT_NUMERIC;
  */
 final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 {
-    /** @var array<string,mixed>|null $stats */
+    /** @var array<string,mixed>|null */
     private ?array $stats = null;
 
     public function __construct(
@@ -74,12 +72,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
     public function enrich(ClusterDraft $cluster, array $mediaMap): void
     {
-        $params = $cluster->getParams();
+        $params  = $cluster->getParams();
         $novelty = $this->floatOrNull($params['novelty'] ?? null);
         if ($novelty === null) {
-            $stats        = $this->stats ?? $this->buildCorpusStats($mediaMap);
-            $novelty      = $this->computeNovelty($cluster, $mediaMap, $stats);
-            $this->stats  = $stats;
+            $stats       = $this->stats ?? $this->buildCorpusStats($mediaMap);
+            $novelty     = $this->computeNovelty($cluster, $mediaMap, $stats);
+            $this->stats = $stats;
         }
 
         $cluster->setParam('novelty', $novelty);
@@ -132,7 +130,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             $lat = $m->getGpsLat();
             $lon = $m->getGpsLon();
             if ($lat !== null && $lon !== null) {
-                $cell = $this->gridCell($lat, $lon);
+                $cell        = $this->gridCell($lat, $lon);
                 $grid[$cell] = ($grid[$cell] ?? 0) + 1;
             }
 
@@ -146,7 +144,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             // pHash prefix
             $ph = $m->getPhash();
             if (is_string($ph) && $ph !== '') {
-                $prefix      = strtolower(
+                $prefix = strtolower(
                     substr(
                         $ph,
                         0,
@@ -189,6 +187,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
      * @param array<string, mixed> $stats    see buildCorpusStats()
      *
      * @return float
+     *
      * @throws DateMalformedStringException
      */
     public function computeNovelty(ClusterDraft $cluster, array $mediaMap, array $stats): float
@@ -284,6 +283,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
      * @param array        $mediaMap
      *
      * @return list<int>
+     *
      * @throws DateMalformedStringException
      */
     private function collectClusterDays(ClusterDraft $c, array $mediaMap): array
@@ -389,7 +389,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
                 continue;
             }
 
-            $prefix            = strtolower(
+            $prefix = strtolower(
                 substr(
                     $ph,
                     0,

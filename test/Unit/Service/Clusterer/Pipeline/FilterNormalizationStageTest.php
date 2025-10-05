@@ -29,7 +29,7 @@ final class FilterNormalizationStageTest extends TestCase
             minValidYear: 2000,
         );
 
-        $validTime = (new DateTimeImmutable('2005-01-01'))->getTimestamp();
+        $validTime  = (new DateTimeImmutable('2005-01-01'))->getTimestamp();
         $validDraft = $this->createDraft(
             'primary',
             0.6,
@@ -70,7 +70,7 @@ final class FilterNormalizationStageTest extends TestCase
     }
 
     /**
-     * @param list<int> $members
+     * @param list<int>           $members
      * @param array<string,mixed> $params
      */
     private function createDraft(string $algorithm, float $score, array $members, array $params = []): ClusterDraft

@@ -14,7 +14,7 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use MagicSunday\Memories\Entity\Location;
 
 /**
- * Interface PoiEnsurerInterface
+ * Interface PoiEnsurerInterface.
  */
 interface PoiEnsurerInterface
 {

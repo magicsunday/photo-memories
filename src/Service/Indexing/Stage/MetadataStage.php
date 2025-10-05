@@ -12,22 +12,22 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
-use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\AppleHeuristicsExtractor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
-use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
 use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\FilenameKeywordExtractor;
+use MagicSunday\Memories\Service\Metadata\FileStatMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Class MetadataStage
+ * Class MetadataStage.
  */
 final class MetadataStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface> $extractors
+     * @var iterable<SingleMetadataExtractorInterface>
      */
     private readonly iterable $extractors;
 

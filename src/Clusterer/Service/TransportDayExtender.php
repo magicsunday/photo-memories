@@ -28,9 +28,9 @@ final class TransportDayExtender
     use ConsecutiveDaysTrait;
 
     /**
-     * @param list<string>                           $run
-     * @param list<string>                           $orderedKeys
-     * @param array<string, int>                     $indexByKey
+     * @param list<string>                                              $run
+     * @param list<string>                                              $orderedKeys
+     * @param array<string, int>                                        $indexByKey
      * @param array<string, array{hasAirportPoi:bool,isSynthetic:bool}> $days
      *
      * @return list<string>
@@ -56,8 +56,8 @@ final class TransportDayExtender
             }
         }
 
-        $lastKey   = $run[count($run) - 1];
-        $lastIndex = $indexByKey[$lastKey] ?? null;
+        $lastKey      = $run[count($run) - 1];
+        $lastIndex    = $indexByKey[$lastKey] ?? null;
         $orderedCount = count($orderedKeys);
         if ($lastIndex !== null && $lastIndex + 1 < $orderedCount) {
             $candidateKey = $orderedKeys[$lastIndex + 1];
@@ -79,6 +79,7 @@ final class TransportDayExtender
      * @param array<string, array{isSynthetic:bool}> $days
      *
      * @return bool
+     *
      * @throws DateMalformedStringException
      */
     public function areSequentialDays(string $previous, string $current, array $days): bool
@@ -92,6 +93,7 @@ final class TransportDayExtender
      * @param array<string, array{isSynthetic:bool}> $days
      *
      * @return bool
+     *
      * @throws DateMalformedStringException
      */
     private function checkSequentialDays(string $previous, string $current, array $days): bool
@@ -110,7 +112,7 @@ final class TransportDayExtender
 
         $cursor = $start->modify('+1 day');
         while ($cursor < $end) {
-            $key = $cursor->format('Y-m-d');
+            $key     = $cursor->format('Y-m-d');
             $summary = $days[$key] ?? null;
             if ($summary === null) {
                 return false;

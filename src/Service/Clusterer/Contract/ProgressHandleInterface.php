@@ -12,7 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer\Contract;
 
 /**
- * Interface ProgressHandleInterface
+ * Interface ProgressHandleInterface.
  */
 interface ProgressHandleInterface
 {

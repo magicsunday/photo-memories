@@ -15,7 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Interface MediaIngestionPipelineInterface
+ * Interface MediaIngestionPipelineInterface.
  */
 interface MediaIngestionPipelineInterface
 {
@@ -25,7 +25,7 @@ interface MediaIngestionPipelineInterface
         bool $dryRun,
         bool $withThumbnails,
         bool $strictMime,
-        OutputInterface $output
+        OutputInterface $output,
     ): ?Media;
 
     public function finalize(bool $dryRun): void;

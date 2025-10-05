@@ -14,13 +14,13 @@ namespace MagicSunday\Memories\Service\Clusterer\Contract;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 
 /**
- * Interface ClusterPersistenceInterface
+ * Interface ClusterPersistenceInterface.
  */
 interface ClusterPersistenceInterface
 {
     /**
-     * @param list<ClusterDraft>                   $drafts
-     * @param callable(int):void|null              $onBatchPersisted
+     * @param list<ClusterDraft>      $drafts
+     * @param callable(int):void|null $onBatchPersisted
      */
     public function persistBatched(array $drafts, int $batchSize, ?callable $onBatchPersisted): int;
 

@@ -18,7 +18,7 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Class PersistenceBatchStage
+ * Class PersistenceBatchStage.
  */
 final class PersistenceBatchStage implements FinalizableMediaIngestionStageInterface
 {

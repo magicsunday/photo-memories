@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+
 use function is_string;
 use function ltrim;
 use function pathinfo;
@@ -26,7 +27,6 @@ use const PATHINFO_FILENAME;
  */
 final class BurstIndexExtractor implements SingleMetadataExtractorInterface
 {
-
     public function supports(string $filepath, Media $media): bool
     {
         $mime = $media->getMime();

@@ -44,9 +44,9 @@ final class PipelineClusterConsolidatorTest extends TestCase
                 perMediaCap: 1,
                 keepOrder: ['primary', 'secondary'],
                 algorithmGroups: [
-                    'primary' => 'stories',
+                    'primary'   => 'stories',
                     'secondary' => 'stories',
-                    'annot' => 'annotations',
+                    'annot'     => 'annotations',
                 ],
                 defaultAlgorithmGroup: 'default',
             ),

@@ -12,10 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
+
 use function sprintf;
 
 /**
- * Class PoiUpdateSummary
+ * Class PoiUpdateSummary.
  */
 final readonly class PoiUpdateSummary
 {

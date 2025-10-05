@@ -23,9 +23,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Throwable;
 
 use function file_exists;
-use function sprintf;
 use function file_put_contents;
 use function is_file;
+use function sprintf;
 use function unlink;
 
 use const LOCK_EX;

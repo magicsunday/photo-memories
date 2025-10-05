@@ -98,7 +98,7 @@ final class CalendarFeatureHelper
         $holidayIds   = [];
 
         foreach ($items as $media) {
-            $features = self::extract($media);
+            $features  = self::extract($media);
             $isWeekend = $features['isWeekend'];
             if ($isWeekend === true) {
                 ++$weekendTrue;

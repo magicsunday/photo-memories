@@ -24,7 +24,7 @@ use function count;
 final readonly class AwayFlagStage implements DaySummaryStageInterface
 {
     public function __construct(
-        private TimezoneResolverInterface     $timezoneResolver,
+        private TimezoneResolverInterface $timezoneResolver,
         private BaseLocationResolverInterface $baseLocationResolver,
     ) {
     }
@@ -41,8 +41,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $summary     = $days[$key];
             $nextSummary = $nextKey !== null ? $days[$nextKey] : null;
 
-            $timezone = $this->timezoneResolver->resolveSummaryTimezone($summary, $home);
-            $baseLocation = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
+            $timezone                   = $this->timezoneResolver->resolveSummaryTimezone($summary, $home);
+            $baseLocation               = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
             $days[$key]['baseLocation'] = $baseLocation;
 
             if ($baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km']) {
@@ -57,7 +57,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $baseFlags     = [];
         $distanceFlags = [];
         foreach ($keys as $key) {
-            $summary = $days[$key];
+            $summary             = $days[$key];
             $baseFlags[$key]     = $summary['baseAway'];
             $distanceFlags[$key] = $summary['awayByDistance'];
         }
@@ -140,8 +140,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, bool> $flags
-     * @param list<string>        $orderedKeys
+     * @param array<string, bool>                    $flags
+     * @param list<string>                           $orderedKeys
      * @param array<string, array{isSynthetic:bool}> $days
      *
      * @return array<string, bool>

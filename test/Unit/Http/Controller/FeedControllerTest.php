@@ -31,6 +31,7 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
 use function file_put_contents;
 use function json_decode;
@@ -42,6 +43,7 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * @internal
+ *
  * @covers \MagicSunday\Memories\Http\Controller\FeedController
  */
 final class FeedControllerTest extends TestCase
@@ -65,7 +67,7 @@ final class FeedControllerTest extends TestCase
                 memberIds: [1, 2, 3],
                 score: 0.68,
                 params: [
-                    'group' => 'city_and_events',
+                    'group'      => 'city_and_events',
                     'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
                 ],
             ),
@@ -77,7 +79,7 @@ final class FeedControllerTest extends TestCase
                 memberIds: [4, 5, 6],
                 score: 0.32,
                 params: [
-                    'group' => 'nature_and_seasons',
+                    'group'      => 'nature_and_seasons',
                     'time_range' => ['from' => 1_600_000_000, 'to' => 1_600_000_600],
                 ],
             ),
@@ -94,13 +96,13 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $mediaOne   = new Media('/media/1.jpg', 'checksum-1', 100);
         $mediaTwo   = new Media('/media/2.jpg', 'checksum-2', 110);
         $mediaThree = new Media('/media/3.jpg', 'checksum-3', 120);
 
-        $idProperty = new \ReflectionProperty(Media::class, 'id');
+        $idProperty = new ReflectionProperty(Media::class, 'id');
         $idProperty->setAccessible(true);
         $idProperty->setValue($mediaOne, 1);
         $idProperty->setValue($mediaTwo, 2);
@@ -166,9 +168,9 @@ final class FeedControllerTest extends TestCase
 
     public function testFeedFormatsTakenAtWithExifOffset(): void
     {
-        $accessor   = new DefaultExifValueAccessor();
-        $processor  = new DateTimeExifMetadataProcessor($accessor);
-        $exif       = [
+        $accessor  = new DefaultExifValueAccessor();
+        $processor = new DateTimeExifMetadataProcessor($accessor);
+        $exif      = [
             'EXIF' => [
                 'DateTimeOriginal'   => '2024:05:01 14:20:30',
                 'OffsetTimeOriginal' => '+0130',
@@ -178,7 +180,7 @@ final class FeedControllerTest extends TestCase
         $media = new Media('/media/offset.jpg', 'checksum-offset', 512);
         $processor->process($exif, $media);
 
-        $reflection = new \ReflectionProperty(Media::class, 'id');
+        $reflection = new ReflectionProperty(Media::class, 'id');
         $reflection->setAccessible(true);
         $reflection->setValue($media, 42);
 
@@ -217,7 +219,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $controller = new FeedController(
             $feedBuilder,
@@ -259,7 +261,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $controller = new FeedController(
             $feedBuilder,
@@ -290,7 +292,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $tempFile = tempnam(sys_get_temp_dir(), 'thumb');
         self::assertIsString($tempFile);
@@ -299,7 +301,7 @@ final class FeedControllerTest extends TestCase
         $media = new Media($tempFile, 'checksum', 4);
         $media->setThumbnails([320 => $tempFile]);
 
-        $reflection = new \ReflectionProperty(Media::class, 'id');
+        $reflection = new ReflectionProperty(Media::class, 'id');
         $reflection->setAccessible(true);
         $reflection->setValue($media, 99);
 
@@ -342,7 +344,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -379,17 +381,17 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $original = tempnam(sys_get_temp_dir(), 'orig');
+        $original  = tempnam(sys_get_temp_dir(), 'orig');
         $generated = tempnam(sys_get_temp_dir(), 'gen');
         self::assertIsString($original);
         self::assertIsString($generated);
         file_put_contents($original, 'original');
         file_put_contents($generated, 'generated');
 
-        $media = new Media($original, 'checksum-123', 10);
-        $reflection = new \ReflectionProperty(Media::class, 'id');
+        $media      = new Media($original, 'checksum-123', 10);
+        $reflection = new ReflectionProperty(Media::class, 'id');
         $reflection->setAccessible(true);
         $reflection->setValue($media, 12);
 

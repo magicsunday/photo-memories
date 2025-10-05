@@ -19,8 +19,8 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\AbstractClusterScoreHeuristic
 use function array_keys;
 use function array_map;
 use function count;
-use function max;
 use function is_string;
+use function max;
 use function usort;
 
 /**
@@ -106,12 +106,12 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 continue;
             }
 
-            $params          = $draft->getParams();
-            $avgQuality      = $this->floatOrNull($params['quality_avg'] ?? null);
-            $avgAesthetics   = $this->floatOrNull($params['aesthetics_score'] ?? null);
-            $avgResolution   = $this->floatOrNull($params['quality_resolution'] ?? null);
-            $avgSharpness    = $this->floatOrNull($params['quality_sharpness'] ?? null);
-            $avgIso          = $this->floatOrNull($params['quality_iso'] ?? null);
+            $params        = $draft->getParams();
+            $avgQuality    = $this->floatOrNull($params['quality_avg'] ?? null);
+            $avgAesthetics = $this->floatOrNull($params['aesthetics_score'] ?? null);
+            $avgResolution = $this->floatOrNull($params['quality_resolution'] ?? null);
+            $avgSharpness  = $this->floatOrNull($params['quality_sharpness'] ?? null);
+            $avgIso        = $this->floatOrNull($params['quality_iso'] ?? null);
 
             /** @var array<string,array{score:float,quality:float,aesthetics:float,penalty:float}> $details */
             $details = [];
@@ -144,17 +144,17 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 }
 
                 $details[(string) $memberId] = [
-                    'score'       => $this->clamp01($baseScore),
-                    'quality'     => $qualityScore,
-                    'aesthetics'  => $aestheticScore,
-                    'penalty'     => $duplicateFactor,
+                    'score'      => $this->clamp01($baseScore),
+                    'quality'    => $qualityScore,
+                    'aesthetics' => $aestheticScore,
+                    'penalty'    => $duplicateFactor,
                 ];
             }
 
             if ($visibleMembers === []) {
                 $draft->setParam('member_quality', [
-                    'ordered' => [],
-                    'members' => [],
+                    'ordered'        => [],
+                    'members'        => [],
                     'quality_ranked' => [
                         'ordered' => [],
                         'members' => [],
@@ -201,27 +201,27 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             foreach ($qualityOrdered as $memberId) {
                 $detail   = $details[(string) $memberId];
                 $ranked[] = [
-                    'id'          => $memberId,
-                    'score'       => $detail['score'],
-                    'quality'     => $detail['quality'],
-                    'aesthetics'  => $detail['aesthetics'],
-                    'penalty'     => $detail['penalty'],
+                    'id'         => $memberId,
+                    'score'      => $detail['score'],
+                    'quality'    => $detail['quality'],
+                    'aesthetics' => $detail['aesthetics'],
+                    'penalty'    => $detail['penalty'],
                 ];
             }
 
             $draft->setParam('member_quality', [
-                'ordered' => $visibleMembers,
-                'members' => $details,
+                'ordered'        => $visibleMembers,
+                'members'        => $details,
                 'quality_ranked' => [
                     'ordered' => $qualityOrdered,
                     'members' => $ranked,
                 ],
                 'summary' => [
-                    'quality_avg'       => $avgQuality,
-                    'aesthetics_avg'    => $avgAesthetics,
-                    'quality_resolution'=> $avgResolution,
-                    'quality_sharpness' => $avgSharpness,
-                    'quality_iso'       => $avgIso,
+                    'quality_avg'        => $avgQuality,
+                    'aesthetics_avg'     => $avgAesthetics,
+                    'quality_resolution' => $avgResolution,
+                    'quality_sharpness'  => $avgSharpness,
+                    'quality_iso'        => $avgIso,
                 ],
                 'weights' => [
                     'quality'    => $this->qualityWeight,
@@ -358,7 +358,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
      */
     private function computeDuplicatePenalty(Media $media, array &$seenPhash, array &$seenDhash, array &$seenBurst): float
     {
-        $penalty  = $this->registerDuplicate($this->phashDuplicateKey($media), $seenPhash, $this->phashPenalty);
+        $penalty = $this->registerDuplicate($this->phashDuplicateKey($media), $seenPhash, $this->phashPenalty);
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getDhash()), $seenDhash, $this->dhashPenalty);
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getBurstUuid()), $seenBurst, $this->burstPenalty);
 
@@ -387,7 +387,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             return 0.0;
         }
 
-        $count      = $seen[$value] ?? 0;
+        $count        = $seen[$value] ?? 0;
         $seen[$value] = $count + 1;
 
         if ($count === 0) {

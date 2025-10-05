@@ -49,7 +49,7 @@ final class ExifMetadataExtractorTest extends TestCase
 
         $exif = [
             'COMPUTED' => [
-                'Width' => $computedWidth,
+                'Width'  => $computedWidth,
                 'Height' => $computedHeight,
             ],
         ];
@@ -161,11 +161,11 @@ final class ExifMetadataExtractorTest extends TestCase
 
         $exif = [
             'GPS' => [
-                'GPSLatitude'             => ['52/1', '30/1', '0/1'],
-                'GPSLatitudeRef'          => 'N',
-                'GPSLongitude'            => ['13/1', '24/1', '0/1'],
-                'GPSLongitudeRef'         => 'E',
-                'UndefinedTag:0x001F'     => '5/2',
+                'GPSLatitude'         => ['52/1', '30/1', '0/1'],
+                'GPSLatitudeRef'      => 'N',
+                'GPSLongitude'        => ['13/1', '24/1', '0/1'],
+                'GPSLongitudeRef'     => 'E',
+                'UndefinedTag:0x001F' => '5/2',
             ],
         ];
 
@@ -190,13 +190,13 @@ final class ExifMetadataExtractorTest extends TestCase
                 'Model' => 'X-T5',
             ],
             'EXIF' => [
-                'CameraOwnerName'                => 'Jane Doe',
-                'BodySerialNumber'               => 'FUJI123456',
-                'LensMake'                       => 'Fujinon',
-                'LensModel'                      => 'XF 16-80mm F4 R OIS WR',
-                'LensSpecification'              => ['16/1', '80/1', '40/10', '40/10'],
-                'LensSerialNumber'               => 'FUJILENS001',
-                'CompositeImage'                 => 2,
+                'CameraOwnerName'                     => 'Jane Doe',
+                'BodySerialNumber'                    => 'FUJI123456',
+                'LensMake'                            => 'Fujinon',
+                'LensModel'                           => 'XF 16-80mm F4 R OIS WR',
+                'LensSpecification'                   => ['16/1', '80/1', '40/10', '40/10'],
+                'LensSerialNumber'                    => 'FUJILENS001',
+                'CompositeImage'                      => 2,
                 'SourceImageNumberOfCompositeImage'   => 4,
                 'SourceExposureTimesOfCompositeImage' => '1/200;1/60;1/30;1/15',
             ],

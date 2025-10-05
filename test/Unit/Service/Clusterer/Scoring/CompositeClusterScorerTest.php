@@ -12,11 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Scoring;
 
 use DateTimeImmutable;
-use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic;
@@ -27,7 +27,6 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic;
-use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
@@ -95,19 +94,19 @@ final class CompositeClusterScorerTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'vacation',
             params: [
-                'poi_label' => 'Museum Island',
+                'poi_label'        => 'Museum Island',
                 'poi_category_key' => 'tourism',
-                'poi_tags' => ['wikidata' => 'Q123'],
-                'time_range' => [
+                'poi_tags'         => ['wikidata' => 'Q123'],
+                'time_range'       => [
                     'from' => (new DateTimeImmutable('2024-05-01 10:00:00'))->getTimestamp(),
-                    'to' => (new DateTimeImmutable('2024-05-01 10:30:00'))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-05-01 10:30:00'))->getTimestamp(),
                 ],
             ],
             centroid: ['lat' => 52.5208, 'lon' => 13.4095],
             members: [1, 2, 3],
         );
 
-        $scored = $scorer->score([$cluster]);
+        $scored        = $scorer->score([$cluster]);
         $scoredCluster = $scored[0];
         $params        = $scoredCluster->getParams();
 
@@ -116,8 +115,7 @@ final class CompositeClusterScorerTest extends TestCase
             $values[$heuristic->weightKey()] = $heuristic->score($scoredCluster);
         }
 
-        $expected =
-            0.22 * $values['quality'] +
+        $expected = 0.22 * $values['quality'] +
             0.08 * ($params['aesthetics_score'] ?? $values['quality']) +
             0.16 * $values['people'] +
             0.09 * $values['content'] +

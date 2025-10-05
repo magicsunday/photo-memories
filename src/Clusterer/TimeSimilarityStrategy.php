@@ -21,7 +21,7 @@ use function array_map;
 use function usort;
 
 /**
- * Class TimeSimilarityStrategy
+ * Class TimeSimilarityStrategy.
  */
 final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 {

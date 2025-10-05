@@ -25,15 +25,15 @@ use function round;
 use function usort;
 
 /**
- * Class DefaultOverpassResponseParser
+ * Class DefaultOverpassResponseParser.
  */
 final readonly class DefaultOverpassResponseParser implements OverpassResponseParserInterface
 {
     public function __construct(
-        private OverpassElementFilterInterface      $elementFilter,
-        private OverpassTagSelectorInterface        $tagSelector,
+        private OverpassElementFilterInterface $elementFilter,
+        private OverpassTagSelectorInterface $tagSelector,
         private OverpassPrimaryTagResolverInterface $primaryTagResolver,
-        private PoiNameExtractorInterface           $poiNameExtractor,
+        private PoiNameExtractorInterface $poiNameExtractor,
     ) {
     }
 

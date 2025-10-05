@@ -21,7 +21,7 @@ interface ExifMetadataProcessorInterface
     /**
      * Applies EXIF data extracted from a media file onto the Media entity.
      *
-     * @param array<string,mixed> $exif The complete EXIF array as returned by the extractor.
+     * @param array<string,mixed> $exif the complete EXIF array as returned by the extractor
      */
     public function process(array $exif, Media $media): void;
 }

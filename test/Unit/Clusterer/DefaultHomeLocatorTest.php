@@ -63,14 +63,14 @@ final class DefaultHomeLocatorTest extends TestCase
             },
         );
 
-        $items = [];
+        $items         = [];
         $daylightStart = new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('UTC'));
 
         for ($i = 0; $i < 5; ++$i) {
             $day = $daylightStart->add(new DateInterval('P' . $i . 'D'));
             for ($sample = 0; $sample < 3; ++$sample) {
                 $timestamp = $day->setTime(9 + ($sample * 3), 0, 0);
-                $items[] = $this->makeMediaFixture(
+                $items[]   = $this->makeMediaFixture(
                     600 + ($i * 3) + $sample,
                     sprintf('daylight-home-%d-%d.jpg', $i, $sample),
                     $timestamp->format('Y-m-d H:i:s'),

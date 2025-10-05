@@ -14,7 +14,7 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Interface PoiUpdateProcessorInterface
+ * Interface PoiUpdateProcessorInterface.
  */
 interface PoiUpdateProcessorInterface
 {

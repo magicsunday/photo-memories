@@ -24,8 +24,8 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
 use function array_keys;
-use function array_slice;
 use function array_map;
+use function array_slice;
 use function count;
 use function explode;
 use function implode;
@@ -50,12 +50,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 {
     use VacationTimezoneTrait;
 
-    private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
-    private const int DAY_SLOT_HOURS = 6;
+    private const float WEEKEND_OR_HOLIDAY_BONUS    = 0.35;
+    private const int DAY_SLOT_HOURS                = 6;
     private const float QUALITY_BASELINE_MEGAPIXELS = 12.0;
 
     /**
-     * @param float $movementThresholdKm Minimum travel distance to count as move day.
+     * @param float $movementThresholdKm minimum travel distance to count as move day
      */
     public function __construct(
         private LocationHelper $locationHelper,
@@ -83,24 +83,24 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $members = [];
         /** @var array<string, list<Media>> $dayMembers */
-        $dayMembers = [];
-        $gpsMembers = [];
-        $maxDistance = 0.0;
-        $avgDistanceSum = 0.0;
-        $tourismHits = 0;
-        $poiSamples = 0;
-        $moveDays = 0;
-        $photoDensitySum = 0.0;
+        $dayMembers              = [];
+        $gpsMembers              = [];
+        $maxDistance             = 0.0;
+        $avgDistanceSum          = 0.0;
+        $tourismHits             = 0;
+        $poiSamples              = 0;
+        $moveDays                = 0;
+        $photoDensitySum         = 0.0;
         $photoDensityDenominator = 0;
-        $timezoneOffsets = [];
-        $countryCodes = [];
-        $workDayPenalty = 0;
-        $reliableDays = 0;
-        $spotClusterCount = 0;
-        $multiSpotDays = 0;
-        $spotDwellSeconds = 0;
-        $weekendHolidayDays = 0;
-        $awayDays = 0;
+        $timezoneOffsets         = [];
+        $countryCodes            = [];
+        $workDayPenalty          = 0;
+        $reliableDays            = 0;
+        $spotClusterCount        = 0;
+        $multiSpotDays           = 0;
+        $spotDwellSeconds        = 0;
+        $weekendHolidayDays      = 0;
+        $awayDays                = 0;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -169,8 +169,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             $dayTimezone = $this->resolveSummaryTimezone($summary, $home);
             $dayDate     = new DateTimeImmutable($summary['date'], $dayTimezone);
-            $isWeekend = $summary['weekday'] >= 6;
-            $isHoliday = $this->holidayResolver->isHoliday($dayDate);
+            $isWeekend   = $summary['weekday'] >= 6;
+            $isHoliday   = $this->holidayResolver->isHoliday($dayDate);
 
             if ($summary['baseAway'] && ($isWeekend || $isHoliday)) {
                 ++$weekendHolidayDays;
@@ -185,10 +185,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        $dayCount = count($dayKeys);
+        $dayCount    = count($dayKeys);
         $avgDistance = $avgDistanceSum / $dayCount;
 
-        $centroid = MediaMath::centroid($gpsMembers);
+        $centroid           = MediaMath::centroid($gpsMembers);
         $centroidDistanceKm = MediaMath::haversineDistanceInMeters(
             $home['lat'],
             $home['lon'],
@@ -208,33 +208,33 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             sort($timezones, SORT_NUMERIC);
         }
 
-        $tourismRatio = $poiSamples > 0 ? min(1.0, $tourismHits / max(1, $poiSamples)) : 0.0;
+        $tourismRatio  = $poiSamples > 0 ? min(1.0, $tourismHits / max(1, $poiSamples)) : 0.0;
         $photoDensityZ = $photoDensityDenominator > 0 ? $photoDensitySum / $photoDensityDenominator : 0.0;
 
-        $firstDay = $days[$dayKeys[0]];
-        $lastDay  = $days[$dayKeys[$dayCount - 1]];
+        $firstDay    = $days[$dayKeys[0]];
+        $lastDay     = $days[$dayKeys[$dayCount - 1]];
         $airportFlag = $firstDay['hasAirportPoi'] || $lastDay['hasAirportPoi'];
 
-        $countryChange = $countries !== [] && (count($countries) > 1 || ($home['country'] !== null && !in_array($home['country'], $countries, true)));
+        $countryChange  = $countries !== [] && (count($countries) > 1 || ($home['country'] !== null && !in_array($home['country'], $countries, true)));
         $timezoneChange = $timezones !== [] && (count($timezones) > 1 || ($home['timezone_offset'] !== null && !in_array($home['timezone_offset'], $timezones, true)));
 
-        $spotDwellHours = $spotDwellSeconds / 3600.0;
-        $multiSpotBonus = min(3.0, $multiSpotDays * 0.9);
-        $dwellBonus     = min(1.5, $spotDwellHours * 0.3);
-        $spotBonus      = $multiSpotBonus + $dwellBonus;
+        $spotDwellHours      = $spotDwellSeconds / 3600.0;
+        $multiSpotBonus      = min(3.0, $multiSpotDays * 0.9);
+        $dwellBonus          = min(1.5, $spotDwellHours * 0.3);
+        $spotBonus           = $multiSpotBonus + $dwellBonus;
         $weekendHolidayBonus = min(2.0, $weekendHolidayDays * self::WEEKEND_OR_HOLIDAY_BONUS);
 
-        $awayDayScore   = min(10, $awayDays) * 1.6;
-        $distanceScore  = $centroidDistanceKm > 0.0 ? 1.2 * log(1.0 + $centroidDistanceKm) : 0.0;
-        $countryBonus   = $countryChange ? 2.5 : 0.0;
-        $timezoneBonus  = $timezoneChange ? 2.0 : 0.0;
-        $tourismBonus   = 1.5 * $tourismRatio;
-        $moveBonus      = 0.8 * $moveDays;
-        $airportBonus   = $airportFlag ? 1.0 : 0.0;
-        $densityBonus   = 0.6 * $photoDensityZ;
-        $explorationBonus = $spotBonus;
+        $awayDayScore        = min(10, $awayDays) * 1.6;
+        $distanceScore       = $centroidDistanceKm > 0.0 ? 1.2 * log(1.0 + $centroidDistanceKm) : 0.0;
+        $countryBonus        = $countryChange ? 2.5 : 0.0;
+        $timezoneBonus       = $timezoneChange ? 2.0 : 0.0;
+        $tourismBonus        = 1.5 * $tourismRatio;
+        $moveBonus           = 0.8 * $moveDays;
+        $airportBonus        = $airportFlag ? 1.0 : 0.0;
+        $densityBonus        = 0.6 * $photoDensityZ;
+        $explorationBonus    = $spotBonus;
         $weekendHolidayScore = $weekendHolidayBonus;
-        $penalty        = 0.4 * $workDayPenalty;
+        $penalty             = 0.4 * $workDayPenalty;
 
         $score = $awayDayScore
             + $distanceScore
@@ -275,7 +275,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $orderedMembers
         );
 
-        $place = $this->locationHelper->majorityLabel($members);
+        $place           = $this->locationHelper->majorityLabel($members);
         $placeComponents = $this->locationHelper->majorityLocationComponents($members);
 
         $classificationLabels = [
@@ -285,32 +285,32 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ];
 
         $params = [
-            'classification'       => $classification,
-            'classification_label' => $classificationLabels[$classification] ?? 'Reise',
-            'score'                => round($score, 2),
-            'nights'               => max(0, $awayDays - 1),
-            'away_days'            => $awayDays,
-            'total_days'           => $dayCount,
-            'time_range'           => $timeRange,
-            'max_distance_km'      => $centroidDistanceKm,
+            'classification'           => $classification,
+            'classification_label'     => $classificationLabels[$classification] ?? 'Reise',
+            'score'                    => round($score, 2),
+            'nights'                   => max(0, $awayDays - 1),
+            'away_days'                => $awayDays,
+            'total_days'               => $dayCount,
+            'time_range'               => $timeRange,
+            'max_distance_km'          => $centroidDistanceKm,
             'max_observed_distance_km' => $maxDistance,
-            'avg_distance_km'      => $avgDistance,
-            'country_change'       => $countryChange,
-            'timezone_change'      => $timezoneChange,
-            'tourism_ratio'        => $tourismRatio,
-            'move_days'            => $moveDays,
-            'photo_density_z'      => $photoDensityZ,
-            'airport_transfer'     => $airportFlag,
-            'spot_clusters_total'  => $spotClusterCount,
-            'spot_cluster_days'    => $multiSpotDays,
-            'spot_dwell_hours'     => round($spotDwellHours, 2),
-            'spot_exploration_bonus' => round($explorationBonus, 2),
-            'weekend_holiday_days' => $weekendHolidayDays,
-            'weekend_holiday_bonus' => round($weekendHolidayBonus, 2),
-            'work_day_penalty_days' => $workDayPenalty,
-            'work_day_penalty_score' => round($penalty, 2),
-            'countries'            => $countries,
-            'timezones'            => $timezones,
+            'avg_distance_km'          => $avgDistance,
+            'country_change'           => $countryChange,
+            'timezone_change'          => $timezoneChange,
+            'tourism_ratio'            => $tourismRatio,
+            'move_days'                => $moveDays,
+            'photo_density_z'          => $photoDensityZ,
+            'airport_transfer'         => $airportFlag,
+            'spot_clusters_total'      => $spotClusterCount,
+            'spot_cluster_days'        => $multiSpotDays,
+            'spot_dwell_hours'         => round($spotDwellHours, 2),
+            'spot_exploration_bonus'   => round($explorationBonus, 2),
+            'weekend_holiday_days'     => $weekendHolidayDays,
+            'weekend_holiday_bonus'    => round($weekendHolidayBonus, 2),
+            'work_day_penalty_days'    => $workDayPenalty,
+            'work_day_penalty_score'   => round($penalty, 2),
+            'countries'                => $countries,
+            'timezones'                => $timezones,
         ];
 
         if ($placeComponents !== []) {
@@ -324,7 +324,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $cityLabel = $this->formatLocationComponent($city);
                 if ($cityLabel !== '') {
                     $params['place_city'] = $cityLabel;
-                    $locationParts[] = $cityLabel;
+                    $locationParts[]      = $cityLabel;
                 }
             }
 
@@ -366,10 +366,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string>                                                                       $dayKeys
-     * @param array<string, list<Media>>                                                         $dayMembers
+     * @param list<string>                                                                                                                                     $dayKeys
+     * @param array<string, list<Media>>                                                                                                                       $dayMembers
      * @param array<string, array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                          $home
      *
      * @return list<Media>
      */
@@ -419,11 +419,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             $queueCount = count($queue);
             for ($index = 1; $index < $queueCount; ++$index) {
-                $media = $queue[$index];
-                $takenAt = $media->getTakenAt();
+                $media       = $queue[$index];
+                $takenAt     = $media->getTakenAt();
                 $leftovers[] = [
-                    'media' => $media,
-                    'score' => $this->evaluateMediaScore($media),
+                    'media'     => $media,
+                    'score'     => $this->evaluateMediaScore($media),
                     'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
                 ];
             }
@@ -450,7 +450,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     /**
      * @param array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string} $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                           $home
      *
      * @return list<Media>
      */

@@ -77,8 +77,8 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
                 $travelKm = 0.0;
                 $previous = null;
                 foreach ($gpsMembers as $gpsMedia) {
-                    $lat = $gpsMedia->getGpsLat();
-                    $lon = $gpsMedia->getGpsLon();
+                    $lat     = $gpsMedia->getGpsLat();
+                    $lon     = $gpsMedia->getGpsLon();
                     $takenAt = $gpsMedia->getTakenAt();
                     assert($lat !== null && $lon !== null && $takenAt instanceof DateTimeImmutable);
 
@@ -113,7 +113,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
                         $centroid['lon'],
                     ) / 1000.0;
 
-                    $summary['distanceSum']   += $distance;
+                    $summary['distanceSum'] += $distance;
                     ++$summary['distanceCount'];
 
                     if ($distance > $summary['maxDistanceKm']) {

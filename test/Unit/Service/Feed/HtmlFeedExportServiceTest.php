@@ -27,11 +27,14 @@ use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
+use SplFileInfo;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-use function file_exists;
 use function basename;
+use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
 use function is_dir;
@@ -45,7 +48,7 @@ use function unlink;
 final class HtmlFeedExportServiceTest extends TestCase
 {
     /**
-     * @var list<string> $tempDirs
+     * @var list<string>
      */
     private array $tempDirs = [];
 
@@ -130,7 +133,7 @@ final class HtmlFeedExportServiceTest extends TestCase
     #[Test]
     public function exportCopiesThumbnailsAndCreatesHtml(): void
     {
-        $baseDir = $this->createTempDir();
+        $baseDir     = $this->createTempDir();
         $thumbSource = $baseDir . '/source-thumb.jpg';
         file_put_contents($thumbSource, 'thumbnail');
 
@@ -147,7 +150,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         $cluster = new Cluster(
             'algo',
             ['group' => 'familie'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2],
         );
 
@@ -159,8 +162,8 @@ final class HtmlFeedExportServiceTest extends TestCase
             [1, 2],
             0.9,
             [
-                'group'       => 'familie',
-                'scene_tags'  => [
+                'group'      => 'familie',
+                'scene_tags' => [
                     ['label' => 'Familie', 'score' => 0.92],
                     ['label' => 'Outdoor', 'score' => 0.81],
                 ],
@@ -268,13 +271,13 @@ final class HtmlFeedExportServiceTest extends TestCase
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
         );
 
         foreach ($iterator as $fileInfo) {
-            if ($fileInfo instanceof \SplFileInfo && $fileInfo->isDir()) {
+            if ($fileInfo instanceof SplFileInfo && $fileInfo->isDir()) {
                 rmdir($fileInfo->getPathname());
 
                 continue;

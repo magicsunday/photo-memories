@@ -11,10 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
-use Closure;
+use JsonException;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
@@ -25,11 +26,11 @@ use function escapeshellarg;
 use function escapeshellcmd;
 use function explode;
 use function intdiv;
+use function is_array;
 use function is_bool;
+use function is_file;
 use function is_float;
 use function is_int;
-use function is_array;
-use function is_file;
 use function is_numeric;
 use function is_string;
 use function json_decode;
@@ -41,7 +42,7 @@ use function strtolower;
 use function trim;
 
 /**
- * Class FfprobeMetadataExtractor
+ * Class FfprobeMetadataExtractor.
  */
 final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
 {
@@ -144,9 +145,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
      *
-     * @return array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>
+     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>
      */
     private function normaliseStreams(?array $streams): array
     {
@@ -168,9 +169,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
      *
-     * @return array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>|null
+     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>|null
      */
     private function firstStream(?array $streams): ?array
     {
@@ -188,7 +189,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $stream
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $stream
      */
     private function parseStreamRotation(array $stream): ?float
     {
@@ -232,7 +233,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $sideData
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $sideData
      */
     private function parseStreamStabilisation(?array $sideData): ?bool
     {
@@ -251,7 +252,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $entry
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $entry
      */
     private function extractStabilisationFromEntry(?array $entry): ?bool
     {
@@ -291,9 +292,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>> $value
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $value
      *
-     * @return array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>
+     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>
      */
     private function normaliseNestedArray(array $value): array
     {
@@ -314,7 +315,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         return $result;
     }
 
-    private function normaliseBoolean(null|string|int|float|bool $value): ?bool
+    private function normaliseBoolean(string|int|float|bool|null $value): ?bool
     {
         if ($value === null) {
             return null;
@@ -394,7 +395,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         return (float) $v;
     }
 
-    private function parseFloat(null|string|int|float $v): ?float
+    private function parseFloat(string|int|float|null $v): ?float
     {
         if ($v === null) {
             return null;
@@ -416,7 +417,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
      * @param string $filepath
      *
      * @return array{0: DateTimeImmutable, 1: ?string}|null
-     * @throws \JsonException
+     *
+     * @throws JsonException
      */
     private function probeQuickTimeCapture(string $filepath): ?array
     {

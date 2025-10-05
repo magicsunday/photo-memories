@@ -210,7 +210,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
             };
         }
 
-        $course = $this->floatOrRational($gps['GPSTrack'] ?? null);
+        $course             = $this->floatOrRational($gps['GPSTrack'] ?? null);
         $horizontalAccuracy = $this->floatOrRational($gps['GPSHPositioningError'] ?? null);
 
         return new GpsMetadata(
@@ -234,7 +234,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 
     private function normalizeExifDate(string $value): string
     {
-        $normalized = strtr($value, [':' => '-']);
+        $normalized     = strtr($value, [':' => '-']);
         $normalized[13] = ':';
         $normalized[16] = ':';
 

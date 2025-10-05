@@ -16,6 +16,7 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 
 use function array_values;
@@ -33,7 +34,7 @@ use function unlink;
 final class DefaultMediaFileLocatorTest extends TestCase
 {
     /**
-     * @var list<string> $tempDirs
+     * @var list<string>
      */
     private array $tempDirs = [];
 
@@ -97,7 +98,7 @@ final class DefaultMediaFileLocatorTest extends TestCase
         $dir = sys_get_temp_dir() . '/memories-indexing-' . uniqid('', true);
 
         if (!is_dir($dir) && !mkdir($dir) && !is_dir($dir)) {
-            throw new \RuntimeException('Unable to create temporary directory: ' . $dir);
+            throw new RuntimeException('Unable to create temporary directory: ' . $dir);
         }
 
         $this->tempDirs[] = $dir;

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Clusterer;
 
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use JsonException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
@@ -25,8 +26,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function array_find;
 use function array_is_list;
-use function array_keys;
 use function array_key_exists;
+use function array_keys;
 use function array_slice;
 use function array_unique;
 use function array_values;
@@ -42,7 +43,7 @@ use function sha1;
 use function spl_object_id;
 
 /**
- * Class ClusterPersistenceService
+ * Class ClusterPersistenceService.
  */
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
@@ -100,7 +101,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $ordered = $this->resolveOrderedMembers($d);
             $members = $this->clampMembers($ordered);
             $fp      = Cluster::computeFingerprint($members);
-            $key = $alg . '|' . $fp;
+            $key     = $alg . '|' . $fp;
             if (isset($existing[$key])) {
                 // already persisted earlier or within this same run
                 continue;
@@ -111,7 +112,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 continue;
             }
 
-            $media = $this->hydrateMembers($members);
+            $media    = $this->hydrateMembers($members);
             $metadata = $this->buildMetadata($d, $members, $media);
 
             // Construct and fill entity
@@ -257,29 +258,30 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      *     centroidLon: ?float,
      *     centroidCell7: ?string
      * }
-     * @throws \JsonException
+     *
+     * @throws JsonException
      */
     private function buildMetadata(ClusterDraft $draft, array $memberIds, array $media): array
     {
-        $bounds = $this->resolveTemporalBounds($media);
+        $bounds       = $this->resolveTemporalBounds($media);
         $membersCount = count($memberIds);
 
         $photoCount = null;
         $videoCount = null;
         if ($media !== []) {
-            $counts = $this->countMembersByKind($media);
+            $counts     = $this->countMembersByKind($media);
             $photoCount = $counts['photos'];
             $videoCount = $counts['videos'];
         }
 
-        $cover = $media !== [] ? $this->coverPicker->pickCover($media, $draft->getParams()) : null;
-        $location = $this->resolveDominantLocation($media);
+        $cover            = $media !== [] ? $this->coverPicker->pickCover($media, $draft->getParams()) : null;
+        $location         = $this->resolveDominantLocation($media);
         $algorithmVersion = $this->resolveAlgorithmVersion($draft->getParams());
-        $configHash = $this->computeConfigHash($draft->getParams());
+        $configHash       = $this->computeConfigHash($draft->getParams());
 
-        $centroid = $draft->getCentroid();
-        $centroidLat = $this->numericOrNull($centroid['lat'] ?? null);
-        $centroidLon = $this->numericOrNull($centroid['lon'] ?? null);
+        $centroid     = $draft->getCentroid();
+        $centroidLat  = $this->numericOrNull($centroid['lat'] ?? null);
+        $centroidLon  = $this->numericOrNull($centroid['lon'] ?? null);
         $centroidCell = null;
         if ($centroidLat !== null && $centroidLon !== null) {
             $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
@@ -299,18 +301,18 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $draft->setCentroidCell7($centroidCell);
 
         return [
-            'startAt' => $bounds['start'],
-            'endAt' => $bounds['end'],
-            'membersCount' => $membersCount,
-            'photoCount' => $photoCount,
-            'videoCount' => $videoCount,
-            'cover' => $cover,
-            'location' => $location,
+            'startAt'          => $bounds['start'],
+            'endAt'            => $bounds['end'],
+            'membersCount'     => $membersCount,
+            'photoCount'       => $photoCount,
+            'videoCount'       => $videoCount,
+            'cover'            => $cover,
+            'location'         => $location,
             'algorithmVersion' => $algorithmVersion,
-            'configHash' => $configHash,
-            'centroidLat' => $centroidLat,
-            'centroidLon' => $centroidLon,
-            'centroidCell7' => $centroidCell,
+            'configHash'       => $configHash,
+            'centroidLat'      => $centroidLat,
+            'centroidLon'      => $centroidLon,
+            'centroidCell7'    => $centroidCell,
         ];
     }
 
@@ -410,7 +412,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 continue;
             }
 
-            $id = $location->getId();
+            $id  = $location->getId();
             $key = $id !== null ? 'id_' . $id : 'obj_' . spl_object_id($location);
 
             if (!isset($counts[$key])) {
@@ -460,8 +462,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     /**
      * @param array<string, scalar|array|null> $params
      *
-     * @return null|string
-     * @throws \JsonException
+     * @return string|null
+     *
+     * @throws JsonException
      */
     private function computeConfigHash(array $params): ?string
     {
@@ -470,7 +473,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $normalized = $this->normaliseParamsForHash($params);
-        $encoded = json_encode(
+        $encoded    = json_encode(
             $normalized,
             JSON_THROW_ON_ERROR
         );
@@ -553,6 +556,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             }
 
             $quality = $this->resolveQualityRankedOrder($metadata, $original);
+
             return $quality ?? $original;
         }
 
@@ -573,7 +577,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function resolveQualityRankedOrder(array $metadata, array $original): ?array
     {
         $qualityRanked = $metadata['quality_ranked'] ?? null;
-        $quality = $this->extractOrderedList($qualityRanked, $original);
+        $quality       = $this->extractOrderedList($qualityRanked, $original);
         if ($quality !== null) {
             return $quality;
         }
@@ -642,7 +646,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         /** @var array<int,int> $originalCounts */
         $originalCounts = [];
         foreach ($original as $id) {
-            $intId = $id;
+            $intId                  = $id;
             $originalCounts[$intId] = ($originalCounts[$intId] ?? 0) + 1;
         }
 
@@ -671,7 +675,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 continue;
             }
 
-            $ordered[] = $intValue;
+            $ordered[]                = $intValue;
             $orderedCounts[$intValue] = ($orderedCounts[$intValue] ?? 0) + 1;
         }
 
@@ -680,7 +684,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         foreach ($original as $id) {
-            $intId   = $id;
+            $intId    = $id;
             $expected = $originalCounts[$intId] ?? 0;
             $current  = $orderedCounts[$intId] ?? 0;
             if ($current >= $expected) {

@@ -18,7 +18,7 @@ use function is_numeric;
 use function is_string;
 
 /**
- * Class OverpassElementFilter
+ * Class OverpassElementFilter.
  */
 final class OverpassElementFilter implements OverpassElementFilterInterface
 {

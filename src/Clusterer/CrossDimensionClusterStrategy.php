@@ -19,7 +19,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function assert;
-
 use function count;
 use function usort;
 
@@ -132,8 +131,8 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
                 continue;
             }
 
-            $time        = $this->computeTimeRange($run);
-            $params      = [
+            $time   = $this->computeTimeRange($run);
+            $params = [
                 'time_range' => $time,
             ];
             $tagMetadata = $this->collectDominantTags($run);

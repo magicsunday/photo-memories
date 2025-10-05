@@ -70,8 +70,8 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
             function (Media $m): bool {
                 $local = $this->localTimeHelper->resolve($m);
                 assert($local instanceof DateTimeImmutable);
-                $md    = $local->format('m-d');
-                $hour  = (int) $local->format('G');
+                $md   = $local->format('m-d');
+                $hour = (int) $local->format('G');
 
                 return ($md === '12-31' && $hour >= $this->startHour)
                     || ($md === '01-01' && $hour <= $this->endHour);
@@ -81,7 +81,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
         foreach ($nyeItems as $m) {
             $local = $this->localTimeHelper->resolve($m);
             assert($local instanceof DateTimeImmutable);
-            $y     = (int) $local->format('Y');
+            $y = (int) $local->format('Y');
 
             $byYear[$y] ??= [];
             $byYear[$y][] = $m;

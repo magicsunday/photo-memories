@@ -22,8 +22,8 @@ use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
-use function explode;
 use function ctype_digit;
+use function explode;
 use function is_string;
 use function mb_strtolower;
 use function strrpos;
@@ -187,16 +187,16 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
     private function holidayNameFromCode(string $code): ?string
     {
         return match (mb_strtolower($code)) {
-            'de-newyear'     => 'Neujahr',
-            'de-labour'      => 'Tag der Arbeit',
-            'de-unity'       => 'Tag der Deutschen Einheit',
-            'de-xmas1'       => '1. Weihnachtstag',
-            'de-xmas2'       => '2. Weihnachtstag',
-            'de-goodfriday'  => 'Karfreitag',
-            'de-eastermon'   => 'Ostermontag',
-            'de-ascension'   => 'Christi Himmelfahrt',
-            'de-whitmonday'  => 'Pfingstmontag',
-            default          => null,
+            'de-newyear'    => 'Neujahr',
+            'de-labour'     => 'Tag der Arbeit',
+            'de-unity'      => 'Tag der Deutschen Einheit',
+            'de-xmas1'      => '1. Weihnachtstag',
+            'de-xmas2'      => '2. Weihnachtstag',
+            'de-goodfriday' => 'Karfreitag',
+            'de-eastermon'  => 'Ostermontag',
+            'de-ascension'  => 'Christi Himmelfahrt',
+            'de-whitmonday' => 'Pfingstmontag',
+            default         => null,
         };
     }
 }

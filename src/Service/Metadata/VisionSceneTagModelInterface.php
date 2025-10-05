@@ -25,4 +25,3 @@ interface VisionSceneTagModelInterface
      */
     public function predict(string $filepath, Media $media): array;
 }
-

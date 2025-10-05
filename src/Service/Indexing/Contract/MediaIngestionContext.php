@@ -15,26 +15,26 @@ use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Class MediaIngestionContext
+ * Class MediaIngestionContext.
  */
 final readonly class MediaIngestionContext
 {
     private function __construct(
-        private string          $filePath,
-        private bool            $force,
-        private bool            $dryRun,
-        private bool            $withThumbnails,
-        private bool            $strictMime,
+        private string $filePath,
+        private bool $force,
+        private bool $dryRun,
+        private bool $withThumbnails,
+        private bool $strictMime,
         private OutputInterface $output,
-        private ?Media          $media,
-        private ?string         $detectedMime,
-        private bool            $detectedRaw,
-        private bool            $detectedHeic,
-        private bool            $detectedHevc,
-        private ?string         $checksum,
-        private bool            $reindexRequired,
-        private bool            $skipped,
-        private ?string         $skipMessage,
+        private ?Media $media,
+        private ?string $detectedMime,
+        private bool $detectedRaw,
+        private bool $detectedHeic,
+        private bool $detectedHevc,
+        private ?string $checksum,
+        private bool $reindexRequired,
+        private bool $skipped,
+        private ?string $skipMessage,
     ) {
     }
 
@@ -44,7 +44,7 @@ final readonly class MediaIngestionContext
         bool $dryRun,
         bool $withThumbnails,
         bool $strictMime,
-        OutputInterface $output
+        OutputInterface $output,
     ): self {
         return new self(
             $filePath,

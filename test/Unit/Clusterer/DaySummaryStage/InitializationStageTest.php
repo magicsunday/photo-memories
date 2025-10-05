@@ -31,10 +31,10 @@ final class InitializationStageTest extends TestCase
         $stage            = new InitializationStage($timezoneResolver, $poiClassifier, 'UTC');
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 

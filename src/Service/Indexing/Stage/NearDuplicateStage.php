@@ -26,9 +26,9 @@ use function is_int;
 final readonly class NearDuplicateStage implements MediaIngestionStageInterface
 {
     public function __construct(
-        private MediaRepository          $mediaRepository,
+        private MediaRepository $mediaRepository,
         private MediaDuplicateRepository $duplicateRepository,
-        private int                      $maxHammingDistance = 6,
+        private int $maxHammingDistance = 6,
     ) {
         if ($this->maxHammingDistance < 0) {
             throw new InvalidArgumentException('Maximum Hamming distance must be zero or greater.');

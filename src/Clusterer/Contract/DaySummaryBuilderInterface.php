@@ -19,7 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 interface DaySummaryBuilderInterface
 {
     /**
-     * @param list<Media>                                                   $items
+     * @param list<Media>                                                                             $items
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return array<string, array{

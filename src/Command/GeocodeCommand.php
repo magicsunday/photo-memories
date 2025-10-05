@@ -24,7 +24,7 @@ use function is_string;
 use function trim;
 
 /**
- * Class GeocodeCommand
+ * Class GeocodeCommand.
  */
 #[AsCommand(
     name: 'memories:geocode',

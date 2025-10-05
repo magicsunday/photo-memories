@@ -139,7 +139,7 @@ trait ClusterBuildHelperTrait
                     $entry['score'] = $value;
                 }
 
-                $entry['count']++;
+                ++$entry['count'];
                 $sceneScores[$label] = $entry;
             }
         }
@@ -193,7 +193,7 @@ trait ClusterBuildHelperTrait
                     $entry['label'] = $trimmed;
                 }
 
-                $entry['count']++;
+                ++$entry['count'];
                 $keywordStats[$normalized] = $entry;
             }
         }

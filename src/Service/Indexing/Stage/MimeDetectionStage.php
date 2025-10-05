@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
+use finfo;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
-use finfo;
 use Throwable;
 
 use function in_array;
@@ -28,17 +28,17 @@ use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
 /**
- * Class MimeDetectionStage
+ * Class MimeDetectionStage.
  */
 final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 {
     /**
-     * @var list<string> $imageExtensions
+     * @var list<string>
      */
     private array $imageExtensions;
 
     /**
-     * @var list<string> $videoExtensions
+     * @var list<string>
      */
     private array $videoExtensions;
 
@@ -63,8 +63,8 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
             return $context;
         }
 
-        $mime  = $this->detectMime($context->getFilePath());
-        $flags = $this->detectFormatFlags($context->getFilePath(), $mime);
+        $mime    = $this->detectMime($context->getFilePath());
+        $flags   = $this->detectFormatFlags($context->getFilePath(), $mime);
         $context = $context->withDetectedMime($mime, $flags['isRaw'], $flags['isHeic'], $flags['isHevc']);
 
         if ($context->isStrictMime() && $this->isMimeConsistent($context->getFilePath(), $mime) === false) {

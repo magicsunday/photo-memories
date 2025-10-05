@@ -38,7 +38,7 @@ final readonly class SlideshowJob
         private string $outputPath,
         private string $lockPath,
         private string $errorPath,
-        private array  $images,
+        private array $images,
     ) {
     }
 

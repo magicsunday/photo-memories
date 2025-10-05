@@ -15,7 +15,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
 /**
- * Interface MediaLocationLinkerInterface
+ * Interface MediaLocationLinkerInterface.
  */
 interface MediaLocationLinkerInterface
 {

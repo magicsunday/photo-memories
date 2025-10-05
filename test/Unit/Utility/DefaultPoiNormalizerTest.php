@@ -37,13 +37,13 @@ final class DefaultPoiNormalizerTest extends TestCase
         $normalizer = new DefaultPoiNormalizer();
 
         $result = $normalizer->normalise([
-            'name'        => '',
-            'names'       => [
-                'default'    => ' Central Park ',
-                'localized'  => [
-                    'EN'        => 'Central Park',
-                    'de-DE'     => 'Zentralpark',
-                    'invalid '  => '',
+            'name'  => '',
+            'names' => [
+                'default'   => ' Central Park ',
+                'localized' => [
+                    'EN'       => 'Central Park',
+                    'de-DE'    => 'Zentralpark',
+                    'invalid ' => '',
                 ],
                 'alternates' => ['  Central ', 'Park', 42],
             ],
@@ -63,8 +63,8 @@ final class DefaultPoiNormalizerTest extends TestCase
         self::assertSame('park', $result['categoryValue']);
         self::assertSame(
             [
-                'default'    => ' Central Park ',
-                'localized'  => [
+                'default'   => ' Central Park ',
+                'localized' => [
                     'de-de' => 'Zentralpark',
                     'en'    => 'Central Park',
                 ],

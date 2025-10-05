@@ -51,8 +51,8 @@ final class GeoFeatureEnricherTest extends TestCase
         $enricher = $this->createEnricher();
         $result   = $enricher->extract($media->getPath(), $media);
 
-        $expectedHash = $this->computeHomeConfigHash();
-        $expectedCell = $this->expectedCell(48.137154, 11.576124);
+        $expectedHash     = $this->computeHomeConfigHash();
+        $expectedCell     = $this->expectedCell(48.137154, 11.576124);
         $expectedDistance = $this->expectedDistanceKm(48.137154, 11.576124);
         $expectedGeohash7 = 'u281z7j';
         $expectedGeohash5 = 'u281z';

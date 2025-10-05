@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+
 use function abs;
 use function intdiv;
 use function sprintf;
@@ -43,8 +44,8 @@ final readonly class DateTimeExifMetadataProcessor implements ExifMetadataProces
         if ($takenAt !== null) {
             if ($offset !== null) {
                 $absOffset = abs($offset);
-                $timezone = new DateTimeZone(sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv($absOffset, 60), $absOffset % 60));
-                $takenAt  = new DateTimeImmutable($takenAt->format('Y-m-d H:i:s'), $timezone);
+                $timezone  = new DateTimeZone(sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv($absOffset, 60), $absOffset % 60));
+                $takenAt   = new DateTimeImmutable($takenAt->format('Y-m-d H:i:s'), $timezone);
             } else {
                 $timezone = $takenAt->getTimezone();
             }

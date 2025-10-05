@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -32,8 +32,8 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
 {
     public function __construct(
         private CaptureTimeResolver $captureTimeResolver,
-        private string              $defaultTimezone,
-        private FilenameDateParser  $filenameDateParser,
+        private string $defaultTimezone,
+        private FilenameDateParser $filenameDateParser,
     ) {
     }
 

@@ -107,7 +107,7 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
         if (is_file($path)) {
             $originExt = pathinfo($path, PATHINFO_EXTENSION);
             if ($originExt !== '' && in_array(strtolower($originExt), $allowedExtensions, true)) {
-                $basename               = basename($path);
+                $basename             = basename($path);
                 $basenames[$basename] = $basename;
             }
         }

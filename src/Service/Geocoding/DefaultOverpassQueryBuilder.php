@@ -20,13 +20,13 @@ use function sprintf;
 use function str_replace;
 
 /**
- * Class DefaultOverpassQueryBuilder
+ * Class DefaultOverpassQueryBuilder.
  */
 final readonly class DefaultOverpassQueryBuilder implements OverpassQueryBuilderInterface
 {
     public function __construct(
         private OverpassTagConfiguration $configuration,
-        private int                      $queryTimeout = 25,
+        private int $queryTimeout = 25,
     ) {
     }
 
@@ -57,7 +57,7 @@ final readonly class DefaultOverpassQueryBuilder implements OverpassQueryBuilder
 
                 $escaped = array_map(static fn (string $value): string => preg_quote($value, '/'), $values);
                 $pattern = implode('|', $escaped);
-                $query  .= sprintf('["%s"~"^(%s)$"]', $key, $pattern);
+                $query .= sprintf('["%s"~"^(%s)$"]', $key, $pattern);
             }
 
             $query .= ';';

@@ -168,10 +168,10 @@ class Cluster
     private ?string $centroidCell7 = null;
 
     /**
-     * @param string              $algorithm Algorithm used for clustering.
-     * @param array<string, mixed> $params   Parameters for the clustering run.
-     * @param array{lat: float, lon: float} $centroid Geographic centroid location.
-     * @param list<int>           $members   Media identifiers comprising the cluster.
+     * @param string                        $algorithm algorithm used for clustering
+     * @param array<string, mixed>          $params    parameters for the clustering run
+     * @param array{lat: float, lon: float} $centroid  geographic centroid location
+     * @param list<int>                     $members   media identifiers comprising the cluster
      */
     public function __construct(
         string $algorithm,
@@ -179,14 +179,14 @@ class Cluster
         array $centroid,
         array $members,
     ) {
-        $this->algorithm   = $algorithm;
-        $this->params      = $params;
-        $this->centroid    = $centroid;
-        $this->members     = $members;
-        $this->createdAt   = new DateTimeImmutable();
+        $this->algorithm = $algorithm;
+        $this->params    = $params;
+        $this->centroid  = $centroid;
+        $this->members   = $members;
+        $this->createdAt = new DateTimeImmutable();
 
         // Pre-compute the fingerprint to ensure deterministic cluster identity.
-        $this->fingerprint = self::computeFingerprint($this->members);
+        $this->fingerprint  = self::computeFingerprint($this->members);
         $this->membersCount = count($members);
         $this->synchroniseCentroid($centroid);
     }
@@ -206,9 +206,9 @@ class Cluster
     /**
      * Deterministic, order-independent member set hash.
      *
-     * @param list<int> $members Members that should be represented by the fingerprint.
+     * @param list<int> $members members that should be represented by the fingerprint
      *
-     * @return string Hash representing the member composition.
+     * @return string hash representing the member composition
      */
     public static function computeFingerprint(array $members): string
     {
@@ -223,7 +223,7 @@ class Cluster
     /**
      * Returns the persistent identifier of the cluster.
      *
-     * @return int Cluster identifier.
+     * @return int cluster identifier
      */
     public function getId(): int
     {
@@ -233,7 +233,7 @@ class Cluster
     /**
      * Returns the clustering algorithm name.
      *
-     * @return string Algorithm identifier.
+     * @return string algorithm identifier
      */
     public function getAlgorithm(): string
     {
@@ -253,7 +253,7 @@ class Cluster
     /**
      * Returns the cluster centroid.
      *
-     * @return array{lat: float, lon: float} Latitude and longitude pair.
+     * @return array{lat: float, lon: float} latitude and longitude pair
      */
     public function getCentroid(): array
     {
@@ -274,7 +274,7 @@ class Cluster
     /**
      * Returns the list of media identifiers associated with the cluster.
      *
-     * @return list<int> Media identifiers belonging to the cluster.
+     * @return list<int> media identifiers belonging to the cluster
      */
     public function getMembers(): array
     {
@@ -284,7 +284,7 @@ class Cluster
     /**
      * Returns the creation timestamp.
      *
-     * @return DateTimeImmutable Creation time of the cluster record.
+     * @return DateTimeImmutable creation time of the cluster record
      */
     public function getCreatedAt(): DateTimeImmutable
     {
@@ -294,7 +294,7 @@ class Cluster
     /**
      * Returns the fingerprint that uniquely represents this cluster.
      *
-     * @return string Cluster fingerprint hash.
+     * @return string cluster fingerprint hash
      */
     public function getFingerprint(): string
     {
@@ -499,6 +499,7 @@ class Cluster
     {
         if ($this->centroidLat === null || $this->centroidLon === null) {
             $this->centroidCell7 = null;
+
             return;
         }
 

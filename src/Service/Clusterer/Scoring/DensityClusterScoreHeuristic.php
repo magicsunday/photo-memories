@@ -18,7 +18,7 @@ use function max;
 use function min;
 
 /**
- * Class DensityClusterScoreHeuristic
+ * Class DensityClusterScoreHeuristic.
  */
 final class DensityClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {

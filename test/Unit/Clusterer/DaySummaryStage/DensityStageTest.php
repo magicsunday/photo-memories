@@ -31,10 +31,10 @@ final class DensityStageTest extends TestCase
         $densityStage     = new DensityStage();
 
         $home = [
-            'lat' => 52.5200,
-            'lon' => 13.4050,
-            'radius_km' => 12.0,
-            'country' => 'de',
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
             'timezone_offset' => 60,
         ];
 
@@ -51,7 +51,7 @@ final class DensityStageTest extends TestCase
         }
 
         $secondDay = $start->add(new DateInterval('P1D'));
-        $items[] = $this->makeMediaFixture(300, 'day-two.jpg', $secondDay, 52.5201, 13.4051);
+        $items[]   = $this->makeMediaFixture(300, 'day-two.jpg', $secondDay, 52.5201, 13.4051);
 
         $initial = $initialStage->process($items, $home);
         $result  = $densityStage->process($initial, $home);

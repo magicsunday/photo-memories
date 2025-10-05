@@ -24,15 +24,15 @@ use function sprintf;
 use function trim;
 
 /**
- * Class DefaultGeocodingWorkflow
+ * Class DefaultGeocodingWorkflow.
  */
 final readonly class DefaultGeocodingWorkflow
 {
     public function __construct(
-        private EntityManagerInterface           $entityManager,
-        private LocationCellIndex                $cellIndex,
+        private EntityManagerInterface $entityManager,
+        private LocationCellIndex $cellIndex,
         private MediaGeocodingProcessorInterface $mediaProcessor,
-        private PoiUpdateProcessorInterface      $poiProcessor,
+        private PoiUpdateProcessorInterface $poiProcessor,
     ) {
     }
 

@@ -18,19 +18,19 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_any;
 use function array_key_first;
 use function array_keys;
 use function array_map;
-use function array_values;
-use function assert;
-use function arsort;
-use function count;
 use function array_search;
+use function array_values;
+use function arsort;
+use function assert;
+use function count;
 use function sort;
 use function strcmp;
 use function usort;
@@ -92,6 +92,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     *
      * @throws DateInvalidTimeZoneException
      */
     public function cluster(array $items): array
@@ -344,9 +345,9 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             return true;
         }
 
-        $firstDay = $runDays[0];
+        $firstDay     = $runDays[0];
         $lastDayIndex = count($runDays) - 1;
-        $lastDay = $runDays[$lastDayIndex];
+        $lastDay      = $runDays[$lastDayIndex];
 
         $prevDay = $this->previousDayKey($sortedDays, $firstDay);
         $nextDay = $this->nextDayKey($sortedDays, $lastDay);
@@ -389,7 +390,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         $nextIndex = $index + 1;
-        $total = count($sortedDays);
+        $total     = count($sortedDays);
         if ($nextIndex >= $total) {
             return null;
         }

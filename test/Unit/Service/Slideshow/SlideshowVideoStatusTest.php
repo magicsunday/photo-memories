@@ -23,10 +23,10 @@ final class SlideshowVideoStatusTest extends TestCase
         $status = SlideshowVideoStatus::ready('/api/feed/foo/video', 3.45);
         self::assertSame(
             [
-                'status' => SlideshowVideoStatus::STATUS_READY,
-                'meldung' => null,
+                'status'               => SlideshowVideoStatus::STATUS_READY,
+                'meldung'              => null,
                 'dauerProBildSekunden' => 3.45,
-                'url' => '/api/feed/foo/video',
+                'url'                  => '/api/feed/foo/video',
             ],
             $status->toArray()
         );
@@ -39,8 +39,8 @@ final class SlideshowVideoStatusTest extends TestCase
         $status = SlideshowVideoStatus::generating(2.0);
         self::assertSame(
             [
-                'status' => SlideshowVideoStatus::STATUS_GENERATING,
-                'meldung' => 'Video wird erstellt …',
+                'status'               => SlideshowVideoStatus::STATUS_GENERATING,
+                'meldung'              => 'Video wird erstellt …',
                 'dauerProBildSekunden' => 2.0,
             ],
             $status->toArray()
@@ -53,8 +53,8 @@ final class SlideshowVideoStatusTest extends TestCase
         $status = SlideshowVideoStatus::error('Fehler', 1.25);
         self::assertSame(
             [
-                'status' => SlideshowVideoStatus::STATUS_ERROR,
-                'meldung' => 'Fehler',
+                'status'               => SlideshowVideoStatus::STATUS_ERROR,
+                'meldung'              => 'Fehler',
                 'dauerProBildSekunden' => 1.25,
             ],
             $status->toArray()

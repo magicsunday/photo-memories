@@ -53,7 +53,7 @@ final class OverpassTagSelectorTest extends TestCase
         $configuration = new OverpassTagConfiguration([
             ['tourism' => ['viewpoint']],
         ]);
-        $selector      = new OverpassTagSelector($configuration);
+        $selector = new OverpassTagSelector($configuration);
 
         $result = $selector->select([
             'tourism'   => 'viewpoint',

@@ -16,10 +16,10 @@ namespace MagicSunday\Memories\Entity\Enum;
  */
 enum ContentKind: string
 {
-    case PHOTO = 'photo';
-    case SCREENSHOT = 'screenshot';
-    case DOCUMENT = 'document';
-    case MAP = 'map';
+    case PHOTO            = 'photo';
+    case SCREENSHOT       = 'screenshot';
+    case DOCUMENT         = 'document';
+    case MAP              = 'map';
     case SCREEN_RECORDING = 'screenrecord';
-    case OTHER = 'other';
+    case OTHER            = 'other';
 }

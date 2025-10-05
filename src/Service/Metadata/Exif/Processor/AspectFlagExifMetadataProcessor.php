@@ -23,7 +23,7 @@ final class AspectFlagExifMetadataProcessor implements ExifMetadataProcessorInte
 {
     public function process(array $exif, Media $media): void
     {
-        $width = $media->getWidth();
+        $width  = $media->getWidth();
         $height = $media->getHeight();
         if ($width === null || $height === null || $width <= 0 || $height <= 0) {
             return;

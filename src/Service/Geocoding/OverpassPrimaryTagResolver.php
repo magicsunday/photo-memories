@@ -17,7 +17,7 @@ use function array_any;
 use function is_string;
 
 /**
- * Class OverpassPrimaryTagResolver
+ * Class OverpassPrimaryTagResolver.
  */
 final readonly class OverpassPrimaryTagResolver implements OverpassPrimaryTagResolverInterface
 {

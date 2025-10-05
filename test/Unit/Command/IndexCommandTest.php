@@ -17,10 +17,13 @@ use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Tester\CommandTester;
 
 use function file_put_contents;
 use function is_dir;
@@ -33,7 +36,7 @@ use function unlink;
 final class IndexCommandTest extends TestCase
 {
     /**
-     * @var list<string> $tempDirs
+     * @var list<string>
      */
     private array $tempDirs = [];
 
@@ -86,7 +89,7 @@ final class IndexCommandTest extends TestCase
 
         $processedMedia = new Media($fileOne, 'checksum', 3);
 
-        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
+        $pipeline  = $this->createMock(MediaIngestionPipelineInterface::class);
         $callCount = 0;
         $pipeline->expects(self::exactly(2))
             ->method('process')
@@ -111,7 +114,7 @@ final class IndexCommandTest extends TestCase
                     return null;
                 }
 
-                throw new \RuntimeException('Unexpected pipeline invocation.');
+                throw new RuntimeException('Unexpected pipeline invocation.');
             });
         $pipeline->expects(self::once())
             ->method('finalize')
@@ -134,7 +137,7 @@ final class IndexCommandTest extends TestCase
         $dir = sys_get_temp_dir() . '/memories-command-' . uniqid('', true);
 
         if (!is_dir($dir) && !mkdir($dir) && !is_dir($dir)) {
-            throw new \RuntimeException('Unable to create temporary directory: ' . $dir);
+            throw new RuntimeException('Unable to create temporary directory: ' . $dir);
         }
 
         $this->tempDirs[] = $dir;
@@ -148,9 +151,9 @@ final class IndexCommandTest extends TestCase
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
         );
 
         foreach ($iterator as $fileInfo) {

@@ -66,8 +66,8 @@ final class Request
                 continue;
             }
 
-            $name             = str_replace('_', '-', substr($key, 5));
-            $headers[$name]   = $value;
+            $name           = str_replace('_', '-', substr($key, 5));
+            $headers[$name] = $value;
         }
 
         $query = [];

@@ -30,7 +30,7 @@ use function trim;
 use const SORT_STRING;
 
 /**
- * Class OverpassTagSelector
+ * Class OverpassTagSelector.
  */
 final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
 {

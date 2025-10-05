@@ -23,8 +23,8 @@ use function count;
 final class RunDetector implements VacationRunDetectorInterface
 {
     /**
-     * @param float $minAwayDistanceKm Minimum distance from home to count as away day.
-     * @param int   $minItemsPerDay    Minimum number of items required to bridge runs.
+     * @param float $minAwayDistanceKm minimum distance from home to count as away day
+     * @param int   $minItemsPerDay    minimum number of items required to bridge runs
      */
     public function __construct(
         private TransportDayExtender $transportDayExtender,
@@ -49,7 +49,7 @@ final class RunDetector implements VacationRunDetectorInterface
             return [];
         }
 
-        $keys = array_keys($days);
+        $keys       = array_keys($days);
         $indexByKey = [];
         foreach ($keys as $index => $key) {
             $indexByKey[$key] = $index;
@@ -57,7 +57,7 @@ final class RunDetector implements VacationRunDetectorInterface
 
         $isAwayCandidate = [];
         foreach ($keys as $key) {
-            $summary = $days[$key];
+            $summary   = $days[$key];
             $candidate = $summary['baseAway'];
 
             if ($candidate === false && $summary['gpsMembers'] !== []) {
@@ -80,7 +80,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 continue;
             }
 
-            $summary = $days[$key];
+            $summary    = $days[$key];
             $gpsMembers = $summary['gpsMembers'];
             if ($gpsMembers === [] || $summary['photoCount'] < $this->minItemsPerDay) {
                 $prevIsAway = $i > 0 && ($isAwayCandidate[$keys[$i - 1]] ?? false);
@@ -91,8 +91,8 @@ final class RunDetector implements VacationRunDetectorInterface
             }
         }
 
-        $runs = [];
-        $run = [];
+        $runs  = [];
+        $run   = [];
         $flush = function () use (&$run, &$runs, $keys, $indexByKey, $days): void {
             if ($run === []) {
                 return;

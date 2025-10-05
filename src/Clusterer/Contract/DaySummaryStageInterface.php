@@ -17,7 +17,7 @@ namespace MagicSunday\Memories\Clusterer\Contract;
 interface DaySummaryStageInterface
 {
     /**
-     * @param array<string, mixed>|list<mixed> $days
+     * @param array<string, mixed>|list<mixed>                                                        $days
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return array<string, mixed>
