@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 
+use function array_any;
 use function array_filter;
 use function array_unique;
 use function array_values;
@@ -307,18 +308,14 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
             return false;
         }
 
-        foreach ($keywords as $keyword) {
-            foreach ($tokens as $token) {
-                if ($token === $keyword || str_contains($token, $keyword)) {
-                    return true;
-                }
-
-                if (str_ends_with($token, '-' . $keyword)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return array_any(
+            $keywords,
+            static fn (string $keyword): bool => array_any(
+                $tokens,
+                static fn (string $token): bool => $token === $keyword
+                    || str_contains($token, $keyword)
+                    || str_ends_with($token, '-' . $keyword)
+            )
+        );
     }
 }

@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
+use function array_map;
 use function count;
 
 /**
@@ -57,10 +58,10 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
         }
 
         /** @var list<list<int>> $normalized */
-        $normalized = [];
-        foreach ($drafts as $draft) {
-            $normalized[] = $this->normalizeMembers($draft->getMembers());
-        }
+        $normalized = array_map(
+            static fn (ClusterDraft $draft): array => $this->normalizeMembers($draft->getMembers()),
+            $drafts,
+        );
 
         /** @var array<int,int> $memberUse */
         $memberUse = [];

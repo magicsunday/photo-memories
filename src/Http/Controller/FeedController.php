@@ -34,10 +34,13 @@ use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
+use function array_filter;
 use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function array_replace;
 use function array_slice;
+use function array_values;
 use function count;
 use function hash;
 use function implode;
@@ -137,30 +140,32 @@ final class FeedController
         $availableStrategies = $this->collectStrategies($items);
         $availableGroups     = $this->collectGroups($items);
 
-        $filtered = [];
-        foreach ($items as $item) {
-            if ($minScore !== null && $item->getScore() < $minScore) {
-                continue;
-            }
+        $filtered = array_values(array_filter(
+            $items,
+            function (MemoryFeedItem $item) use ($minScore, $strategy, $filterDate): bool {
+                if ($minScore !== null && $item->getScore() < $minScore) {
+                    return false;
+                }
 
-            if ($strategy !== null && $item->getAlgorithm() !== $strategy) {
-                continue;
-            }
+                if ($strategy !== null && $item->getAlgorithm() !== $strategy) {
+                    return false;
+                }
 
-            if ($filterDate !== null && !$this->matchesDate($item, $filterDate)) {
-                continue;
-            }
+                if ($filterDate !== null && !$this->matchesDate($item, $filterDate)) {
+                    return false;
+                }
 
-            $filtered[] = $item;
-            if (count($filtered) >= $limit) {
-                break;
+                return true;
             }
-        }
+        ));
 
-        $data = [];
-        foreach ($filtered as $item) {
-            $data[] = $this->transformItem($item);
-        }
+        $filtered = array_slice($filtered, 0, $limit);
+
+        /** @var list<array<string, mixed>> $data */
+        $data = array_map(
+            fn (MemoryFeedItem $item): array => $this->transformItem($item),
+            $filtered,
+        );
 
         $meta = [
             'erstelltAm'          =>

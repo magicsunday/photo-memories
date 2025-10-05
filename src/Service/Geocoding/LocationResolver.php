@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use DateTimeImmutable;
-use Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
@@ -131,15 +130,15 @@ final class LocationResolver implements PoiEnsurerInterface
      *
      * This is used when we re-use Locations from the cell cache/index without
      * going through the full reverse-geocoding pipeline again. When
-     * $forceRefresh is true, existing POI data is cleared before the re-fetch.
+     * $refreshPois is true, existing POI data is cleared before the re-fetch.
      */
-    public function ensurePois(Location $location, bool $forceRefresh = false): void
+    public function ensurePois(Location $location, bool $refreshPois = false): void
     {
         if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
             return;
         }
 
-        if ($forceRefresh && $location->getPois() !== null) {
+        if ($refreshPois && $location->getPois() !== null) {
             $location->setPois(null);
         }
 
@@ -278,10 +277,6 @@ final class LocationResolver implements PoiEnsurerInterface
             return $geocode->refreshedAt;
         }
 
-        try {
-            return new DateTimeImmutable();
-        } catch (Exception) {
-            return null;
-        }
+        return new DateTimeImmutable();
     }
 }

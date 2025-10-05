@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\Contract\OverpassTagSelectorInterface;
 
+use function array_any;
 use function array_filter;
 use function array_map;
 use function array_unique;
@@ -158,15 +159,10 @@ final class OverpassTagSelector implements OverpassTagSelectorInterface
             return false;
         }
 
-        if (in_array(
-            $value,
+        return array_any(
             $allowedValues,
-            true
-        )) {
-            return true;
-        }
-
-        return false;
+            static fn (string $allowed): bool => $allowed === $value
+        );
     }
 
     private function stringOrNull(mixed $value): ?string

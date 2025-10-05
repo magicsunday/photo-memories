@@ -65,13 +65,15 @@ final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
      */
     private function computeContentMetrics(array $mediaItems, int $members, array $params): array
     {
-        if (isset($params['content']) && $this->floatOrNull($params['content']) !== null) {
+        $cachedContentScore = $this->floatOrNull($params['content'] ?? null);
+
+        if (($score = $cachedContentScore) !== null) {
             $unique   = (int) ($params['content_keywords_unique'] ?? 0);
             $total    = (int) ($params['content_keywords_total'] ?? 0);
             $coverage = $this->clamp01($this->floatOrNull($params['content_coverage'] ?? null));
 
             return [
-                'score'           => $this->clamp01((float) $params['content']),
+                'score'           => $this->clamp01($score),
                 'unique_keywords' => $unique,
                 'total_keywords'  => $total,
                 'coverage'        => $coverage,

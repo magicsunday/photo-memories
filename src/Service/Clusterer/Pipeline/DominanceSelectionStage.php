@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
 use function array_keys;
+use function array_map;
 use function count;
 use function usort;
 
@@ -73,10 +74,10 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         /** @var list<list<int>> $normalized */
-        $normalized = [];
-        foreach ($drafts as $draft) {
-            $normalized[] = $this->normalizeMembers($draft->getMembers());
-        }
+        $normalized = array_map(
+            static fn (ClusterDraft $draft): array => $this->normalizeMembers($draft->getMembers()),
+            $drafts,
+        );
 
         /** @var array<string,list<int>> $byAlgorithm */
         $byAlgorithm = [];
@@ -170,10 +171,10 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         /** @var list<ClusterDraft> $result */
-        $result = [];
-        foreach ($selected as $index) {
-            $result[] = $drafts[$index];
-        }
+        $result = array_map(
+            static fn (int $index): ClusterDraft => $drafts[$index],
+            $selected,
+        );
 
         return $result;
     }

@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer\Service;
 use MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface;
 use MagicSunday\Memories\Entity\Location;
 
+use function array_any;
 use function is_array;
 use function is_string;
 use function str_contains;
@@ -194,17 +195,10 @@ final class PoiClassifier implements PoiClassifierInterface
         }
 
         $needle = strtolower($value);
-        foreach ($keywords as $keyword) {
-            $keywordLower = strtolower($keyword);
-            if ($needle === $keywordLower) {
-                return true;
-            }
 
-            if (str_contains($needle, $keywordLower)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            $keywords,
+            static fn (string $keyword): bool => $needle === strtolower($keyword) || str_contains($needle, strtolower($keyword))
+        );
     }
 }

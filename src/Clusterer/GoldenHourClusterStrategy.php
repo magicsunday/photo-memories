@@ -112,7 +112,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
         $lastTs = null;
 
         foreach ($cand as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
+            $ts = $m->getTakenAt()->getTimestamp();
             if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds && $buf !== []) {
                 $runs[] = $buf;
                 $buf    = [];

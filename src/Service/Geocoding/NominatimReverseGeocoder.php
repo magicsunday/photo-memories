@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use DateTimeImmutable;
-use Exception;
 use MagicSunday\Memories\Utility\MediaMath;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -101,11 +100,7 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
 
         $accuracy = $this->accuracyRadius($bbox, (float) $latS, (float) $lonS);
 
-        try {
-            $refreshedAt = new DateTimeImmutable();
-        } catch (Exception) {
-            $refreshedAt = null;
-        }
+        $refreshedAt = new DateTimeImmutable();
 
         return new GeocodeResult(
             provider: 'nominatim',

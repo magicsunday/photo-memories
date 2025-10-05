@@ -60,9 +60,11 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic
      */
     private function computeLocationMetrics(array $mediaItems, int $members, array $params): array
     {
-        if (isset($params['location_score']) && $this->floatOrNull($params['location_score']) !== null) {
+        $cachedLocationScore = $this->floatOrNull($params['location_score'] ?? null);
+
+        if (($score = $cachedLocationScore) !== null) {
             return [
-                'score'        => $this->clamp01((float) $params['location_score']),
+                'score'        => $this->clamp01($score),
                 'geo_coverage' => $this->clamp01($this->floatOrNull($params['location_geo_coverage'] ?? null)),
             ];
         }
