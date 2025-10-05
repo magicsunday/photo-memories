@@ -38,8 +38,21 @@ final class DependencyContainerFactory
 
     private const CONTAINER_NAMESPACE = __NAMESPACE__;
 
+    /**
+     * Absolute directory path where the compiled container cache is stored.
+     *
+     * This always resolves to "var/cache" within the project root, even when
+     * running from a packaged PHAR archive.
+     */
     private string $cacheDirectory;
 
+    /**
+     * Fully-qualified file path to the cached container PHP class.
+     *
+     * The file lives inside {@see $cacheDirectory} and follows the
+     * "DependencyContainer.php" naming convention so that the class can be
+     * required directly.
+     */
     private string $cacheFile;
 
     public function __construct()
@@ -69,6 +82,8 @@ final class DependencyContainerFactory
         $yamlFileLoader = new YamlFileLoader($containerBuilder, new FileLocator(__DIR__ . '/../config'));
         $yamlFileLoader->load('services.yaml');
 
+        // Register SymfonyStyle so that console commands can inject it; the actual
+        // instance is provided by the command runtime and therefore marked synthetic.
         $containerBuilder
             ->register(SymfonyStyle::class)
             ->setPublic(true)
@@ -101,12 +116,20 @@ final class DependencyContainerFactory
         return new DependencyContainer();
     }
 
+    /**
+     * Ensures the cache directory exists before writing the compiled container.
+     *
+     * Creates "var/cache" recursively and raises an exception when another
+     * process fails to create it correctly.
+     */
     private function createCacheDirectoryIfMissing(): void
     {
         if (is_dir($this->cacheDirectory)) {
             return;
         }
 
+        // The double check accounts for concurrent mkdir calls. Only fail when
+        // the directory still does not exist after attempting to create it.
         if (!mkdir($concurrentDirectory = $this->cacheDirectory, 0775, true) && !is_dir($concurrentDirectory)) {
             throw new RuntimeException(
                 sprintf(
@@ -117,8 +140,16 @@ final class DependencyContainerFactory
         }
     }
 
+    /**
+     * Determines the project root path for dependency container configuration.
+     *
+     * Returns the directory of the running PHAR when packaged, otherwise the
+     * repository root relative to this source file.
+     */
     private function resolveProjectDir(): string
     {
+        // When bundled as a PHAR, resolve the path to the archive instead of the
+        // filesystem location of the source files.
         if (class_exists(Phar::class) && Phar::running() !== '') {
             return dirname(Phar::running(false));
         }
