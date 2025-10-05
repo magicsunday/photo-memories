@@ -29,6 +29,9 @@ parameters:
     memories.hash.phash_prefix_length: 16
 
     # Home configuration
+    memories.home.lat_default: 0.0
+    memories.home.lon_default: 0.0
+    memories.home.radius_km_default: 15.0
     env(MEMORIES_HOME_VERSION_HASH): 'home_config_v1'
     memories.home.version_hash: '%env(string:MEMORIES_HOME_VERSION_HASH)%'
 
@@ -44,14 +47,16 @@ parameters:
     memories.geocoding.overpass.max_pois: 15
     memories.geocoding.overpass.fetch_limit_multiplier: 3.0
     memories.geocoding.overpass.allowed_pois: []
-    memories.localization.preferred_locale: '%env(default::string:MEMORIES_PREFERRED_LOCALE)%'
+    memories.localization.preferred_locale_default: 'de'
+    memories.localization.preferred_locale: '%env(default:memories.localization.preferred_locale_default:string:MEMORIES_PREFERRED_LOCALE)%'
 
     memories.timezone.default: 'UTC'
     memories.cluster.timezone.default: 'Europe/Berlin'
 
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
-    memories.thumbnail.apply_orientation: '%env(default::bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
+    memories.thumbnail.apply_orientation_default: false
+    memories.thumbnail.apply_orientation: '%env(default:memories.thumbnail.apply_orientation_default:bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
 
     # Consolidation Defaults
     memories.cluster.consolidate.min_score: 0.30
