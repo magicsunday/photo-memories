@@ -21,10 +21,12 @@ use function array_key_first;
 use function arsort;
 use function implode;
 use function is_string;
+use function mb_convert_case;
+use function mb_strtolower;
 use function strcmp;
-use function strtolower;
 use function trim;
 
+use const MB_CASE_TITLE;
 use const SORT_NUMERIC;
 
 /**
@@ -91,7 +93,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             if (is_string($label)) {
                 $normalizedLabel = trim($label);
                 if ($normalizedLabel !== '') {
-                    return $normalizedLabel;
+                    return $this->normalizeLabelCasing($normalizedLabel);
                 }
             }
         }
@@ -110,7 +112,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
             $normalizedComponent = trim($component);
             if ($normalizedComponent !== '') {
-                return $normalizedComponent;
+                return $this->normalizeLabelCasing($normalizedComponent);
             }
         }
 
@@ -118,7 +120,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         if (is_string($label)) {
             $normalizedLabel = trim($label);
             if ($normalizedLabel !== '') {
-                return $normalizedLabel;
+                return $this->normalizeLabelCasing($normalizedLabel);
             }
         }
 
@@ -145,14 +147,14 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
                 if ($normalizedLabel !== '') {
                     $categoryValue = $poiContext['categoryValue'] ?? null;
                     if (!is_string($categoryValue)) {
-                        return $normalizedLabel;
+                        return $this->normalizeLabelCasing($normalizedLabel);
                     }
 
                     $normalizedCategory = trim($categoryValue);
                     if ($normalizedCategory === ''
-                        || strtolower($normalizedLabel) !== strtolower($normalizedCategory)
+                        || mb_strtolower($normalizedLabel, 'UTF-8') !== mb_strtolower($normalizedCategory, 'UTF-8')
                     ) {
-                        return $normalizedLabel;
+                        return $this->normalizeLabelCasing($normalizedLabel);
                     }
                 }
             }
@@ -244,8 +246,13 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         $variants = $bucket[$winnerKey]['variants'] ?? [];
+        $variant  = $this->pickRepresentativeVariant($variants);
 
-        return $this->pickRepresentativeVariant($variants);
+        if ($variant === null) {
+            return null;
+        }
+
+        return $this->normalizeLabelCasing($variant);
     }
 
     /**
@@ -262,7 +269,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             return;
         }
 
-        $normalized = strtolower($trimmed);
+        $normalized = mb_strtolower($trimmed, 'UTF-8');
 
         if (!isset($bucket[$normalized])) {
             $bucket[$normalized] = [
@@ -297,5 +304,23 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         return $winnerLabel;
+    }
+
+    /**
+     * Normalizes the casing of a location label to ensure user-facing output.
+     */
+    private function normalizeLabelCasing(string $label): string
+    {
+        $trimmed = trim($label);
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        $lowerCase = mb_strtolower($trimmed, 'UTF-8');
+        if ($trimmed === $lowerCase) {
+            return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return $trimmed;
     }
 }
