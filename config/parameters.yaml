@@ -43,6 +43,7 @@ parameters:
     memories.geocoding.nominatim.user_agent: 'Rueckblick/1.0'
     memories.geocoding.nominatim.zoom: 14
     memories.geocoding.delay_ms: 1200
+    memories.geocoding.refresh.batch_size: 25
     memories.geocoding.overpass.base_url: 'https://overpass-api.de/api'
     memories.geocoding.overpass.timeout: 25
     memories.geocoding.overpass.radius_m: 250
