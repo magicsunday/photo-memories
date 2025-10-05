@@ -17,7 +17,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function count;
 use function is_array;
-use function is_numeric;
 use function is_string;
 use function max;
 use function number_format;
@@ -153,25 +152,22 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
         }
 
         [$south, $north, $west, $east] = $bbox;
-        if (!is_numeric($south) || !is_numeric($north) || !is_numeric($west) || !is_numeric($east)) {
-            return null;
-        }
+
+        $northFloat = (float) $north;
+        $southFloat = (float) $south;
+        $eastFloat  = (float) $east;
+        $westFloat  = (float) $west;
 
         $distances = [
-            MediaMath::haversineDistanceInMeters($lat, $lon, (float) $north, $lon),
-            MediaMath::haversineDistanceInMeters($lat, $lon, (float) $south, $lon),
-            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, (float) $east),
-            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, (float) $west),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $northFloat, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $southFloat, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $eastFloat),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $westFloat),
         ];
 
-        $radius = max($distances);
-        if (!is_numeric($radius)) {
-            return null;
-        }
+        $radius = (float) max($distances);
 
-        $radiusFloat = (float) $radius;
-
-        return $radiusFloat > 0.0 ? $radiusFloat : null;
+        return $radius > 0.0 ? $radius : null;
     }
 
     /**
