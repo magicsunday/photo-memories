@@ -157,12 +157,12 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         }
 
         $isHoliday = $features['isHoliday'] ?? null;
-        if (is_bool($isHoliday) && $isHoliday === true) {
+        if ($isHoliday === true) {
             $this->bump($scores, 'Feiertag', 0.55);
         }
 
         $isWeekend = $features['isWeekend'] ?? null;
-        if (is_bool($isWeekend) && $isWeekend === true) {
+        if ($isWeekend === true) {
             $this->bump($scores, 'Wochenende', 0.52);
         }
     }
