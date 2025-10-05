@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+use function array_find;
 use function array_is_list;
 use function array_keys;
 use function array_key_exists;
@@ -438,14 +439,17 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $params['version'] ?? null,
         ];
 
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && $candidate !== '') {
-                return $candidate;
-            }
+        $candidate = array_find(
+            $candidates,
+            static fn ($value): bool => (is_string($value) && $value !== '') || is_int($value)
+        );
 
-            if (is_int($candidate)) {
-                return (string) $candidate;
-            }
+        if (is_string($candidate)) {
+            return $candidate;
+        }
+
+        if (is_int($candidate)) {
+            return (string) $candidate;
         }
 
         return null;
