@@ -43,11 +43,11 @@ final class RunDetectorTest extends TestCase
         $media = $this->createMock(Media::class);
 
         $days = [
-            '2024-02-29' => $this->makeDaySummary('2024-02-29', false, [$media], 10.0, 80.0, 1, hasAirport: true),
+            '2024-02-29' => $this->makeDaySummary('2024-02-29', false, [$media], 10.0, 80.0, 1, hasAirport: false, hasHighSpeedTransit: true),
             '2024-03-01' => $this->makeDaySummary('2024-03-01', true, [$media], 30.0, 120.0, 4),
             '2024-03-02' => $this->makeDaySummary('2024-03-02', false, [], 5.0, 40.0, 1),
             '2024-03-03' => $this->makeDaySummary('2024-03-03', true, [$media], 28.0, 140.0, 4),
-            '2024-03-04' => $this->makeDaySummary('2024-03-04', false, [$media], 12.0, 90.0, 2, hasAirport: true),
+            '2024-03-04' => $this->makeDaySummary('2024-03-04', false, [$media], 12.0, 90.0, 2, hasAirport: false, hasHighSpeedTransit: true),
         ];
 
         $runs = $detector->detectVacationRuns($days, $home);
@@ -70,6 +70,7 @@ final class RunDetectorTest extends TestCase
         float $maxDistanceKm,
         int $photoCount,
         bool $hasAirport = false,
+        bool $hasHighSpeedTransit = false,
         bool $isSynthetic = false,
     ): array {
         return [
@@ -79,6 +80,9 @@ final class RunDetectorTest extends TestCase
             'maxDistanceKm'           => $maxDistanceKm,
             'avgDistanceKm'           => $avgDistanceKm,
             'travelKm'                => 0.0,
+            'maxSpeedKmh'             => $hasHighSpeedTransit ? 220.0 : 0.0,
+            'avgSpeedKmh'             => $hasHighSpeedTransit ? 160.0 : 0.0,
+            'hasHighSpeedTransit'     => $hasHighSpeedTransit,
             'countryCodes'            => [],
             'timezoneOffsets'         => [],
             'localTimezoneIdentifier' => 'Europe/Berlin',

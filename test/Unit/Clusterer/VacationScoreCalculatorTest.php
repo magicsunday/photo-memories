@@ -69,6 +69,9 @@ final class VacationScoreCalculatorTest extends TestCase
                 hasAirport: $i === 0 || $i === 2,
                 spotCount: 2,
                 spotDwellSeconds: 7200 + ($i * 1800),
+                maxSpeedKmh: 240.0 - ($i * 10.0),
+                avgSpeedKmh: 180.0 - ($i * 5.0),
+                hasHighSpeedTransit: true,
             );
         }
 
@@ -79,6 +82,9 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('vacation', $params['classification']);
         self::assertSame(3, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
+        self::assertTrue($params['high_speed_transit']);
+        self::assertGreaterThan(0.0, $params['max_speed_kmh']);
+        self::assertGreaterThan(0.0, $params['avg_speed_kmh']);
         self::assertContains('pt', $params['countries']);
         self::assertGreaterThan(8.0, $params['score']);
         self::assertSame(3, $params['spot_cluster_days']);
@@ -132,6 +138,9 @@ final class VacationScoreCalculatorTest extends TestCase
                 hasAirport: $i === 0 || $i === $dayCount - 1,
                 spotCount: 3,
                 spotDwellSeconds: 5400 + ($i * 600),
+                maxSpeedKmh: 210.0 - ($i * 15.0),
+                avgSpeedKmh: 160.0 - ($i * 7.5),
+                hasHighSpeedTransit: $i === 0,
             );
         }
 
@@ -259,6 +268,9 @@ final class VacationScoreCalculatorTest extends TestCase
         bool $hasAirport,
         int $spotCount,
         int $spotDwellSeconds,
+        float $maxSpeedKmh = 0.0,
+        float $avgSpeedKmh = 0.0,
+        bool $hasHighSpeedTransit = false,
     ): array {
         $first = $gpsMembers[0];
         $last  = $gpsMembers[count($gpsMembers) - 1];
@@ -270,6 +282,9 @@ final class VacationScoreCalculatorTest extends TestCase
             'maxDistanceKm'           => 180.0,
             'avgDistanceKm'           => 95.0,
             'travelKm'                => $travelKm,
+            'maxSpeedKmh'             => $maxSpeedKmh,
+            'avgSpeedKmh'             => $avgSpeedKmh,
+            'hasHighSpeedTransit'     => $hasHighSpeedTransit,
             'countryCodes'            => ['pt' => true],
             'timezoneOffsets'         => [$timezoneOffset => count($gpsMembers)],
             'localTimezoneIdentifier' => 'Europe/Lisbon',

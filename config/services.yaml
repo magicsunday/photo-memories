@@ -667,6 +667,14 @@ services:
         tags:
             - { name: 'memories.day_summary_stage', priority: 300 }
 
+    MagicSunday\Memories\Clusterer\DaySummaryStage\TransportSpeedStage:
+        arguments:
+            $minLegDurationMinutes: '%memories.cluster.transport_speed.min_leg_duration_minutes%'
+            $minLegDistanceKm: '%memories.cluster.transport_speed.min_leg_distance_km%'
+            $highSpeedThresholdKmh: '%memories.cluster.transport_speed.high_speed_threshold_kmh%'
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 250 }
+
     MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage:
         tags:
             - { name: 'memories.day_summary_stage', priority: 200 }
