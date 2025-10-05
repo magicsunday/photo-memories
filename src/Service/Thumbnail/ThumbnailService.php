@@ -103,6 +103,8 @@ class ThumbnailService implements ThumbnailServiceInterface
             throw new RuntimeException('Imagick is required to create thumbnails for RAW/HEIC media');
         }
 
+        $fellBackToGd = false;
+
         if ($hasImagick) {
             try {
                 return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum, $requiresImagick);
@@ -116,11 +118,19 @@ class ThumbnailService implements ThumbnailServiceInterface
                 }
 
                 // Imagick failed, therefore fall back to the GD implementation below.
+                $fellBackToGd = true;
             }
         }
 
         if ($hasGd && !$requiresImagick) {
-            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
+            return $this->generateThumbnailsWithGd(
+                $filepath,
+                $orientation,
+                $this->sizes,
+                $checksum,
+                $media->getMime(),
+                $fellBackToGd,
+            );
         }
 
         throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
@@ -160,21 +170,18 @@ class ThumbnailService implements ThumbnailServiceInterface
 
             $sourceWidth = $imagick->getImageWidth();
 
-            $results       = [];
-            $generatedKeys = [];
+            $results = [];
+
             foreach ($sizes as $size) {
+                if (isset($results[$size])) {
+                    continue;
+                }
+
                 $targetWidth = min($size, $sourceWidth);
 
                 if ($targetWidth <= 0) {
                     continue;
                 }
-
-                if (isset($generatedKeys[$targetWidth])) {
-                    continue;
-                }
-
-                // Remember that this width was already generated to avoid duplicates.
-                $generatedKeys[$targetWidth] = true;
 
                 $clone           = $this->cloneImagick($imagick);
                 $cloneIsOriginal = $clone === $imagick;
@@ -187,29 +194,13 @@ class ThumbnailService implements ThumbnailServiceInterface
                             \sprintf('Unable to resize image for thumbnail width %d.', $targetWidth));
                     }
 
-                    $clone->setImageBackgroundColor('white');
-
-                    try {
-                        $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
-                    } catch (ImagickException) {
-                        // Older Imagick builds may not support manipulating the alpha channel explicitly.
-                    } catch (Throwable) {
-                        // Ignore missing support for setImageAlphaChannel on legacy Imagick versions.
-                    }
-
-                    if ($clone->getImageAlphaChannel()) {
-                        // Flatten transparent images on a white background to avoid artefacts in the final JPEG file.
-                        $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
-                        $clone->clear();
-                        unset($clone);
-                        $clone = $flattened;
-                    }
+                    $clone = $this->ensureOpaqueImagick($clone);
 
                     $clone->setImageFormat('jpeg');
                     $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
                     $clone->setImageCompressionQuality(self::JPEG_QUALITY);
 
-                    $out         = $this->buildThumbnailPath($checksum, $targetWidth);
+                    $out         = $this->buildThumbnailPath($checksum, $size);
                     $writeResult = $clone->writeImage($out);
 
                     if ($writeResult === false) {
@@ -217,7 +208,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                             \sprintf('Unable to create thumbnail at path "%s".', $out));
                     }
 
-                    $results[$targetWidth] = $out;
+                    $results[$size] = $out;
                 } finally {
                     if (!$cloneIsOriginal || !$requiresImagick) {
                         $clone->clear();
@@ -245,7 +236,14 @@ class ThumbnailService implements ThumbnailServiceInterface
      *
      * @return array<int, string>
      */
-    private function generateThumbnailsWithGd(string $filepath, ?int $orientation, array $sizes, string $checksum, ?string $mime = null): array
+    private function generateThumbnailsWithGd(
+        string $filepath,
+        ?int $orientation,
+        array $sizes,
+        string $checksum,
+        ?string $mime = null,
+        bool $preserveRequestedKeys = false,
+    ): array
     {
         $src = null;
 
@@ -303,28 +301,31 @@ class ThumbnailService implements ThumbnailServiceInterface
         $ratio  = $height > 0 ? ($width / $height) : 1;
 
         try {
-            $results       = [];
-            $generatedKeys = [];
+            $results              = [];
+            $generatedActualWidths = [];
+
             foreach ($sizes as $size) {
+                if (isset($results[$size])) {
+                    continue;
+                }
+
                 $newWidth = min($size, $width);
 
                 if ($newWidth <= 0) {
                     continue;
                 }
 
-                if (isset($generatedKeys[$newWidth])) {
+                if (!$preserveRequestedKeys && isset($generatedActualWidths[$newWidth])) {
                     continue;
                 }
-
-                // Remember that this width was already generated to avoid duplicates.
-                $generatedKeys[$newWidth] = true;
 
                 $newHeight = (int) round($newWidth / $ratio);
 
                 if ($newHeight <= 0) {
-                    continue;
+                    $newHeight = 1;
                 }
-                $dst       = imagecreatetruecolor($newWidth, $newHeight);
+
+                $dst = imagecreatetruecolor($newWidth, $newHeight);
 
                 if (!$dst instanceof GdImage) {
                     throw new RuntimeException('Unable to create GD thumbnail resource.');
@@ -350,7 +351,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                         throw new RuntimeException('Unable to resample image for thumbnail.');
                     }
 
-                    $out         = $this->buildThumbnailPath($checksum, $newWidth);
+                    $outputWidth = $preserveRequestedKeys ? $size : $newWidth;
+                    $out         = $this->buildThumbnailPath($checksum, $outputWidth);
                     $writeResult = @imagejpeg($dst, $out, self::JPEG_QUALITY);
                 } finally {
                     imagedestroy($dst);
@@ -361,13 +363,53 @@ class ThumbnailService implements ThumbnailServiceInterface
                         \sprintf('Unable to create thumbnail at path "%s".', $out));
                 }
 
-                $results[$newWidth] = $out;
+                $results[$preserveRequestedKeys ? $size : $newWidth] = $out;
+                $generatedActualWidths[$newWidth]                     = $out;
             }
 
             return $results;
         } finally {
             imagedestroy($src);
         }
+    }
+
+    private function ensureOpaqueImagick(Imagick $image): Imagick
+    {
+        try {
+            $image->setImageBackgroundColor('white');
+        } catch (ImagickException) {
+            // Ignore background colour failures on legacy builds.
+        }
+
+        try {
+            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+        } catch (ImagickException) {
+            // Some Imagick versions lack explicit alpha channel controls.
+        } catch (Throwable) {
+            // Silently ignore unexpected alpha channel errors.
+        }
+
+        if ($image->getImageAlphaChannel()) {
+            try {
+                $flattened = $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                $image->clear();
+                $image->destroy();
+
+                $image = $flattened;
+            } catch (ImagickException) {
+                // Best effort flattening; keep the original instance when merge fails.
+            }
+        }
+
+        try {
+            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
+        } catch (ImagickException) {
+            // Ignore when alpha channel adjustments are unsupported.
+        } catch (Throwable) {
+            // Ignore unexpected alpha manipulation failures.
+        }
+
+        return $image;
     }
 
     /**
@@ -441,8 +483,27 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
-        if ($orientation !== null && $orientation >= self::ORIENTATION_TOPLEFT && $orientation <= self::ORIENTATION_LEFTBOTTOM) {
+        if ($orientation === null || $orientation === self::ORIENTATION_TOPLEFT) {
+            $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+
+            return;
+        }
+
+        if ($orientation >= self::ORIENTATION_TOPLEFT && $orientation <= self::ORIENTATION_LEFTBOTTOM) {
             $imagick->setImageOrientation($orientation);
+        }
+
+        if (method_exists($imagick, 'autoOrientImage')) {
+            try {
+                $imagick->autoOrientImage();
+                $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+
+                return;
+            } catch (ImagickException) {
+                // Fall back to manual transformations when autoOrientImage is unavailable.
+            } catch (Throwable) {
+                // Silently ignore unexpected failures and use the legacy path below.
+            }
         }
 
         $this->applyOrientationWithLegacyImagick($imagick);
@@ -478,8 +539,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                 return;
             case self::ORIENTATION_LEFTTOP:
-                $imagick->flopImage();
-                $imagick->rotateImage(new ImagickPixel('none'), 90);
+                $imagick->transposeImage();
 
                 return;
             case self::ORIENTATION_RIGHTTOP:
@@ -487,8 +547,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                 return;
             case self::ORIENTATION_RIGHTBOTTOM:
-                $imagick->flopImage();
-                $imagick->rotateImage(new ImagickPixel('none'), -90);
+                $imagick->transverseImage();
 
                 return;
             case self::ORIENTATION_LEFTBOTTOM:
