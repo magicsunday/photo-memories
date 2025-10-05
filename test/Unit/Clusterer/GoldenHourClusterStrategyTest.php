@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
     public function clustersGoldenHourSequence(): void
     {
         $strategy = new GoldenHourClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             morningHours: [6, 7, 8],
             eveningHours: [18, 19, 20],
             sessionGapSeconds: 1200,
@@ -51,7 +52,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresPhotosOutsideGoldenHours(): void
     {
-        $strategy = new GoldenHourClusterStrategy();
+        $strategy = new GoldenHourClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
 
         $base  = new DateTimeImmutable('2024-08-10 13:00:00', new DateTimeZone('UTC'));
         $items = [];

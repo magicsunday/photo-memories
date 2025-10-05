@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -31,7 +31,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
     use MediaFilterTrait;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
+        private LocalTimeHelper $localTimeHelper,
         private int $timeGapSeconds = 3 * 3600, // 3h
         private float $radiusMeters = 300.0,
         private int $minItemsPerRun = 5,
@@ -61,14 +61,11 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
         $night = $this->filterTimestampedItemsBy(
             $items,
-            function (Media $m) use ($tz): bool {
-                $t = $m->getTakenAt();
-                assert($t instanceof DateTimeImmutable);
-                $local = $t->setTimezone($tz);
+            function (Media $m): bool {
+                $local = $this->localTimeHelper->resolve($m);
+                assert($local instanceof DateTimeImmutable);
                 $h     = (int) $local->format('G');
 
                 return ($h >= 20) || ($h <= 4);

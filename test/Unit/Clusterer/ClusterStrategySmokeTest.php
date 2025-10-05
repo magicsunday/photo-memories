@@ -38,6 +38,7 @@ use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
@@ -101,12 +102,16 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'AtHomeWeekdayClusterStrategy' => [
             AtHomeWeekdayClusterStrategy::class,
             'at_home_weekday',
-            null,
+            static fn (): ClusterStrategyInterface => new AtHomeWeekdayClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'AtHomeWeekendClusterStrategy' => [
             AtHomeWeekendClusterStrategy::class,
             'at_home_weekend',
-            null,
+            static fn (): ClusterStrategyInterface => new AtHomeWeekendClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'BurstClusterStrategy' => [
             BurstClusterStrategy::class,
@@ -121,7 +126,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'DayAlbumClusterStrategy' => [
             DayAlbumClusterStrategy::class,
             'day_album',
-            null,
+            static fn (): ClusterStrategyInterface => new DayAlbumClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'DeviceSimilarityStrategy' => [
             DeviceSimilarityStrategy::class,
@@ -140,7 +147,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'GoldenHourClusterStrategy' => [
             GoldenHourClusterStrategy::class,
             'golden_hour',
-            null,
+            static fn (): ClusterStrategyInterface => new GoldenHourClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'HolidayEventClusterStrategy' => [
             HolidayEventClusterStrategy::class,
@@ -182,12 +191,16 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'NewYearEveClusterStrategy' => [
             NewYearEveClusterStrategy::class,
             'new_year_eve',
-            null,
+            static fn (): ClusterStrategyInterface => new NewYearEveClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'NightlifeEventClusterStrategy' => [
             NightlifeEventClusterStrategy::class,
             'nightlife_event',
-            null,
+            static fn (): ClusterStrategyInterface => new NightlifeEventClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'OnThisDayOverYearsClusterStrategy' => [
             OnThisDayOverYearsClusterStrategy::class,
@@ -258,12 +271,16 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'TransitTravelDayClusterStrategy' => [
             TransitTravelDayClusterStrategy::class,
             'transit_travel_day',
-            null,
+            static fn (): ClusterStrategyInterface => new TransitTravelDayClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'VideoStoriesClusterStrategy' => [
             VideoStoriesClusterStrategy::class,
             'video_stories',
-            null,
+            static fn (): ClusterStrategyInterface => new VideoStoriesClusterStrategy(
+                localTimeHelper: self::localTimeHelper()
+            ),
         ];
         yield 'WeekendGetawaysOverYearsClusterStrategy' => [
             WeekendGetawaysOverYearsClusterStrategy::class,
@@ -282,6 +299,11 @@ final class ClusterStrategySmokeTest extends TestCase
     private static function locationHelper(): LocationHelper
     {
         return LocationHelper::createDefault();
+    }
+
+    private static function localTimeHelper(): LocalTimeHelper
+    {
+        return new LocalTimeHelper('Europe/Berlin');
     }
 
     /**

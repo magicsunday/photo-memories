@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     public function clustersVideosByLocalDay(): void
     {
         $strategy = new VideoStoriesClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             minItemsPerDay: 2,
         );
 
@@ -47,7 +48,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresNonVideoMedia(): void
     {
-        $strategy = new VideoStoriesClusterStrategy();
+        $strategy = new VideoStoriesClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
 
         $items = [
             $this->createPhoto(3400, new DateTimeImmutable('2024-03-16 08:00:00', new DateTimeZone('UTC'))),

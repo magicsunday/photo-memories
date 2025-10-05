@@ -12,8 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -33,7 +33,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
     use MediaFilterTrait;
 
     public function __construct(
-        private string $timezone = 'Europe/Berlin',
+        private LocalTimeHelper $localTimeHelper,
         /** Inclusive local hours considered golden-hour candidates. */
         private array $morningHours = [6, 7, 8],
         private array $eveningHours = [18, 19, 20],
@@ -73,15 +73,13 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
      */
     public function cluster(array $items): array
     {
-        $tz = new DateTimeZone($this->timezone);
-
         /** @var list<Media> $cand */
         $cand = $this->filterTimestampedItemsBy(
             $items,
-            function (Media $m) use ($tz): bool {
-                $t = $m->getTakenAt();
-                assert($t instanceof DateTimeImmutable);
-                $h = (int) $t->setTimezone($tz)->format('G');
+            function (Media $m): bool {
+                $local = $this->localTimeHelper->resolve($m);
+                assert($local instanceof DateTimeImmutable);
+                $h = (int) $local->format('G');
 
                 return in_array($h, $this->morningHours, true)
                     || in_array($h, $this->eveningHours, true);

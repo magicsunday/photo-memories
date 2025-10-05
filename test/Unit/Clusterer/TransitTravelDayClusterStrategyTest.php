@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
     public function marksDaysWithSufficientTravelDistance(): void
     {
         $strategy = new TransitTravelDayClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             minTravelKm: 60.0,
             minItemsPerDay: 5,
         );
@@ -57,7 +58,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
     #[Test]
     public function skipsDaysBelowDistance(): void
     {
-        $strategy = new TransitTravelDayClusterStrategy();
+        $strategy = new TransitTravelDayClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
 
         $day    = new DateTimeImmutable('2024-07-02 06:00:00', new DateTimeZone('UTC'));
         $points = [

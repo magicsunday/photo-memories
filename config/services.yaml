@@ -479,6 +479,10 @@ services:
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.device_similarity_strategy%' }
 
+    MagicSunday\Memories\Clusterer\Support\LocalTimeHelper:
+        arguments:
+            $fallbackTimezone: '%memories.cluster.timezone.default%'
+
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
             $maxHamming: 7
@@ -530,7 +534,6 @@ services:
 
     MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $minItemsPerDay: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.video_stories_cluster_strategy%' }
@@ -538,7 +541,6 @@ services:
     # --- Daily life & home rituals ---
     MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $minItemsPerDay: 7
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.day_album_cluster_strategy%' }
@@ -551,7 +553,6 @@ services:
             $minHomeShare: 0.62
             $minItemsPerDay: 3
             $minItemsTotal: 6
-            $timezone: 'Europe/Berlin'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.at_home_weekend_cluster_strategy%' }
 
@@ -563,7 +564,6 @@ services:
             $minHomeShare: 0.60
             $minItemsPerDay: 3
             $minItemsTotal: 5
-            $timezone: 'Europe/Berlin'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.at_home_weekday_cluster_strategy%' }
 
@@ -593,7 +593,6 @@ services:
     # --- Special outings & events ---
     MagicSunday\Memories\Clusterer\NightlifeEventClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $timeGapSeconds: 9000        # 2.5h keeps multi-venue nights linked
             $radiusMeters: 260.0
             $minItemsPerRun: 5
@@ -602,7 +601,6 @@ services:
 
     MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $startHour: 20
             $endHour: 2
             $minItemsPerYear: 6
@@ -712,7 +710,6 @@ services:
 
     MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $minTravelKm: 70.0
             $minItemsPerDay: 6
         tags:
@@ -754,7 +751,6 @@ services:
 
     MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy:
         arguments:
-            $timezone: 'Europe/Berlin'
             $morningHours:
                 - 6
                 - 7

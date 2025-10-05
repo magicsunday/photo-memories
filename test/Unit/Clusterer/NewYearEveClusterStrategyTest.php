@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
     public function clustersNewYearEveWindowPerYear(): void
     {
         $strategy = new NewYearEveClusterStrategy(
-            timezone: 'Europe/Berlin',
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             startHour: 20,
             endHour: 2,
             minItemsPerYear: 6,
@@ -53,7 +54,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresPhotosOutsidePartyWindow(): void
     {
-        $strategy = new NewYearEveClusterStrategy();
+        $strategy = new NewYearEveClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
 
         $items = [];
         for ($i = 0; $i < 6; ++$i) {

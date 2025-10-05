@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -24,13 +25,13 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
     public function clustersWeekendSessionsWithinHomeRadius(): void
     {
         $strategy = new AtHomeWeekendClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             homeLat: 52.5200,
             homeLon: 13.4050,
             homeRadiusMeters: 400.0,
             minHomeShare: 0.6,
             minItemsPerDay: 2,
             minItemsTotal: 4,
-            timezone: 'Europe/Berlin',
         );
 
         $mediaItems = [
@@ -69,13 +70,13 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
     public function skipsDaysBelowHomeShareThreshold(): void
     {
         $strategy = new AtHomeWeekendClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             homeLat: 52.5200,
             homeLon: 13.4050,
             homeRadiusMeters: 300.0,
             minHomeShare: 0.7,
             minItemsPerDay: 2,
             minItemsTotal: 4,
-            timezone: 'Europe/Berlin',
         );
 
         $mediaItems = [
