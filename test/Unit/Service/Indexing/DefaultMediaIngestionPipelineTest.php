@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Indexing;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Repository\MediaDuplicateRepository;
+use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
 use MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage;
@@ -22,6 +24,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\FacesStage;
 use MagicSunday\Memories\Service\Indexing\Stage\GeoStage;
 use MagicSunday\Memories\Service\Indexing\Stage\HashStage;
+use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
@@ -358,9 +361,20 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         array $extractors,
         ?array $imageExtensions,
         ?array $videoExtensions,
-        ?FastHashGeneratorInterface $fastHashGenerator = null
+        ?FastHashGeneratorInterface $fastHashGenerator = null,
+        ?MediaRepository $mediaRepository = null,
+        ?MediaDuplicateRepository $duplicateRepository = null,
     ): DefaultMediaIngestionPipeline {
         $fastHashGenerator ??= $this->createMock(FastHashGeneratorInterface::class);
+        if ($mediaRepository === null) {
+            $mediaRepository = $this->createMock(MediaRepository::class);
+            $mediaRepository->expects(self::never())->method('findNearestByPhash');
+        }
+
+        if ($duplicateRepository === null) {
+            $duplicateRepository = $this->createMock(MediaDuplicateRepository::class);
+            $duplicateRepository->expects(self::never())->method('recordDistance');
+        }
 
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
@@ -383,6 +397,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new QualityStage($extractors['quality']['vision']),
             new ContentKindStage($extractors['content']['classifier']),
             new HashStage($extractors['hash']['perceptual']),
+            new NearDuplicateStage($mediaRepository, $duplicateRepository),
             new BurstLiveStage(
                 $extractors['burst']['detector'],
                 $extractors['burst']['livePair'],

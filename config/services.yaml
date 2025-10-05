@@ -303,6 +303,11 @@ services:
     MagicSunday\Memories\Service\Indexing\Stage\HashStage:
         arguments:
             $hash: '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
+    MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage:
+        arguments:
+            $mediaRepository: '@MagicSunday\Memories\Repository\MediaRepository'
+            $duplicateRepository: '@MagicSunday\Memories\Repository\MediaDuplicateRepository'
+            $maxHammingDistance: 6
 
     MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage: ~
 
@@ -321,6 +326,7 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\QualityStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\HashStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\FacesStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\SceneStage'
