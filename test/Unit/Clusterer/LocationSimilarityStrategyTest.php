@@ -27,7 +27,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     public function clustersMediaByLocalityWithPoiMetadata(): void
     {
         $strategy = new LocationSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             radiusMeters: 200.0,
             minItemsPerPlace: 3,
             maxSpanHours: 12,
@@ -41,6 +41,9 @@ final class LocationSimilarityStrategyTest extends TestCase
             city: 'Berlin',
             country: 'Germany',
             suburb: 'Mitte',
+            configure: static function (Location $location): void {
+                $location->setState('Berlin');
+            },
         );
         $museum->setPois([
             [
@@ -86,6 +89,10 @@ final class LocationSimilarityStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame('suburb:Mitte|city:Berlin|country:Germany', $params['place_key']);
         self::assertSame('Museum Island', $params['place']);
+        self::assertSame('Berlin', $params['place_city']);
+        self::assertSame('Berlin', $params['place_region']);
+        self::assertSame('Germany', $params['place_country']);
+        self::assertSame('Berlin, Germany', $params['place_location']);
         self::assertSame('Museum Island', $params['poi_label']);
         self::assertSame('tourism', $params['poi_category_key']);
         self::assertSame('museum', $params['poi_category_value']);
@@ -106,7 +113,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     public function fallsBackToSpatialWindowsForItemsWithoutLocality(): void
     {
         $strategy = new LocationSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             radiusMeters: 250.0,
             minItemsPerPlace: 3,
             maxSpanHours: 1,
@@ -149,7 +156,7 @@ final class LocationSimilarityStrategyTest extends TestCase
     public function usesGeoCellMetadataToPreGroupSpatialWindows(): void
     {
         $strategy = new LocationSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             radiusMeters: 250.0,
             minItemsPerPlace: 3,
             maxSpanHours: 1,

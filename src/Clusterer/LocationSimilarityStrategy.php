@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -29,10 +30,11 @@ use function usort;
 final readonly class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private LocationHelper $locHelper,
+        private LocationHelper $locationHelper,
         private float $radiusMeters = 150.0,
         private int $minItemsPerPlace = 5,
         private int $maxSpanHours = 24,
@@ -71,7 +73,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         $noLocality = [];
 
         foreach ($withTimestamp as $m) {
-            $key = $this->locHelper->localityKeyForMedia($m);
+            $key = $this->locationHelper->localityKeyForMedia($m);
             if ($key !== null) {
                 $byLocality[$key] ??= [];
                 $byLocality[$key][] = $m;
@@ -86,34 +88,16 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         $drafts = [];
 
         foreach ($eligibleLocalities as $key => $group) {
-            $label  = $this->locHelper->majorityLabel($group);
             $params = [
                 'place_key'  => $key,
                 'time_range' => $this->computeTimeRange($group),
             ];
-            if ($label !== null) {
-                $params['place'] = $label;
-            }
+
+            $params = $this->appendLocationMetadata($group, $params);
 
             $tagMetadata = $this->collectDominantTags($group);
             foreach ($tagMetadata as $paramKey => $value) {
                 $params[$paramKey] = $value;
-            }
-
-            $poi = $this->locHelper->majorityPoiContext($group);
-            if ($poi !== null) {
-                $params['poi_label'] = $poi['label'];
-                if ($poi['categoryKey'] !== null) {
-                    $params['poi_category_key'] = $poi['categoryKey'];
-                }
-
-                if ($poi['categoryValue'] !== null) {
-                    $params['poi_category_value'] = $poi['categoryValue'];
-                }
-
-                if ($poi['tags'] !== []) {
-                    $params['poi_tags'] = $poi['tags'];
-                }
             }
 
             $drafts[] = new ClusterDraft(
