@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Clusterer\Service;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_slice;

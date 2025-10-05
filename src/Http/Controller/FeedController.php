@@ -1,4 +1,8 @@
-<?php
+<?php 
+
+
+
+
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -455,12 +459,12 @@ final class FeedController
 
         $result = [];
         if (is_numeric($from)) {
-            $fromDate = (new DateTimeImmutable('@' . (string) $from))->setTimezone(new DateTimeZone('Europe/Berlin'));
+            $fromDate = (new DateTimeImmutable('@' . $from))->setTimezone(new DateTimeZone('Europe/Berlin'));
             $result['von'] = $fromDate->format(DateTimeInterface::ATOM);
         }
 
         if (is_numeric($to)) {
-            $toDate = (new DateTimeImmutable('@' . (string) $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
+            $toDate = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('Europe/Berlin'));
             $result['bis'] = $toDate->format(DateTimeInterface::ATOM);
         }
 
@@ -529,10 +533,10 @@ final class FeedController
 
         $timezone = new DateTimeZone('Europe/Berlin');
 
-        $start = $from !== null ? (new DateTimeImmutable('@' . (string) $from))->setTimezone($timezone) : null;
-        $end   = $to !== null ? (new DateTimeImmutable('@' . (string) $to))->setTimezone($timezone) : null;
+        $start = $from !== null ? (new DateTimeImmutable('@' . $from))->setTimezone($timezone) : null;
+        $end   = $to !== null ? (new DateTimeImmutable('@' . $to))->setTimezone($timezone) : null;
 
-        $dayStart = $target->setTime(0, 0, 0);
+        $dayStart = $target->setTime(0, 0);
         $dayEnd   = $dayStart->add(new DateInterval('P1D'));
 
         if ($start instanceof DateTimeImmutable && $end instanceof DateTimeImmutable) {

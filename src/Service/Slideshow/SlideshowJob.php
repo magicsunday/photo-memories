@@ -27,18 +27,18 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Represents a scheduled slideshow generation job.
  */
-final class SlideshowJob
+final readonly class SlideshowJob
 {
     /**
      * @param list<string> $images
      */
     public function __construct(
-        private readonly string $id,
-        private readonly string $jobFile,
-        private readonly string $outputPath,
-        private readonly string $lockPath,
-        private readonly string $errorPath,
-        private readonly array $images,
+        private string $id,
+        private string $jobFile,
+        private string $outputPath,
+        private string $lockPath,
+        private string $errorPath,
+        private array  $images,
     ) {
     }
 
@@ -101,7 +101,12 @@ final class SlideshowJob
             throw new RuntimeException(sprintf('Could not read job file "%s".', $path));
         }
 
-        $payload = json_decode($contents, true);
+        $payload = json_decode(
+            $contents,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
         if (!is_array($payload)) {
             throw new RuntimeException(sprintf('Invalid job description in "%s": %s', $path, json_last_error_msg()));
         }

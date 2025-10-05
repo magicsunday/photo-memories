@@ -88,7 +88,7 @@ final class Request
         $uri    = $server['REQUEST_URI'] ?? '/';
         $path   = (string) parse_url($uri, PHP_URL_PATH);
 
-        $headers = array_change_key_case($headers, CASE_LOWER);
+        $headers = array_change_key_case($headers);
 
         $body = null;
         if (isset($server['CONTENT_LENGTH']) && $server['CONTENT_LENGTH'] !== '0') {

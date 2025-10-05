@@ -26,10 +26,10 @@ use function sprintf;
  * Extracts camera and lens information from EXIF data.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class CameraExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class CameraExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

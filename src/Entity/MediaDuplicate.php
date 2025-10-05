@@ -21,13 +21,13 @@ use InvalidArgumentException;
  */
 #[ORM\Entity]
 #[ORM\Table(
-    name: 'media_duplicate',
-    uniqueConstraints: [
-        new ORM\UniqueConstraint(name: 'uniq_media_duplicate_pair', columns: ['media_left_id', 'media_right_id'])
-    ],
-    indexes: [
+    name             : 'media_duplicate',
+    indexes          : [
         new ORM\Index(name: 'idx_media_duplicate_left', columns: ['media_left_id']),
         new ORM\Index(name: 'idx_media_duplicate_right', columns: ['media_right_id'])
+    ],
+    uniqueConstraints: [
+        new ORM\UniqueConstraint(name: 'uniq_media_duplicate_pair', columns: ['media_left_id', 'media_right_id'])
     ]
 )]
 final class MediaDuplicate

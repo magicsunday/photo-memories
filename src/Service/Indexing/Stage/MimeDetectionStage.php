@@ -27,19 +27,22 @@ use function strtolower;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
-final class MimeDetectionStage implements MediaIngestionStageInterface
+/**
+ * Class MimeDetectionStage
+ */
+final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 {
     /**
      * @var list<string>
      */
-    private readonly array $imageExtensions;
+    private array $imageExtensions;
 
     /**
      * @var list<string>
      */
-    private readonly array $videoExtensions;
+    private array $videoExtensions;
 
-    private readonly finfo $finfo;
+    private finfo $finfo;
 
     /**
      * @param list<string>|null $imageExtensions

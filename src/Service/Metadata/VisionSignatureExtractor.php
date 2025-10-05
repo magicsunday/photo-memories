@@ -19,21 +19,16 @@ use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
-use Symfony\Component\Process\Process;
-use Throwable;
 
 use function array_fill;
 use function count;
 use function imagecolorat;
 use function is_file;
-use function is_numeric;
 use function is_string;
 use function log;
 use function max;
 use function min;
 use function round;
-use function sprintf;
-use function trim;
 use function sqrt;
 use function str_starts_with;
 
@@ -47,11 +42,11 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     use VideoPosterFrameTrait;
 
     public function __construct(
-        private readonly MediaQualityAggregator $qualityAggregator,
-        private int $sampleSize = 96, // square downsample for analysis
-        private string $ffmpegBinary = 'ffmpeg',
-        private string $ffprobeBinary = 'ffprobe',
-        private float $posterFrameSecond = 1.0,
+        private MediaQualityAggregator $qualityAggregator,
+        private int                    $sampleSize = 96, // square downsample for analysis
+        private string                 $ffmpegBinary = 'ffmpeg',
+        private string                 $ffprobeBinary = 'ffprobe',
+        private float                  $posterFrameSecond = 1.0,
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');

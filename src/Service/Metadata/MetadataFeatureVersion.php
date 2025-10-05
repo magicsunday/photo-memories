@@ -16,19 +16,19 @@ namespace MagicSunday\Memories\Service\Metadata;
  */
 final class MetadataFeatureVersion
 {
-    public const PIPELINE_VERSION = 1;
+    public const int PIPELINE_VERSION = 1;
 
     /**
      * @var array<string, int>
      */
-    public const MODULE_VERSIONS = [
+    public const array MODULE_VERSIONS = [
         'core' => 1,
         'exif' => 1,
         'xmp' => 1,
         'vision' => 1,
     ];
 
-    public const CURRENT = self::PIPELINE_VERSION;
+    public const int CURRENT = self::PIPELINE_VERSION;
 
     private function __construct()
     {

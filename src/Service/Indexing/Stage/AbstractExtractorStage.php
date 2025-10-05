@@ -20,6 +20,9 @@ use Throwable;
 
 use function sprintf;
 
+/**
+ * Class AbstractExtractorStage
+ */
 abstract class AbstractExtractorStage implements MediaIngestionStageInterface
 {
     protected function shouldSkipExtraction(MediaIngestionContext $context): bool

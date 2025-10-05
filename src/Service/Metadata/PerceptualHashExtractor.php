@@ -145,7 +145,15 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
 
             $prefixLength = max(0, min(32, $this->phashPrefixLength));
             if ($prefixLength > 0) {
-                $media->setPhashPrefix(substr(strtolower($phashHex), 0, $prefixLength));
+                $media->setPhashPrefix(
+                    strtolower(
+                        substr(
+                            $phashHex,
+                            0,
+                            $prefixLength
+                        )
+                    )
+                );
             } else {
                 $media->setPhashPrefix(null);
             }
@@ -226,14 +234,14 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         if ($bitCounter < $bitCount) {
-            $bits = str_pad($bits, $bitCount, '0', STR_PAD_RIGHT);
+            $bits = str_pad($bits, $bitCount, '0');
         }
 
         $hex128 = strtolower($this->bitsToHex($bits, $bitCount));
 
         $bits64 = substr($bits, 0, 64);
         if (strlen($bits64) < 64) {
-            $bits64 = str_pad($bits64, 64, '0', STR_PAD_RIGHT);
+            $bits64 = str_pad($bits64, 64, '0');
         }
 
         $hex64 = strtolower($this->bitsToHex($bits64, 64));

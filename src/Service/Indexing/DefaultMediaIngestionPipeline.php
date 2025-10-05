@@ -21,12 +21,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function is_array;
 use function iterator_to_array;
 
-final class DefaultMediaIngestionPipeline implements MediaIngestionPipelineInterface
+/**
+ * Class DefaultMediaIngestionPipeline
+ */
+final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipelineInterface
 {
     /**
      * @var list<MediaIngestionStageInterface>
      */
-    private readonly array $stages;
+    private array $stages;
 
     /**
      * @param iterable<MediaIngestionStageInterface> $stages

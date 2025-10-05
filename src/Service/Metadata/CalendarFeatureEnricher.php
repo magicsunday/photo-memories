@@ -66,7 +66,12 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
     /**
      * Determines whether the provided date matches a nationally recognised German holiday.
      *
+     * @param int $y
+     * @param int $m
+     * @param int $d
+     *
      * @return array{bool, ?string}
+     * @throws \DateMalformedStringException
      */
     private function isGermanHoliday(int $y, int $m, int $d): array
     {

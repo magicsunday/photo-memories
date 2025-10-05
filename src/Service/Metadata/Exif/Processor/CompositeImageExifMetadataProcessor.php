@@ -21,10 +21,10 @@ use function is_array;
  * Persists composite image EXIF metadata onto the media entity.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class CompositeImageExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class CompositeImageExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

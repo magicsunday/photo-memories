@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Entity\Location;
 
+/**
+ * Interface PoiEnsurerInterface
+ */
 interface PoiEnsurerInterface
 {
     public function ensurePois(Location $location, bool $refreshPois = false): void;

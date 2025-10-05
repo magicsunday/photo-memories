@@ -17,6 +17,9 @@ use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStag
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class PersistenceBatchStage
+ */
 final class PersistenceBatchStage implements FinalizableMediaIngestionStageInterface
 {
     private int $batchCount = 0;

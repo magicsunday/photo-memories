@@ -111,7 +111,11 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
     /**
      * Export RGB bytes of a resized clone (w × h).
      *
+     * @param int $w
+     * @param int $h
+     *
      * @return list<int> Flat array [R,G,B, R,G,B, ...] in 0..255, length = w*h*3
+     * @throws \ImagickException
      */
     public function exportRgbBytes(int $w, int $h): array
     {
@@ -142,7 +146,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
 
         for ($i = 0; $i < $outLen; ++$i) {
             $v     = $buf[$i];
-            $out[] = (int) (is_float($v) ? round($v) : $v);
+            $out[] = (int) (\is_float($v) ? round($v) : $v);
         }
 
         /** @var list<int> $out */

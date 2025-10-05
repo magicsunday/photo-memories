@@ -18,13 +18,13 @@ use function round;
  */
 final class SlideshowVideoStatus
 {
-    public const STATUS_READY = 'bereit';
+    public const string STATUS_READY = 'bereit';
 
-    public const STATUS_GENERATING = 'in_erstellung';
+    public const string STATUS_GENERATING = 'in_erstellung';
 
-    public const STATUS_ERROR = 'fehlgeschlagen';
+    public const string STATUS_ERROR = 'fehlgeschlagen';
 
-    public const STATUS_UNAVAILABLE = 'nicht_verfuegbar';
+    public const string STATUS_UNAVAILABLE = 'nicht_verfuegbar';
 
     public function __construct(
         private readonly string $status,

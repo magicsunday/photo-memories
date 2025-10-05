@@ -16,6 +16,9 @@ use MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class SceneStage
+ */
 final class SceneStage extends AbstractExtractorStage
 {
     /**

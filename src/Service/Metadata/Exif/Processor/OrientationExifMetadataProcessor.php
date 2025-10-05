@@ -20,10 +20,10 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Maps orientation data onto the media entity.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class OrientationExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class OrientationExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

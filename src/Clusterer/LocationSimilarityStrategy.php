@@ -22,6 +22,9 @@ use function array_values;
 use function count;
 use function usort;
 
+/**
+ * Class LocationSimilarityStrategy
+ */
 final readonly class LocationSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
@@ -202,7 +205,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
                     (float) $media->getGpsLat(),
                     (float) $media->getGpsLon()
                 );
-                $spanOk = $start !== null ? ($ts - $start) <= $this->maxSpanHours * 3600 : true;
+                $spanOk = !($start !== null) || ($ts - $start) <= $this->maxSpanHours * 3600;
 
                 if ($dist <= $this->radiusMeters && $spanOk) {
                     $bucket[] = $media;

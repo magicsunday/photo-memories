@@ -40,6 +40,9 @@ use function ksort;
 use function sha1;
 use function spl_object_id;
 
+/**
+ * Class ClusterPersistenceService
+ */
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
     public function __construct(
@@ -458,7 +461,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         $normalized = $this->normaliseParamsForHash($params);
-        $encoded = json_encode($normalized);
+        $encoded = json_encode(
+            $normalized,
+            JSON_THROW_ON_ERROR
+        );
         if ($encoded === false) {
             return null;
         }
@@ -538,11 +544,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             }
 
             $quality = $this->resolveQualityRankedOrder($metadata, $original);
-            if ($quality !== null) {
-                return $quality;
-            }
-
-            return $original;
+            return $quality ?? $original;
         }
 
         $quality = $this->resolveQualityRankedOrder($metadata, $original);
@@ -550,11 +552,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             return $quality;
         }
 
-        if ($balanced !== null) {
-            return $balanced;
-        }
-
-        return $original;
+        return $balanced ?? $original;
     }
 
     /**

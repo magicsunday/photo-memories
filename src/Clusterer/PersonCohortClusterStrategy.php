@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -71,6 +71,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     * @throws \DateMalformedStringException
      */
     public function cluster(array $items): array
     {

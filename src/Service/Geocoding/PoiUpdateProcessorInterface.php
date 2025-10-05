@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Interface PoiUpdateProcessorInterface
+ */
 interface PoiUpdateProcessorInterface
 {
     public function process(iterable $locations, bool $refreshPois, bool $dryRun, OutputInterface $output): PoiUpdateSummary;

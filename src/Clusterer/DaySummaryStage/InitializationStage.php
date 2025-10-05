@@ -31,15 +31,15 @@ use const SORT_STRING;
 /**
  * Initialises per-day summaries from media items.
  */
-final class InitializationStage implements DaySummaryStageInterface
+final readonly class InitializationStage implements DaySummaryStageInterface
 {
     /**
      * @param non-empty-string $timezone
      */
     public function __construct(
-        private readonly TimezoneResolverInterface $timezoneResolver,
-        private readonly PoiClassifierInterface $poiClassifier,
-        private readonly string $timezone = 'Europe/Berlin',
+        private TimezoneResolverInterface $timezoneResolver,
+        private PoiClassifierInterface    $poiClassifier,
+        private string                    $timezone = 'Europe/Berlin',
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -179,6 +179,8 @@ final class InitializationStage implements DaySummaryStageInterface
      * @param array<string, array{date:string,isSynthetic:bool}> $days
      *
      * @return array<string, array{date:string,isSynthetic:bool}>
+     * @throws \DateInvalidTimeZoneException
+     * @throws \DateMalformedStringException
      */
     private function ensureContinuousDayRange(array $days): array
     {
@@ -192,7 +194,7 @@ final class InitializationStage implements DaySummaryStageInterface
         $timezone = new DateTimeZone('UTC');
 
         $first = DateTimeImmutable::createFromFormat('!Y-m-d', $keys[0], $timezone);
-        $last  = DateTimeImmutable::createFromFormat('!Y-m-d', $keys[count($keys) - 1], $timezone);
+        $last  = DateTimeImmutable::createFromFormat('!Y-m-d', $keys[\count($keys) - 1], $timezone);
 
         if ($first === false || $last === false) {
             return $days;
@@ -214,7 +216,11 @@ final class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
+     * @param string $date
+     *
      * @return array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,isSynthetic:bool,timezoneIdentifierVotes:array<string,int>}
+     * @throws \DateInvalidTimeZoneException
+     * @throws \DateMalformedStringException
      */
     private function createSyntheticDaySummary(string $date): array
     {

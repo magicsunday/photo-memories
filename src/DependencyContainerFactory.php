@@ -34,9 +34,9 @@ use function sprintf;
  */
 final class DependencyContainerFactory
 {
-    private const CONTAINER_CLASS = 'DependencyContainer';
+    private const string CONTAINER_CLASS = 'DependencyContainer';
 
-    private const CONTAINER_NAMESPACE = __NAMESPACE__;
+    private const string CONTAINER_NAMESPACE = __NAMESPACE__;
 
     /**
      * Absolute directory path where the compiled container cache is stored.

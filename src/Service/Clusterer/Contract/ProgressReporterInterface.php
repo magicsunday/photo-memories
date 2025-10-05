@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Contract;
 
+/**
+ * Interface ProgressReporterInterface
+ */
 interface ProgressReporterInterface
 {
     public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface;

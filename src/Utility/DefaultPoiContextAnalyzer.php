@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Utility;
 
 use MagicSunday\Memories\Entity\Location;
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface;
 use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 use MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface;
@@ -111,9 +110,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
          *     tags:array<string,string>
          * } $best
          */
-        $best = $candidates[0]['data'];
-
-        return $best;
+        return $candidates[0]['data'];
     }
 
     public function bestLabelForLocation(Location $location): ?string

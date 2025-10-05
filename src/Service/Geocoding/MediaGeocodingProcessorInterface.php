@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Interface MediaGeocodingProcessorInterface
+ */
 interface MediaGeocodingProcessorInterface
 {
     public function process(iterable $media, bool $refreshPois, bool $dryRun, OutputInterface $output): GeocodingResultSummary;

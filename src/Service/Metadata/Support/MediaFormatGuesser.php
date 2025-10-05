@@ -21,16 +21,16 @@ use function trim;
 final class MediaFormatGuesser
 {
     /** @var list<string> */
-    private const RAW_EXTENSIONS = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng'];
+    private const array RAW_EXTENSIONS = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng'];
 
     /** @var list<string> */
-    private const HEIC_EXTENSIONS = ['heic', 'heif', 'hif'];
+    private const array HEIC_EXTENSIONS = ['heic', 'heif', 'hif'];
 
     /** @var list<string> */
-    private const HEVC_EXTENSIONS = ['hevc', 'h265'];
+    private const array HEVC_EXTENSIONS = ['hevc', 'h265'];
 
     /** @var list<string> */
-    private const RAW_MIME_TYPES = [
+    private const array RAW_MIME_TYPES = [
         'image/x-canon-cr2',
         'image/x-canon-cr3',
         'image/x-nikon-nef',
@@ -42,7 +42,7 @@ final class MediaFormatGuesser
     ];
 
     /** @var list<string> */
-    private const HEIC_MIME_TYPES = [
+    private const array HEIC_MIME_TYPES = [
         'image/heic',
         'image/heif',
         'image/heic-sequence',
@@ -50,19 +50,19 @@ final class MediaFormatGuesser
     ];
 
     /** @var list<string> */
-    private const HEVC_MIME_TYPES = [
+    private const array HEVC_MIME_TYPES = [
         'video/hevc',
         'video/h265',
     ];
 
     /** @var list<string> */
-    private const RAW_FILE_TYPES = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng', 'raw'];
+    private const array RAW_FILE_TYPES = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng', 'raw'];
 
     /** @var list<string> */
-    private const HEIC_FILE_TYPES = ['heic', 'heif'];
+    private const array HEIC_FILE_TYPES = ['heic', 'heif'];
 
     /** @var list<string> */
-    private const HEVC_FILE_TYPES = ['hevc', 'h265'];
+    private const array HEVC_FILE_TYPES = ['hevc', 'h265'];
 
     public static function isRawFromExtension(?string $extension): bool
     {

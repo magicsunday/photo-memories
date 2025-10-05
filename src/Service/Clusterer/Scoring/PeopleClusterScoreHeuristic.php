@@ -18,6 +18,9 @@ use function count;
 use function is_array;
 use function is_string;
 
+/**
+ * Class PeopleClusterScoreHeuristic
+ */
 final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function supports(ClusterDraft $cluster): bool
@@ -104,7 +107,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             [$coverage, 0.4],
             [$richness, 0.35],
             [$mentionScore, 0.25],
-        ], 0.0);
+        ]);
 
         return [
             'score'    => $score,

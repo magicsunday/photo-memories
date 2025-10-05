@@ -94,7 +94,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
         /** @var list<ClusterDraft> $result */
         $result = [];
-        foreach (array_values($winnerByFingerprint) as $idx) {
+        foreach ($winnerByFingerprint as $idx) {
             $result[] = $drafts[$idx];
         }
 

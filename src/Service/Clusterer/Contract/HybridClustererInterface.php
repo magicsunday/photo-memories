@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Clusterer\Contract;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 
+/**
+ * Interface HybridClustererInterface
+ */
 interface HybridClustererInterface
 {
     public function countStrategies(): int;

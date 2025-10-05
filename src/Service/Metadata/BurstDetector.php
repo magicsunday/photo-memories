@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
+use DateTimeInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 
@@ -30,9 +31,9 @@ use function usort;
 /**
  * Detects burst groups heuristically based on capture time and perceptual hash.
  */
-final class BurstDetector implements SingleMetadataExtractorInterface
+final readonly class BurstDetector implements SingleMetadataExtractorInterface
 {
-    public function __construct(private readonly MediaRepository $mediaRepository)
+    public function __construct(private MediaRepository $mediaRepository)
     {
     }
 
@@ -180,7 +181,7 @@ final class BurstDetector implements SingleMetadataExtractorInterface
         $parts = array_map(
             static function (Media $item): string {
                 $takenAt = $item->getTakenAt();
-                $stamp   = $takenAt instanceof DateTimeImmutable ? $takenAt->format(DateTimeImmutable::ATOM) : '0';
+                $stamp   = $takenAt instanceof DateTimeImmutable ? $takenAt->format(DateTimeInterface::ATOM) : '0';
 
                 return $stamp . ':' . $item->getChecksum();
             },

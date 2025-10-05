@@ -35,12 +35,12 @@ final class DefaultMediaFileLocator implements MediaFileLocatorInterface
      */
     private readonly array $videoExtensions;
 
-    private const DEFAULT_IMAGE_EXT = [
+    private const array DEFAULT_IMAGE_EXT = [
         'jpg', 'jpeg', 'jpe', 'jxl', 'avif', 'heic', 'heif', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif',
         'cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng',
     ];
 
-    private const DEFAULT_VIDEO_EXT = [
+    private const array DEFAULT_VIDEO_EXT = [
         'mp4', 'm4v', 'mov', '3gp', '3g2', 'avi', 'mkv', 'webm',
     ];
 

@@ -26,10 +26,10 @@ use function sprintf;
  * Applies capture date, timezone offset and sub-second precision from EXIF data.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

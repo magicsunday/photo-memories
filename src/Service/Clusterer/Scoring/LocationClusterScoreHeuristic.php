@@ -17,6 +17,9 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function count;
 
+/**
+ * Class LocationClusterScoreHeuristic
+ */
 final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function supports(ClusterDraft $cluster): bool
@@ -113,7 +116,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $score = $this->combineScores([
             [$coverage, 0.7],
             [$compactness, 0.3],
-        ], 0.0);
+        ]);
 
         return [
             'score'        => $score,

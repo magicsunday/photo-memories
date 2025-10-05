@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Clusterer\Contract;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 
+/**
+ * Interface ClusterPersistenceInterface
+ */
 interface ClusterPersistenceInterface
 {
     /**

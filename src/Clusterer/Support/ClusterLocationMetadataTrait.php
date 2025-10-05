@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Support;
 
 use MagicSunday\Memories\Entity\Media;
 
+use MagicSunday\Memories\Utility\LocationHelper;
 use function in_array;
 use function implode;
 use function is_string;
@@ -20,7 +21,7 @@ use function is_string;
 /**
  * Provides helper functionality to enrich cluster parameters with location metadata.
  *
- * @property \MagicSunday\Memories\Utility\LocationHelper $locationHelper
+ * @property LocationHelper $locationHelper
  *
  * @internal
  */

@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
+/**
+ * Interface MediaLocationLinkerInterface
+ */
 interface MediaLocationLinkerInterface
 {
     public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location;

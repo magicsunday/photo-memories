@@ -21,10 +21,10 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Derives format flags (RAW/HEIC/HEVC) from EXIF file metadata.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor', ['priority' => 80])]
-final class FormatFlagExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class FormatFlagExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

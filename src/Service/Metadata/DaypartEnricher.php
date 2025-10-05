@@ -15,9 +15,12 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 
-final class DaypartEnricher implements SingleMetadataExtractorInterface
+/**
+ * Class DaypartEnricher
+ */
+final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
 {
-    public function __construct(private readonly CaptureTimeResolver $captureTimeResolver)
+    public function __construct(private CaptureTimeResolver $captureTimeResolver)
     {
     }
 

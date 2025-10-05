@@ -90,6 +90,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
+     * @throws \DateInvalidTimeZoneException
      */
     public function cluster(array $items): array
     {

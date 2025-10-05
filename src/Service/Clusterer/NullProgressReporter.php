@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Clusterer;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 
+/**
+ * Class NullProgressReporter
+ */
 final class NullProgressReporter implements ProgressReporterInterface
 {
     public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface

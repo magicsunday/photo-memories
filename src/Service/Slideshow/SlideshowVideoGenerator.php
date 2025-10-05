@@ -31,7 +31,7 @@ use function trim;
 final class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
 {
     /** @var list<string> */
-    private const DEFAULT_TRANSITIONS = [
+    private const array DEFAULT_TRANSITIONS = [
         'fade',
         'wipeleft',
         'wiperight',

@@ -176,7 +176,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $code = substr($holidayId, 0, $pos);
-        if (!is_string($code) || $code === '') {
+        if (!\is_string($code) || $code === '') {
             return null;
         }
 

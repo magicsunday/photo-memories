@@ -18,6 +18,9 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class TimeStage
+ */
 final class TimeStage extends AbstractExtractorStage
 {
     /**

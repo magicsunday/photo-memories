@@ -21,11 +21,11 @@ use function count;
 /**
  * Post-processes away flags for day summaries.
  */
-final class AwayFlagStage implements DaySummaryStageInterface
+final readonly class AwayFlagStage implements DaySummaryStageInterface
 {
     public function __construct(
-        private readonly TimezoneResolverInterface $timezoneResolver,
-        private readonly BaseLocationResolverInterface $baseLocationResolver,
+        private TimezoneResolverInterface     $timezoneResolver,
+        private BaseLocationResolverInterface $baseLocationResolver,
     ) {
     }
 

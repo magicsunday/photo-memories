@@ -17,6 +17,9 @@ use function is_array;
 use function is_numeric;
 use function is_string;
 
+/**
+ * Class OverpassElementFilter
+ */
 final class OverpassElementFilter implements OverpassElementFilterInterface
 {
     public function filter(array $element): ?array

@@ -23,17 +23,20 @@ use function iterator_to_array;
 use function spl_object_id;
 use function usleep;
 
-final class DefaultMediaGeocodingProcessor implements MediaGeocodingProcessorInterface
+/**
+ * Class DefaultMediaGeocodingProcessor
+ */
+final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingProcessorInterface
 {
     /**
      * @param positive-int $batchSize
      */
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly MediaLocationLinkerInterface $linker,
-        private readonly string $locale,
-        private readonly int $delayMs = 1200,
-        private readonly int $batchSize = 10,
+        private EntityManagerInterface       $entityManager,
+        private MediaLocationLinkerInterface $linker,
+        private string                       $locale,
+        private int                          $delayMs = 1200,
+        private int                          $batchSize = 10,
     ) {
     }
 

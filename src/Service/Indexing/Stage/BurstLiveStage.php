@@ -18,6 +18,9 @@ use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class BurstLiveStage
+ */
 final class BurstLiveStage extends AbstractExtractorStage
 {
     /**

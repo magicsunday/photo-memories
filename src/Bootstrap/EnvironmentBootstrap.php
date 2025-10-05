@@ -47,7 +47,7 @@ final class EnvironmentBootstrap
 
         // 1) Current working directory
         $cwd = getcwd();
-        if (is_string($cwd) && $cwd !== '') {
+        if (\is_string($cwd) && $cwd !== '') {
             $candidates[] = $cwd . DIRECTORY_SEPARATOR . '.env';
         }
 

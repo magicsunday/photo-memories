@@ -16,6 +16,9 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class QualityStage
+ */
 final class QualityStage extends AbstractExtractorStage
 {
     /**

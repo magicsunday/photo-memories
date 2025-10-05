@@ -16,6 +16,9 @@ use function str_replace;
 use function strlen;
 use function strtolower;
 
+/**
+ * Trait PathTokensTrait
+ */
 trait PathTokensTrait
 {
     /** @return list<string> */

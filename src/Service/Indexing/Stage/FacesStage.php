@@ -16,6 +16,9 @@ use MagicSunday\Memories\Service\Metadata\FacePresenceDetector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class FacesStage
+ */
 final class FacesStage extends AbstractExtractorStage
 {
     /**

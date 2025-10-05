@@ -25,6 +25,10 @@ final class JsonResponse extends Response
 {
     /**
      * @param array<mixed>|scalar|null $data
+     * @param int                      $statusCode
+     * @param array                    $headers
+     *
+     * @throws JsonException
      */
     public function __construct(array|int|float|string|bool|null $data, int $statusCode = 200, array $headers = [])
     {

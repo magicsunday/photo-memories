@@ -19,11 +19,14 @@ use function preg_quote;
 use function sprintf;
 use function str_replace;
 
-final class DefaultOverpassQueryBuilder implements OverpassQueryBuilderInterface
+/**
+ * Class DefaultOverpassQueryBuilder
+ */
+final readonly class DefaultOverpassQueryBuilder implements OverpassQueryBuilderInterface
 {
     public function __construct(
-        private readonly OverpassTagConfiguration $configuration,
-        private readonly int $queryTimeout = 25,
+        private OverpassTagConfiguration $configuration,
+        private int                      $queryTimeout = 25,
     ) {
     }
 

@@ -23,9 +23,9 @@ use function sprintf;
 /**
  * Resolves the best local capture time for media items.
  */
-final class LocalTimeHelper
+final readonly class LocalTimeHelper
 {
-    private readonly DateTimeZone $fallbackTimezone;
+    private DateTimeZone $fallbackTimezone;
 
     public function __construct(string $fallbackTimezone)
     {

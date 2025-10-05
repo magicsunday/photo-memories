@@ -36,16 +36,16 @@ use const LOCK_EX;
 /**
  * Coordinates slideshow generation.
  */
-final class SlideshowVideoManager implements SlideshowVideoManagerInterface
+final readonly class SlideshowVideoManager implements SlideshowVideoManagerInterface
 {
-    private readonly ?string $configuredPhpBinary;
+    private ?string $configuredPhpBinary;
 
     public function __construct(
-        private readonly string $videoDirectory,
-        private readonly string $projectDirectory,
-        private readonly float $slideDuration,
-        ?string $phpBinary,
-        private readonly PhpExecutableFinder $phpExecutableFinder,
+        private string              $videoDirectory,
+        private string              $projectDirectory,
+        private float               $slideDuration,
+        ?string                     $phpBinary,
+        private PhpExecutableFinder $phpExecutableFinder,
     ) {
         $phpBinary = is_string($phpBinary) ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;

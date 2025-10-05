@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Contract;
 
+/**
+ * Interface ProgressHandleInterface
+ */
 interface ProgressHandleInterface
 {
     public function advance(int $step = 1): void;

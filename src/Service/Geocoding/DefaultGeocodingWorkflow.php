@@ -23,13 +23,16 @@ use function mb_strtolower;
 use function sprintf;
 use function trim;
 
-final class DefaultGeocodingWorkflow
+/**
+ * Class DefaultGeocodingWorkflow
+ */
+final readonly class DefaultGeocodingWorkflow
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly LocationCellIndex $cellIndex,
-        private readonly MediaGeocodingProcessorInterface $mediaProcessor,
-        private readonly PoiUpdateProcessorInterface $poiProcessor,
+        private EntityManagerInterface           $entityManager,
+        private LocationCellIndex                $cellIndex,
+        private MediaGeocodingProcessorInterface $mediaProcessor,
+        private PoiUpdateProcessorInterface      $poiProcessor,
     ) {
     }
 

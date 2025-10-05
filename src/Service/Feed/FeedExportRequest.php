@@ -17,26 +17,29 @@ use function max;
 
 use const DIRECTORY_SEPARATOR;
 
-final class FeedExportRequest
+/**
+ * Class FeedExportRequest
+ */
+final readonly class FeedExportRequest
 {
-    private readonly int $limitClusters;
+    private int $limitClusters;
 
-    private readonly int $maxItems;
+    private int $maxItems;
 
-    private readonly int $imagesPerItem;
+    private int $imagesPerItem;
 
-    private readonly int $thumbnailWidth;
+    private int $thumbnailWidth;
 
-    private readonly string $baseOutputDirectory;
+    private string $baseOutputDirectory;
 
     public function __construct(
-        int $limitClusters,
-        int $maxItems,
-        int $imagesPerItem,
-        int $thumbnailWidth,
-        private readonly bool $useSymlinks,
-        string $baseOutputDirectory,
-        private readonly DateTimeImmutable $timestamp,
+        int                       $limitClusters,
+        int                       $maxItems,
+        int                       $imagesPerItem,
+        int                       $thumbnailWidth,
+        private bool              $useSymlinks,
+        string                    $baseOutputDirectory,
+        private DateTimeImmutable $timestamp,
     ) {
         $this->limitClusters       = max(1, $limitClusters);
         $this->maxItems            = max(1, $maxItems);

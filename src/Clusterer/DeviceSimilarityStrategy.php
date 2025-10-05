@@ -30,6 +30,9 @@ use function strlen;
 use function substr;
 use function trim;
 
+/**
+ * Class DeviceSimilarityStrategy
+ */
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;

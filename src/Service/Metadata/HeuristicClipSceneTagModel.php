@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Service\Metadata;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 
-use function count;
 use function is_array;
 use function is_bool;
 use function is_string;

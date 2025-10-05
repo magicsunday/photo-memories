@@ -86,7 +86,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
 
         try {
             /** @var array<string,mixed>|false $exif */
-            $exif = @exif_read_data($filepath, null, true, false);
+            $exif = @exif_read_data($filepath, null, true);
         } catch (Throwable) {
             $exif = false;
         }

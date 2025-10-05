@@ -23,6 +23,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use function is_string;
 use function trim;
 
+/**
+ * Class GeocodeCommand
+ */
 #[AsCommand(
     name: 'memories:geocode',
     description: 'Orte aus GPS-Daten ermitteln und speichern'
@@ -38,7 +41,7 @@ final class GeocodeCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl zu verarbeitender Medien', null)
+            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl zu verarbeitender Medien')
             ->addOption('all', null, InputOption::VALUE_NONE, 'Alle Medien erneut geokodieren (auch bereits verknüpft)')
             ->addOption('city', null, InputOption::VALUE_REQUIRED, 'Orte nach Stadtnamen aktualisieren (z.B. "Paris")')
             ->addOption('missing-pois', null, InputOption::VALUE_NONE, 'Orte ohne POI-Daten ergänzen')

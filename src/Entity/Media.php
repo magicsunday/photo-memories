@@ -2096,7 +2096,13 @@ class Media
             return;
         }
 
-        $this->phashPrefix = substr(strtolower($v), 0, 32);
+        $this->phashPrefix = strtolower(
+            substr(
+                $v,
+                0,
+                32
+            )
+        );
     }
 
     /**

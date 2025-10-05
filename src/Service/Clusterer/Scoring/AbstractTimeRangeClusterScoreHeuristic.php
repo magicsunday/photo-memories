@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -20,6 +20,9 @@ use function is_array;
 use function is_numeric;
 use function sprintf;
 
+/**
+ * Class AbstractTimeRangeClusterScoreHeuristic
+ */
 abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function __construct(
@@ -54,6 +57,9 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
 
     /**
      * @param array{from:int,to:int}|null $range
+     *
+     * @return bool
+     * @throws \DateMalformedStringException
      */
     protected function isValidTimeRange(?array $range): bool
     {

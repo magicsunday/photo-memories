@@ -15,6 +15,9 @@ use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * Interface FeedExportServiceInterface
+ */
 interface FeedExportServiceInterface
 {
     public function export(FeedExportRequest $request, SymfonyStyle $io): FeedExportResult;

@@ -19,10 +19,13 @@ use Throwable;
 
 use function sprintf;
 
-final class ThumbnailGenerationStage implements MediaIngestionStageInterface
+/**
+ * Class ThumbnailGenerationStage
+ */
+final readonly class ThumbnailGenerationStage implements MediaIngestionStageInterface
 {
     public function __construct(
-        private readonly ThumbnailServiceInterface $thumbnailService,
+        private ThumbnailServiceInterface $thumbnailService,
     ) {
     }
 

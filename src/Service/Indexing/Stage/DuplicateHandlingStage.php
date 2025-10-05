@@ -23,11 +23,14 @@ use function filesize;
 use function hash_file;
 use function sprintf;
 
-final class DuplicateHandlingStage implements MediaIngestionStageInterface
+/**
+ * Class DuplicateHandlingStage
+ */
+final readonly class DuplicateHandlingStage implements MediaIngestionStageInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly FastHashGeneratorInterface $fastHashGenerator,
+        private EntityManagerInterface     $entityManager,
+        private FastHashGeneratorInterface $fastHashGenerator,
     ) {
     }
 

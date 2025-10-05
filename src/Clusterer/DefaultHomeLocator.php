@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -66,6 +66,10 @@ final class DefaultHomeLocator implements HomeLocatorInterface
 
     /**
      * @param list<Media> $items
+     *
+     * @return null|array
+     * @throws \DateInvalidTimeZoneException
+     * @throws \DateMalformedStringException
      */
     public function determineHome(array $items): ?array
     {

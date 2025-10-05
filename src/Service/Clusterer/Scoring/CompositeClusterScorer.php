@@ -69,7 +69,8 @@ final class CompositeClusterScorer
         foreach ($this->algorithmBoosts as $algorithm => $boost) {
             if ($boost <= 0.0) {
                 throw new InvalidArgumentException(
-                    sprintf('Algorithm boost must be > 0.0, got %s => %f', (string) $algorithm, $boost)
+                    sprintf('Algorithm boost must be > 0.0, got %s => %f',
+                        $algorithm, $boost)
                 );
             }
         }
@@ -180,7 +181,7 @@ final class CompositeClusterScorer
         $quality    = $weightedValues['quality'] ?? 0.0;
         $aesthetics = $this->floatOrNull($params['aesthetics_score'] ?? null) ?? $quality;
 
-        $score = ($this->weights['quality'] ?? 0.0) * $quality +
+        return ($this->weights['quality'] ?? 0.0) * $quality +
             ($this->weights['aesthetics'] ?? 0.0) * $aesthetics +
             ($this->weights['people'] ?? 0.0) * ($weightedValues['people'] ?? 0.0) +
             ($this->weights['content'] ?? 0.0) * ($weightedValues['content'] ?? 0.0) +
@@ -191,8 +192,6 @@ final class CompositeClusterScorer
             ($this->weights['location'] ?? 0.0) * ($weightedValues['location'] ?? 0.0) +
             ($this->weights['poi'] ?? 0.0) * ($weightedValues['poi'] ?? 0.0) +
             ($this->weights['time_coverage'] ?? 0.0) * ($weightedValues['time_coverage'] ?? 0.0);
-
-        return $score;
     }
 
     private function floatOrNull(mixed $value): ?float

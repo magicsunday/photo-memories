@@ -17,16 +17,11 @@ use function count;
 use function max;
 use function min;
 
+/**
+ * Class DensityClusterScoreHeuristic
+ */
 final class DensityClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
-    public function __construct(
-        int $timeRangeMinSamples,
-        float $timeRangeMinCoverage,
-        int $minValidYear,
-    ) {
-        parent::__construct($timeRangeMinSamples, $timeRangeMinCoverage, $minValidYear);
-    }
-
     public function supports(ClusterDraft $cluster): bool
     {
         return true;

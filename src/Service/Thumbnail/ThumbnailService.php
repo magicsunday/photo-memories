@@ -24,17 +24,17 @@ use Throwable;
  */
 class ThumbnailService implements ThumbnailServiceInterface
 {
-    private const ORIENTATION_UNDEFINED = 0;
-    private const ORIENTATION_TOPLEFT   = 1;
-    private const ORIENTATION_TOPRIGHT  = 2;
-    private const ORIENTATION_BOTTOMRIGHT = 3;
-    private const ORIENTATION_BOTTOMLEFT  = 4;
-    private const ORIENTATION_LEFTTOP     = 5;
-    private const ORIENTATION_RIGHTTOP    = 6;
-    private const ORIENTATION_RIGHTBOTTOM = 7;
-    private const ORIENTATION_LEFTBOTTOM  = 8;
+    private const int ORIENTATION_UNDEFINED = 0;
+    private const int ORIENTATION_TOPLEFT   = 1;
+    private const int ORIENTATION_TOPRIGHT  = 2;
+    private const int ORIENTATION_BOTTOMRIGHT = 3;
+    private const int ORIENTATION_BOTTOMLEFT  = 4;
+    private const int ORIENTATION_LEFTTOP     = 5;
+    private const int ORIENTATION_RIGHTTOP    = 6;
+    private const int ORIENTATION_RIGHTBOTTOM = 7;
+    private const int ORIENTATION_LEFTBOTTOM  = 8;
 
-    private const JPEG_QUALITY = 85;
+    private const int JPEG_QUALITY = 85;
 
     /**
      * Absolute path to the thumbnail output directory.
@@ -64,7 +64,8 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         // Ensure the output directory exists before thumbnails are generated.
         if (!is_dir($this->thumbnailDir) && !mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
-            throw new RuntimeException(sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir));
+            throw new RuntimeException(
+                \sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir));
         }
     }
 
@@ -80,8 +81,8 @@ class ThumbnailService implements ThumbnailServiceInterface
     {
         $orientation = $media->getOrientation();
         $checksum    = $media->getChecksum();
-        $hasImagick  = extension_loaded('imagick');
-        $hasGd       = function_exists('imagecreatefromstring');
+        $hasImagick  = \extension_loaded('imagick');
+        $hasGd       = \function_exists('imagecreatefromstring');
         $requiresImagick = $media->isRaw() || $media->isHeic();
 
         // Abort early when no supported imaging library is available at all.
@@ -127,12 +128,13 @@ class ThumbnailService implements ThumbnailServiceInterface
     }
 
     /**
-     * @param string   $filepath   Absolute path to the original media file.
+     * @param string   $filepath    Absolute path to the original media file.
      * @param int|null $orientation EXIF orientation value of the source media.
-     * @param int[]    $sizes        Desired thumbnail widths (in pixels).
-     * @param string   $checksum     Media checksum used for generating file names.
+     * @param int[]    $sizes       Desired thumbnail widths (in pixels).
+     * @param string   $checksum    Media checksum used for generating file names.
      *
      * @return array<int, string>
+     * @throws ImagickException
      */
     private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes, string $checksum): array
     {
@@ -170,7 +172,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $resizeResult = $clone->thumbnailImage($targetWidth, 0);
 
                     if ($resizeResult === false) {
-                        throw new RuntimeException(sprintf('Unable to resize image for thumbnail width %d.', $targetWidth));
+                        throw new RuntimeException(
+                            \sprintf('Unable to resize image for thumbnail width %d.', $targetWidth));
                     }
 
                     $clone->setImageBackgroundColor('white');
@@ -199,7 +202,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $writeResult = $clone->writeImage($out);
 
                     if ($writeResult === false) {
-                        throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                        throw new RuntimeException(
+                            \sprintf('Unable to create thumbnail at path "%s".', $out));
                     }
 
                     $results[$targetWidth] = $out;
@@ -246,9 +250,9 @@ class ThumbnailService implements ThumbnailServiceInterface
                 $selectedLoader    = null;
 
                 // Try to locate a project specific GD loader before using the global function.
-                if (function_exists($namespacedLoader)) {
+                if (\function_exists($namespacedLoader)) {
                     $selectedLoader = $namespacedLoader;
-                } elseif (function_exists($loader)) {
+                } elseif (\function_exists($loader)) {
                     $selectedLoader = $loader;
                 }
 
@@ -261,7 +265,8 @@ class ThumbnailService implements ThumbnailServiceInterface
         if (!$src instanceof GdImage) {
             $data = @file_get_contents($filepath);
             if ($data === false) {
-                throw new RuntimeException(sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
+                throw new RuntimeException(
+                    \sprintf('Unable to read image data from "%s" for thumbnail generation.', $filepath));
             }
 
             // Fall back to the generic loader which can infer the format from the binary data.
@@ -269,7 +274,8 @@ class ThumbnailService implements ThumbnailServiceInterface
         }
 
         if (!$src instanceof GdImage) {
-            throw new RuntimeException(sprintf('Unable to create GD image from "%s".', $filepath));
+            throw new RuntimeException(
+                \sprintf('Unable to create GD image from "%s".', $filepath));
         }
 
         if ($this->applyOrientation) {
@@ -313,7 +319,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                     $backgroundColor = imagecolorallocate($dst, 255, 255, 255);
 
-                    if (!is_int($backgroundColor)) {
+                    if (!\is_int($backgroundColor)) {
                         throw new RuntimeException('Unable to allocate background color for thumbnail.');
                     }
 
@@ -335,7 +341,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                 }
 
                 if ($writeResult === false) {
-                    throw new RuntimeException(sprintf('Unable to create thumbnail at path "%s".', $out));
+                    throw new RuntimeException(
+                        \sprintf('Unable to create thumbnail at path "%s".', $out));
                 }
 
                 $results[$newWidth] = $out;
@@ -411,8 +418,10 @@ class ThumbnailService implements ThumbnailServiceInterface
     /**
      * Applies the EXIF orientation to an Imagick instance.
      *
-     * @param Imagick   $imagick    Imagick instance to transform.
-     * @param int|null  $orientation EXIF orientation value or null when unavailable.
+     * @param Imagick  $imagick     Imagick instance to transform.
+     * @param int|null $orientation EXIF orientation value or null when unavailable.
+     *
+     * @throws ImagickException
      */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
@@ -429,6 +438,8 @@ class ThumbnailService implements ThumbnailServiceInterface
      * Applies the orientation manually for Imagick versions lacking autoOrientImage().
      *
      * @param Imagick $imagick Imagick instance to transform.
+     *
+     * @throws ImagickException
      */
     private function applyOrientationWithLegacyImagick(Imagick $imagick): void
     {
@@ -501,7 +512,7 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     private function flipImage(GdImage $image, int $mode): GdImage
     {
-        if (function_exists('imageflip')) {
+        if (\function_exists('imageflip')) {
             imageflip($image, $mode);
 
             return $image;

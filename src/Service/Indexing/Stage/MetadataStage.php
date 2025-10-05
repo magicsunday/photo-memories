@@ -21,6 +21,9 @@ use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\XmpIptcExtractor;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class MetadataStage
+ */
 final class MetadataStage extends AbstractExtractorStage
 {
     /**

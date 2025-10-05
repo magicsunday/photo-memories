@@ -22,10 +22,10 @@ use function is_array;
  * Enriches the media entity with GPS coordinates, altitude, speed and course.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class GpsExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class GpsExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

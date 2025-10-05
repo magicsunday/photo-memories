@@ -14,24 +14,27 @@ namespace MagicSunday\Memories\Service\Indexing\Contract;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Console\Output\OutputInterface;
 
-final class MediaIngestionContext
+/**
+ * Class MediaIngestionContext
+ */
+final readonly class MediaIngestionContext
 {
     private function __construct(
-        private readonly string $filePath,
-        private readonly bool $force,
-        private readonly bool $dryRun,
-        private readonly bool $withThumbnails,
-        private readonly bool $strictMime,
-        private readonly OutputInterface $output,
-        private readonly ?Media $media,
-        private readonly ?string $detectedMime,
-        private readonly bool $detectedRaw,
-        private readonly bool $detectedHeic,
-        private readonly bool $detectedHevc,
-        private readonly ?string $checksum,
-        private readonly bool $reindexRequired,
-        private readonly bool $skipped,
-        private readonly ?string $skipMessage,
+        private string          $filePath,
+        private bool            $force,
+        private bool            $dryRun,
+        private bool            $withThumbnails,
+        private bool            $strictMime,
+        private OutputInterface $output,
+        private ?Media          $media,
+        private ?string         $detectedMime,
+        private bool            $detectedRaw,
+        private bool            $detectedHeic,
+        private bool            $detectedHevc,
+        private ?string         $checksum,
+        private bool            $reindexRequired,
+        private bool            $skipped,
+        private ?string         $skipMessage,
     ) {
     }
 

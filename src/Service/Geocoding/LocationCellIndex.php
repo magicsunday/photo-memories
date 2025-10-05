@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use MagicSunday\Memories\Entity\Location;
@@ -43,7 +44,7 @@ final class LocationCellIndex
         }
 
         /** @var iterable<array{id:int,cell:string}> $it */
-        $it = $q->toIterable([], Query::HYDRATE_ARRAY);
+        $it = $q->toIterable([], AbstractQuery::HYDRATE_ARRAY);
 
         $n = 0;
         foreach ($it as $row) {

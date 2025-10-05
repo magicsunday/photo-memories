@@ -20,6 +20,9 @@ use function is_string;
 use function mb_strtolower;
 use function min;
 
+/**
+ * Class ContentClusterScoreHeuristic
+ */
 final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function supports(ClusterDraft $cluster): bool
@@ -105,7 +108,7 @@ final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             [$coverage, 0.4],
             [$richness, 0.35],
             [$density, 0.25],
-        ], 0.0);
+        ]);
 
         return [
             'score'           => $score,

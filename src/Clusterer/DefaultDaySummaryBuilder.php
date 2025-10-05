@@ -18,13 +18,13 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Default implementation that prepares per-day vacation summaries.
  */
-final class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
+final readonly class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
 {
     /**
      * @param iterable<DaySummaryStageInterface> $stages
      */
     public function __construct(
-        private readonly iterable $stages,
+        private iterable $stages,
     ) {
     }
 

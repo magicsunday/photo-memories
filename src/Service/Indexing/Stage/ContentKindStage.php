@@ -16,6 +16,9 @@ use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class ContentKindStage
+ */
 final class ContentKindStage extends AbstractExtractorStage
 {
     /**

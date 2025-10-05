@@ -17,7 +17,6 @@ use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function count;
 use function max;
 use function usort;
 
@@ -49,19 +48,14 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
             }
 
             $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
-            if ($largestStaypoint !== null) {
-                return $largestStaypoint;
-            }
-
-            return $sleepProxy;
+            return $largestStaypoint ?? $sleepProxy;
         }
 
         $largestStaypoint = $this->selectLargestStaypoint($summary['staypoints'], $home);
-        if ($largestStaypoint !== null) {
-            return $largestStaypoint;
-        }
-
-        return $this->fallbackBaseLocation($summary, $home);
+        return $largestStaypoint ?? $this->fallbackBaseLocation(
+            $summary,
+            $home
+        );
     }
 
     private function selectStaypointBase(

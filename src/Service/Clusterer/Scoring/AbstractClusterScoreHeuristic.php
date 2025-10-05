@@ -19,6 +19,9 @@ use function is_numeric;
 use function is_string;
 use function log;
 
+/**
+ * Class AbstractClusterScoreHeuristic
+ */
 abstract class AbstractClusterScoreHeuristic implements ClusterScoreHeuristicInterface
 {
     public function prepare(array $clusters, array $mediaMap): void

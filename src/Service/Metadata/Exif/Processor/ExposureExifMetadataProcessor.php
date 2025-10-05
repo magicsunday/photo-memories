@@ -20,10 +20,10 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * Maps exposure related metadata such as focal length and ISO.
  */
 #[AutoconfigureTag('memories.metadata.exif.processor')]
-final class ExposureExifMetadataProcessor implements ExifMetadataProcessorInterface
+final readonly class ExposureExifMetadataProcessor implements ExifMetadataProcessorInterface
 {
     public function __construct(
-        private readonly ExifValueAccessorInterface $accessor,
+        private ExifValueAccessorInterface $accessor,
     ) {
     }
 

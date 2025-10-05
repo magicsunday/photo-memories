@@ -110,7 +110,12 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
             return FaceDetectionResult::fromCount(0);
         }
 
-        $decoded = json_decode($output, true);
+        $decoded = json_decode(
+            $output,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
         if (!is_array($decoded)) {
             return FaceDetectionResult::unavailable();
         }

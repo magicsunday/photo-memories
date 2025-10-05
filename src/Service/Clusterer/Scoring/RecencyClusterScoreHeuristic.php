@@ -17,6 +17,9 @@ use function max;
 use function min;
 use function time;
 
+/**
+ * Class RecencyClusterScoreHeuristic
+ */
 final class RecencyClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
     /** @var callable():int */

@@ -13,12 +13,15 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-final class PoiUpdateSummary
+/**
+ * Class PoiUpdateSummary
+ */
+final readonly class PoiUpdateSummary
 {
     public function __construct(
-        private readonly int $processed,
-        private readonly int $updated,
-        private readonly int $networkCalls,
+        private int $processed,
+        private int $updated,
+        private int $networkCalls,
     ) {
     }
 
@@ -39,6 +42,7 @@ final class PoiUpdateSummary
 
     public function render(SymfonyStyle $io): void
     {
-        $io->writeln(sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls));
+        $io->writeln(
+            \sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls));
     }
 }

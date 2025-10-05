@@ -68,15 +68,13 @@ final class FeedPreviewCommand extends Command
                 'min-score',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Mindest-Score für Kandidaten (FeedBuilder-Filter)',
-                null
+                'Mindest-Score für Kandidaten (FeedBuilder-Filter)'
             )
             ->addOption(
                 'per-media-cap',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Per-Media-Cap zur Konsolidierung (0 = aus)',
-                null
+                'Per-Media-Cap zur Konsolidierung (0 = aus)'
             )
             ->addOption(
                 'show-members',

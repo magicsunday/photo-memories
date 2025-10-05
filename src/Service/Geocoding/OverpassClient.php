@@ -19,7 +19,6 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function max;
-use function sprintf;
 use function trim;
 
 /**

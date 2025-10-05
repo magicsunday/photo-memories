@@ -29,9 +29,12 @@ use function strtolower;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
 
+/**
+ * Class BinaryFileResponse
+ */
 final class BinaryFileResponse extends Response
 {
-    private const DEFAULT_STATUS = 200;
+    private const int DEFAULT_STATUS = 200;
 
     private readonly string $filePath;
 

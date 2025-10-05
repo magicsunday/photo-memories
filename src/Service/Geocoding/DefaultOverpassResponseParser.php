@@ -24,13 +24,16 @@ use function is_array;
 use function round;
 use function usort;
 
-final class DefaultOverpassResponseParser implements OverpassResponseParserInterface
+/**
+ * Class DefaultOverpassResponseParser
+ */
+final readonly class DefaultOverpassResponseParser implements OverpassResponseParserInterface
 {
     public function __construct(
-        private readonly OverpassElementFilterInterface $elementFilter,
-        private readonly OverpassTagSelectorInterface $tagSelector,
-        private readonly OverpassPrimaryTagResolverInterface $primaryTagResolver,
-        private readonly PoiNameExtractorInterface $poiNameExtractor,
+        private OverpassElementFilterInterface      $elementFilter,
+        private OverpassTagSelectorInterface        $tagSelector,
+        private OverpassPrimaryTagResolverInterface $primaryTagResolver,
+        private PoiNameExtractorInterface           $poiNameExtractor,
     ) {
     }
 

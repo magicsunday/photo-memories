@@ -1,4 +1,6 @@
-<?php
+<?php 
+
+
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -142,7 +144,19 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             // pHash prefix
             $ph = $m->getPhash();
             if (is_string($ph) && $ph !== '') {
-                $prefix      = substr(strtolower($ph), 0, max(1, min(16, $this->phashPrefixNibbles)));
+                $prefix      = strtolower(
+                    substr(
+                        $ph,
+                        0,
+                        max(
+                            1,
+                            min(
+                                16,
+                                $this->phashPrefixNibbles
+                            )
+                        )
+                    )
+                );
                 $key         = 'h:' . $prefix;
                 $phash[$key] = ($phash[$key] ?? 0) + 1;
             }
@@ -260,9 +274,11 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     }
 
     /**
-     * @param list<int> $days values 1..366
+     * @param ClusterDraft $c
+     * @param array        $mediaMap
      *
      * @return list<int>
+     * @throws \DateMalformedStringException
      */
     private function collectClusterDays(ClusterDraft $c, array $mediaMap): array
     {
@@ -367,7 +383,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
                 continue;
             }
 
-            $prefix            = substr(strtolower($ph), 0, $nibbles);
+            $prefix            = strtolower(
+                substr(
+                    $ph,
+                    0,
+                    $nibbles
+                )
+            );
             $key               = 'h:' . $prefix;
             $cnt[$key]         = ($cnt[$key] ?? 0) + 1;
             $prefixByKey[$key] = $prefix;

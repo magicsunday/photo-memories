@@ -26,6 +26,9 @@ use function ctype_digit;
 use function is_string;
 use function sprintf;
 
+/**
+ * Class ClusterCommand
+ */
 #[AsCommand(
     name: 'memories:cluster',
     description: 'Erstellt Erinnerungs-Cluster anhand konfigurierter Strategien.'
@@ -41,8 +44,8 @@ final class ClusterCommand extends Command
     {
         $this
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur berechnen, nicht speichern')
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl Medien', null)
-            ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD)', null)
+            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl Medien')
+            ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD)')
             ->addOption('replace', null, InputOption::VALUE_NONE, 'Bestehende Cluster vor dem Speichern löschen');
     }
 

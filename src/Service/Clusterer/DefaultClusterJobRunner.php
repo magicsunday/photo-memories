@@ -27,13 +27,16 @@ use function max;
 use function microtime;
 use function sprintf;
 
-final class DefaultClusterJobRunner implements ClusterJobRunnerInterface
+/**
+ * Class DefaultClusterJobRunner
+ */
+final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly HybridClustererInterface $clusterer,
-        private readonly ClusterConsolidatorInterface $consolidator,
-        private readonly ClusterPersistenceInterface $persistence,
+        private EntityManagerInterface       $entityManager,
+        private HybridClustererInterface     $clusterer,
+        private ClusterConsolidatorInterface $consolidator,
+        private ClusterPersistenceInterface  $persistence,
     ) {
     }
 

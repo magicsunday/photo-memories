@@ -26,15 +26,18 @@ use function strlen;
 use function substr;
 use function trim;
 
-final class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInterface
+/**
+ * Class DefaultPoiUpdateProcessor
+ */
+final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInterface
 {
     /**
      * @param positive-int $batchSize
      */
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly PoiEnsurerInterface $locationResolver,
-        private readonly int $batchSize = 10,
+        private EntityManagerInterface $entityManager,
+        private PoiEnsurerInterface    $locationResolver,
+        private int                    $batchSize = 10,
     ) {
     }
 

@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Clusterer\Contract;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 
+/**
+ * Interface ClusterJobRunnerInterface
+ */
 interface ClusterJobRunnerInterface
 {
     public function run(ClusterJobOptions $options, ProgressReporterInterface $progressReporter): ClusterJobResult;

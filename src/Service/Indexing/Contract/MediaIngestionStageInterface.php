@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Contract;
 
+/**
+ * Interface MediaIngestionStageInterface
+ */
 interface MediaIngestionStageInterface
 {
     public function process(MediaIngestionContext $context): MediaIngestionContext;

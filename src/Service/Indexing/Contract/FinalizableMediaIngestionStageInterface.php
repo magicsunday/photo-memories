@@ -11,6 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Contract;
 
+/**
+ * Interface FinalizableMediaIngestionStageInterface
+ */
 interface FinalizableMediaIngestionStageInterface extends MediaIngestionStageInterface
 {
     public function finalize(MediaIngestionContext $context): void;

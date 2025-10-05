@@ -23,12 +23,12 @@ use function is_int;
 /**
  * Detects perceptually similar media and records their Hamming distance.
  */
-final class NearDuplicateStage implements MediaIngestionStageInterface
+final readonly class NearDuplicateStage implements MediaIngestionStageInterface
 {
     public function __construct(
-        private readonly MediaRepository $mediaRepository,
-        private readonly MediaDuplicateRepository $duplicateRepository,
-        private readonly int $maxHammingDistance = 6,
+        private MediaRepository          $mediaRepository,
+        private MediaDuplicateRepository $duplicateRepository,
+        private int                      $maxHammingDistance = 6,
     ) {
         if ($this->maxHammingDistance < 0) {
             throw new InvalidArgumentException('Maximum Hamming distance must be zero or greater.');

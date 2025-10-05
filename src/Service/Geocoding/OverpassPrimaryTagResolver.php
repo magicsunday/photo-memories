@@ -15,9 +15,12 @@ use MagicSunday\Memories\Service\Geocoding\Contract\OverpassPrimaryTagResolverIn
 
 use function is_string;
 
-final class OverpassPrimaryTagResolver implements OverpassPrimaryTagResolverInterface
+/**
+ * Class OverpassPrimaryTagResolver
+ */
+final readonly class OverpassPrimaryTagResolver implements OverpassPrimaryTagResolverInterface
 {
-    public function __construct(private readonly OverpassTagConfiguration $configuration)
+    public function __construct(private OverpassTagConfiguration $configuration)
     {
     }
 
@@ -46,10 +49,12 @@ final class OverpassPrimaryTagResolver implements OverpassPrimaryTagResolverInte
             return false;
         }
 
-        foreach ($allowedValues as $allowed) {
-            if ($allowed === $value) {
-                return true;
-            }
+        if (in_array(
+            $value,
+            $allowedValues,
+            true
+        )) {
+            return true;
         }
 
         return false;

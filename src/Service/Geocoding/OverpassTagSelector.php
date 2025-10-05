@@ -28,6 +28,9 @@ use function trim;
 
 use const SORT_STRING;
 
+/**
+ * Class OverpassTagSelector
+ */
 final class OverpassTagSelector implements OverpassTagSelectorInterface
 {
     /**
@@ -155,10 +158,12 @@ final class OverpassTagSelector implements OverpassTagSelectorInterface
             return false;
         }
 
-        foreach ($allowedValues as $allowed) {
-            if ($allowed === $value) {
-                return true;
-            }
+        if (in_array(
+            $value,
+            $allowedValues,
+            true
+        )) {
+            return true;
         }
 
         return false;

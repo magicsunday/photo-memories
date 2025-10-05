@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Indexing;
 use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Interface MediaIngestionPipelineInterface
+ */
 interface MediaIngestionPipelineInterface
 {
     public function process(

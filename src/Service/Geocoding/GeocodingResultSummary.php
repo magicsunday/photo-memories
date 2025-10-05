@@ -14,16 +14,19 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use MagicSunday\Memories\Entity\Location;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-final class GeocodingResultSummary
+/**
+ * Class GeocodingResultSummary
+ */
+final readonly class GeocodingResultSummary
 {
     /**
      * @param list<Location> $locationsForPoiUpdate
      */
     public function __construct(
-        private readonly int $processed,
-        private readonly int $linked,
-        private readonly int $networkCalls,
-        private readonly array $locationsForPoiUpdate,
+        private int   $processed,
+        private int   $linked,
+        private int   $networkCalls,
+        private array $locationsForPoiUpdate,
     ) {
     }
 
@@ -52,6 +55,7 @@ final class GeocodingResultSummary
 
     public function render(SymfonyStyle $io): void
     {
-        $io->writeln(sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $this->processed, $this->linked, $this->networkCalls));
+        $io->writeln(
+            \sprintf('✅ %d Medien verarbeitet, %d Orte verknüpft, %d Netzabfragen.', $this->processed, $this->linked, $this->networkCalls));
     }
 }

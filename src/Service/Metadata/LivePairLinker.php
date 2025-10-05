@@ -27,9 +27,9 @@ use function usort;
 /**
  * Links photo/video live pairs using Apple metadata and heuristic fallbacks.
  */
-final class LivePairLinker implements SingleMetadataExtractorInterface
+final readonly class LivePairLinker implements SingleMetadataExtractorInterface
 {
-    public function __construct(private readonly MediaRepository $mediaRepository)
+    public function __construct(private MediaRepository $mediaRepository)
     {
     }
 

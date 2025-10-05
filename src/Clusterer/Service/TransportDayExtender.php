@@ -81,7 +81,12 @@ final class TransportDayExtender
     }
 
     /**
+     * @param string                                 $previous
+     * @param string                                 $current
      * @param array<string, array{isSynthetic:bool}> $days
+     *
+     * @return bool
+     * @throws \DateMalformedStringException
      */
     private function checkSequentialDays(string $previous, string $current, array $days): bool
     {

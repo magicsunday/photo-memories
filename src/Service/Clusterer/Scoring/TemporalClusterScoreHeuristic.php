@@ -17,16 +17,11 @@ use MagicSunday\Memories\Entity\Media;
 
 use function count;
 
+/**
+ * Class TemporalClusterScoreHeuristic
+ */
 final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
-    public function __construct(
-        int $timeRangeMinSamples,
-        float $timeRangeMinCoverage,
-        int $minValidYear,
-    ) {
-        parent::__construct($timeRangeMinSamples, $timeRangeMinCoverage, $minValidYear);
-    }
-
     public function supports(ClusterDraft $cluster): bool
     {
         return true;
@@ -75,7 +70,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
     private function computeTemporalMetrics(array $mediaItems, int $members, ?array $timeRange, array $cached): array
     {
         $duration = $cached['duration_seconds'] ?? null;
-        if ($duration === null && is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
+        if ($duration === null && \is_array($timeRange) && isset($timeRange['from'], $timeRange['to'])) {
             $duration = max(0, $timeRange['to'] - $timeRange['from']);
         }
 
@@ -103,7 +98,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
             $score     = $this->combineScores([
                 [$coverage, 0.55],
                 [$spanScore, 0.45],
-            ], 0.0);
+            ]);
         }
 
         return [

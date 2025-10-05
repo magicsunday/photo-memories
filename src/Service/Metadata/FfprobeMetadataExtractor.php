@@ -40,6 +40,9 @@ use function str_starts_with;
 use function strtolower;
 use function trim;
 
+/**
+ * Class FfprobeMetadataExtractor
+ */
 final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
@@ -73,7 +76,12 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return $media;
         }
 
-        $payload = json_decode($out, true);
+        $payload = json_decode(
+            $out,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
         if (!is_array($payload)) {
             return $media;
         }
@@ -420,7 +428,12 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return null;
         }
 
-        $data = json_decode($out, true);
+        $data = json_decode(
+            $out,
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
         if (!is_array($data)) {
             return null;
         }

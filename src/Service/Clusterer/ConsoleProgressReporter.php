@@ -23,11 +23,14 @@ use function max;
 use function microtime;
 use function sprintf;
 
-final class ConsoleProgressReporter implements ProgressReporterInterface
+/**
+ * Class ConsoleProgressReporter
+ */
+final readonly class ConsoleProgressReporter implements ProgressReporterInterface
 {
     public function __construct(
-        private readonly SymfonyStyle $io,
-        private readonly OutputInterface $output,
+        private SymfonyStyle    $io,
+        private OutputInterface $output,
     ) {
     }
 
@@ -38,10 +41,10 @@ final class ConsoleProgressReporter implements ProgressReporterInterface
         $section = $this->output->section();
         $bar     = $this->makeBar($section, $max, $headline);
 
-        return new class($section, $bar) implements ProgressHandleInterface {
+        return new readonly class($section, $bar) implements ProgressHandleInterface {
             public function __construct(
-                private readonly ConsoleSectionOutput $section,
-                private readonly ProgressBar $bar,
+                private ConsoleSectionOutput $section,
+                private ProgressBar          $bar,
             ) {
             }
 

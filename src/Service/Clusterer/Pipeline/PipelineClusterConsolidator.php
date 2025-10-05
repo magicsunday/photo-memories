@@ -18,12 +18,12 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface
 /**
  * Executes a configurable list of consolidation stages sequentially.
  */
-final class PipelineClusterConsolidator implements ClusterConsolidatorInterface
+final readonly class PipelineClusterConsolidator implements ClusterConsolidatorInterface
 {
     /**
      * @param iterable<ClusterConsolidationStageInterface> $stages
      */
-    public function __construct(private readonly iterable $stages)
+    public function __construct(private iterable $stages)
     {
     }
 

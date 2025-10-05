@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -110,8 +110,12 @@ final class MediaMath
      * or timestamps are earlier than $minValidYear-01-01.
      *
      * @param list<Media> $items
+     * @param int         $minSamples
+     * @param float       $minCoverage
+     * @param int         $minValidYear
      *
      * @return array{from:int,to:int}|null
+     * @throws \DateMalformedStringException
      */
     public static function timeRangeReliable(
         array $items,

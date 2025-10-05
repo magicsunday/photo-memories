@@ -35,7 +35,7 @@ use function strtolower;
 final class ContentClassifierExtractor implements SingleMetadataExtractorInterface
 {
     /** @var array<int, string> */
-    private const SCREENSHOT_KEYWORDS = [
+    private const array SCREENSHOT_KEYWORDS = [
         'screenshot',
         'screen-shot',
         'screen_capture',
@@ -46,7 +46,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     ];
 
     /** @var array<int, string> */
-    private const DOCUMENT_KEYWORDS = [
+    private const array DOCUMENT_KEYWORDS = [
         'document',
         'scan',
         'scanned',
@@ -60,7 +60,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     ];
 
     /** @var array<int, string> */
-    private const MAP_KEYWORDS = [
+    private const array MAP_KEYWORDS = [
         'map',
         'maps',
         'karte',
@@ -72,7 +72,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     ];
 
     /** @var array<int, string> */
-    private const SCREEN_RECORD_KEYWORDS = [
+    private const array SCREEN_RECORD_KEYWORDS = [
         'screenrecord',
         'screen-record',
         'screen_record',
@@ -170,11 +170,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         }
 
         $colorfulness = $media->getColorfulness();
-        if ($colorfulness !== null && $colorfulness > 0.45) {
-            return false;
-        }
-
-        return true;
+        return !($colorfulness !== null && $colorfulness > 0.45);
     }
 
     /**
@@ -215,11 +211,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         $colorfulness = $media->getColorfulness();
         $entropy      = $media->getEntropy();
 
-        if ($colorfulness !== null && $colorfulness >= 0.45 && $entropy !== null && $entropy <= 0.55) {
-            return true;
-        }
-
-        return false;
+        return $colorfulness !== null && $colorfulness >= 0.45 && $entropy !== null && $entropy <= 0.55;
     }
 
     /**

@@ -16,6 +16,9 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use function is_array;
 use function is_numeric;
 
+/**
+ * Class PoiClusterScoreHeuristic
+ */
 final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     /** @param array<string,float> $poiCategoryBoosts */

@@ -18,7 +18,6 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\AbstractClusterScoreHeuristic
 
 use function array_keys;
 use function array_map;
-use function array_values;
 use function count;
 use function max;
 use function is_string;
@@ -363,7 +362,10 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getDhash()), $seenDhash, $this->dhashPenalty);
         $penalty += $this->registerDuplicate($this->stringOrNull($media->getBurstUuid()), $seenBurst, $this->burstPenalty);
 
-        return $penalty > 0.9 ? 0.9 : $penalty;
+        return min(
+            $penalty,
+            0.9
+        );
     }
 
     private function phashDuplicateKey(Media $media): ?string
@@ -394,7 +396,10 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
         $penalty = $basePenalty * (1.0 + 0.5 * ($count - 1));
 
-        return $penalty > 0.9 ? 0.9 : $penalty;
+        return min(
+            $penalty,
+            0.9
+        );
     }
 
     private function resolveResolutionScore(Media $media): ?float

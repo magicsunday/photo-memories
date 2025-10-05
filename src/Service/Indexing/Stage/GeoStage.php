@@ -16,6 +16,9 @@ use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * Class GeoStage
+ */
 final class GeoStage extends AbstractExtractorStage
 {
     /**

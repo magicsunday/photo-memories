@@ -22,6 +22,9 @@ use function count;
 use function is_array;
 use function iterator_to_array;
 
+/**
+ * Class HybridClusterer
+ */
 final class HybridClusterer implements HybridClustererInterface
 {
     /** @var list<ClusterStrategyInterface>|null */

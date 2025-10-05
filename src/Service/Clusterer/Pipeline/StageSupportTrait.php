@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -89,7 +89,6 @@ trait StageSupportTrait
 
     protected function computeScore(ClusterDraft $draft, ?array $normalizedMembers = null): float
     {
-        /** @var float $score */
         $score = (float) ($draft->getParams()['score'] ?? 0.0);
         if ($score > 0.0) {
             return $score;

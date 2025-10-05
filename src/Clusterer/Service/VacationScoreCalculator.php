@@ -471,7 +471,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $localHour  = (int) $localTime->format('H');
                 $slotIndex  = intdiv($localHour, self::DAY_SLOT_HOURS);
                 $slotHour   = $slotIndex * self::DAY_SLOT_HOURS;
-                $slotStart  = $localTime->setTime($slotHour, 0, 0);
+                $slotStart  = $localTime->setTime($slotHour, 0);
                 $bucketItem = [
                     'media'         => $media,
                     'score'         => $score,

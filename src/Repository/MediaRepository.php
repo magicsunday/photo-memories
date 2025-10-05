@@ -12,8 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Repository;
 
 use DateTimeImmutable;
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\OptimisticLockException;
 use Doctrine\Persistence\ObjectRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
@@ -73,23 +76,36 @@ readonly class MediaRepository implements MemberMediaLookupInterface
     /**
      * Finds media items within the provided Hamming distance of the given pHash.
      *
+     * @param string $phashHex
+     * @param int    $maxHamming
+     * @param int    $limit
+     *
      * @return list<array{media: Media, distance: int}>
+     * @throws Exception
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     public function findNearestByPhash(string $phashHex, int $maxHamming, int $limit = 20): array
     {
-        $phashHex = trim(strtolower($phashHex));
+        $phashHex = strtolower(trim($phashHex));
         if ($phashHex === '' || $maxHamming < 0) {
             return [];
         }
 
-        $limit = $limit < 1 ? 1 : $limit;
+        $limit = max(
+            $limit,
+            1
+        );
 
         $conn        = $this->em->getConnection();
-        $prefixLength = $this->phashPrefixLength > 32 ? 32 : $this->phashPrefixLength;
+        $prefixLength = min(
+            $this->phashPrefixLength,
+            32
+        );
         $phashPrefix  = $prefixLength > 0 ? substr($phashHex, 0, $prefixLength) : '';
         $phash64Hex   = substr($phashHex, 0, 16);
         if (strlen($phash64Hex) < 16) {
-            $phash64Hex = str_pad($phash64Hex, 16, '0', STR_PAD_RIGHT);
+            $phash64Hex = str_pad($phash64Hex, 16, '0');
         }
 
         $sql = <<<'SQL'
@@ -186,7 +202,10 @@ SQL;
      */
     public function findIndexingCandidates(int $limit): array
     {
-        $maxResults = $limit < 1 ? 1 : $limit;
+        $maxResults = max(
+            $limit,
+            1
+        );
 
         $qb = $this->em->createQueryBuilder();
         $qb->select('m')
@@ -210,7 +229,10 @@ SQL;
      */
     public function findGoodCandidatesByDateRange(DateTimeImmutable $from, DateTimeImmutable $to, int $limit): array
     {
-        $maxResults = $limit < 1 ? 1 : $limit;
+        $maxResults = max(
+            $limit,
+            1
+        );
 
         $qb = $this->em->createQueryBuilder();
         $qb->select('m')

@@ -107,7 +107,7 @@ class Response
     {
         $parts = explode('-', $name);
         foreach ($parts as $index => $part) {
-            $parts[$index] = strtoupper(substr($part, 0, 1)) . strtolower(substr($part, 1));
+            $parts[$index] = strtoupper($part[0]) . strtolower(substr($part, 1));
         }
 
         return implode('-', $parts);

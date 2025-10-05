@@ -62,7 +62,7 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
         }
 
         $candidate = preg_replace('~_(?:COVER|PORTRAIT)\z~i', '', $filename);
-        $candidate = $candidate === null ? $filename : $candidate;
+        $candidate = $candidate ?? $filename;
 
         if (preg_match('~(?:BURST|IMG|VID)[^0-9]*([0-9]{2,})\z~i', $candidate, $matches) === 1) {
             return $this->normaliseIndex($matches[1]);

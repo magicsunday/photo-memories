@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\Contract\PoiNameExtractorInterface;
 
+/**
+ * Class PoiNameExtractor
+ */
 final class PoiNameExtractor implements PoiNameExtractorInterface
 {
     public function extract(array $names): ?string

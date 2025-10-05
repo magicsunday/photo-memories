@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -28,12 +28,12 @@ use function sprintf;
 /**
  * Normalises capture timestamps and timezone metadata based on priority sources.
  */
-final class TimeNormalizer implements SingleMetadataExtractorInterface
+final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
 {
     public function __construct(
-        private readonly CaptureTimeResolver $captureTimeResolver,
-        private readonly string $defaultTimezone,
-        private readonly FilenameDateParser $filenameDateParser,
+        private CaptureTimeResolver $captureTimeResolver,
+        private string              $defaultTimezone,
+        private FilenameDateParser  $filenameDateParser,
     ) {
     }
 
