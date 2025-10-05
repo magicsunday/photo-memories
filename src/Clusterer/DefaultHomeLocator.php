@@ -21,6 +21,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_slice;
 use function assert;
 use function count;
 use function intdiv;
@@ -29,6 +30,7 @@ use function is_string;
 use function max;
 use function round;
 use function strtolower;
+use function usort;
 
 /**
  * Default implementation that derives the home location from timestamped media.
@@ -45,6 +47,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         private readonly ?float $homeLat = null,
         private readonly ?float $homeLon = null,
         private readonly ?float $homeRadiusKm = null,
+        private readonly int $maxHomeCenters = 2,
+        private readonly float $fallbackRadiusScale = 1.5,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -52,6 +56,14 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
         if ($this->defaultHomeRadiusKm <= 0.0) {
             throw new InvalidArgumentException('defaultHomeRadiusKm must be > 0.');
+        }
+
+        if ($this->maxHomeCenters < 1) {
+            throw new InvalidArgumentException('maxHomeCenters must be >= 1.');
+        }
+
+        if ($this->fallbackRadiusScale < 1.0) {
+            throw new InvalidArgumentException('fallbackRadiusScale must be >= 1.');
         }
 
         if ($this->homeLat !== null && ($this->homeLat < -90.0 || $this->homeLat > 90.0)) {
@@ -70,7 +82,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     /**
      * @param list<Media> $items
      *
-     * @return array|null
+     * @return array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int,country:?string,timezone_offset:?int}>}|null
      *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
@@ -100,11 +112,26 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                 'radius_km'       => $radius,
                 'country'         => $country,
                 'timezone_offset' => $timezoneOffset,
+                'centers'         => [[
+                    'lat'             => $this->homeLat,
+                    'lon'             => $this->homeLon,
+                    'radius_km'       => $radius,
+                    'member_count'    => 0,
+                    'dwell_seconds'   => 0,
+                    'country'         => $country,
+                    'timezone_offset' => $timezoneOffset,
+                ]],
             ];
         }
 
         /**
-         * @var array<string, array{members:list<Media>, countryCounts:array<string,int>, offsets:array<int,int>}> $clusters
+         * @var array<string, array{
+         *     members:list<Media>,
+         *     countryCounts:array<string,int>,
+         *     offsets:array<int,int>,
+         *     firstTimestamp:int|null,
+         *     lastTimestamp:int|null,
+         * }> $clusters
          */
         $clusters = [];
 
@@ -133,10 +160,24 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                     'members'       => [],
                     'countryCounts' => [],
                     'offsets'       => [],
+                    'firstTimestamp' => null,
+                    'lastTimestamp'  => null,
                 ];
             }
 
             $clusters[$key]['members'][] = $media;
+
+            $timestamp = $local->getTimestamp();
+            $first     = $clusters[$key]['firstTimestamp'];
+            $last      = $clusters[$key]['lastTimestamp'];
+
+            if ($first === null || $timestamp < $first) {
+                $clusters[$key]['firstTimestamp'] = $timestamp;
+            }
+
+            if ($last === null || $timestamp > $last) {
+                $clusters[$key]['lastTimestamp'] = $timestamp;
+            }
 
             $location = $media->getLocation();
             if ($location instanceof Location) {
@@ -166,71 +207,33 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             return null;
         }
 
-        $bestKey   = null;
-        $bestCount = 0;
-        foreach ($clusters as $key => $data) {
-            $count = count($data['members']);
-            if ($count > $bestCount) {
-                $bestKey   = $key;
-                $bestCount = $count;
-            }
-        }
-
-        if ($bestKey === null) {
+        $summaries = $this->summariseClusters($clusters);
+        if ($summaries === []) {
             return null;
         }
 
-        $members  = $clusters[$bestKey]['members'];
-        $centroid = MediaMath::centroid($members);
-
-        $maxDistance = 0.0;
-        foreach ($members as $media) {
-            $lat = $media->getGpsLat();
-            $lon = $media->getGpsLon();
-            assert($lat !== null && $lon !== null);
-
-            $distance = MediaMath::haversineDistanceInMeters(
-                $lat,
-                $lon,
-                $centroid['lat'],
-                $centroid['lon'],
-            ) / 1000.0;
-
-            if ($distance > $maxDistance) {
-                $maxDistance = $distance;
-            }
-        }
-
-        $country   = null;
-        $countries = $clusters[$bestKey]['countryCounts'];
-        if ($countries !== []) {
-            $maxCountryCount = 0;
-            foreach ($countries as $countryKey => $count) {
-                if ($count > $maxCountryCount) {
-                    $maxCountryCount = $count;
-                    $country         = $countryKey;
+        usort($summaries, static function (array $a, array $b): int {
+            if ($a['dwell_seconds'] === $b['dwell_seconds']) {
+                if ($a['member_count'] === $b['member_count']) {
+                    return $b['radius_km'] <=> $a['radius_km'];
                 }
-            }
-        }
 
-        $offsets        = $clusters[$bestKey]['offsets'];
-        $timezoneOffset = null;
-        if ($offsets !== []) {
-            $maxOffsetCount = 0;
-            foreach ($offsets as $offsetValue => $count) {
-                if ($count > $maxOffsetCount) {
-                    $maxOffsetCount = $count;
-                    $timezoneOffset = $offsetValue;
-                }
+                return $b['member_count'] <=> $a['member_count'];
             }
-        }
+
+            return $b['dwell_seconds'] <=> $a['dwell_seconds'];
+        });
+
+        $centers = array_slice($summaries, 0, $this->maxHomeCenters);
+        $primary = $centers[0];
 
         return [
-            'lat'             => $centroid['lat'],
-            'lon'             => $centroid['lon'],
-            'radius_km'       => max($maxDistance, $this->defaultHomeRadiusKm),
-            'country'         => $country,
-            'timezone_offset' => $timezoneOffset,
+            'lat'             => $primary['lat'],
+            'lon'             => $primary['lon'],
+            'radius_km'       => $primary['radius_km'],
+            'country'         => $primary['country'],
+            'timezone_offset' => $primary['timezone_offset'],
+            'centers'         => $centers,
         ];
     }
 
@@ -258,5 +261,131 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         $lonKey = (string) round($lon, 3);
 
         return 'coord:' . $latKey . ':' . $lonKey;
+    }
+
+    /**
+     * @param array<string, array{members:list<Media>,countryCounts:array<string,int>,offsets:array<int,int>,firstTimestamp:int|null,lastTimestamp:int|null}> $clusters
+     *
+     * @return list<array{
+     *     lat:float,
+     *     lon:float,
+     *     radius_km:float,
+     *     member_count:int,
+     *     dwell_seconds:int,
+     *     country:?string,
+     *     timezone_offset:?int,
+     * }>
+     */
+    private function summariseClusters(array $clusters): array
+    {
+        $summaries = [];
+
+        foreach ($clusters as $data) {
+            $members = $data['members'];
+            if ($members === []) {
+                continue;
+            }
+
+            $centroid = MediaMath::centroid($members);
+
+            $maxDistanceKm = 0.0;
+            foreach ($members as $media) {
+                $lat = $media->getGpsLat();
+                $lon = $media->getGpsLon();
+                assert($lat !== null && $lon !== null);
+
+                $distance = MediaMath::haversineDistanceInMeters(
+                    $lat,
+                    $lon,
+                    $centroid['lat'],
+                    $centroid['lon'],
+                ) / 1000.0;
+
+                if ($distance > $maxDistanceKm) {
+                    $maxDistanceKm = $distance;
+                }
+            }
+
+            $country         = $this->majorityCountry($data['countryCounts']);
+            $timezoneOffset  = $this->majorityOffset($data['offsets']);
+            $memberCount     = count($members);
+            $dwellSeconds    = $this->dwellSeconds($data['firstTimestamp'], $data['lastTimestamp']);
+            $adaptiveRadius  = $this->adaptiveRadius($memberCount, $maxDistanceKm, $dwellSeconds);
+
+            $summaries[] = [
+                'lat'             => $centroid['lat'],
+                'lon'             => $centroid['lon'],
+                'radius_km'       => $adaptiveRadius,
+                'member_count'    => $memberCount,
+                'dwell_seconds'   => $dwellSeconds,
+                'country'         => $country,
+                'timezone_offset' => $timezoneOffset,
+            ];
+        }
+
+        return $summaries;
+    }
+
+    private function majorityCountry(array $countries): ?string
+    {
+        $bestCountry = null;
+        $bestCount   = 0;
+
+        foreach ($countries as $country => $count) {
+            if ($count > $bestCount) {
+                $bestCount   = $count;
+                $bestCountry = $country;
+            }
+        }
+
+        return $bestCountry;
+    }
+
+    private function majorityOffset(array $offsets): ?int
+    {
+        $bestOffset = null;
+        $bestCount  = 0;
+
+        foreach ($offsets as $offset => $count) {
+            if ($count > $bestCount) {
+                $bestCount  = $count;
+                $bestOffset = $offset;
+            }
+        }
+
+        return $bestOffset;
+    }
+
+    private function dwellSeconds(?int $firstTimestamp, ?int $lastTimestamp): int
+    {
+        if ($firstTimestamp === null || $lastTimestamp === null) {
+            return 0;
+        }
+
+        if ($lastTimestamp < $firstTimestamp) {
+            return 0;
+        }
+
+        return $lastTimestamp - $firstTimestamp;
+    }
+
+    private function adaptiveRadius(int $memberCount, float $maxDistanceKm, int $dwellSeconds): float
+    {
+        $radius = max($maxDistanceKm, $this->defaultHomeRadiusKm);
+
+        if ($maxDistanceKm >= $this->defaultHomeRadiusKm) {
+            return $radius;
+        }
+
+        $dwellHours       = $dwellSeconds > 0 ? $dwellSeconds / 3600.0 : 0.0;
+        $densityPerHour   = $dwellHours > 0.0 ? $memberCount / $dwellHours : (float) $memberCount;
+        $hasExtendedDwell = $dwellHours >= 8.0;
+        $hasHighDensity   = $densityPerHour >= 2.0;
+
+        if ($hasExtendedDwell || $hasHighDensity) {
+            $radius = max($radius, $this->defaultHomeRadiusKm * $this->fallbackRadiusScale);
+        }
+
+        return $radius;
     }
 }

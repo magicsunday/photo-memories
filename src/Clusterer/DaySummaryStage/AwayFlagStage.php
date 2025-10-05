@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Clusterer\DaySummaryStage;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
+use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
 use function count;
@@ -45,11 +47,18 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $baseLocation               = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
             $days[$key]['baseLocation'] = $baseLocation;
 
-            if ($baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km']) {
+            if ($baseLocation !== null && HomeBoundaryHelper::isBeyondHome($home, $baseLocation['lat'], $baseLocation['lon'])) {
                 $days[$key]['baseAway'] = true;
             }
 
-            if ($summary['avgDistanceKm'] > $home['radius_km']) {
+            if ($summary['gpsMembers'] !== [] && HomeBoundaryHelper::hasCoordinateSamples($summary['gpsMembers'])) {
+                $centroid     = MediaMath::centroid($summary['gpsMembers']);
+                $isBeyondHome = HomeBoundaryHelper::isBeyondHome($home, $centroid['lat'], $centroid['lon']);
+
+                if ($isBeyondHome) {
+                    $days[$key]['awayByDistance'] = true;
+                }
+            } elseif ($summary['avgDistanceKm'] > HomeBoundaryHelper::primaryRadius($home)) {
                 $days[$key]['awayByDistance'] = true;
             }
         }

@@ -14,11 +14,11 @@ namespace MagicSunday\Memories\Clusterer\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function assert;
-use function max;
 use function usort;
 
 /**
@@ -32,11 +32,11 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
 
         if ($staypointBase !== null) {
-            if ($staypointBase['distance_km'] > $home['radius_km']) {
+            if (HomeBoundaryHelper::isBeyondHome($home, $staypointBase['lat'], $staypointBase['lon'])) {
                 return $staypointBase;
             }
 
-            if ($sleepProxy !== null && $sleepProxy['distance_km'] > $home['radius_km']) {
+            if ($sleepProxy !== null && HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'])) {
                 return $sleepProxy;
             }
 
@@ -44,7 +44,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         }
 
         if ($sleepProxy !== null) {
-            if ($sleepProxy['distance_km'] > $home['radius_km']) {
+            if (HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'])) {
                 return $sleepProxy;
             }
 
@@ -96,12 +96,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         usort($candidates, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
         $best = $candidates[0];
 
-        return [
-            'lat'         => $best['lat'],
-            'lon'         => $best['lon'],
-            'distance_km' => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
-            'source'      => 'staypoint',
-        ];
+        return $this->formatBaseLocation($best['lat'], $best['lon'], 'staypoint', $home);
     }
 
     private function staypointOverlapsWindow(
@@ -119,9 +114,10 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $nextFirst = $nextSummary['firstGpsMedia'] ?? null;
 
         if ($last instanceof Media && $nextFirst instanceof Media) {
-            $lastCoords = $this->mediaCoordinates($last);
-            $nextCoords = $this->mediaCoordinates($nextFirst);
-
+            $lastCoords   = $this->mediaCoordinates($last);
+            $nextCoords   = $this->mediaCoordinates($nextFirst);
+            $lastNearest  = HomeBoundaryHelper::nearestCenter($home, $lastCoords['lat'], $lastCoords['lon']);
+            $nextNearest  = HomeBoundaryHelper::nearestCenter($home, $nextCoords['lat'], $nextCoords['lon']);
             $pairDistance = MediaMath::haversineDistanceInMeters(
                 $lastCoords['lat'],
                 $lastCoords['lon'],
@@ -129,55 +125,34 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
                 $nextCoords['lon'],
             ) / 1000.0;
 
-            $lastDistance = $this->distanceToHomeKm($lastCoords['lat'], $lastCoords['lon'], $home);
-            $nextDistance = $this->distanceToHomeKm($nextCoords['lat'], $nextCoords['lon'], $home);
+            if (
+                $pairDistance <= 2.0
+                && $lastNearest['distance_km'] > $lastNearest['radius_km']
+                && $nextNearest['distance_km'] > $nextNearest['radius_km']
+            ) {
+                $lat = ($lastCoords['lat'] + $nextCoords['lat']) / 2.0;
+                $lon = ($lastCoords['lon'] + $nextCoords['lon']) / 2.0;
 
-            if ($pairDistance <= 2.0 && $lastDistance > $home['radius_km'] && $nextDistance > $home['radius_km']) {
-                return [
-                    'lat'         => ($lastCoords['lat'] + $nextCoords['lat']) / 2.0,
-                    'lon'         => ($lastCoords['lon'] + $nextCoords['lon']) / 2.0,
-                    'distance_km' => max($lastDistance, $nextDistance),
-                    'source'      => 'sleep_proxy_pair',
-                ];
+                return $this->formatBaseLocation($lat, $lon, 'sleep_proxy_pair', $home);
             }
 
-            if ($lastDistance > $nextDistance) {
-                return [
-                    'lat'         => $lastCoords['lat'],
-                    'lon'         => $lastCoords['lon'],
-                    'distance_km' => $lastDistance,
-                    'source'      => 'sleep_proxy_last',
-                ];
+            if ($lastNearest['distance_km'] > $nextNearest['distance_km']) {
+                return $this->formatBaseLocation($lastCoords['lat'], $lastCoords['lon'], 'sleep_proxy_last', $home);
             }
 
-            return [
-                'lat'         => $nextCoords['lat'],
-                'lon'         => $nextCoords['lon'],
-                'distance_km' => $nextDistance,
-                'source'      => 'sleep_proxy_first',
-            ];
+            return $this->formatBaseLocation($nextCoords['lat'], $nextCoords['lon'], 'sleep_proxy_first', $home);
         }
 
         if ($last instanceof Media) {
             $coords = $this->mediaCoordinates($last);
 
-            return [
-                'lat'         => $coords['lat'],
-                'lon'         => $coords['lon'],
-                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
-                'source'      => 'sleep_proxy_last',
-            ];
+            return $this->formatBaseLocation($coords['lat'], $coords['lon'], 'sleep_proxy_last', $home);
         }
 
         if ($nextFirst instanceof Media) {
             $coords = $this->mediaCoordinates($nextFirst);
 
-            return [
-                'lat'         => $coords['lat'],
-                'lon'         => $coords['lon'],
-                'distance_km' => $this->distanceToHomeKm($coords['lat'], $coords['lon'], $home),
-                'source'      => 'sleep_proxy_first',
-            ];
+            return $this->formatBaseLocation($coords['lat'], $coords['lon'], 'sleep_proxy_first', $home);
         }
 
         return null;
@@ -204,12 +179,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         usort($staypoints, static fn (array $a, array $b): int => $b['dwell'] <=> $a['dwell']);
         $best = $staypoints[0];
 
-        return [
-            'lat'         => $best['lat'],
-            'lon'         => $best['lon'],
-            'distance_km' => $this->distanceToHomeKm($best['lat'], $best['lon'], $home),
-            'source'      => 'staypoint',
-        ];
+        return $this->formatBaseLocation($best['lat'], $best['lon'], 'staypoint', $home);
     }
 
     private function fallbackBaseLocation(array $summary, array $home): ?array
@@ -221,21 +191,18 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
 
         $centroid = MediaMath::centroid($gpsMembers);
 
-        return [
-            'lat'         => $centroid['lat'],
-            'lon'         => $centroid['lon'],
-            'distance_km' => $this->distanceToHomeKm($centroid['lat'], $centroid['lon'], $home),
-            'source'      => 'day_centroid',
-        ];
+        return $this->formatBaseLocation($centroid['lat'], $centroid['lon'], 'day_centroid', $home);
     }
 
-    private function distanceToHomeKm(float $lat, float $lon, array $home): float
+    private function formatBaseLocation(float $lat, float $lon, string $source, array $home): array
     {
-        return MediaMath::haversineDistanceInMeters(
-            $lat,
-            $lon,
-            $home['lat'],
-            $home['lon'],
-        ) / 1000.0;
+        $nearest = HomeBoundaryHelper::nearestCenter($home, $lat, $lon);
+
+        return [
+            'lat'         => $lat,
+            'lon'         => $lon,
+            'distance_km' => $nearest['distance_km'],
+            'source'      => $source,
+        ];
     }
 }

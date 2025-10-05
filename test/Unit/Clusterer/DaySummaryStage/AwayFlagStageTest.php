@@ -45,6 +45,13 @@ final class AwayFlagStageTest extends TestCase
             'radius_km'       => 12.0,
             'country'         => 'de',
             'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5200,
+                'lon'           => 13.4050,
+                'radius_km'     => 12.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
         ];
 
         $berlin = $this->makeLocation('berlin', 'Berlin, Germany', 52.5200, 13.4050, country: 'Germany');
@@ -100,5 +107,63 @@ final class AwayFlagStageTest extends TestCase
 
         self::assertFalse($result['2024-06-01']['awayByDistance']);
         self::assertTrue($result['2024-06-02']['baseAway']);
+    }
+
+    #[Test]
+    public function treatsSecondaryHomeCenterAsHome(): void
+    {
+        $timezoneResolver = new TimezoneResolver('Europe/Berlin');
+        $initialStage     = new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin');
+        $gpsStage         = new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 3);
+        $densityStage     = new DensityStage();
+        $awayStage        = new AwayFlagStage($timezoneResolver, new BaseLocationResolver());
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5200,
+                'lon'           => 13.4050,
+                'radius_km'     => 12.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ], [
+                'lat'           => 48.1371,
+                'lon'           => 11.5754,
+                'radius_km'     => 8.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $munich = $this->makeLocation('munich', 'München, Deutschland', 48.1371, 11.5754, country: 'Germany');
+
+        $items   = [];
+        $dayBase = new DateTimeImmutable('2024-07-10 09:00:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 4; ++$i) {
+            $items[] = $this->makeMediaFixture(
+                200 + $i,
+                sprintf('alt-home-%d.jpg', $i),
+                $dayBase->add(new DateInterval('PT' . ($i * 2) . 'H')),
+                $munich->getLat() + ($i * 0.0001),
+                $munich->getLon() + ($i * 0.0001),
+                $munich,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                },
+            );
+        }
+
+        $initial = $initialStage->process($items, $home);
+        $gps     = $gpsStage->process($initial, $home);
+        $dense   = $densityStage->process($gps, $home);
+        $result  = $awayStage->process($dense, $home);
+
+        self::assertArrayHasKey('2024-07-10', $result);
+        self::assertFalse($result['2024-07-10']['baseAway']);
+        self::assertFalse($result['2024-07-10']['awayByDistance']);
     }
 }
