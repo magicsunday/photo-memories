@@ -307,6 +307,127 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function buildDraftPreservesUppercaseLocationComponents(): void
+    {
+        $labelResolver = new class implements LocationLabelResolverInterface {
+            public function localityKey(?Location $location): ?string
+            {
+                return null;
+            }
+
+            public function displayLabel(?Location $location): ?string
+            {
+                return null;
+            }
+
+            public function localityKeyForMedia(Media $media): ?string
+            {
+                return null;
+            }
+
+            public function labelForMedia(Media $media): ?string
+            {
+                return null;
+            }
+
+            public function majorityLabel(array $members): ?string
+            {
+                return 'NEW YORK';
+            }
+
+            public function majorityLocationComponents(array $members): array
+            {
+                return [
+                    'city'    => 'NEW YORK',
+                    'region'  => 'NY',
+                    'country' => 'USA',
+                ];
+            }
+
+            public function sameLocality(Media $a, Media $b): bool
+            {
+                return false;
+            }
+        };
+
+        $poiAnalyzer = new class implements PoiContextAnalyzerInterface {
+            public function resolvePrimaryPoi(Location $location): ?array
+            {
+                return null;
+            }
+
+            public function bestLabelForLocation(Location $location): ?string
+            {
+                return null;
+            }
+
+            public function majorityPoiContext(array $members): ?array
+            {
+                return null;
+            }
+        };
+
+        $locationHelper = new LocationHelper($labelResolver, $poiAnalyzer);
+        $calculator     = new VacationScoreCalculator(
+            locationHelper: $locationHelper,
+            holidayResolver: new NullHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 25.0,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $start   = new DateTimeImmutable('2024-06-01 09:00:00');
+        $days    = [];
+        $dayKeys = [];
+
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
+            $members   = $this->makeMembersForDay(30 + $i, $dayDate, 2);
+            $dayKey    = $dayDate->format('Y-m-d');
+            $dayKeys[] = $dayKey;
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 6 + $i,
+                poiSamples: 8,
+                travelKm: 110.0,
+                timezoneOffset: 0,
+                hasAirport: false,
+                spotCount: 1,
+                spotDwellSeconds: 3600,
+                maxSpeedKmh: 95.0,
+                avgSpeedKmh: 70.0,
+                hasHighSpeedTransit: false,
+                cohortPresenceRatio: 0.25,
+                cohortMembers: [],
+                staypoints: [],
+                countryCodes: ['us' => true],
+            );
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+
+        $params = $draft->getParams();
+        self::assertSame('NEW YORK', $params['place_city']);
+        self::assertSame('NY', $params['place_region']);
+        self::assertSame('USA', $params['place_country']);
+        self::assertSame('NEW YORK, NY, USA', $params['place_location']);
+    }
+
+    #[Test]
     public function buildDraftBackfillsRegionIntoLocationWhenPrimaryStaypointProvidesIt(): void
     {
         $locationHelper = LocationHelper::createDefault();
