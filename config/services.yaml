@@ -867,6 +867,7 @@ services:
             $overlapMergeThreshold: '%memories.cluster.consolidate.overlap_merge_threshold%'
             $overlapDropThreshold: '%memories.cluster.consolidate.overlap_drop_threshold%'
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
+            $classificationPriority: '%memories.cluster.consolidate.classification_priority%'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 300 }
 

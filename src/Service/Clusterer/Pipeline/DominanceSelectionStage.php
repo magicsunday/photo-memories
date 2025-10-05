@@ -19,6 +19,7 @@ use function array_fill_keys;
 use function array_keys;
 use function array_map;
 use function count;
+use function is_string;
 use function usort;
 
 /**
@@ -32,12 +33,19 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
     private array $priorityMap = [];
 
     /**
-     * @param list<string> $keepOrder
+     * @var array<string,array<string,int>>
+     */
+    private array $classificationPriorityMap = [];
+
+    /**
+     * @param list<string>                   $keepOrder
+     * @param array<string,list<string>>     $classificationPriority
      */
     public function __construct(
         private readonly float $overlapMergeThreshold,
         private readonly float $overlapDropThreshold,
         private readonly array $keepOrder,
+        private readonly array $classificationPriority,
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
             throw new InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
@@ -46,6 +54,26 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         $base = count($keepOrder);
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
+        }
+
+        foreach ($this->classificationPriority as $algorithm => $classifications) {
+            $count = count($classifications);
+            if ($count === 0) {
+                continue;
+            }
+
+            $priorityMap = [];
+            foreach ($classifications as $index => $classification) {
+                if (!is_string($classification) || $classification === '') {
+                    continue;
+                }
+
+                $priorityMap[$classification] = $count - $index;
+            }
+
+            if (count($priorityMap) > 0) {
+                $this->classificationPriorityMap[$algorithm] = $priorityMap;
+            }
         }
     }
 
@@ -127,6 +155,12 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                     return $priorityA < $priorityB ? 1 : -1;
                 }
 
+                $classificationPriorityA = $this->resolveClassificationPriority($draftA);
+                $classificationPriorityB = $this->resolveClassificationPriority($draftB);
+                if ($classificationPriorityA !== $classificationPriorityB) {
+                    return $classificationPriorityA < $classificationPriorityB ? 1 : -1;
+                }
+
                 $sizeA = count($normalized[$a]);
                 $sizeB = count($normalized[$b]);
                 if ($sizeA !== $sizeB) {
@@ -175,5 +209,22 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         );
 
         return $result;
+    }
+
+    private function resolveClassificationPriority(ClusterDraft $draft): int
+    {
+        $algorithm = $draft->getAlgorithm();
+        $map       = $this->classificationPriorityMap[$algorithm] ?? null;
+        if ($map === null) {
+            return 0;
+        }
+
+        $params         = $draft->getParams();
+        $classification = $params['classification'] ?? null;
+        if (!is_string($classification) || $classification === '') {
+            return 0;
+        }
+
+        return (int) ($map[$classification] ?? 0);
     }
 }

@@ -108,6 +108,11 @@ parameters:
         - 'device_similarity'
         - 'phash_similarity'
         - 'burst'
+    memories.cluster.consolidate.classification_priority:
+        vacation:
+            - 'vacation'
+            - 'short_trip'
+            - 'day_trip'
     memories.cluster.consolidate.default_group: 'default'
     memories.cluster.consolidate.groups:
         time_similarity: 'time_and_basics'
