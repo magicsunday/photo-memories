@@ -5,7 +5,7 @@ parameters:
     memories.index.image_ext: ['jpg','jpeg','jpe','jxl','avif','heic','heif','png','webp','gif','bmp','tiff','tif','cr2','cr3','nef','arw','rw2','raf','dng']
     memories.index.video_ext: []
 #    memories.index.video_ext: ['mp4','m4v','mov','3gp','3g2','avi','mkv','webm']
-    env(MEMORIES_INDEX_BATCH_SIZE): '500'
+    env(MEMORIES_INDEX_BATCH_SIZE): '25'
     memories.index.batch_size: '%env(int:MEMORIES_INDEX_BATCH_SIZE)%'
 
     memories.video.poster_frame_second: 1.5
