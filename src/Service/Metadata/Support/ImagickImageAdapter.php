@@ -101,7 +101,6 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
     public function destroy(): void
     {
         $this->image->clear();
-        $this->image->destroy();
     }
 
     public function getNative(): Imagick
@@ -134,7 +133,8 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
             Imagick::PIXEL_CHAR
         );
 
-        $clone->destroy();
+        $clone->clear();
+        unset($clone);
 
         // normalisieren auf ints 0..255
         $out    = [];
