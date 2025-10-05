@@ -187,6 +187,13 @@ parameters:
 
     # Scoring Defaults
     memories.score.quality_baseline_megapixels: 12.0
+    memories.score.quality.min_resolution_megapixels: 2.0
+    memories.score.quality.low_score_threshold: 0.35
+    memories.score.quality.low_sharpness_threshold: 0.20
+    memories.score.quality.low_exposure_threshold: 0.25
+    memories.score.quality.low_noise_quality_threshold: 0.25
+    memories.score.quality.clipping_threshold: 0.15
+    memories.score.quality.clipping_penalty_weight: 0.5
     memories.score.min_valid_year: 1995
     memories.score.time_range.min_samples: 3
     memories.score.time_range.min_coverage: 0.6
