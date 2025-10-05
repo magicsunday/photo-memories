@@ -71,17 +71,25 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
         }
 
         $shouldSkip = $existing instanceof Media
-            && $context->isForce() === false
-            && $existing->getFeatureVersion() >= MetadataFeatureVersion::PIPELINE_VERSION
-            && $existing->getIndexedAt() !== null;
+            && $context->isForce() === false;
 
         if ($shouldSkip) {
-            $context->getOutput()->writeln(
-                ' -> Übersprungen (bereits indexiert)',
-                OutputInterface::VERBOSITY_VERBOSE
-            );
+            if (
+                $existing->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION
+                && $existing->getIndexedAt() !== null
+            ) {
+                $context->getOutput()->writeln(
+                    ' -> Übersprungen (bereits indexiert)',
+                    OutputInterface::VERBOSITY_VERBOSE
+                );
 
-            return $context->markSkipped();
+                return $context->markSkipped();
+            }
+
+            return $context
+                ->withChecksum($checksum)
+                ->withMedia($existing)
+                ->withReindexRequired();
         }
 
         $media = $existing ?? new Media(

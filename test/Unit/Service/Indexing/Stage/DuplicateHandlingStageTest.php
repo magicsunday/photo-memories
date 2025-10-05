@@ -11,12 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Indexing\Stage;
 
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -50,6 +52,9 @@ final class DuplicateHandlingStageTest extends TestCase
         $filepath = $this->createTempFile('jpg', 'existing');
         $checksum = (string) hash_file('sha256', $filepath);
         $media    = new Media($filepath, $checksum, 1);
+
+        $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
+        $media->setIndexedAt(new DateTimeImmutable());
 
         $fastHash = '4c3d2b1a0f0e0d0c';
 
@@ -88,6 +93,58 @@ final class DuplicateHandlingStageTest extends TestCase
 
         self::assertTrue($result->isSkipped());
         self::assertNull($result->getMedia());
+        self::assertSame($fastHash, $media->getFastChecksumXxhash64());
+    }
+
+    #[Test]
+    public function processReprocessesExistingMediaWhenFeatureVersionOutdated(): void
+    {
+        $filepath = $this->createTempFile('jpg', 'existing-outdated');
+        $checksum = (string) hash_file('sha256', $filepath);
+        $media    = new Media($filepath, $checksum, 1);
+
+        $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION - 1);
+        $media->setIndexedAt(new DateTimeImmutable('-1 day'));
+
+        $fastHash = 'feedfacecafebeef';
+
+        $repository = $this->getMockBuilder(EntityRepository::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['findOneBy'])
+            ->getMock();
+        $repository->expects(self::once())
+            ->method('findOneBy')
+            ->with(['fastChecksumXxhash64' => $fastHash])
+            ->willReturn($media);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('getRepository')
+            ->with(Media::class)
+            ->willReturn($repository);
+
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($filepath)
+            ->willReturn($fastHash);
+
+        $stage = new DuplicateHandlingStage($entityManager, $fastHashGenerator);
+        $context = MediaIngestionContext::create(
+            $filepath,
+            false,
+            false,
+            false,
+            false,
+            new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE)
+        );
+
+        $result = $stage->process($context);
+
+        self::assertFalse($result->isSkipped());
+        self::assertSame($checksum, $result->getChecksum());
+        self::assertSame($media, $result->getMedia());
+        self::assertTrue($result->requiresReindex());
         self::assertSame($fastHash, $media->getFastChecksumXxhash64());
     }
 
