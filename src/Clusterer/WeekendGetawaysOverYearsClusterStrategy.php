@@ -169,34 +169,35 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
             // evaluate runs: keep only those that (a) include a weekend and (b) span 1..3 nights
             /** @var list<array{days:list<string>, items:list<Media>}> $candidates */
-            $candidates = [];
+            $candidates = array_values(array_filter(
+                $runs,
+                function (array $run) use ($allDays, $dayLocality): bool {
+                    $nDays = count($run['days']);
+                    if ($nDays < 2) {
+                        return false;
+                    }
 
-            foreach ($runs as $r) {
-                $nDays = count($r['days']);
-                if ($nDays < 2) {
-                    continue;
+                    $nights = $nDays - 1;
+                    if ($nights < $this->minNights) {
+                        return false;
+                    }
+
+                    if ($nights > $this->maxNights) {
+                        return false;
+                    }
+
+                    // must include weekend day (Sat/Sun) detected via features or fallback calendar logic
+                    if (!$this->runContainsWeekend($run)) {
+                        return false;
+                    }
+
+                    if (!$this->isRunBracketedByDifferentLocality($run, $allDays, $dayLocality)) {
+                        return false;
+                    }
+
+                    return true;
                 }
-
-                $nights = $nDays - 1;
-                if ($nights < $this->minNights) {
-                    continue;
-                }
-
-                if ($nights > $this->maxNights) {
-                    continue;
-                }
-
-                // must include weekend day (Sat/Sun) detected via features or fallback calendar logic
-                if (!$this->runContainsWeekend($r)) {
-                    continue;
-                }
-
-                if (!$this->isRunBracketedByDifferentLocality($r, $allDays, $dayLocality)) {
-                    continue;
-                }
-
-                $candidates[] = $r;
-            }
+            ));
 
             if ($candidates === []) {
                 continue;
