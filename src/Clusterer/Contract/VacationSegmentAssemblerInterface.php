@@ -53,7 +53,7 @@ interface VacationSegmentAssemblerInterface
      *     lastGpsMedia: Media|null,
      *     isSynthetic: bool,
      * }> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>} $home
      *
      * @return list<ClusterDraft>
      */

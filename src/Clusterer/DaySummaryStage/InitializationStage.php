@@ -91,7 +91,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
 
     /**
      * @param array<string, DaySummary>                                                       $days
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>} $home
      *
      * @return array<string, DaySummary>
      */

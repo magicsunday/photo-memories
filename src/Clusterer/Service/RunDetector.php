@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Service;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 
 use function array_keys;
 use function count;
@@ -63,7 +64,7 @@ final class RunDetector implements VacationRunDetectorInterface
             if ($candidate === false && $summary['gpsMembers'] !== []) {
                 $hasUsefulSamples = $summary['sufficientSamples'] || $summary['photoCount'] >= 2;
 
-                if ($summary['avgDistanceKm'] > $home['radius_km'] && $hasUsefulSamples) {
+                if ($summary['avgDistanceKm'] > HomeBoundaryHelper::maxRadius($home) && $hasUsefulSamples) {
                     $candidate = true;
                 } elseif ($summary['maxDistanceKm'] > $this->minAwayDistanceKm && $hasUsefulSamples) {
                     $candidate = true;

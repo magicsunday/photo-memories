@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer\DaySummaryStage;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 
 use function array_keys;
 use function count;
@@ -45,11 +46,15 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $baseLocation               = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
             $days[$key]['baseLocation'] = $baseLocation;
 
-            if ($baseLocation !== null && $baseLocation['distance_km'] > $home['radius_km']) {
+            if ($baseLocation !== null && HomeBoundaryHelper::isWithinHome(
+                $baseLocation['lat'],
+                $baseLocation['lon'],
+                $home,
+            ) === false) {
                 $days[$key]['baseAway'] = true;
             }
 
-            if ($summary['avgDistanceKm'] > $home['radius_km']) {
+            if ($summary['avgDistanceKm'] > HomeBoundaryHelper::maxRadius($home)) {
                 $days[$key]['awayByDistance'] = true;
             }
         }

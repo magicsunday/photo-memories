@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -32,11 +33,15 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
 
         if ($staypointBase !== null) {
-            if ($staypointBase['distance_km'] > $home['radius_km']) {
+            if (HomeBoundaryHelper::isWithinHome($staypointBase['lat'], $staypointBase['lon'], $home) === false) {
                 return $staypointBase;
             }
 
-            if ($sleepProxy !== null && $sleepProxy['distance_km'] > $home['radius_km']) {
+            if ($sleepProxy !== null && HomeBoundaryHelper::isWithinHome(
+                $sleepProxy['lat'],
+                $sleepProxy['lon'],
+                $home,
+            ) === false) {
                 return $sleepProxy;
             }
 
@@ -44,7 +49,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         }
 
         if ($sleepProxy !== null) {
-            if ($sleepProxy['distance_km'] > $home['radius_km']) {
+            if (HomeBoundaryHelper::isWithinHome($sleepProxy['lat'], $sleepProxy['lon'], $home) === false) {
                 return $sleepProxy;
             }
 
@@ -132,7 +137,10 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
             $lastDistance = $this->distanceToHomeKm($lastCoords['lat'], $lastCoords['lon'], $home);
             $nextDistance = $this->distanceToHomeKm($nextCoords['lat'], $nextCoords['lon'], $home);
 
-            if ($pairDistance <= 2.0 && $lastDistance > $home['radius_km'] && $nextDistance > $home['radius_km']) {
+            $lastIsHome = HomeBoundaryHelper::isWithinHome($lastCoords['lat'], $lastCoords['lon'], $home);
+            $nextIsHome = HomeBoundaryHelper::isWithinHome($nextCoords['lat'], $nextCoords['lon'], $home);
+
+            if ($pairDistance <= 2.0 && $lastIsHome === false && $nextIsHome === false) {
                 return [
                     'lat'         => ($lastCoords['lat'] + $nextCoords['lat']) / 2.0,
                     'lon'         => ($lastCoords['lon'] + $nextCoords['lon']) / 2.0,
@@ -231,11 +239,6 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
 
     private function distanceToHomeKm(float $lat, float $lon, array $home): float
     {
-        return MediaMath::haversineDistanceInMeters(
-            $lat,
-            $lon,
-            $home['lat'],
-            $home['lon'],
-        ) / 1000.0;
+        return HomeBoundaryHelper::minDistanceKm($lat, $lon, $home);
     }
 }

@@ -26,7 +26,8 @@ interface HomeLocatorInterface
      *     lon: float,
      *     radius_km: float,
      *     country: string|null,
-     *     timezone_offset: int|null
+     *     timezone_offset: int|null,
+     *     centers: list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>
      * }|null
      */
     public function determineHome(array $items): ?array;

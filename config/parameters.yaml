@@ -32,6 +32,8 @@ parameters:
     memories.home.lat_default: 0.0
     memories.home.lon_default: 0.0
     memories.home.radius_km_default: 15.0
+    memories.home.max_centers: 2
+    memories.home.fallback_radius_scale: 1.5
     env(MEMORIES_HOME_VERSION_HASH): 'home_config_v1'
     memories.home.version_hash: '%env(string:MEMORIES_HOME_VERSION_HASH)%'
 

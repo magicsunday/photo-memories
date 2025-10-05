@@ -18,7 +18,7 @@ interface DaySummaryStageInterface
 {
     /**
      * @param array<string, mixed>|list<mixed>                                                        $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>} $home
      *
      * @return array<string, mixed>
      */

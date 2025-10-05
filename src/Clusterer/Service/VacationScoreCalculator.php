@@ -369,7 +369,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      * @param list<string>                                                                                                                                     $dayKeys
      * @param array<string, list<Media>>                                                                                                                       $dayMembers
      * @param array<string, array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                          $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>}                                                          $home
      *
      * @return list<Media>
      */
@@ -450,7 +450,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     /**
      * @param array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string} $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                           $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int}>}                                           $home
      *
      * @return list<Media>
      */
