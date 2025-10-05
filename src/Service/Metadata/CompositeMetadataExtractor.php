@@ -19,7 +19,10 @@ use MagicSunday\Memories\Entity\Media;
  */
 final readonly class CompositeMetadataExtractor implements MetadataExtractorInterface
 {
-    /** @var SingleMetadataExtractorInterface[] */
+    /**
+     * @var SingleMetadataExtractorInterface[] Prioritised extractor list executed in order of
+     *                                        likelihood/cost to build up the composite metadata set.
+     */
     private array $extractors;
 
     /**
@@ -30,6 +33,17 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         $this->extractors = $extractors;
     }
 
+    /**
+     * Runs all supporting extractors sequentially to enrich the given media metadata.
+     * Unsupported extractors are skipped, while supported ones merge their output into the same
+     * Media instance so that later extractors can extend earlier results. The method mutates the
+     * supplied entity by guessing a MIME type when none is present before any extractor executes.
+     *
+     * @param string $filepath Absolute path to the media file currently processed.
+     * @param Media  $media    Media entity to populate; receives a MIME type guess when missing.
+     *
+     * @return Media Media entity that contains the aggregated metadata from all supporting extractors.
+     */
     public function extract(string $filepath, Media $media): Media
     {
         // Ensure mime is present early (if not set yet, guess it)
