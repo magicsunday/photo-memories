@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use DateTimeImmutable;
-use Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
@@ -278,10 +277,6 @@ final class LocationResolver implements PoiEnsurerInterface
             return $geocode->refreshedAt;
         }
 
-        try {
-            return new DateTimeImmutable();
-        } catch (Exception) {
-            return null;
-        }
+        return new DateTimeImmutable();
     }
 }
