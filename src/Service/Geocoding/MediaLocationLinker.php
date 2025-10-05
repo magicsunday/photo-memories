@@ -43,9 +43,18 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
     ) {
     }
 
-    public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location
+    public function link(
+        Media $media,
+        string $acceptLanguage = 'de',
+        bool $forceRefreshLocations = false,
+        bool $forceRefreshPois = false,
+    ): ?Location
     {
         $this->lastNetworkCalls = 0;
+
+        if ($forceRefreshLocations) {
+            $this->cellCache = [];
+        }
 
         $lat = $media->getGpsLat();
         $lon = $media->getGpsLon();
@@ -56,7 +65,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         $cell = $this->cellKey($lat, $lon, $this->cellDeg);
 
         // 1) in-run cache first
-        if (isset($this->cellCache[$cell])) {
+        if (!$forceRefreshLocations && isset($this->cellCache[$cell])) {
             $loc = $this->cellCache[$cell];
             $this->ensurePois($loc, $forceRefreshPois);
             $media->setLocation($loc);
@@ -66,14 +75,16 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         }
 
         // 2) pre-warmed DB index
-        $fromIndex = $this->cellIndex->findByCell($cell);
-        if ($fromIndex instanceof Location) {
-            $this->cellCache[$cell] = $fromIndex;
-            $this->ensurePois($fromIndex, $forceRefreshPois);
-            $media->setLocation($fromIndex);
-            $media->setNeedsGeocode(false);
+        if (!$forceRefreshLocations) {
+            $fromIndex = $this->cellIndex->findByCell($cell);
+            if ($fromIndex instanceof Location) {
+                $this->cellCache[$cell] = $fromIndex;
+                $this->ensurePois($fromIndex, $forceRefreshPois);
+                $media->setLocation($fromIndex);
+                $media->setNeedsGeocode(false);
 
-            return $fromIndex;
+                return $fromIndex;
+            }
         }
 
         // 3) network path once per cell
@@ -91,7 +102,9 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
             ++$networkCalls;
         }
 
-        $this->cellCache[$cell] = $loc;
+        if (!$forceRefreshLocations) {
+            $this->cellCache[$cell] = $loc;
+        }
         $this->cellIndex->remember($cell, $loc);
         $this->lastNetworkCalls = $networkCalls;
 

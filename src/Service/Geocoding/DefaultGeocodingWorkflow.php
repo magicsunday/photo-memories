@@ -100,7 +100,13 @@ final readonly class DefaultGeocodingWorkflow
             return;
         }
 
-        $summary = $this->mediaProcessor->process($medias, $options->refreshPois(), $options->isDryRun(), $output);
+        $summary = $this->mediaProcessor->process(
+            $medias,
+            $options->refreshPois(),
+            $options->refreshLocations(),
+            $options->isDryRun(),
+            $output,
+        );
         $summary->render($io);
 
         $locationsForPoi = $summary->getLocationsForPoiUpdate();
