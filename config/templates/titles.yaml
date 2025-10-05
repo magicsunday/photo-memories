@@ -98,7 +98,10 @@ de:
     #   - {{ place }} (optional): Dominanter Aufnahmeort
     #   - {{ place_city }} (optional): Dominante Stadt im Cluster
     #   - {{ place_region }} (optional): Dominante Region/Bundesland
-    #   - {{ place_country }} (optional): Dominantes Land
+    #   - {{ place_country }} (optional): Dominantes Land; Templates können bei Uneindeutigkeit auf {{ countries }} zurückgreifen
+    #   - {{ primaryStaypointCity }} (optional): Stadt des längsten Aufenthalts
+    #   - {{ primaryStaypointLocation }} (optional): Formatierter Aufenthaltsort des Haupt-Staypoints
+    #   - {{ countries }} (optional): Liste eindeutiger ISO-Ländercodes für Multi-Country-Reisen
     vacation:
         title: "{{ classification_label }} – {{ place_country }}"
         subtitle: "{{ start_date }} – {{ end_date }}"
