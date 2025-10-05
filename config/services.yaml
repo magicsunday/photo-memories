@@ -448,6 +448,14 @@ services:
     MagicSunday\Memories\Service\Geocoding\MediaGeocodingProcessorInterface:
         alias: MagicSunday\Memories\Service\Geocoding\DefaultMediaGeocodingProcessor
 
+    MagicSunday\Memories\Service\Geocoding\DefaultLocationRefreshProcessor:
+        arguments:
+            $locale: '%memories.localization.preferred_locale%'
+            $batchSize: '%memories.geocoding.refresh.batch_size%'
+
+    MagicSunday\Memories\Service\Geocoding\LocationRefreshProcessorInterface:
+        alias: MagicSunday\Memories\Service\Geocoding\DefaultLocationRefreshProcessor
+
     MagicSunday\Memories\Service\Geocoding\PoiUpdateProcessorInterface:
         alias: MagicSunday\Memories\Service\Geocoding\DefaultPoiUpdateProcessor
 

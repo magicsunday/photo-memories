@@ -33,6 +33,7 @@ final readonly class DefaultGeocodingWorkflow
         private LocationCellIndex $cellIndex,
         private MediaGeocodingProcessorInterface $mediaProcessor,
         private PoiUpdateProcessorInterface $poiProcessor,
+        private LocationRefreshProcessorInterface $locationRefreshProcessor,
     ) {
     }
 
@@ -66,6 +67,26 @@ final readonly class DefaultGeocodingWorkflow
     {
         if ($options->refreshLocations()) {
             $io->note('Bestehende Ortsverknüpfungen werden vollständig aktualisiert.');
+
+            $io->section('🏷️ Orte neu auflösen');
+
+            $locations = $this->entityManager->getRepository(Location::class)
+                ->createQueryBuilder('l')
+                ->orderBy('l.id', 'ASC')
+                ->getQuery()
+                ->getResult();
+
+            if (count($locations) < 1) {
+                $io->writeln('Keine Orte vorhanden.');
+            } else {
+                $summary = $this->locationRefreshProcessor->process(
+                    $locations,
+                    $options->refreshPois(),
+                    $options->isDryRun(),
+                    $output,
+                );
+                $summary->render($io);
+            }
         } else {
             $loaded = $this->cellIndex->warmUpFromDb();
             $io->writeln(sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));

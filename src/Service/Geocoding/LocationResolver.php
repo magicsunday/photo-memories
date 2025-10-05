@@ -119,6 +119,16 @@ final class LocationResolver implements PoiEnsurerInterface
         return $loc;
     }
 
+    /**
+     * Applies refreshed metadata from a geocode result to an existing location.
+     */
+    public function refreshMetadata(Location $location, GeocodeResult $geocode): void
+    {
+        $this->lastUsedNetwork = false;
+
+        $this->applyGeocodeMetadata($location, $geocode);
+    }
+
     public function consumeLastUsedNetwork(): bool
     {
         $v                     = $this->lastUsedNetwork;
