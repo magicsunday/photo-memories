@@ -63,8 +63,10 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
      */
     private function computePeopleMetrics(array $mediaItems, int $members, array $params): array
     {
-        if (isset($params['people']) && $this->floatOrNull($params['people']) !== null) {
-            $score    = $this->clamp01((float) $params['people']);
+        $cachedPeopleScore = $this->floatOrNull($params['people'] ?? null);
+
+        if (($score = $cachedPeopleScore) !== null) {
+            $score    = $this->clamp01($score);
             $mentions = (int) ($params['people_count'] ?? 0);
             $unique   = (int) ($params['people_unique'] ?? 0);
             $coverage = $this->clamp01($this->floatOrNull($params['people_coverage'] ?? null));
