@@ -19,6 +19,7 @@ use Doctrine\ORM\Tools\SchemaTool;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Entity\MediaDuplicate;
 use MagicSunday\Memories\Entity\Memory;
 use PDO;
 use Throwable;
@@ -70,6 +71,7 @@ final class EntityManagerFactory
     {
         $classes = [
             Media::class,
+            MediaDuplicate::class,
             Cluster::class,
             Memory::class,
             Location::class,
