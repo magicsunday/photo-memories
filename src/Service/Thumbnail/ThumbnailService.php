@@ -21,6 +21,7 @@ use Throwable;
 use function extension_loaded;
 use function function_exists;
 use function is_int;
+use function method_exists;
 use function sprintf;
 
 /**
@@ -185,26 +186,43 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $resizeResult = $clone->thumbnailImage($targetWidth, 0);
 
                     if ($resizeResult === false) {
-                        throw new RuntimeException(
-                            sprintf('Unable to resize image for thumbnail width %d.', $targetWidth));
+                        throw new ImagickException(
+                            sprintf('Unable to resize image for thumbnail width %d.', $targetWidth)
+                        );
                     }
 
-                    $clone->setImageBackgroundColor('white');
+                    $clone->setImageBackgroundColor(new ImagickPixel('white'));
 
                     try {
                         $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
                     } catch (ImagickException) {
-                        // Older Imagick builds may not support manipulating the alpha channel explicitly.
+                        try {
+                            $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
+                        } catch (ImagickException | Throwable) {
+                            // Legacy builds may not support manipulating the alpha channel explicitly.
+                        }
                     } catch (Throwable) {
                         // Ignore missing support for setImageAlphaChannel on legacy Imagick versions.
                     }
 
-                    if ($clone->getImageAlphaChannel()) {
-                        // Flatten transparent images on a white background to avoid artefacts in the final JPEG file.
+                    try {
                         $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
                         $clone->clear();
-                        unset($clone);
                         $clone = $flattened;
+                    } catch (ImagickException | Throwable) {
+                        try {
+                            $flattened = $clone->flattenImages();
+                            $clone->clear();
+                            $clone = $flattened;
+                        } catch (Throwable) {
+                            // Keep the original instance when flattening is not supported.
+                        }
+                    }
+
+                    try {
+                        $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
+                    } catch (ImagickException | Throwable) {
+                        // Ignore when the alpha channel cannot be forced to opaque.
                     }
 
                     $clone->setImageFormat('jpeg');
@@ -215,21 +233,40 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $writeResult = $clone->writeImage($out);
 
                     if ($writeResult === false) {
-                        throw new RuntimeException(
-                            sprintf('Unable to create thumbnail at path "%s".', $out));
+                        throw new ImagickException(
+                            sprintf('Unable to create thumbnail at path "%s".', $out)
+                        );
                     }
 
                     $results[$targetWidth] = $out;
                 } finally {
-                    $clone->clear();
-                    unset($clone);
+                    try {
+                        $clone->clear();
+                    } finally {
+                        try {
+                            $clone->destroy();
+                        } catch (ImagickException | Throwable) {
+                            // Ignore destruction errors on cloned instances.
+                        }
+
+                        unset($clone);
+                    }
                 }
             }
 
             return $results;
         } finally {
-            $imagick->clear();
-            unset($imagick);
+            try {
+                $imagick->clear();
+            } finally {
+                try {
+                    $imagick->destroy();
+                } catch (ImagickException | Throwable) {
+                    // Ignore destruction errors during cleanup.
+                }
+
+                unset($imagick);
+            }
         }
     }
 
@@ -438,13 +475,44 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
+        $targetOrientation = $orientation;
+
         if ($orientation !== null && $orientation >= self::ORIENTATION_TOPLEFT && $orientation <= self::ORIENTATION_LEFTBOTTOM) {
-            $imagick->setImageOrientation($orientation);
+            try {
+                $imagick->setImageOrientation($orientation);
+            } catch (ImagickException | Throwable) {
+                // Continue with the provided orientation when setImageOrientation is unsupported.
+            }
         }
 
-        $this->applyOrientationWithLegacyImagick($imagick);
+        try {
+            if (method_exists($imagick, 'autoOrientImage')) {
+                if ($targetOrientation !== null) {
+                    $imagick->setImageOrientation($targetOrientation);
+                }
 
-        $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+                $imagick->autoOrientImage();
+                $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+
+                return;
+            }
+        } catch (ImagickException | Throwable) {
+            // Fall back to the manual implementation when autoOrientImage is unavailable.
+        }
+
+        $effectiveOrientation = $imagick->getImageOrientation();
+
+        if ($effectiveOrientation === self::ORIENTATION_UNDEFINED && $targetOrientation !== null) {
+            $effectiveOrientation = $targetOrientation;
+        }
+
+        $this->applyOrientationWithLegacyImagick($imagick, $effectiveOrientation);
+
+        try {
+            $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+        } catch (ImagickException | Throwable) {
+            // Ignore when the Imagick build cannot reset the orientation flag.
+        }
     }
 
     /**
@@ -454,10 +522,8 @@ class ThumbnailService implements ThumbnailServiceInterface
      *
      * @throws ImagickException
      */
-    private function applyOrientationWithLegacyImagick(Imagick $imagick): void
+    private function applyOrientationWithLegacyImagick(Imagick $imagick, int $orientation): void
     {
-        $orientation = $imagick->getImageOrientation();
-
         switch ($orientation) {
             case self::ORIENTATION_UNDEFINED:
             case self::ORIENTATION_TOPLEFT:
