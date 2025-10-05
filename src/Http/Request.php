@@ -24,7 +24,6 @@ use function strtoupper;
 use function substr;
 use function trim;
 
-use const CASE_LOWER;
 use const PHP_URL_PATH;
 
 /**

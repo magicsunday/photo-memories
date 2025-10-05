@@ -41,7 +41,6 @@ use function trim;
 use function unpack;
 
 use const SORT_NUMERIC;
-use const STR_PAD_RIGHT;
 
 /**
  * Computes perceptual hashes (pHash 128-bit) plus aHash/dHash from a single

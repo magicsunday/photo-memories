@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Query;
 use MagicSunday\Memories\Entity\Location;
 
 /**
