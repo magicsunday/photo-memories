@@ -484,7 +484,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'max_speed_kmh'            => $maxSpeedKmh,
             'avg_speed_kmh'            => $avgSpeedKmh,
             'high_speed_transit'       => $highSpeedTransit,
-            'spot_clusters_total'      => $spotClusterCount,
+            'spot_count'               => $spotClusterCount,
             'spot_cluster_days'        => $multiSpotDays,
             'spot_dwell_hours'         => round($spotDwellHours, 2),
             'spot_exploration_bonus'   => round($explorationBonus, 2),
@@ -496,6 +496,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'work_day_penalty_days'    => $workDayPenalty,
             'work_day_penalty_score'   => round($penalty, 2),
             'timezones'                => $timezones,
+            'countries'                => $countries,
         ];
 
         if ($placeComponents !== []) {
@@ -564,10 +565,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         if ($primaryStaypointLocationParts !== []) {
             $params['primaryStaypointLocationParts'] = $primaryStaypointLocationParts;
-        }
-
-        if (count($countries) > 1) {
-            $params['countries'] = $countries;
         }
 
         $placeCityMissing = !isset($params['place_city']) || $params['place_city'] === '';

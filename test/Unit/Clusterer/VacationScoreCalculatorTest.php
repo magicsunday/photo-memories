@@ -138,7 +138,8 @@ final class VacationScoreCalculatorTest extends TestCase
             $params['primaryStaypointLocationParts'],
         );
         self::assertSame('Lisbon, Lisbon District, Portugal', $params['primaryStaypointLocation']);
-        self::assertArrayNotHasKey('countries', $params);
+        self::assertArrayHasKey('countries', $params);
+        self::assertSame(['es'], $params['countries']);
         self::assertGreaterThan(8.0, $params['score']);
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
@@ -301,7 +302,8 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('Staypoint City, Spain', $params['primaryStaypointLocation']);
         self::assertSame(['Staypoint City', 'Spain'], $params['primaryStaypointLocationParts']);
         self::assertArrayNotHasKey('primaryStaypointRegion', $params);
-        self::assertArrayNotHasKey('countries', $params);
+        self::assertArrayHasKey('countries', $params);
+        self::assertSame(['es'], $params['countries']);
     }
 
     #[Test]

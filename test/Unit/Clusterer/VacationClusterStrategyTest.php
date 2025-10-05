@@ -205,13 +205,14 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertTrue($params['country_change']);
         self::assertTrue($params['timezone_change']);
         self::assertIsBool($params['airport_transfer']);
-        self::assertArrayHasKey('spot_clusters_total', $params);
+        self::assertArrayHasKey('spot_count', $params);
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
         self::assertSame(5, $params['work_day_penalty_days']);
         self::assertSame(2.0, $params['work_day_penalty_score']);
-        self::assertArrayNotHasKey('countries', $params);
+        self::assertArrayHasKey('countries', $params);
+        self::assertSame(['it'], $params['countries']);
         self::assertSame([120], $params['timezones']);
         self::assertSame('Roma', $params['place_city']);
         self::assertSame('Lazio', $params['place_region']);
@@ -606,7 +607,7 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame('vacation', $cluster->getAlgorithm());
         self::assertSame('vacation', $params['classification']);
         self::assertGreaterThanOrEqual(8.0, $params['score']);
-        self::assertArrayHasKey('spot_clusters_total', $params);
+        self::assertArrayHasKey('spot_count', $params);
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
@@ -614,7 +615,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
         self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
         self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
-        self::assertArrayNotHasKey('countries', $params);
+        self::assertArrayHasKey('countries', $params);
+        self::assertSame(['de'], $params['countries']);
         self::assertSame([120], $params['timezones']);
         self::assertArrayNotHasKey('place_city', $params);
         self::assertSame('Schleswig-Holstein', $params['place_region']);
@@ -731,7 +733,8 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertGreaterThanOrEqual(8.0, $params['score']);
         self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
         self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
-        self::assertArrayNotHasKey('countries', $params);
+        self::assertArrayHasKey('countries', $params);
+        self::assertSame(['de'], $params['countries']);
         self::assertSame([60], $params['timezones']);
     }
 
@@ -1165,7 +1168,7 @@ final class VacationClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame('vacation', $params['classification']);
         self::assertGreaterThanOrEqual(8.0, $params['score']);
-        self::assertSame(4, $params['spot_clusters_total']);
+        self::assertSame(4, $params['spot_count']);
         self::assertSame(2, $params['spot_cluster_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
         self::assertGreaterThan(0.0, $params['spot_dwell_hours']);

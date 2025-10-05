@@ -89,7 +89,7 @@ de:
     #   - {{ move_days }}: Tage mit signifikanter Bewegung
     #   - {{ photo_density_z }}: Standardisierte Fotodichte (z-Wert)
     #   - {{ airport_transfer }}: Flag für Flughafen- oder Bahnhofs-Transfers
-    #   - {{ spot_clusters_total }}: Anzahl der Spot-Cluster
+    #   - {{ spot_count }}: Anzahl der Spot-Cluster
     #   - {{ spot_cluster_days }}: Tage mit Spot-Clustern
     #   - {{ spot_dwell_hours }}: Aufenthaltsstunden in Spot-Clustern
     #   - {{ spot_exploration_bonus }}: Explorationsbonus (Score)
@@ -101,7 +101,7 @@ de:
     #   - {{ place_country }} (optional): Dominantes Land; Templates können bei Uneindeutigkeit auf {{ countries }} zurückgreifen
     #   - {{ primaryStaypointCity }} (optional): Stadt des längsten Aufenthalts
     #   - {{ primaryStaypointLocation }} (optional): Formatierter Aufenthaltsort des Haupt-Staypoints
-    #   - {{ countries }} (optional): Liste eindeutiger ISO-Ländercodes für Multi-Country-Reisen
+    #   - {{ countries }}: Liste eindeutiger ISO-Ländercodes (kann leer sein)
     vacation:
         title: "{{ classification_label }} – {{ place_country }}"
         subtitle: "{{ start_date }} – {{ end_date }}"
