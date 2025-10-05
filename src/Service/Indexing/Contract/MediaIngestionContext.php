@@ -29,6 +29,7 @@ final class MediaIngestionContext
         private readonly bool $detectedHeic,
         private readonly bool $detectedHevc,
         private readonly ?string $checksum,
+        private readonly bool $reindexRequired,
         private readonly bool $skipped,
         private readonly ?string $skipMessage,
     ) {
@@ -55,6 +56,7 @@ final class MediaIngestionContext
             false,
             false,
             null,
+            false,
             false,
             null,
         );
@@ -125,6 +127,11 @@ final class MediaIngestionContext
         return $this->skipped;
     }
 
+    public function requiresReindex(): bool
+    {
+        return $this->reindexRequired;
+    }
+
     public function getSkipMessage(): ?string
     {
         return $this->skipMessage;
@@ -149,6 +156,7 @@ final class MediaIngestionContext
             $isHeic,
             $isHevc,
             $this->checksum,
+            $this->reindexRequired,
             $this->skipped,
             $this->skipMessage,
         );
@@ -169,6 +177,7 @@ final class MediaIngestionContext
             $this->detectedHeic,
             $this->detectedHevc,
             $checksum,
+            $this->reindexRequired,
             $this->skipped,
             $this->skipMessage,
         );
@@ -189,6 +198,28 @@ final class MediaIngestionContext
             $this->detectedHeic,
             $this->detectedHevc,
             $this->checksum,
+            $this->reindexRequired,
+            $this->skipped,
+            $this->skipMessage,
+        );
+    }
+
+    public function withReindexRequired(bool $reindexRequired = true): self
+    {
+        return new self(
+            $this->filePath,
+            $this->force,
+            $this->dryRun,
+            $this->withThumbnails,
+            $this->strictMime,
+            $this->output,
+            $this->media,
+            $this->detectedMime,
+            $this->detectedRaw,
+            $this->detectedHeic,
+            $this->detectedHevc,
+            $this->checksum,
+            $reindexRequired,
             $this->skipped,
             $this->skipMessage,
         );
@@ -209,6 +240,7 @@ final class MediaIngestionContext
             $this->detectedHeic,
             $this->detectedHevc,
             $this->checksum,
+            $this->reindexRequired,
             true,
             $message,
         );

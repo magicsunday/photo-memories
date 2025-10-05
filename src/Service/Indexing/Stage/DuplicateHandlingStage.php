@@ -16,6 +16,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use function filesize;
@@ -69,7 +70,12 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
             $existing->setFastChecksumXxhash64($fastChecksum);
         }
 
-        if ($existing instanceof Media && $context->isForce() === false) {
+        $shouldSkip = $existing instanceof Media
+            && $context->isForce() === false
+            && $existing->getFeatureVersion() >= MetadataFeatureVersion::PIPELINE_VERSION
+            && $existing->getIndexedAt() !== null;
+
+        if ($shouldSkip) {
             $context->getOutput()->writeln(
                 ' -> Übersprungen (bereits indexiert)',
                 OutputInterface::VERBOSITY_VERBOSE
@@ -99,6 +105,7 @@ final class DuplicateHandlingStage implements MediaIngestionStageInterface
 
         return $context
             ->withChecksum($checksum)
-            ->withMedia($media);
+            ->withMedia($media)
+            ->withReindexRequired();
     }
 }

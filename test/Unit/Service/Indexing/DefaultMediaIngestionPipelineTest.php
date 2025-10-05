@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Indexing;
 
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use MagicSunday\Memories\Entity\Media;
@@ -32,6 +33,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
 use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
@@ -73,6 +75,8 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $path     = $this->createTempFile('jpg', 'existing');
         $checksum = (string) hash_file('sha256', $path);
         $media    = new Media($path, $checksum, (int) filesize($path));
+        $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
+        $media->setIndexedAt(new DateTimeImmutable('-1 minute'));
         $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
         $fastHash = 'feedfacecafe1234';
@@ -193,6 +197,70 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
 
         self::assertInstanceOf(Media::class, $result);
         self::assertSame($fastHash, $result->getFastChecksumXxhash64());
+        self::assertSame($this->expectedExtractorOrder(), $callLog);
+    }
+
+    #[Test]
+    public function processReindexesOutdatedMediaWithoutForce(): void
+    {
+        $path     = $this->createTempFile('jpg', 'outdated');
+        $checksum = (string) hash_file('sha256', $path);
+        $output   = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
+
+        $fastHash = 'cafebabefeed1234';
+
+        $existing = new Media($path, $checksum, (int) filesize($path));
+        $existing->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION - 1);
+        $existing->setIndexedAt(new DateTimeImmutable('-1 hour'));
+
+        $repository = $this->getMockBuilder(EntityRepository::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['findOneBy'])
+            ->getMock();
+        $repository->expects(self::once())
+            ->method('findOneBy')
+            ->with(['fastChecksumXxhash64' => $fastHash])
+            ->willReturn($existing);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('getRepository')
+            ->with(Media::class)
+            ->willReturn($repository);
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with($existing);
+        $entityManager->expects(self::once())
+            ->method('flush');
+        $entityManager->expects(self::never())
+            ->method('clear');
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $thumbnailService->expects(self::never())->method('generateAll');
+
+        $extractors = $this->createExtractorMap();
+        $callLog    = [];
+        $this->configureExtractorOrderExpectations($extractors, $callLog);
+
+        $fastHashGenerator = $this->createMock(FastHashGeneratorInterface::class);
+        $fastHashGenerator->expects(self::once())
+            ->method('hash')
+            ->with($path)
+            ->willReturn($fastHash);
+
+        $pipeline = $this->createPipeline(
+            $entityManager,
+            $thumbnailService,
+            $extractors,
+            ['jpg'],
+            [],
+            $fastHashGenerator
+        );
+
+        $result = $pipeline->process($path, false, false, false, false, $output);
+        $pipeline->finalize(false);
+
+        self::assertSame($existing, $result);
         self::assertSame($this->expectedExtractorOrder(), $callLog);
     }
 

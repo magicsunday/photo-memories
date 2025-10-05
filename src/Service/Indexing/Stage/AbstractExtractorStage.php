@@ -34,6 +34,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
         }
 
         if ($context->isForce() === false
+            && $context->requiresReindex() === false
             && $media->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION
         ) {
             return true;
