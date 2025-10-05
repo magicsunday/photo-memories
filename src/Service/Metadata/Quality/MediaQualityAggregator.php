@@ -27,12 +27,11 @@ use function sprintf;
 final class MediaQualityAggregator
 {
     public function __construct(
-        private float $qualityBaselineMegapixels = 12.0,
+        private float $minResolutionMegapixels = 2.0,
         private float $lowScoreThreshold = 0.35,
-        private float $lowResolutionThreshold = 0.30,
-        private float $lowSharpnessThreshold = 0.30,
+        private float $lowSharpnessThreshold = 0.20,
         private float $lowExposureThreshold = 0.25,
-        private float $lowNoiseThreshold = 0.25,
+        private float $lowNoiseQualityThreshold = 0.25,
         private float $clippingLowQualityThreshold = 0.15,
         private float $clippingPenaltyWeight = 0.5,
     ) {
@@ -40,16 +39,17 @@ final class MediaQualityAggregator
 
     public function aggregate(Media $media): void
     {
-        $resolutionScore = $this->resolutionScore($media);
-        $sharpnessScore  = $this->clamp01($media->getSharpness());
-        $noiseScore      = $this->isoScore($media->getIso());
-        $clippingShare   = $this->clamp01($media->getQualityClipping());
+        $megapixels     = $this->resolutionMegapixels($media);
+        $sharpnessScore = $this->clamp01($media->getSharpness());
+        $noiseScore     = $this->isoScore($media->getIso());
+        $exposureScore  = $this->exposureScore($media);
+        $clippingShare  = $this->clamp01($media->getQualityClipping());
 
         $media->setQualityClipping($clippingShare);
 
         $qualityScore = $this->weightedScore([
-            [$resolutionScore, 0.45],
-            [$sharpnessScore, 0.35],
+            [$sharpnessScore, 0.50],
+            [$exposureScore, 0.30],
             [$noiseScore, 0.20],
         ]);
 
@@ -57,14 +57,6 @@ final class MediaQualityAggregator
             $penaltyFactor = max(0.0, min(1.0, $this->clippingPenaltyWeight * $clippingShare));
             $qualityScore  = max(0.0, $qualityScore * (1.0 - $penaltyFactor));
         }
-
-        $brightness      = $this->clamp01($media->getBrightness());
-        $contrast        = $this->clamp01($media->getContrast());
-        $balancedBright  = $brightness !== null ? $this->balancedScore($brightness, 0.55, 0.35) : null;
-        $exposureScore   = $this->weightedScore([
-            [$balancedBright, 0.60],
-            [$contrast, 0.40],
-        ]);
 
         $media->setQualityScore($qualityScore);
         $media->setQualityExposure($exposureScore);
@@ -75,7 +67,7 @@ final class MediaQualityAggregator
             $isLowQuality = true;
         }
 
-        if ($resolutionScore !== null && $resolutionScore < $this->lowResolutionThreshold) {
+        if ($megapixels !== null && $megapixels < $this->minResolutionMegapixels) {
             $isLowQuality = true;
         }
 
@@ -87,7 +79,7 @@ final class MediaQualityAggregator
             $isLowQuality = true;
         }
 
-        if ($noiseScore !== null && $noiseScore < $this->lowNoiseThreshold) {
+        if ($noiseScore !== null && $noiseScore < $this->lowNoiseQualityThreshold) {
             $isLowQuality = true;
         }
 
@@ -138,6 +130,18 @@ final class MediaQualityAggregator
         return $value;
     }
 
+    private function exposureScore(Media $media): ?float
+    {
+        $brightness     = $this->clamp01($media->getBrightness());
+        $contrast       = $this->clamp01($media->getContrast());
+        $balancedBright = $brightness !== null ? $this->balancedScore($brightness, 0.55, 0.35) : null;
+
+        return $this->weightedScore([
+            [$balancedBright, 0.60],
+            [$contrast, 0.40],
+        ]);
+    }
+
     private function balancedScore(float $value, float $target, float $tolerance): float
     {
         $delta = abs($value - $target);
@@ -161,7 +165,7 @@ final class MediaQualityAggregator
         return 1.0 - (log($value / $min) / log($max / $min));
     }
 
-    private function resolutionScore(Media $media): ?float
+    private function resolutionMegapixels(Media $media): ?float
     {
         $width  = $media->getWidth();
         $height = $media->getHeight();
@@ -169,9 +173,7 @@ final class MediaQualityAggregator
             return null;
         }
 
-        $megapixels = ((float) $width * (float) $height) / 1_000_000.0;
-
-        return $this->clamp01($megapixels / max(0.000001, $this->qualityBaselineMegapixels));
+        return ((float) $width * (float) $height) / 1_000_000.0;
     }
 
     private function appendQualitySummary(Media $media, bool $isLowQuality, ?float $sharpnessScore, ?float $clippingShare): void

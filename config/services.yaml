@@ -191,6 +191,16 @@ services:
     MagicSunday\Memories\Service\Metadata\Support\FaceDetectionBackendInterface:
         alias: MagicSunday\Memories\Service\Metadata\Support\CommandLineFaceDetectionBackend
 
+    MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator:
+        arguments:
+            $minResolutionMegapixels: '%memories.score.quality.min_resolution_megapixels%'
+            $lowScoreThreshold: '%memories.score.quality.low_score_threshold%'
+            $lowSharpnessThreshold: '%memories.score.quality.low_sharpness_threshold%'
+            $lowExposureThreshold: '%memories.score.quality.low_exposure_threshold%'
+            $lowNoiseQualityThreshold: '%memories.score.quality.low_noise_quality_threshold%'
+            $clippingLowQualityThreshold: '%memories.score.quality.clipping_threshold%'
+            $clippingPenaltyWeight: '%memories.score.quality.clipping_penalty_weight%'
+
     MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor:
         arguments:
             $sampleSize: 320
