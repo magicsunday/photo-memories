@@ -642,7 +642,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         /** @var array<int,int> $originalCounts */
         $originalCounts = [];
         foreach ($original as $id) {
-            $intId = (int) $id;
+            $intId = $id;
             $originalCounts[$intId] = ($originalCounts[$intId] ?? 0) + 1;
         }
 
@@ -680,7 +680,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         foreach ($original as $id) {
-            $intId   = (int) $id;
+            $intId   = $id;
             $expected = $originalCounts[$intId] ?? 0;
             $current  = $orderedCounts[$intId] ?? 0;
             if ($current >= $expected) {
