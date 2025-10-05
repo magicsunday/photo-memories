@@ -29,7 +29,8 @@ use function sprintf;
 final class CaptureTimeResolver
 {
     /**
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param TimezoneResolverInterface $timezoneResolver
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:?int} $home
      */
     public function __construct(
         private readonly TimezoneResolverInterface $timezoneResolver,
