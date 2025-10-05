@@ -14,10 +14,12 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
 use function explode;
@@ -34,8 +36,10 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     public function __construct(
+        private LocationHelper $locationHelper,
         private int $minItemsPerHoliday = 8,
     ) {
         if ($this->minItemsPerHoliday < 1) {
@@ -94,6 +98,8 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $params = $this->appendLocationMetadata($members, $params);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),

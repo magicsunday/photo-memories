@@ -13,10 +13,12 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
 use function is_string;
@@ -30,9 +32,11 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
+        private LocationHelper $locationHelper,
         // Minimum number of videos per local day to emit a story.
         private int $minItemsPerDay = 2,
     ) {
@@ -139,6 +143,8 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $params = $this->appendLocationMetadata($members, $params);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),

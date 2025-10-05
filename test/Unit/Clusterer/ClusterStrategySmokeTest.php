@@ -116,7 +116,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'BurstClusterStrategy' => [
             BurstClusterStrategy::class,
             'burst',
-            null,
+            static fn (): ClusterStrategyInterface => new BurstClusterStrategy(
+                locationHelper: self::locationHelper()
+            ),
         ];
         yield 'CrossDimensionClusterStrategy' => [
             CrossDimensionClusterStrategy::class,
@@ -154,7 +156,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'HolidayEventClusterStrategy' => [
             HolidayEventClusterStrategy::class,
             'holiday_event',
-            null,
+            static fn (): ClusterStrategyInterface => new HolidayEventClusterStrategy(
+                locationHelper: self::locationHelper()
+            ),
         ];
         yield 'LocationSimilarityStrategy' => [
             LocationSimilarityStrategy::class,
@@ -192,7 +196,8 @@ final class ClusterStrategySmokeTest extends TestCase
             NewYearEveClusterStrategy::class,
             'new_year_eve',
             static fn (): ClusterStrategyInterface => new NewYearEveClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'NightlifeEventClusterStrategy' => [
@@ -273,14 +278,16 @@ final class ClusterStrategySmokeTest extends TestCase
             TransitTravelDayClusterStrategy::class,
             'transit_travel_day',
             static fn (): ClusterStrategyInterface => new TransitTravelDayClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'VideoStoriesClusterStrategy' => [
             VideoStoriesClusterStrategy::class,
             'video_stories',
             static fn (): ClusterStrategyInterface => new VideoStoriesClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'WeekendGetawaysOverYearsClusterStrategy' => [

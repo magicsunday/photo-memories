@@ -14,8 +14,10 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_filter;
@@ -32,8 +34,10 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     public function __construct(
+        private LocationHelper $locationHelper,
         private int $maxGapSeconds = 90,
         private float $maxMoveMeters = 50.0,
         // Minimum photos per burst run before emitting a memory.
@@ -150,6 +154,8 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         if ($tags !== []) {
             $params = [...$params, ...$tags];
         }
+
+        $params = $this->appendLocationMetadata($orderedMembers, $params);
 
         return new ClusterDraft(
             algorithm: $this->name(),

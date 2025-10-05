@@ -498,6 +498,7 @@ services:
     # --- Composition & session heuristics ---
     MagicSunday\Memories\Clusterer\BurstClusterStrategy:
         arguments:
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $maxGapSeconds: 90
             $maxMoveMeters: 45.0
             $minItemsPerBurst: 3
@@ -539,6 +540,7 @@ services:
 
     MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy:
         arguments:
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $minItemsPerDay: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.video_stories_cluster_strategy%' }
@@ -594,6 +596,7 @@ services:
 
     MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy:
         arguments:
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $minItemsPerHoliday: 6
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.holiday_event_cluster_strategy%' }
@@ -612,6 +615,7 @@ services:
             $startHour: 20
             $endHour: 2
             $minItemsPerYear: 6
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.new_year_eve_cluster_strategy%' }
 
@@ -718,6 +722,8 @@ services:
 
     MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy:
         arguments:
+            $localTimeHelper: '@MagicSunday\Memories\Clusterer\Support\LocalTimeHelper'
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $minTravelKm: 70.0
             $minItemsPerDay: 6
         tags:

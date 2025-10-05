@@ -16,8 +16,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class NewYearEveClusterStrategyTest extends TestCase
@@ -27,6 +29,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
     {
         $strategy = new NewYearEveClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             startHour: 20,
             endHour: 2,
             minItemsPerYear: 6,
@@ -34,10 +37,24 @@ final class NewYearEveClusterStrategyTest extends TestCase
 
         $start = new DateTimeImmutable('2023-12-31 20:00:00', new DateTimeZone('Europe/Berlin'));
         $items = [];
+
+        $berlin = $this->makeLocation(
+            providerPlaceId: 'nye-berlin',
+            displayName: 'Silvester Berlin',
+            lat: 52.5200,
+            lon: 13.4050,
+            city: 'Berlin',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Berlin');
+            },
+        );
+
         for ($i = 0; $i < 6; ++$i) {
             $items[] = $this->createMedia(
                 2100 + $i,
                 $start->add(new DateInterval('PT' . ($i * 30) . 'M')),
+                $berlin,
             );
         }
 
@@ -49,12 +66,21 @@ final class NewYearEveClusterStrategyTest extends TestCase
         self::assertSame('new_year_eve', $cluster->getAlgorithm());
         self::assertSame(2023, $cluster->getParams()['year']);
         self::assertSame(range(2100, 2105), $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertArrayHasKey('place', $params);
+        self::assertNotSame('', $params['place']);
+        self::assertSame('berlin', $params['place_city']);
+        self::assertSame('germany', $params['place_country']);
     }
 
     #[Test]
     public function ignoresPhotosOutsidePartyWindow(): void
     {
-        $strategy = new NewYearEveClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new NewYearEveClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $items = [];
         for ($i = 0; $i < 6; ++$i) {
@@ -67,7 +93,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($items));
     }
 
-    private function createMedia(int $id, DateTimeImmutable $takenAt): Media
+    private function createMedia(int $id, DateTimeImmutable $takenAt, ?Location $location = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -76,6 +102,7 @@ final class NewYearEveClusterStrategyTest extends TestCase
             lat: 52.5,
             lon: 13.4,
             size: 2048,
+            location: $location,
         );
     }
 }

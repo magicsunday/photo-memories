@@ -16,8 +16,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\TransitTravelDayClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class TransitTravelDayClusterStrategyTest extends TestCase
@@ -27,6 +29,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
     {
         $strategy = new TransitTravelDayClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minTravelKm: 60.0,
             minItemsPerDay: 5,
         );
@@ -41,8 +44,27 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         ];
 
         $items = [];
+
+        $frankfurt = $this->makeLocation(
+            providerPlaceId: 'travel-frankfurt',
+            displayName: 'Frankfurt am Main',
+            lat: 50.1109,
+            lon: 8.6821,
+            city: 'Frankfurt',
+            country: 'Germany',
+            configure: static function (Location $location): void {
+                $location->setState('Hessen');
+            },
+        );
+
         foreach ($points as $idx => [$lat, $lon]) {
-            $items[] = $this->createMedia(2300 + $idx, $day->add(new DateInterval('PT' . ($idx * 1800) . 'S')), $lat, $lon);
+            $items[] = $this->createMedia(
+                2300 + $idx,
+                $day->add(new DateInterval('PT' . ($idx * 1800) . 'S')),
+                $lat,
+                $lon,
+                $frankfurt,
+            );
         }
 
         $clusters = $strategy->cluster($items);
@@ -53,12 +75,19 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertSame('transit_travel_day', $cluster->getAlgorithm());
         self::assertSame(range(2300, 2304), $cluster->getMembers());
         self::assertGreaterThanOrEqual(60.0, $cluster->getParams()['distance_km']);
+        self::assertArrayHasKey('place', $cluster->getParams());
+        self::assertNotSame('', $cluster->getParams()['place']);
+        self::assertSame('frankfurt', $cluster->getParams()['place_city']);
+        self::assertSame('germany', $cluster->getParams()['place_country']);
     }
 
     #[Test]
     public function skipsDaysBelowDistance(): void
     {
-        $strategy = new TransitTravelDayClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new TransitTravelDayClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $day    = new DateTimeImmutable('2024-07-02 06:00:00', new DateTimeZone('UTC'));
         $points = [
@@ -77,7 +106,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($items));
     }
 
-    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon): Media
+    private function createMedia(int $id, DateTimeImmutable $takenAt, float $lat, float $lon, ?Location $location = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -85,6 +114,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+            location: $location,
         );
     }
 }
