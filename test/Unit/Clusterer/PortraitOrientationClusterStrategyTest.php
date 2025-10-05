@@ -72,6 +72,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             configure: static function (Media $media): void {
                 $media->setWidth(1000);
                 $media->setHeight(1500);
+                $media->setPersons(['Alice']);
             },
         );
     }
@@ -85,6 +86,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             configure: static function (Media $media): void {
                 $media->setWidth(1600);
                 $media->setHeight(900);
+                $media->setPersons(['Bob']);
             },
         );
     }

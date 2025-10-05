@@ -61,6 +61,14 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
         $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
+                if ($m->hasFaces() === false) {
+                    $persons = $m->getPersons();
+
+                    if ($persons === null || count($persons) === 0) {
+                        return false;
+                    }
+                }
+
                 $w = $m->getWidth();
                 $h = $m->getHeight();
 
