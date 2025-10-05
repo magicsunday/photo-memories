@@ -28,7 +28,7 @@ trait VacationTimezoneTrait
 {
     /**
      * @param array{localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>} $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     private function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
     {
@@ -64,7 +64,7 @@ trait VacationTimezoneTrait
     /**
      * @param Media             $media
      * @param DateTimeImmutable $takenAt
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return DateTimeZone
      * @throws DateInvalidTimeZoneException

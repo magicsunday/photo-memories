@@ -102,7 +102,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             }
         );
 
-        /** @var array{name:?string,names:array{default:?string,localized:array<string,string>,alternates:list<string>},categoryKey:?string,categoryValue:?string,tags:array<string,string>} $best */
+        /** @var array{name:string|null,names:array{default:string|null,localized:array<string,string>,alternates:list<string>},categoryKey:string|null,categoryValue:string|null,tags:array<string,string>} $best */
         return $candidates[0]['data'];
     }
 
@@ -128,7 +128,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
 
     public function majorityPoiContext(array $members): ?array
     {
-        /** @var array<string,array{label:string,categoryKey:?string,categoryValue:?string,tags:array<string,string>,count:int}> $counts */
+        /** @var array<string,array{label:string,categoryKey:string|null,categoryValue:string|null,tags:array<string,string>,count:int}> $counts */
         $counts = [];
 
         foreach ($members as $media) {

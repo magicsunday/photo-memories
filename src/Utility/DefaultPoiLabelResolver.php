@@ -62,7 +62,7 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
     }
 
     /**
-     * @param array{default:?string,localized:array<string,string>,alternates:list<string>} $names
+     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>} $names
      */
     private function labelFromNames(array $names): ?string
     {

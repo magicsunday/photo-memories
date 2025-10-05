@@ -18,10 +18,10 @@ interface PoiLabelResolverInterface
 {
     /**
      * @param array{
-     *     name:?string,
-     *     names:array{default:?string,localized:array<string,string>,alternates:list<string>},
-     *     categoryKey:?string,
-     *     categoryValue:?string,
+     *     name:string|null,
+     *     names:array{default:string|null,localized:array<string,string>,alternates:list<string>},
+     *     categoryKey:string|null,
+     *     categoryValue:string|null,
      *     tags:array<string,string>
      * } $poi
      */

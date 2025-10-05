@@ -20,7 +20,7 @@ interface DaySummaryBuilderInterface
 {
     /**
      * @param list<Media>                                                   $items
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return array<string, array{
      *     date: string,

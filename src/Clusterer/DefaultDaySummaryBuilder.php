@@ -30,7 +30,7 @@ final readonly class DefaultDaySummaryBuilder implements DaySummaryBuilderInterf
 
     /**
      * @param list<Media>                                                   $items
-     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function buildDaySummaries(array $items, array $home): array
     {

@@ -23,10 +23,10 @@ interface PoiContextAnalyzerInterface
      * Returns the most relevant POI for a location after applying the internal ranking heuristics.
      *
      * @return array{
-     *     name:?string,
-     *     names:array{default:?string,localized:array<string,string>,alternates:list<string>},
-     *     categoryKey:?string,
-     *     categoryValue:?string,
+     *     name:string|null,
+     *     names:array{default:string|null,localized:array<string,string>,alternates:list<string>},
+     *     categoryKey:string|null,
+     *     categoryValue:string|null,
      *     tags:array<string,string>
      * }|null
      */
@@ -37,7 +37,7 @@ interface PoiContextAnalyzerInterface
     /**
      * @param list<Media> $members
      *
-     * @return array{label:string,categoryKey:?string,categoryValue:?string,tags:array<string,string>}|null
+     * @return array{label:string,categoryKey:string|null,categoryValue:string|null,tags:array<string,string>}|null
      */
     public function majorityPoiContext(array $members): ?array;
 }

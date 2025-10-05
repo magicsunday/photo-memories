@@ -30,7 +30,7 @@ final class CaptureTimeResolver
 {
     /**
      * @param TimezoneResolverInterface $timezoneResolver
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:?int} $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function __construct(
         private readonly TimezoneResolverInterface $timezoneResolver,

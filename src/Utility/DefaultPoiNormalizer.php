@@ -66,9 +66,9 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     }
 
     /**
-     * @param array{default:?string,localized:array<string,string>,alternates:list<string>}|null $raw
+     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>}|null $raw
      *
-     * @return array{default:?string,localized:array<string,string>,alternates:list<string>}
+     * @return array{default:string|null,localized:array<string,string>,alternates:list<string>}
      */
     private function normaliseNames(?array $raw, ?string $fallbackDefault): array
     {
@@ -134,7 +134,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     }
 
     /**
-     * @param array{default:?string,localized:array<string,string>,alternates:list<string>} $names
+     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>} $names
      */
     private function coalesceName(array $names): ?string
     {
