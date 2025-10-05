@@ -115,7 +115,7 @@ final class TimeSimilarityStrategyTest extends TestCase
     }
 
     #[Test]
-    public function skipsNoShowMediaWhenBuildingBuckets(): void
+    public function enrichesClustersWithDominantTags(): void
     {
         $helper   = LocationHelper::createDefault();
         $strategy = new TimeSimilarityStrategy(

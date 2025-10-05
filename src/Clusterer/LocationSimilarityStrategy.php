@@ -90,6 +90,11 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
                 $params['place'] = $label;
             }
 
+            $tagMetadata = $this->collectDominantTags($group);
+            foreach ($tagMetadata as $paramKey => $value) {
+                $params[$paramKey] = $value;
+            }
+
             $poi = $this->locHelper->majorityPoiContext($group);
             if ($poi !== null) {
                 $params['poi_label'] = $poi['label'];
@@ -124,6 +129,12 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             $params = [
                 'time_range' => $this->computeTimeRange($bucket),
             ];
+
+            $tagMetadata = $this->collectDominantTags($bucket);
+            foreach ($tagMetadata as $paramKey => $value) {
+                $params[$paramKey] = $value;
+            }
+
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,

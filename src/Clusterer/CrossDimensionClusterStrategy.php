@@ -12,11 +12,11 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
 use function count;
 use function usort;
 
@@ -26,6 +26,7 @@ use function usort;
  */
 final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
@@ -119,14 +120,20 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
                 continue;
             }
 
-            $time  = MediaMath::timeRange($run);
+            $time        = $this->computeTimeRange($run);
+            $params      = [
+                'time_range' => $time,
+            ];
+            $tagMetadata = $this->collectDominantTags($run);
+            foreach ($tagMetadata as $key => $value) {
+                $params[$key] = $value;
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: 'cross_dimension',
-                params: [
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: $this->toMemberIds($run)
             );
         }
 
