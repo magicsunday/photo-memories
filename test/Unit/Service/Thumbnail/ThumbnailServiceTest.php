@@ -204,7 +204,7 @@ final class ThumbnailServiceTest extends TestCase
         $imagick->expects(self::exactly(2))->method('destroy');
 
         $service = new class ($thumbnailDir, [200], $imagick) extends ThumbnailService {
-            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
+            public function __construct(string $thumbnailDir, array $sizes, private readonly Imagick $imagick)
             {
                 parent::__construct($thumbnailDir, $sizes);
             }
@@ -383,7 +383,7 @@ final class ThumbnailServiceTest extends TestCase
         $imagick->expects(self::once())->method('destroy');
 
         $service = new class ($thumbnailDir, [320], $imagick) extends ThumbnailService {
-            public function __construct(string $thumbnailDir, array $sizes, private Imagick $imagick)
+            public function __construct(string $thumbnailDir, array $sizes, private readonly Imagick $imagick)
             {
                 parent::__construct($thumbnailDir, $sizes);
             }
