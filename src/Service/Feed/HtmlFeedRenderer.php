@@ -52,8 +52,8 @@ final class HtmlFeedRenderer
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{$title}</title>
-<style>{$css}</style>
+<title>$title</title>
+<style>$css</style>
 </head>
 <body>
 <header class="header">
@@ -61,7 +61,7 @@ final class HtmlFeedRenderer
   <p class="sub">Statische Vorschau – lokal erzeugt</p>
 </header>
 <main class="grid">
-{$itemsHtml}
+$itemsHtml
 </main>
 <footer class="footer">
   <p>Erzeugt mit Rückblick – Stand: {date('d.m.Y H:i')}</p>
@@ -96,11 +96,11 @@ HTML;
             $chips = [];
             if (is_string($group) && $group !== '') {
                 $grp     = htmlspecialchars($group, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $chips[] = "<span class=\"chip\">{$grp}</span>";
+                $chips[] = "<span class=\"chip\">$grp</span>";
             }
 
-            $chips[] = "<span class=\"chip\">{$alg}</span>";
-            $chips[] = "<span class=\"chip\">Score {$score}</span>";
+            $chips[] = "<span class=\"chip\">$alg</span>";
+            $chips[] = "<span class=\"chip\">Score $score</span>";
 
             $sceneTags = $c['sceneTags'] ?? null;
             if (is_array($sceneTags)) {
@@ -123,7 +123,7 @@ HTML;
                     }
 
                     $safe = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                    $chips[] = "<span class=\"chip chip-tag\">{$safe}</span>";
+                    $chips[] = "<span class=\"chip chip-tag\">$safe</span>";
                 }
             }
 
@@ -135,15 +135,15 @@ HTML;
 <section class="card">
   <div class="card-head">
     <div class="titles">
-      <h2>{$t}</h2>
-      <p class="muted">{$st}</p>
+      <h2>$t</h2>
+      <p class="muted">$st</p>
     </div>
     <div class="meta">
-      {$meta}
+      $meta
     </div>
   </div>
   <div class="thumbs">
-    {$images}
+    $images
   </div>
 </section>
 CARD;
@@ -164,7 +164,7 @@ CARD;
 
             $out[] = <<<IMG
 <figure class="ph">
-  <img loading="lazy" decoding="async" src="{$href}" alt="{$alt}">
+  <img loading="lazy" decoding="async" src="$href" alt="$alt">
 </figure>
 IMG;
         }
