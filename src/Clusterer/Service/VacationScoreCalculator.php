@@ -24,6 +24,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
 use function array_keys;
+use function array_merge;
 use function array_map;
 use function array_slice;
 use function count;
@@ -40,6 +41,7 @@ use function sort;
 use function str_replace;
 use function ucwords;
 use function usort;
+use function spl_object_id;
 
 use const SORT_NUMERIC;
 use const SORT_STRING;
@@ -71,6 +73,65 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($this->movementThresholdKm <= 0.0) {
             throw new InvalidArgumentException('movementThresholdKm must be > 0.');
         }
+    }
+
+    /**
+     * @param array<string, array{members:list<Media>,gpsMembers:list<Media>}> $days
+     * @param array{lat:float,lon:float,start:int,end:int,dwell:int}            $staypoint
+     *
+     * @return list<Media>
+     */
+    private function collectStaypointMembers(array $days, array $staypoint): array
+    {
+        $members = [];
+        $seen    = [];
+
+        foreach ($days as $summary) {
+            $candidates = $this->filterMembersWithinStaypoint($summary['members'], $staypoint['start'], $staypoint['end']);
+
+            if ($summary['gpsMembers'] !== []) {
+                $gpsCandidates = $this->filterMembersWithinStaypoint($summary['gpsMembers'], $staypoint['start'], $staypoint['end']);
+                if ($gpsCandidates !== []) {
+                    $candidates = array_merge($candidates, $gpsCandidates);
+                }
+            }
+
+            foreach ($candidates as $media) {
+                $objectId = spl_object_id($media);
+                if (isset($seen[$objectId])) {
+                    continue;
+                }
+
+                $members[]       = $media;
+                $seen[$objectId] = true;
+            }
+        }
+
+        return $members;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return list<Media>
+     */
+    private function filterMembersWithinStaypoint(array $members, int $start, int $end): array
+    {
+        $filtered = [];
+
+        foreach ($members as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $timestamp = $takenAt->getTimestamp();
+            if ($timestamp >= $start && $timestamp <= $end) {
+                $filtered[] = $media;
+            }
+        }
+
+        return $filtered;
     }
 
     /**
@@ -109,6 +170,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $cohortRatioSum          = 0.0;
         $cohortRatioSamples      = 0;
         $cohortMemberAggregate   = [];
+        $primaryStaypoint        = null;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -182,6 +244,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             if ($summary['baseAway']) {
+                foreach ($summary['staypoints'] as $staypoint) {
+                    if ($primaryStaypoint === null || $staypoint['dwell'] > $primaryStaypoint['dwell']) {
+                        $primaryStaypoint = $staypoint;
+                    }
+                }
+            }
+
+            if ($summary['baseAway']) {
                 if ($summary['weekday'] >= 1 && $summary['weekday'] <= 5 && $summary['tourismRatio'] < 0.2) {
                     ++$workDayPenalty;
                 }
@@ -248,6 +318,72 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($timezoneOffsets !== []) {
             $timezones = array_keys($timezoneOffsets);
             sort($timezones, SORT_NUMERIC);
+        }
+
+        $primaryStaypointCity          = null;
+        $primaryStaypointRegion        = null;
+        $primaryStaypointCountry       = null;
+        $primaryStaypointLocation      = null;
+        $primaryStaypointLocationParts = [];
+        $primaryStaypointData          = null;
+
+        if ($primaryStaypoint !== null) {
+            $primaryStaypointData = [
+                'lat'           => (float) $primaryStaypoint['lat'],
+                'lon'           => (float) $primaryStaypoint['lon'],
+                'start'         => (int) $primaryStaypoint['start'],
+                'end'           => (int) $primaryStaypoint['end'],
+                'dwell_seconds' => (int) $primaryStaypoint['dwell'],
+            ];
+
+            $staypointMembers    = $this->collectStaypointMembers($days, $primaryStaypoint);
+            $staypointComponents = [];
+
+            if ($staypointMembers !== []) {
+                $staypointComponents = $this->locationHelper->majorityLocationComponents($staypointMembers);
+            }
+
+            if ($staypointComponents !== []) {
+                $staypointCity = $staypointComponents['city'] ?? null;
+                if ($staypointCity !== null) {
+                    $cityLabel = $this->formatLocationComponent($staypointCity);
+                    if ($cityLabel !== '') {
+                        $primaryStaypointCity          = $cityLabel;
+                        $primaryStaypointLocationParts[] = $cityLabel;
+                    }
+                }
+
+                $staypointRegion = $staypointComponents['region'] ?? null;
+                if ($staypointRegion !== null) {
+                    $regionLabel = $this->formatLocationComponent($staypointRegion);
+                    if ($regionLabel !== '') {
+                        $primaryStaypointRegion = $regionLabel;
+                        if (!in_array($regionLabel, $primaryStaypointLocationParts, true)) {
+                            $primaryStaypointLocationParts[] = $regionLabel;
+                        }
+                    }
+                }
+
+                $staypointCountry = $staypointComponents['country'] ?? null;
+                if ($staypointCountry !== null) {
+                    $countryLabel = $this->formatLocationComponent($staypointCountry);
+                    if ($countryLabel !== '') {
+                        $primaryStaypointCountry = $countryLabel;
+                        if (!in_array($countryLabel, $primaryStaypointLocationParts, true)) {
+                            $primaryStaypointLocationParts[] = $countryLabel;
+                        }
+                    }
+                }
+            }
+
+            if ($primaryStaypointLocationParts !== []) {
+                $primaryStaypointLocation = implode(', ', $primaryStaypointLocationParts);
+            } elseif (isset($staypointMembers) && $staypointMembers !== []) {
+                $staypointLabel = $this->locationHelper->majorityLabel($staypointMembers);
+                if ($staypointLabel !== null && $staypointLabel !== '') {
+                    $primaryStaypointLocation = $staypointLabel;
+                }
+            }
         }
 
         $tourismRatio  = $poiSamples > 0 ? min(1.0, $tourismHits / max(1, $poiSamples)) : 0.0;
@@ -359,7 +495,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'cohort_members'            => $cohortMemberAggregate,
             'work_day_penalty_days'    => $workDayPenalty,
             'work_day_penalty_score'   => round($penalty, 2),
-            'countries'                => $countries,
             'timezones'                => $timezones,
         ];
 
@@ -405,6 +540,49 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         if ($place !== null) {
             $params['place'] = $place;
+        }
+
+        if ($primaryStaypointData !== null) {
+            $params['primaryStaypoint'] = $primaryStaypointData;
+        }
+
+        if ($primaryStaypointCity !== null) {
+            $params['primaryStaypointCity'] = $primaryStaypointCity;
+        }
+
+        if ($primaryStaypointRegion !== null) {
+            $params['primaryStaypointRegion'] = $primaryStaypointRegion;
+        }
+
+        if ($primaryStaypointCountry !== null) {
+            $params['primaryStaypointCountry'] = $primaryStaypointCountry;
+        }
+
+        if ($primaryStaypointLocation !== null) {
+            $params['primaryStaypointLocation'] = $primaryStaypointLocation;
+        }
+
+        if ($primaryStaypointLocationParts !== []) {
+            $params['primaryStaypointLocationParts'] = $primaryStaypointLocationParts;
+        }
+
+        if (count($countries) > 1) {
+            $params['countries'] = $countries;
+        }
+
+        $placeCityMissing = !isset($params['place_city']) || $params['place_city'] === '';
+        if ($placeCityMissing && $primaryStaypointCity !== null) {
+            $params['place_city'] = $primaryStaypointCity;
+        }
+
+        $placeLocationMissing = !isset($params['place_location']) || $params['place_location'] === '';
+        if ($placeLocationMissing && $primaryStaypointLocation !== null) {
+            $params['place_location'] = $primaryStaypointLocation;
+        }
+
+        $placeCountryMissing = !isset($params['place_country']) || $params['place_country'] === '';
+        if ($placeCountryMissing && $primaryStaypointCountry !== null) {
+            $params['place_country'] = $primaryStaypointCountry;
         }
 
         return new ClusterDraft(
