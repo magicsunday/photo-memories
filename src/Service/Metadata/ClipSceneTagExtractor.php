@@ -15,6 +15,8 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
+use function array_keys;
+use function array_map;
 use function array_slice;
 use function arsort;
 use function implode;
@@ -125,12 +127,11 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
 
         $sliced = array_slice($filtered, 0, $this->maxTags, true);
 
-        $result = [];
-        foreach ($sliced as $label => $score) {
-            $result[] = ['label' => $label, 'score' => $score];
-        }
-
-        return $result;
+        return array_map(
+            static fn (string $label, float $score): array => ['label' => $label, 'score' => $score],
+            array_keys($sliced),
+            $sliced
+        );
     }
 
     /**
@@ -138,11 +139,10 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
      */
     private function formatSceneSummary(array $tags): string
     {
-        $parts = [];
-
-        foreach ($tags as $tag) {
-            $parts[] = sprintf('%s(%.2f)', $tag['label'], $tag['score']);
-        }
+        $parts = array_map(
+            static fn (array $tag): string => sprintf('%s(%.2f)', $tag['label'], $tag['score']),
+            $tags
+        );
 
         return sprintf('scene=%s', implode(',', $parts));
     }
