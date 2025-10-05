@@ -38,6 +38,7 @@ final class PipelineClusterConsolidatorTest extends TestCase
                 overlapMergeThreshold: 0.5,
                 overlapDropThreshold: 0.9,
                 keepOrder: ['primary', 'secondary'],
+                classificationPriority: [],
             ),
             new AnnotationPruningStage(['annot'], ['annot' => 0.4]),
             new PerMediaCapStage(
