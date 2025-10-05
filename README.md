@@ -98,6 +98,23 @@ MEMORIES_PREFERRED_LOCALE=de
 
 Leave the variable unset to retain the previous behaviour of using the generic `name` tag provided by Overpass.
 
+## Geocoding-Workflow per CLI
+
+Starte den Geocoding-Lauf über `php src/Memories.php memories:geocode`. Ohne weitere Optionen verarbeitet der Befehl jede
+gefundene GPS-Aufnahme erneut, verknüpft Medien mit vorhandenen Orten und ergänzt fehlende POI-Daten. Mit folgenden
+Schaltern steuerst du den Ablauf:
+
+* `--refresh-locations` erzwingt eine komplette Aktualisierung aller Ortszuweisungen.
+* `--refresh-pois` lädt gespeicherte POI-Daten neu; ohne zusätzliche Parameter werden sämtliche Orte unabhängig von Medien
+  aktualisiert.
+* `--missing-pois` fokussiert den Lauf ausschließlich auf Orte ohne POI-Daten.
+* `--city="Name"` beschränkt POI-Aktualisierungen auf Orte mit passendem Stadtnamen.
+* `--limit=50` reduziert die Anzahl der zu verarbeitenden Medien im Standardlauf.
+* `--dry-run` zeigt lediglich eine Vorschau und persistiert keine Änderungen.
+
+Kombiniere die Optionen bei Bedarf: `--refresh-pois --refresh-locations` aktualisiert sowohl Ortsverknüpfungen als auch die POI
+Angaben für exakt die Medien im gewählten Lauf.
+
 ## Thumbnail-Ausrichtung
 
 Die Thumbnail-Pipeline ignoriert EXIF-Orientierungsflags jetzt standardmäßig und erzeugt die verkleinerten JPEGs genau so, wie

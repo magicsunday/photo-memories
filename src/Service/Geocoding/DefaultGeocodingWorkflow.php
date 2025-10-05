@@ -53,7 +53,7 @@ final readonly class DefaultGeocodingWorkflow
             return;
         }
 
-        if ($options->refreshPois() && !$options->processAllMedia() && $options->getLimit() === null) {
+        if ($options->refreshPois() && !$options->refreshLocations() && $options->getLimit() === null) {
             $this->refreshAllPois($options, $io, $output);
 
             return;
@@ -64,8 +64,12 @@ final readonly class DefaultGeocodingWorkflow
 
     private function processNewMedia(GeocodeCommandOptions $options, SymfonyStyle $io, OutputInterface $output): void
     {
-        $loaded = $this->cellIndex->warmUpFromDb();
-        $io->writeln(sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));
+        if ($options->refreshLocations()) {
+            $io->note('Bestehende Ortsverknüpfungen werden vollständig aktualisiert.');
+        } else {
+            $loaded = $this->cellIndex->warmUpFromDb();
+            $io->writeln(sprintf('🔎 %d bekannte Zellen vorab geladen.', $loaded));
+        }
 
         $medias = $this->loadMedia($options);
 
@@ -195,14 +199,6 @@ final readonly class DefaultGeocodingWorkflow
             ->andWhere('m.gpsLon IS NOT NULL')
             ->orderBy('m.geoCell8', 'ASC')
             ->addOrderBy('m.takenAt', 'ASC');
-
-        if (!$options->processAllMedia()) {
-            if ($options->refreshPois()) {
-                $qb->andWhere('m.location IS NOT NULL');
-            } else {
-                $qb->andWhere('m.needsGeocode = true');
-            }
-        }
 
         $limit = $options->getLimit();
         if ($limit !== null && $limit > 0) {
