@@ -70,8 +70,8 @@ final class NewYearEveClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
-        self::assertSame('berlin', $params['place_city']);
-        self::assertSame('germany', $params['place_country']);
+        self::assertSame('Berlin', $params['place_city']);
+        self::assertSame('Germany', $params['place_country']);
     }
 
     #[Test]

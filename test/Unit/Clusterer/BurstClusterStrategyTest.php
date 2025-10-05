@@ -92,10 +92,10 @@ final class BurstClusterStrategyTest extends TestCase
         ], $params['scene_tags']);
         self::assertSame(['Serienaufnahme'], $params['keywords']);
         self::assertSame('Museum Island', $params['place']);
-        self::assertSame('berlin', $params['place_city']);
-        self::assertSame('berlin', $params['place_region']);
-        self::assertSame('germany', $params['place_country']);
-        self::assertSame('berlin, germany', $params['place_location']);
+        self::assertSame('Berlin', $params['place_city']);
+        self::assertSame('Berlin', $params['place_region']);
+        self::assertSame('Germany', $params['place_country']);
+        self::assertSame('Berlin, Germany', $params['place_location']);
         self::assertSame('Museum Island', $params['poi_label']);
         self::assertSame('tourism', $params['poi_category_key']);
         self::assertSame('museum', $params['poi_category_value']);

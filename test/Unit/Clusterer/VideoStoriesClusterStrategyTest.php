@@ -102,8 +102,8 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             ['label' => 'Filmabend', 'score' => 0.88],
         ], $params['scene_tags']);
         self::assertSame(['Filmabend'], $params['keywords']);
-        self::assertSame('munich', $params['place_city']);
-        self::assertSame('germany', $params['place_country']);
+        self::assertSame('Munich', $params['place_city']);
+        self::assertSame('Germany', $params['place_country']);
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
     }
