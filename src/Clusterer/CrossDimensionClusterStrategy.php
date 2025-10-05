@@ -81,7 +81,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         $lastTs = null;
 
         foreach ($withTime as $m) {
-            $ts = (int) $m->getTakenAt()->getTimestamp();
+            $ts = $m->getTakenAt()->getTimestamp();
 
             if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds && $buf !== []) {
                 $runs[] = $buf;
