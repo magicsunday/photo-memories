@@ -13,7 +13,7 @@ namespace MagicSunday\Memories\Support;
 
 use MagicSunday\Memories\Entity\Media;
 
-use function rtrim;
+use function str_ends_with;
 
 /**
  * Utility helpers for working with the media index log.
@@ -43,10 +43,13 @@ final class IndexLogHelper
             return;
         }
 
-        // Avoid adding duplicate blank lines when the stored log already ends with a newline.
-        $normalizedExisting = rtrim($existing, "\n");
+        if (str_ends_with($existing, "\n")) {
+            $media->setIndexLog($existing . $line);
 
-        $media->setIndexLog($normalizedExisting . "\n" . $line);
+            return;
+        }
+
+        $media->setIndexLog($existing . "\n" . $line);
     }
 }
 
