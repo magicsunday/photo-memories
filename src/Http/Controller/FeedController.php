@@ -37,6 +37,7 @@ use RuntimeException;
 use function array_filter;
 use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function array_replace;
 use function array_slice;
 use function array_values;
@@ -160,10 +161,11 @@ final class FeedController
 
         $filtered = array_slice($filtered, 0, $limit);
 
-        $data = [];
-        foreach ($filtered as $item) {
-            $data[] = $this->transformItem($item);
-        }
+        /** @var list<array<string, mixed>> $data */
+        $data = array_map(
+            fn (MemoryFeedItem $item): array => $this->transformItem($item),
+            $filtered,
+        );
 
         $meta = [
             'erstelltAm'          =>
