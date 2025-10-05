@@ -37,6 +37,8 @@ final class ClusterEntityToDraftMapper
 
     /**
      * Provides the fallback group name when no explicit mapping exists.
+     *
+     * @var string
      */
     private string $defaultAlgorithmGroup;
 
