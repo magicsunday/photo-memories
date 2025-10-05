@@ -46,12 +46,14 @@ final class TimeNormalizerTest extends TestCase
             takenAt: '2024-01-01T09:11:12+00:00',
             configure: static function (Media $item): void {
                 $item->setIndexLog('initial');
+                $item->setTzConfidence(1.0);
             },
         );
 
         $result = $normalizer->extract($media->getPath(), $media);
 
         self::assertSame(TimeSource::EXIF, $result->getTimeSource());
+        self::assertSame(1.0, $result->getTzConfidence());
         $expectedSummary = sprintf(
             'time=%s; tz=%s; off=%+d',
             TimeSource::EXIF->value,
@@ -103,6 +105,7 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame(TimeSource::FILENAME, $result->getTimeSource());
         self::assertSame('Europe/Berlin', $result->getTzId());
         self::assertSame(120, $result->getTimezoneOffsetMin());
+        self::assertSame(0.4, $result->getTzConfidence());
         self::assertSame('time=FILENAME; tz=Europe/Berlin; off=+120', $result->getIndexLog());
     }
 
@@ -134,6 +137,7 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame(TimeSource::FILE_MTIME, $result->getTimeSource());
         self::assertSame('Europe/Berlin', $result->getTzId());
         self::assertSame(60, $result->getTimezoneOffsetMin());
+        self::assertSame(0.2, $result->getTzConfidence());
         $expectedSummary = sprintf(
             'time=%s; tz=%s; off=%+d',
             TimeSource::FILE_MTIME->value,
@@ -170,6 +174,7 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame(TimeSource::FILENAME, $result->getTimeSource());
         self::assertSame('Europe/Rome', $result->getTzId());
         self::assertSame(120, $result->getTimezoneOffsetMin());
+        self::assertSame(0.8, $result->getTzConfidence());
         self::assertStringContainsString('tz=Europe/Rome', (string) $result->getIndexLog());
     }
 

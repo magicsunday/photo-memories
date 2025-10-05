@@ -18,6 +18,9 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifValueAccessorInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use function abs;
+use function intdiv;
+use function sprintf;
 
 /**
  * Applies capture date, timezone offset and sub-second precision from EXIF data.
@@ -57,6 +60,7 @@ final class DateTimeExifMetadataProcessor implements ExifMetadataProcessorInterf
 
         if ($offset !== null) {
             $media->setTimezoneOffsetMin($offset);
+            $media->setTzConfidence(1.0);
         }
 
         $subSeconds = $this->accessor->intOrNull($exif['EXIF']['SubSecTimeOriginal'] ?? null);
