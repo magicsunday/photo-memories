@@ -29,7 +29,7 @@ use function trim;
  */
 final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 {
-    public function __construct(private readonly TitleTemplateProvider $provider)
+    public function __construct(private TitleTemplateProvider $provider)
     {
     }
 

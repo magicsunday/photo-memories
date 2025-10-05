@@ -21,7 +21,7 @@ use function max;
  */
 readonly class ClusterRepository
 {
-    public function __construct(private readonly EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em)
     {
     }
 
