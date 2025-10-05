@@ -114,12 +114,53 @@ final class TimeSimilarityStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function skipsNoShowMediaWhenBuildingBuckets(): void
+    {
+        $helper   = LocationHelper::createDefault();
+        $strategy = new TimeSimilarityStrategy(
+            locHelper: $helper,
+            maxGapSeconds: 1800,
+            minItemsPerBucket: 2,
+        );
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'potsdam-city',
+            displayName: 'Potsdam',
+            lat: 52.3906,
+            lon: 13.0645,
+            city: 'Potsdam',
+            country: 'Germany',
+        );
+
+        $mediaItems = [
+            $this->createMedia(2101, '2024-05-12 14:00:00', 52.3907, 13.0646, $location),
+            $this->createMedia(2102, '2024-05-12 14:10:00', 52.3908, 13.0647, $location),
+            $this->createMedia(
+                2103,
+                '2024-05-12 14:20:00',
+                52.3909,
+                13.0648,
+                $location,
+                static function (Media $media): void {
+                    $media->setNoShow(true);
+                }
+            ),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        self::assertSame([2101, 2102], $clusters[0]->getMembers());
+    }
+
     private function createMedia(
         int $id,
         string $takenAt,
         float $lat,
         float $lon,
         Location $location,
+        ?callable $configure = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -128,6 +169,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
+            configure: $configure,
         );
     }
 }
