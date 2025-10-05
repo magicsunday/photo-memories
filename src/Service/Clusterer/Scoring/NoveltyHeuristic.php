@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 
 
@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -182,8 +183,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     /**
      * Compute novelty for a cluster using precomputed corpus stats.
      *
+     * @param ClusterDraft         $cluster
      * @param array<int, Media>    $mediaMap id => Media
      * @param array<string, mixed> $stats    see buildCorpusStats()
+     *
+     * @return float
+     * @throws DateMalformedStringException
      */
     public function computeNovelty(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
@@ -278,7 +283,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
      * @param array        $mediaMap
      *
      * @return list<int>
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     private function collectClusterDays(ClusterDraft $c, array $mediaMap): array
     {

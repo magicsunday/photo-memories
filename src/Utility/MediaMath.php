@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 /**
  * This file is part of the package magicsunday/photo-memories.
@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Utility;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 
@@ -115,7 +116,7 @@ final class MediaMath
      * @param int         $minValidYear
      *
      * @return array{from:int,to:int}|null
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     public static function timeRangeReliable(
         array $items,

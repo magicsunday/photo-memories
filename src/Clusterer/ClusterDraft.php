@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Location;
+use function count;
 
 /**
  * Immutable data transfer object that captures the calculated cluster state
@@ -63,7 +64,7 @@ final class ClusterDraft
         $this->members   = $members;
 
         // Calculate basic cluster statistics that are derived from the constructor arguments.
-        $this->membersCount = \count($members);
+        $this->membersCount = count($members);
         $this->centroidLat  = $centroid['lat'] ?? null;
         $this->centroidLon  = $centroid['lon'] ?? null;
     }

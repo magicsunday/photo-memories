@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
@@ -91,7 +92,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      * @param list<Media> $items
      *
      * @return list<ClusterDraft>
-     * @throws \DateInvalidTimeZoneException
+     * @throws DateInvalidTimeZoneException
      */
     public function cluster(array $items): array
     {
@@ -144,7 +145,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             $runItems = [];
             $prev     = null;
 
-            $flush = function () use (&$runs, &$runDays, &$runItems): void {
+            $flush = static function () use (&$runs, &$runDays, &$runItems): void {
                 if ($runDays !== []) {
                     $runs[] = ['days' => $runDays, 'items' => $runItems];
                 }
@@ -205,7 +206,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             }
 
             // pick best candidate: by items count (desc), tie-breaker by span (more nights), then by latest
-            usort($candidates, function (array $a, array $b): int {
+            usort($candidates, static function (array $a, array $b): int {
                 $na = count($a['items']);
                 $nb = count($b['items']);
                 if ($na !== $nb) {

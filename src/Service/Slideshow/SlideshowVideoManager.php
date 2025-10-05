@@ -84,7 +84,9 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $this->ensureVideoDirectory();
 
-        $handle = @fopen($lockPath, 'x');
+        $handle = @fopen($lockPath,
+            'xb'
+        );
         if ($handle === false) {
             return SlideshowVideoStatus::generating($this->slideDuration);
         }

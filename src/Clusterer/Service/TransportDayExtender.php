@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Service;
 
+use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
@@ -73,7 +74,12 @@ final class TransportDayExtender
     }
 
     /**
+     * @param string                                 $previous
+     * @param string                                 $current
      * @param array<string, array{isSynthetic:bool}> $days
+     *
+     * @return bool
+     * @throws DateMalformedStringException
      */
     public function areSequentialDays(string $previous, string $current, array $days): bool
     {
@@ -86,7 +92,7 @@ final class TransportDayExtender
      * @param array<string, array{isSynthetic:bool}> $days
      *
      * @return bool
-     * @throws \DateMalformedStringException
+     * @throws DateMalformedStringException
      */
     private function checkSequentialDays(string $previous, string $current, array $days): bool
     {

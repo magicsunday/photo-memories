@@ -24,6 +24,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function assert;
 use function explode;
 use function ctype_digit;
+use function is_string;
 use function mb_strtolower;
 use function strrpos;
 use function substr;
@@ -176,7 +177,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $code = substr($holidayId, 0, $pos);
-        if (!\is_string($code) || $code === '') {
+        if (!is_string($code) || $code === '') {
             return null;
         }
 

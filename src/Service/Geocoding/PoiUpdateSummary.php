@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Geocoding;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
+use function sprintf;
 
 /**
  * Class PoiUpdateSummary
@@ -43,6 +44,6 @@ final readonly class PoiUpdateSummary
     public function render(SymfonyStyle $io): void
     {
         $io->writeln(
-            \sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls));
+            sprintf('✅ %d Orte verarbeitet, %d aktualisiert, %d Netzabfragen.', $this->processed, $this->updated, $this->networkCalls));
     }
 }

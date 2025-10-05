@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Utility;
 
 use InvalidArgumentException;
+use function strlen;
 
 /**
  * Helper for encoding latitude/longitude into GeoHash strings.
@@ -48,7 +49,7 @@ final class GeoHash
         $bit = 0;
         $ch = 0;
 
-        while (\strlen($geohash) < $precision) {
+        while (strlen($geohash) < $precision) {
             if ($isEven) {
                 $mid = ($lonInterval[0] + $lonInterval[1]) / 2.0;
                 if ($longitude >= $mid) {

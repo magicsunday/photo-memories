@@ -186,7 +186,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
             }
 
             $qualityOrdered = $visibleMembers;
-            usort($qualityOrdered, function (int $a, int $b) use ($details, $positions): int {
+            usort($qualityOrdered, static function (int $a, int $b) use ($details, $positions): int {
                 $detailA = $details[(string) $a]['score'] ?? 0.0;
                 $detailB = $details[(string) $b]['score'] ?? 0.0;
 

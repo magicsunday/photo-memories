@@ -13,6 +13,9 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use Doctrine\DBAL\Exception;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\OptimisticLockException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 
@@ -89,7 +92,14 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
     }
 
     /**
+     * @param Media             $media
+     * @param DateTimeImmutable $takenAt
+     * @param string            $phash
+     *
      * @return list<Media>
+     * @throws Exception
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     private function collectMembers(Media $media, DateTimeImmutable $takenAt, string $phash): array
     {
