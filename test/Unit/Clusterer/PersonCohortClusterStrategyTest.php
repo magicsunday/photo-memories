@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -28,6 +29,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             minPersons: 2,
             minItemsTotal: 5,
             windowDays: 7,
+            personSignatureHelper: new PersonSignatureHelper(),
         );
 
         $start = new DateTimeImmutable('2024-01-05 12:00:00', new DateTimeZone('UTC'));
@@ -60,6 +62,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             minPersons: 3,
             minItemsTotal: 5,
             windowDays: 7,
+            personSignatureHelper: new PersonSignatureHelper(),
         );
 
         $start = new DateTimeImmutable('2024-02-01 10:00:00', new DateTimeZone('UTC'));
@@ -73,6 +76,62 @@ final class PersonCohortClusterStrategyTest extends TestCase
         }
 
         self::assertSame([], $strategy->cluster($items));
+    }
+
+    #[Test]
+    public function includesMediaWithImportedPersonsMetadata(): void
+    {
+        $strategy = new PersonCohortClusterStrategy(
+            minPersons: 2,
+            minItemsTotal: 4,
+            windowDays: 5,
+            personSignatureHelper: new PersonSignatureHelper(),
+        );
+
+        $start = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
+        $items = [];
+        for ($i = 0; $i < 4; ++$i) {
+            $items[] = $this->makeMediaFixture(
+                id: 2000 + $i,
+                filename: sprintf('iptc-%d.jpg', $i),
+                takenAt: $start->add(new DateInterval('P' . $i . 'D')),
+                lat: 48.1,
+                lon: 11.6,
+                configure: static function (Media $media): void {
+                    $media->setPersons(['Alice', ' Bob ', 'alice']);
+                },
+            );
+        }
+
+        // Noise with insufficient or different persons metadata
+        $items[] = $this->makeMediaFixture(
+            id: 2050,
+            filename: 'iptc-noise-a.jpg',
+            takenAt: $start,
+            lat: 48.1,
+            lon: 11.6,
+            configure: static function (Media $media): void {
+                $media->setPersons(['Alice']);
+            },
+        );
+
+        $items[] = $this->makeMediaFixture(
+            id: 2051,
+            filename: 'iptc-noise-b.jpg',
+            takenAt: $start,
+            lat: 48.1,
+            lon: 11.6,
+            configure: static function (Media $media): void {
+                $media->setPersons(['Charlie', 'Dana']);
+            },
+        );
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame([2000, 2001, 2002, 2003], $cluster->getMembers());
     }
 
     /**
