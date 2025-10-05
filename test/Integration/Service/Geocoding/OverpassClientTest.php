@@ -95,7 +95,7 @@ final class RecordingHttpClient implements HttpClientInterface
 {
     public string $lastQuery = '';
 
-    public function __construct(private ResponseInterface $response)
+    public function __construct(private readonly ResponseInterface $response)
     {
     }
 

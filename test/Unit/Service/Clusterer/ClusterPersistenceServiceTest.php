@@ -36,7 +36,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         $media = $this->buildMediaSet();
         $lookup = new class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private array $media) {}
+            public function __construct(private readonly array $media) {}
 
             public function findByIds(array $ids, bool $onlyVideos = false): array
             {

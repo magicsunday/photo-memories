@@ -335,7 +335,7 @@ final class VacationClusterStrategyTest extends TestCase
             /**
              * @param array<int, Media> $map
              */
-            public function __construct(private array $map)
+            public function __construct(private readonly array $map)
             {
             }
 
