@@ -86,8 +86,8 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
         return $media;
     }
 
-    /** @param mixed $v @return list<string> */
-    private function fromIptcStrings($v): array
+    /** @param array|bool|float|int|string|null $v @return list<string> */
+    private function fromIptcStrings(array|bool|float|int|string|null $v): array
     {
         if (is_array($v)) {
             /** @var list<string> $out */

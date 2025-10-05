@@ -171,9 +171,9 @@ final readonly class FeedPreviewCommand extends Command
 }
 
     /**
-     * @param mixed $value
+     * @param array|bool|float|int|string|null $value
      */
-    private function formatSceneTags($value): string
+    private function formatSceneTags(array|bool|float|int|string|null $value): string
     {
         if (!is_array($value)) {
             return '–';

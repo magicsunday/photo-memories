@@ -284,11 +284,11 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     }
 
     /**
-     * @param mixed $value
+     * @param array|bool|float|int|string|null $value
      *
      * @return list<array{label: string, score: float}>
      */
-    private function normalizeSceneTags($value): array
+    private function normalizeSceneTags(array|bool|float|int|string|null $value): array
     {
         if (!is_array($value)) {
             return [];
