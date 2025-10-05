@@ -13,7 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Exif\Contract\ExifMetadataProcessorInterface;
-use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Throwable;
 
 use function array_key_exists;
@@ -57,7 +57,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
      * @param iterable<ExifMetadataProcessorInterface> $processors
      */
     public function __construct(
-        #[TaggedIterator('memories.metadata.exif.processor')]
+        #[AutowireIterator('memories.metadata.exif.processor')]
         private iterable $processors,
         private bool $readExifForVideos = false,
     ) {
