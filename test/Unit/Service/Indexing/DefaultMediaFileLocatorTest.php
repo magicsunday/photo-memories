@@ -33,7 +33,7 @@ use function unlink;
 final class DefaultMediaFileLocatorTest extends TestCase
 {
     /**
-     * @var list<string>
+     * @var list<string> $tempDirs
      */
     private array $tempDirs = [];
 

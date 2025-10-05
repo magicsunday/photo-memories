@@ -33,7 +33,7 @@ use function is_string;
  */
 final class TitleTemplateProvider
 {
-    /** @var array<string, array<string, array{title:string,subtitle?:string}>> */
+    /** @var array<string, array<string, array{title:string,subtitle?:string}>> $templates */
     private array $templates = [];
 
     public function __construct(

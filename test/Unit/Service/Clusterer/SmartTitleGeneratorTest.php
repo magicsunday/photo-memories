@@ -31,7 +31,7 @@ use function unlink;
 #[CoversClass(ClusterDraft::class)]
 final class SmartTitleGeneratorTest extends TestCase
 {
-    /** @var list<string> */
+    /** @var list<string> $tempFiles */
     private array $tempFiles = [];
 
     protected function tearDown(): void

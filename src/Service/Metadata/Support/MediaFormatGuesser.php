@@ -20,16 +20,16 @@ use function trim;
  */
 final class MediaFormatGuesser
 {
-    /** @var list<string> */
+    /** Raw file extensions used for detection. */
     private const array RAW_EXTENSIONS = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng'];
 
-    /** @var list<string> */
+    /** HEIC-related file extensions. */
     private const array HEIC_EXTENSIONS = ['heic', 'heif', 'hif'];
 
-    /** @var list<string> */
+    /** HEVC-related file extensions. */
     private const array HEVC_EXTENSIONS = ['hevc', 'h265'];
 
-    /** @var list<string> */
+    /** MIME types considered RAW. */
     private const array RAW_MIME_TYPES = [
         'image/x-canon-cr2',
         'image/x-canon-cr3',
@@ -41,7 +41,7 @@ final class MediaFormatGuesser
         'image/dng',
     ];
 
-    /** @var list<string> */
+    /** MIME types representing HEIC media. */
     private const array HEIC_MIME_TYPES = [
         'image/heic',
         'image/heif',
@@ -49,19 +49,19 @@ final class MediaFormatGuesser
         'image/heif-sequence',
     ];
 
-    /** @var list<string> */
+    /** MIME types representing HEVC video. */
     private const array HEVC_MIME_TYPES = [
         'video/hevc',
         'video/h265',
     ];
 
-    /** @var list<string> */
+    /** File type identifiers used to detect RAW media. */
     private const array RAW_FILE_TYPES = ['cr2', 'cr3', 'nef', 'arw', 'rw2', 'raf', 'dng', 'raw'];
 
-    /** @var list<string> */
+    /** File type identifiers used to detect HEIC media. */
     private const array HEIC_FILE_TYPES = ['heic', 'heif'];
 
-    /** @var list<string> */
+    /** File type identifiers used to detect HEVC media. */
     private const array HEVC_FILE_TYPES = ['hevc', 'h265'];
 
     public static function isRawFromExtension(?string $extension): bool

@@ -35,7 +35,7 @@ use function strtolower;
  */
 final class ContentClassifierExtractor implements SingleMetadataExtractorInterface
 {
-    /** @var array<int, string> */
+    /** Keywords associated with screenshot detection. */
     private const array SCREENSHOT_KEYWORDS = [
         'screenshot',
         'screen-shot',
@@ -46,7 +46,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'bildschirmaufnahme',
     ];
 
-    /** @var array<int, string> */
+    /** Keywords indicating document-style media. */
     private const array DOCUMENT_KEYWORDS = [
         'document',
         'scan',
@@ -60,7 +60,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'certificate',
     ];
 
-    /** @var array<int, string> */
+    /** Keywords used to recognise map-related media. */
     private const array MAP_KEYWORDS = [
         'map',
         'maps',
@@ -72,7 +72,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'osm',
     ];
 
-    /** @var array<int, string> */
+    /** Keywords marking screen recordings. */
     private const array SCREEN_RECORD_KEYWORDS = [
         'screenrecord',
         'screen-record',

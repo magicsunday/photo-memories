@@ -45,13 +45,13 @@ use const SORT_NUMERIC;
  */
 final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 {
-    /** @var array<string,mixed>|null */
+    /** @var array<string,mixed>|null $stats */
     private ?array $stats = null;
 
     public function __construct(
         private float $gridStepDeg = 0.5,     // ~55 km
         private int $phashPrefixNibbles = 4,  // 4 hex chars -> 16 bit
-        /** @var array{place: float, time: float, device: float, content: float} */
+        /** @var array{place: float, time: float, device: float, content: float} $weights */
         private array $weights = [
             'place'   => 0.35,
             'time'    => 0.25,

@@ -58,7 +58,7 @@ use function unlink;
 final class DefaultMediaIngestionPipelineTest extends TestCase
 {
     /**
-     * @var list<string>
+     * @var list<string> $tempFiles
      */
     private array $tempFiles = [];
 
