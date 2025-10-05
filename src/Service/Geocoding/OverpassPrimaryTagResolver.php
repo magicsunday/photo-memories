@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use MagicSunday\Memories\Service\Geocoding\Contract\OverpassPrimaryTagResolverInterface;
 
+use function array_any;
 use function is_string;
 
 /**
@@ -49,15 +50,10 @@ final readonly class OverpassPrimaryTagResolver implements OverpassPrimaryTagRes
             return false;
         }
 
-        if (in_array(
-            $value,
+        return array_any(
             $allowedValues,
-            true
-        )) {
-            return true;
-        }
-
-        return false;
+            static fn (string $allowed): bool => $allowed === $value
+        );
     }
 
     private function stringOrNull(mixed $value): ?string
