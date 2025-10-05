@@ -14,8 +14,16 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
+use function count;
+use function explode;
 use function floor;
+use function implode;
 use function sprintf;
+use function str_contains;
+use function str_replace;
+use function strtolower;
+use function strtoupper;
+use function trim;
 
 /**
  * Links Media to Locations; uses a pre-warmed cell index + in-run cache.
@@ -69,6 +77,8 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         }
 
         // 3) network path once per cell
+        $acceptLanguage = $this->normalizeAcceptLanguage($acceptLanguage);
+
         $result = $this->geocoder->reverse($lat, $lon, $acceptLanguage);
         if (!$result instanceof GeocodeResult) {
             return null;
@@ -114,5 +124,41 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         if ($this->resolver->consumeLastUsedNetwork()) {
             ++$this->lastNetworkCalls;
         }
+    }
+
+    private function normalizeAcceptLanguage(string $value): string
+    {
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return 'de';
+        }
+
+        if (str_contains($trimmed, ',')) {
+            return $trimmed;
+        }
+
+        $normalized = str_replace('_', '-', $trimmed);
+        $normalized = explode('.', $normalized, 2)[0];
+        $parts      = explode('-', $normalized);
+        $count      = count($parts);
+
+        if ($count === 0) {
+            return 'de';
+        }
+
+        $parts[0] = strtolower($parts[0]);
+
+        for ($i = 1; $i < $count; ++$i) {
+            $parts[$i] = strtoupper($parts[$i]);
+        }
+
+        $header = implode('-', $parts);
+
+        if ($header === '') {
+            return 'de';
+        }
+
+        return $header;
     }
 }
