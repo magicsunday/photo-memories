@@ -62,21 +62,17 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     public function build(array $clusters): array
     {
         // 1) filter
-        $filtered = [];
-        foreach ($clusters as $c) {
-            $score        = (float) ($c->getParams()['score'] ?? 0.0);
-            $membersCount = $c->getMembersCount();
-            if ($score < $this->minScore) {
-                continue;
-            }
+        $filtered = array_values(array_filter(
+            $clusters,
+            function (ClusterDraft $c): bool {
+                $score = (float) ($c->getParams()['score'] ?? 0.0);
+                if ($score < $this->minScore) {
+                    return false;
+                }
 
-            if ($membersCount < $this->minMembers) {
-                continue;
+                return $c->getMembersCount() >= $this->minMembers;
             }
-
-            $members = $c->getMembers();
-            $filtered[] = $c;
-        }
+        ));
 
         if ($filtered === []) {
             return [];
