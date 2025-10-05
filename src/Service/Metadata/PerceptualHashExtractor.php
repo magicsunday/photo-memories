@@ -143,14 +143,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             $media->setDhash($this->computeDhash64($mat));
             $media->setPhash(strtolower($phashHex));
 
-            $prefixLength = max(0, min(32, $this->phashPrefixLength));
-            if ($prefixLength > 0) {
+            if ($this->phashPrefixLength > 0) {
                 $media->setPhashPrefix(
                     strtolower(
                         substr(
                             $phashHex,
                             0,
-                            $prefixLength
+                            $this->phashPrefixLength
                         )
                     )
                 );
