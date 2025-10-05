@@ -111,6 +111,11 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
             $params['place'] = $label;
         }
 
+        $tagMetadata = $this->collectDominantTags($bucket);
+        foreach ($tagMetadata as $key => $value) {
+            $params[$key] = $value;
+        }
+
         return new ClusterDraft(
             algorithm: $this->name(),
             params: $params,

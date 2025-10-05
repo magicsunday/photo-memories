@@ -114,6 +114,89 @@ final class TimeSimilarityStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function enrichesClustersWithDominantTags(): void
+    {
+        $helper   = LocationHelper::createDefault();
+        $strategy = new TimeSimilarityStrategy(
+            locHelper: $helper,
+            maxGapSeconds: 3600,
+            minItemsPerBucket: 2,
+        );
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'london-city',
+            displayName: 'London',
+            lat: 51.5074,
+            lon: -0.1278,
+            city: 'London',
+            country: 'United Kingdom',
+        );
+
+        $mediaItems = [
+            $this->makeMediaFixture(
+                id: 2001,
+                filename: 'time-tags-2001.jpg',
+                takenAt: '2023-06-01 18:00:00',
+                lat: 51.5075,
+                lon: -0.1277,
+                location: $location,
+                configure: static function (Media $media): void {
+                    $media->setSceneTags([
+                        ['label' => 'Beach', 'score' => 0.92],
+                        ['label' => 'Sunset', 'score' => 0.55],
+                    ]);
+                    $media->setKeywords(['Vacation', 'Beach Day']);
+                }
+            ),
+            $this->makeMediaFixture(
+                id: 2002,
+                filename: 'time-tags-2002.jpg',
+                takenAt: '2023-06-01 18:20:00',
+                lat: 51.5076,
+                lon: -0.1276,
+                location: $location,
+                configure: static function (Media $media): void {
+                    $media->setSceneTags([
+                        ['label' => 'Beach', 'score' => 0.82],
+                        ['label' => 'Sunset', 'score' => 0.61],
+                    ]);
+                    $media->setKeywords(['Vacation', 'Sunset']);
+                }
+            ),
+            $this->makeMediaFixture(
+                id: 2003,
+                filename: 'time-tags-2003.jpg',
+                takenAt: '2023-06-01 18:45:00',
+                lat: 51.5077,
+                lon: -0.1275,
+                location: $location,
+                configure: static function (Media $media): void {
+                    $media->setSceneTags([
+                        ['label' => 'Forest', 'score' => 0.75],
+                    ]);
+                    $media->setKeywords(['Beach Day']);
+                }
+            ),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        $params = $clusters[0]->getParams();
+
+        self::assertArrayHasKey('scene_tags', $params);
+        /** @var list<array{label: string, score: float}> $sceneTags */
+        $sceneTags = $params['scene_tags'];
+        self::assertSame('Beach', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.92, $sceneTags[0]['score'], 0.00001);
+        self::assertSame('Forest', $sceneTags[1]['label']);
+        self::assertSame('Sunset', $sceneTags[2]['label']);
+
+        self::assertArrayHasKey('keywords', $params);
+        self::assertSame(['Beach Day', 'Vacation', 'Sunset'], $params['keywords']);
+    }
+
     private function createMedia(
         int $id,
         string $takenAt,
