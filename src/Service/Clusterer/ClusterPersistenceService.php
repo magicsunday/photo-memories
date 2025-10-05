@@ -510,9 +510,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param mixed $value
+     * @param array|bool|float|int|string|null $value
      */
-    private function numericOrNull($value): ?float
+    private function numericOrNull(array|bool|float|int|string|null $value): ?float
     {
         if ($value === null) {
             return null;
@@ -584,12 +584,12 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param mixed     $value
-     * @param list<int> $original
+     * @param array|bool|float|int|string|null $value
+     * @param list<int>                        $original
      *
      * @return list<int>|null
      */
-    private function extractOrderedList($value, array $original): ?array
+    private function extractOrderedList(array|bool|float|int|string|null $value, array $original): ?array
     {
         if (!is_array($value)) {
             return null;
@@ -628,12 +628,12 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param mixed     $raw
-     * @param list<int> $original
+     * @param array|bool|float|int|string|null $raw
+     * @param list<int>                        $original
      *
      * @return list<int>|null
      */
-    private function normaliseOrderList($raw, array $original): ?array
+    private function normaliseOrderList(array|bool|float|int|string|null $raw, array $original): ?array
     {
         if (!is_array($raw) || $raw === []) {
             return null;
