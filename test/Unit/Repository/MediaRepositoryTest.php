@@ -106,6 +106,99 @@ final class MediaRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function findByIdsFiltersHiddenBurstMembers(): void
+    {
+        $media = $this->makeMedia(25, 'member.heic');
+
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getMock();
+        $query->expects(self::once())
+            ->method('getResult')
+            ->willReturn([$media]);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
+        $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
+        $qb->expects(self::once())->method('where')->with('m.id IN (:ids)')->willReturn($qb);
+        $andWhereConditions = ['m.noShow = false', '(m.burstRepresentative IS NULL OR m.burstRepresentative = true)'];
+        $qb->expects(self::exactly(2))
+            ->method('andWhere')
+            ->willReturnCallback(static function (string $condition) use (&$andWhereConditions, $qb): QueryBuilder {
+                $expected = array_shift($andWhereConditions);
+                self::assertSame($expected, $condition);
+
+                return $qb;
+            });
+        $qb->expects(self::once())
+            ->method('setParameter')
+            ->with('ids', [25])
+            ->willReturn($qb);
+        $qb->expects(self::once())->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+
+        $repository = new MediaRepository($em);
+
+        $result = $repository->findByIds([25]);
+
+        self::assertSame([$media], $result);
+    }
+
+    #[Test]
+    public function findBurstMembersReturnsSiblingsSortedByIndex(): void
+    {
+        $first  = $this->makeMedia(31, 'burst-1.heic');
+        $second = $this->makeMedia(32, 'burst-2.heic');
+
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getMock();
+        $query->expects(self::once())
+            ->method('getResult')
+            ->willReturn([$first, $second]);
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
+        $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
+        $qb->expects(self::once())->method('where')->with('m.burstUuid = :burstUuid')->willReturn($qb);
+        $qb->expects(self::exactly(2))
+            ->method('setParameter')
+            ->willReturnCallback(static function (string $name, mixed $value) use ($qb): QueryBuilder {
+                if ($name === 'burstUuid') {
+                    self::assertSame('existing-burst', $value);
+                } else {
+                    self::assertSame('burst-1.heic', $value);
+                }
+
+                return $qb;
+            });
+        $qb->expects(self::once())->method('orderBy')->with('m.burstIndex', 'ASC')->willReturn($qb);
+        $qb->expects(self::exactly(2))
+            ->method('addOrderBy')
+            ->willReturnCallback(static function (string $field, string $direction) use ($qb): QueryBuilder {
+                self::assertContains($field, ['m.takenAt', 'm.id']);
+                self::assertSame('ASC', $direction);
+
+                return $qb;
+            });
+        $qb->expects(self::once())->method('andWhere')->with('m.path <> :excludePath')->willReturn($qb);
+        $qb->expects(self::once())->method('getQuery')->willReturn($query);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+
+        $repository = new MediaRepository($em);
+
+        $result = $repository->findBurstMembers(' existing-burst ', ' burst-1.heic ');
+
+        self::assertSame([$first, $second], $result);
+    }
+
+    #[Test]
     public function findIndexingCandidatesAppliesMetadataFiltersAndLimit(): void
     {
         $media = $this->makeMedia(30, 'candidate.jpg');
@@ -158,8 +251,8 @@ final class MediaRepositoryTest extends TestCase
         $qb->expects(self::once())->method('select')->with('m')->willReturn($qb);
         $qb->expects(self::once())->method('from')->with(Media::class, 'm')->willReturn($qb);
         $qb->expects(self::once())->method('where')->with('m.noShow = false')->willReturn($qb);
-        $andWhereExpectations = ['m.lowQuality = false', 'm.takenAt BETWEEN :from AND :to'];
-        $qb->expects(self::exactly(2))
+        $andWhereExpectations = ['m.lowQuality = false', '(m.burstRepresentative IS NULL OR m.burstRepresentative = true)', 'm.takenAt BETWEEN :from AND :to'];
+        $qb->expects(self::exactly(3))
             ->method('andWhere')
             ->willReturnCallback(static function (string $condition) use (&$andWhereExpectations, $qb): QueryBuilder {
                 $expected = array_shift($andWhereExpectations);

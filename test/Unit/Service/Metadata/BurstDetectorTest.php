@@ -45,11 +45,13 @@ final class BurstDetectorTest extends TestCase
         $media = $this->makeMedia(2, 'burst-1.heic', $baseTime, configure: static function (Media $media): void {
             $media->setMime('image/heic');
             $media->setPhash('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+            $media->setSharpness(0.20);
         });
 
         $neighbor = $this->makeMedia(3, 'burst-2.heic', '2024-02-02T12:00:02+00:00', configure: static function (Media $media): void {
             $media->setMime('image/heic');
             $media->setPhash('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+            $media->setSharpness(0.80);
         });
 
         $far = $this->makeMedia(4, 'other.heic', '2024-02-02T12:00:10+00:00', configure: static function (Media $media): void {
@@ -66,6 +68,7 @@ final class BurstDetectorTest extends TestCase
                 ['media' => $neighbor, 'distance' => 3],
                 ['media' => $far, 'distance' => 1],
             ]);
+        $repository->expects(self::never())->method('findBurstMembers');
 
         $detector = new BurstDetector($repository);
 
@@ -78,5 +81,46 @@ final class BurstDetectorTest extends TestCase
         self::assertSame(0, $media->getBurstIndex());
         self::assertSame(1, $neighbor->getBurstIndex());
         self::assertSame('keep-existing', $far->getBurstUuid());
+        self::assertFalse($media->isBurstRepresentative());
+        self::assertTrue($neighbor->isBurstRepresentative());
+        self::assertNull($far->isBurstRepresentative());
+    }
+
+    #[Test]
+    public function reprocessesExistingBurstAndKeepsRepresentativeStable(): void
+    {
+        $media = $this->makeMedia(5, 'existing-1.heic', '2024-02-02T12:00:00+00:00', configure: static function (Media $media): void {
+            $media->setMime('image/heic');
+            $media->setBurstUuid('existing-burst');
+            $media->setBurstIndex(5);
+            $media->setSharpness(0.30);
+        });
+
+        $sibling = $this->makeMedia(6, 'existing-2.heic', '2024-02-02T12:00:01+00:00', configure: static function (Media $media): void {
+            $media->setMime('image/heic');
+            $media->setBurstUuid('existing-burst');
+            $media->setBurstIndex(1);
+            $media->setSharpness(0.85);
+        });
+
+        $repository = $this->createMock(MediaRepository::class);
+        $repository->expects(self::never())->method('findNearestByPhash');
+        $repository
+            ->expects(self::once())
+            ->method('findBurstMembers')
+            ->with('existing-burst', $media->getPath())
+            ->willReturn([$sibling]);
+
+        $detector = new BurstDetector($repository);
+
+        $detector->extract($media->getPath(), $media);
+
+        self::assertFalse($media->isBurstRepresentative());
+        self::assertTrue($sibling->isBurstRepresentative());
+
+        $detector->extract($media->getPath(), $media);
+
+        self::assertFalse($media->isBurstRepresentative());
+        self::assertTrue($sibling->isBurstRepresentative());
     }
 }

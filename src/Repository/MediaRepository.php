@@ -54,6 +54,7 @@ readonly class MediaRepository implements MemberMediaLookupInterface
             ->from(Media::class, 'm')
             ->where('m.id IN (:ids)')
             ->andWhere('m.noShow = false')
+            ->andWhere('(m.burstRepresentative IS NULL OR m.burstRepresentative = true)')
             ->setParameter('ids', $ids);
 
         if ($onlyVideos) {
@@ -150,6 +151,39 @@ SQL;
     /**
      * @return list<Media>
      */
+    public function findBurstMembers(string $burstUuid, ?string $excludePath = null): array
+    {
+        $burstUuid = trim($burstUuid);
+        if ($burstUuid === '') {
+            return [];
+        }
+
+        $qb = $this->em->createQueryBuilder();
+        $qb->select('m')
+            ->from(Media::class, 'm')
+            ->where('m.burstUuid = :burstUuid')
+            ->setParameter('burstUuid', $burstUuid)
+            ->orderBy('m.burstIndex', 'ASC')
+            ->addOrderBy('m.takenAt', 'ASC')
+            ->addOrderBy('m.id', 'ASC');
+
+        $excludePath = $excludePath !== null ? trim($excludePath) : null;
+        if ($excludePath !== null && $excludePath !== '') {
+            $qb->andWhere('m.path <> :excludePath')
+                ->setParameter('excludePath', $excludePath);
+        }
+
+        $query = $qb->getQuery();
+
+        /** @var list<Media> $items */
+        $items = $query->getResult();
+
+        return $items;
+    }
+
+    /**
+     * @return list<Media>
+     */
     public function findIndexingCandidates(int $limit): array
     {
         $maxResults = $limit < 1 ? 1 : $limit;
@@ -183,6 +217,7 @@ SQL;
             ->from(Media::class, 'm')
             ->where('m.noShow = false')
             ->andWhere('m.lowQuality = false')
+            ->andWhere('(m.burstRepresentative IS NULL OR m.burstRepresentative = true)')
             ->andWhere('m.takenAt BETWEEN :from AND :to')
             ->setParameter('from', $from)
             ->setParameter('to', $to)
