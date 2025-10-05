@@ -187,7 +187,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         // Flatten transparent images on a white background to avoid artefacts in the final JPEG file.
                         $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
                         $clone->clear();
-                        $clone->destroy();
+                        unset($clone);
                         $clone = $flattened;
                     }
 
@@ -205,14 +205,14 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $results[$targetWidth] = $out;
                 } finally {
                     $clone->clear();
-                    $clone->destroy();
+                    unset($clone);
                 }
             }
 
             return $results;
         } finally {
             $imagick->clear();
-            $imagick->destroy();
+            unset($imagick);
         }
     }
 
