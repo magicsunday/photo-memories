@@ -53,6 +53,13 @@ parameters:
     memories.timezone.default: 'UTC'
     memories.cluster.timezone.default: 'Europe/Berlin'
 
+    memories.cluster.transport_speed.min_leg_duration_minutes_default: 5.0
+    memories.cluster.transport_speed.min_leg_distance_km_default: 10.0
+    memories.cluster.transport_speed.high_speed_threshold_kmh_default: 160.0
+    memories.cluster.transport_speed.min_leg_duration_minutes: '%env(default:memories.cluster.transport_speed.min_leg_duration_minutes_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_MINUTES)%'
+    memories.cluster.transport_speed.min_leg_distance_km: '%env(default:memories.cluster.transport_speed.min_leg_distance_km_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_DISTANCE_KM)%'
+    memories.cluster.transport_speed.high_speed_threshold_kmh: '%env(default:memories.cluster.transport_speed.high_speed_threshold_kmh_default:float:MEMORIES_CLUSTER_TRANSPORT_HIGH_SPEED_THRESHOLD_KMH)%'
+
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
     memories.thumbnail.apply_orientation_default: false

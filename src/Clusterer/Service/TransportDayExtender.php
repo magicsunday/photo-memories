@@ -29,9 +29,9 @@ final class TransportDayExtender
 
     /**
      * @param list<string>                                              $run
-     * @param list<string>                                              $orderedKeys
-     * @param array<string, int>                                        $indexByKey
-     * @param array<string, array{hasAirportPoi:bool,isSynthetic:bool}> $days
+     * @param list<string>                                                      $orderedKeys
+     * @param array<string, int>                                                $indexByKey
+     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool}> $days
      *
      * @return list<string>
      */
@@ -49,7 +49,8 @@ final class TransportDayExtender
             $candidateKey = $orderedKeys[$firstIndex - 1];
             if (
                 !in_array($candidateKey, $extended, true)
-                && ($days[$candidateKey]['hasAirportPoi'] ?? false)
+                && (($days[$candidateKey]['hasAirportPoi'] ?? false)
+                    || ($days[$candidateKey]['hasHighSpeedTransit'] ?? false))
                 && $this->areSequentialDays($candidateKey, $firstKey, $days)
             ) {
                 array_unshift($extended, $candidateKey);
@@ -63,7 +64,8 @@ final class TransportDayExtender
             $candidateKey = $orderedKeys[$lastIndex + 1];
             if (
                 !in_array($candidateKey, $extended, true)
-                && ($days[$candidateKey]['hasAirportPoi'] ?? false)
+                && (($days[$candidateKey]['hasAirportPoi'] ?? false)
+                    || ($days[$candidateKey]['hasHighSpeedTransit'] ?? false))
                 && $this->areSequentialDays($lastKey, $candidateKey, $days)
             ) {
                 $extended[] = $candidateKey;

@@ -101,6 +101,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $spotDwellSeconds        = 0;
         $weekendHolidayDays      = 0;
         $awayDays                = 0;
+        $maxSpeedKmh             = 0.0;
+        $avgSpeedKmhSum          = 0.0;
+        $avgSpeedKmhSamples      = 0;
+        $highSpeedTransit        = false;
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -119,6 +123,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($summary['maxDistanceKm'] > $maxDistance) {
                 $maxDistance = $summary['maxDistanceKm'];
+            }
+
+            if ($summary['maxSpeedKmh'] > $maxSpeedKmh) {
+                $maxSpeedKmh = $summary['maxSpeedKmh'];
+            }
+
+            if ($summary['avgSpeedKmh'] > 0.0) {
+                $avgSpeedKmhSum += $summary['avgSpeedKmh'];
+                ++$avgSpeedKmhSamples;
+            }
+
+            if ($summary['hasHighSpeedTransit']) {
+                $highSpeedTransit = true;
             }
 
             $avgDistanceSum += $summary['avgDistanceKm'];
@@ -210,6 +227,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $tourismRatio  = $poiSamples > 0 ? min(1.0, $tourismHits / max(1, $poiSamples)) : 0.0;
         $photoDensityZ = $photoDensityDenominator > 0 ? $photoDensitySum / $photoDensityDenominator : 0.0;
+        $avgSpeedKmh   = $avgSpeedKmhSamples > 0 ? $avgSpeedKmhSum / $avgSpeedKmhSamples : 0.0;
 
         $firstDay    = $days[$dayKeys[0]];
         $lastDay     = $days[$dayKeys[$dayCount - 1]];
@@ -301,6 +319,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'move_days'                => $moveDays,
             'photo_density_z'          => $photoDensityZ,
             'airport_transfer'         => $airportFlag,
+            'max_speed_kmh'            => $maxSpeedKmh,
+            'avg_speed_kmh'            => $avgSpeedKmh,
+            'high_speed_transit'       => $highSpeedTransit,
             'spot_clusters_total'      => $spotClusterCount,
             'spot_cluster_days'        => $multiSpotDays,
             'spot_dwell_hours'         => round($spotDwellHours, 2),
