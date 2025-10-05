@@ -53,6 +53,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2023-08-15 10:12:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $cluster->getParams()['time_range']);
+        self::assertArrayHasKey('quality_avg', $cluster->getParams());
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(40.712825, $centroid['lat'], 0.00001);
@@ -87,6 +88,16 @@ final class CrossDimensionClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
+            configure: static function (Media $media): void {
+                $media->setWidth(4000);
+                $media->setHeight(3000);
+                $media->setSharpness(0.75);
+                $media->setIso(100);
+                $media->setBrightness(0.6);
+                $media->setContrast(0.7);
+                $media->setEntropy(0.8);
+                $media->setColorfulness(0.9);
+            },
         );
     }
 }

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -29,10 +30,13 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private int $timeGapSeconds = 2 * 3600,   // 2h
         private float $radiusMeters = 150.0,      // 150 m
         private int $minItemsPerRun = 6,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->timeGapSeconds < 1) {
             throw new InvalidArgumentException('timeGapSeconds must be >= 1.');
@@ -45,6 +49,8 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         if ($this->minItemsPerRun < 1) {
             throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -127,6 +133,13 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
             $tagMetadata = $this->collectDominantTags($run);
             foreach ($tagMetadata as $key => $value) {
                 $params[$key] = $value;
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($run);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
             }
 
             $out[] = new ClusterDraft(

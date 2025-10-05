@@ -116,6 +116,34 @@ final class DayAlbumClusterStrategyTest extends TestCase
         self::assertSame([501, 502], $clusters[0]->getMembers());
     }
 
+    #[Test]
+    public function addsCalendarFlagsAndQualityMetrics(): void
+    {
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            minItemsPerDay: 2,
+        );
+
+        $mediaItems = [
+            $this->createAnnotatedMedia(801, '2023-12-24 09:00:00'),
+            $this->createAnnotatedMedia(802, '2023-12-24 10:00:00'),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        $params = $clusters[0]->getParams();
+
+        self::assertArrayHasKey('isWeekend', $params);
+        self::assertTrue($params['isWeekend']);
+        self::assertSame('holiday-winter-2023', $params['holidayId']);
+        self::assertEqualsWithDelta(1.0, $params['quality_avg'], 1e-9);
+        self::assertEqualsWithDelta(1.0, $params['aesthetics_score'], 1e-9);
+        self::assertEqualsWithDelta(1.0, $params['quality_resolution'], 1e-9);
+        self::assertEqualsWithDelta(1.0, $params['quality_sharpness'], 1e-9);
+        self::assertEqualsWithDelta(1.0, $params['quality_iso'], 1e-9);
+    }
+
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
     {
         return $this->makeMediaFixture(
@@ -141,6 +169,29 @@ final class DayAlbumClusterStrategyTest extends TestCase
                 $local = new DateTimeImmutable($capturedLocal, new DateTimeZone('America/Los_Angeles'));
                 $media->setCapturedLocal($local);
                 $media->setTimezoneOffsetMin(-480);
+            },
+        );
+    }
+
+    private function createAnnotatedMedia(int $id, string $takenAt): Media
+    {
+        return $this->makeMediaFixture(
+            id: $id,
+            filename: sprintf('day-album-quality-%d.jpg', $id),
+            takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setFeatures([
+                    'isWeekend' => true,
+                    'holidayId' => 'holiday-winter-2023',
+                ]);
+                $media->setWidth(4000);
+                $media->setHeight(3000);
+                $media->setSharpness(1.0);
+                $media->setIso(50);
+                $media->setBrightness(0.55);
+                $media->setContrast(1.0);
+                $media->setEntropy(1.0);
+                $media->setColorfulness(1.0);
             },
         );
     }

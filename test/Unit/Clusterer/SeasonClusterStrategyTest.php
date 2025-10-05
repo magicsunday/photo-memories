@@ -59,6 +59,7 @@ final class SeasonClusterStrategyTest extends TestCase
         self::assertSame([1, 2, 3, 4], $cluster->getMembers());
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
+        self::assertArrayHasKey('quality_avg', $params);
         $sceneTags = $params['scene_tags'];
         self::assertCount(3, $sceneTags);
         self::assertSame('Schnee', $sceneTags[0]['label']);
@@ -114,6 +115,16 @@ final class SeasonClusterStrategyTest extends TestCase
             id: $id,
             filename: sprintf('season-%d.jpg', $id),
             takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setWidth(4032);
+                $media->setHeight(3024);
+                $media->setSharpness(0.7);
+                $media->setIso(125);
+                $media->setBrightness(0.58);
+                $media->setContrast(0.65);
+                $media->setEntropy(0.72);
+                $media->setColorfulness(0.81);
+            },
         );
     }
 

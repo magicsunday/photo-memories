@@ -13,9 +13,8 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
-use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
+use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
-use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -26,15 +25,16 @@ final class TimeStage extends AbstractExtractorStage
      */
     private readonly iterable $extractors;
 
+    private readonly MetadataQaInspector $metadataQaInspector;
+
     public function __construct(
         #[Autowire(service: TimeNormalizer::class)]
         SingleMetadataExtractorInterface $normalizer,
         #[Autowire(service: CalendarFeatureEnricher::class)]
         SingleMetadataExtractorInterface $calendar,
-        #[Autowire(service: DaypartEnricher::class)]
         SingleMetadataExtractorInterface $daypart,
-        #[Autowire(service: SolarEnricher::class)]
         SingleMetadataExtractorInterface $solar,
+        MetadataQaInspector $metadataQaInspector,
     ) {
         $this->extractors = [
             $normalizer,
@@ -42,6 +42,8 @@ final class TimeStage extends AbstractExtractorStage
             $daypart,
             $solar,
         ];
+
+        $this->metadataQaInspector = $metadataQaInspector;
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
@@ -54,6 +56,16 @@ final class TimeStage extends AbstractExtractorStage
             return $context;
         }
 
-        return $this->runExtractors($context, $this->extractors);
+        $context = $this->runExtractors($context, $this->extractors);
+
+        $media = $context->getMedia();
+        if ($media === null) {
+            return $context;
+        }
+
+        $this->metadataQaInspector->inspect($context->getFilePath(), $media);
+
+        return $context->withMedia($media);
     }
+
 }

@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -38,9 +39,9 @@ final class DeviceSimilarityStrategyTest extends TestCase
         );
 
         $mediaItems = [
-            $this->createMedia(301, '2023-05-01 09:00:00', 'Canon EOS R5', $berlin, 52.5200, 13.4050),
-            $this->createMedia(302, '2023-05-01 10:30:00', 'Canon EOS R5', $berlin, 52.5203, 13.4052),
-            $this->createMedia(303, '2023-05-01 11:45:00', 'Canon EOS R5', $berlin, 52.5205, 13.4054),
+            $this->createMedia(301, '2023-05-01 09:00:00', 'Canon EOS R5', $berlin, 52.5200, 13.4050, 'RF24-70mm F2.8', ContentKind::PHOTO),
+            $this->createMedia(302, '2023-05-01 10:30:00', 'Canon EOS R5', $berlin, 52.5203, 13.4052, 'RF24-70mm F2.8', ContentKind::PHOTO),
+            $this->createMedia(303, '2023-05-01 11:45:00', 'Canon EOS R5', $berlin, 52.5205, 13.4054, 'RF24-70mm F2.8', ContentKind::PHOTO),
             // Different day, should not form a cluster because below minItems
             $this->createMedia(304, '2023-05-02 09:15:00', 'Canon EOS R5', $berlin, 52.5206, 13.4056),
             $this->createMedia(305, '2023-05-02 12:00:00', 'Canon EOS R5', $berlin, 52.5207, 13.4057),
@@ -58,6 +59,8 @@ final class DeviceSimilarityStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame('Canon EOS R5', $params['device']);
         self::assertSame('Berlin', $params['place']);
+        self::assertSame('RF24-70mm F2.8', $params['lensModel']);
+        self::assertSame(ContentKind::PHOTO->value, $params['contentKind']);
 
         $expectedRange = [
             'from' => (new DateTimeImmutable('2023-05-01 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -100,6 +103,8 @@ final class DeviceSimilarityStrategyTest extends TestCase
         Location $location,
         float $lat,
         float $lon,
+        ?string $lensModel = null,
+        ?ContentKind $contentKind = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -108,8 +113,10 @@ final class DeviceSimilarityStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
-            configure: static function (Media $media) use ($camera): void {
+            configure: static function (Media $media) use ($camera, $lensModel, $contentKind): void {
                 $media->setCameraModel($camera);
+                $media->setLensModel($lensModel);
+                $media->setContentKind($contentKind);
             },
         );
     }

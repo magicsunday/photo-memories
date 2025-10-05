@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Scoring;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
@@ -22,7 +23,7 @@ final class QualityClusterScoreHeuristicTest extends TestCase
     #[Test]
     public function enrichCalculatesQualityAndAesthetics(): void
     {
-        $heuristic = new QualityClusterScoreHeuristic(qualityBaselineMegapixels: 12.0);
+        $heuristic = new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0));
 
         $cluster = new ClusterDraft(
             algorithm: 'test',

@@ -295,6 +295,7 @@ services:
             $calendar: '@MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher'
             $daypart: '@MagicSunday\Memories\Service\Metadata\DaypartEnricher'
             $solar: '@MagicSunday\Memories\Service\Metadata\SolarEnricher'
+            $metadataQaInspector: '@MagicSunday\Memories\Service\Metadata\MetadataQaInspector'
     MagicSunday\Memories\Service\Indexing\Stage\GeoStage:
         arguments:
             $geo: '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
@@ -482,6 +483,10 @@ services:
     MagicSunday\Memories\Clusterer\Support\LocalTimeHelper:
         arguments:
             $fallbackTimezone: '%memories.cluster.timezone.default%'
+
+    MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator:
+        arguments:
+            $qualityBaselineMegapixels: '%memories.score.quality_baseline_megapixels%'
 
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
@@ -899,7 +904,7 @@ services:
 
     MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic:
         arguments:
-            $qualityBaselineMegapixels: '%memories.score.quality_baseline_megapixels%'
+            $qualityAggregator: '@MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic: ~
 

@@ -27,6 +27,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
@@ -60,7 +61,7 @@ final class CompositeClusterScorerTest extends TestCase
 
         $heuristics = [
             new TemporalClusterScoreHeuristic(3, 0.6, 1990),
-            new QualityClusterScoreHeuristic(12.0),
+            new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
             new PeopleClusterScoreHeuristic(),
             new ContentClusterScoreHeuristic(),
             new LocationClusterScoreHeuristic(),
