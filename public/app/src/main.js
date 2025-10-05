@@ -30,87 +30,135 @@ const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', {
 
 document.title = 'Rückblick-Galerie';
 
-const app = document.querySelector('#app');
-app.innerHTML = `
-  <section class="toolbar">
-    <div>
-      <h1>Rückblick-Galerie</h1>
-      <p class="subtitle">Entdecke kuratierte Highlights aus deiner Mediathek.</p>
-    </div>
-    <div class="status-line" data-status>Starte Ladevorgang …</div>
-    <form class="filter" data-filter>
-      <label>
-        Score ab <strong data-score-value>0.35</strong>
-        <input type="range" min="0" max="1" step="0.05" name="score" value="0.35" aria-label="Minimaler Score" />
-      </label>
-      <label>
-        Strategie
-        <select name="strategie" aria-label="Strategiefilter">
-          <option value="">Alle Strategien</option>
-        </select>
-      </label>
-      <label>
-        Stichtag
-        <input type="date" name="datum" aria-label="Datumsfilter" />
-      </label>
-      <div class="filter-actions">
-        <button type="button" data-apply>Aktualisieren</button>
-        <button type="button" data-reset>Zurücksetzen</button>
-      </div>
-    </form>
-  </section>
-  <section class="cards" data-cards></section>
-`;
+let filterForm = null;
+let scoreInput = null;
+let scoreValue = null;
+let strategySelect = null;
+let dateInput = null;
+let applyButton = null;
+let resetButton = null;
+let statusLine = null;
+let cardsContainer = null;
 
 const lightbox = createLightbox();
 
-const filterForm = app.querySelector('[data-filter]');
-const scoreInput = filterForm.querySelector('input[name="score"]');
-const scoreValue = filterForm.querySelector('[data-score-value]');
-const strategySelect = filterForm.querySelector('select[name="strategie"]');
-const dateInput = filterForm.querySelector('input[name="datum"]');
-const applyButton = filterForm.querySelector('[data-apply]');
-const resetButton = filterForm.querySelector('[data-reset]');
-const statusLine = app.querySelector('[data-status]');
-const cardsContainer = app.querySelector('[data-cards]');
+const appContainer = document.querySelector('#app');
+if (appContainer instanceof HTMLElement) {
+  initialiseApp(appContainer);
+} else {
+  console.error('Konnte die Anwendung nicht initialisieren: Container "#app" fehlt.');
+}
 
-setFormFromState();
-updateScoreLabel();
+function initialiseApp(app) {
+  app.innerHTML = `
+    <section class="toolbar">
+      <div>
+        <h1>Rückblick-Galerie</h1>
+        <p class="subtitle">Entdecke kuratierte Highlights aus deiner Mediathek.</p>
+      </div>
+      <div class="status-line" data-status>Starte Ladevorgang …</div>
+      <form class="filter" data-filter>
+        <label>
+          Score ab <strong data-score-value>0.35</strong>
+          <input type="range" min="0" max="1" step="0.05" name="score" value="0.35" aria-label="Minimaler Score" />
+        </label>
+        <label>
+          Strategie
+          <select name="strategie" aria-label="Strategiefilter">
+            <option value="">Alle Strategien</option>
+          </select>
+        </label>
+        <label>
+          Stichtag
+          <input type="date" name="datum" aria-label="Datumsfilter" />
+        </label>
+        <div class="filter-actions">
+          <button type="button" data-apply>Aktualisieren</button>
+          <button type="button" data-reset>Zurücksetzen</button>
+        </div>
+      </form>
+    </section>
+    <section class="cards" data-cards></section>
+  `;
 
-scoreInput.addEventListener('input', () => {
-  updateScoreLabel();
-});
+  const form = app.querySelector('[data-filter]');
+  const status = app.querySelector('[data-status]');
+  const cards = app.querySelector('[data-cards]');
 
-scoreInput.addEventListener('change', () => {
-  applyFiltersFromForm();
-  fetchFeed();
-});
+  if (!(form instanceof HTMLFormElement) || !(status instanceof HTMLElement) || !(cards instanceof HTMLElement)) {
+    console.error('Konnte die Anwendung nicht initialisieren: erforderliche DOM-Elemente fehlen.');
 
-strategySelect.addEventListener('change', () => {
-  applyFiltersFromForm();
-  fetchFeed();
-});
+    return;
+  }
 
-dateInput.addEventListener('change', () => {
-  applyFiltersFromForm();
-  fetchFeed();
-});
+  filterForm = form;
+  statusLine = status;
+  cardsContainer = cards;
 
-applyButton.addEventListener('click', () => {
-  applyFiltersFromForm();
-  fetchFeed();
-});
+  const score = filterForm.querySelector('input[name="score"]');
+  const scoreDisplay = filterForm.querySelector('[data-score-value]');
+  const strategy = filterForm.querySelector('select[name="strategie"]');
+  const date = filterForm.querySelector('input[name="datum"]');
+  const apply = filterForm.querySelector('[data-apply]');
+  const reset = filterForm.querySelector('[data-reset]');
 
-resetButton.addEventListener('click', () => {
-  state.filters = { ...defaultFilters };
+  if (!(score instanceof HTMLInputElement)
+    || !(scoreDisplay instanceof HTMLElement)
+    || !(strategy instanceof HTMLSelectElement)
+    || !(date instanceof HTMLInputElement)
+    || !(apply instanceof HTMLButtonElement)
+    || !(reset instanceof HTMLButtonElement)
+  ) {
+    console.error('Konnte die Anwendung nicht initialisieren: Filtersteuerelemente fehlen oder sind ungültig.');
+
+    return;
+  }
+
+  scoreInput = score;
+  scoreValue = scoreDisplay;
+  strategySelect = strategy;
+  dateInput = date;
+  applyButton = apply;
+  resetButton = reset;
+
   setFormFromState();
   updateScoreLabel();
-  fetchFeed();
-});
 
-updateStatus();
-renderItems();
-fetchFeed();
+  scoreInput.addEventListener('input', () => {
+    updateScoreLabel();
+  });
+
+  scoreInput.addEventListener('change', () => {
+    applyFiltersFromForm();
+    fetchFeed();
+  });
+
+  strategySelect.addEventListener('change', () => {
+    applyFiltersFromForm();
+    fetchFeed();
+  });
+
+  dateInput.addEventListener('change', () => {
+    applyFiltersFromForm();
+    fetchFeed();
+  });
+
+  applyButton.addEventListener('click', () => {
+    applyFiltersFromForm();
+    fetchFeed();
+  });
+
+  resetButton.addEventListener('click', () => {
+    state.filters = { ...defaultFilters };
+    setFormFromState();
+    updateScoreLabel();
+    fetchFeed();
+  });
+
+  updateStatus();
+  renderItems();
+  fetchFeed();
+}
 
 async function fetchFeed() {
   state.loading = true;
@@ -180,6 +228,10 @@ async function fetchFeed() {
 }
 
 function renderItems() {
+  if (!(cardsContainer instanceof HTMLElement)) {
+    return;
+  }
+
   cardsContainer.textContent = '';
 
   if (!state.items || state.items.length === 0) {
@@ -512,6 +564,10 @@ function createLightbox() {
 }
 
 function updateStatus() {
+  if (!(statusLine instanceof HTMLElement)) {
+    return;
+  }
+
   statusLine.classList.toggle('error', Boolean(state.error));
 
   if (state.loading) {
@@ -539,11 +595,19 @@ function updateStatus() {
 }
 
 function updateScoreLabel() {
+  if (!(scoreInput instanceof HTMLInputElement) || !(scoreValue instanceof HTMLElement)) {
+    return;
+  }
+
   const value = Number.parseFloat(scoreInput.value);
   scoreValue.textContent = Number.isNaN(value) ? '0.00' : value.toFixed(2);
 }
 
 function populateStrategyOptions(strategies) {
+  if (!(strategySelect instanceof HTMLSelectElement)) {
+    return;
+  }
+
   const currentValue = strategySelect.value;
 
   while (strategySelect.options.length > 1) {
@@ -567,15 +631,23 @@ function populateStrategyOptions(strategies) {
 }
 
 function applyFiltersFromForm() {
-  state.filters.score = scoreInput.value ?? defaultFilters.score;
-  state.filters.strategie = strategySelect.value ?? defaultFilters.strategie;
-  state.filters.datum = dateInput.value ?? defaultFilters.datum;
+  state.filters.score = scoreInput instanceof HTMLInputElement ? scoreInput.value : defaultFilters.score;
+  state.filters.strategie = strategySelect instanceof HTMLSelectElement ? strategySelect.value : defaultFilters.strategie;
+  state.filters.datum = dateInput instanceof HTMLInputElement ? dateInput.value : defaultFilters.datum;
 }
 
 function setFormFromState() {
-  scoreInput.value = state.filters.score ?? defaultFilters.score;
-  strategySelect.value = state.filters.strategie ?? '';
-  dateInput.value = state.filters.datum ?? '';
+  if (scoreInput instanceof HTMLInputElement) {
+    scoreInput.value = state.filters.score ?? defaultFilters.score;
+  }
+
+  if (strategySelect instanceof HTMLSelectElement) {
+    strategySelect.value = state.filters.strategie ?? '';
+  }
+
+  if (dateInput instanceof HTMLInputElement) {
+    dateInput.value = state.filters.datum ?? '';
+  }
 }
 
 function formatLabel(value) {
