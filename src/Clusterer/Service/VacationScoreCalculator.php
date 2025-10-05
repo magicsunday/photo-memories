@@ -24,6 +24,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
 use function array_keys;
+use function array_slice;
 use function array_map;
 use function count;
 use function explode;
@@ -515,9 +516,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $winners[] = $winner;
             }
 
-            $entryCount = count($entries);
-            for ($i = 1; $i < $entryCount; ++$i) {
-                $fallback[] = $entries[$i];
+            foreach (array_slice($entries, 1) as $entry) {
+                $fallback[] = $entry;
             }
         }
 
