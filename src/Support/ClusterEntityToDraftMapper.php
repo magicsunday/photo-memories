@@ -22,17 +22,37 @@ use function sort;
 use const SORT_NUMERIC;
 
 /**
- * Maps persisted Cluster entity to in-memory ClusterDraft (no mutation).
+ * Maps persisted Cluster entities to immutable draft objects that are used by
+ * the clustering strategies.
  */
 final class ClusterEntityToDraftMapper
 {
-    /** @var array<string,string> */
+    /**
+     * Lookup table that maps the configured clustering algorithm to a logical
+     * group name used by the UI.
+     *
+     * @var array<string, string>
+     */
     private array $algorithmGroups = [];
 
+    /**
+     * Provides the fallback group name when no explicit mapping exists.
+     */
+    private string $defaultAlgorithmGroup;
+
+    /**
+     * @param array<string, string> $algorithmGroups Configuration that maps the algorithm identifier
+     *                                               to the human-readable group label.
+     * @param string                $defaultGroup    Optional default group name used when neither the
+     *                                               entity nor configuration defines a mapping.
+     */
     public function __construct(
         array $algorithmGroups = [],
-        private string $defaultAlgorithmGroup = 'default'
+        string $defaultGroup = 'default'
     ) {
+        $this->defaultAlgorithmGroup = $defaultGroup;
+
+        // Build a normalized lookup table that only contains non-empty string values.
         foreach ($algorithmGroups as $algorithm => $group) {
             if (!is_string($group) || $group === '') {
                 continue;
@@ -47,9 +67,12 @@ final class ClusterEntityToDraftMapper
     }
 
     /**
-     * @param list<Cluster> $entities
+     * Converts a list of persisted cluster entities into their in-memory draft
+     * representation.
      *
-     * @return list<ClusterDraft>
+     * @param list<Cluster> $entities The clusters retrieved from the persistence layer.
+     *
+     * @return list<ClusterDraft> The mapped draft objects used by the strategies.
      */
     public function mapMany(array $entities): array
     {
@@ -57,12 +80,15 @@ final class ClusterEntityToDraftMapper
         foreach ($entities as $e) {
             $algorithm = $e->getAlgorithm();
             $params    = $e->getParams() ?? [];
+
+            // Ensure every cluster is assigned to a group even if the entity did not persist one.
             if (!isset($params['group']) || !is_string($params['group']) || $params['group'] === '') {
                 $params['group'] = $this->resolveGroup($algorithm);
             }
             $centroid  = $e->getCentroid();
             $members   = $this->normalizeMembers($e->getMembers());
 
+            // Create a fresh draft object to avoid mutating the persisted entity state.
             $draft = new ClusterDraft(
                 algorithm: $algorithm,
                 params: $params,
@@ -90,9 +116,12 @@ final class ClusterEntityToDraftMapper
     }
 
     /**
-     * @param list<int> $members
+     * Normalizes the list of member media identifiers by removing duplicates
+     * and sorting the values numerically.
      *
-     * @return list<int>
+     * @param list<int> $members The raw member identifier list from the entity.
+     *
+     * @return list<int> The normalized list of unique member identifiers.
      */
     private function normalizeMembers(array $members): array
     {
@@ -102,6 +131,14 @@ final class ClusterEntityToDraftMapper
         return $members;
     }
 
+    /**
+     * Resolves the group name for the provided algorithm, falling back to the
+     * configured default when no mapping exists.
+     *
+     * @param string $algorithm Name of the algorithm stored on the entity.
+     *
+     * @return string The resolved group name.
+     */
     private function resolveGroup(string $algorithm): string
     {
         $group = $this->algorithmGroups[$algorithm] ?? null;
