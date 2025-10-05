@@ -83,11 +83,15 @@ final class GpsMetricsStage implements DaySummaryStageInterface
                     assert($lat !== null && $lon !== null && $takenAt instanceof DateTimeImmutable);
 
                     if ($previous instanceof Media) {
+                        $prevLat = $previous->getGpsLat();
+                        $prevLon = $previous->getGpsLon();
+                        assert($prevLat !== null && $prevLon !== null);
+
                         $travelKm += MediaMath::haversineDistanceInMeters(
-                            (float) $previous->getGpsLat(),
-                            (float) $previous->getGpsLon(),
-                            (float) $lat,
-                            (float) $lon,
+                            $prevLat,
+                            $prevLon,
+                            $lat,
+                            $lon,
                         ) / 1000.0;
                     }
 
@@ -98,11 +102,15 @@ final class GpsMetricsStage implements DaySummaryStageInterface
 
                 $centroid = MediaMath::centroid($gpsMembers);
                 foreach ($gpsMembers as $gpsMedia) {
+                    $gpsLat = $gpsMedia->getGpsLat();
+                    $gpsLon = $gpsMedia->getGpsLon();
+                    assert($gpsLat !== null && $gpsLon !== null);
+
                     $distance = MediaMath::haversineDistanceInMeters(
-                        (float) $gpsMedia->getGpsLat(),
-                        (float) $gpsMedia->getGpsLon(),
-                        (float) $centroid['lat'],
-                        (float) $centroid['lon'],
+                        $gpsLat,
+                        $gpsLon,
+                        $centroid['lat'],
+                        $centroid['lon'],
                     ) / 1000.0;
 
                     $summary['distanceSum']   += $distance;

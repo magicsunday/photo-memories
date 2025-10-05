@@ -18,6 +18,8 @@ use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
+use function assert;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
@@ -99,8 +101,9 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
         foreach ($timestampedGps as $m) {
             $t = $m->getTakenAt();
             assert($t instanceof DateTimeImmutable);
-            $lat   = (float) $m->getGpsLat();
-            $lon   = (float) $m->getGpsLon();
+            $lat   = $m->getGpsLat();
+            $lon   = $m->getGpsLon();
+            assert($lat !== null && $lon !== null);
             $local = $t->setTimezone($tz);
             $day   = $local->format('Y-m-d');
             $cell  = $this->cellKey($lat, $lon);

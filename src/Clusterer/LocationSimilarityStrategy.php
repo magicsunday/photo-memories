@@ -190,6 +190,10 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             $start  = null;
 
             foreach ($group as $media) {
+                if ($media->getGpsLat() === null || $media->getGpsLon() === null) {
+                    continue;
+                }
+
                 $ts = $media->getTakenAt()?->getTimestamp() ?? 0;
 
                 if ($bucket === []) {
@@ -198,12 +202,21 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
                     continue;
                 }
 
-                $anchor = $bucket[0];
-                $dist   = MediaMath::haversineDistanceInMeters(
-                    (float) $anchor->getGpsLat(),
-                    (float) $anchor->getGpsLon(),
-                    (float) $media->getGpsLat(),
-                    (float) $media->getGpsLon()
+                $anchor    = $bucket[0];
+                $anchorLat = $anchor->getGpsLat();
+                $anchorLon = $anchor->getGpsLon();
+                $mediaLat  = $media->getGpsLat();
+                $mediaLon  = $media->getGpsLon();
+
+                if ($anchorLat === null || $anchorLon === null || $mediaLat === null || $mediaLon === null) {
+                    continue;
+                }
+
+                $dist = MediaMath::haversineDistanceInMeters(
+                    $anchorLat,
+                    $anchorLon,
+                    $mediaLat,
+                    $mediaLon
                 );
                 $spanOk = !($start !== null) || ($ts - $start) <= $this->maxSpanHours * 3600;
 

@@ -77,7 +77,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic
                 continue;
             }
 
-            $coords[] = [(float) $lat, (float) $lon];
+            $coords[] = [$lat, $lon];
         }
 
         $withGeo  = count($coords);

@@ -49,8 +49,8 @@ final class GeoDbscanHelper
             }
 
             $points[] = [
-                'lat'   => (float) $lat,
-                'lon'   => (float) $lon,
+                'lat'   => $lat,
+                'lon'   => $lon,
                 'media' => $media,
             ];
         }

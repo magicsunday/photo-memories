@@ -197,7 +197,7 @@ trait MediaFilterTrait
                 return $items;
             }
 
-            $coordinates[] = [(float) $lat, (float) $lon];
+            $coordinates[] = [$lat, $lon];
         }
 
         $count        = count($coordinates);
