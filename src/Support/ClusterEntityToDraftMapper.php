@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Support;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 
+use function array_map;
 use function array_unique;
 use function array_values;
 use function is_string;
@@ -76,43 +77,40 @@ final class ClusterEntityToDraftMapper
      */
     public function mapMany(array $entities): array
     {
-        $out = [];
-        foreach ($entities as $e) {
-            $algorithm = $e->getAlgorithm();
-            $params    = $e->getParams() ?? [];
+        return array_map(function (Cluster $entity): ClusterDraft {
+            $algorithm = $entity->getAlgorithm();
+            $params    = $entity->getParams() ?? [];
 
             // Ensure every cluster is assigned to a group even if the entity did not persist one.
             if (!isset($params['group']) || !is_string($params['group']) || $params['group'] === '') {
                 $params['group'] = $this->resolveGroup($algorithm);
             }
-            $centroid  = $e->getCentroid();
-            $members   = $this->normalizeMembers($e->getMembers());
+
+            $members = $this->normalizeMembers($entity->getMembers());
 
             // Create a fresh draft object to avoid mutating the persisted entity state.
             $draft = new ClusterDraft(
                 algorithm: $algorithm,
                 params: $params,
-                centroid: $centroid,
+                centroid: $entity->getCentroid(),
                 members: $members
             );
 
-            $draft->setStartAt($e->getStartAt());
-            $draft->setEndAt($e->getEndAt());
-            $draft->setMembersCount($e->getMembersCount());
-            $draft->setPhotoCount($e->getPhotoCount());
-            $draft->setVideoCount($e->getVideoCount());
-            $draft->setCoverMediaId($e->getCover()?->getId());
-            $draft->setLocation($e->getLocation());
-            $draft->setAlgorithmVersion($e->getAlgorithmVersion());
-            $draft->setConfigHash($e->getConfigHash());
-            $draft->setCentroidLat($e->getCentroidLat());
-            $draft->setCentroidLon($e->getCentroidLon());
-            $draft->setCentroidCell7($e->getCentroidCell7());
+            $draft->setStartAt($entity->getStartAt());
+            $draft->setEndAt($entity->getEndAt());
+            $draft->setMembersCount($entity->getMembersCount());
+            $draft->setPhotoCount($entity->getPhotoCount());
+            $draft->setVideoCount($entity->getVideoCount());
+            $draft->setCoverMediaId($entity->getCover()?->getId());
+            $draft->setLocation($entity->getLocation());
+            $draft->setAlgorithmVersion($entity->getAlgorithmVersion());
+            $draft->setConfigHash($entity->getConfigHash());
+            $draft->setCentroidLat($entity->getCentroidLat());
+            $draft->setCentroidLon($entity->getCentroidLon());
+            $draft->setCentroidCell7($entity->getCentroidCell7());
 
-            $out[] = $draft;
-        }
-
-        return $out;
+            return $draft;
+        }, $entities);
     }
 
     /**

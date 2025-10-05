@@ -15,6 +15,8 @@ use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
+use function array_keys;
+use function array_map;
 use function array_merge;
 use function count;
 use function dirname;
@@ -160,9 +162,8 @@ final class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
             ]);
         }
 
-        $filters = [];
-        foreach ($images as $index => $image) {
-            $filters[] = sprintf(
+        $filters = array_map(
+            fn (int $index): string => sprintf(
                 '[%1$d:v]scale=%2$d:%3$d:force_original_aspect_ratio=decrease,' .
                 'pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1,' .
                 'trim=duration=%4$.3f,setpts=PTS-STARTPTS[s%1$d]',
@@ -170,8 +171,9 @@ final class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
                 $this->width,
                 $this->height,
                 $durationWithOverlap
-            );
-        }
+            ),
+            array_keys($images),
+        );
 
         $transitionCount = count($this->transitions);
         $current = '[s0]';
