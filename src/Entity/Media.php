@@ -34,6 +34,8 @@ use function min;
         new ORM\Index(name: 'idx_live_pair_checksum', columns: ['livePairChecksum']),
         new ORM\Index(name: 'idx_media_live_pair_id', columns: ['livePairMediaId']),
         new ORM\Index(name: 'idx_media_geocell8', columns: ['geoCell8']),
+        new ORM\Index(name: 'idx_media_geohash7', columns: ['geohash7']),
+        new ORM\Index(name: 'idx_media_geohash5', columns: ['geohash5']),
         new ORM\Index(name: 'idx_media_phash_prefix', columns: ['phashPrefix']),
         new ORM\Index(name: 'idx_media_burst_taken', columns: ['burstUuid', 'takenAt']),
         new ORM\Index(name: 'idx_media_video_taken', columns: ['isVideo', 'takenAt']),
@@ -303,6 +305,18 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 20, nullable: true)]
     private ?string $geoCell8 = null;
+
+    /**
+     * GeoHash at precision seven characters.
+     */
+    #[ORM\Column(type: Types::STRING, length: 12, nullable: true)]
+    private ?string $geohash7 = null;
+
+    /**
+     * GeoHash at precision five characters.
+     */
+    #[ORM\Column(type: Types::STRING, length: 12, nullable: true)]
+    private ?string $geohash5 = null;
 
     /**
      * Distance from configured home location in kilometres.
@@ -1418,6 +1432,42 @@ class Media
     public function setGeoCell8(?string $v): void
     {
         $this->geoCell8 = $v;
+    }
+
+    /**
+     * Returns the GeoHash with seven characters.
+     */
+    public function getGeohash7(): ?string
+    {
+        return $this->geohash7;
+    }
+
+    /**
+     * Sets the GeoHash with seven characters.
+     *
+     * @param string|null $v GeoHash string with seven characters.
+     */
+    public function setGeohash7(?string $v): void
+    {
+        $this->geohash7 = $v;
+    }
+
+    /**
+     * Returns the GeoHash with five characters.
+     */
+    public function getGeohash5(): ?string
+    {
+        return $this->geohash5;
+    }
+
+    /**
+     * Sets the GeoHash with five characters.
+     *
+     * @param string|null $v GeoHash string with five characters.
+     */
+    public function setGeohash5(?string $v): void
+    {
+        $this->geohash5 = $v;
     }
 
     /**

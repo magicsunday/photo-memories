@@ -54,10 +54,14 @@ final class GeoFeatureEnricherTest extends TestCase
         $expectedHash = $this->computeHomeConfigHash();
         $expectedCell = $this->expectedCell(48.137154, 11.576124);
         $expectedDistance = $this->expectedDistanceKm(48.137154, 11.576124);
+        $expectedGeohash7 = 'u281z7j';
+        $expectedGeohash5 = 'u281z';
 
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame($expectedCell, $result->getGeoCell8());
         self::assertSame($expectedDistance, $result->getDistanceKmFromHome());
+        self::assertSame($expectedGeohash7, $result->getGeohash7());
+        self::assertSame($expectedGeohash5, $result->getGeohash5());
         self::assertTrue($result->needsGeocode());
     }
 
@@ -75,15 +79,22 @@ final class GeoFeatureEnricherTest extends TestCase
                 $media->setGeoCell8('custom-cell');
                 $media->setDistanceKmFromHome(12.5);
                 $media->setHomeConfigHash($expectedHash);
+                $media->setGeohash7('legacy7');
+                $media->setGeohash5('legacy5');
             },
         );
 
         $enricher = $this->createEnricher();
         $result   = $enricher->extract($media->getPath(), $media);
 
+        $expectedGeohash7 = 'u284pyx';
+        $expectedGeohash5 = 'u284p';
+
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame('custom-cell', $result->getGeoCell8());
         self::assertSame(12.5, $result->getDistanceKmFromHome());
+        self::assertSame($expectedGeohash7, $result->getGeohash7());
+        self::assertSame($expectedGeohash5, $result->getGeohash5());
         self::assertTrue($result->needsGeocode());
     }
 
@@ -111,10 +122,14 @@ final class GeoFeatureEnricherTest extends TestCase
 
         $expectedCell     = $this->expectedCell($lat, $lon);
         $expectedDistance = $this->expectedDistanceKm($lat, $lon);
+        $expectedGeohash7 = 'u2860h8';
+        $expectedGeohash5 = 'u2860';
 
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame($expectedCell, $result->getGeoCell8());
         self::assertSame($expectedDistance, $result->getDistanceKmFromHome());
+        self::assertSame($expectedGeohash7, $result->getGeohash7());
+        self::assertSame($expectedGeohash5, $result->getGeohash5());
         self::assertTrue($result->needsGeocode());
     }
 

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\GeoHash;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function floor;
@@ -46,10 +47,10 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
             || $media->getGeoCell8() === null
             || $media->getDistanceKmFromHome() === null;
 
-        if ($shouldUpdateHomeMetrics) {
-            $lat = (float) $media->getGpsLat();
-            $lon = (float) $media->getGpsLon();
+        $lat = (float) $media->getGpsLat();
+        $lon = (float) $media->getGpsLon();
 
+        if ($shouldUpdateHomeMetrics) {
             $cell = $this->cellKey($lat, $lon, $this->cellDegrees);
             $media->setGeoCell8($cell);
 
@@ -58,6 +59,9 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
 
             $media->setHomeConfigHash($desiredHash);
         }
+
+        $media->setGeohash7(GeoHash::encode($lat, $lon, 7));
+        $media->setGeohash5(GeoHash::encode($lat, $lon, 5));
 
         $media->setNeedsGeocode($media->getLocation() === null);
 
