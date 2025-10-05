@@ -33,6 +33,7 @@ use function in_array;
 use function log;
 use function max;
 use function min;
+use function ksort;
 use function preg_replace;
 use function round;
 use function sort;
@@ -105,6 +106,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $avgSpeedKmhSum          = 0.0;
         $avgSpeedKmhSamples      = 0;
         $highSpeedTransit        = false;
+        $cohortRatioSum          = 0.0;
+        $cohortRatioSamples      = 0;
+        $cohortMemberAggregate   = [];
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -140,6 +144,18 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             $avgDistanceSum += $summary['avgDistanceKm'];
             if ($summary['baseAway']) {
+                $cohortRatioSum += (float) ($summary['cohortPresenceRatio'] ?? 0.0);
+                ++$cohortRatioSamples;
+
+                $cohortMembers = $summary['cohortMembers'] ?? [];
+                foreach ($cohortMembers as $personId => $count) {
+                    if (!isset($cohortMemberAggregate[$personId])) {
+                        $cohortMemberAggregate[$personId] = 0;
+                    }
+
+                    $cohortMemberAggregate[$personId] += (int) $count;
+                }
+
                 $tourismHits += $summary['tourismHits'];
                 $poiSamples += $summary['poiSamples'];
 
@@ -197,6 +213,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($awayDays === 0 || $reliableDays === 0) {
             return null;
         }
+
+        $avgCohortRatio = $cohortRatioSamples > 0 ? $cohortRatioSum / $cohortRatioSamples : 0.0;
+        $avgCohortRatio = max(0.0, min(1.0, $avgCohortRatio));
+
+        if ($cohortMemberAggregate !== []) {
+            ksort($cohortMemberAggregate, SORT_NUMERIC);
+        }
+
+        $cohortBonus = min(1.5, $avgCohortRatio * 2.5);
 
         if ($gpsMembers === []) {
             return null;
@@ -264,6 +289,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             + $densityBonus
             + $explorationBonus
             + $weekendHolidayScore
+            + $cohortBonus
             - $penalty;
 
         $classification = 'none';
@@ -328,6 +354,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'spot_exploration_bonus'   => round($explorationBonus, 2),
             'weekend_holiday_days'     => $weekendHolidayDays,
             'weekend_holiday_bonus'    => round($weekendHolidayBonus, 2),
+            'cohort_bonus'              => round($cohortBonus, 2),
+            'cohort_presence_ratio'     => round($avgCohortRatio, 3),
+            'cohort_members'            => $cohortMemberAggregate,
             'work_day_penalty_days'    => $workDayPenalty,
             'work_day_penalty_score'   => round($penalty, 2),
             'countries'                => $countries,

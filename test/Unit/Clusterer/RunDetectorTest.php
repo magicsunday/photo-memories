@@ -102,6 +102,8 @@ final class RunDetectorTest extends TestCase
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
+            'cohortPresenceRatio'     => 0.0,
+            'cohortMembers'           => [],
             'baseLocation'            => null,
             'baseAway'                => $baseAway,
             'awayByDistance'          => $baseAway,

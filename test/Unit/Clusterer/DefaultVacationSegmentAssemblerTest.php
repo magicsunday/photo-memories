@@ -15,6 +15,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\CohortPresenceStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
@@ -53,6 +54,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         $timezoneResolver = new TimezoneResolver('Europe/Berlin');
         $dayBuilder       = new DefaultDaySummaryBuilder([
             new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin'),
+            new CohortPresenceStage(),
             new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 2),
             new DensityStage(),
             new AwayFlagStage($timezoneResolver, new BaseLocationResolver()),
