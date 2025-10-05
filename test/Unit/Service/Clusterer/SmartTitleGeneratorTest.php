@@ -147,6 +147,32 @@ YAML
         self::assertSame('Reise nach Nordsee', $generator->makeTitle($cluster));
     }
 
+    #[Test]
+    public function prefersRegionWhenCityIsMissing(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  vacation:
+    title: "Reise nach {{ place_city|place_region|place_country|place }}"
+    subtitle: "{{ start_date }} – {{ end_date }}"
+YAML
+        );
+
+        $cluster = $this->createCluster(
+            algorithm: 'vacation',
+            params: [
+                'place_region' => 'Lombardei',
+                'place_country' => 'Italien',
+                'time_range'    => [
+                    'from' => (new DateTimeImmutable('2024-10-10 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-10-15 22:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+            ],
+        );
+
+        self::assertSame('Reise nach Lombardei', $generator->makeTitle($cluster));
+    }
+
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
     {
         $path = tempnam(sys_get_temp_dir(), 'titles_');

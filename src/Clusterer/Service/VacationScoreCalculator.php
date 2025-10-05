@@ -31,6 +31,7 @@ use function count;
 use function explode;
 use function implode;
 use function in_array;
+use function is_string;
 use function log;
 use function max;
 use function min;
@@ -572,14 +573,42 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $params['place_city'] = $primaryStaypointCity;
         }
 
-        $placeLocationMissing = !isset($params['place_location']) || $params['place_location'] === '';
-        if ($placeLocationMissing && $primaryStaypointLocation !== null) {
-            $params['place_location'] = $primaryStaypointLocation;
+        $placeRegionMissing = !isset($params['place_region']) || $params['place_region'] === '';
+        if ($placeRegionMissing && $primaryStaypointRegion !== null) {
+            $params['place_region'] = $primaryStaypointRegion;
         }
 
         $placeCountryMissing = !isset($params['place_country']) || $params['place_country'] === '';
         if ($placeCountryMissing && $primaryStaypointCountry !== null) {
             $params['place_country'] = $primaryStaypointCountry;
+        }
+
+        $placeLocationMissing = !isset($params['place_location']) || $params['place_location'] === '';
+
+        $resolvedLocationParts = [];
+        $resolvedCity           = $params['place_city'] ?? null;
+        if (is_string($resolvedCity) && $resolvedCity !== '') {
+            $resolvedLocationParts[] = $resolvedCity;
+        }
+
+        $resolvedRegion = $params['place_region'] ?? null;
+        if (is_string($resolvedRegion) && $resolvedRegion !== '' && !in_array($resolvedRegion, $resolvedLocationParts, true)) {
+            $resolvedLocationParts[] = $resolvedRegion;
+        }
+
+        $resolvedCountry = $params['place_country'] ?? null;
+        if (is_string($resolvedCountry) && $resolvedCountry !== '' && !in_array($resolvedCountry, $resolvedLocationParts, true)) {
+            $resolvedLocationParts[] = $resolvedCountry;
+        }
+
+        if ($resolvedLocationParts !== []) {
+            $resolvedLocation = implode(', ', $resolvedLocationParts);
+            $currentLocation  = $params['place_location'] ?? null;
+            if (!is_string($currentLocation) || $currentLocation !== $resolvedLocation) {
+                $params['place_location'] = $resolvedLocation;
+            }
+        } elseif ($placeLocationMissing && $primaryStaypointLocation !== null) {
+            $params['place_location'] = $primaryStaypointLocation;
         }
 
         return new ClusterDraft(
