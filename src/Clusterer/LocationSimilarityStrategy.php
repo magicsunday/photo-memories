@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_values;
 use function count;
 use function usort;
 
@@ -151,48 +152,74 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
     {
         $gps = $this->filterTimestampedGpsItems($items);
 
-        usort(
-            $gps,
-            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
-        );
+        /** @var array<string, list<Media>> $byCell */
+        $byCell = [];
+        /** @var list<Media> $withoutCell */
+        $withoutCell = [];
 
-        $out = [];
-        /** @var list<Media> $bucket */
-        $bucket = [];
-        $start  = null;
-
-        foreach ($gps as $m) {
-            $ts = $m->getTakenAt()?->getTimestamp() ?? 0;
-
-            if ($bucket === []) {
-                $bucket = [$m];
-                $start  = $ts;
+        foreach ($gps as $media) {
+            $cell = $media->getGeoCell8();
+            if ($cell !== null) {
+                $byCell[$cell] ??= [];
+                $byCell[$cell][] = $media;
                 continue;
             }
 
-            $anchor = $bucket[0];
-            $dist   = MediaMath::haversineDistanceInMeters(
-                (float) $anchor->getGpsLat(),
-                (float) $anchor->getGpsLon(),
-                (float) $m->getGpsLat(),
-                (float) $m->getGpsLon()
-            );
-            $spanOk = $start !== null ? ($ts - $start) <= $this->maxSpanHours * 3600 : true;
+            $withoutCell[] = $media;
+        }
 
-            if ($dist <= $this->radiusMeters && $spanOk) {
-                $bucket[] = $m;
-            } else {
+        /** @var list<list<Media>> $groups */
+        $groups = array_values($byCell);
+        if ($withoutCell !== []) {
+            $groups[] = $withoutCell;
+        }
+
+        $out = [];
+
+        foreach ($groups as $group) {
+            usort(
+                $group,
+                static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+            );
+
+            /** @var list<Media> $bucket */
+            $bucket = [];
+            $start  = null;
+
+            foreach ($group as $media) {
+                $ts = $media->getTakenAt()?->getTimestamp() ?? 0;
+
+                if ($bucket === []) {
+                    $bucket = [$media];
+                    $start  = $ts;
+                    continue;
+                }
+
+                $anchor = $bucket[0];
+                $dist   = MediaMath::haversineDistanceInMeters(
+                    (float) $anchor->getGpsLat(),
+                    (float) $anchor->getGpsLon(),
+                    (float) $media->getGpsLat(),
+                    (float) $media->getGpsLon()
+                );
+                $spanOk = $start !== null ? ($ts - $start) <= $this->maxSpanHours * 3600 : true;
+
+                if ($dist <= $this->radiusMeters && $spanOk) {
+                    $bucket[] = $media;
+                    continue;
+                }
+
                 if (count($bucket) > 0) {
                     $out[] = $bucket;
                 }
 
-                $bucket = [$m];
+                $bucket = [$media];
                 $start  = $ts;
             }
-        }
 
-        if ($bucket !== []) {
-            $out[] = $bucket;
+            if ($bucket !== []) {
+                $out[] = $bucket;
+            }
         }
 
         return $out;

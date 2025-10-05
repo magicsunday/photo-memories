@@ -145,12 +145,82 @@ final class LocationSimilarityStrategyTest extends TestCase
         self::assertEqualsWithDelta(11.5754, $centroid['lon'], 0.00001);
     }
 
+    #[Test]
+    public function usesGeoCellMetadataToPreGroupSpatialWindows(): void
+    {
+        $strategy = new LocationSimilarityStrategy(
+            locHelper: LocationHelper::createDefault(),
+            radiusMeters: 250.0,
+            minItemsPerPlace: 3,
+            maxSpanHours: 1,
+        );
+
+        $mediaItems = [
+            $this->createMedia(
+                931,
+                '2023-05-03 12:00:00',
+                48.2082,
+                16.3738,
+                null,
+                static function (Media $media): void {
+                    $media->setGeoCell8('u2edk8h2');
+                }
+            ),
+            $this->createMedia(
+                932,
+                '2023-05-03 12:15:00',
+                48.2083,
+                16.3739,
+                null,
+                static function (Media $media): void {
+                    $media->setGeoCell8('u2edk8h2');
+                }
+            ),
+            $this->createMedia(
+                933,
+                '2023-05-03 12:40:00',
+                48.2084,
+                16.3740,
+                null,
+                static function (Media $media): void {
+                    $media->setGeoCell8('u2edk8h2');
+                }
+            ),
+            $this->createMedia(
+                934,
+                '2023-05-03 12:45:00',
+                48.2150,
+                16.3800,
+                null,
+                static function (Media $media): void {
+                    $media->setGeoCell8('u2edk8x0');
+                }
+            ),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertInstanceOf(ClusterDraft::class, $cluster);
+        self::assertSame([931, 932, 933], $cluster->getMembers());
+
+        $params        = $cluster->getParams();
+        $expectedRange = [
+            'from' => (new DateTimeImmutable('2023-05-03 12:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2023-05-03 12:40:00', new DateTimeZone('UTC')))->getTimestamp(),
+        ];
+        self::assertSame($expectedRange, $params['time_range']);
+    }
+
     private function createMedia(
         int $id,
         string $takenAt,
         float $lat,
         float $lon,
         ?Location $location,
+        ?callable $configure = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -159,6 +229,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
+            configure: $configure,
         );
     }
 }
