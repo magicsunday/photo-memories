@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Service\Feed;
 use MagicSunday\Memories\Entity\Media;
 
 use function abs;
+use function array_filter;
+use function array_map;
+use function array_values;
 use function count;
 use function floor;
 use function max;
@@ -39,13 +42,17 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         // Median timestamp (for temporal proximity)
-        $ts = [];
-        foreach ($members as $m) {
-            $t = $m->getTakenAt()?->getTimestamp() ?? null;
-            if ($t !== null) {
-                $ts[] = $t;
-            }
-        }
+        /** @var list<int|null> $timestamps */
+        $timestamps = array_map(
+            static fn (Media $media): ?int => $media->getTakenAt()?->getTimestamp(),
+            $members,
+        );
+
+        /** @var list<int> $ts */
+        $ts = array_values(array_filter(
+            $timestamps,
+            static fn (?int $timestamp): bool => $timestamp !== null,
+        ));
 
         sort($ts, SORT_NUMERIC);
         $medianTs = $ts !== [] ? $ts[(int) floor(count($ts) / 2)] : null;
