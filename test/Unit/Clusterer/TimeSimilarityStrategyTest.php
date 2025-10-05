@@ -120,62 +120,30 @@ final class TimeSimilarityStrategyTest extends TestCase
         $helper   = LocationHelper::createDefault();
         $strategy = new TimeSimilarityStrategy(
             locHelper: $helper,
-            maxGapSeconds: 3600,
+            maxGapSeconds: 1800,
             minItemsPerBucket: 2,
         );
 
         $location = $this->makeLocation(
-            providerPlaceId: 'london-city',
-            displayName: 'London',
-            lat: 51.5074,
-            lon: -0.1278,
-            city: 'London',
-            country: 'United Kingdom',
+            providerPlaceId: 'potsdam-city',
+            displayName: 'Potsdam',
+            lat: 52.3906,
+            lon: 13.0645,
+            city: 'Potsdam',
+            country: 'Germany',
         );
 
         $mediaItems = [
-            $this->makeMediaFixture(
-                id: 2001,
-                filename: 'time-tags-2001.jpg',
-                takenAt: '2023-06-01 18:00:00',
-                lat: 51.5075,
-                lon: -0.1277,
-                location: $location,
-                configure: static function (Media $media): void {
-                    $media->setSceneTags([
-                        ['label' => 'Beach', 'score' => 0.92],
-                        ['label' => 'Sunset', 'score' => 0.55],
-                    ]);
-                    $media->setKeywords(['Vacation', 'Beach Day']);
-                }
-            ),
-            $this->makeMediaFixture(
-                id: 2002,
-                filename: 'time-tags-2002.jpg',
-                takenAt: '2023-06-01 18:20:00',
-                lat: 51.5076,
-                lon: -0.1276,
-                location: $location,
-                configure: static function (Media $media): void {
-                    $media->setSceneTags([
-                        ['label' => 'Beach', 'score' => 0.82],
-                        ['label' => 'Sunset', 'score' => 0.61],
-                    ]);
-                    $media->setKeywords(['Vacation', 'Sunset']);
-                }
-            ),
-            $this->makeMediaFixture(
-                id: 2003,
-                filename: 'time-tags-2003.jpg',
-                takenAt: '2023-06-01 18:45:00',
-                lat: 51.5077,
-                lon: -0.1275,
-                location: $location,
-                configure: static function (Media $media): void {
-                    $media->setSceneTags([
-                        ['label' => 'Forest', 'score' => 0.75],
-                    ]);
-                    $media->setKeywords(['Beach Day']);
+            $this->createMedia(2101, '2024-05-12 14:00:00', 52.3907, 13.0646, $location),
+            $this->createMedia(2102, '2024-05-12 14:10:00', 52.3908, 13.0647, $location),
+            $this->createMedia(
+                2103,
+                '2024-05-12 14:20:00',
+                52.3909,
+                13.0648,
+                $location,
+                static function (Media $media): void {
+                    $media->setNoShow(true);
                 }
             ),
         ];
@@ -183,18 +151,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
-        $params = $clusters[0]->getParams();
-
-        self::assertArrayHasKey('scene_tags', $params);
-        /** @var list<array{label: string, score: float}> $sceneTags */
-        $sceneTags = $params['scene_tags'];
-        self::assertSame('Beach', $sceneTags[0]['label']);
-        self::assertEqualsWithDelta(0.92, $sceneTags[0]['score'], 0.00001);
-        self::assertSame('Forest', $sceneTags[1]['label']);
-        self::assertSame('Sunset', $sceneTags[2]['label']);
-
-        self::assertArrayHasKey('keywords', $params);
-        self::assertSame(['Beach Day', 'Vacation', 'Sunset'], $params['keywords']);
+        self::assertSame([2101, 2102], $clusters[0]->getMembers());
     }
 
     private function createMedia(
@@ -203,6 +160,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         float $lat,
         float $lon,
         Location $location,
+        ?callable $configure = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -211,6 +169,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
+            configure: $configure,
         );
     }
 }

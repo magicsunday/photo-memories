@@ -25,6 +25,14 @@ use function count;
 trait MediaFilterTrait
 {
     /**
+     * Indicates whether the media item can participate in clustering.
+     */
+    private function isEligibleMedia(Media $media): bool
+    {
+        return $media->isNoShow() === false && $media->isLowQuality() === false;
+    }
+
+    /**
      * @param list<Media> $items
      *
      * @return list<Media>
@@ -33,7 +41,8 @@ trait MediaFilterTrait
     {
         return array_values(array_filter(
             $items,
-            static fn (Media $m): bool => $m->getTakenAt() instanceof DateTimeImmutable
+            fn (Media $m): bool => $this->isEligibleMedia($m)
+                && $m->getTakenAt() instanceof DateTimeImmutable
         ));
     }
 
@@ -62,7 +71,9 @@ trait MediaFilterTrait
     {
         return array_values(array_filter(
             $items,
-            static fn (Media $m): bool => $m->getGpsLat() !== null && $m->getGpsLon() !== null
+            fn (Media $m): bool => $this->isEligibleMedia($m)
+                && $m->getGpsLat() !== null
+                && $m->getGpsLon() !== null
         ));
     }
 
@@ -75,7 +86,8 @@ trait MediaFilterTrait
     {
         return array_values(array_filter(
             $items,
-            static fn (Media $m): bool => $m->getTakenAt() instanceof DateTimeImmutable
+            fn (Media $m): bool => $this->isEligibleMedia($m)
+                && $m->getTakenAt() instanceof DateTimeImmutable
                 && $m->getGpsLat() !== null
                 && $m->getGpsLon() !== null
         ));
