@@ -73,6 +73,15 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
         $panoramaItems = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
+                $flag = $m->isPanorama();
+                if ($flag === true) {
+                    return true;
+                }
+
+                if ($flag === false) {
+                    return false;
+                }
+
                 $w = $m->getWidth();
                 $h = $m->getHeight();
 
