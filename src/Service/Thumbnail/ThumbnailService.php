@@ -105,8 +105,8 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         if ($hasImagick) {
             try {
-                return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
-            } catch (ImagickException $exception) {
+                return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum, $requiresImagick);
+            } catch (Throwable $exception) {
                 if ($requiresImagick) {
                     throw new RuntimeException('Imagick is required to create thumbnails for RAW/HEIC media', 0, $exception);
                 }
@@ -137,15 +137,16 @@ class ThumbnailService implements ThumbnailServiceInterface
     }
 
     /**
-     * @param string   $filepath    Absolute path to the original media file.
-     * @param int|null $orientation EXIF orientation value of the source media.
-     * @param int[]    $sizes       Desired thumbnail widths (in pixels).
-     * @param string   $checksum    Media checksum used for generating file names.
+     * @param string   $filepath        Absolute path to the original media file.
+     * @param int|null $orientation     EXIF orientation value of the source media.
+     * @param int[]    $sizes           Desired thumbnail widths (in pixels).
+     * @param string   $checksum        Media checksum used for generating file names.
+     * @param bool     $requiresImagick Whether the current source mandates Imagick support.
      *
      * @return array<int, string>
      * @throws ImagickException
      */
-    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes, string $checksum): array
+    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes, string $checksum, bool $requiresImagick): array
     {
         $imagick = $this->createImagick();
 
@@ -175,7 +176,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                 // Remember that this width was already generated to avoid duplicates.
                 $generatedKeys[$targetWidth] = true;
 
-                $clone = $this->cloneImagick($imagick);
+                $clone           = $this->cloneImagick($imagick);
+                $cloneIsOriginal = $clone === $imagick;
 
                 try {
                     $resizeResult = $clone->thumbnailImage($targetWidth, 0);
@@ -217,7 +219,11 @@ class ThumbnailService implements ThumbnailServiceInterface
 
                     $results[$targetWidth] = $out;
                 } finally {
-                    $clone->clear();
+                    if (!$cloneIsOriginal || !$requiresImagick) {
+                        $clone->clear();
+                        $clone->destroy();
+                    }
+
                     unset($clone);
                 }
             }
@@ -225,6 +231,7 @@ class ThumbnailService implements ThumbnailServiceInterface
             return $results;
         } finally {
             $imagick->clear();
+            $imagick->destroy();
             unset($imagick);
         }
     }
