@@ -56,6 +56,12 @@ final class VacationScoreCalculatorTest extends TestCase
             $dayDate       = $start->add(new DateInterval('P' . $i . 'D'));
             $members       = $this->makeMembersForDay($i, $dayDate);
             $dayKey        = $dayDate->format('Y-m-d');
+            $ratio         = 0.2 + (0.2 * $i);
+            $cohortMembers = match ($i) {
+                0       => [101 => 2],
+                1       => [101 => 1, 202 => 3],
+                default => [202 => 1],
+            };
             $days[$dayKey] = $this->makeDaySummary(
                 date: $dayKey,
                 weekday: (int) $dayDate->format('N'),
@@ -72,6 +78,8 @@ final class VacationScoreCalculatorTest extends TestCase
                 maxSpeedKmh: 240.0 - ($i * 10.0),
                 avgSpeedKmh: 180.0 - ($i * 5.0),
                 hasHighSpeedTransit: true,
+                cohortPresenceRatio: $ratio,
+                cohortMembers: $cohortMembers,
             );
         }
 
@@ -90,6 +98,12 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
+        self::assertSame(1.0, $params['cohort_bonus']);
+        self::assertEqualsWithDelta(0.4, $params['cohort_presence_ratio'], 0.0001);
+        self::assertSame([
+            101 => 3,
+            202 => 4,
+        ], $params['cohort_members']);
     }
 
     #[Test]
@@ -252,6 +266,7 @@ final class VacationScoreCalculatorTest extends TestCase
     /**
      * @param list<Media> $members
      * @param list<Media> $gpsMembers
+     * @param array<int, int> $cohortMembers
      *
      * @return array<string, mixed>
      */
@@ -271,6 +286,8 @@ final class VacationScoreCalculatorTest extends TestCase
         float $maxSpeedKmh = 0.0,
         float $avgSpeedKmh = 0.0,
         bool $hasHighSpeedTransit = false,
+        float $cohortPresenceRatio = 0.0,
+        array $cohortMembers = [],
     ): array {
         $first = $gpsMembers[0];
         $last  = $gpsMembers[count($gpsMembers) - 1];
@@ -304,6 +321,8 @@ final class VacationScoreCalculatorTest extends TestCase
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => $spotDwellSeconds,
             'staypoints'              => [],
+            'cohortPresenceRatio'     => $cohortPresenceRatio,
+            'cohortMembers'           => $cohortMembers,
             'baseLocation'            => null,
             'baseAway'                => $baseAway,
             'awayByDistance'          => true,

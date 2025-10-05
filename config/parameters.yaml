@@ -60,6 +60,9 @@ parameters:
     memories.cluster.transport_speed.min_leg_distance_km: '%env(default:memories.cluster.transport_speed.min_leg_distance_km_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_DISTANCE_KM)%'
     memories.cluster.transport_speed.high_speed_threshold_kmh: '%env(default:memories.cluster.transport_speed.high_speed_threshold_kmh_default:float:MEMORIES_CLUSTER_TRANSPORT_HIGH_SPEED_THRESHOLD_KMH)%'
 
+    memories.cluster.cohort.important_person_ids: []
+    memories.cluster.cohort.fallback_person_ids: []
+
     # Thumbnail-Größen (px)
     memories.thumbnail_sizes: [320, 1024]
     memories.thumbnail.apply_orientation_default: false
