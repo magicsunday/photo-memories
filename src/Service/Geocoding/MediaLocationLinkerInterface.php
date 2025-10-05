@@ -19,7 +19,12 @@ use MagicSunday\Memories\Entity\Media;
  */
 interface MediaLocationLinkerInterface
 {
-    public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location;
+    public function link(
+        Media $media,
+        string $acceptLanguage = 'de',
+        bool $forceRefreshLocations = false,
+        bool $forceRefreshPois = false,
+    ): ?Location;
 
     public function consumeLastNetworkCalls(): int;
 }

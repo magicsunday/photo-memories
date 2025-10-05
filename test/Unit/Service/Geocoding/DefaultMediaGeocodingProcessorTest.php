@@ -50,9 +50,15 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
             ) {
             }
 
-            public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location
+            public function link(
+                Media $media,
+                string $acceptLanguage = 'de',
+                bool $forceRefreshLocations = false,
+                bool $forceRefreshPois = false,
+            ): ?Location
             {
                 Assert::assertSame('de', $acceptLanguage);
+                Assert::assertFalse($forceRefreshLocations);
                 Assert::assertFalse($forceRefreshPois);
 
                 if ($this->invocations === 0) {
@@ -80,7 +86,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
         $processor = new DefaultMediaGeocodingProcessor($entityManager, $linker, 'de', 0, 10);
 
-        $summary = $processor->process([$mediaA, $mediaB], false, false, new NullOutput());
+        $summary = $processor->process([$mediaA, $mediaB], false, false, false, new NullOutput());
 
         self::assertSame(2, $summary->getProcessed());
         self::assertSame(1, $summary->getLinked());
@@ -109,10 +115,16 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
             ) {
             }
 
-            public function link(Media $media, string $acceptLanguage = 'de', bool $forceRefreshPois = false): ?Location
+            public function link(
+                Media $media,
+                string $acceptLanguage = 'de',
+                bool $forceRefreshLocations = false,
+                bool $forceRefreshPois = false,
+            ): ?Location
             {
                 Assert::assertSame($this->expectedMedia, $media);
                 Assert::assertSame('de', $acceptLanguage);
+                Assert::assertTrue($forceRefreshLocations);
                 Assert::assertTrue($forceRefreshPois);
 
                 $this->linked = true;
@@ -133,9 +145,94 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
         $processor = new DefaultMediaGeocodingProcessor($entityManager, $linker, 'de', 0, 10);
 
-        $summary = $processor->process([$media], true, true, new NullOutput());
+        $summary = $processor->process([$media], true, true, true, new NullOutput());
 
         self::assertSame([$location], $summary->getLocationsForPoiUpdate());
         self::assertFalse($media->needsGeocode());
+    }
+
+    #[Test]
+    public function forcesReverseGeocodingWhenRefreshingLocations(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::exactly(2))->method('flush');
+
+        $mediaA = new Media('force-a.jpg', 'hash-force-a', 400);
+        $mediaB = new Media('force-b.jpg', 'hash-force-b', 500);
+
+        $mediaA->setGpsLat(52.0);
+        $mediaA->setGpsLon(13.0);
+        $mediaB->setGpsLat(52.0);
+        $mediaB->setGpsLon(13.0);
+
+        $mediaA->setNeedsGeocode(true);
+        $mediaB->setNeedsGeocode(true);
+
+        $linker = new class() implements MediaLocationLinkerInterface {
+            private ?Location $cached = null;
+
+            private int $lastNetworkCalls = 0;
+
+            /** @var list<bool> */
+            public array $forcedFlags = [];
+
+            public function link(
+                Media $media,
+                string $acceptLanguage = 'de',
+                bool $forceRefreshLocations = false,
+                bool $forceRefreshPois = false,
+            ): ?Location {
+                $this->forcedFlags[] = $forceRefreshLocations;
+
+                if ($forceRefreshLocations) {
+                    $this->cached = null;
+                }
+
+                if ($this->cached instanceof Location) {
+                    $this->lastNetworkCalls = 0;
+                    $media->setLocation($this->cached);
+                    $media->setNeedsGeocode(false);
+
+                    return $this->cached;
+                }
+
+                $this->lastNetworkCalls = 1;
+                $location             = new Location(
+                    'nominatim',
+                    'forced-' . spl_object_id($media),
+                    'Berlin',
+                    $media->getGpsLat() ?? 0.0,
+                    $media->getGpsLon() ?? 0.0,
+                    'cell-force',
+                );
+                $this->cached = $location;
+
+                $media->setLocation($location);
+                $media->setNeedsGeocode(false);
+
+                return $location;
+            }
+
+            public function consumeLastNetworkCalls(): int
+            {
+                $value                 = $this->lastNetworkCalls;
+                $this->lastNetworkCalls = 0;
+
+                return $value;
+            }
+        };
+
+        $processor = new DefaultMediaGeocodingProcessor($entityManager, $linker, 'de', 0, 10);
+
+        $processor->process([$mediaA, $mediaB], false, false, false, new NullOutput());
+
+        $mediaA->setNeedsGeocode(true);
+        $mediaB->setNeedsGeocode(true);
+
+        $summary = $processor->process([$mediaA, $mediaB], false, true, false, new NullOutput());
+
+        self::assertSame([false, false, true, true], $linker->forcedFlags);
+        self::assertSame(2, $summary->getNetworkCalls());
+        self::assertSame(2, $summary->getLinked());
     }
 }

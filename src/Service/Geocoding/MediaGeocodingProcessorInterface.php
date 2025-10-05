@@ -18,5 +18,11 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 interface MediaGeocodingProcessorInterface
 {
-    public function process(iterable $media, bool $refreshPois, bool $dryRun, OutputInterface $output): GeocodingResultSummary;
+    public function process(
+        iterable $media,
+        bool $refreshPois,
+        bool $forceRefreshLocations,
+        bool $dryRun,
+        OutputInterface $output,
+    ): GeocodingResultSummary;
 }

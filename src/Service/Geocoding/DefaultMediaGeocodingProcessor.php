@@ -40,7 +40,13 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
     ) {
     }
 
-    public function process(iterable $media, bool $refreshPois, bool $dryRun, OutputInterface $output): GeocodingResultSummary
+    public function process(
+        iterable $media,
+        bool $refreshPois,
+        bool $forceRefreshLocations,
+        bool $dryRun,
+        OutputInterface $output,
+    ): GeocodingResultSummary
     {
         $medias = $this->normalizeIterable($media);
         $count  = count($medias);
@@ -58,7 +64,7 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
 
         foreach ($medias as $item) {
             $progressBar->setMessage('Rückwärtssuche');
-            $location = $this->linker->link($item, $this->locale, $refreshPois);
+            $location = $this->linker->link($item, $this->locale, $forceRefreshLocations, $refreshPois);
 
             if ($location instanceof Location) {
                 ++$linked;
