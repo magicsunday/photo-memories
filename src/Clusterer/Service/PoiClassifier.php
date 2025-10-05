@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface;
 use MagicSunday\Memories\Entity\Location;
 
 use function array_any;
+use function array_keys;
 use function is_array;
 use function is_string;
 use function str_contains;
@@ -53,27 +54,30 @@ final class PoiClassifier implements PoiClassifierInterface
             return false;
         }
 
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
+        if (array_any(
+            $pois,
+            static function (mixed $poi): bool {
+                if (!is_array($poi)) {
+                    return false;
+                }
 
-            if (isset($poi['categoryKey']) && is_string($poi['categoryKey']) && $poi['categoryKey'] !== '') {
-                return true;
-            }
+                if (isset($poi['categoryKey']) && is_string($poi['categoryKey']) && $poi['categoryKey'] !== '') {
+                    return true;
+                }
 
-            if (isset($poi['categoryValue']) && is_string($poi['categoryValue']) && $poi['categoryValue'] !== '') {
-                return true;
-            }
+                if (isset($poi['categoryValue']) && is_string($poi['categoryValue']) && $poi['categoryValue'] !== '') {
+                    return true;
+                }
 
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
+                $tags = $poi['tags'] ?? null;
+                if (!is_array($tags)) {
+                    return false;
+                }
 
-            if ($tags !== []) {
-                return true;
+                return $tags !== [];
             }
+        )) {
+            return true;
         }
 
         if ($this->matchesKeyword($location->getCategory(), self::TOURISM_KEYWORDS)) {
@@ -102,38 +106,37 @@ final class PoiClassifier implements PoiClassifierInterface
             return false;
         }
 
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
+        return array_any(
+            $pois,
+            function (mixed $poi): bool {
+                if (!is_array($poi)) {
+                    return false;
+                }
 
-            $categoryKey   = $poi['categoryKey'] ?? null;
-            $categoryValue = $poi['categoryValue'] ?? null;
-            if ($this->matchesKeyword($categoryKey, self::TOURISM_KEYWORDS)) {
-                return true;
-            }
-
-            if ($this->matchesKeyword($categoryValue, self::TOURISM_KEYWORDS)) {
-                return true;
-            }
-
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
-
-            foreach ($tags as $tagKey => $tagValue) {
-                if ($this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TOURISM_KEYWORDS)) {
+                $categoryKey   = $poi['categoryKey'] ?? null;
+                $categoryValue = $poi['categoryValue'] ?? null;
+                if ($this->matchesKeyword($categoryKey, self::TOURISM_KEYWORDS)) {
                     return true;
                 }
 
-                if ($this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TOURISM_KEYWORDS)) {
+                if ($this->matchesKeyword($categoryValue, self::TOURISM_KEYWORDS)) {
                     return true;
                 }
-            }
-        }
 
-        return false;
+                $tags = $poi['tags'] ?? null;
+                if (!is_array($tags)) {
+                    return false;
+                }
+
+                return array_any(
+                    array_keys($tags),
+                    fn (string|int $tagKey): bool => $this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TOURISM_KEYWORDS)
+                ) || array_any(
+                    $tags,
+                    fn (mixed $tagValue): bool => $this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TOURISM_KEYWORDS)
+                );
+            }
+        );
     }
 
     public function isTransportPoi(Location $location): bool
@@ -151,38 +154,37 @@ final class PoiClassifier implements PoiClassifierInterface
             return false;
         }
 
-        foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
+        return array_any(
+            $pois,
+            function (mixed $poi): bool {
+                if (!is_array($poi)) {
+                    return false;
+                }
 
-            $categoryKey   = $poi['categoryKey'] ?? null;
-            $categoryValue = $poi['categoryValue'] ?? null;
-            if ($this->matchesKeyword($categoryKey, self::TRANSPORT_KEYWORDS)) {
-                return true;
-            }
-
-            if ($this->matchesKeyword($categoryValue, self::TRANSPORT_KEYWORDS)) {
-                return true;
-            }
-
-            $tags = $poi['tags'] ?? null;
-            if (!is_array($tags)) {
-                continue;
-            }
-
-            foreach ($tags as $tagKey => $tagValue) {
-                if ($this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TRANSPORT_KEYWORDS)) {
+                $categoryKey   = $poi['categoryKey'] ?? null;
+                $categoryValue = $poi['categoryValue'] ?? null;
+                if ($this->matchesKeyword($categoryKey, self::TRANSPORT_KEYWORDS)) {
                     return true;
                 }
 
-                if ($this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TRANSPORT_KEYWORDS)) {
+                if ($this->matchesKeyword($categoryValue, self::TRANSPORT_KEYWORDS)) {
                     return true;
                 }
-            }
-        }
 
-        return false;
+                $tags = $poi['tags'] ?? null;
+                if (!is_array($tags)) {
+                    return false;
+                }
+
+                return array_any(
+                    array_keys($tags),
+                    fn (string|int $tagKey): bool => $this->matchesKeyword(is_string($tagKey) ? $tagKey : null, self::TRANSPORT_KEYWORDS)
+                ) || array_any(
+                    $tags,
+                    fn (mixed $tagValue): bool => $this->matchesKeyword(is_string($tagValue) ? $tagValue : null, self::TRANSPORT_KEYWORDS)
+                );
+            }
+        );
     }
 
     /**

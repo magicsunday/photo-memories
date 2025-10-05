@@ -19,6 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_any;
 use function array_map;
 use function array_values;
 use function assert;
@@ -191,19 +192,19 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
      */
     private function hasNightDaypart(array $run): bool
     {
-        foreach ($run as $media) {
-            $features = $media->getFeatures();
-            if (!is_array($features)) {
-                continue;
-            }
+        return array_any(
+            $run,
+            static function (Media $media): bool {
+                $features = $media->getFeatures();
+                if (!is_array($features)) {
+                    return false;
+                }
 
-            $daypart = $features['daypart'] ?? null;
-            if (is_string($daypart) && strtolower($daypart) === 'night') {
-                return true;
-            }
-        }
+                $daypart = $features['daypart'] ?? null;
 
-        return false;
+                return is_string($daypart) && strtolower($daypart) === 'night';
+            }
+        );
     }
 
     /**
