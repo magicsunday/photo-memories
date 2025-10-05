@@ -27,7 +27,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final class MetadataStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface>
+     * @var iterable<SingleMetadataExtractorInterface> $extractors
      */
     private readonly iterable $extractors;
 

@@ -30,10 +30,10 @@ use function usort;
  */
 final class CompositeClusterScorer
 {
-    /** @var list<ClusterScoreHeuristicInterface> */
+    /** @var list<ClusterScoreHeuristicInterface> $heuristics */
     private array $heuristics;
 
-    /** @var array<string,string> */
+    /** @var array<string,string> $algorithmGroups */
     private array $algorithmGroups = [];
 
     /**

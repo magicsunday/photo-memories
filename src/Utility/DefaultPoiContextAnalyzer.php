@@ -102,14 +102,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             }
         );
 
-        /** @var array{
-         *     name:?string,
-         *     names:array{default:?string,localized:array<string,string>,alternates:list<string>},
-         *     categoryKey:?string,
-         *     categoryValue:?string,
-         *     tags:array<string,string>
-         * } $best
-         */
+        /** @var array{name:?string,names:array{default:?string,localized:array<string,string>,alternates:list<string>},categoryKey:?string,categoryValue:?string,tags:array<string,string>} $best */
         return $candidates[0]['data'];
     }
 

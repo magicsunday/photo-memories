@@ -343,7 +343,7 @@ final class LocationPoiEnricherTest extends TestCase
 final class FakeHttpClient implements HttpClientInterface
 {
     /**
-     * @var list<FakeHttpResponse>
+     * @var list<FakeHttpResponse> $responses
      */
     private array $responses;
 

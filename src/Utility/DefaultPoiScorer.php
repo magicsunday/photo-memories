@@ -31,8 +31,6 @@ final class DefaultPoiScorer implements PoiScoringStrategyInterface
 
     /**
      * Tag specific weightings favouring more significant POIs.
-     *
-     * @var array<string,int>
      */
     private const array POI_TAG_WEIGHTS = [
         'tourism'  => 600,
@@ -47,8 +45,6 @@ final class DefaultPoiScorer implements PoiScoringStrategyInterface
 
     /**
      * Category key bonuses stacked on top of the tag weights.
-     *
-     * @var array<string,int>
      */
     private const array POI_CATEGORY_KEY_BONUS = [
         'tourism'  => 220,
@@ -62,8 +58,6 @@ final class DefaultPoiScorer implements PoiScoringStrategyInterface
 
     /**
      * Additional bonuses for specific tag/value combinations.
-     *
-     * @var array<string,int>
      */
     private const array POI_TAG_VALUE_BONUS = [
         'man_made:tower' => 260,

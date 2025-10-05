@@ -25,8 +25,7 @@ final class OverpassTagConfiguration
 {
     /**
      * Default Overpass tag filters considered for POI categorisation.
-     *
-     * @var array<string,list<string>>
+     * Represented as a map of tag keys to lists of allowed values.
      */
     private const array DEFAULT_ALLOWED_COMBINATIONS = [
         ['tourism' => ['attraction', 'viewpoint', 'museum', 'gallery']],
@@ -37,12 +36,12 @@ final class OverpassTagConfiguration
     ];
 
     /**
-     * @var list<array<string,list<string>>>
+     * @var list<array<string,list<string>>> $allowedTagCombinations
      */
     private array $allowedTagCombinations;
 
     /**
-     * @var array<string,list<string>>
+     * @var array<string,list<string>> $allowedTagMap
      */
     private array $allowedTagMap;
 

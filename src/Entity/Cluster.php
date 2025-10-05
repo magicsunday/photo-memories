@@ -60,7 +60,7 @@ class Cluster
     /**
      * Configuration parameters used by the clustering algorithm.
      *
-     * @var array<string, mixed>
+     * @var array<string, mixed> $params
      */
     #[ORM\Column(type: Types::JSON)]
     private array $params;
@@ -68,7 +68,7 @@ class Cluster
     /**
      * Geographic centroid of the cluster expressed as latitude/longitude pair.
      *
-     * @var array{lat: float, lon: float}
+     * @var array{lat: float, lon: float} $centroid
      */
     #[ORM\Column(type: Types::JSON)]
     private array $centroid;
@@ -76,7 +76,7 @@ class Cluster
     /**
      * Identifiers of the media records that belong to this cluster.
      *
-     * @var list<int>
+     * @var list<int> $members
      */
     #[ORM\Column(type: Types::JSON)]
     private array $members;

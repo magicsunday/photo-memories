@@ -31,14 +31,12 @@ final class ClusterEntityToDraftMapper
      * Lookup table that maps the configured clustering algorithm to a logical
      * group name used by the UI.
      *
-     * @var array<string, string>
+     * @var array<string, string> $algorithmGroups
      */
     private array $algorithmGroups = [];
 
     /**
      * Provides the fallback group name when no explicit mapping exists.
-     *
-     * @var string
      */
     private string $defaultAlgorithmGroup;
 

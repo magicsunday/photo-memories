@@ -26,12 +26,12 @@ use const PATHINFO_EXTENSION;
 final class DefaultMediaFileLocator implements MediaFileLocatorInterface
 {
     /**
-     * @var list<string>
+     * @var list<string> $imageExtensions
      */
     private readonly array $imageExtensions;
 
     /**
-     * @var list<string>
+     * @var list<string> $videoExtensions
      */
     private readonly array $videoExtensions;
 

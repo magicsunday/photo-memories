@@ -34,7 +34,7 @@ final class DefaultPoiUpdateProcessorTest extends TestCase
         $resolver = new class($locationA, $locationB) implements PoiEnsurerInterface {
             private int $calls = 0;
 
-            /** @var list<bool> */
+            /** @var list<bool> $network */
             private array $network = [true, false];
 
             public function __construct(

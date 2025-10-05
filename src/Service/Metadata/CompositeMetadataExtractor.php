@@ -20,8 +20,8 @@ use MagicSunday\Memories\Entity\Media;
 final readonly class CompositeMetadataExtractor implements MetadataExtractorInterface
 {
     /**
-     * @var SingleMetadataExtractorInterface[] Prioritised extractor list executed in order of
-     *                                        likelihood/cost to build up the composite metadata set.
+     * @var list<SingleMetadataExtractorInterface> $extractors Prioritised extractor list executed in order of
+     *                                                         likelihood/cost to build up the composite metadata set.
      */
     private array $extractors;
 

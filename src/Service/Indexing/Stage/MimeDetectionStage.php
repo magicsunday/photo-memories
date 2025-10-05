@@ -33,12 +33,12 @@ use const PATHINFO_EXTENSION;
 final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 {
     /**
-     * @var list<string>
+     * @var list<string> $imageExtensions
      */
     private array $imageExtensions;
 
     /**
-     * @var list<string>
+     * @var list<string> $videoExtensions
      */
     private array $videoExtensions;
 

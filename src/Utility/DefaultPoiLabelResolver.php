@@ -28,7 +28,7 @@ use function trim;
 final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
 {
     /**
-     * @var list<string>
+     * @var list<string> $preferredLocaleKeys
      */
     private array $preferredLocaleKeys;
 

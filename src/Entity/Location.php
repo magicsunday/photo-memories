@@ -138,7 +138,7 @@ class Location
     /**
      * Bounding box coordinates describing the spatial footprint.
      *
-     * @var list<float>|null
+     * @var list<float>|null $boundingBox
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $boundingBox = null;
@@ -146,7 +146,7 @@ class Location
     /**
      * Nearby Points of Interest enriched via Overpass API responses.
      *
-     * @var list<array<string, mixed>>|null
+     * @var list<array<string, mixed>>|null $pois
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $pois = null;
@@ -220,7 +220,7 @@ class Location
     /**
      * Alternative names keyed by qualifier or locale.
      *
-     * @var array<string, string>|null
+     * @var array<string, string>|null $altNames
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $altNames = null;
@@ -228,7 +228,7 @@ class Location
     /**
      * Additional provider specific tags.
      *
-     * @var array<string, string>|null
+     * @var array<string, string>|null $extraTags
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $extraTags = null;

@@ -19,7 +19,7 @@ final class MetadataFeatureVersion
     public const int PIPELINE_VERSION = 1;
 
     /**
-     * @var array<string, int>
+     * Version identifiers per metadata extraction module.
      */
     public const array MODULE_VERSIONS = [
         'core' => 1,

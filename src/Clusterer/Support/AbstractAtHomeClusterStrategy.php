@@ -38,7 +38,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
 
     /**
-     * @var array<int, true>
+     * @var array<int, true> $allowedWeekdayLookup
      */
     private readonly array $allowedWeekdayLookup;
 

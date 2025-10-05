@@ -22,7 +22,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 final class QualityStage extends AbstractExtractorStage
 {
     /**
-     * @var iterable<SingleMetadataExtractorInterface>
+     * @var iterable<SingleMetadataExtractorInterface> $extractors
      */
     private readonly iterable $extractors;
 

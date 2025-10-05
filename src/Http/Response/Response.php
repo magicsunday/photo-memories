@@ -27,7 +27,7 @@ use RuntimeException;
  */
 class Response
 {
-    /** @var array<string,string> */
+    /** @var array<string,string> $headers */
     private array $headers;
 
     public function __construct(

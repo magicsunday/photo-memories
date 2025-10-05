@@ -431,7 +431,7 @@ class Media
     /**
      * Normalised ffprobe stream metadata for downstream consumers.
      *
-     * @var array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null
+     * @var array<int, array<int|string, int|float|string|bool|null|array<int|string, int|float|string|bool|null|array>>>|null $videoStreams
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $videoStreams = null;
@@ -553,7 +553,7 @@ class Media
     /**
      * List of keywords extracted or assigned to the media.
      *
-     * @var array<int, string>|null
+     * @var array<int, string>|null $keywords
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $keywords = null;
@@ -561,7 +561,7 @@ class Media
     /**
      * List of detected or tagged persons.
      *
-     * @var array<int, string>|null
+     * @var array<int, string>|null $persons
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $persons = null;
@@ -581,7 +581,7 @@ class Media
     /**
      * Feature set describing the scene (labels, categories, etc.).
      *
-     * @var array<string, scalar|array|null>|null
+     * @var array<string, scalar|array|null>|null $features
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $features = null;
@@ -589,7 +589,7 @@ class Media
     /**
      * Highest confidence scene tags derived from vision models.
      *
-     * @var list<array{label: string, score: float}>|null
+     * @var list<array{label: string, score: float}>|null $sceneTags
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $sceneTags = null;
@@ -597,7 +597,7 @@ class Media
     /**
      * Generated thumbnails mapped by size identifier.
      *
-     * @var array<string, string>|null
+     * @var array<string, string>|null $thumbnails
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $thumbnails = null;

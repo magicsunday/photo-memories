@@ -22,29 +22,27 @@ final class ClusterDraft
 {
     /**
      * Name of the algorithm that produced the cluster.
-     *
-     * @var string
      */
     private readonly string $algorithm;
 
     /**
      * Raw configuration parameters provided by the clustering strategy.
      *
-     * @var array<string, int|float|string|bool|array|null>
+     * @var array<string, int|float|string|bool|array|null> $params
      */
     private array $params;
 
     /**
      * Geographic centroid coordinates (latitude/longitude pair).
      *
-     * @var array{lat: float, lon: float}
+     * @var array{lat: float, lon: float} $centroid
      */
     private readonly array $centroid;
 
     /**
      * Ordered identifiers of media entities that belong to the cluster.
      *
-     * @var list<int>
+     * @var list<int> $members
      */
     private readonly array $members;
 
@@ -72,85 +70,61 @@ final class ClusterDraft
 
     /**
      * Marks the timestamp of the first media item that belongs to the cluster.
-     *
-     * @var DateTimeImmutable|null
      */
     private ?DateTimeImmutable $startAt = null;
 
     /**
      * Marks the timestamp of the last media item that belongs to the cluster.
-     *
-     * @var DateTimeImmutable|null
      */
     private ?DateTimeImmutable $endAt = null;
 
     /**
      * Cached count of members for quick read access without recalculating the array size.
-     *
-     * @var int
      */
     private int $membersCount = 0;
 
     /**
      * Number of photos that belong to the cluster.
-     *
-     * @var int|null
      */
     private ?int $photoCount = null;
 
     /**
      * Number of videos that belong to the cluster.
-     *
-     * @var int|null
      */
     private ?int $videoCount = null;
 
     /**
      * Identifier of the media entity that represents the cover image.
-     *
-     * @var int|null
      */
     private ?int $coverMediaId = null;
 
     /**
      * Optional location associated with the cluster.
-     *
-     * @var Location|null
      */
     private ?Location $location = null;
 
     /**
      * Version string of the algorithm that produced the cluster.
-     *
-     * @var string|null
      */
     private ?string $algorithmVersion = null;
 
     /**
      * Hash of the configuration that was used during clustering.
-     *
-     * @var string|null
      */
     private ?string $configHash = null;
 
     /**
      * Latitude of the cluster centroid stored for quick access.
-     *
-     * @var float|null
      */
     private ?float $centroidLat = null;
 
     /**
      * Longitude of the cluster centroid stored for quick access.
-     *
-     * @var float|null
      */
     private ?float $centroidLon = null;
 
     /**
      * S2 cell identifier with level 7 precision representing the centroid.
-     *
-     * @var string|null
      */
     private ?string $centroidCell7 = null;
 

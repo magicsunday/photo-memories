@@ -42,7 +42,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     private readonly string $thumbnailDir;
 
     /**
-     * @var int[] List of thumbnail widths that should be generated.
+     * @var list<int> $sizes List of thumbnail widths that should be generated.
      */
     private readonly array $sizes;
 

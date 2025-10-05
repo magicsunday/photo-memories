@@ -29,7 +29,7 @@ use function trim;
 final class PersonSignatureHelper
 {
     /**
-     * @var array<string, int>
+     * @var array<string, int> $cache
      */
     private array $cache = [];
 

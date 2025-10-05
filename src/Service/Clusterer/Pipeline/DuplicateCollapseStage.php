@@ -24,7 +24,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 {
     use StageSupportTrait;
 
-    /** @var array<string,int> */
+    /** @var array<string,int> $priorityMap */
     private array $priorityMap = [];
 
     /**

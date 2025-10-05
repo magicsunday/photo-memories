@@ -59,7 +59,7 @@ use const SORT_STRING;
 final class FeedController
 {
     /**
-     * @var array<int, Media|null>
+     * @var array<int, Media|null> $mediaCache
      */
     private array $mediaCache = [];
 

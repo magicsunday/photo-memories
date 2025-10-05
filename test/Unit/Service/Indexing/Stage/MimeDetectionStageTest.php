@@ -26,7 +26,7 @@ use function unlink;
 
 final class MimeDetectionStageTest extends TestCase
 {
-    /** @var list<string> */
+    /** @var list<string> $tempFiles */
     private array $tempFiles = [];
 
     protected function tearDown(): void

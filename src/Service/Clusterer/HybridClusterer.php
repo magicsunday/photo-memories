@@ -27,7 +27,7 @@ use function iterator_to_array;
  */
 final class HybridClusterer implements HybridClustererInterface
 {
-    /** @var list<ClusterStrategyInterface>|null */
+    /** @var list<ClusterStrategyInterface>|null $strategiesCache */
     private ?array $strategiesCache = null;
 
     /**

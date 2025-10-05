@@ -35,8 +35,7 @@ final class OverpassTagSelector implements OverpassTagSelectorInterface
 {
     /**
      * Additional tags that are preserved even if they are not a category key.
-     *
-     * @var list<string>
+     * Represented as a list of tag names.
      */
     private const array AUXILIARY_TAG_KEYS = [
         'wikidata',

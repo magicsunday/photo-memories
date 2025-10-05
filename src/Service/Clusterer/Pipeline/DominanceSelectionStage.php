@@ -26,7 +26,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 {
     use StageSupportTrait;
 
-    /** @var array<string,int> */
+    /** @var array<string,int> $priorityMap */
     private array $priorityMap = [];
 
     /**

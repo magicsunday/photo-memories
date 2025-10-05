@@ -45,7 +45,7 @@ use function unlink;
 final class HtmlFeedExportServiceTest extends TestCase
 {
     /**
-     * @var list<string>
+     * @var list<string> $tempDirs
      */
     private array $tempDirs = [];
 

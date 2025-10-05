@@ -22,7 +22,7 @@ use function time;
  */
 final class RecencyClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
-    /** @var callable():int */
+    /** @var callable():int $timeProvider */
     private $timeProvider;
 
     private int $now = 0;

@@ -29,7 +29,9 @@ use function strtoupper;
  */
 final class LocationResolver implements PoiEnsurerInterface
 {
-    /** @var array<string,Location> provider|placeId -> Location (may be managed or detached) */
+    /**
+     * @var array<string,Location> $cacheByKey provider|placeId -> Location (may be managed or detached)
+     */
     private array $cacheByKey = [];
 
     private bool $lastUsedNetwork = false;

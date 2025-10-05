@@ -27,7 +27,7 @@ use function iterator_to_array;
 final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipelineInterface
 {
     /**
-     * @var list<MediaIngestionStageInterface>
+     * @var list<MediaIngestionStageInterface> $stages
      */
     private array $stages;
 

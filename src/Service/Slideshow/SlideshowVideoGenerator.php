@@ -30,7 +30,9 @@ use function trim;
  */
 final class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
 {
-    /** @var list<string> */
+    /**
+     * Default list of transition names used when no custom set is provided.
+     */
     private const array DEFAULT_TRANSITIONS = [
         'fade',
         'wipeleft',
