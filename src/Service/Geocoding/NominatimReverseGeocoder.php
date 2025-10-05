@@ -153,16 +153,11 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
 
         [$south, $north, $west, $east] = $bbox;
 
-        $northFloat = (float) $north;
-        $southFloat = (float) $south;
-        $eastFloat  = (float) $east;
-        $westFloat  = (float) $west;
-
         $distances = [
-            MediaMath::haversineDistanceInMeters($lat, $lon, $northFloat, $lon),
-            MediaMath::haversineDistanceInMeters($lat, $lon, $southFloat, $lon),
-            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $eastFloat),
-            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $westFloat),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $north, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $south, $lon),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $east),
+            MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $west),
         ];
 
         $radius = (float) max($distances);
