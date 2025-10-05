@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -86,6 +87,53 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($items));
     }
 
+    #[Test]
+    public function featureDrivenWeekendDetectionMatchesFallback(): void
+    {
+        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minNights: 1,
+            maxNights: 3,
+            minItemsPerDay: 4,
+            minYears: 2,
+            minItemsTotal: 16,
+        );
+
+        $items = [];
+
+        foreach ([2020, 2021] as $year) {
+            $friday = new DateTimeImmutable(sprintf('%d-09-04 16:00:00', $year), new DateTimeZone('UTC'));
+            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
+                $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
+
+                for ($i = 0; $i < 4; ++$i) {
+                    $items[] = $this->createMedia(
+                        ($year * 100) + ($dayOffset * 10) + $i,
+                        $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
+                    );
+                }
+            }
+        }
+
+        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        foreach ($items as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $isWeekend = ((int) $takenAt->format('N')) >= 6;
+            $media->setFeatures([
+                'isWeekend' => $isWeekend,
+            ]);
+        }
+
+        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        self::assertSame($fallbackClusters, $featureClusters);
+    }
+
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
         return $this->makeMediaFixture(
@@ -95,6 +143,24 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             lat: 47.0,
             lon: 11.0,
             size: 2048,
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     */
+    private function normaliseClusters(array $clusters): array
+    {
+        return array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'algorithm' => $cluster->getAlgorithm(),
+                'params'    => $cluster->getParams(),
+                'centroid'  => $cluster->getCentroid(),
+                'members'   => $cluster->getMembers(),
+            ],
+            $clusters,
         );
     }
 }

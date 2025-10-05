@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -62,6 +63,30 @@ final class HolidayEventClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function featureDrivenHolidayGroupingMatchesFallback(): void
+    {
+        $strategy = new HolidayEventClusterStrategy(minItemsPerHoliday: 2);
+
+        $items = [
+            $this->createMedia(201, '2024-03-29 09:00:00', 50.0, 8.0),
+            $this->createMedia(202, '2024-03-29 11:00:00', 50.0005, 8.0005),
+        ];
+
+        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        foreach ($items as $media) {
+            $media->setFeatures([
+                'isHoliday' => true,
+                'holidayId' => 'de-goodfriday-2024',
+            ]);
+        }
+
+        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        self::assertSame($fallbackClusters, $featureClusters);
+    }
+
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
     {
         return $this->makeMediaFixture(
@@ -71,6 +96,24 @@ final class HolidayEventClusterStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             size: 2048,
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     */
+    private function normaliseClusters(array $clusters): array
+    {
+        return array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'algorithm' => $cluster->getAlgorithm(),
+                'params'    => $cluster->getParams(),
+                'centroid'  => $cluster->getCentroid(),
+                'members'   => $cluster->getMembers(),
+            ],
+            $clusters,
         );
     }
 }

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -55,12 +56,55 @@ final class SeasonClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function featureDrivenSeasonMatchesFallback(): void
+    {
+        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 4);
+
+        $items = [
+            $this->createMedia(101, '2022-12-12 07:45:00'),
+            $this->createMedia(102, '2023-01-03 09:00:00'),
+            $this->createMedia(103, '2023-02-11 10:15:00'),
+            $this->createMedia(104, '2023-02-18 11:30:00'),
+        ];
+
+        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        foreach ($items as $media) {
+            $media->setFeatures([
+                'season' => 'winter',
+            ]);
+        }
+
+        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        self::assertSame($fallbackClusters, $featureClusters);
+    }
+
     private function createMedia(int $id, string $takenAt): Media
     {
         return $this->makeMediaFixture(
             id: $id,
             filename: sprintf('season-%d.jpg', $id),
             takenAt: $takenAt,
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     */
+    private function normaliseClusters(array $clusters): array
+    {
+        return array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'algorithm' => $cluster->getAlgorithm(),
+                'params'    => $cluster->getParams(),
+                'centroid'  => $cluster->getCentroid(),
+                'members'   => $cluster->getMembers(),
+            ],
+            $clusters,
         );
     }
 }

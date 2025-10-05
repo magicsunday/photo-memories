@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -65,12 +66,58 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function featureDrivenSeasonAggregationMatchesFallback(): void
+    {
+        $strategy = new SeasonOverYearsClusterStrategy(
+            minYears: 2,
+            minItemsPerSeason: 4,
+        );
+
+        $items = [
+            $this->createMedia(201, '2019-06-01 08:00:00'),
+            $this->createMedia(202, '2019-06-03 09:00:00'),
+            $this->createMedia(203, '2020-08-10 10:00:00'),
+            $this->createMedia(204, '2020-08-12 11:00:00'),
+        ];
+
+        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        foreach ($items as $media) {
+            $media->setFeatures([
+                'season' => 'summer',
+            ]);
+        }
+
+        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+
+        self::assertSame($fallbackClusters, $featureClusters);
+    }
+
     private function createMedia(int $id, string $takenAt): Media
     {
         return $this->makeMediaFixture(
             id: $id,
             filename: sprintf('season-over-years-%d.jpg', $id),
             takenAt: $takenAt,
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<array{algorithm: string, params: array, centroid: array, members: list<int>}>
+     */
+    private function normaliseClusters(array $clusters): array
+    {
+        return array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'algorithm' => $cluster->getAlgorithm(),
+                'params'    => $cluster->getParams(),
+                'centroid'  => $cluster->getCentroid(),
+                'members'   => $cluster->getMembers(),
+            ],
+            $clusters,
         );
     }
 }
