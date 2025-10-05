@@ -13,12 +13,12 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_filter;
-use function array_map;
 use function array_values;
 use function assert;
 use function count;
@@ -31,6 +31,7 @@ use function usort;
 final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private int $maxGapSeconds = 90,
@@ -132,12 +133,12 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
         ));
 
         $centroidSource = $representatives !== [] ? $representatives : $orderedMembers;
-        $centroid       = MediaMath::centroid($centroidSource);
+        $centroid       = $this->computeCentroid($centroidSource);
 
         $representative = $representatives[0] ?? null;
 
         $params = [
-            'time_range' => MediaMath::timeRange($orderedMembers),
+            'time_range' => $this->computeTimeRange($orderedMembers),
             'representative_media_id' => $representative?->getId(),
         ];
 
@@ -145,11 +146,16 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
             $params['burst_uuid'] = $burstUuid;
         }
 
+        $tags = $this->collectDominantTags($orderedMembers);
+        if ($tags !== []) {
+            $params = [...$params, ...$tags];
+        }
+
         return new ClusterDraft(
             algorithm: $this->name(),
             params: $params,
             centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: array_map(static fn (Media $m): int => $m->getId(), $orderedMembers)
+            members: $this->toMemberIds($orderedMembers)
         );
     }
 

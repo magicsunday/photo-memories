@@ -54,6 +54,13 @@ final class VideoStoriesClusterStrategyTest extends TestCase
                 $video->setVideoHasStabilization($hasStabilization);
             }
 
+            if ($i === 0) {
+                $video->setSceneTags([
+                    ['label' => 'Filmabend', 'score' => 0.88],
+                ]);
+                $video->setKeywords(['Filmabend']);
+            }
+
             $videos[] = $video;
         }
 
@@ -76,6 +83,10 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         self::assertSame(30.0, $params['video_duration_total_s']);
         self::assertSame(1, $params['video_slow_mo_count']);
         self::assertSame(2, $params['video_stabilized_count']);
+        self::assertSame([
+            ['label' => 'Filmabend', 'score' => 0.88],
+        ], $params['scene_tags']);
+        self::assertSame(['Filmabend'], $params['keywords']);
     }
 
     #[Test]

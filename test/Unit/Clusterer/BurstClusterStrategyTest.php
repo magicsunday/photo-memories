@@ -34,6 +34,10 @@ final class BurstClusterStrategyTest extends TestCase
         ];
 
         $mediaItems[2]->setBurstRepresentative(true);
+        $mediaItems[0]->setSceneTags([
+            ['label' => 'Serienaufnahme', 'score' => 0.8],
+        ]);
+        $mediaItems[0]->setKeywords(['Serienaufnahme']);
 
         $clusters = $strategy->cluster($mediaItems);
 
@@ -51,6 +55,10 @@ final class BurstClusterStrategyTest extends TestCase
         ];
         self::assertSame($expectedRange, $params['time_range']);
         self::assertSame(3003, $params['representative_media_id']);
+        self::assertSame([
+            ['label' => 'Serienaufnahme', 'score' => 0.8],
+        ], $params['scene_tags']);
+        self::assertSame(['Serienaufnahme'], $params['keywords']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.5202, $centroid['lat'], 0.0001);

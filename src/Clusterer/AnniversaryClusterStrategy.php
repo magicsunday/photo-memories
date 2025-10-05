@@ -170,6 +170,11 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 $params['place'] = $label;
             }
 
+            $tags = $this->collectDominantTags($group);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
+
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
