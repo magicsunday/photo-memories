@@ -68,6 +68,8 @@ use const SORT_STRING;
  *     firstGpsMedia: Media|null,
  *     lastGpsMedia: Media|null,
  *     timezoneIdentifierVotes?: array<string, int>,
+ *     cohortPresenceRatio: float,
+ *     cohortMembers: array<int, int>,
  *     isSynthetic: bool,
  * }
  */
@@ -151,6 +153,8 @@ final readonly class InitializationStage implements DaySummaryStageInterface
                     'firstGpsMedia'           => null,
                     'lastGpsMedia'            => null,
                     'timezoneIdentifierVotes' => [],
+                    'cohortPresenceRatio'     => 0.0,
+                    'cohortMembers'           => [],
                     'isSynthetic'             => false,
                 ];
             }

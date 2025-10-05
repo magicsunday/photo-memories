@@ -191,6 +191,12 @@ parameters:
     memories.cluster.priority.video_stories_cluster_strategy: 41
     memories.cluster.priority.device_similarity_strategy: 40
 
+    # Cohort configuration
+    env(MEMORIES_CLUSTER_COHORT_IMPORTANT_PERSON_IDS): '[]'
+    env(MEMORIES_CLUSTER_COHORT_IMPORTANT_PERSON_FALLBACKS): '[]'
+    memories.cluster.cohort.important_person_ids: '%env(json:MEMORIES_CLUSTER_COHORT_IMPORTANT_PERSON_IDS)%'
+    memories.cluster.cohort.important_person_fallbacks: '%env(json:MEMORIES_CLUSTER_COHORT_IMPORTANT_PERSON_FALLBACKS)%'
+
     # Scoring Defaults
     memories.score.quality_baseline_megapixels: 12.0
     memories.score.quality.min_resolution_megapixels: 2.0

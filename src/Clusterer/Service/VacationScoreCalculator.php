@@ -30,9 +30,14 @@ use function count;
 use function explode;
 use function implode;
 use function in_array;
+use function is_array;
 use function log;
 use function max;
 use function min;
+use function ksort;
+use function is_int;
+use function is_numeric;
+use function is_string;
 use function preg_replace;
 use function round;
 use function sort;
@@ -101,6 +106,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $spotDwellSeconds        = 0;
         $weekendHolidayDays      = 0;
         $awayDays                = 0;
+        $cohortRatioSum          = 0.0;
+        $cohortRatioSamples      = 0;
+        $cohortMembersTotal      = [];
 
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
@@ -175,6 +183,43 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             if ($summary['baseAway'] && ($isWeekend || $isHoliday)) {
                 ++$weekendHolidayDays;
             }
+
+            $ratio = (float) ($summary['cohortPresenceRatio'] ?? 0.0);
+            if ($ratio < 0.0) {
+                $ratio = 0.0;
+            } elseif ($ratio > 1.0) {
+                $ratio = 1.0;
+            }
+
+            $cohortRatioSum += $ratio;
+            ++$cohortRatioSamples;
+
+            $dayCohortMembers = $summary['cohortMembers'] ?? null;
+            if (is_array($dayCohortMembers)) {
+                foreach ($dayCohortMembers as $personId => $count) {
+                    if (is_string($personId) && is_numeric($personId)) {
+                        $personId = (int) $personId;
+                    }
+
+                    if (!is_int($personId)) {
+                        continue;
+                    }
+
+                    if (is_string($count) && is_numeric($count)) {
+                        $count = (int) $count;
+                    }
+
+                    if (!is_int($count)) {
+                        continue;
+                    }
+
+                    if ($count < 1) {
+                        continue;
+                    }
+
+                    $cohortMembersTotal[$personId] = ($cohortMembersTotal[$personId] ?? 0) + $count;
+                }
+            }
         }
 
         if ($awayDays === 0 || $reliableDays === 0) {
@@ -210,6 +255,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $tourismRatio  = $poiSamples > 0 ? min(1.0, $tourismHits / max(1, $poiSamples)) : 0.0;
         $photoDensityZ = $photoDensityDenominator > 0 ? $photoDensitySum / $photoDensityDenominator : 0.0;
+        $cohortAverage = $cohortRatioSamples > 0 ? $cohortRatioSum / $cohortRatioSamples : 0.0;
+        $cohortAverage = min(1.0, max(0.0, $cohortAverage));
 
         $firstDay    = $days[$dayKeys[0]];
         $lastDay     = $days[$dayKeys[$dayCount - 1]];
@@ -234,6 +281,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $densityBonus        = 0.6 * $photoDensityZ;
         $explorationBonus    = $spotBonus;
         $weekendHolidayScore = $weekendHolidayBonus;
+        $cohortBonus         = min(1.5, max(0.0, $cohortAverage * 2.5));
         $penalty             = 0.4 * $workDayPenalty;
 
         $score = $awayDayScore
@@ -246,6 +294,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             + $densityBonus
             + $explorationBonus
             + $weekendHolidayScore
+            + $cohortBonus
             - $penalty;
 
         $classification = 'none';
@@ -284,6 +333,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'day_trip'   => 'Tagesausflug',
         ];
 
+        if ($cohortMembersTotal !== []) {
+            ksort($cohortMembersTotal, SORT_NUMERIC);
+        }
+
         $params = [
             'classification'           => $classification,
             'classification_label'     => $classificationLabels[$classification] ?? 'Reise',
@@ -311,6 +364,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'work_day_penalty_score'   => round($penalty, 2),
             'countries'                => $countries,
             'timezones'                => $timezones,
+            'cohort_presence_ratio'    => round($cohortAverage, 3),
+            'cohort_bonus'             => round($cohortBonus, 2),
+            'cohort_members'           => $cohortMembersTotal,
         ];
 
         if ($placeComponents !== []) {

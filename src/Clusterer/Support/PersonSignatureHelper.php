@@ -58,14 +58,34 @@ final class PersonSignatureHelper
 
         $ids = [];
         foreach ($normalised as $name) {
-            if ($name === '') {
+            $personId = $this->personIdFromName($name);
+            if ($personId === null) {
                 continue;
             }
 
-            $ids[] = $this->cache[$name] ??= $this->hashPerson($name);
+            $ids[] = $personId;
         }
 
         return $ids;
+    }
+
+    /**
+     * Returns the deterministic identifier for a person name if available.
+     */
+    public function personIdFromName(string $name): ?int
+    {
+        $normalised = mb_strtolower(trim($name));
+        if ($normalised === '') {
+            return null;
+        }
+
+        if (isset($this->cache[$normalised])) {
+            return $this->cache[$normalised];
+        }
+
+        $this->cache[$normalised] = $this->hashPerson($normalised);
+
+        return $this->cache[$normalised];
     }
 
     private function hashPerson(string $name): int

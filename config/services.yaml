@@ -659,6 +659,13 @@ services:
         tags:
             - { name: 'memories.day_summary_stage', priority: 400 }
 
+    MagicSunday\Memories\Clusterer\DaySummaryStage\CohortPresenceStage:
+        arguments:
+            $importantPersonIds: '%memories.cluster.cohort.important_person_ids%'
+            $fallbackPersonNames: '%memories.cluster.cohort.important_person_fallbacks%'
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 350 }
+
     MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage:
         arguments:
             $gpsOutlierRadiusKm: 1.0
