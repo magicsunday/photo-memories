@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -40,6 +41,7 @@ use const SORT_NUMERIC;
  */
 final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
 
@@ -185,7 +187,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                 }
 
                 // must include weekend day (Sat/Sun)
-                if (!$this->containsWeekendDay($r['days'])) {
+                if (!$this->runContainsWeekend($r)) {
                     continue;
                 }
 
@@ -248,9 +250,24 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     }
 
     /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     */
+    private function runContainsWeekend(array $run): bool
+    {
+        foreach ($run['items'] as $media) {
+            $features = $this->extractCalendarFeatures($media);
+            if ($features['isWeekend'] === true) {
+                return true;
+            }
+        }
+
+        return $this->containsWeekendDayFallback($run['days']);
+    }
+
+    /**
      * @param list<string> $days
      */
-    private function containsWeekendDay(array $days): bool
+    private function containsWeekendDayFallback(array $days): bool
     {
         $tz = new DateTimeZone('UTC');
 

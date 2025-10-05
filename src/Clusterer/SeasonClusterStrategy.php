@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -27,6 +28,7 @@ use function explode;
  */
 final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
@@ -59,10 +61,11 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
             assert($t instanceof DateTimeImmutable);
-            $month = (int) $t->format('n');
-            $year  = (int) $t->format('Y');
+            $month    = (int) $t->format('n');
+            $year     = (int) $t->format('Y');
+            $features = $this->extractCalendarFeatures($m);
 
-            $season = match (true) {
+            $season = $this->seasonLabelFromFeature($features['season']) ?? match (true) {
                 $month >= 3 && $month <= 5  => 'Frühling',
                 $month >= 6 && $month <= 8  => 'Sommer',
                 $month >= 9 && $month <= 11 => 'Herbst',

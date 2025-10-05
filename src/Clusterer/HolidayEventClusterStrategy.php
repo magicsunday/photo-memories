@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
@@ -28,6 +29,7 @@ use function explode;
  */
 final readonly class HolidayEventClusterStrategy implements ClusterStrategyInterface
 {
+    use ClusterBuildHelperTrait;
     use MediaFilterTrait;
 
     public function __construct(
@@ -59,12 +61,30 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         foreach ($timestamped as $m) {
             $t = $m->getTakenAt();
             assert($t instanceof DateTimeImmutable);
-            $name = Calendar::germanFederalHolidayName($t);
+            $features = $this->extractCalendarFeatures($m);
+
+            $name = null;
+            $year = null;
+
+            if ($features['isHoliday'] === true) {
+                $decoded = $this->decodeHolidayFeature($features['holidayId']);
+                if ($decoded['code'] !== null) {
+                    $name = $this->holidayLabelFromCode($decoded['code']);
+                    $year = $decoded['year'];
+                }
+            }
+
+            if ($name === null) {
+                $name = Calendar::germanFederalHolidayName($t);
+            }
+
             if ($name === null) {
                 continue;
             }
 
-            $key = $t->format('Y') . ':' . $name . ':' . $t->format('Y-m-d');
+            $holidayYear = $year ?? (int) $t->format('Y');
+
+            $key = $holidayYear . ':' . $name . ':' . $t->format('Y-m-d');
             $groups[$key] ??= [];
             $groups[$key][] = $m;
         }

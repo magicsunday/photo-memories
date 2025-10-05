@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -27,13 +28,13 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         );
 
         $mediaItems = [
-            $this->createMedia(1, '2019-07-01 08:00:00'),
-            $this->createMedia(2, '2019-07-05 09:00:00'),
-            $this->createMedia(3, '2020-08-10 10:00:00'),
-            $this->createMedia(4, '2020-08-11 11:00:00'),
-            $this->createMedia(5, '2021-06-15 12:00:00'),
-            $this->createMedia(6, '2021-06-18 13:00:00'),
-            $this->createMedia(7, '2021-12-05 14:00:00'),
+            $this->createMedia(1, '2019-07-01 08:00:00', ['season' => 'summer']),
+            $this->createMedia(2, '2019-07-05 09:00:00', ['season' => 'summer']),
+            $this->createMedia(3, '2020-08-10 10:00:00', ['season' => 'summer']),
+            $this->createMedia(4, '2020-08-11 11:00:00', ['season' => 'summer']),
+            $this->createMedia(5, '2021-06-15 12:00:00', ['season' => 'summer']),
+            $this->createMedia(6, '2021-06-18 13:00:00', ['season' => 'summer']),
+            $this->createMedia(7, '2021-12-05 14:00:00', ['season' => 'winter']),
         ];
 
         $clusters = $strategy->cluster($mediaItems);
@@ -65,12 +66,68 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
-    private function createMedia(int $id, string $takenAt): Media
+    #[Test]
+    public function featureBasedAndFallbackAggregationMatch(): void
+    {
+        $strategy = new SeasonOverYearsClusterStrategy(
+            minYears: 3,
+            minItemsPerSeason: 6,
+        );
+
+        $dataset = [
+            ['id' => 31, 'takenAt' => '2019-06-20 08:00:00', 'season' => 'summer'],
+            ['id' => 32, 'takenAt' => '2019-07-05 09:00:00', 'season' => 'summer'],
+            ['id' => 33, 'takenAt' => '2020-08-12 10:00:00', 'season' => 'summer'],
+            ['id' => 34, 'takenAt' => '2020-08-14 12:30:00', 'season' => 'summer'],
+            ['id' => 35, 'takenAt' => '2021-06-18 13:00:00', 'season' => 'summer'],
+            ['id' => 36, 'takenAt' => '2021-07-01 14:00:00', 'season' => 'summer'],
+        ];
+
+        $withFeatures = [];
+        $fallbackOnly = [];
+
+        foreach ($dataset as $row) {
+            $withFeatures[] = $this->createMedia($row['id'], $row['takenAt'], ['season' => $row['season']]);
+            $fallbackOnly[] = $this->createMedia($row['id'], $row['takenAt']);
+        }
+
+        $clustersWith = $strategy->cluster($withFeatures);
+        $clustersWithout = $strategy->cluster($fallbackOnly);
+
+        self::assertSame(
+            $this->normaliseClusters($clustersWithout),
+            $this->normaliseClusters($clustersWith),
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<array{algorithm: string, params: array, members: list<int>}> 
+     */
+    private function normaliseClusters(array $clusters): array
+    {
+        return array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'algorithm' => $cluster->getAlgorithm(),
+                'params'    => $cluster->getParams(),
+                'members'   => $cluster->getMembers(),
+            ],
+            $clusters,
+        );
+    }
+
+    private function createMedia(int $id, string $takenAt, ?array $features = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
             filename: sprintf('season-over-years-%d.jpg', $id),
             takenAt: $takenAt,
+            configure: $features !== null
+                ? static function (Media $media) use ($features): void {
+                    $media->setFeatures($features);
+                }
+                : null,
         );
     }
 }
