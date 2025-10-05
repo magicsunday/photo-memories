@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
+use function array_fill_keys;
 use function array_map;
 use function count;
 
@@ -35,9 +36,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
         private readonly array $annotateOnly,
         private readonly array $minUniqueShare,
     ) {
-        foreach ($annotateOnly as $algorithm) {
-            $this->annotateOnlySet[$algorithm] = true;
-        }
+        $this->annotateOnlySet = array_fill_keys($annotateOnly, true);
     }
 
     public function getLabel(): string
