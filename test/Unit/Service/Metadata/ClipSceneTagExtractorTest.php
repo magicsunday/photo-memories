@@ -139,5 +139,34 @@ final class ClipSceneTagExtractorTest extends TestCase
             $result->getIndexLog()
         );
     }
+
+    #[Test]
+    public function extractAcceptsZeroScoreWhenMinimumScoreIsZero(): void
+    {
+        $model = new class implements VisionSceneTagModelInterface {
+            public function predict(string $filepath, Media $media): array
+            {
+                return [
+                    'neutral'  => 0.0,
+                    'negative' => -0.2,
+                    'positive' => 0.5,
+                ];
+            }
+        };
+
+        $media = new Media('scene3.jpg', 'checksum-scene3', 1024);
+        $media->setMime('image/jpeg');
+
+        $extractor = new ClipSceneTagExtractor($model, maxTags: 3, minScore: 0.0);
+        $result    = $extractor->extract('/tmp/scene3.jpg', $media);
+
+        $tags = $result->getSceneTags();
+        self::assertIsArray($tags);
+        self::assertCount(2, $tags);
+        self::assertSame('positive', $tags[0]['label']);
+        self::assertEqualsWithDelta(0.5, $tags[0]['score'], 0.0001);
+        self::assertSame('neutral', $tags[1]['label']);
+        self::assertEqualsWithDelta(0.0, $tags[1]['score'], 0.0001);
+    }
 }
 
