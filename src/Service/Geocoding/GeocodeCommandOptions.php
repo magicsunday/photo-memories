@@ -18,8 +18,7 @@ final readonly class GeocodeCommandOptions
 {
     public function __construct(
         private bool $dryRun,
-        private ?int $limit,
-        private bool $processAll,
+        private bool $refreshLocations,
         private ?string $city,
         private bool $missingPois,
         private bool $refreshPois,
@@ -31,14 +30,9 @@ final readonly class GeocodeCommandOptions
         return $this->dryRun;
     }
 
-    public function getLimit(): ?int
+    public function refreshLocations(): bool
     {
-        return $this->limit;
-    }
-
-    public function processAllMedia(): bool
-    {
-        return $this->processAll;
+        return $this->refreshLocations;
     }
 
     public function getCity(): ?string
