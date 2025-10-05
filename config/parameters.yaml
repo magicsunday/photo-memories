@@ -222,7 +222,7 @@ parameters:
 
     memories.http.feed.default_limit: 24
     memories.http.feed.max_limit: 120
-    memories.http.feed.preview_images: 8
+    memories.http.feed.preview_images: 20
     memories.http.feed.cluster_multiplier: 4
     memories.http.feed.cover_width: 640
     memories.http.feed.member_width: 320
