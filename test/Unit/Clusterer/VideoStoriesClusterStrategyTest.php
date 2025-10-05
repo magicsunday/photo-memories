@@ -30,10 +30,31 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             minItemsPerDay: 2,
         );
 
-        $base   = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
-        $videos = [];
+        $base          = new DateTimeImmutable('2024-03-15 08:00:00', new DateTimeZone('UTC'));
+        $videos        = [];
+        $durations     = [10.0, 20.0, null];
+        $slowMoFlags   = [true, false, null];
+        $stabilisation = [true, false, true];
+
         for ($i = 0; $i < 3; ++$i) {
-            $videos[] = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
+            $video = $this->createVideo(3300 + $i, $base->add(new DateInterval('PT' . ($i * 1800) . 'S')));
+
+            $duration = $durations[$i];
+            if ($duration !== null) {
+                $video->setVideoDurationS($duration);
+            }
+
+            $isSlowMo = $slowMoFlags[$i];
+            if ($isSlowMo !== null) {
+                $video->setIsSlowMo($isSlowMo);
+            }
+
+            $hasStabilization = $stabilisation[$i];
+            if ($hasStabilization !== null) {
+                $video->setVideoHasStabilization($hasStabilization);
+            }
+
+            $videos[] = $video;
         }
 
         $clusters = $strategy->cluster($videos);
@@ -43,6 +64,18 @@ final class VideoStoriesClusterStrategyTest extends TestCase
 
         self::assertSame('video_stories', $cluster->getAlgorithm());
         self::assertSame([3300, 3301, 3302], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+
+        self::assertArrayHasKey('video_count', $params);
+        self::assertArrayHasKey('video_duration_total_s', $params);
+        self::assertArrayHasKey('video_slow_mo_count', $params);
+        self::assertArrayHasKey('video_stabilized_count', $params);
+
+        self::assertSame(3, $params['video_count']);
+        self::assertSame(30.0, $params['video_duration_total_s']);
+        self::assertSame(1, $params['video_slow_mo_count']);
+        self::assertSame(2, $params['video_stabilized_count']);
     }
 
     #[Test]

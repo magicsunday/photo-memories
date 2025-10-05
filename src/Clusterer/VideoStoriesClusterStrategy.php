@@ -85,11 +85,51 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             $centroid = MediaMath::centroid($members);
             $time     = MediaMath::timeRange($members);
 
+            $videoCount            = count($members);
+            $videoDurationTotal    = 0.0;
+            $videoSlowMoCount      = 0;
+            $videoStabilizedCount  = 0;
+
+            foreach ($members as $member) {
+                $videoDuration = $member->getVideoDurationS();
+                if ($videoDuration !== null) {
+                    $videoDurationTotal += $videoDuration;
+                }
+
+                $isSlowMo = $member->isSlowMo();
+                if ($isSlowMo === true) {
+                    ++$videoSlowMoCount;
+                }
+
+                $hasStabilization = $member->getVideoHasStabilization();
+                if ($hasStabilization === true) {
+                    ++$videoStabilizedCount;
+                }
+            }
+
+            $params = [
+                'time_range' => $time,
+            ];
+
+            if ($videoCount > 0) {
+                $params['video_count'] = $videoCount;
+            }
+
+            if ($videoDurationTotal > 0.0) {
+                $params['video_duration_total_s'] = $videoDurationTotal;
+            }
+
+            if ($videoSlowMoCount > 0) {
+                $params['video_slow_mo_count'] = $videoSlowMoCount;
+            }
+
+            if ($videoStabilizedCount > 0) {
+                $params['video_stabilized_count'] = $videoStabilizedCount;
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $members)
             );
