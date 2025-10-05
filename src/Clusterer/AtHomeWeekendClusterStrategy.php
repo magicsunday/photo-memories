@@ -27,6 +27,7 @@ final class AtHomeWeekendClusterStrategy extends AbstractAtHomeClusterStrategy
         float $minHomeShare = 0.7,
         int $minItemsPerDay = 4,
         int $minItemsTotal = 6,
+        string $homeVersionHash = '',
     ) {
         parent::__construct(
             algorithm: 'at_home_weekend',
@@ -38,6 +39,7 @@ final class AtHomeWeekendClusterStrategy extends AbstractAtHomeClusterStrategy
             minItemsPerDay: $minItemsPerDay,
             minItemsTotal: $minItemsTotal,
             localTimeHelper: $localTimeHelper,
+            homeVersionHash: $homeVersionHash,
         );
     }
 }
