@@ -40,7 +40,9 @@ use function preg_replace;
 use function round;
 use function sort;
 use function str_replace;
-use function ucwords;
+use function trim;
+use function mb_strtoupper;
+use function mb_substr;
 use function usort;
 use function spl_object_id;
 
@@ -912,7 +914,29 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $parts = explode('-', $value);
         foreach ($parts as $index => $part) {
-            $parts[$index] = ucwords($part);
+            $normalizedPart = trim($part);
+            if ($normalizedPart === '') {
+                $parts[$index] = $normalizedPart;
+
+                continue;
+            }
+
+            $words = explode(' ', $normalizedPart);
+            foreach ($words as $wordIndex => $word) {
+                if ($word === '') {
+                    continue;
+                }
+
+                $firstCharacter = mb_substr($word, 0, 1);
+                if ($firstCharacter === '') {
+                    continue;
+                }
+
+                $remainder = mb_substr($word, 1);
+                $words[$wordIndex] = mb_strtoupper($firstCharacter) . ($remainder === false ? '' : $remainder);
+            }
+
+            $parts[$index] = implode(' ', $words);
         }
 
         return implode('-', $parts);
