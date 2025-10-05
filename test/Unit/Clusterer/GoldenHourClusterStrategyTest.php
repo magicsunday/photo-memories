@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\Test;
 final class GoldenHourClusterStrategyTest extends TestCase
 {
     #[Test]
-    public function clustersGoldenHourSequence(): void
+    public function clustersGoldenHourSequenceBasedOnFeatureFlag(): void
     {
         $strategy = new GoldenHourClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
@@ -33,12 +33,13 @@ final class GoldenHourClusterStrategyTest extends TestCase
             minItemsPerRun: 5,
         );
 
-        $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-08-10 13:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
                 2700 + $i,
                 $base->add(new DateInterval('PT' . ($i * 600) . 'S')),
+                true,
             );
         }
 
@@ -47,14 +48,20 @@ final class GoldenHourClusterStrategyTest extends TestCase
         self::assertCount(1, $clusters);
         self::assertSame('golden_hour', $clusters[0]->getAlgorithm());
         self::assertSame(range(2700, 2704), $clusters[0]->getMembers());
+
+        $params = $clusters[0]->getParams();
+        self::assertArrayHasKey('scene_tags', $params);
+        $labels = array_map(static fn (array $tag): string => $tag['label'], $params['scene_tags']);
+        self::assertContains('Sunset Skyline', $labels);
+        self::assertContains('Golden light', $labels);
     }
 
     #[Test]
-    public function ignoresPhotosOutsideGoldenHours(): void
+    public function clustersGoldenHourSequenceWithHourFallback(): void
     {
         $strategy = new GoldenHourClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
 
-        $base  = new DateTimeImmutable('2024-08-10 13:00:00', new DateTimeZone('UTC'));
+        $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
         $items = [];
         for ($i = 0; $i < 5; ++$i) {
             $items[] = $this->createMedia(
@@ -63,10 +70,31 @@ final class GoldenHourClusterStrategyTest extends TestCase
             );
         }
 
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        self::assertSame(range(2800, 2804), $clusters[0]->getMembers());
+    }
+
+    #[Test]
+    public function ignoresMediaMarkedAsNotGoldenHour(): void
+    {
+        $strategy = new GoldenHourClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+
+        $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
+        $items = [];
+        for ($i = 0; $i < 5; ++$i) {
+            $items[] = $this->createMedia(
+                2900 + $i,
+                $base->add(new DateInterval('PT' . ($i * 600) . 'S')),
+                false,
+            );
+        }
+
         self::assertSame([], $strategy->cluster($items));
     }
 
-    private function createMedia(int $id, DateTimeImmutable $takenAt): Media
+    private function createMedia(int $id, DateTimeImmutable $takenAt, ?bool $golden = null): Media
     {
         return $this->makeMediaFixture(
             id: $id,
@@ -74,6 +102,16 @@ final class GoldenHourClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: 48.5,
             lon: 9.0,
+            configure: static function (Media $media) use ($golden): void {
+                if ($golden !== null) {
+                    $media->setFeatures(['isGoldenHour' => $golden]);
+                }
+
+                $media->setSceneTags([
+                    ['label' => 'Sunset Skyline', 'score' => 0.91],
+                    ['label' => 'Golden light', 'score' => 0.88],
+                ]);
+            },
         );
     }
 }

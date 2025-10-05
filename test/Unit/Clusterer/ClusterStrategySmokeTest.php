@@ -199,7 +199,8 @@ final class ClusterStrategySmokeTest extends TestCase
             NightlifeEventClusterStrategy::class,
             'nightlife_event',
             static fn (): ClusterStrategyInterface => new NightlifeEventClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'OnThisDayOverYearsClusterStrategy' => [

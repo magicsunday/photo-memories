@@ -16,11 +16,19 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_map;
+use function array_values;
 use function assert;
 use function count;
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_string;
+use function strtolower;
+use function str_contains;
 use function usort;
 
 /**
@@ -32,6 +40,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
+        private LocationHelper $locationHelper,
         private int $timeGapSeconds = 3 * 3600, // 3h
         private float $radiusMeters = 300.0,
         private int $minItemsPerRun = 5,
@@ -129,17 +138,189 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                 continue;
             }
 
-            $time  = MediaMath::timeRange($run);
+            $time      = MediaMath::timeRange($run);
+            $hasNight  = $this->hasNightDaypart($run);
+            $sceneTags = $this->collectSceneTags($run);
+            $poi       = $this->resolveNightlifePoi($run);
+
+            if ($hasNight === false && $sceneTags === [] && $poi === null) {
+                continue;
+            }
+
+            $params = [
+                'time_range' => $time,
+            ];
+
+            if ($hasNight === true) {
+                $params['feature_daypart'] = 'night';
+            }
+
+            if ($sceneTags !== []) {
+                $params['scene_tags'] = $sceneTags;
+            }
+
+            if ($poi !== null) {
+                $params['poi_label'] = $poi['label'];
+
+                if ($poi['categoryKey'] !== null) {
+                    $params['poi_category_key'] = $poi['categoryKey'];
+                }
+
+                if ($poi['categoryValue'] !== null) {
+                    $params['poi_category_value'] = $poi['categoryValue'];
+                }
+
+                if ($poi['tags'] !== []) {
+                    $params['poi_tags'] = $poi['tags'];
+                }
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: 'nightlife_event',
-                params: [
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }
 
         return $out;
+    }
+
+    /**
+     * @param list<Media> $run
+     */
+    private function hasNightDaypart(array $run): bool
+    {
+        foreach ($run as $media) {
+            $features = $media->getFeatures();
+            if (!is_array($features)) {
+                continue;
+            }
+
+            $daypart = $features['daypart'] ?? null;
+            if (is_string($daypart) && strtolower($daypart) === 'night') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<Media> $run
+     *
+     * @return list<array{label: string, score: float}>
+     */
+    private function collectSceneTags(array $run): array
+    {
+        $keywords = ['night', 'club', 'party', 'concert', 'festival', 'bar', 'pub', 'dj', 'dance'];
+        $collected = [];
+
+        foreach ($run as $media) {
+            $tags = $media->getSceneTags();
+            if (!is_array($tags)) {
+                continue;
+            }
+
+            foreach ($tags as $tag) {
+                if (!is_array($tag)) {
+                    continue;
+                }
+
+                $label = $tag['label'] ?? null;
+                $score = $tag['score'] ?? null;
+
+                if (!is_string($label)) {
+                    continue;
+                }
+
+                if (!is_float($score) && !is_int($score)) {
+                    continue;
+                }
+
+                $normalized = strtolower($label);
+                $matches    = false;
+                foreach ($keywords as $keyword) {
+                    if (str_contains($normalized, $keyword)) {
+                        $matches = true;
+                        break;
+                    }
+                }
+
+                if ($matches === false) {
+                    continue;
+                }
+
+                if (!isset($collected[$label]) || $collected[$label]['score'] < (float) $score) {
+                    $collected[$label] = ['label' => $label, 'score' => (float) $score];
+                }
+            }
+        }
+
+        return array_values($collected);
+    }
+
+    /**
+     * @param list<Media> $run
+     *
+     * @return array{label: string, categoryKey: ?string, categoryValue: ?string, tags: array<string,string>}|null
+     */
+    private function resolveNightlifePoi(array $run): ?array
+    {
+        $poi = $this->locationHelper->majorityPoiContext($run);
+        if ($poi === null) {
+            return null;
+        }
+
+        $nightKeywords = ['night', 'club', 'bar', 'pub', 'biergarten', 'lounge', 'casino'];
+
+        $label = $poi['label'] ?? null;
+        if (is_string($label)) {
+            $normalizedLabel = strtolower($label);
+            foreach ($nightKeywords as $keyword) {
+                if (str_contains($normalizedLabel, $keyword)) {
+                    return $poi;
+                }
+            }
+        }
+
+        $categoryKey   = $poi['categoryKey'] ?? null;
+        $categoryValue = $poi['categoryValue'] ?? null;
+        if (is_string($categoryKey) || is_string($categoryValue)) {
+            $values = [
+                strtolower((string) $categoryKey),
+                strtolower((string) $categoryValue),
+            ];
+
+            foreach ($values as $value) {
+                if ($value === '') {
+                    continue;
+                }
+
+                foreach ($nightKeywords as $keyword) {
+                    if (str_contains($value, $keyword)) {
+                        return $poi;
+                    }
+                }
+            }
+        }
+
+        $tags = $poi['tags'] ?? [];
+        if (is_array($tags)) {
+            foreach ($tags as $tagValue) {
+                if (!is_string($tagValue)) {
+                    continue;
+                }
+
+                $normalizedValue = strtolower($tagValue);
+                foreach ($nightKeywords as $keyword) {
+                    if (str_contains($normalizedValue, $keyword)) {
+                        return $poi;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }
