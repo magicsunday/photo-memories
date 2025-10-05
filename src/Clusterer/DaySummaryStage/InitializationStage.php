@@ -32,6 +32,46 @@ use function strtolower;
 use const SORT_STRING;
 
 /**
+ * @phpstan-type Staypoint array{lat:float,lon:float,start:int,end:int,dwell:int}
+ * @phpstan-type BaseLocation array{lat:float,lon:float,distance_km:float,source:string}
+ * @phpstan-type DaySummary array{
+ *     date: string,
+ *     members: list<Media>,
+ *     gpsMembers: list<Media>,
+ *     maxDistanceKm: float,
+ *     distanceSum: float,
+ *     distanceCount: int,
+ *     avgDistanceKm: float,
+ *     travelKm: float,
+ *     countryCodes: array<string, true>,
+ *     timezoneOffsets: array<int, int>,
+ *     localTimezoneIdentifier: string,
+ *     localTimezoneOffset: int|null,
+ *     tourismHits: int,
+ *     poiSamples: int,
+ *     tourismRatio: float,
+ *     hasAirportPoi: bool,
+ *     weekday: int,
+ *     photoCount: int,
+ *     densityZ: float,
+ *     isAwayCandidate: bool,
+ *     sufficientSamples: bool,
+ *     spotClusters: list<list<Media>>,
+ *     spotNoise: list<Media>,
+ *     spotCount: int,
+ *     spotNoiseSamples: int,
+ *     spotDwellSeconds: int,
+ *     staypoints: list<Staypoint>,
+ *     baseLocation: BaseLocation|null,
+ *     baseAway: bool,
+ *     awayByDistance: bool,
+ *     firstGpsMedia: Media|null,
+ *     lastGpsMedia: Media|null,
+ *     timezoneIdentifierVotes?: array<string, int>,
+ *     isSynthetic: bool,
+ * }
+ */
+/**
  * Initialises per-day summaries from media items.
  */
 final readonly class InitializationStage implements DaySummaryStageInterface
@@ -49,6 +89,12 @@ final readonly class InitializationStage implements DaySummaryStageInterface
         }
     }
 
+    /**
+     * @param array<string, DaySummary> $days
+     * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
+     *
+     * @return array<string, DaySummary>
+     */
     public function process(array $days, array $home): array
     {
         if ($days === []) {
@@ -179,9 +225,9 @@ final readonly class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, array{date:string,isSynthetic:bool}> $days
+     * @param array<string, DaySummary> $days
      *
-     * @return array<string, array{date:string,isSynthetic:bool}>
+     * @return array<string, DaySummary>
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */
@@ -219,9 +265,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param string $date
-     *
-     * @return array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,distanceSum:float,distanceCount:int,avgDistanceKm:float,travelKm:float,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,isSynthetic:bool,timezoneIdentifierVotes:array<string,int>}
+     * @return DaySummary
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
      */

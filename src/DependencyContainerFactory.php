@@ -16,6 +16,7 @@ use Phar;
 use RuntimeException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -106,14 +107,35 @@ final class DependencyContainerFactory
 
     /**
      * Creates and returns the dependency container instance.
+     *
+     * @return ContainerInterface
      */
-    public function create(): DependencyContainer
+    public function create(): ContainerInterface
     {
         $this->ensure();
 
         require_once $this->cacheFile;
 
-        return new DependencyContainer();
+        /** @var class-string $className */
+        $className = sprintf('%s\\%s', self::CONTAINER_NAMESPACE, self::CONTAINER_CLASS);
+
+        if (!class_exists($className)) {
+            throw new RuntimeException(sprintf('Cached container class "%s" was not generated.', $className));
+        }
+
+        $container = new $className();
+
+        if (!$container instanceof ContainerInterface) {
+            throw new RuntimeException(
+                sprintf(
+                    'Cached container class "%s" must implement %s.',
+                    $className,
+                    ContainerInterface::class,
+                ),
+            );
+        }
+
+        return $container;
     }
 
     /**
