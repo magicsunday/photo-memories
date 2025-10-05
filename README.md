@@ -149,6 +149,10 @@ Medien pro Cluster maximal gespeichert werden. Für eine abweichende Konfigurati
 Die Auswahl innerhalb dieses Limits wird nun vorab nach einem qualitätsbasierten Score sortiert: Auflösungs- und Schärfedaten, ISO-Normalisierung sowie die ästhetischen Kenngrößen aus den Medien fließen gemeinsam mit den von der `QualityClusterScoreHeuristic` berechneten Aggregaten in die Bewertung ein. Wiederholte Aufnahmen mit identischem `phash`, `dhash` oder identischer `burstUuid` werden pro Treffer stärker abgewertet, sodass die auf %memories.cluster.persistence.max_members% (= `MEMORIES_CLUSTER_MAX_MEMBERS`) begrenzte Top-Auswahl bevorzugt einzigartige Motive enthält.
 Bei Urlaubsclustern wird die Reihenfolge zusätzlich über Tages-Slots ausbalanciert. Pro Abschnitt wandert das bestbewertete Foto nach vorn, bevor die restlichen Kandidaten folgen. Dadurch bleiben nach dem Clamping weiterhin alle Reisetage im Feed, und die Cover-Auswahl in Vorschau sowie Export spiegelt die zeitliche Dramaturgie der Reise wider.
 
+### Metadaten-Schutz beim Clustern
+
+Vor jedem Clustering-Lauf prüft `memories:cluster`, ob alle geladenen Medien mit der aktuellen `MetadataFeatureVersion::CURRENT` indiziert wurden. Finden sich abweichende Versionen, informiert die CLI mit einer Warnung und bricht bei gesetztem `--replace` sofort ab, damit keine Mischstände persistiert werden. Starte in diesem Fall zunächst `memories:index` (ggf. ebenfalls mit `--replace`), um die Metadaten auf den neuesten Stand zu bringen und das Clustering anschließend erneut auszuführen.
+
 ### Qualitätsaggregation
 
 Die Vision-Pipeline speichert jetzt voraggregierte Qualitätsmetriken direkt am `media`-Datensatz. Aus Auflösung, Schärfe, ISO-Normalisierung sowie den Helligkeits- und Kontrastmessungen entstehen die drei neuen Felder `quality_score`, `quality_exposure` und `quality_noise` (alle `FLOAT`). Zusätzlich markiert das Flag `low_quality` (`BOOL`) problematische Aufnahmen. Ein Bild gilt als niedrigwertig, sobald einer der folgenden Werte unterschritten wird:

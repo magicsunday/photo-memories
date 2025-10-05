@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
@@ -83,6 +84,30 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $loadedCount = count($items);
         if ($loadedCount === 0) {
             return new ClusterJobResult($total, 0, 0, 0, 0, 0, $options->isDryRun());
+        }
+
+        $outdatedMedia = [];
+        foreach ($items as $media) {
+            if ($media->getFeatureVersion() !== MetadataFeatureVersion::CURRENT) {
+                $outdatedMedia[] = $media;
+            }
+        }
+
+        if ($outdatedMedia !== []) {
+            $outdatedCount = count($outdatedMedia);
+            $warningHandle = $progressReporter->create('Warnung', '⚠️ Feature-Version prüfen', $outdatedCount);
+            $warningHandle->setPhase(sprintf(
+                'Erwartete Feature-Version %d, %d Medien benötigen eine erneute Metadaten-Indexierung.',
+                MetadataFeatureVersion::CURRENT,
+                $outdatedCount,
+            ));
+            $warningHandle->setRate('Bitte führe memories:index vor dem Clustering erneut aus.');
+            $warningHandle->advance($outdatedCount);
+            $warningHandle->finish();
+
+            if ($options->shouldReplace()) {
+                return new ClusterJobResult($total, $loadedCount, 0, 0, 0, 0, $options->isDryRun());
+            }
         }
 
         $strategyCount = $this->clusterer->countStrategies();
