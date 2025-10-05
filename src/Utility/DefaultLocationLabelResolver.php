@@ -218,32 +218,38 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     }
 
     /**
-     * @param array<string,array{count:int}> $bucket
+     * @param array<string,array{count:int,variants:array<string,int>}> $bucket
      */
     private function pickMajorityValue(array $bucket): ?string
     {
-        $winnerValue = null;
+        $winnerKey   = null;
         $winnerCount = -1;
 
         foreach ($bucket as $value => $payload) {
             $count = $payload['count'];
             if ($count > $winnerCount) {
                 $winnerCount = $count;
-                $winnerValue = $value;
+                $winnerKey   = $value;
 
                 continue;
             }
 
-            if ($count === $winnerCount && $winnerValue !== null && strcmp($value, $winnerValue) < 0) {
-                $winnerValue = $value;
+            if ($count === $winnerCount && $winnerKey !== null && strcmp($value, $winnerKey) < 0) {
+                $winnerKey = $value;
             }
         }
 
-        return $winnerValue;
+        if ($winnerKey === null) {
+            return null;
+        }
+
+        $variants = $bucket[$winnerKey]['variants'] ?? [];
+
+        return $this->pickRepresentativeVariant($variants);
     }
 
     /**
-     * @param array<string,array{count:int}> $bucket
+     * @param array<string,array{count:int,variants:array<string,int>}> $bucket
      */
     private function collectComponent(array &$bucket, ?string $value): void
     {
@@ -251,15 +257,45 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             return;
         }
 
-        $normalized = strtolower(trim($value));
-        if ($normalized === '') {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
             return;
         }
 
+        $normalized = strtolower($trimmed);
+
         if (!isset($bucket[$normalized])) {
-            $bucket[$normalized] = ['count' => 0];
+            $bucket[$normalized] = [
+                'count'    => 0,
+                'variants' => [],
+            ];
         }
 
         ++$bucket[$normalized]['count'];
+        $bucket[$normalized]['variants'][$trimmed] = ($bucket[$normalized]['variants'][$trimmed] ?? 0) + 1;
+    }
+
+    /**
+     * @param array<string,int> $variants
+     */
+    private function pickRepresentativeVariant(array $variants): ?string
+    {
+        $winnerLabel = null;
+        $winnerCount = -1;
+
+        foreach ($variants as $label => $count) {
+            if ($count > $winnerCount) {
+                $winnerCount = $count;
+                $winnerLabel = $label;
+
+                continue;
+            }
+
+            if ($count === $winnerCount && $winnerLabel !== null && strcmp($label, $winnerLabel) < 0) {
+                $winnerLabel = $label;
+            }
+        }
+
+        return $winnerLabel;
     }
 }
