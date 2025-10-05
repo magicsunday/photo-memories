@@ -38,6 +38,7 @@ use function min;
         new ORM\Index(name: 'idx_media_geohash5', columns: ['geohash5']),
         new ORM\Index(name: 'idx_media_phash_prefix', columns: ['phashPrefix']),
         new ORM\Index(name: 'idx_media_burst_taken', columns: ['burstUuid', 'takenAt']),
+        new ORM\Index(name: 'idx_media_burst_repr', columns: ['burstUuid', 'burstRepresentative']),
         new ORM\Index(name: 'idx_media_video_taken', columns: ['isVideo', 'takenAt']),
         new ORM\Index(name: 'idx_media_location', columns: ['location_id']),
         new ORM\Index(name: 'idx_media_needs_geocode', columns: ['needsGeocode']),
@@ -341,6 +342,12 @@ class Media
      */
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
     private ?int $burstIndex = null;
+
+    /**
+     * Flag marking the canonical member of a burst sequence.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, nullable: true)]
+    private ?bool $burstRepresentative = null;
 
     /**
      * Fractional capture seconds extracted from EXIF metadata.
@@ -1540,6 +1547,22 @@ class Media
     public function setBurstIndex(?int $v): void
     {
         $this->burstIndex = $v;
+    }
+
+    /**
+     * Returns whether the media is the representative member of its burst.
+     */
+    public function isBurstRepresentative(): ?bool
+    {
+        return $this->burstRepresentative;
+    }
+
+    /**
+     * Marks the media as burst representative.
+     */
+    public function setBurstRepresentative(?bool $v): void
+    {
+        $this->burstRepresentative = $v;
     }
 
     /**

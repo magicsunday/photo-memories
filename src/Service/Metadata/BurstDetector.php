@@ -45,7 +45,15 @@ final class BurstDetector implements SingleMetadataExtractorInterface
 
     public function extract(string $filepath, Media $media): Media
     {
-        if ($media->getBurstUuid() !== null) {
+        $existingBurst = $media->getBurstUuid();
+        if ($existingBurst !== null && $media->isBurstRepresentative() !== null) {
+            return $media;
+        }
+
+        if ($existingBurst !== null) {
+            $members = $this->collectExistingMembers($media, $existingBurst);
+            $this->assignRepresentatives($members);
+
             return $media;
         }
 
@@ -73,6 +81,8 @@ final class BurstDetector implements SingleMetadataExtractorInterface
                 $member->setBurstIndex($index);
             }
         }
+
+        $this->assignRepresentatives($sorted);
 
         return $media;
     }
@@ -115,6 +125,24 @@ final class BurstDetector implements SingleMetadataExtractorInterface
         }
 
         return $members;
+    }
+
+    /**
+     * @return list<Media>
+     */
+    private function collectExistingMembers(Media $media, string $burstUuid): array
+    {
+        $members = [$media];
+
+        foreach ($this->mediaRepository->findBurstMembers($burstUuid, $media->getPath()) as $sibling) {
+            if (!$sibling instanceof Media) {
+                continue;
+            }
+
+            $members[] = $sibling;
+        }
+
+        return $this->sortMembers($members);
     }
 
     /**
@@ -165,5 +193,99 @@ final class BurstDetector implements SingleMetadataExtractorInterface
     private function secondsBetween(DateTimeImmutable $a, DateTimeImmutable $b): int
     {
         return abs($a->getTimestamp() - $b->getTimestamp());
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    private function assignRepresentatives(array $members): void
+    {
+        if ($members === []) {
+            return;
+        }
+
+        $representative = $this->selectRepresentative($members);
+
+        foreach ($members as $member) {
+            $member->setBurstRepresentative($member === $representative);
+        }
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    private function selectRepresentative(array $members): Media
+    {
+        $best = $members[0];
+
+        foreach ($members as $candidate) {
+            if ($candidate === $best) {
+                continue;
+            }
+
+            if ($this->isBetterRepresentative($candidate, $best)) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    private function isBetterRepresentative(Media $candidate, Media $current): bool
+    {
+        $candidateSharpness = $this->clamp01($candidate->getSharpness());
+        $currentSharpness   = $this->clamp01($current->getSharpness());
+
+        if ($candidateSharpness !== null || $currentSharpness !== null) {
+            if ($candidateSharpness === null) {
+                return false;
+            }
+
+            if ($currentSharpness === null) {
+                return true;
+            }
+
+            if ($candidateSharpness !== $currentSharpness) {
+                return $candidateSharpness > $currentSharpness;
+            }
+        }
+
+        $candidateIndex = $candidate->getBurstIndex();
+        $currentIndex   = $current->getBurstIndex();
+
+        if ($candidateIndex !== null && $currentIndex !== null && $candidateIndex !== $currentIndex) {
+            return $candidateIndex < $currentIndex;
+        }
+
+        $candidateTaken = $candidate->getTakenAt();
+        $currentTaken   = $current->getTakenAt();
+
+        if ($candidateTaken instanceof DateTimeImmutable && $currentTaken instanceof DateTimeImmutable) {
+            $candidateStamp = $candidateTaken->getTimestamp();
+            $currentStamp   = $currentTaken->getTimestamp();
+
+            if ($candidateStamp !== $currentStamp) {
+                return $candidateStamp < $currentStamp;
+            }
+        }
+
+        return strcmp($candidate->getChecksum(), $current->getChecksum()) < 0;
+    }
+
+    private function clamp01(?float $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value < 0.0) {
+            return 0.0;
+        }
+
+        if ($value > 1.0) {
+            return 1.0;
+        }
+
+        return $value;
     }
 }

@@ -265,6 +265,10 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 continue;
             }
 
+            if ($media->isBurstRepresentative() === false) {
+                continue;
+            }
+
             $map[$media->getId()] = $media;
         }
 
