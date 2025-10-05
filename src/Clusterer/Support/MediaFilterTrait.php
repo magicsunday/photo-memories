@@ -267,6 +267,6 @@ trait MediaFilterTrait
             return $items;
         }
 
-        return array_values($result);
+        return $result;
     }
 }
