@@ -43,7 +43,7 @@ use function sprintf;
     name: 'memories:index',
     description: 'Indexiert Medien: Metadaten extrahieren und in DB speichern. Thumbnails optional mit --thumbnails.'
 )]
-final class IndexCommand extends Command
+final readonly class IndexCommand extends Command
 {
     public function __construct(
         private readonly MediaFileLocatorInterface $locator,

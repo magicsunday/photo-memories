@@ -23,7 +23,7 @@ use function is_string;
 /**
  * Default timezone resolver used by the vacation clustering pipeline.
  */
-final class TimezoneResolver implements TimezoneResolverInterface
+final readonly class TimezoneResolver implements TimezoneResolverInterface
 {
     use VacationTimezoneTrait {
         resolveMediaTimezone as private traitResolveMediaTimezone;

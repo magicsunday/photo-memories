@@ -21,7 +21,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Class BurstLiveStage
  */
-final class BurstLiveStage extends AbstractExtractorStage
+final readonly class BurstLiveStage extends AbstractExtractorStage
 {
     /**
      * @var iterable<SingleMetadataExtractorInterface> $extractors

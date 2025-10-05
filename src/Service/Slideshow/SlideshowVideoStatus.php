@@ -16,7 +16,7 @@ use function round;
 /**
  * Value object describing the current slideshow video state.
  */
-final class SlideshowVideoStatus
+final readonly class SlideshowVideoStatus
 {
     public const string STATUS_READY = 'bereit';
 

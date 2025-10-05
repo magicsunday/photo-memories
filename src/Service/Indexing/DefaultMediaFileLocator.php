@@ -23,7 +23,7 @@ use const PATHINFO_EXTENSION;
 /**
  * Default implementation locating image and video files by extension.
  */
-final class DefaultMediaFileLocator implements MediaFileLocatorInterface
+final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterface
 {
     /**
      * @var list<string> $imageExtensions

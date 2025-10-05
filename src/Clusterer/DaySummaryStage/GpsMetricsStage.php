@@ -27,7 +27,7 @@ use function usort;
 /**
  * Computes GPS-based metrics for day summaries.
  */
-final class GpsMetricsStage implements DaySummaryStageInterface
+final readonly class GpsMetricsStage implements DaySummaryStageInterface
 {
     use MediaFilterTrait;
 
