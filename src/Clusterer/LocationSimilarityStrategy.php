@@ -19,6 +19,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_values;
+use function assert;
 use function count;
 use function usort;
 
@@ -157,19 +158,21 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
 
         /** @var array<string, list<Media>> $byCell */
         $byCell = [];
-        /** @var list<Media> $withoutCell */
-        $withoutCell = [];
-
-        foreach ($gps as $media) {
+        foreach ($this->filterTimestampedGpsItemsBy(
+            $gps,
+            static fn (Media $media): bool => $media->getGeoCell8() !== null
+        ) as $media) {
             $cell = $media->getGeoCell8();
-            if ($cell !== null) {
-                $byCell[$cell] ??= [];
-                $byCell[$cell][] = $media;
-                continue;
-            }
-
-            $withoutCell[] = $media;
+            assert($cell !== null);
+            $byCell[$cell] ??= [];
+            $byCell[$cell][] = $media;
         }
+
+        /** @var list<Media> $withoutCell */
+        $withoutCell = $this->filterTimestampedGpsItemsBy(
+            $gps,
+            static fn (Media $media): bool => $media->getGeoCell8() === null
+        );
 
         /** @var list<list<Media>> $groups */
         $groups = array_values($byCell);
