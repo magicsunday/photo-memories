@@ -40,7 +40,7 @@ final class ClipSceneTagExtractorTest extends TestCase
         $media->setHeight(2000);
         $media->setKeywords(['beach', 'family']);
 
-        $extractor = new ClipSceneTagExtractor(new HeuristicClipSceneTagModel(), maxTags: 3, minScore: 0.2);
+        $extractor = new ClipSceneTagExtractor(new HeuristicClipSceneTagModel(), maxTags: 3, minScore: 0.3);
 
         $result = $extractor->extract('/tmp/scene.jpg', $media);
 
@@ -131,7 +131,7 @@ final class ClipSceneTagExtractorTest extends TestCase
         $media->setMime('image/jpeg');
         $media->setIndexLog('time=exif; tz=UTC; off=+0');
 
-        $extractor = new ClipSceneTagExtractor($model, maxTags: 2, minScore: 0.2);
+        $extractor = new ClipSceneTagExtractor($model, maxTags: 2, minScore: 0.3);
         $result    = $extractor->extract('/tmp/scene2.jpg', $media);
 
         self::assertSame(
