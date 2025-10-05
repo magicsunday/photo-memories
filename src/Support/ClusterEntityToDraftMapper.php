@@ -62,9 +62,6 @@ final class ClusterEntityToDraftMapper
             $this->algorithmGroups[$algorithm] = $group;
         }
 
-        if ($this->defaultAlgorithmGroup === '') {
-            $this->defaultAlgorithmGroup = 'default';
-        }
     }
 
     /**
