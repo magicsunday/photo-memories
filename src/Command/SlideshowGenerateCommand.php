@@ -34,7 +34,7 @@ use const LOCK_EX;
  * Console command that executes slideshow generation jobs.
  */
 #[AsCommand(name: 'slideshow:generate', description: 'Erstellt ein Slideshow-Video für die angegebene Job-Datei.')]
-final readonly class SlideshowGenerateCommand extends Command
+final class SlideshowGenerateCommand extends Command
 {
     public function __construct(private readonly SlideshowVideoGeneratorInterface $generator)
     {

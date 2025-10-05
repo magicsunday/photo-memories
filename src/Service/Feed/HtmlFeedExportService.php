@@ -100,10 +100,10 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $skippedThumbCount = 0;
 
         /** @var list<array<string, mixed>|null> $cardCandidates */
-        $cardCandidates = array_map(
-            fn (MemoryFeedItem $item): ?array => $this->createCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount),
-            $items,
-        );
+        $cardCandidates = [];
+        foreach ($items as $item) {
+            $cardCandidates[] = $this->createCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+        }
 
         /** @var list<array<string, mixed>> $cards */
         $cards = array_values(array_filter(
