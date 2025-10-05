@@ -109,7 +109,6 @@ Schaltern steuerst du den Ablauf:
   aktualisiert.
 * `--missing-pois` fokussiert den Lauf ausschließlich auf Orte ohne POI-Daten.
 * `--city="Name"` beschränkt POI-Aktualisierungen auf Orte mit passendem Stadtnamen.
-* `--limit=50` reduziert die Anzahl der zu verarbeitenden Medien im Standardlauf.
 * `--dry-run` zeigt lediglich eine Vorschau und persistiert keine Änderungen.
 
 Kombiniere die Optionen bei Bedarf: `--refresh-pois --refresh-locations` aktualisiert sowohl Ortsverknüpfungen als auch die POI

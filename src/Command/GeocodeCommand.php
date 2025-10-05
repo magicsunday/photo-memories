@@ -41,7 +41,6 @@ final class GeocodeCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl zu verarbeitender Medien')
             ->addOption('refresh-locations', null, InputOption::VALUE_NONE, 'Bestehende Ortsverknüpfungen erneut berechnen')
             ->addOption('city', null, InputOption::VALUE_REQUIRED, 'Orte nach Stadtnamen aktualisieren (z.B. "Paris")')
             ->addOption('missing-pois', null, InputOption::VALUE_NONE, 'Orte ohne POI-Daten ergänzen')
@@ -57,7 +56,6 @@ final class GeocodeCommand extends Command
                 * `--refresh-pois` aktualisiert vorhandene POI-Daten; ohne weitere Optionen werden alle Orte unabhängig von Medien erneut abgefragt.
                 * `--missing-pois` ergänzt lediglich Orte ohne POI-Daten.
                 * `--city="Name"` fokussiert die Aktualisierung auf Orte mit passendem Stadtnamen.
-                * `--limit=50` begrenzt die Anzahl der Medien im Standardlauf.
                 * `--dry-run` führt nur eine Vorschau aus, ohne Änderungen zu speichern.
             HELP
         );
@@ -67,8 +65,6 @@ final class GeocodeCommand extends Command
     {
         $io          = new SymfonyStyle($input, $output);
         $dryRun      = (bool) $input->getOption('dry-run');
-        $limit       = $input->getOption('limit');
-        $limitN      = is_string($limit) ? (int) $limit : null;
         $refreshLocations = (bool) $input->getOption('refresh-locations');
         $city        = $input->getOption('city');
         $missingPois = (bool) $input->getOption('missing-pois');
@@ -76,7 +72,6 @@ final class GeocodeCommand extends Command
 
         $options = new GeocodeCommandOptions(
             $dryRun,
-            $limitN,
             $refreshLocations,
             is_string($city) && trim($city) !== '' ? $city : null,
             $missingPois,

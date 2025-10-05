@@ -18,7 +18,6 @@ final readonly class GeocodeCommandOptions
 {
     public function __construct(
         private bool $dryRun,
-        private ?int $limit,
         private bool $refreshLocations,
         private ?string $city,
         private bool $missingPois,
@@ -29,11 +28,6 @@ final readonly class GeocodeCommandOptions
     public function isDryRun(): bool
     {
         return $this->dryRun;
-    }
-
-    public function getLimit(): ?int
-    {
-        return $this->limit;
     }
 
     public function refreshLocations(): bool

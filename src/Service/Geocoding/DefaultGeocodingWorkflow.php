@@ -53,7 +53,7 @@ final readonly class DefaultGeocodingWorkflow
             return;
         }
 
-        if ($options->refreshPois() && !$options->refreshLocations() && $options->getLimit() === null) {
+        if ($options->refreshPois() && !$options->refreshLocations()) {
             $this->refreshAllPois($options, $io, $output);
 
             return;
@@ -206,11 +206,6 @@ final readonly class DefaultGeocodingWorkflow
             } else {
                 $qb->andWhere('m.needsGeocode = true');
             }
-        }
-
-        $limit = $options->getLimit();
-        if ($limit !== null && $limit > 0) {
-            $qb->setMaxResults($limit);
         }
 
         /** @var list<Media> $result */
