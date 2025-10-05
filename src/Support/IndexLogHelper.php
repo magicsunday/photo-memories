@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Support;
 
 use MagicSunday\Memories\Entity\Media;
 
+use function rtrim;
+
 /**
  * Utility helpers for working with the media index log.
  */
@@ -24,6 +26,9 @@ final class IndexLogHelper
 
     /**
      * Appends a line to the media index log, inserting a newline when required.
+     *
+     * @param Media  $media Media entity whose index log should be updated.
+     * @param string $line  Line that should be appended to the log.
      */
     public static function append(Media $media, string $line): void
     {
@@ -38,7 +43,10 @@ final class IndexLogHelper
             return;
         }
 
-        $media->setIndexLog($existing . "\n" . $line);
+        // Avoid adding duplicate blank lines when the stored log already ends with a newline.
+        $normalizedExisting = rtrim($existing, "\n");
+
+        $media->setIndexLog($normalizedExisting . "\n" . $line);
     }
 }
 
