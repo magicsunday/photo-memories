@@ -224,7 +224,7 @@ services:
     MagicSunday\Memories\Service\Metadata\ClipSceneTagExtractor:
         arguments:
             $maxTags: 5
-            $minScore: 0.2
+            $minScore: 0.3
         tags:
             - { name: 'memories.metadata_extractor', priority: 40 }
 

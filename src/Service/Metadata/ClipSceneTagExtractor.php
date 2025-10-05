@@ -29,10 +29,14 @@ use function str_starts_with;
  */
 final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInterface
 {
+    /**
+     * @param int   $maxTags  Maximum number of scene tags to persist.
+     * @param float $minScore Minimum confidence required to accept a tag.
+     */
     public function __construct(
         private VisionSceneTagModelInterface $model,
         private int $maxTags = 6,
-        private float $minScore = 0.05,
+        private float $minScore = 0.3,
     ) {
         if ($this->maxTags < 1) {
             throw new InvalidArgumentException('maxTags must be >= 1');
