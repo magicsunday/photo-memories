@@ -627,6 +627,8 @@ services:
             $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
             $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
             $homeRadiusKm: '%env(default:memories.home.radius_km_default:float:MEMORIES_HOME_RADIUS_KM)%'
+            $maxHomeCenters: '%env(default:memories.home.max_centers_default:int:MEMORIES_HOME_MAX_CENTERS)%'
+            $fallbackRadiusScale: '%env(default:memories.home.fallback_radius_scale_default:float:MEMORIES_HOME_FALLBACK_RADIUS_SCALE)%'
 
     MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultHomeLocator

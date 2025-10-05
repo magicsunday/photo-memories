@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Contract;
 
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -20,11 +21,13 @@ use MagicSunday\Memories\Entity\Media;
 interface BaseLocationResolverInterface
 {
     /**
+     * @phpstan-import-type HomeDescriptor from DaySummaryStageInterface
+     *
      * Determines the most plausible base location for the provided day summary.
      *
      * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>} $summary
      * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null}|null                                           $nextSummary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                                            $home
+     * @param HomeDescriptor                                                                                                                          $home
      *
      * @return array{lat:float,lon:float,distance_km:float,source:string}|null
      */
