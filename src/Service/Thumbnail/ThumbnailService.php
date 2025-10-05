@@ -110,7 +110,13 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         if ($hasImagick) {
             try {
-                return $this->generateThumbnailsWithImagick($filepath, $orientation, $this->sizes, $checksum);
+                return $this->generateThumbnailsWithImagick(
+                    $filepath,
+                    $orientation,
+                    $this->sizes,
+                    $checksum,
+                    $requiresImagick === false,
+                );
             } catch (ImagickException $exception) {
                 if ($requiresImagick) {
                     throw new RuntimeException('Imagick is required to create thumbnails for RAW/HEIC media', 0, $exception);
@@ -142,17 +148,25 @@ class ThumbnailService implements ThumbnailServiceInterface
     }
 
     /**
-     * @param string   $filepath    Absolute path to the original media file.
-     * @param int|null $orientation EXIF orientation value of the source media.
-     * @param int[]    $sizes       Desired thumbnail widths (in pixels).
-     * @param string   $checksum    Media checksum used for generating file names.
+     * @param string   $filepath      Absolute path to the original media file.
+     * @param int|null $orientation   EXIF orientation value of the source media.
+     * @param int[]    $sizes         Desired thumbnail widths (in pixels).
+     * @param string   $checksum      Media checksum used for generating file names.
+     * @param bool     $allowFallback When <code>true</code> Imagick failures may fall back to GD.
      *
      * @return array<int, string>
      * @throws ImagickException
      */
-    private function generateThumbnailsWithImagick(string $filepath, ?int $orientation, array $sizes, string $checksum): array
+    private function generateThumbnailsWithImagick(
+        string $filepath,
+        ?int $orientation,
+        array $sizes,
+        string $checksum,
+        bool $allowFallback,
+    ): array
     {
         $imagick = $this->createImagick();
+        $skipFinalCleanup = false;
 
         try {
             $imagick->setOption('jpeg:preserve-settings', 'true');
@@ -180,7 +194,8 @@ class ThumbnailService implements ThumbnailServiceInterface
                 // Remember that this width was already generated to avoid duplicates.
                 $generatedKeys[$targetWidth] = true;
 
-                $clone = $this->cloneImagick($imagick);
+                $clone         = $this->cloneImagick($imagick);
+                $isSameInstance = $clone === $imagick;
 
                 try {
                     $resizeResult = $clone->thumbnailImage($targetWidth, 0);
@@ -191,39 +206,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         );
                     }
 
-                    $clone->setImageBackgroundColor(new ImagickPixel('white'));
-
-                    try {
-                        $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
-                    } catch (ImagickException) {
-                        try {
-                            $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
-                        } catch (ImagickException | Throwable) {
-                            // Legacy builds may not support manipulating the alpha channel explicitly.
-                        }
-                    } catch (Throwable) {
-                        // Ignore missing support for setImageAlphaChannel on legacy Imagick versions.
-                    }
-
-                    try {
-                        $flattened = $clone->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
-                        $clone->clear();
-                        $clone = $flattened;
-                    } catch (ImagickException | Throwable) {
-                        try {
-                            $flattened = $clone->flattenImages();
-                            $clone->clear();
-                            $clone = $flattened;
-                        } catch (Throwable) {
-                            // Keep the original instance when flattening is not supported.
-                        }
-                    }
-
-                    try {
-                        $clone->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
-                    } catch (ImagickException | Throwable) {
-                        // Ignore when the alpha channel cannot be forced to opaque.
-                    }
+                    $clone = $this->prepareImagickThumbnail($clone);
 
                     $clone->setImageFormat('jpeg');
                     $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
@@ -247,6 +230,10 @@ class ThumbnailService implements ThumbnailServiceInterface
                             $clone->destroy();
                         } catch (ImagickException | Throwable) {
                             // Ignore destruction errors on cloned instances.
+                        } finally {
+                            if (!$allowFallback && $isSameInstance) {
+                                $skipFinalCleanup = true;
+                            }
                         }
 
                         unset($clone);
@@ -256,18 +243,101 @@ class ThumbnailService implements ThumbnailServiceInterface
 
             return $results;
         } finally {
-            try {
-                $imagick->clear();
-            } finally {
+            if (!$skipFinalCleanup) {
                 try {
-                    $imagick->destroy();
-                } catch (ImagickException | Throwable) {
-                    // Ignore destruction errors during cleanup.
+                    $imagick->clear();
+                } finally {
+                    try {
+                        $imagick->destroy();
+                    } catch (ImagickException | Throwable) {
+                        // Ignore destruction errors during cleanup.
+                    }
                 }
+            }
 
-                unset($imagick);
+            unset($imagick);
+        }
+    }
+
+    /**
+     * Flattens an Imagick instance to an opaque white background to ensure JPEG output without alpha.
+     */
+    private function prepareImagickThumbnail(Imagick $image): Imagick
+    {
+        try {
+            $image->setImageBackgroundColor(new ImagickPixel('white'));
+        } catch (ImagickException | Throwable) {
+            // Ignore when the Imagick build cannot adjust the background colour.
+        }
+
+        try {
+            $image->setBackgroundColor(new ImagickPixel('white'));
+        } catch (ImagickException | Throwable) {
+            // Continue when background colour assignment is unsupported.
+        }
+
+        try {
+            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
+        } catch (ImagickException | Throwable) {
+            try {
+                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
+            } catch (ImagickException | Throwable) {
+                // Legacy Imagick builds may lack alpha channel controls entirely.
             }
         }
+
+        $flattened = null;
+
+        try {
+            $flattened = $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+        } catch (ImagickException | Throwable) {
+            try {
+                $flattened = $image->flattenImages();
+            } catch (ImagickException | Throwable) {
+                $flattened = null;
+            }
+        }
+
+        if (!$flattened instanceof Imagick) {
+            try {
+                $background = new Imagick();
+                $background->newImage(
+                    $image->getImageWidth(),
+                    $image->getImageHeight(),
+                    new ImagickPixel('white'),
+                );
+                $background->compositeImage($image, Imagick::COMPOSITE_OVER, 0, 0);
+                $flattened = $background;
+            } catch (ImagickException | Throwable) {
+                $flattened = null;
+            }
+        }
+
+        if ($flattened instanceof Imagick) {
+            try {
+                $image->clear();
+            } finally {
+                try {
+                    $image->destroy();
+                } catch (ImagickException | Throwable) {
+                    // Ignore destruction failures when replacing the instance.
+                }
+            }
+
+            $image = $flattened;
+        }
+
+        try {
+            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_DEACTIVATE);
+        } catch (ImagickException | Throwable) {
+            try {
+                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
+            } catch (ImagickException | Throwable) {
+                // Continue when alpha channel adjustments are unavailable.
+            }
+        }
+
+        return $image;
     }
 
     /**
