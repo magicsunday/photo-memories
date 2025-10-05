@@ -200,6 +200,14 @@ final readonly class DefaultGeocodingWorkflow
             ->orderBy('m.geoCell8', 'ASC')
             ->addOrderBy('m.takenAt', 'ASC');
 
+        if (!$options->refreshLocations()) {
+            if ($options->refreshPois()) {
+                $qb->andWhere('m.location IS NOT NULL');
+            } else {
+                $qb->andWhere('m.needsGeocode = true');
+            }
+        }
+
         $limit = $options->getLimit();
         if ($limit !== null && $limit > 0) {
             $qb->setMaxResults($limit);

@@ -100,8 +100,8 @@ Leave the variable unset to retain the previous behaviour of using the generic `
 
 ## Geocoding-Workflow per CLI
 
-Starte den Geocoding-Lauf über `php src/Memories.php memories:geocode`. Ohne weitere Optionen verarbeitet der Befehl jede
-gefundene GPS-Aufnahme erneut, verknüpft Medien mit vorhandenen Orten und ergänzt fehlende POI-Daten. Mit folgenden
+Starte den Geocoding-Lauf über `php src/Memories.php memories:geocode`. Ohne weitere Optionen verarbeitet der Befehl
+Medien mit gesetztem `needsGeocode`-Flag, verknüpft neue Aufnahmen mit vorhandenen Orten und ergänzt fehlende POI-Daten. Mit folgenden
 Schaltern steuerst du den Ablauf:
 
 * `--refresh-locations` erzwingt eine komplette Aktualisierung aller Ortszuweisungen.

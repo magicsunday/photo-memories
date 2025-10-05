@@ -50,10 +50,10 @@ final class GeocodeCommand extends Command
 
         $this->setHelp(
             <<<'HELP'
-                Standardmäßig verarbeitet dieser Befehl alle Medien mit GPS-Koordinaten erneut und aktualisiert dabei sowohl
-                die Ortsverknüpfungen als auch fehlende POI-Daten. Mit den Optionen kannst du das Verhalten weiter anpassen:
+                Standardmäßig verarbeitet dieser Befehl neue bzw. noch nicht verknüpfte Medien mit GPS-Koordinaten und ergänzt
+                dabei fehlende POI-Daten. Mit den Optionen passt du den Lauf an:
 
-                * `--refresh-locations` erzwingt eine vollständige Aktualisierung der Geocoding-Daten je Medium.
+                * `--refresh-locations` erzwingt eine vollständige Aktualisierung aller Ortsverknüpfungen je Medium.
                 * `--refresh-pois` aktualisiert vorhandene POI-Daten; ohne weitere Optionen werden alle Orte unabhängig von Medien erneut abgefragt.
                 * `--missing-pois` ergänzt lediglich Orte ohne POI-Daten.
                 * `--city="Name"` fokussiert die Aktualisierung auf Orte mit passendem Stadtnamen.
