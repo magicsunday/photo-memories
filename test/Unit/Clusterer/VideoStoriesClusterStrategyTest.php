@@ -91,6 +91,58 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($items));
     }
 
+    #[Test]
+    public function recognisesVideoFlagWithoutMimeInformation(): void
+    {
+        $strategy = new VideoStoriesClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            minItemsPerDay: 1,
+        );
+
+        $video = $this->makeMediaFixture(
+            id: 3450,
+            filename: 'video-3450.mp4',
+            takenAt: new DateTimeImmutable('2024-03-17 08:00:00', new DateTimeZone('UTC')),
+            configure: static function (Media $media): void {
+                $media->setIsVideo(true);
+            },
+        );
+
+        $clusters = $strategy->cluster([$video]);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame('video_stories', $cluster->getAlgorithm());
+        self::assertSame([3450], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+
+        self::assertSame(1, $params['video_count']);
+    }
+
+    #[Test]
+    public function respectsExplicitNonVideoFlagEvenWithVideoMime(): void
+    {
+        $strategy = new VideoStoriesClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            minItemsPerDay: 1,
+        );
+
+        $nonVideo = $this->makeMediaFixture(
+            id: 3451,
+            filename: 'video-3451.mp4',
+            takenAt: new DateTimeImmutable('2024-03-17 10:00:00', new DateTimeZone('UTC')),
+            configure: static function (Media $media): void {
+                $media->setMime('video/mp4');
+                $media->setIsVideo(false);
+                $media->setIndexedAt(new DateTimeImmutable('2024-03-17 11:00:00', new DateTimeZone('UTC')));
+            },
+        );
+
+        self::assertSame([], $strategy->cluster([$nonVideo]));
+    }
+
     private function createVideo(int $id, DateTimeImmutable $takenAt): Media
     {
         return $this->makeMediaFixture(
