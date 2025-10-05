@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Http\Response;
 use finfo;
 use RuntimeException;
 
+use function array_any;
 use function array_keys;
 use function file_get_contents;
 use function filesize;
@@ -124,13 +125,10 @@ final class BinaryFileResponse extends Response
      */
     private function hasHeader(array $headers, string $name): bool
     {
-        foreach (array_keys($headers) as $headerName) {
-            if (strcasecmp($headerName, $name) === 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            array_keys($headers),
+            static fn (string $headerName): bool => strcasecmp($headerName, $name) === 0,
+        );
     }
 
     private function resolveMimeType(string $filePath): string
