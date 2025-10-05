@@ -31,6 +31,7 @@ use function min;
 use function round;
 use function sqrt;
 use function str_starts_with;
+use function trim;
 
 /**
  * Computes simple vision quality features from a downscaled grayscale matrix.
@@ -41,12 +42,16 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     use GdImageToolsTrait;
     use VideoPosterFrameTrait;
 
+    private string $ffmpegBinary;
+
+    private string $ffprobeBinary;
+
     public function __construct(
         private MediaQualityAggregator $qualityAggregator,
         private int                    $sampleSize = 96, // square downsample for analysis
-        private string                 $ffmpegBinary = 'ffmpeg',
-        private string                 $ffprobeBinary = 'ffprobe',
         private float                  $posterFrameSecond = 1.0,
+        string                         $ffmpegBinary = 'ffmpeg',
+        string                         $ffprobeBinary = 'ffprobe',
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');
@@ -56,13 +61,19 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             throw new InvalidArgumentException('posterFrameSecond must be >= 0');
         }
 
-        if ($this->ffmpegBinary === '') {
-            $this->ffmpegBinary = 'ffmpeg';
+        $normalizedFfmpeg  = trim($ffmpegBinary);
+        $normalizedFfprobe = trim($ffprobeBinary);
+
+        if ($normalizedFfmpeg === '') {
+            $normalizedFfmpeg = 'ffmpeg';
         }
 
-        if ($this->ffprobeBinary === '') {
-            $this->ffprobeBinary = 'ffprobe';
+        if ($normalizedFfprobe === '') {
+            $normalizedFfprobe = 'ffprobe';
         }
+
+        $this->ffmpegBinary  = $normalizedFfmpeg;
+        $this->ffprobeBinary = $normalizedFfprobe;
     }
 
     public function supports(string $filepath, Media $media): bool
