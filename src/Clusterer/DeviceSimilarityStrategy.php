@@ -22,7 +22,12 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function assert;
 use function array_key_first;
 use function count;
+use function implode;
 use function is_string;
+use function sprintf;
+use function stripos;
+use function strlen;
+use function substr;
 use function trim;
 
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
@@ -61,13 +66,13 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
         $devices = [];
 
         $ingest = function (Media $m, string $date) use (&$groups, &$devices): void {
-            $device = $m->getCameraModel() ?? 'unbekannt';
+            $descriptor = $this->buildDeviceDescriptor($m);
             $locKey = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
 
-            $key = $device . '|' . $date . '|' . $locKey;
+            $key = $descriptor['key'] . '|' . $date . '|' . $locKey;
             $groups[$key] ??= [];
             $groups[$key][] = $m;
-            $devices[$key]  = $device;
+            $devices[$key]  = $descriptor['label'];
         };
 
         foreach ($withTimestamp as $m) {
@@ -93,7 +98,7 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             $label  = $this->locHelper->majorityLabel($group);
             $params = [
                 'time_range' => $this->computeTimeRange($group),
-                'device'     => $devices[$key] ?? 'Unbekannt',
+                'device'     => $devices[$key] ?? 'Unbekanntes Gerät',
             ];
             if ($label !== null) {
                 $params['place'] = $label;
@@ -117,6 +122,77 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
         }
 
         return $drafts;
+    }
+
+    /**
+     * Builds a normalized device descriptor to group and label media consistently.
+     *
+     * @return array{key: string, label: string}
+     */
+    private function buildDeviceDescriptor(Media $media): array
+    {
+        $make   = $this->normalizeDeviceValue($media->getCameraMake());
+        $model  = $this->normalizeDeviceValue($media->getCameraModel());
+        $owner  = $this->normalizeDeviceValue($media->getCameraOwner());
+        $serial = $this->normalizeDeviceValue($media->getCameraBodySerial());
+
+        $key = implode('|', [
+            $make ?? 'keine-marke',
+            $model ?? 'kein-modell',
+            $owner ?? 'kein-besitzer',
+            $serial ?? 'keine-seriennummer',
+        ]);
+
+        $labelParts = [];
+
+        if ($make !== null) {
+            $labelParts[] = $make;
+        }
+
+        if ($model !== null) {
+            if ($make !== null && stripos($model, $make) === 0) {
+                $suffix = trim((string) substr($model, strlen($make)));
+                if ($suffix !== '') {
+                    $labelParts[] = $suffix;
+                }
+            } else {
+                $labelParts[] = $model;
+            }
+        }
+
+        $label = trim(implode(' ', $labelParts));
+        if ($label === '') {
+            $label = 'Unbekanntes Gerät';
+        }
+
+        $detailParts = [];
+        if ($owner !== null) {
+            $detailParts[] = sprintf('Besitzer: %s', $owner);
+        }
+
+        if ($serial !== null) {
+            $detailParts[] = sprintf('Seriennummer: %s', $serial);
+        }
+
+        if ($detailParts !== []) {
+            $label .= ' – ' . implode(', ', $detailParts);
+        }
+
+        return [
+            'key'   => $key,
+            'label' => $label,
+        ];
+    }
+
+    private function normalizeDeviceValue(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     /**
