@@ -21,7 +21,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Class TimeStage
  */
-final readonly class TimeStage extends AbstractExtractorStage
+final class TimeStage extends AbstractExtractorStage
 {
     /**
      * @var iterable<SingleMetadataExtractorInterface> $extractors

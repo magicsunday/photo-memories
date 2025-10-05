@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Class HashStage
  */
-final readonly class HashStage extends AbstractExtractorStage
+final class HashStage extends AbstractExtractorStage
 {
     /**
      * @var iterable<SingleMetadataExtractorInterface> $extractors

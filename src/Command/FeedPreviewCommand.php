@@ -42,7 +42,7 @@ use function sprintf;
     name: 'memories:feed:preview',
     description: 'Zeigt eine Vorschau des Rückblick-Feeds.'
 )]
-final readonly class FeedPreviewCommand extends Command
+final class FeedPreviewCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $em,

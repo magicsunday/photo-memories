@@ -19,7 +19,7 @@ use function is_numeric;
 /**
  * Class PoiClusterScoreHeuristic
  */
-final readonly class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
+final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     /** @param array<string,float> $poiCategoryBoosts */
     public function __construct(private readonly array $poiCategoryBoosts = [])

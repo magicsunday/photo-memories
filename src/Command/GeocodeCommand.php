@@ -30,7 +30,7 @@ use function trim;
     name: 'memories:geocode',
     description: 'Orte aus GPS-Daten ermitteln und speichern'
 )]
-final readonly class GeocodeCommand extends Command
+final class GeocodeCommand extends Command
 {
     public function __construct(
         private readonly DefaultGeocodingWorkflow $workflow,
