@@ -90,13 +90,22 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
                 $distKm = 0.0;
                 for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
-                    $p = $sorted[$i - 1];
-                    $q = $sorted[$i];
+                    $p    = $sorted[$i - 1];
+                    $q    = $sorted[$i];
+                    $pLat = $p->getGpsLat();
+                    $pLon = $p->getGpsLon();
+                    $qLat = $q->getGpsLat();
+                    $qLon = $q->getGpsLon();
+
+                    if ($pLat === null || $pLon === null || $qLat === null || $qLon === null) {
+                        continue;
+                    }
+
                     $distKm += MediaMath::haversineDistanceInMeters(
-                        (float) $p->getGpsLat(),
-                        (float) $p->getGpsLon(),
-                        (float) $q->getGpsLat(),
-                        (float) $q->getGpsLon()
+                        $pLat,
+                        $pLon,
+                        $qLat,
+                        $qLon
                     ) / 1000.0;
                 }
 
@@ -129,7 +138,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }

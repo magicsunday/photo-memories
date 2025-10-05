@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\GeoHash;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function assert;
 use function floor;
 use function hash;
 use function sprintf;
@@ -47,8 +48,9 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
             || $media->getGeoCell8() === null
             || $media->getDistanceKmFromHome() === null;
 
-        $lat = (float) $media->getGpsLat();
-        $lon = (float) $media->getGpsLon();
+        $lat = $media->getGpsLat();
+        $lon = $media->getGpsLon();
+        assert($lat !== null && $lon !== null);
 
         if ($shouldUpdateHomeMetrics) {
             $cell = $this->cellKey($lat, $lon, $this->cellDegrees);

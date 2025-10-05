@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function assert;
 use function max;
 use function usort;
 
@@ -182,9 +183,13 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
 
     private function mediaCoordinates(Media $media): array
     {
+        $lat = $media->getGpsLat();
+        $lon = $media->getGpsLon();
+        assert($lat !== null && $lon !== null);
+
         return [
-            'lat' => (float) $media->getGpsLat(),
-            'lon' => (float) $media->getGpsLon(),
+            'lat' => $lat,
+            'lon' => $lon,
         ];
     }
 
@@ -215,9 +220,9 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $centroid = MediaMath::centroid($gpsMembers);
 
         return [
-            'lat'         => (float) $centroid['lat'],
-            'lon'         => (float) $centroid['lon'],
-            'distance_km' => $this->distanceToHomeKm((float) $centroid['lat'], (float) $centroid['lon'], $home),
+            'lat'         => $centroid['lat'],
+            'lon'         => $centroid['lon'],
+            'distance_km' => $this->distanceToHomeKm($centroid['lat'], $centroid['lon'], $home),
             'source'      => 'day_centroid',
         ];
     }

@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 
 use function acos;
 use function asin;
+use function assert;
 use function cos;
 use function deg2rad;
 use function floor;
@@ -54,8 +55,9 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
             return $media;
         }
 
-        $lat = (float) $media->getGpsLat();
-        $lon = (float) $media->getGpsLon();
+        $lat = $media->getGpsLat();
+        $lon = $media->getGpsLon();
+        assert($lat !== null && $lon !== null);
 
         $sunUtc = $this->sunTimesUtc($local, $lat, $lon);
         if ($sunUtc === null) {

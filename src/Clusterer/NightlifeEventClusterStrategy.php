@@ -19,6 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function assert;
 use function array_any;
 use function array_map;
 use function array_values;
@@ -122,11 +123,15 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
             $ok = true;
             foreach ($gps as $m) {
+                $lat = $m->getGpsLat();
+                $lon = $m->getGpsLon();
+                assert($lat !== null && $lon !== null);
+
                 $dist = MediaMath::haversineDistanceInMeters(
                     $centroid['lat'],
                     $centroid['lon'],
-                    (float) $m->getGpsLat(),
-                    (float) $m->getGpsLon()
+                    $lat,
+                    $lon
                 );
 
                 if ($dist > $this->radiusMeters) {
@@ -179,7 +184,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             $out[] = new ClusterDraft(
                 algorithm: 'nightlife_event',
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $run)
             );
         }

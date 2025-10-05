@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_slice;
+use function assert;
 use function count;
 
 /**
@@ -52,11 +53,17 @@ final class StaypointDetector implements StaypointDetectorInterface
                     continue;
                 }
 
+                $startLat = $startMedia->getGpsLat();
+                $startLon = $startMedia->getGpsLon();
+                $candLat  = $candidate->getGpsLat();
+                $candLon  = $candidate->getGpsLon();
+                assert($startLat !== null && $startLon !== null && $candLat !== null && $candLon !== null);
+
                 $distanceKm = MediaMath::haversineDistanceInMeters(
-                    (float) $startMedia->getGpsLat(),
-                    (float) $startMedia->getGpsLon(),
-                    (float) $candidate->getGpsLat(),
-                    (float) $candidate->getGpsLon(),
+                    $startLat,
+                    $startLon,
+                    $candLat,
+                    $candLon,
                 ) / 1000.0;
 
                 if ($distanceKm > 0.2) {
@@ -86,8 +93,8 @@ final class StaypointDetector implements StaypointDetectorInterface
                 $centroid = MediaMath::centroid($segment);
 
                 $staypoints[] = [
-                    'lat'   => (float) $centroid['lat'],
-                    'lon'   => (float) $centroid['lon'],
+                    'lat'   => $centroid['lat'],
+                    'lon'   => $centroid['lon'],
                     'start' => $startTime->getTimestamp(),
                     'end'   => $endTime->getTimestamp(),
                     'dwell' => $dwell,

@@ -21,6 +21,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function assert;
 use function count;
 use function intdiv;
 use function is_array;
@@ -183,11 +184,15 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
         $maxDistance = 0.0;
         foreach ($members as $media) {
+            $lat = $media->getGpsLat();
+            $lon = $media->getGpsLon();
+            assert($lat !== null && $lon !== null);
+
             $distance = MediaMath::haversineDistanceInMeters(
-                (float) $media->getGpsLat(),
-                (float) $media->getGpsLon(),
-                (float) $centroid['lat'],
-                (float) $centroid['lon'],
+                $lat,
+                $lon,
+                $centroid['lat'],
+                $centroid['lon'],
             ) / 1000.0;
 
             if ($distance > $maxDistance) {
@@ -220,8 +225,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         }
 
         return [
-            'lat'             => (float) $centroid['lat'],
-            'lon'             => (float) $centroid['lon'],
+            'lat'             => $centroid['lat'],
+            'lon'             => $centroid['lon'],
             'radius_km'       => max($maxDistance, $this->defaultHomeRadiusKm),
             'country'         => $country,
             'timezone_offset' => $timezoneOffset,

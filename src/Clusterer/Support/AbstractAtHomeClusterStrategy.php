@@ -153,7 +153,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                     continue;
                 }
 
-                $distanceKm = $this->distanceKmFromHome($media, (float) $lat, (float) $lon);
+                $distanceKm = $this->distanceKmFromHome($media, $lat, $lon);
 
                 if ($distanceKm <= $this->homeRadiusMeters / 1000.0) {
                     $within[] = $media;

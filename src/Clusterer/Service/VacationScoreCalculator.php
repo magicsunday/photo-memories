@@ -191,8 +191,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $centroidDistanceKm = MediaMath::haversineDistanceInMeters(
             $home['lat'],
             $home['lon'],
-            (float) $centroid['lat'],
-            (float) $centroid['lon'],
+            $centroid['lat'],
+            $centroid['lon'],
         ) / 1000.0;
 
         $countries = [];

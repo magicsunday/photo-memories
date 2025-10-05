@@ -18,6 +18,8 @@ use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function assert;
+
 use function count;
 use function usort;
 
@@ -109,11 +111,15 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
 
             $ok = true;
             foreach ($gps as $m) {
+                $lat = $m->getGpsLat();
+                $lon = $m->getGpsLon();
+                assert($lat !== null && $lon !== null);
+
                 $dist = MediaMath::haversineDistanceInMeters(
                     $centroid['lat'],
                     $centroid['lon'],
-                    (float) $m->getGpsLat(),
-                    (float) $m->getGpsLon()
+                    $lat,
+                    $lon
                 );
 
                 if ($dist > $this->radiusMeters) {
@@ -145,7 +151,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
             $out[] = new ClusterDraft(
                 algorithm: 'cross_dimension',
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: $this->toMemberIds($run)
             );
         }

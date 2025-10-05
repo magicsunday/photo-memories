@@ -132,7 +132,8 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             $lat = $m->getGpsLat();
             $lon = $m->getGpsLon();
             if ($lat !== null && $lon !== null) {
-                $grid[$this->gridCell((float) $lat, (float) $lon)] = ($grid[$this->gridCell((float) $lat, (float) $lon)] ?? 0) + 1;
+                $cell = $this->gridCell($lat, $lon);
+                $grid[$cell] = ($grid[$cell] ?? 0) + 1;
             }
 
             // day-of-year (only if time present)
