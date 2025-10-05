@@ -32,15 +32,42 @@ final class SeasonClusterStrategyTest extends TestCase
             $this->createMedia(5, '2024-07-01 12:00:00'),
         ];
 
+        $this->assignTags($mediaItems[0], [
+            ['label' => 'Schnee', 'score' => 0.85],
+            ['label' => 'Familie', 'score' => 0.8],
+        ], ['Winter', 'Familie']);
+        $this->assignTags($mediaItems[1], [
+            ['label' => 'Schnee', 'score' => 0.9],
+            ['label' => 'Stadt', 'score' => 0.6],
+        ], ['Winter', 'Stadt']);
+        $this->assignTags($mediaItems[2], [
+            ['label' => 'Schnee', 'score' => 0.7],
+        ], ['Winter']);
+        $this->assignTags($mediaItems[3], [
+            ['label' => 'Schnee', 'score' => 0.65],
+        ], ['Winter']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
         self::assertSame('season', $cluster->getAlgorithm());
-        self::assertSame('Winter', $cluster->getParams()['label']);
-        self::assertSame(2024, $cluster->getParams()['year']);
+        $params = $cluster->getParams();
+        self::assertSame('Winter', $params['label']);
+        self::assertSame(2024, $params['year']);
         self::assertSame([1, 2, 3, 4], $cluster->getMembers());
+        self::assertArrayHasKey('scene_tags', $params);
+        self::assertArrayHasKey('keywords', $params);
+        $sceneTags = $params['scene_tags'];
+        self::assertCount(3, $sceneTags);
+        self::assertSame('Schnee', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);
+        self::assertSame('Familie', $sceneTags[1]['label']);
+        self::assertEqualsWithDelta(0.8, $sceneTags[1]['score'], 0.0001);
+        self::assertSame('Stadt', $sceneTags[2]['label']);
+        self::assertEqualsWithDelta(0.6, $sceneTags[2]['score'], 0.0001);
+        self::assertSame(['Winter', 'Familie', 'Stadt'], $params['keywords']);
     }
 
     #[Test]
@@ -88,6 +115,16 @@ final class SeasonClusterStrategyTest extends TestCase
             filename: sprintf('season-%d.jpg', $id),
             takenAt: $takenAt,
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 
     /**

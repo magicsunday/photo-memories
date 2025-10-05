@@ -37,15 +37,29 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             $this->createMedia(7, '2023-04-03 12:00:00'),
         ];
 
+        foreach ([0, 1, 2, 3] as $index) {
+            $this->assignTags($mediaItems[$index], [
+                ['label' => 'Stadt', 'score' => 0.75 + ($index * 0.01)],
+            ], ['Highlights', 'Stadt']);
+        }
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
 
         self::assertSame('monthly_highlights', $cluster->getAlgorithm());
-        self::assertSame(2023, $cluster->getParams()['year']);
-        self::assertSame(3, $cluster->getParams()['month']);
+        $params = $cluster->getParams();
+        self::assertSame(2023, $params['year']);
+        self::assertSame(3, $params['month']);
         self::assertSame([1, 2, 3, 4], $cluster->getMembers());
+        self::assertArrayHasKey('scene_tags', $params);
+        self::assertArrayHasKey('keywords', $params);
+        $sceneTags = $params['scene_tags'];
+        self::assertCount(1, $sceneTags);
+        self::assertSame('Stadt', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.78, $sceneTags[0]['score'], 0.0001);
+        self::assertSame(['Highlights', 'Stadt'], $params['keywords']);
     }
 
     #[Test]
@@ -74,5 +88,15 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             filename: sprintf('monthly-%d.jpg', $id),
             takenAt: $takenAt,
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 }

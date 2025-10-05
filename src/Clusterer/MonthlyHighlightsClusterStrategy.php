@@ -14,11 +14,10 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
 use function assert;
 use function count;
 use function substr;
@@ -30,6 +29,7 @@ use function usort;
 final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private string $timezone = 'Europe/Berlin',
@@ -102,22 +102,29 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
         foreach ($eligibleMonths as $ym => $list) {
             usort($list, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
-            $centroid = MediaMath::centroid($list);
-            $time     = MediaMath::timeRange($list);
+            $centroid = $this->computeCentroid($list);
+            $time     = $this->computeTimeRange($list);
 
             $year  = (int) substr($ym, 0, 4);
             $month = (int) substr($ym, 5, 2);
             $label = $this->germanMonthLabel($month) . ' ' . $year;
 
+            $params = [
+                'year'       => $year,
+                'month'      => $month,
+                'time_range' => $time,
+            ];
+
+            $tags = $this->collectDominantTags($list);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'year'       => $year,
-                    'month'      => $month,
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: $this->toMemberIds($list)
             );
         }
 

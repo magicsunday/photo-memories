@@ -13,12 +13,11 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
-use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
 use function assert;
 use function explode;
 use function mb_strtolower;
@@ -30,6 +29,7 @@ use function mb_strtolower;
 final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         // Minimum members per (season, year) bucket.
@@ -76,18 +76,25 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
             [$yearStr, $season] = explode(':', $key, 2);
             $yearInt            = (int) $yearStr;
 
-            $centroid = MediaMath::centroid($members);
-            $time     = MediaMath::timeRange($members);
+            $centroid = $this->computeCentroid($members);
+            $time     = $this->computeTimeRange($members);
+
+            $params = [
+                'label'      => $season,
+                'year'       => $yearInt,
+                'time_range' => $time,
+            ];
+
+            $tags = $this->collectDominantTags($members);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'label'      => $season,
-                    'year'       => $yearInt,
-                    'time_range' => $time,
-                ],
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $members)
+                members: $this->toMemberIds($members)
             );
         }
 

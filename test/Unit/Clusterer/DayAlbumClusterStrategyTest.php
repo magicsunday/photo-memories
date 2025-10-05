@@ -37,6 +37,15 @@ final class DayAlbumClusterStrategyTest extends TestCase
             $this->createMedia(103, '2022-06-02 07:30:00', 34.0526, -118.2441),
         ];
 
+        $this->assignTags($mediaItems[0], [
+            ['label' => 'Strand', 'score' => 0.9],
+            ['label' => 'Familie', 'score' => 0.8],
+        ], ['Strand', 'Sonne']);
+        $this->assignTags($mediaItems[1], [
+            ['label' => 'Strand', 'score' => 0.7],
+            ['label' => 'Sonne', 'score' => 0.6],
+        ], ['Strand', 'Familie']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
@@ -54,6 +63,17 @@ final class DayAlbumClusterStrategyTest extends TestCase
             'to'   => (new DateTimeImmutable('2022-06-02 00:15:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $params['time_range']);
+        self::assertArrayHasKey('scene_tags', $params);
+        self::assertArrayHasKey('keywords', $params);
+        $sceneTags = $params['scene_tags'];
+        self::assertCount(3, $sceneTags);
+        self::assertSame('Strand', $sceneTags[0]['label']);
+        self::assertEqualsWithDelta(0.9, $sceneTags[0]['score'], 0.0001);
+        self::assertSame('Familie', $sceneTags[1]['label']);
+        self::assertEqualsWithDelta(0.8, $sceneTags[1]['score'], 0.0001);
+        self::assertSame('Sonne', $sceneTags[2]['label']);
+        self::assertEqualsWithDelta(0.6, $sceneTags[2]['score'], 0.0001);
+        self::assertSame(['Strand', 'Familie', 'Sonne'], $params['keywords']);
 
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(34.0523, $centroid['lat'], 0.0001);
@@ -123,5 +143,15 @@ final class DayAlbumClusterStrategyTest extends TestCase
                 $media->setTimezoneOffsetMin(-480);
             },
         );
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $sceneTags
+     * @param list<string>                             $keywords
+     */
+    private function assignTags(Media $media, array $sceneTags, array $keywords): void
+    {
+        $media->setSceneTags($sceneTags);
+        $media->setKeywords($keywords);
     }
 }
