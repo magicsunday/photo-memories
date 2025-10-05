@@ -18,7 +18,6 @@ use MagicSunday\Memories\Entity\Media;
 
 use function array_keys;
 use function count;
-use function is_array;
 use function is_int;
 use function ksort;
 
@@ -42,8 +41,8 @@ final class CohortPresenceStage implements DaySummaryStageInterface
     private PersonSignatureHelper $personSignatureHelper;
 
     /**
-     * @param list<int>           $importantPersonIds
-     * @param array<int, list<int>> $fallbackPersonIds
+     * @param list<int> $importantPersonIds
+     * @param list<int> $fallbackPersonIds
      */
     public function __construct(
         array $importantPersonIds = [],
@@ -52,36 +51,19 @@ final class CohortPresenceStage implements DaySummaryStageInterface
     ) {
         $this->personSignatureHelper = $personSignatureHelper ?? new PersonSignatureHelper();
 
-        foreach ($importantPersonIds as $personId) {
+        $allPersonIds = [...$importantPersonIds, ...$fallbackPersonIds];
+
+        foreach ($allPersonIds as $personId) {
             if (!is_int($personId) || $personId <= 0) {
-                throw new InvalidArgumentException('importantPersonIds must contain positive integers.');
+                throw new InvalidArgumentException('importantPersonIds and fallbackPersonIds must contain positive integers.');
+            }
+
+            if (isset($this->importantPersons[$personId])) {
+                continue;
             }
 
             $this->importantPersons[$personId] = true;
             $this->aliasToCanonical[$personId] = $personId;
-        }
-
-        foreach ($fallbackPersonIds as $canonical => $aliases) {
-            if (!is_int($canonical) || $canonical <= 0) {
-                throw new InvalidArgumentException('fallbackPersonIds keys must be positive integers.');
-            }
-
-            if ($aliases === [] || !is_array($aliases)) {
-                continue;
-            }
-
-            if (!isset($this->importantPersons[$canonical])) {
-                $this->importantPersons[$canonical] = true;
-                $this->aliasToCanonical[$canonical] = $canonical;
-            }
-
-            foreach ($aliases as $alias) {
-                if (!is_int($alias) || $alias <= 0) {
-                    throw new InvalidArgumentException('fallbackPersonIds entries must be positive integers.');
-                }
-
-                $this->aliasToCanonical[$alias] = $canonical;
-            }
         }
     }
 
