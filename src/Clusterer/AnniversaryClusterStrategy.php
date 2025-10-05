@@ -128,8 +128,8 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             $yearKeys  = array_keys($years);
             $spanYears = max($yearKeys) - min($yearKeys) + 1;
 
-            $maxPerYear     = $years === [] ? 0 : max($years);
-            $averagePerYear = $distinctYears === 0 ? 0.0 : $total / $distinctYears;
+            $maxPerYear     = max($years);
+            $averagePerYear = $total / $distinctYears;
 
             // Weight recurring anniversaries stronger than one-off bursts while still
             // favouring days that contain many media overall.
