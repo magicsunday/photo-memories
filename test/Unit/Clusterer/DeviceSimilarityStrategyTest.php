@@ -96,6 +96,52 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertSame([], $strategy->cluster($mediaItems));
     }
 
+    #[Test]
+    public function separatesMediaByOwnerAndSerial(): void
+    {
+        $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 2);
+
+        $paris = $this->makeLocation(
+            providerPlaceId: 'paris-001',
+            displayName: 'Paris',
+            lat: 48.8566,
+            lon: 2.3522,
+            city: 'Paris',
+            country: 'France',
+        );
+
+        $mediaItems = [
+            $this->createMedia(601, '2023-07-10 08:00:00', 'Fujifilm X-T5', $paris, 48.8566, 2.3522, cameraOwner: 'Alice', cameraMake: 'Fujifilm', cameraSerial: 'SN-123'),
+            $this->createMedia(602, '2023-07-10 08:05:00', 'Fujifilm X-T5', $paris, 48.8567, 2.3523, cameraOwner: 'Alice', cameraMake: 'Fujifilm', cameraSerial: 'SN-123'),
+            $this->createMedia(603, '2023-07-10 09:00:00', 'Fujifilm X-T5', $paris, 48.8568, 2.3524, cameraOwner: 'Alice', cameraMake: 'Fujifilm', cameraSerial: 'SN-456'),
+            $this->createMedia(604, '2023-07-10 09:05:00', 'Fujifilm X-T5', $paris, 48.8569, 2.3525, cameraOwner: 'Alice', cameraMake: 'Fujifilm', cameraSerial: 'SN-456'),
+            $this->createMedia(605, '2023-07-10 10:00:00', 'Fujifilm X-T5', $paris, 48.8570, 2.3526, cameraOwner: 'Bob', cameraMake: 'Fujifilm', cameraSerial: 'SN-123'),
+            $this->createMedia(606, '2023-07-10 10:05:00', 'Fujifilm X-T5', $paris, 48.8571, 2.3527, cameraOwner: 'Bob', cameraMake: 'Fujifilm', cameraSerial: 'SN-123'),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(3, $clusters);
+
+        $membersByDevice = [];
+        foreach ($clusters as $cluster) {
+            $params = $cluster->getParams();
+            $membersByDevice[$params['device']] = $cluster->getMembers();
+        }
+
+        $aliceFirstBody = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-123';
+        $aliceSecondBody = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-456';
+        $bobBody         = 'Fujifilm X-T5 – Besitzer: Bob, Seriennummer: SN-123';
+
+        self::assertArrayHasKey($aliceFirstBody, $membersByDevice);
+        self::assertArrayHasKey($aliceSecondBody, $membersByDevice);
+        self::assertArrayHasKey($bobBody, $membersByDevice);
+
+        self::assertSame([601, 602], $membersByDevice[$aliceFirstBody]);
+        self::assertSame([603, 604], $membersByDevice[$aliceSecondBody]);
+        self::assertSame([605, 606], $membersByDevice[$bobBody]);
+    }
+
     private function createMedia(
         int $id,
         string $takenAt,
@@ -105,6 +151,9 @@ final class DeviceSimilarityStrategyTest extends TestCase
         float $lon,
         ?string $lensModel = null,
         ?ContentKind $contentKind = null,
+        ?string $cameraOwner = null,
+        ?string $cameraMake = null,
+        ?string $cameraSerial = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -113,10 +162,28 @@ final class DeviceSimilarityStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
-            configure: static function (Media $media) use ($camera, $lensModel, $contentKind): void {
+            configure: static function (Media $media) use (
+                $camera,
+                $lensModel,
+                $contentKind,
+                $cameraOwner,
+                $cameraMake,
+                $cameraSerial,
+            ): void {
                 $media->setCameraModel($camera);
                 $media->setLensModel($lensModel);
                 $media->setContentKind($contentKind);
+                if ($cameraMake !== null) {
+                    $media->setCameraMake($cameraMake);
+                }
+
+                if ($cameraOwner !== null) {
+                    $media->setCameraOwner($cameraOwner);
+                }
+
+                if ($cameraSerial !== null) {
+                    $media->setCameraBodySerial($cameraSerial);
+                }
             },
         );
     }
