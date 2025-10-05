@@ -21,6 +21,11 @@ use function is_file;
  */
 final class ComposerAutoload
 {
+    /**
+     * Guards against requiring the Composer autoloader multiple times within the same process.
+     * The {@see require()} method flips the flag to true after a successful include, so that
+     * subsequent calls respect the lifecycle and do not reload the autoloader.
+     */
     private static bool $autoloadLoaded = false;
 
     /**
