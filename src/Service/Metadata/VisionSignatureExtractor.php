@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
 
 use function array_fill;
+use function array_map;
 use function count;
 use function imagecolorat;
 use function is_file;
@@ -204,18 +205,17 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
      */
     private function lumaMatrixFromRgb(array $rgbMatrix): array
     {
-        $out = [];
+        return array_map(
+            static fn (array $row): array => array_map(
+                static function (array $pixel): float {
+                    [$r, $g, $b] = $pixel;
 
-        foreach ($rgbMatrix as $row) {
-            $lumaRow = [];
-            foreach ($row as [$r, $g, $b]) {
-                $lumaRow[] = 0.299 * $r + 0.587 * $g + 0.114 * $b;
-            }
-
-            $out[] = $lumaRow;
-        }
-
-        return $out;
+                    return 0.299 * $r + 0.587 * $g + 0.114 * $b;
+                },
+                $row,
+            ),
+            $rgbMatrix,
+        );
     }
 
     /**
