@@ -69,6 +69,16 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
                     }
                 }
 
+                $orientation = $m->isPortrait();
+
+                if ($orientation === true) {
+                    return true;
+                }
+
+                if ($orientation === false) {
+                    return false;
+                }
+
                 $w = $m->getWidth();
                 $h = $m->getHeight();
 
