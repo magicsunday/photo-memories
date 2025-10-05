@@ -50,9 +50,9 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     public function __construct(
         private MediaQualityAggregator $qualityAggregator,
         private int                    $sampleSize = 96, // square downsample for analysis
-        private float                  $posterFrameSecond = 1.0,
         string                         $ffmpegBinary = 'ffmpeg',
         string                         $ffprobeBinary = 'ffprobe',
+        private float                  $posterFrameSecond = 1.0,
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');

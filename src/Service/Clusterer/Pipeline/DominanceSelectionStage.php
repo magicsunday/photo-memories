@@ -75,7 +75,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
         /** @var list<list<int>> $normalized */
         $normalized = array_map(
-            static fn (ClusterDraft $draft): array => $this->normalizeMembers($draft->getMembers()),
+            fn (ClusterDraft $draft): array => $this->normalizeMembers($draft->getMembers()),
             $drafts,
         );
 

@@ -58,14 +58,23 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024], bool $applyOrientation = false)
     {
-        $this->thumbnailDir = $thumbnailDir;
-        $this->sizes        = $sizes;
+        $this->thumbnailDir     = $thumbnailDir;
+        $this->sizes            = $sizes;
         $this->applyOrientation = $applyOrientation;
 
         // Ensure the output directory exists before thumbnails are generated.
-        if (!is_dir($this->thumbnailDir) && !mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
-            throw new RuntimeException(
-                \sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir));
+        if (!is_dir($this->thumbnailDir)) {
+            if (\file_exists($this->thumbnailDir)) {
+                throw new RuntimeException(
+                    \sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir),
+                );
+            }
+
+            if (!mkdir($this->thumbnailDir, 0755, true) && !is_dir($this->thumbnailDir)) {
+                throw new RuntimeException(
+                    \sprintf('Failed to create thumbnail directory "%s".', $this->thumbnailDir),
+                );
+            }
         }
     }
 
