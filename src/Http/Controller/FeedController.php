@@ -35,6 +35,9 @@ use MagicSunday\Memories\Entity\Media;
 use RuntimeException;
 
 use function array_filter;
+use function array_fill_keys;
+use function array_flip;
+use function array_intersect_key;
 use function array_key_exists;
 use function array_keys;
 use function array_map;
@@ -348,13 +351,17 @@ final class FeedController
             }
         }
 
-        $result = [];
-        foreach ($ids as $id) {
-            $media = $this->mediaCache[$id] ?? null;
-            if ($media instanceof Media) {
-                $result[$id] = $media;
-            }
-        }
+        /** @var array<int, Media|null> $orderedCache */
+        $orderedCache = array_replace(
+            array_fill_keys($ids, null),
+            array_intersect_key($this->mediaCache, array_flip($ids)),
+        );
+
+        /** @var array<int, Media> $result */
+        $result = array_filter(
+            $orderedCache,
+            static fn (?Media $media): bool => $media instanceof Media,
+        );
 
         return $result;
     }
