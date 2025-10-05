@@ -4,6 +4,12 @@
 
 # Photo Memories
 
+## Repository Layout
+
+- `src/` – Produktionscode und alle Cluster-Strategien.
+- `config/` – Symfony-DI-Konfiguration, Parameter und Index-Pipeline.
+- `docs/cluster-metadata.md` – Übersicht der Cluster-Strategien mit ihren Metadaten-Abhängigkeiten.
+
 ## HTTP-Feed & Single-Page-App
 
 Der neue HTTP-Einstiegspunkt unter `public/index.php` liefert zwei Dinge:
