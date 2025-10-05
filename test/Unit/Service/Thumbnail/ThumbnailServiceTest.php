@@ -1560,12 +1560,12 @@ final class ThumbnailServiceTest extends TestCase
             $row = [];
 
             for ($x = 0; $x < $width; ++$x) {
-                $color = $imagick->getImagePixelColor($x, $y)->getColor(true);
+                $pixel = $imagick->getImagePixelColor($x, $y);
 
                 $row[] = $this->rgbToHex(
-                    (int) round($color['r'] * 255),
-                    (int) round($color['g'] * 255),
-                    (int) round($color['b'] * 255),
+                    (int) round($pixel->getColorValue(Imagick::COLOR_RED) * 255),
+                    (int) round($pixel->getColorValue(Imagick::COLOR_GREEN) * 255),
+                    (int) round($pixel->getColorValue(Imagick::COLOR_BLUE) * 255),
                 );
             }
 
