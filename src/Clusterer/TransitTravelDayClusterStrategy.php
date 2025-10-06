@@ -20,6 +20,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function abs;
 use function array_map;
 use function assert;
 use function count;
@@ -39,6 +40,10 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         private float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
         private int $minItemsPerDay = 5,
+        private float $minSegmentSpeedMps = 5.0,
+        private int $minFastSegments = 3,
+        private float $maxHeadingChangeDeg = 90.0,
+        private int $minConsistentHeadingSegments = 2,
     ) {
         if ($this->minTravelKm <= 0.0) {
             throw new InvalidArgumentException('minTravelKm must be > 0.');
@@ -46,6 +51,22 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+
+        if ($this->minSegmentSpeedMps <= 0.0) {
+            throw new InvalidArgumentException('minSegmentSpeedMps must be > 0.');
+        }
+
+        if ($this->minFastSegments < 0) {
+            throw new InvalidArgumentException('minFastSegments must be >= 0.');
+        }
+
+        if ($this->maxHeadingChangeDeg <= 0.0 || $this->maxHeadingChangeDeg > 180.0) {
+            throw new InvalidArgumentException('maxHeadingChangeDeg must be within (0, 180].');
+        }
+
+        if ($this->minConsistentHeadingSegments < 0) {
+            throw new InvalidArgumentException('minConsistentHeadingSegments must be >= 0.');
         }
     }
 
@@ -82,13 +103,24 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         /** @var array<string, float> $dayDistanceKm */
         $dayDistanceKm = [];
+        /** @var array<string, array<string, int|float|null>> $dayMovementMetrics */
+        $dayMovementMetrics = [];
         $travelDays    = $this->filterGroupsWithKeys(
             $eligibleDays,
-            function (array $list, string $day) use (&$dayDistanceKm): bool {
+            function (array $list, string $day) use (&$dayDistanceKm, &$dayMovementMetrics): bool {
                 $sorted = $list;
                 usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-                $distKm = 0.0;
+                $distKm                      = 0.0;
+                $segmentCount                = 0;
+                $fastSegmentCount            = 0;
+                $speedSum                    = 0.0;
+                $speedSamples                = 0;
+                $maxSpeedMps                 = null;
+                $headingChangeSum            = 0.0;
+                $headingSamples              = 0;
+                $consistentHeadingSegments   = 0;
+
                 for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
                     $p    = $sorted[$i - 1];
                     $q    = $sorted[$i];
@@ -107,13 +139,63 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                         $qLat,
                         $qLon
                     ) / 1000.0;
+
+                    ++$segmentCount;
+
+                    $segmentSpeedMps = self::resolveSegmentSpeed($p->getGpsSpeedMps(), $q->getGpsSpeedMps());
+
+                    if ($segmentSpeedMps !== null) {
+                        $speedSum     += $segmentSpeedMps;
+                        ++$speedSamples;
+                        if ($maxSpeedMps === null || $segmentSpeedMps > $maxSpeedMps) {
+                            $maxSpeedMps = $segmentSpeedMps;
+                        }
+
+                        if ($segmentSpeedMps >= $this->minSegmentSpeedMps) {
+                            ++$fastSegmentCount;
+                        }
+                    }
+
+                    $headingDelta = self::resolveHeadingDelta($p->getGpsHeadingDeg(), $q->getGpsHeadingDeg());
+
+                    if ($headingDelta !== null) {
+                        $headingChangeSum += $headingDelta;
+                        ++$headingSamples;
+
+                        if ($headingDelta <= $this->maxHeadingChangeDeg) {
+                            ++$consistentHeadingSegments;
+                        }
+                    }
                 }
 
                 if ($distKm < $this->minTravelKm) {
                     return false;
                 }
 
+                if ($fastSegmentCount < $this->minFastSegments) {
+                    return false;
+                }
+
+                if (
+                    $headingSamples > 0
+                    && $consistentHeadingSegments < $this->minConsistentHeadingSegments
+                ) {
+                    return false;
+                }
+
                 $dayDistanceKm[$day] = $distKm;
+
+                $dayMovementMetrics[$day] = [
+                    'segment_count'                    => $segmentCount,
+                    'fast_segment_count'               => $fastSegmentCount,
+                    'fast_segment_ratio'               => $segmentCount > 0 ? $fastSegmentCount / $segmentCount : null,
+                    'avg_speed_mps'                    => $speedSamples > 0 ? $speedSum / $speedSamples : null,
+                    'max_speed_mps'                    => $maxSpeedMps,
+                    'heading_sample_count'             => $headingSamples,
+                    'avg_heading_change_deg'           => $headingSamples > 0 ? $headingChangeSum / $headingSamples : null,
+                    'consistent_heading_segment_count' => $consistentHeadingSegments,
+                    'heading_consistency_ratio'        => $headingSamples > 0 ? $consistentHeadingSegments / $headingSamples : null,
+                ];
 
                 return true;
             }
@@ -133,6 +215,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             $params = $this->appendLocationMetadata($list, [
                 'distance_km' => $dayDistanceKm[$day],
                 'time_range'  => $time,
+                'movement'    => $dayMovementMetrics[$day] ?? null,
             ]);
 
             $out[] = new ClusterDraft(
@@ -144,5 +227,33 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         }
 
         return $out;
+    }
+
+    private static function resolveSegmentSpeed(?float $pSpeedMps, ?float $qSpeedMps): ?float
+    {
+        if ($pSpeedMps !== null && $qSpeedMps !== null) {
+            return ($pSpeedMps + $qSpeedMps) / 2.0;
+        }
+
+        if ($pSpeedMps !== null) {
+            return $pSpeedMps;
+        }
+
+        return $qSpeedMps;
+    }
+
+    private static function resolveHeadingDelta(?float $pHeadingDeg, ?float $qHeadingDeg): ?float
+    {
+        if ($pHeadingDeg === null || $qHeadingDeg === null) {
+            return null;
+        }
+
+        $delta = abs($pHeadingDeg - $qHeadingDeg);
+
+        if ($delta > 180.0) {
+            return 360.0 - $delta;
+        }
+
+        return $delta;
     }
 }
