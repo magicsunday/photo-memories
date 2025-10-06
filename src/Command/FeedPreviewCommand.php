@@ -171,7 +171,7 @@ final class FeedPreviewCommand extends Command
     }
 
     /**
-     * @param array|bool|float|int|string|null $value
+     * @param array<int, array<string, mixed>|bool|float|int|string|null>|bool|float|int|string|null $value
      */
     private function formatSceneTags(array|bool|float|int|string|null $value): string
     {

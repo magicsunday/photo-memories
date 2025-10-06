@@ -90,9 +90,14 @@ final class SlideshowGenerateCommand extends Command
 
     private function writeError(SlideshowJob $job, Throwable $throwable): void
     {
+        $message = $throwable->getMessage();
+        if ($message === '') {
+            $message = 'Unbekannter Fehler bei der Videoerstellung.';
+        }
+
         file_put_contents(
             $job->errorPath(),
-            $throwable->getMessage() ?: 'Unbekannter Fehler bei der Videoerstellung.',
+            $message,
             LOCK_EX
         );
 
