@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -79,6 +80,44 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
         ];
 
         self::assertSame([], $strategy->cluster($mediaItems));
+    }
+
+    #[Test]
+    public function sortsClustersByMostRecentMonthFirst(): void
+    {
+        $strategy = new MonthlyHighlightsClusterStrategy(
+            timezone: 'UTC',
+            minItemsPerMonth: 2,
+            minDistinctDays: 2,
+        );
+
+        $mediaItems = [
+            // March 2023 appears first in the input to verify explicit sorting.
+            $this->createMedia(21, '2023-03-15 08:30:00'),
+            $this->createMedia(22, '2024-02-01 09:00:00'),
+            $this->createMedia(23, '2024-01-01 10:00:00'),
+            $this->createMedia(24, '2024-02-18 11:00:00'),
+            $this->createMedia(25, '2024-01-12 12:00:00'),
+            $this->createMedia(26, '2023-03-22 13:00:00'),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(3, $clusters);
+
+        $timeline = array_map(
+            static fn (ClusterDraft $cluster): array => [
+                'year'  => $cluster->getParams()['year'],
+                'month' => $cluster->getParams()['month'],
+            ],
+            $clusters,
+        );
+
+        self::assertSame([
+            ['year' => 2024, 'month' => 2],
+            ['year' => 2024, 'month' => 1],
+            ['year' => 2023, 'month' => 3],
+        ], $timeline);
     }
 
     private function createMedia(int $id, string $takenAt): Media
