@@ -18,14 +18,13 @@ use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
+use MagicSunday\Memories\Service\Metadata\Support\ImageOrVideoSupportTrait;
 
 use function abs;
 use function array_map;
 use function count;
 use function implode;
-use function is_string;
 use function sha1;
-use function str_starts_with;
 use function strcmp;
 use function substr;
 use function trim;
@@ -36,15 +35,15 @@ use function usort;
  */
 final readonly class BurstDetector implements SingleMetadataExtractorInterface
 {
+    use ImageOrVideoSupportTrait;
+
     public function __construct(private MediaRepository $mediaRepository)
     {
     }
 
     public function supports(string $filepath, Media $media): bool
     {
-        $mime = $media->getMime();
-
-        return is_string($mime) && (str_starts_with($mime, 'image/') || str_starts_with($mime, 'video/'));
+        return $this->supportsImageOrVideoMime($media);
     }
 
     public function extract(string $filepath, Media $media): Media

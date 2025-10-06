@@ -12,13 +12,13 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Support\ImageOrVideoSupportTrait;
 
 use function is_string;
 use function ltrim;
 use function pathinfo;
 use function preg_match;
 use function preg_replace;
-use function str_starts_with;
 
 use const PATHINFO_FILENAME;
 
@@ -27,11 +27,11 @@ use const PATHINFO_FILENAME;
  */
 final class BurstIndexExtractor implements SingleMetadataExtractorInterface
 {
+    use ImageOrVideoSupportTrait;
+
     public function supports(string $filepath, Media $media): bool
     {
-        $mime = $media->getMime();
-
-        return is_string($mime) && (str_starts_with($mime, 'image/') || str_starts_with($mime, 'video/'));
+        return $this->supportsImageOrVideoMime($media);
     }
 
     public function extract(string $filepath, Media $media): Media
