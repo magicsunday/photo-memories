@@ -15,6 +15,8 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use JsonException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -47,6 +49,9 @@ use function spl_object_id;
  */
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
+    private ClusterQualityAggregator $qualityAggregator;
+    private ClusterPeopleAggregator $peopleAggregator;
+
     public function __construct(
         private EntityManagerInterface $em,
         private MemberMediaLookupInterface $mediaLookup,
@@ -54,7 +59,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
         private int $maxMembers = 20,
+        ?ClusterQualityAggregator $qualityAggregator = null,
+        ?ClusterPeopleAggregator $peopleAggregator = null,
     ) {
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
+        $this->peopleAggregator  = $peopleAggregator ?? new ClusterPeopleAggregator();
     }
 
     /**
@@ -274,10 +283,28 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $videoCount = $counts['videos'];
         }
 
-        $cover            = $media !== [] ? $this->coverPicker->pickCover($media, $draft->getParams()) : null;
+        $params = $draft->getParams();
+
+        if ($media !== []) {
+            $qualityParams = $this->qualityAggregator->buildParams($media);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $draft->setParam($qualityKey, $qualityValue);
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->peopleAggregator->buildParams($media);
+            foreach ($peopleParams as $peopleKey => $peopleValue) {
+                $draft->setParam($peopleKey, $peopleValue);
+                $params[$peopleKey] = $peopleValue;
+            }
+        }
+
+        $cover            = $media !== [] ? $this->coverPicker->pickCover($media, $params) : null;
         $location         = $this->resolveDominantLocation($media);
-        $algorithmVersion = $this->resolveAlgorithmVersion($draft->getParams());
-        $configHash       = $this->computeConfigHash($draft->getParams());
+        $algorithmVersion = $this->resolveAlgorithmVersion($params);
+        $configHash       = $this->computeConfigHash($params);
 
         $centroid     = $draft->getCentroid();
         $centroidLat  = $this->numericOrNull($centroid['lat'] ?? null);

@@ -126,6 +126,25 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame(1, $draft->getVideoCount());
         self::assertNotNull($draft->getConfigHash());
         self::assertSame(GeoCell::fromPoint(48.123456, 11.654321, 7), $draft->getCentroidCell7());
+
+        $params = $draft->getParams();
+        self::assertArrayHasKey('quality_avg', $params);
+        self::assertGreaterThan(0.0, $params['quality_avg']);
+        self::assertArrayHasKey('people', $params);
+        self::assertSame(0.0, $params['people']);
+        self::assertArrayHasKey('people_count', $params);
+        self::assertSame(0, $params['people_count']);
+        self::assertArrayHasKey('people_unique', $params);
+        self::assertSame(0, $params['people_unique']);
+        self::assertArrayHasKey('people_coverage', $params);
+        self::assertSame(0.0, $params['people_coverage']);
+        self::assertArrayHasKey('people_face_coverage', $params);
+        self::assertSame(0.0, $params['people_face_coverage']);
+
+        $persistedParams = $persisted->getParams();
+        self::assertArrayHasKey('quality_avg', $persistedParams);
+        self::assertArrayHasKey('people', $persistedParams);
+        self::assertArrayHasKey('people_count', $persistedParams);
     }
 
     /**

@@ -56,6 +56,18 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
         self::assertSame([1, 2, 3, 4], $cluster->getMembers());
         self::assertArrayHasKey('scene_tags', $params);
         self::assertArrayHasKey('keywords', $params);
+        self::assertArrayHasKey('quality_avg', $params);
+        self::assertIsFloat($params['quality_avg']);
+        self::assertArrayHasKey('people', $params);
+        self::assertArrayHasKey('people_count', $params);
+        self::assertArrayHasKey('people_unique', $params);
+        self::assertArrayHasKey('people_coverage', $params);
+        self::assertArrayHasKey('people_face_coverage', $params);
+        self::assertSame(0.0, $params['people']);
+        self::assertSame(0, $params['people_count']);
+        self::assertSame(0, $params['people_unique']);
+        self::assertSame(0.0, $params['people_coverage']);
+        self::assertSame(0.0, $params['people_face_coverage']);
         $sceneTags = $params['scene_tags'];
         self::assertCount(1, $sceneTags);
         self::assertSame('Stadt', $sceneTags[0]['label']);
