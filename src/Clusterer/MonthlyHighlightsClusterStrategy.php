@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 
@@ -33,10 +34,13 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private string $timezone = 'Europe/Berlin',
         private int $minItemsPerMonth = 40,
         private int $minDistinctDays = 10,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerMonth < 1) {
             throw new InvalidArgumentException('minItemsPerMonth must be >= 1.');
@@ -45,6 +49,8 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         if ($this->minDistinctDays < 1) {
             throw new InvalidArgumentException('minDistinctDays must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -124,6 +130,13 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             $tags = $this->collectDominantTags($list);
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($list);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
             }
 
             $peopleParams = $this->buildPeopleParams($list);
