@@ -13,6 +13,10 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
 
+use function is_file;
+use function is_string;
+use function mime_content_type;
+
 /**
  * Orchestrates a sequence of specialized extractors.
  * Keeps IndexCommand unchanged: it still depends on MetadataExtractorInterface.
@@ -47,9 +51,11 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
     public function extract(string $filepath, Media $media): Media
     {
         // Ensure mime is present early (if not set yet, guess it)
-        if ($media->getMime() === null) {
-            $mime = mime_content_type($filepath) ?: null;
-            $media->setMime($mime);
+        if ($media->getMime() === null && is_file($filepath)) {
+            $mime = @mime_content_type($filepath);
+            if (is_string($mime) && $mime !== '') {
+                $media->setMime($mime);
+            }
         }
 
         foreach ($this->extractors as $extractor) {
