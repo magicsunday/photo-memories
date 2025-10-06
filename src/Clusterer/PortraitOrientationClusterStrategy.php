@@ -12,11 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
-
-use function array_map;
 use function count;
 use function usort;
 
@@ -26,6 +24,7 @@ use function usort;
 final readonly class PortraitOrientationClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private float $minPortraitRatio = 1.2, // height / width
@@ -134,16 +133,16 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $centroid = MediaMath::centroid($run);
-            $time     = MediaMath::timeRange($run);
+            $centroid      = $this->computeCentroid($run);
+            $timeRange     = $this->computeTimeRange($run);
+            $peopleParams  = $this->buildPeopleParams($run);
+            $clusterParams = ['time_range' => $timeRange, ...$peopleParams];
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: [
-                    'time_range' => $time,
-                ],
+                params: $clusterParams,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: $this->toMemberIds($run)
             );
         }
 

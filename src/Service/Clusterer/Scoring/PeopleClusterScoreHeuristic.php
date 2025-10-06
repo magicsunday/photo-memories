@@ -12,11 +12,10 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator;
 use MagicSunday\Memories\Entity\Media;
 
 use function count;
-use function is_array;
-use function is_string;
 
 /**
  * Class PeopleClusterScoreHeuristic.
@@ -79,43 +78,14 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             ];
         }
 
-        $uniqueNames     = [];
-        $mentions        = 0;
-        $itemsWithPeople = 0;
-
-        foreach ($mediaItems as $media) {
-            $persons = $media->getPersons();
-            if (!is_array($persons) || $persons === []) {
-                continue;
-            }
-
-            ++$itemsWithPeople;
-            foreach ($persons as $person) {
-                if (!is_string($person) || $person === '') {
-                    continue;
-                }
-
-                $uniqueNames[$person] = true;
-                ++$mentions;
-            }
-        }
-
-        $unique       = count($uniqueNames);
-        $coverage     = $members > 0 ? $itemsWithPeople / $members : 0.0;
-        $richness     = $unique > 0 ? min(1.0, $unique / 4.0) : 0.0;
-        $mentionScore = $members > 0 ? min(1.0, $mentions / (float) max(1, $members)) : 0.0;
-
-        $score = $this->combineScores([
-            [$coverage, 0.4],
-            [$richness, 0.35],
-            [$mentionScore, 0.25],
-        ]);
+        $aggregator   = new ClusterPeopleAggregator();
+        $peopleParams = $aggregator->buildParams($mediaItems);
 
         return [
-            'score'    => $score,
-            'unique'   => $unique,
-            'mentions' => $mentions,
-            'coverage' => $coverage,
+            'score'    => $peopleParams['people'],
+            'unique'   => $peopleParams['people_unique'],
+            'mentions' => $peopleParams['people_count'],
+            'coverage' => $peopleParams['people_coverage'],
         ];
     }
 }

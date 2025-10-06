@@ -157,6 +157,9 @@ final readonly class BurstClusterStrategy implements ClusterStrategyInterface
 
         $params = $this->appendLocationMetadata($orderedMembers, $params);
 
+        $peopleParams = $this->buildPeopleParams($orderedMembers);
+        $params       = [...$params, ...$peopleParams];
+
         return new ClusterDraft(
             algorithm: $this->name(),
             params: $params,
