@@ -16,11 +16,18 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 
+use function array_filter;
+use function array_map;
 use function explode;
+use function implode;
 use function is_array;
 use function is_scalar;
+use function mb_convert_case;
+use function mb_strtolower;
 use function preg_replace_callback;
 use function trim;
+
+use const MB_CASE_TITLE;
 
 /**
  * Renders titles/subtitles using YAML templates + params (iOS-like).
@@ -50,7 +57,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     /** Very small moustache-like renderer for {{ keys }} from params */
     private function render(string $template, ClusterDraft $cluster): string
     {
-        $p = $cluster->getParams();
+        $p = $this->normalizeLocationParameters($cluster->getParams());
 
         // Common computed helpers
         $p['date_range'] ??= $this->formatRange($p['time_range'] ?? null);
@@ -116,5 +123,65 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     private function fallbackSubtitle(ClusterDraft $cluster): string
     {
         return $this->formatRange($cluster->getParams()['time_range'] ?? null);
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     *
+     * @return array<string, scalar|array|null>
+     */
+    private function normalizeLocationParameters(array $params): array
+    {
+        $normalized = $params;
+
+        foreach (['place', 'place_city', 'place_region', 'place_country'] as $key) {
+            $value = $normalized[$key] ?? null;
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $normalized[$key] = $this->normalizeLocationComponent((string) $value);
+        }
+
+        $location = $normalized['place_location'] ?? null;
+        if (is_scalar($location)) {
+            $normalized['place_location'] = $this->normalizeLocationList((string) $location);
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeLocationComponent(string $value): string
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        $lower = mb_strtolower($trimmed, 'UTF-8');
+        if ($trimmed === $lower) {
+            return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        return $trimmed;
+    }
+
+    private function normalizeLocationList(string $value): string
+    {
+        $parts = array_filter(array_map(
+            static fn (string $part): string => trim($part),
+            explode(',', $value)
+        ), static fn (string $part): bool => $part !== '');
+
+        if ($parts === []) {
+            return '';
+        }
+
+        $normalized = array_map(
+            fn (string $part): string => $this->normalizeLocationComponent($part),
+            $parts
+        );
+
+        return implode(', ', $normalized);
     }
 }

@@ -173,6 +173,36 @@ YAML
         self::assertSame('Reise nach Lombardei', $generator->makeTitle($cluster));
     }
 
+    #[Test]
+    public function normalizesLowercasePlaceValues(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  location_similarity:
+    title: "Unterwegs in {{ place }}"
+    subtitle: "{{ place_location }}"
+YAML
+        );
+
+        $cluster = $this->createCluster(
+            algorithm: 'location_similarity',
+            params: [
+                'place'           => 'monterosso al mare',
+                'place_city'      => 'monterosso al mare',
+                'place_region'    => 'ligurien',
+                'place_country'   => 'italien',
+                'place_location'  => 'monterosso al mare, ligurien, italien',
+                'time_range'      => [
+                    'from' => (new DateTimeImmutable('2024-07-06 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-07-06 18:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+            ],
+        );
+
+        self::assertSame('Unterwegs in Monterosso Al Mare', $generator->makeTitle($cluster));
+        self::assertSame('Monterosso Al Mare, Ligurien, Italien', $generator->makeSubtitle($cluster));
+    }
+
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
     {
         $path = tempnam(sys_get_temp_dir(), 'titles_');
