@@ -36,6 +36,13 @@ final class Request
      * @param array<string,string> $headers
      * @param array<string,string> $server
      */
+    /**
+     * Creates a new request instance with the given normalized data.
+     *
+     * @param array<string,string> $query   normalized query parameters
+     * @param array<string,string> $headers lowercase header map including the HTTP_* values
+     * @param array<string,string> $server  server parameter map as provided by PHP
+     */
     private function __construct(
         private string $method,
         private string $path,
@@ -46,11 +53,22 @@ final class Request
     ) {
     }
 
+    /**
+     * Builds a request instance from the PHP global state.
+     *
+     * Iterates over $_SERVER, $_GET and php://input to create an immutable
+     * representation of the incoming HTTP request. All values are normalized
+     * to strings to avoid dealing with mixed input types.
+     *
+     * @return self immutable request reflecting the superglobals
+     */
     public static function fromGlobals(): self
     {
         $server  = [];
         $headers = [];
 
+        // Normalise server parameters and extract HTTP headers from the
+        // corresponding HTTP_* entries provided by PHP.
         foreach ($_SERVER as $key => $value) {
             if (!is_string($key)) {
                 continue;
@@ -71,6 +89,8 @@ final class Request
         }
 
         $query = [];
+        // Normalize the query string parameters to ensure consistent string keys
+        // and values, ignoring anything that cannot be represented as a string.
         foreach ($_GET as $key => $value) {
             if (!is_string($key)) {
                 continue;
@@ -99,9 +119,13 @@ final class Request
     }
 
     /**
-     * @param array<string,string> $query
-     * @param array<string,string> $headers
-     * @param array<string,string> $server
+     * Creates a synthetic request for testing purposes.
+     *
+     * @param array<string,string> $query   request query parameters
+     * @param array<string,string> $headers HTTP headers
+     * @param array<string,string> $server  additional server parameters
+     *
+     * @return self newly created request instance
      */
     public static function create(
         string $path,
@@ -152,16 +176,28 @@ final class Request
         return new self(strtoupper($method), $normalizedPath, $normalizedQuery, $normalizedHeaders, $serverData, $body);
     }
 
+    /**
+     * Returns the HTTP method used for the request (e.g. GET or POST).
+     */
     public function getMethod(): string
     {
         return $this->method;
     }
 
+    /**
+     * Returns the normalized request path without scheme or host.
+     */
     public function getPath(): string
     {
         return $this->path;
     }
 
+    /**
+     * Returns a single query parameter or the provided default if unavailable.
+     *
+     * @param string      $name    parameter key to fetch
+     * @param string|null $default fallback value when the parameter is missing
+     */
     public function getQueryParam(string $name, ?string $default = null): ?string
     {
         if (!array_key_exists($name, $this->query)) {
@@ -185,6 +221,11 @@ final class Request
         return $this->query;
     }
 
+    /**
+     * Returns a header value using a case-insensitive lookup.
+     *
+     * @return string|null normalized header value or null when absent
+     */
     public function getHeader(string $name): ?string
     {
         $normalized = strtolower($name);
@@ -202,11 +243,17 @@ final class Request
         return $value;
     }
 
+    /**
+     * Returns the raw request body if one was provided.
+     */
     public function getBody(): ?string
     {
         return $this->body;
     }
 
+    /**
+     * Resolves the request host either from the Host header or SERVER_NAME.
+     */
     public function getHost(): string
     {
         $hostHeader = $this->getHeader('host');
@@ -224,6 +271,9 @@ final class Request
         return 'localhost';
     }
 
+    /**
+     * Returns the request scheme (http or https) based on the HTTPS flag.
+     */
     public function getScheme(): string
     {
         $https = $this->server['HTTPS'] ?? '';
@@ -234,6 +284,9 @@ final class Request
         return 'http';
     }
 
+    /**
+     * Builds the base URL consisting of the scheme and host.
+     */
     public function getBaseUrl(): string
     {
         $scheme = $this->getScheme();
