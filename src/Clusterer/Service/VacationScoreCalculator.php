@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Service;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
@@ -23,6 +24,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
+use function array_key_exists;
 use function array_keys;
 use function array_merge;
 use function array_map;
@@ -175,6 +177,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $cohortMemberAggregate   = [];
         $primaryStaypoint        = null;
 
+        $weekendHolidayFlags = [];
+
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
             foreach ($summary['members'] as $media) {
@@ -273,12 +277,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 ++$awayDays;
             }
 
-            $dayTimezone = $this->resolveSummaryTimezone($summary, $home);
-            $dayDate     = new DateTimeImmutable($summary['date'], $dayTimezone);
-            $isWeekend   = $summary['weekday'] >= 6;
-            $isHoliday   = $this->holidayResolver->isHoliday($dayDate);
+            $isWeekendOrHoliday         = $this->isWeekendOrHoliday($summary, $home);
+            $weekendHolidayFlags[$key] = $isWeekendOrHoliday;
 
-            if ($summary['baseAway'] && ($isWeekend || $isHoliday)) {
+            if ($summary['baseAway'] && $isWeekendOrHoliday) {
                 ++$weekendHolidayDays;
             }
         }
@@ -286,6 +288,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($awayDays === 0 || $reliableDays === 0) {
             return null;
         }
+
+        $weekendHolidayDays += $this->countAdjacentWeekendHolidayDays($dayKeys, $days, $home, $weekendHolidayFlags);
 
         $avgCohortRatio = $cohortRatioSamples > 0 ? $cohortRatioSum / $cohortRatioSamples : 0.0;
         $avgCohortRatio = max(0.0, min(1.0, $avgCohortRatio));
@@ -613,12 +617,87 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $params['place_location'] = $primaryStaypointLocation;
         }
 
-        return new ClusterDraft(
+        $draft = new ClusterDraft(
             algorithm: 'vacation',
             params: $params,
             centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
             members: $memberIds,
         );
+        return $draft;
+    }
+
+    /**
+     * @param list<string>                                               $dayKeys
+     * @param array<string, array{date:string}>                          $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array<string, bool>                                        $weekendHolidayFlags
+     */
+    private function countAdjacentWeekendHolidayDays(array $dayKeys, array $days, array $home, array $weekendHolidayFlags): int
+    {
+        if ($dayKeys === []) {
+            return 0;
+        }
+
+        $extra      = 0;
+        $firstKey   = $dayKeys[0];
+        $lastKey    = $dayKeys[count($dayKeys) - 1];
+        $neighbors  = [
+            $this->neighborDayKey($firstKey, -1, $days),
+            $this->neighborDayKey($lastKey, 1, $days),
+        ];
+
+        foreach ($neighbors as $neighborKey) {
+            if ($neighborKey === null || in_array($neighborKey, $dayKeys, true)) {
+                continue;
+            }
+
+            $isWeekendOrHoliday = $weekendHolidayFlags[$neighborKey] ?? $this->isWeekendOrHoliday($days[$neighborKey], $home);
+            if ($isWeekendOrHoliday) {
+                ++$extra;
+            }
+        }
+
+        return $extra;
+    }
+
+    /**
+     * @param array<string, array{date:string}> $days
+     */
+    private function neighborDayKey(string $referenceKey, int $offset, array $days): ?string
+    {
+        if ($offset === 0) {
+            return null;
+        }
+
+        $timezone = new DateTimeZone('UTC');
+        $date     = DateTimeImmutable::createFromFormat('!Y-m-d', $referenceKey, $timezone);
+        if ($date === false) {
+            return null;
+        }
+
+        $modifier = $offset > 0 ? '+' . $offset . ' day' : $offset . ' day';
+        $candidate = $date->modify($modifier);
+        if ($candidate === false) {
+            return null;
+        }
+
+        $key = $candidate->format('Y-m-d');
+
+        return array_key_exists($key, $days) ? $key : null;
+    }
+
+    /**
+     * @param array{weekday:int,date:string} $summary
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     */
+    private function isWeekendOrHoliday(array $summary, array $home): bool
+    {
+        $dayTimezone = $this->resolveSummaryTimezone($summary, $home);
+        $dayDate     = new DateTimeImmutable($summary['date'], $dayTimezone);
+        $isWeekend   = $summary['weekday'] >= 6;
+        $isHoliday   = $this->holidayResolver->isHoliday($dayDate);
+
+        return $isWeekend || $isHoliday;
     }
 
     /**

@@ -47,13 +47,13 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $baseLocation               = $this->baseLocationResolver->resolve($summary, $nextSummary, $home, $timezone);
             $days[$key]['baseLocation'] = $baseLocation;
 
-            if ($baseLocation !== null && HomeBoundaryHelper::isBeyondHome($home, $baseLocation['lat'], $baseLocation['lon'])) {
+            if ($baseLocation !== null && HomeBoundaryHelper::isBeyondHome($home, $baseLocation['lat'], $baseLocation['lon'], true)) {
                 $days[$key]['baseAway'] = true;
             }
 
             if ($summary['gpsMembers'] !== [] && HomeBoundaryHelper::hasCoordinateSamples($summary['gpsMembers'])) {
                 $centroid     = MediaMath::centroid($summary['gpsMembers']);
-                $isBeyondHome = HomeBoundaryHelper::isBeyondHome($home, $centroid['lat'], $centroid['lon']);
+                $isBeyondHome = HomeBoundaryHelper::isBeyondHome($home, $centroid['lat'], $centroid['lon'], true);
 
                 if ($isBeyondHome) {
                     $days[$key]['awayByDistance'] = true;

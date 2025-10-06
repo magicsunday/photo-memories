@@ -81,9 +81,23 @@ final class HomeBoundaryHelper
     /**
      * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float}>} $home
      */
-    public static function isBeyondHome(array $home, float $lat, float $lon): bool
+    public static function isBeyondHome(array $home, float $lat, float $lon, bool $treatSecondaryCentersAsHome = false): bool
     {
         $nearest = self::nearestCenter($home, $lat, $lon);
+
+        if ($nearest['index'] > 0) {
+            if ($treatSecondaryCentersAsHome === false) {
+                return true;
+            }
+
+            $center       = $nearest['center'];
+            $memberCount  = (int) ($center['member_count'] ?? 0);
+            $dwellSeconds = (int) ($center['dwell_seconds'] ?? 0);
+
+            if ($memberCount > 0 || $dwellSeconds > 0) {
+                return true;
+            }
+        }
 
         return $nearest['distance_km'] > $nearest['radius_km'];
     }

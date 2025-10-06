@@ -41,8 +41,8 @@ final class CohortPresenceStage implements DaySummaryStageInterface
     private PersonSignatureHelper $personSignatureHelper;
 
     /**
-     * @param list<int> $importantPersonIds
-     * @param list<int> $fallbackPersonIds
+     * @param list<int>            $importantPersonIds
+     * @param array<int, list<int>> $fallbackPersonIds
      */
     public function __construct(
         array $importantPersonIds = [],
@@ -51,20 +51,50 @@ final class CohortPresenceStage implements DaySummaryStageInterface
     ) {
         $this->personSignatureHelper = $personSignatureHelper ?? new PersonSignatureHelper();
 
-        $allPersonIds = [...$importantPersonIds, ...$fallbackPersonIds];
+        foreach ($importantPersonIds as $personId) {
+            $this->registerCanonical($this->normalizePersonId($personId));
+        }
 
-        foreach ($allPersonIds as $personId) {
-            if (!is_int($personId) || $personId <= 0) {
-                throw new InvalidArgumentException('importantPersonIds and fallbackPersonIds must contain positive integers.');
-            }
+        foreach ($fallbackPersonIds as $canonicalId => $aliases) {
+            if (is_int($canonicalId) && is_array($aliases)) {
+                $canonical = $this->normalizePersonId($canonicalId);
+                $this->registerCanonical($canonical);
 
-            if (isset($this->importantPersons[$personId])) {
+                foreach ($aliases as $aliasId) {
+                    $alias = $this->normalizePersonId($aliasId);
+                    if ($alias === $canonical) {
+                        continue;
+                    }
+
+                    $this->aliasToCanonical[$alias] = $canonical;
+                    $this->importantPersons[$canonical] = true;
+                }
+
                 continue;
             }
 
-            $this->importantPersons[$personId] = true;
-            $this->aliasToCanonical[$personId] = $personId;
+            $personId = $this->normalizePersonId($aliases);
+            $this->registerCanonical($personId);
         }
+    }
+
+    private function registerCanonical(int $personId): void
+    {
+        if (isset($this->importantPersons[$personId])) {
+            return;
+        }
+
+        $this->importantPersons[$personId] = true;
+        $this->aliasToCanonical[$personId] = $personId;
+    }
+
+    private function normalizePersonId(mixed $value): int
+    {
+        if (!is_int($value) || $value <= 0) {
+            throw new InvalidArgumentException('importantPersonIds and fallbackPersonIds must contain positive integers.');
+        }
+
+        return $value;
     }
 
     /**
@@ -109,7 +139,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
                 ksort($frequency);
             }
 
-            $ratio = $totalImportant > 0 ? count($present) / $totalImportant : 0.0;
+            $ratio = $totalImportant > 0 ? (float) count($present) / $totalImportant : 0.0;
             if ($ratio > 1.0) {
                 $ratio = 1.0;
             }

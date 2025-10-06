@@ -32,11 +32,11 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         $sleepProxy    = $this->computeSleepProxyLocation($summary, $nextSummary, $home);
 
         if ($staypointBase !== null) {
-            if (HomeBoundaryHelper::isBeyondHome($home, $staypointBase['lat'], $staypointBase['lon'])) {
+            if (HomeBoundaryHelper::isBeyondHome($home, $staypointBase['lat'], $staypointBase['lon'], false)) {
                 return $staypointBase;
             }
 
-            if ($sleepProxy !== null && HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'])) {
+            if ($sleepProxy !== null && HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'], false)) {
                 return $sleepProxy;
             }
 
@@ -44,7 +44,7 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         }
 
         if ($sleepProxy !== null) {
-            if (HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'])) {
+            if (HomeBoundaryHelper::isBeyondHome($home, $sleepProxy['lat'], $sleepProxy['lon'], false)) {
                 return $sleepProxy;
             }
 

@@ -66,7 +66,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             $parts[] = 'county:' . $county;
         }
 
-        if ($state !== null) {
+        if ($state !== null && $city === null && $county === null) {
             $parts[] = 'state:' . $state;
         }
 
