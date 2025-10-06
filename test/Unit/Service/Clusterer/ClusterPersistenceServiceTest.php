@@ -97,6 +97,11 @@ final class ClusterPersistenceServiceTest extends TestCase
             params: [
                 'version'        => '2024.1',
                 'member_quality' => ['ordered' => [2, 1, 3]],
+                'movement'       => [
+                    'segment_count'      => 4,
+                    'fast_segment_ratio' => 0.5,
+                    'avg_speed_mps'      => 12.3,
+                ],
             ],
             centroid: ['lat' => 48.123456, 'lon' => 11.654321],
             members: [1, 2, 3],
@@ -130,6 +135,8 @@ final class ClusterPersistenceServiceTest extends TestCase
         $params = $draft->getParams();
         self::assertArrayHasKey('quality_avg', $params);
         self::assertGreaterThan(0.0, $params['quality_avg']);
+        self::assertArrayHasKey('quality_resolution', $params);
+        self::assertGreaterThan(0.0, $params['quality_resolution']);
         self::assertArrayHasKey('people', $params);
         self::assertSame(0.0, $params['people']);
         self::assertArrayHasKey('people_count', $params);
@@ -140,11 +147,24 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame(0.0, $params['people_coverage']);
         self::assertArrayHasKey('people_face_coverage', $params);
         self::assertSame(0.0, $params['people_face_coverage']);
+        self::assertArrayHasKey('movement', $params);
+        self::assertSame([
+            'segment_count'      => 4,
+            'fast_segment_ratio' => 0.5,
+            'avg_speed_mps'      => 12.3,
+        ], $params['movement']);
 
         $persistedParams = $persisted->getParams();
         self::assertArrayHasKey('quality_avg', $persistedParams);
+        self::assertArrayHasKey('quality_resolution', $persistedParams);
         self::assertArrayHasKey('people', $persistedParams);
         self::assertArrayHasKey('people_count', $persistedParams);
+        self::assertArrayHasKey('movement', $persistedParams);
+        self::assertSame([
+            'segment_count'      => 4,
+            'fast_segment_ratio' => 0.5,
+            'avg_speed_mps'      => 12.3,
+        ], $persistedParams['movement']);
     }
 
     /**
