@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 use function count;
 use function usort;
 
@@ -25,8 +27,10 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     public function __construct(
+        private LocationHelper $locationHelper,
         private float $minPortraitRatio = 1.2, // height / width
         private int $sessionGapSeconds = 2 * 3600,
         private int $minItemsPerRun = 4,
@@ -133,14 +137,22 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $centroid      = $this->computeCentroid($run);
-            $timeRange     = $this->computeTimeRange($run);
-            $peopleParams  = $this->buildPeopleParams($run);
-            $clusterParams = ['time_range' => $timeRange, ...$peopleParams];
+            $centroid     = $this->computeCentroid($run);
+            $timeRange    = $this->computeTimeRange($run);
+            $peopleParams = $this->buildPeopleParams($run);
+
+            $params = ['time_range' => $timeRange, ...$peopleParams];
+
+            $tags = $this->collectDominantTags($run);
+            if ($tags !== []) {
+                $params = [...$params, ...$tags];
+            }
+
+            $params = $this->appendLocationMetadata($run, $params);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
-                params: $clusterParams,
+                params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
                 members: $this->toMemberIds($run)
             );
