@@ -21,6 +21,7 @@ use MagicSunday\Memories\Entity\Media;
 
 use function assert;
 use function count;
+use function krsort;
 use function substr;
 use function usort;
 
@@ -99,6 +100,8 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         if ($eligibleMonths === []) {
             return [];
         }
+
+        krsort($eligibleMonths, SORT_STRING);
 
         /** @var list<ClusterDraft> $out */
         $out = [];
