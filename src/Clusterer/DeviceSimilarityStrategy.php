@@ -119,6 +119,11 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             $peopleParams = $this->buildPeopleParams($group);
             $params       = [...$params, ...$peopleParams];
 
+            $tagMetadata = $this->collectDominantTags($group);
+            if ($tagMetadata !== []) {
+                $params = [...$params, ...$tagMetadata];
+            }
+
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
