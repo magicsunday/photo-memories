@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\Support\ImageOrVideoSupportTrait;
 
 use function array_values;
 use function basename;
@@ -28,7 +29,6 @@ use function preg_match;
 use function scandir;
 use function sha1;
 use function sort;
-use function str_starts_with;
 use function strtolower;
 
 use const PATHINFO_EXTENSION;
@@ -39,11 +39,11 @@ use const PATHINFO_FILENAME;
  */
 final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
 {
+    use ImageOrVideoSupportTrait;
+
     public function supports(string $filepath, Media $media): bool
     {
-        $mime = $media->getMime();
-
-        return $mime !== null && (str_starts_with($mime, 'image/') || str_starts_with($mime, 'video/'));
+        return $this->supportsImageOrVideoMime($media);
     }
 
     public function extract(string $filepath, Media $media): Media
