@@ -126,6 +126,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                 $params = [...$params, ...$tags];
             }
 
+            $peopleParams = $this->buildPeopleParams($list);
+            $params       = [...$params, ...$peopleParams];
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
