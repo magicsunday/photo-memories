@@ -18,6 +18,7 @@ use MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface;
 use MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface;
 
 use function is_array;
+use function is_finite;
 use function is_numeric;
 use function is_string;
 use function reset;
@@ -200,10 +201,16 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
 
     private function distanceOrNull(mixed $value): ?float
     {
-        if (is_numeric($value)) {
-            return (float) $value;
+        if (!is_numeric($value)) {
+            return null;
         }
 
-        return null;
+        $distance = (float) $value;
+
+        if (!is_finite($distance) || $distance < 0.0) {
+            return null;
+        }
+
+        return $distance;
     }
 }
