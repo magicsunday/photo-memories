@@ -36,7 +36,7 @@
 - [ ] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L13-L132】
 
 ### 6. QA & Beobachtbarkeit
-- [ ] `MetadataQaInspector` um strukturierte Ergebnisse erweitern (statt Log-Zeilen), damit der Indexprozess maschinell reagieren kann.【F:src/Service/Metadata/MetadataQaInspector.php†L32-L55】
+- [x] `MetadataQaInspector` um strukturierte Ergebnisse erweitern (statt Log-Zeilen), damit der Indexprozess maschinell reagieren kann.【F:src/Service/Metadata/MetadataQaInspector.php†L24-L78】【F:src/Service/Metadata/MetadataQaInspectionResult.php†L13-L69】【F:src/Service/Indexing/Contract/MediaIngestionContext.php†L19-L214】【F:src/Service/Indexing/Stage/TimeStage.php†L19-L87】
 - [ ] Einheitliches Index-Log-Schema definieren und in allen Extractoren anwenden (aktuell schreiben nur ausgewählte Klassen aggregierte Meldungen).
 - [ ] Dashboards/Reports für fehlende oder widersprüchliche Metadaten erstellen (z. B. Tageszeit ohne Zeitzone, Golden Hour ohne GPS).
 

@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
+use MagicSunday\Memories\Support\IndexLogHelper;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -66,7 +67,15 @@ final class TimeStage extends AbstractExtractorStage
             return $context;
         }
 
-        $this->metadataQaInspector->inspect($context->getFilePath(), $media);
+        $inspection = $this->metadataQaInspector->inspect($context->getFilePath(), $media);
+        if ($inspection->hasIssues()) {
+            $message = $inspection->toLogMessage();
+            if ($message !== null) {
+                IndexLogHelper::append($media, $message);
+            }
+
+            $context = $context->withQaFinding($inspection);
+        }
 
         return $context->withMedia($media);
     }

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Contract;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -35,6 +36,8 @@ final readonly class MediaIngestionContext
         private bool $reindexRequired,
         private bool $skipped,
         private ?string $skipMessage,
+        /** @var list<MetadataQaInspectionResult> */
+        private array $qaFindings,
     ) {
     }
 
@@ -62,6 +65,7 @@ final readonly class MediaIngestionContext
             false,
             false,
             null,
+            [],
         );
     }
 
@@ -140,6 +144,14 @@ final readonly class MediaIngestionContext
         return $this->skipMessage;
     }
 
+    /**
+     * @return list<MetadataQaInspectionResult>
+     */
+    public function getQaFindings(): array
+    {
+        return $this->qaFindings;
+    }
+
     public function withDetectedMime(
         string $detectedMime,
         bool $isRaw = false,
@@ -162,6 +174,7 @@ final readonly class MediaIngestionContext
             $this->reindexRequired,
             $this->skipped,
             $this->skipMessage,
+            $this->qaFindings,
         );
     }
 
@@ -183,6 +196,7 @@ final readonly class MediaIngestionContext
             $this->reindexRequired,
             $this->skipped,
             $this->skipMessage,
+            $this->qaFindings,
         );
     }
 
@@ -204,6 +218,7 @@ final readonly class MediaIngestionContext
             $this->reindexRequired,
             $this->skipped,
             $this->skipMessage,
+            $this->qaFindings,
         );
     }
 
@@ -225,6 +240,7 @@ final readonly class MediaIngestionContext
             $reindexRequired,
             $this->skipped,
             $this->skipMessage,
+            $this->qaFindings,
         );
     }
 
@@ -246,6 +262,32 @@ final readonly class MediaIngestionContext
             $this->reindexRequired,
             true,
             $message,
+            $this->qaFindings,
+        );
+    }
+
+    public function withQaFinding(MetadataQaInspectionResult $finding): self
+    {
+        $qaFindings = $this->qaFindings;
+        $qaFindings[] = $finding;
+
+        return new self(
+            $this->filePath,
+            $this->force,
+            $this->dryRun,
+            $this->withThumbnails,
+            $this->strictMime,
+            $this->output,
+            $this->media,
+            $this->detectedMime,
+            $this->detectedRaw,
+            $this->detectedHeic,
+            $this->detectedHevc,
+            $this->checksum,
+            $this->reindexRequired,
+            $this->skipped,
+            $this->skipMessage,
+            $qaFindings,
         );
     }
 }
