@@ -14,14 +14,17 @@ namespace MagicSunday\Memories\Clusterer;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_keys;
 use function array_map;
 use function array_merge;
+use function array_values;
 use function count;
 use function implode;
 use function is_array;
@@ -39,10 +42,13 @@ use function usort;
 final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     private PersonSignatureHelper $personSignatureHelper;
 
     public function __construct(
+        private LocationHelper $locationHelper,
         private int $minPersons = 2,
         private int $minItemsTotal = 5,
         private int $windowDays = 14,
@@ -168,7 +174,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
      */
     private function makeDraft(array $members): ClusterDraft
     {
-        $centroid = MediaMath::centroid($members);
+        $centroid = $this->computeCentroid($members);
 
         $personIdSet = [];
         $labelSet    = [];
@@ -205,7 +211,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         usort($personLabels, static fn (string $a, string $b): int => strcasecmp($a, $b));
 
         $params = [
-            'time_range' => MediaMath::timeRange($members),
+            'time_range' => $this->computeTimeRange($members),
         ];
 
         if ($persons !== []) {
@@ -216,11 +222,20 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             $params['person_labels'] = $personLabels;
         }
 
-        return new ClusterDraft(
+        $draft = new ClusterDraft(
             algorithm: $this->name(),
             params: $params,
             centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-            members: array_map(static fn (Media $m): int => $m->getId(), $members)
+            members: $this->toMemberIds($members)
         );
+
+        $tagMetadata = $this->collectDominantTags($members);
+        foreach ($tagMetadata as $key => $value) {
+            $draft->setParam($key, $value);
+        }
+
+        $this->applyLocationMetadata($draft, $members);
+
+        return $draft;
     }
 }

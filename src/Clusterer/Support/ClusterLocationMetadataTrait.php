@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Support;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
@@ -114,6 +115,20 @@ trait ClusterLocationMetadataTrait
         }
 
         return $params;
+    }
+
+    /**
+     * Applies location metadata to a cluster draft.
+     *
+     * @param list<Media> $members
+     */
+    private function applyLocationMetadata(ClusterDraft $draft, array $members): void
+    {
+        $params = $this->appendLocationMetadata($members, $draft->getParams());
+
+        foreach ($params as $key => $value) {
+            $draft->setParam($key, $value);
+        }
     }
 
     private function normalizeLocationComponent(string $value): string
