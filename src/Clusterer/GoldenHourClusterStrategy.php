@@ -13,13 +13,15 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_key_exists;
-use function array_map;
 use function array_values;
 use function assert;
 use function count;
@@ -38,14 +40,20 @@ use function usort;
 final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
+
+    private ClusterQualityAggregator $qualityAggregator;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
+        private LocationHelper $locationHelper,
         /** Inclusive local hours considered golden-hour candidates. */
         private array $morningHours = [6, 7, 8],
         private array $eveningHours = [18, 19, 20],
         private int $sessionGapSeconds = 90 * 60,
         private int $minItemsPerRun = 5,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->morningHours === [] || $this->eveningHours === []) {
             throw new InvalidArgumentException('Morning and evening hours must not be empty.');
@@ -66,6 +74,8 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
         if ($this->minItemsPerRun < 1) {
             throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -131,8 +141,8 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
         $out = [];
 
         foreach ($eligibleRuns as $run) {
-            $centroid  = MediaMath::centroid($run);
-            $time      = MediaMath::timeRange($run);
+            $centroid  = $this->computeCentroid($run);
+            $time      = $this->computeTimeRange($run);
             $sceneTags = $this->collectSceneTags($run);
 
             $params = [
@@ -143,11 +153,29 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
                 $params['scene_tags'] = $sceneTags;
             }
 
+            $tagMetadata = $this->collectDominantTags($run);
+            $keywords    = $tagMetadata['keywords'] ?? null;
+            if (is_array($keywords) && $keywords !== []) {
+                $params['keywords'] = $keywords;
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($run);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->buildPeopleParams($run);
+            $params       = [...$params, ...$peopleParams];
+
+            $params = $this->appendLocationMetadata($run, $params);
+
             $out[] = new ClusterDraft(
                 algorithm: 'golden_hour',
                 params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: $this->toMemberIds($run)
             );
         }
 
