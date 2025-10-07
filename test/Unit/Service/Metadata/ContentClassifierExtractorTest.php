@@ -92,6 +92,23 @@ final class ContentClassifierExtractorTest extends TestCase
         self::assertTrue($media->isNoShow());
     }
 
+    #[Test]
+    public function classifiesScreenshotsViaVisionTagsWhenTokensMissing(): void
+    {
+        $media = $this->buildMedia(14, 'image/png', 1242, 2688);
+        $media->setSharpness(0.2);
+        $media->setColorfulness(0.1);
+        $media->setSceneTags([
+            ['label' => 'Screen capture interface', 'score' => 0.88],
+        ]);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/library/Image-14.png', $media);
+
+        self::assertSame(ContentKind::SCREENSHOT, $media->getContentKind());
+        self::assertTrue($media->isNoShow());
+    }
+
     private function buildMedia(int $id, string $mime, int $width, int $height): Media
     {
         $media = new Media('path-' . $id, 'checksum-' . $id, 1024);
