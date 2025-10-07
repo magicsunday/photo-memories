@@ -13,12 +13,8 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Support\IndexLogHelper;
-
+use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
 use function array_key_exists;
-use function array_unique;
-use function implode;
-use function sprintf;
 
 /**
  * Validates that mandatory time related metadata has been enriched.
@@ -32,7 +28,7 @@ final readonly class MetadataQaInspector
     ) {
     }
 
-    public function inspect(string $filepath, Media $media): void
+    public function inspect(string $filepath, Media $media): MetadataQaInspectionResult
     {
         $features = $media->getFeatures() ?? [];
         $missing  = [];
@@ -65,14 +61,9 @@ final readonly class MetadataQaInspector
         }
 
         if ($missing === []) {
-            return;
+            return MetadataQaInspectionResult::none();
         }
 
-        $message = sprintf('Warnung: fehlende Zeit-Features (%s).', implode(', ', array_unique($missing)));
-        if ($suggestions !== []) {
-            $message .= ' Empfehlung: ' . implode('; ', array_unique($suggestions)) . '.';
-        }
-
-        IndexLogHelper::append($media, $message);
+        return MetadataQaInspectionResult::withIssues($missing, $suggestions);
     }
 }

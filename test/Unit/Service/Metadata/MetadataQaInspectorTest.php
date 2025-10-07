@@ -37,14 +37,20 @@ final class MetadataQaInspectorTest extends TestCase
         );
         $media->setTimezoneOffsetMin(60);
 
-        $inspector->inspect('/tmp/qa-metadata.jpg', $media);
+        $result = $inspector->inspect('/tmp/qa-metadata.jpg', $media);
 
-        $log = $media->getIndexLog();
-        self::assertNotNull($log);
-        self::assertStringContainsString('daypart', (string) $log);
-        self::assertStringContainsString('isGoldenHour', (string) $log);
-        self::assertStringContainsString('tzConfidence', (string) $log);
-        self::assertStringContainsString('Empfehlung:', (string) $log);
+        self::assertTrue($result->hasIssues());
+        self::assertSame(['daypart', 'isGoldenHour', 'tzConfidence'], $result->getMissingFeatures());
+        self::assertSame(
+            ['TimeNormalizer-Konfiguration prüfen', 'Zeitzonenquellen priorisieren'],
+            $result->getSuggestions(),
+        );
+
+        $message = $result->toLogMessage();
+        self::assertNotNull($message);
+        self::assertStringContainsString('daypart', $message);
+        self::assertStringContainsString('Empfehlung:', $message);
+        self::assertNull($media->getIndexLog());
     }
 
     #[Test]
@@ -65,9 +71,10 @@ final class MetadataQaInspectorTest extends TestCase
         ]);
         $media->setTzConfidence(0.8);
 
-        $inspector->inspect('/tmp/qa-metadata-present.jpg', $media);
+        $result = $inspector->inspect('/tmp/qa-metadata-present.jpg', $media);
 
-        self::assertNull($media->getIndexLog());
+        self::assertFalse($result->hasIssues());
+        self::assertNull($result->toLogMessage());
     }
 
     #[Test]
@@ -86,12 +93,11 @@ final class MetadataQaInspectorTest extends TestCase
             'isGoldenHour' => false,
         ]);
 
-        $inspector->inspect('/tmp/qa-timezone-missing.jpg', $media);
+        $result = $inspector->inspect('/tmp/qa-timezone-missing.jpg', $media);
 
-        $log = $media->getIndexLog();
-        self::assertNotNull($log);
-        self::assertStringContainsString('timezoneOffsetMin', (string) $log);
-        self::assertStringContainsString('TimeNormalizer-Konfiguration prüfen', (string) $log);
+        self::assertTrue($result->hasIssues());
+        self::assertSame(['timezoneOffsetMin', 'tzConfidence'], $result->getMissingFeatures());
+        self::assertSame(['TimeNormalizer-Konfiguration prüfen'], $result->getSuggestions());
     }
 
     private function createInspector(): MetadataQaInspector
