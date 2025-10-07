@@ -23,7 +23,6 @@ use function extension_loaded;
 use function file_exists;
 use function function_exists;
 use function is_int;
-use function method_exists;
 use function sprintf;
 
 /**
@@ -266,80 +265,18 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     private function prepareImagickThumbnail(Imagick $image): Imagick
     {
-        try {
-            $image->setImageBackgroundColor(new ImagickPixel('white'));
-        } catch (ImagickException|Throwable) {
-            // Ignore when the Imagick build cannot adjust the background colour.
-        }
+        $image->setImageBackgroundColor(new ImagickPixel('white'));
+        $image->setBackgroundColor(new ImagickPixel('white'));
+        $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
 
-        try {
-            $image->setBackgroundColor(new ImagickPixel('white'));
-        } catch (ImagickException|Throwable) {
-            // Continue when background colour assignment is unsupported.
-        }
+        $flattened = $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
 
-        try {
-            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_REMOVE);
-        } catch (ImagickException|Throwable) {
-            try {
-                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
-            } catch (ImagickException|Throwable) {
-                // Legacy Imagick builds may lack alpha channel controls entirely.
-            }
-        }
+        $image->clear();
+        $image->destroy();
 
-        $flattened = null;
+        $flattened->setImageAlphaChannel(Imagick::ALPHACHANNEL_DEACTIVATE);
 
-        try {
-            $flattened = $image->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
-        } catch (ImagickException|Throwable) {
-            try {
-                $flattened = $image->flattenImages();
-            } catch (ImagickException|Throwable) {
-                $flattened = null;
-            }
-        }
-
-        if (!$flattened instanceof Imagick) {
-            try {
-                $background = new Imagick();
-                $background->newImage(
-                    $image->getImageWidth(),
-                    $image->getImageHeight(),
-                    new ImagickPixel('white'),
-                );
-                $background->compositeImage($image, Imagick::COMPOSITE_OVER, 0, 0);
-                $flattened = $background;
-            } catch (ImagickException|Throwable) {
-                $flattened = null;
-            }
-        }
-
-        if ($flattened instanceof Imagick) {
-            try {
-                $image->clear();
-            } finally {
-                try {
-                    $image->destroy();
-                } catch (ImagickException|Throwable) {
-                    // Ignore destruction failures when replacing the instance.
-                }
-            }
-
-            $image = $flattened;
-        }
-
-        try {
-            $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_DEACTIVATE);
-        } catch (ImagickException|Throwable) {
-            try {
-                $image->setImageAlphaChannel(Imagick::ALPHACHANNEL_OPAQUE);
-            } catch (ImagickException|Throwable) {
-                // Continue when alpha channel adjustments are unavailable.
-            }
-        }
-
-        return $image;
+        return $flattened;
     }
 
     /**
@@ -547,90 +484,12 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
-        $targetOrientation = $orientation;
-
-        if ($orientation !== null && $orientation >= self::ORIENTATION_TOPLEFT && $orientation <= self::ORIENTATION_LEFTBOTTOM) {
-            try {
-                $imagick->setImageOrientation($orientation);
-            } catch (ImagickException|Throwable) {
-                // Continue with the provided orientation when setImageOrientation is unsupported.
-            }
+        if ($orientation !== null) {
+            $imagick->setImageOrientation($orientation);
         }
 
-        try {
-            if (method_exists($imagick, 'autoOrientImage')) {
-                if ($targetOrientation !== null) {
-                    $imagick->setImageOrientation($targetOrientation);
-                }
-
-                $imagick->autoOrientImage();
-                $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
-
-                return;
-            }
-        } catch (ImagickException|Throwable) {
-            // Fall back to the manual implementation when autoOrientImage is unavailable.
-        }
-
-        $effectiveOrientation = $imagick->getImageOrientation();
-
-        if ($effectiveOrientation === self::ORIENTATION_UNDEFINED && $targetOrientation !== null) {
-            $effectiveOrientation = $targetOrientation;
-        }
-
-        $this->applyOrientationWithLegacyImagick($imagick, $effectiveOrientation);
-
-        try {
-            $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
-        } catch (ImagickException|Throwable) {
-            // Ignore when the Imagick build cannot reset the orientation flag.
-        }
-    }
-
-    /**
-     * Applies the orientation manually for Imagick versions lacking autoOrientImage().
-     *
-     * @param Imagick $imagick imagick instance to transform
-     *
-     * @throws ImagickException
-     */
-    private function applyOrientationWithLegacyImagick(Imagick $imagick, int $orientation): void
-    {
-        switch ($orientation) {
-            case self::ORIENTATION_UNDEFINED:
-            case self::ORIENTATION_TOPLEFT:
-                return;
-            case self::ORIENTATION_TOPRIGHT:
-                $imagick->flopImage();
-
-                return;
-            case self::ORIENTATION_BOTTOMRIGHT:
-                $imagick->rotateImage(new ImagickPixel('none'), 180);
-
-                return;
-            case self::ORIENTATION_BOTTOMLEFT:
-                $imagick->flipImage();
-
-                return;
-            case self::ORIENTATION_LEFTTOP:
-                $imagick->flopImage();
-                $imagick->rotateImage(new ImagickPixel('none'), 90);
-
-                return;
-            case self::ORIENTATION_RIGHTTOP:
-                $imagick->rotateImage(new ImagickPixel('none'), -90);
-
-                return;
-            case self::ORIENTATION_RIGHTBOTTOM:
-                $imagick->flopImage();
-                $imagick->rotateImage(new ImagickPixel('none'), -90);
-
-                return;
-            case self::ORIENTATION_LEFTBOTTOM:
-                $imagick->rotateImage(new ImagickPixel('none'), 90);
-
-                return;
-        }
+        $imagick->autoOrientImage();
+        $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
     }
 
     /**
