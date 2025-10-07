@@ -22,6 +22,12 @@ use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use ReflectionClass;
 
+use function explode;
+use function json_decode;
+use function trim;
+
+use const JSON_THROW_ON_ERROR;
+
 abstract class TestCase extends BaseTestCase
 {
     private ?string $fixtureDir = null;
@@ -295,5 +301,27 @@ abstract class TestCase extends BaseTestCase
         }
 
         return DateTimeImmutable::createFromInterface($value);
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    protected function decodeIndexLog(?string $log): array
+    {
+        if ($log === null || $log === '') {
+            return [];
+        }
+
+        $entries = [];
+        foreach (explode("\n", $log) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $entries[] = json_decode($line, true, 512, JSON_THROW_ON_ERROR);
+        }
+
+        return $entries;
     }
 }

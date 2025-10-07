@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
+use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
 use MagicSunday\Memories\Support\IndexLogHelper;
@@ -31,6 +32,8 @@ final class TimeStage extends AbstractExtractorStage
 
     private readonly MetadataQaInspector $metadataQaInspector;
 
+    private readonly MetadataQaReportCollector $qaReportCollector;
+
     public function __construct(
         #[Autowire(service: TimeNormalizer::class)]
         SingleMetadataExtractorInterface $normalizer,
@@ -39,6 +42,7 @@ final class TimeStage extends AbstractExtractorStage
         SingleMetadataExtractorInterface $daypart,
         SingleMetadataExtractorInterface $solar,
         MetadataQaInspector $metadataQaInspector,
+        MetadataQaReportCollector $qaReportCollector,
     ) {
         $this->extractors = [
             $normalizer,
@@ -47,7 +51,8 @@ final class TimeStage extends AbstractExtractorStage
             $solar,
         ];
 
-        $this->metadataQaInspector = $metadataQaInspector;
+        $this->metadataQaInspector  = $metadataQaInspector;
+        $this->qaReportCollector    = $qaReportCollector;
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
@@ -69,11 +74,12 @@ final class TimeStage extends AbstractExtractorStage
 
         $inspection = $this->metadataQaInspector->inspect($context->getFilePath(), $media);
         if ($inspection->hasIssues()) {
-            $message = $inspection->toLogMessage();
-            if ($message !== null) {
-                IndexLogHelper::append($media, $message);
+            $entry = $inspection->toIndexLogEntry();
+            if ($entry !== null) {
+                IndexLogHelper::appendEntry($media, $entry);
             }
 
+            $this->qaReportCollector->record($media, $inspection);
             $context = $context->withQaFinding($inspection);
         }
 

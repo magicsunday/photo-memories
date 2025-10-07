@@ -51,4 +51,9 @@ final class IndexLogHelper
 
         $media->setIndexLog($existing . "\n" . $line);
     }
+
+    public static function appendEntry(Media $media, IndexLogEntry $entry): void
+    {
+        self::append($media, $entry->toJson());
+    }
 }

@@ -46,10 +46,12 @@ final class MetadataQaInspectorTest extends TestCase
             $result->getSuggestions(),
         );
 
-        $message = $result->toLogMessage();
-        self::assertNotNull($message);
-        self::assertStringContainsString('daypart', $message);
-        self::assertStringContainsString('Empfehlung:', $message);
+        $entry = $result->toIndexLogEntry();
+        self::assertNotNull($entry);
+        $payload = $entry->toArray();
+        self::assertSame('metadata.qa', $payload['component']);
+        self::assertStringContainsString('daypart', $payload['message']);
+        self::assertStringContainsString('Empfehlung:', $payload['message']);
         self::assertNull($media->getIndexLog());
     }
 
@@ -74,7 +76,7 @@ final class MetadataQaInspectorTest extends TestCase
         $result = $inspector->inspect('/tmp/qa-metadata-present.jpg', $media);
 
         self::assertFalse($result->hasIssues());
-        self::assertNull($result->toLogMessage());
+        self::assertNull($result->toIndexLogEntry());
     }
 
     #[Test]

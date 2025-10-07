@@ -18,7 +18,11 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 
+use function explode;
+use function json_decode;
 use function log;
+
+use const JSON_THROW_ON_ERROR;
 
 final class MediaQualityAggregatorTest extends TestCase
 {
@@ -105,11 +109,12 @@ final class MediaQualityAggregatorTest extends TestCase
         self::assertTrue($media->isLowQuality());
         self::assertEqualsWithDelta(0.2, $media->getQualityClipping() ?? 0.0, 0.0005);
 
-        $log = $media->getIndexLog();
-        self::assertNotNull($log);
-        self::assertStringContainsString('quality|status=low', $log);
-        self::assertStringContainsString('clip=0.20', $log);
-        self::assertStringContainsString('noiseThreshold=0.25', $log);
+        $logLines = explode("\n", (string) $media->getIndexLog());
+        self::assertSame('time=exif; tz=UTC; off=+0', $logLines[0]);
+        $entry = json_decode($logLines[1], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('low', $entry['context']['status'] ?? null);
+        self::assertSame(0.2, $entry['context']['clipping'] ?? null);
+        self::assertEqualsWithDelta(0.25, $entry['context']['noiseThreshold'] ?? 0.0, 0.0001);
     }
 
     #[Test]
@@ -133,10 +138,9 @@ final class MediaQualityAggregatorTest extends TestCase
         self::assertNotNull($noiseScore);
         self::assertGreaterThan(0.14, $noiseScore);
 
-        $log = $media->getIndexLog();
-        self::assertNotNull($log);
-        self::assertStringContainsString('quality|status=ok', $log);
-        self::assertStringContainsString('noiseThreshold=0.10', $log);
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertSame('ok', $entries[0]['context']['status'] ?? null);
+        self::assertEqualsWithDelta(0.10, $entries[0]['context']['noiseThreshold'] ?? 0.0, 0.0001);
     }
 
     private function createMedia(int $id): Media

@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use MagicSunday\Memories\Support\IndexLogEntry;
+
 use function array_unique;
 use function array_values;
 use function implode;
@@ -65,7 +67,7 @@ final readonly class MetadataQaInspectionResult
         return $this->suggestions;
     }
 
-    public function toLogMessage(): ?string
+    public function toIndexLogEntry(): ?IndexLogEntry
     {
         if (!$this->hasIssues()) {
             return null;
@@ -76,6 +78,14 @@ final readonly class MetadataQaInspectionResult
             $message .= ' Empfehlung: ' . implode('; ', $this->suggestions) . '.';
         }
 
-        return $message;
+        return IndexLogEntry::warning(
+            'metadata.qa',
+            'time_features',
+            $message,
+            [
+                'missing' => $this->missingFeatures,
+                'suggestions' => $this->suggestions,
+            ],
+        );
     }
 }

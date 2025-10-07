@@ -19,6 +19,7 @@ use JsonException;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
@@ -158,7 +159,18 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                     $stdout   = $result['stdout'] ?? '';
                     if ($exitCode !== 0) {
                         $stderr = trim((string) ($result['stderr'] ?? ''));
-                        IndexLogHelper::append($media, sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode, $stderr));
+                        IndexLogHelper::appendEntry(
+                            $media,
+                            IndexLogEntry::error(
+                                'metadata.ffprobe',
+                                'process.failure',
+                                sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode, $stderr),
+                                [
+                                    'stage' => $component,
+                                    'exitCode' => $exitCode,
+                                ],
+                            ),
+                        );
 
                         return null;
                     }
@@ -180,16 +192,48 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             if (!$process->isSuccessful()) {
                 $stderr   = trim($process->getErrorOutput());
                 $exitCode = $process->getExitCode();
-                IndexLogHelper::append($media, sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode ?? -1, $stderr));
+                IndexLogHelper::appendEntry(
+                    $media,
+                    IndexLogEntry::error(
+                        'metadata.ffprobe',
+                        'process.failure',
+                        sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode ?? -1, $stderr),
+                        [
+                            'stage' => $component,
+                            'exitCode' => $exitCode ?? -1,
+                        ],
+                    ),
+                );
 
                 return null;
             }
 
             return $this->normaliseOutput($process->getOutput());
         } catch (ProcessTimedOutException $exception) {
-            IndexLogHelper::append($media, sprintf('[%s] ffprobe timeout after %.1fs', $component, $exception->getExceededTimeout()));
+            IndexLogHelper::appendEntry(
+                $media,
+                IndexLogEntry::warning(
+                    'metadata.ffprobe',
+                    'process.timeout',
+                    sprintf('[%s] ffprobe timeout after %.1fs', $component, $exception->getExceededTimeout()),
+                    [
+                        'stage' => $component,
+                        'timeoutSeconds' => $exception->getExceededTimeout(),
+                    ],
+                ),
+            );
         } catch (Throwable $exception) {
-            IndexLogHelper::append($media, sprintf('[%s] ffprobe error: %s', $component, $exception->getMessage()));
+            IndexLogHelper::appendEntry(
+                $media,
+                IndexLogEntry::error(
+                    'metadata.ffprobe',
+                    'process.error',
+                    sprintf('[%s] ffprobe error: %s', $component, $exception->getMessage()),
+                    [
+                        'stage' => $component,
+                    ],
+                ),
+            );
         }
 
         return null;
@@ -527,7 +571,17 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return [$instant, $tzName];
         }
 
-        IndexLogHelper::append($media, '[ffprobe.quicktime] Keine gültige QuickTime-Aufnahmezeit gefunden.');
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::warning(
+                'metadata.ffprobe',
+                'quicktime.missing_date',
+                '[ffprobe.quicktime] Keine gültige QuickTime-Aufnahmezeit gefunden.',
+                [
+                    'path' => $filepath,
+                ],
+            ),
+        );
 
         return null;
     }

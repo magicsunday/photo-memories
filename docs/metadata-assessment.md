@@ -36,11 +36,15 @@
 - [x] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L30-L251】【F:test/Unit/Service/Metadata/Quality/MediaQualityAggregatorTest.php†L19-L149】
 
 ### 6. QA & Beobachtbarkeit
+Die Konsolidierung der Index-Logs erfolgt jetzt über strukturierte JSON-Zeilen. Die neue Klasse `IndexLogEntry` definiert Komponentennamen, Events und optionale Kontexte, sodass Parser und QA-Tools konsistente Informationen erhalten.【F:src/Support/IndexLogEntry.php†L1-L165】 `IndexLogHelper::appendEntry()` ersetzt manuelle String-Konkatenation und wird von allen relevanten Extractoren genutzt, wodurch Fehler- und Erfolgsfälle einheitlich protokolliert werden.【F:src/Service/Metadata/CompositeMetadataExtractor.php†L17-L165】【F:src/Service/Metadata/TimeNormalizer.php†L17-L317】【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L17-L347】【F:src/Service/Metadata/ClipSceneTagExtractor.php†L17-L122】【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L1-L264】【F:src/Service/Indexing/Stage/ThumbnailGenerationStage.php†L1-L78】
+
+Ein neuer `MetadataQaReportCollector` sammelt fehlende Features, Vorschläge und Widersprüche während der Indexierung. `TimeStage` speist QA-Ergebnisse direkt ein, und `IndexCommand` rendert nach Abschluss einen konsolidierten Report inkl. Beispieldateien und Maßnahmenempfehlungen.【F:src/Service/Metadata/MetadataQaReportCollector.php†L1-L168】【F:src/Service/Indexing/Stage/TimeStage.php†L19-L96】【F:src/Command/IndexCommand.php†L1-L157】 Entwickler können den Bericht auch in Tests auswerten.【F:test/Unit/Service/Metadata/MetadataQaReportCollectorTest.php†L1-L66】【F:test/Integration/Service/Indexing/MetadataPipelineQaIntegrationTest.php†L1-L112】
+
 - [x] `MetadataQaInspector` um strukturierte Ergebnisse erweitern (statt Log-Zeilen), damit der Indexprozess maschinell reagieren kann.【F:src/Service/Metadata/MetadataQaInspector.php†L24-L78】【F:src/Service/Metadata/MetadataQaInspectionResult.php†L13-L69】【F:src/Service/Indexing/Contract/MediaIngestionContext.php†L19-L214】【F:src/Service/Indexing/Stage/TimeStage.php†L19-L87】
-- [ ] Einheitliches Index-Log-Schema definieren und in allen Extractoren anwenden (aktuell schreiben nur ausgewählte Klassen aggregierte Meldungen).
-- [ ] Dashboards/Reports für fehlende oder widersprüchliche Metadaten erstellen (z. B. Tageszeit ohne Zeitzone, Golden Hour ohne GPS).
+- [x] Einheitliches Index-Log-Schema definieren und in allen Extractoren anwenden (aktuell schreiben nur ausgewählte Klassen aggregierte Meldungen).
+- [x] Dashboards/Reports für fehlende oder widersprüchliche Metadaten erstellen (z. B. Tageszeit ohne Zeitzone, Golden Hour ohne GPS).
 
 ### 7. Tests & Dokumentation
-- [ ] Fehlende Unit-Tests für Daypart-, Solar- und Kalender-Edge-Cases ergänzen (z. B. Polartag, Zeitzonenwechsel, bewegliche Feiertage).【F:src/Service/Metadata/SolarEnricher.php†L87-L158】【F:src/Service/Metadata/CalendarFeatureEnricher.php†L67-L115】
-- [ ] Integrationstests für die vollständige Pipeline aufsetzen (Fixture-Medien mit erwarteten Feature-Sets).
-- [ ] Entwickler-Dokumentation aktualisieren, die neuen Konfigurationsoptionen und den erweiterten QA-Prozess beschreibt.
+- [x] Fehlende Unit-Tests für Daypart-, Solar- und Kalender-Edge-Cases ergänzen (z. B. Polartag, Zeitzonenwechsel, bewegliche Feiertage).【F:src/Service/Metadata/SolarEnricher.php†L87-L158】【F:src/Service/Metadata/CalendarFeatureEnricher.php†L67-L115】
+- [x] Integrationstests für die vollständige Pipeline aufsetzen (Fixture-Medien mit erwarteten Feature-Sets).
+- [x] Entwickler-Dokumentation aktualisieren, die neuen Konfigurationsoptionen und den erweiterten QA-Prozess beschreibt.

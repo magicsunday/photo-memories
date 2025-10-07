@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Command;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
+use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -48,6 +49,7 @@ final class IndexCommand extends Command
     public function __construct(
         private readonly MediaFileLocatorInterface $locator,
         private readonly MediaIngestionPipelineInterface $pipeline,
+        private readonly MetadataQaReportCollector $qaReportCollector,
         #[Autowire(env: 'MEMORIES_MEDIA_DIR')]
         private readonly string $defaultMediaDir,
     ) {
@@ -81,6 +83,8 @@ final class IndexCommand extends Command
 
             return Command::FAILURE;
         }
+
+        $this->qaReportCollector->reset();
 
         $output->writeln(sprintf('Starte Indexierung: <info>%s</info>', $path));
         $output->writeln(sprintf('Metadaten-Feature-Version: <info>%d</info>', MetadataFeatureVersion::CURRENT));
@@ -141,6 +145,8 @@ final class IndexCommand extends Command
         }
 
         $output->writeln(sprintf('<info>Indexierung abgeschlossen. Insgesamt verarbeitete Dateien: %d</info>', $count));
+        $this->qaReportCollector->render($output);
+        $this->qaReportCollector->reset();
 
         return Command::SUCCESS;
     }

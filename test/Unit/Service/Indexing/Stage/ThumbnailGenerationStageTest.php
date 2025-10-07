@@ -40,6 +40,10 @@ final class ThumbnailGenerationStageTest extends TestCase
 
         $stage->process($context);
 
-        self::assertSame('Thumbnail generation failed for /tmp/file.jpg: Generation failed', $media->getIndexLog());
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame('thumbnails.generate', $entries[0]['component']);
+        self::assertSame('failure', $entries[0]['event']);
+        self::assertSame('Thumbnail generation failed for /tmp/file.jpg: Generation failed', $entries[0]['message']);
     }
 }

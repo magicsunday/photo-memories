@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 use RuntimeException;
 use Throwable;
@@ -65,7 +66,20 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
                     $message = sprintf('%s Grund: %s', $message, $reason);
                 }
 
-                IndexLogHelper::append($media, $message);
+                $context = ['extractor' => $description];
+                if ($reason !== null) {
+                    $context['reason'] = $reason;
+                }
+
+                IndexLogHelper::appendEntry(
+                    $media,
+                    IndexLogEntry::info(
+                        'metadata.pipeline',
+                        'extractor.skip',
+                        $message,
+                        $context,
+                    ),
+                );
                 $this->telemetry->recordSkip($extractor::class);
 
                 continue;
@@ -92,7 +106,15 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
 
                 $description = $this->configuration->describeExtractor($extractor);
                 $message = sprintf('Extractor %s fehlgeschlagen: %s', $description, $exception->getMessage());
-                IndexLogHelper::append($media, $message);
+                IndexLogHelper::appendEntry(
+                    $media,
+                    IndexLogEntry::error(
+                        'metadata.pipeline',
+                        'extractor.failure',
+                        $message,
+                        ['extractor' => $description],
+                    ),
+                );
             }
         }
 
@@ -106,7 +128,15 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         }
 
         if (is_file($filepath) === false) {
-            IndexLogHelper::append($media, 'MIME-Bestimmung übersprungen: Datei nicht gefunden.');
+            IndexLogHelper::appendEntry(
+                $media,
+                IndexLogEntry::warning(
+                    'metadata.mime',
+                    'probe',
+                    'MIME-Bestimmung übersprungen: Datei nicht gefunden.',
+                    ['reason' => 'file_missing'],
+                ),
+            );
 
             return;
         }
@@ -122,9 +152,14 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         try {
             $mime = mime_content_type($filepath);
         } catch (Throwable $exception) {
-            IndexLogHelper::append(
+            IndexLogHelper::appendEntry(
                 $media,
-                sprintf('MIME-Bestimmung fehlgeschlagen: %s', $exception->getMessage())
+                IndexLogEntry::error(
+                    'metadata.mime',
+                    'probe',
+                    sprintf('MIME-Bestimmung fehlgeschlagen: %s', $exception->getMessage()),
+                    ['error' => $exception->getMessage()],
+                ),
             );
 
             return;
@@ -134,12 +169,28 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
 
         if (is_string($mime) && $mime !== '') {
             $media->setMime($mime);
-            IndexLogHelper::append($media, sprintf('MIME-Bestimmung erfolgreich: %s', $mime));
+            IndexLogHelper::appendEntry(
+                $media,
+                IndexLogEntry::info(
+                    'metadata.mime',
+                    'probe',
+                    sprintf('MIME-Bestimmung erfolgreich: %s', $mime),
+                    ['mime' => $mime],
+                ),
+            );
 
             return;
         }
 
-        IndexLogHelper::append($media, 'MIME-Bestimmung fehlgeschlagen: Keine gültige Antwort erhalten.');
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::warning(
+                'metadata.mime',
+                'probe',
+                'MIME-Bestimmung fehlgeschlagen: Keine gültige Antwort erhalten.',
+                ['error' => 'empty_response'],
+            ),
+        );
     }
 
     private function calculateDuration(?int $startedAt): ?float
