@@ -96,7 +96,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         $draft = new ClusterDraft(
             algorithm: 'demo',
             params: [
-                'version'        => '2024.1',
+                'algorithmVersion' => '2024.1',
                 'member_quality' => ['ordered' => [2, 1, 3]],
                 'movement'       => [
                     'segment_count'                               => 4,

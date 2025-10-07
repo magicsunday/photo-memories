@@ -464,23 +464,14 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      */
     private function resolveAlgorithmVersion(array $params): ?string
     {
-        $candidates = [
-            $params['algorithm_version'] ?? null,
-            $params['algorithmVersion'] ?? null,
-            $params['version'] ?? null,
-        ];
+        $value = $params['algorithmVersion'] ?? null;
 
-        $candidate = array_find(
-            $candidates,
-            static fn ($value): bool => (is_string($value) && $value !== '') || is_int($value)
-        );
-
-        if (is_string($candidate)) {
-            return $candidate;
+        if (is_string($value) && $value !== '') {
+            return $value;
         }
 
-        if (is_int($candidate)) {
-            return (string) $candidate;
+        if (is_int($value)) {
+            return (string) $value;
         }
 
         return null;
