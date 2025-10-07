@@ -15,11 +15,14 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\LocationHelper;
 
-use function array_map;
 use function assert;
 use function count;
 use function hash;
@@ -36,6 +39,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     /**
      * @var array<int, true>
@@ -43,6 +48,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     private readonly array $allowedWeekdayLookup;
 
     private ?string $expectedHomeConfigHash = null;
+
+    private ClusterQualityAggregator $qualityAggregator;
 
     /**
      * @param list<int> $allowedWeekdays
@@ -57,6 +64,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         private readonly int $minItemsPerDay,
         private readonly int $minItemsTotal,
         private readonly LocalTimeHelper $localTimeHelper,
+        private readonly LocationHelper $locationHelper,
+        ?ClusterQualityAggregator $qualityAggregator = null,
         private readonly string $homeVersionHash = '',
     ) {
         if ($this->algorithm === '') {
@@ -90,8 +99,9 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         if ($lookup === []) {
             throw new InvalidArgumentException('allowedWeekdays must contain at least one weekday between 1 and 7.');
         }
-
         $this->allowedWeekdayLookup = $lookup;
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     final public function name(): string
@@ -201,8 +211,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                 return;
             }
 
-            $centroid  = MediaMath::centroid($members);
-            $timeRange = MediaMath::timeRange($members);
+            $centroid = $this->computeCentroid($members);
+            $timeRange = $this->computeTimeRange($members);
 
             $params = ['time_range' => $timeRange];
 
@@ -215,11 +225,30 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                 $params['holidayId'] = $calendar['holidayId'];
             }
 
+            $tagMetadata = $this->collectDominantTags($members);
+            foreach ($tagMetadata as $tagKey => $tagValue) {
+                $params[$tagKey] = $tagValue;
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($members);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->buildPeopleParams($members);
+            foreach ($peopleParams as $peopleKey => $peopleValue) {
+                $params[$peopleKey] = $peopleValue;
+            }
+
+            $params = $this->appendLocationMetadata($members, $params);
+
             $clusters[] = new ClusterDraft(
                 algorithm: $this->algorithm,
                 params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $media): int => $media->getId(), $members),
+                members: $this->toMemberIds($members),
             );
 
             $run = [];
