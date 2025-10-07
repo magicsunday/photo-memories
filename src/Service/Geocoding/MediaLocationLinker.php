@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Service\Geocoding;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
+use function array_filter;
+use function array_values;
 use function count;
 use function explode;
 use function floor;
@@ -153,8 +155,11 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
 
         $normalized = str_replace('_', '-', $trimmed);
         $normalized = explode('.', $normalized, 2)[0];
-        $parts      = explode('-', $normalized);
-        $count      = count($parts);
+        $parts = array_values(array_filter(
+            explode('-', $normalized),
+            static fn (string $part): bool => $part !== ''
+        ));
+        $count = count($parts);
 
         if ($count === 0) {
             return 'de';
@@ -167,11 +172,6 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         }
 
         $header = implode('-', $parts);
-
-        if ($header === '') {
-            return 'de';
-        }
-
         return $header;
     }
 }

@@ -22,6 +22,11 @@ use function is_string;
  */
 final class OverpassElementFilter implements OverpassElementFilterInterface
 {
+    /**
+     * @param array<string, mixed> $element
+     *
+     * @return array{id: string, lat: float, lon: float, tags: array<string, mixed>}|null
+     */
     public function filter(array $element): ?array
     {
         $id = $this->elementId($element);
@@ -47,6 +52,9 @@ final class OverpassElementFilter implements OverpassElementFilterInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $element
+     */
     private function elementId(array $element): ?string
     {
         $type = $element['type'] ?? null;

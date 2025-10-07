@@ -283,7 +283,7 @@ final class LocationResolver implements PoiEnsurerInterface
         $location->setStale(false);
     }
 
-    private function resolveRefreshedAt(GeocodeResult $geocode): ?DateTimeImmutable
+    private function resolveRefreshedAt(GeocodeResult $geocode): DateTimeImmutable
     {
         if ($geocode->refreshedAt instanceof DateTimeImmutable) {
             return $geocode->refreshedAt;

@@ -160,7 +160,7 @@ final readonly class NominatimReverseGeocoder implements ReverseGeocoderInterfac
             MediaMath::haversineDistanceInMeters($lat, $lon, $lat, $west),
         ];
 
-        $radius = (float) max($distances);
+        $radius = max($distances);
 
         return $radius > 0.0 ? $radius : null;
     }

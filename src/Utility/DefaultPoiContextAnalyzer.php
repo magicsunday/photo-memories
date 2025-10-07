@@ -17,7 +17,6 @@ use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 use MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface;
 use MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface;
 
-use function is_array;
 use function is_finite;
 use function is_numeric;
 use function is_string;
@@ -44,21 +43,19 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
     public function resolvePrimaryPoi(Location $location): ?array
     {
         $pois = $location->getPois();
-        if (!is_array($pois) || $pois === []) {
+        if ($pois === null || $pois === []) {
             return null;
         }
 
+        /** @var list<array<string, mixed>> $pois */
         $candidates = [];
         foreach ($pois as $index => $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
             $normalised = $this->poiNormalizer->normalise($poi);
             if ($normalised === null) {
                 continue;
             }
 
+            /** @var array{name:string|null,names:array{default:string|null,localized:array<string,string>,alternates:list<string>},categoryKey:string|null,categoryValue:string|null,tags:array<string,string>} $normalised */
             $distance     = $this->distanceOrNull($poi['distanceMeters'] ?? null);
             $candidates[] = [
                 'data'     => $normalised,
@@ -104,7 +101,9 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
         );
 
         /** @var array{name:string|null,names:array{default:string|null,localized:array<string,string>,alternates:list<string>},categoryKey:string|null,categoryValue:string|null,tags:array<string,string>} $best */
-        return $candidates[0]['data'];
+        $best = $candidates[0]['data'];
+
+        return $best;
     }
 
     public function bestLabelForLocation(Location $location): ?string
@@ -165,7 +164,7 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             ++$counts[$key]['count'];
 
             foreach ($poi['tags'] as $tagKey => $tagValue) {
-                if (!is_string($tagKey) || $tagKey === '' || !is_string($tagValue) || $tagValue === '') {
+                if ($tagKey === '' || $tagValue === '') {
                     continue;
                 }
 

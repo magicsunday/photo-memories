@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Utility;
 use MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface;
 
 use function floor;
-use function is_string;
 
 /**
  * Applies the default POI weighting heuristics.
@@ -81,10 +80,6 @@ final class DefaultPoiScorer implements PoiScoringStrategyInterface
         }
 
         foreach ($poi['tags'] as $tagKey => $tagValue) {
-            if (!is_string($tagValue)) {
-                continue;
-            }
-
             $score += self::POI_TAG_WEIGHTS[$tagKey] ?? 0;
             $score += self::POI_TAG_VALUE_BONUS[$tagKey . ':' . $tagValue] ?? 0;
         }

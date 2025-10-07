@@ -19,6 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use function count;
 use function function_exists;
 use function is_array;
+use function is_string;
 use function iterator_to_array;
 use function mb_strimwidth;
 use function preg_replace;
@@ -106,7 +107,10 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
 
     private function formatProgressLabel(string $label): string
     {
-        $normalized = preg_replace('/\s+/u', ' ', trim($label)) ?? $label;
+        $normalized = preg_replace('/\s+/u', ' ', trim($label));
+        if (!is_string($normalized) || $normalized === '') {
+            $normalized = $label;
+        }
 
         if (function_exists('mb_strimwidth')) {
             return mb_strimwidth($normalized, 0, 70, '…', 'UTF-8');
