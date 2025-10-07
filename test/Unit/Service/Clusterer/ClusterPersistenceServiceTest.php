@@ -98,9 +98,20 @@ final class ClusterPersistenceServiceTest extends TestCase
                 'version'        => '2024.1',
                 'member_quality' => ['ordered' => [2, 1, 3]],
                 'movement'       => [
-                    'segment_count'      => 4,
-                    'fast_segment_ratio' => 0.5,
-                    'avg_speed_mps'      => 12.3,
+                    'segment_count'                               => 4,
+                    'fast_segment_count'                          => 2,
+                    'fast_segment_ratio'                          => 0.5,
+                    'speed_sample_count'                          => 3,
+                    'avg_speed_mps'                               => 12.3,
+                    'max_speed_mps'                               => 18.5,
+                    'heading_sample_count'                        => 2,
+                    'avg_heading_change_deg'                      => 45.0,
+                    'consistent_heading_segment_count'            => 2,
+                    'heading_consistency_ratio'                   => 1.0,
+                    'fast_segment_speed_threshold_mps'            => 5.0,
+                    'min_fast_segment_count_threshold'            => 2,
+                    'max_heading_change_threshold_deg'            => 90.0,
+                    'min_consistent_heading_segments_threshold'   => 1,
                 ],
             ],
             centroid: ['lat' => 48.123456, 'lon' => 11.654321],
@@ -149,9 +160,20 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame(0.0, $params['people_face_coverage']);
         self::assertArrayHasKey('movement', $params);
         self::assertSame([
-            'segment_count'      => 4,
-            'fast_segment_ratio' => 0.5,
-            'avg_speed_mps'      => 12.3,
+            'segment_count'                               => 4,
+            'fast_segment_count'                          => 2,
+            'fast_segment_ratio'                          => 0.5,
+            'speed_sample_count'                          => 3,
+            'avg_speed_mps'                               => 12.3,
+            'max_speed_mps'                               => 18.5,
+            'heading_sample_count'                        => 2,
+            'avg_heading_change_deg'                      => 45.0,
+            'consistent_heading_segment_count'            => 2,
+            'heading_consistency_ratio'                   => 1.0,
+            'fast_segment_speed_threshold_mps'            => 5.0,
+            'min_fast_segment_count_threshold'            => 2,
+            'max_heading_change_threshold_deg'            => 90.0,
+            'min_consistent_heading_segments_threshold'   => 1,
         ], $params['movement']);
 
         $persistedParams = $persisted->getParams();
@@ -161,9 +183,20 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertArrayHasKey('people_count', $persistedParams);
         self::assertArrayHasKey('movement', $persistedParams);
         self::assertSame([
-            'segment_count'      => 4,
-            'fast_segment_ratio' => 0.5,
-            'avg_speed_mps'      => 12.3,
+            'segment_count'                               => 4,
+            'fast_segment_count'                          => 2,
+            'fast_segment_ratio'                          => 0.5,
+            'speed_sample_count'                          => 3,
+            'avg_speed_mps'                               => 12.3,
+            'max_speed_mps'                               => 18.5,
+            'heading_sample_count'                        => 2,
+            'avg_heading_change_deg'                      => 45.0,
+            'consistent_heading_segment_count'            => 2,
+            'heading_consistency_ratio'                   => 1.0,
+            'fast_segment_speed_threshold_mps'            => 5.0,
+            'min_fast_segment_count_threshold'            => 2,
+            'max_heading_change_threshold_deg'            => 90.0,
+            'min_consistent_heading_segments_threshold'   => 1,
         ], $persistedParams['movement']);
     }
 
