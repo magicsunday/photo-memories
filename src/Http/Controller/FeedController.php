@@ -50,6 +50,7 @@ use function hash;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_int;
 use function is_numeric;
 use function is_string;
 use function max;
@@ -107,6 +108,10 @@ final class FeedController
         private int $defaultCoverWidth = 640,
         private int $defaultMemberWidth = 320,
         private int $maxThumbnailWidth = 2048,
+        private float $slideshowImageDuration = 3.5,
+        private float $slideshowTransitionDuration = 0.8,
+        private array $slideshowTransitions = [],
+        private ?string $slideshowMusic = null,
     ) {
         if ($this->defaultFeedLimit < 1) {
             $this->defaultFeedLimit = 24;
@@ -134,6 +139,36 @@ final class FeedController
 
         if ($this->maxThumbnailWidth < $this->defaultCoverWidth) {
             $this->maxThumbnailWidth = $this->defaultCoverWidth;
+        }
+
+        if ($this->slideshowImageDuration <= 0.0) {
+            $this->slideshowImageDuration = 3.5;
+        }
+
+        if ($this->slideshowTransitionDuration < 0.0) {
+            $this->slideshowTransitionDuration = 0.8;
+        }
+
+        $transitions = [];
+        foreach ($this->slideshowTransitions as $transition) {
+            if (!is_string($transition)) {
+                continue;
+            }
+
+            $trimmed = trim($transition);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $transitions[] = $trimmed;
+        }
+
+        $this->slideshowTransitions = $transitions;
+
+        if (!is_string($this->slideshowMusic) || trim($this->slideshowMusic) === '') {
+            $this->slideshowMusic = null;
+        } else {
+            $this->slideshowMusic = trim($this->slideshowMusic);
         }
     }
 
@@ -492,7 +527,102 @@ final class FeedController
             'zusatzdaten'        => $item->getParams(),
             'kontext'            => $clusterContext,
             'slideshow'          => $this->enrichSlideshowStatus($status),
+            'storyboard'         => $this->buildStoryboard($memberPayload),
         ];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $memberPayload
+     */
+    private function buildStoryboard(array $memberPayload): ?array
+    {
+        if ($memberPayload === []) {
+            return null;
+        }
+
+        $slides           = [];
+        $transitionCount  = count($this->slideshowTransitions);
+
+        foreach ($memberPayload as $index => $entry) {
+            $mediaId = $entry['mediaId'] ?? null;
+            if (!is_int($mediaId)) {
+                continue;
+            }
+
+            $slide = [
+                'mediaId'        => $mediaId,
+                'dauerSekunden'  => $this->slideshowImageDuration,
+                'thumbnail'      => $entry['thumbnail'] ?? null,
+                'uebergang'      => $this->resolveStoryboardTransition($index, $transitionCount),
+            ];
+
+            $beschreibung = $entry['beschreibung'] ?? null;
+            if (is_string($beschreibung) && trim($beschreibung) !== '') {
+                $slide['beschreibung'] = trim($beschreibung);
+            }
+
+            $aufgenommen = $entry['aufgenommenAmText'] ?? null;
+            if (is_string($aufgenommen) && $aufgenommen !== '') {
+                $slide['aufgenommenAmText'] = $aufgenommen;
+            }
+
+            $hinweis = $entry['hinweisAufgenommenAm'] ?? null;
+            if (is_string($hinweis) && $hinweis !== '') {
+                $slide['hinweis'] = $hinweis;
+            }
+
+            if (isset($entry['personen']) && is_array($entry['personen']) && $entry['personen'] !== []) {
+                $slide['personen'] = $entry['personen'];
+            }
+
+            if (isset($entry['szenen']) && is_array($entry['szenen']) && $entry['szenen'] !== []) {
+                $slide['szenen'] = $entry['szenen'];
+            }
+
+            if (isset($entry['schlagwoerter']) && is_array($entry['schlagwoerter']) && $entry['schlagwoerter'] !== []) {
+                $slide['schlagwoerter'] = $entry['schlagwoerter'];
+            }
+
+            if (isset($entry['ort']) && is_array($entry['ort'])) {
+                $slide['ort'] = $entry['ort'];
+            }
+
+            $slides[] = $slide;
+        }
+
+        if ($slides === []) {
+            return null;
+        }
+
+        $payload = [
+            'dauerSekunden'        => $this->slideshowImageDuration,
+            'uebergangSekunden'    => $this->slideshowTransitionDuration,
+            'folien'               => $slides,
+        ];
+
+        if ($this->slideshowTransitions !== []) {
+            $payload['uebergaenge'] = $this->slideshowTransitions;
+        }
+
+        if ($this->slideshowMusic !== null) {
+            $payload['musik'] = $this->slideshowMusic;
+        }
+
+        return $payload;
+    }
+
+    private function resolveStoryboardTransition(int $index, int $transitionCount): ?string
+    {
+        if ($transitionCount === 0) {
+            return null;
+        }
+
+        $transition = $this->slideshowTransitions[$index % $transitionCount] ?? null;
+        if (!is_string($transition) || $transition === '') {
+            return null;
+        }
+
+        return $transition;
     }
 
     private function buildThumbnailUrl(int $mediaId, int $width, string $baseUrl): string

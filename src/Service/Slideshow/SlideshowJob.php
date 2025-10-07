@@ -15,11 +15,14 @@ use RuntimeException;
 
 use function file_get_contents;
 use function is_array;
+use function is_int;
+use function is_numeric;
 use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error_msg;
 use function sprintf;
+use function trim;
 
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
@@ -30,7 +33,8 @@ use const JSON_THROW_ON_ERROR;
 final readonly class SlideshowJob
 {
     /**
-     * @param list<string> $images
+     * @param list<string>                                                                     $images
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
      */
     public function __construct(
         private string $id,
@@ -39,6 +43,9 @@ final readonly class SlideshowJob
         private string $lockPath,
         private string $errorPath,
         private array $images,
+        private array $slides,
+        private ?float $transitionDuration,
+        private ?string $audioTrack,
     ) {
     }
 
@@ -76,16 +83,65 @@ final readonly class SlideshowJob
     }
 
     /**
+     * @return list<array{image:string,mediaId:int|null,duration:float,transition:string|null}>
+     */
+    public function slides(): array
+    {
+        return $this->slides;
+    }
+
+    public function transitionDuration(): ?float
+    {
+        return $this->transitionDuration;
+    }
+
+    public function audioTrack(): ?string
+    {
+        return $this->audioTrack;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array
     {
+        $storyboard = [
+            'slides' => array_map(
+                static function (array $slide): array {
+                    $payload = [
+                        'image'    => $slide['image'],
+                        'duration' => $slide['duration'],
+                    ];
+
+                    if ($slide['mediaId'] !== null) {
+                        $payload['mediaId'] = $slide['mediaId'];
+                    }
+
+                    if ($slide['transition'] !== null) {
+                        $payload['transition'] = $slide['transition'];
+                    }
+
+                    return $payload;
+                },
+                $this->slides,
+            ),
+        ];
+
+        if ($this->transitionDuration !== null) {
+            $storyboard['transitionDuration'] = $this->transitionDuration;
+        }
+
+        if ($this->audioTrack !== null) {
+            $storyboard['music'] = $this->audioTrack;
+        }
+
         return [
-            'id'     => $this->id,
-            'output' => $this->outputPath,
-            'lock'   => $this->lockPath,
-            'error'  => $this->errorPath,
-            'images' => $this->images,
+            'id'         => $this->id,
+            'output'     => $this->outputPath,
+            'lock'       => $this->lockPath,
+            'error'      => $this->errorPath,
+            'images'     => $this->images,
+            'storyboard' => $storyboard,
         ];
     }
 
@@ -134,7 +190,118 @@ final readonly class SlideshowJob
             throw new RuntimeException('Job payload does not contain any usable images.');
         }
 
-        return new self($id, $path, $output, $lock, $error, $images);
+        $storyboardRaw = $payload['storyboard'] ?? [];
+        if (!is_array($storyboardRaw)) {
+            $storyboardRaw = [];
+        }
+
+        $storyboard = self::normaliseStoryboard($storyboardRaw, $images);
+
+        return new self(
+            $id,
+            $path,
+            $output,
+            $lock,
+            $error,
+            $images,
+            $storyboard['slides'],
+            $storyboard['transitionDuration'],
+            $storyboard['music'],
+        );
+    }
+
+    /**
+     * @param array<string,mixed> $storyboard
+     * @param list<string>        $images
+     *
+     * @return array{slides:list<array{image:string,mediaId:int|null,duration:float,transition:string|null}>,transitionDuration:float|null,music:string|null}
+     */
+    private static function normaliseStoryboard(array $storyboard, array $images): array
+    {
+        $slidesRaw = $storyboard['slides'] ?? [];
+        $slides    = [];
+
+        if (is_array($slidesRaw)) {
+            foreach ($slidesRaw as $index => $slide) {
+                if (!is_array($slide)) {
+                    continue;
+                }
+
+                $image = $slide['image'] ?? ($images[$index] ?? null);
+                if (!is_string($image) || $image === '') {
+                    continue;
+                }
+
+                $durationRaw = $slide['duration'] ?? null;
+                $duration    = is_numeric($durationRaw) ? (float) $durationRaw : 0.0;
+                if ($duration <= 0.0) {
+                    $duration = 0.0;
+                }
+
+                $mediaRaw = $slide['mediaId'] ?? null;
+                $mediaId  = null;
+                if (is_int($mediaRaw)) {
+                    $mediaId = $mediaRaw;
+                } elseif (is_numeric($mediaRaw)) {
+                    $mediaId = (int) $mediaRaw;
+                }
+
+                $transitionRaw = $slide['transition'] ?? null;
+                $transition    = null;
+                if (is_string($transitionRaw)) {
+                    $trimmed = trim($transitionRaw);
+                    if ($trimmed !== '') {
+                        $transition = $trimmed;
+                    }
+                }
+
+                $slides[] = [
+                    'image'      => $image,
+                    'mediaId'    => $mediaId,
+                    'duration'   => $duration,
+                    'transition' => $transition,
+                ];
+            }
+        }
+
+        if ($slides === []) {
+            foreach ($images as $image) {
+                $slides[] = [
+                    'image'      => $image,
+                    'mediaId'    => null,
+                    'duration'   => 0.0,
+                    'transition' => null,
+                ];
+            }
+        }
+
+        $transitionRaw      = $storyboard['transitionDuration'] ?? null;
+        $transitionDuration = null;
+        if (is_numeric($transitionRaw)) {
+            $transitionDuration = (float) $transitionRaw;
+            if ($transitionDuration <= 0.0) {
+                $transitionDuration = null;
+            }
+        }
+
+        $musicRaw = $storyboard['music'] ?? null;
+        if (!is_string($musicRaw)) {
+            $musicRaw = $storyboard['audio'] ?? null;
+        }
+
+        $music = null;
+        if (is_string($musicRaw)) {
+            $trimmed = trim($musicRaw);
+            if ($trimmed !== '') {
+                $music = $trimmed;
+            }
+        }
+
+        return [
+            'slides'             => $slides,
+            'transitionDuration' => $transitionDuration,
+            'music'              => $music,
+        ];
     }
 
     private static function requireString(mixed $value, string $field): string

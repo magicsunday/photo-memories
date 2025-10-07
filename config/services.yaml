@@ -91,6 +91,8 @@ services:
             $transitionDuration: '%memories.slideshow.transition_duration_s%'
             $width: '%memories.slideshow.video_width%'
             $height: '%memories.slideshow.video_height%'
+            $transitions: '%memories.slideshow.transitions%'
+            $audioTrack: '%memories.slideshow.music_path%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -102,7 +104,10 @@ services:
             $videoDirectory: '%memories.slideshow.video_dir%'
             $projectDirectory: '%kernel.project_dir%'
             $slideDuration: '%memories.slideshow.image_duration_s%'
+            $transitionDuration: '%memories.slideshow.transition_duration_s%'
             $phpBinary: '%memories.slideshow.php_binary%'
+            $transitions: '%memories.slideshow.transitions%'
+            $musicTrack: '%memories.slideshow.music_path%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
@@ -1100,6 +1105,10 @@ services:
             $defaultCoverWidth: '%memories.http.feed.cover_width%'
             $defaultMemberWidth: '%memories.http.feed.member_width%'
             $maxThumbnailWidth: '%memories.http.feed.max_thumbnail_width%'
+            $slideshowImageDuration: '%memories.slideshow.image_duration_s%'
+            $slideshowTransitionDuration: '%memories.slideshow.transition_duration_s%'
+            $slideshowTransitions: '%memories.slideshow.transitions%'
+            $slideshowMusic: '%memories.slideshow.music_path%'
             $thumbnailService: '@MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface'
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
             $profileProvider: '@MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider'
