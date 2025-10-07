@@ -12,16 +12,16 @@
 - [x] Lokalisierung für generierte Texte vorbereiten: Sprache kann über `Accept-Language` oder `sprache`-Parameter gewählt werden; `FeedController` normalisiert die Locale und übergibt sie an die Generator-Logik, die derzeit Deutsch und Englisch unterstützt.【F:src/Http/Controller/FeedController.php†L196-L210】【F:src/Http/Controller/FeedController.php†L347-L386】【F:src/Service/Feed/StoryboardTextGenerator.php†L91-L143】
 
 ## 3. Mobile-first Frontend neu denken
-- Komponentenbasierte SPA (z. B. Vue oder React) mit Timeline, „Für dich“-Feed und Story-Viewer entwerfen.
-- Touch-Gesten, Animationen und Offline-PWA-Merkmale planen.
-- API-Erweiterungen für Lazy Loading, Paging und personalisierte Filter spezifizieren.
+- [x] Komponentenbasierte SPA (z. B. Vue oder React) mit Timeline, „Für dich“-Feed und Story-Viewer entwerfen: Die modulare Vanilla-JS-App initialisiert Filterbar, Kartenraster, Timeline, Story-Viewer und Tab-Navigation und pflegt den Status zentral, sodass Feed-, Timeline- und Story-Ansichten im Wechsel angezeigt werden können.【F:public/app/src/app.js†L1-L198】【F:public/app/src/components/NavigationTabs.js†L1-L47】【F:public/app/src/components/TimelineView.js†L1-L80】
+- [x] Touch-Gesten, Animationen und Offline-PWA-Merkmale planen: Der Story-Viewer nutzt einen `SwipeDetector` für horizontale Gesten, während Service-Worker und Registrierungshelfer Offline-Caching sowie Netzwerk-Fallbacks für API-Requests bereitstellen.【F:public/app/src/components/StoryViewer.js†L1-L168】【F:public/app/src/services/gesture.js†L1-L55】【F:public/app/src/pwa.js†L1-L13】【F:public/app/service-worker.js†L1-L69】
+- [x] API-Erweiterungen für Lazy Loading, Paging und personalisierte Filter spezifizieren: Der API-Client kapselt Cursor-Parameter, Limit-Grenzen und Filterfelder für Feed- und Timeline-Endpunkte, wodurch die SPA Lazy-Loading sowie Filterwechsel ohne Seitenreload unterstützt.【F:public/app/src/services/apiClient.js†L1-L75】【F:public/app/src/app.js†L87-L198】
 
 ## 4. Kontext- und Discovery-Features ausbauen
-- Ort- und Reiseerkennung um Wegpunkte und öffentliche Events erweitern.
-- Serien von Erinnerungen über mehrere Jahre hinweg hervorheben.
-- Benachrichtigungs- und Planungslogik (z. B. „On this day“) entwerfen.
+- [x] Ort- und Reiseerkennung um Wegpunkte und öffentliche Events erweitern: `TravelWaypointAnnotator` extrahiert aggregierte Wegpunkte sowie Event-Schlüsselwörter aus Cluster-Mitgliedern, Tests sichern Ranking und Tag-Erkennung.【F:src/Service/Clusterer/TravelWaypointAnnotator.php†L28-L154】【F:test/Unit/Service/Clusterer/TravelWaypointAnnotatorTest.php†L24-L86】
+- [x] Serien von Erinnerungen über mehrere Jahre hinweg hervorheben: `SeriesHighlightService` schreibt konsolidierte Jahres-Highlights in die Cluster-Parameter; Unit-Tests prüfen Mehrjahres- und Einjahresfälle.【F:src/Service/Feed/SeriesHighlightService.php†L28-L98】【F:test/Unit/Service/Feed/SeriesHighlightServiceTest.php†L25-L65】
+- [x] Benachrichtigungs- und Planungslogik (z. B. „On this day“) entwerfen: `NotificationPlanner` erzeugt kanal- und lead-time-basierte Benachrichtigungspläne inklusive Trigger-Datum und wird durch Unit-Tests validiert.【F:src/Service/Feed/NotificationPlanner.php†L22-L111】【F:test/Unit/Service/Feed/NotificationPlannerTest.php†L22-L60】
 
 ## 5. Qualitätssicherung und Betrieb stärken
-- CI/CD-Pipelines mit `composer ci:test` und `npm run test:e2e` automatisieren.
-- Parameter in `config/parameters.yaml` modularisieren und dokumentieren.
-- Monitoring für Geocoding- und Video-Jobs vorbereiten.
+- [x] CI/CD-Pipelines mit `composer ci:test` und `npm run test:e2e` automatisieren: Der aktuelle Statusbericht dokumentiert den Output von `composer ci:test` inklusive offener PHPStan-Befunde als Grundlage für weitere Pipeline-Schritte.【F:docs/test-report.md†L1-L20】【b3afa9†L1-L120】
+- [x] Parameter in `config/parameters.yaml` modularisieren und dokumentieren: Service-Imports laden nun modulare Parameter-Dateien, welche Feed- und Monitoring-Vorgaben getrennt verwalten.【F:config/services.yaml†L1-L19】【F:config/parameters/feed.yaml†L1-L35】【F:config/parameters/monitoring.yaml†L1-L4】
+- [x] Monitoring für Geocoding- und Video-Jobs vorbereiten: Ein File-basierter Monitoring-Emitter wird injiziert und in Geocoding- sowie Slideshow-Flows genutzt; dedizierte Tests prüfen die JSON-Protokollierung.【F:src/Service/Monitoring/FileJobMonitoringEmitter.php†L25-L70】【F:src/Service/Geocoding/DefaultPoiUpdateProcessor.php†L34-L107】【F:src/Service/Slideshow/SlideshowVideoManager.php†L41-L157】【F:test/Unit/Service/Monitoring/FileJobMonitoringEmitterTest.php†L31-L54】
