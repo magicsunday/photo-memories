@@ -1091,6 +1091,9 @@ services:
     MagicSunday\Memories\Service\Feed\ThumbnailPathResolver: ~
     MagicSunday\Memories\Service\Feed\HtmlFeedRenderer: ~
     MagicSunday\Memories\Service\Feed\HtmlFeedExportService: ~
+    MagicSunday\Memories\Service\Feed\StoryboardTextGenerator:
+        arguments:
+            $defaultLocale: '%memories.localization.preferred_locale%'
 
     MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface:
         alias: MagicSunday\Memories\Service\Feed\HtmlFeedExportService

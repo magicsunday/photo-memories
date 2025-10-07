@@ -23,7 +23,10 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DateTimeExifMetadataProcessor;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
@@ -132,7 +135,7 @@ final class FeedControllerTest extends TestCase
             ->with([1, 2, 3], false)
             ->willReturn([$mediaOne, $mediaTwo, $mediaThree]);
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             $mapper,
@@ -167,6 +170,15 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('pagination', $meta);
         self::assertFalse($meta['pagination']['hatWeitere']);
         self::assertNull($meta['pagination']['nextCursor']);
+
+        $storyboard = $payload['items'][0]['storyboard'];
+        self::assertIsArray($storyboard);
+        self::assertArrayHasKey('titel', $storyboard);
+        self::assertArrayHasKey('beschreibung', $storyboard);
+        self::assertNotSame('', $storyboard['titel']);
+        self::assertNotSame('', $storyboard['beschreibung']);
+
+        unlink($storagePath);
     }
 
     public function testFeedFormatsTakenAtWithExifOffset(): void
@@ -224,7 +236,7 @@ final class FeedControllerTest extends TestCase
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             new ClusterEntityToDraftMapper([]),
@@ -250,6 +262,8 @@ final class FeedControllerTest extends TestCase
         self::assertSame('2024-05-01T14:20:30+01:30', $item['galerie'][0]['aufgenommenAm']);
 
         self::assertSame(90, $media->getTimezoneOffsetMin());
+
+        unlink($storagePath);
     }
 
     public function testFeedRejectsInvalidDate(): void
@@ -266,7 +280,7 @@ final class FeedControllerTest extends TestCase
         $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             $mapper,
@@ -283,6 +297,8 @@ final class FeedControllerTest extends TestCase
         self::assertSame(400, $response->getStatusCode());
         $body = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('Invalid date filter format, expected YYYY-MM-DD.', $body['error']);
+
+        unlink($storagePath);
     }
 
     public function testThumbnailDeliversBinaryResponse(): void
@@ -316,7 +332,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService->expects(self::never())->method('generateAll');
         $entityManager->expects(self::never())->method('flush');
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             $mapper,
@@ -335,6 +351,7 @@ final class FeedControllerTest extends TestCase
         self::assertSame($tempFile, $response->getFilePath());
 
         unlink($tempFile);
+        unlink($storagePath);
     }
 
     public function testThumbnailReturnsNotFoundWhenMediaMissing(): void
@@ -354,7 +371,7 @@ final class FeedControllerTest extends TestCase
             ->with([123], false)
             ->willReturn([]);
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             $mapper,
@@ -372,6 +389,8 @@ final class FeedControllerTest extends TestCase
         self::assertSame(404, $response->getStatusCode());
         $body = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('Media not found.', $body['error']);
+
+        unlink($storagePath);
     }
 
     public function testThumbnailGeneratesMissingThumbnailWhenAbsent(): void
@@ -411,7 +430,7 @@ final class FeedControllerTest extends TestCase
         $entityManager->expects(self::once())
             ->method('flush');
 
-        $controller = new FeedController(
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
             $clusterRepo,
             $mapper,
@@ -430,5 +449,58 @@ final class FeedControllerTest extends TestCase
 
         unlink($original);
         unlink($generated);
+        unlink($storagePath);
+    }
+
+    /**
+     * @return array{0: FeedController, 1: string}
+     */
+    private function createControllerWithDependencies(
+        FeedBuilderInterface $feedBuilder,
+        ClusterRepository $clusterRepo,
+        ClusterEntityToDraftMapper $mapper,
+        ThumbnailPathResolver $thumbnailResolver,
+        MediaRepository $mediaRepo,
+        ThumbnailServiceInterface $thumbnailService,
+        SlideshowVideoManagerInterface $slideshowManager,
+        EntityManagerInterface $entityManager,
+    ): array {
+        $profileProvider = new FeedPersonalizationProfileProvider([
+            'default' => [
+                'min_score'             => 0.0,
+                'min_members'           => 1,
+                'max_per_day'           => 24,
+                'max_total'             => 120,
+                'max_per_algorithm'     => 24,
+                'quality_floor'         => 0.0,
+                'people_coverage_min'   => 0.0,
+                'recent_days'           => 0,
+                'stale_days'            => 0,
+                'recent_score_bonus'    => 0.0,
+                'stale_score_penalty'   => 0.0,
+            ],
+        ]);
+
+        $storagePath = tempnam(sys_get_temp_dir(), 'prefs');
+        self::assertIsString($storagePath);
+
+        $preferenceStorage = new FeedUserPreferenceStorage($storagePath);
+        $storyboardGenerator = new StoryboardTextGenerator();
+
+        $controller = new FeedController(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+            $profileProvider,
+            $preferenceStorage,
+            $storyboardGenerator,
+        );
+
+        return [$controller, $storagePath];
     }
 }
