@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 
+use function strcmp;
 use function usort;
 
 /**
@@ -66,21 +67,52 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         }
 
         // Ensure chronological ordering so day summaries receive a consistent sequence.
-        usort($timestamped, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        $ordered = $this->sortChronologically($timestamped);
 
         // Determine the traveller's base location, which anchors day grouping and trip detection.
-        $home = $this->homeLocator->determineHome($timestamped);
+        $home = $this->homeLocator->determineHome($ordered);
         if ($home === null) {
             return [];
         }
 
         // Build per-day statistics (distances, stay points, etc.) required to evaluate candidate vacation runs.
-        $days = $this->daySummaryBuilder->buildDaySummaries($timestamped, $home);
+        $days = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
         if ($days === []) {
             return [];
         }
 
         // Translate day summaries into scored vacation segments ready for persistence.
         return $this->segmentAssembler->detectSegments($days, $home);
+    }
+
+    /**
+     * @param list<Media> $items
+     *
+     * @return list<Media>
+     */
+    private function sortChronologically(array $items): array
+    {
+        $ordered = $items;
+
+        usort(
+            $ordered,
+            static function (Media $left, Media $right): int {
+                $leftTakenAt  = $left->getTakenAt();
+                $rightTakenAt = $right->getTakenAt();
+
+                if ($leftTakenAt === null || $rightTakenAt === null) {
+                    return $leftTakenAt <=> $rightTakenAt;
+                }
+
+                $comparison = $leftTakenAt <=> $rightTakenAt;
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+
+                return strcmp($left->getPath(), $right->getPath());
+            }
+        );
+
+        return $ordered;
     }
 }
