@@ -66,8 +66,8 @@ final class MetadataQaInspectorTest extends TestCase
         );
         $media->setTimezoneOffsetMin(120);
         $media->setFeatures([
-            'daypart'      => 'morning',
-            'isGoldenHour' => true,
+            'calendar' => ['daypart' => 'morning'],
+            'solar'    => ['isGoldenHour' => true],
         ]);
         $media->setTzConfidence(0.8);
 
@@ -89,8 +89,8 @@ final class MetadataQaInspectorTest extends TestCase
             lon: 11.6,
         );
         $media->setFeatures([
-            'daypart'      => 'morning',
-            'isGoldenHour' => false,
+            'calendar' => ['daypart' => 'morning'],
+            'solar'    => ['isGoldenHour' => false],
         ]);
 
         $result = $inspector->inspect('/tmp/qa-timezone-missing.jpg', $media);

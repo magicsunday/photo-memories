@@ -75,11 +75,11 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         }
 
         if (!$sunEvents->isRegularDay()) {
-            $features                  = $media->getFeatures() ?? [];
-            $features['isGoldenHour']  = false;
-            $features['isPolarDay']    = $sunEvents->isPolarDay;
-            $features['isPolarNight']  = $sunEvents->isPolarNight;
-            $media->setFeatures($features);
+            $bag = $media->getFeatureBag();
+            $bag->setSolarIsGoldenHour(false);
+            $bag->setSolarIsPolarDay($sunEvents->isPolarDay);
+            $bag->setSolarIsPolarNight($sunEvents->isPolarNight);
+            $media->setFeatureBag($bag);
 
             return $media;
         }
@@ -97,11 +97,11 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $isGolden = ($photoLocal >= $sunriseLocal && $photoLocal <= ($sunriseLocal + $delta))
             || ($photoLocal >= ($sunsetLocal - $delta) && $photoLocal <= $sunsetLocal);
 
-        $features                  = $media->getFeatures() ?? [];
-        $features['isGoldenHour']  = $isGolden;
-        $features['isPolarDay']    = false;
-        $features['isPolarNight']  = false;
-        $media->setFeatures($features);
+        $bag = $media->getFeatureBag();
+        $bag->setSolarIsGoldenHour($isGolden);
+        $bag->setSolarIsPolarDay(false);
+        $bag->setSolarIsPolarNight(false);
+        $media->setFeatureBag($bag);
 
         return $media;
     }

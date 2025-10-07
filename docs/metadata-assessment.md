@@ -21,9 +21,9 @@
 - [x] QA-Checks erweitern (z. B. Prüfung auf `timezoneOffsetMin`, `tzConfidence`) und automatisch Korrekturmaßnahmen vorschlagen.【F:src/Service/Metadata/MetadataQaInspector.php†L15-L82】
 
 ### 3. Feature-Taxonomie & Datenmodell
-- [ ] Das freie `features`-Array durch einen typisierten Value-Object-Ansatz ersetzen oder zumindest Namespaces/Hydration-Helper definieren, um Key-Kollisionen zu verhindern.【F:src/Service/Metadata/DaypartEnricher.php†L49-L51】【F:src/Service/Metadata/CalendarFeatureEnricher.php†L46-L62】
+- [x] Das freie `features`-Array durch einen typisierten Value-Object-Ansatz ersetzen oder zumindest Namespaces/Hydration-Helper definieren, um Key-Kollisionen zu verhindern.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L1-L219】【F:src/Entity/Media.php†L585-L610】【F:src/Service/Metadata/DaypartEnricher.php†L41-L59】【F:src/Service/Metadata/FilenameKeywordExtractor.php†L30-L52】
 - [ ] Feature-Versionierung (`MetadataFeatureVersion`) modularisieren, sodass pro Feature-Gruppe Migrationsroutinen definiert werden können.【F:src/Service/Metadata/MetadataFeatureVersion.php†L13-L31】
-- [ ] Dokumentation der Feature-Semantik (z. B. `daypart`, `holidayId`, `isGoldenHour`) erstellen und automatisiert verifizieren (Schema-Validierung in Tests).
+- [x] Dokumentation der Feature-Semantik (z. B. `daypart`, `holidayId`, `isGoldenHour`) erstellen und automatisiert verifizieren (Schema-Validierung in Tests).【F:docs/metadata-feature-semantics.md†L1-L120】
 
 ### 4. Video-Metadaten & Prozessausführung
 - [ ] `FfprobeMetadataExtractor` auf Symfony Process bzw. asynchrone Ausführung umstellen, um Timeout/Exit-Code-Handhabung zu verbessern.【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L70-L145】

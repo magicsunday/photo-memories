@@ -123,7 +123,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             configure: static function (Media $media) use ($takenAt): void {
                 $weekday = (int) (new DateTimeImmutable($takenAt, new DateTimeZone('UTC')))->format('N');
                 $media->setFeatures([
-                    'isWeekend' => $weekday >= 6,
+                    'calendar' => ['isWeekend' => $weekday >= 6],
                 ]);
             },
         );

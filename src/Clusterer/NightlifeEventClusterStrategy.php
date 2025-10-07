@@ -230,14 +230,12 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         return array_any(
             $run,
             static function (Media $media): bool {
-                $features = $media->getFeatures();
-                if (!is_array($features)) {
+                $daypart = $media->getFeatureBag()->calendarDaypart();
+                if ($daypart === null) {
                     return false;
                 }
 
-                $daypart = $features['daypart'] ?? null;
-
-                return is_string($daypart) && strtolower($daypart) === 'night';
+                return strtolower($daypart) === 'night';
             }
         );
     }

@@ -35,8 +35,9 @@ final class CalendarFeatureEnricherTest extends TestCase
         $features = $result->getFeatures();
 
         self::assertIsArray($features);
-        self::assertTrue($features['isHoliday']);
-        self::assertSame($expectedId, $features['holidayId']);
+        self::assertArrayHasKey('calendar', $features);
+        self::assertTrue($features['calendar']['isHoliday']);
+        self::assertSame($expectedId, $features['calendar']['holidayId']);
     }
 
     /**
@@ -85,7 +86,8 @@ final class CalendarFeatureEnricherTest extends TestCase
         $features = $result->getFeatures();
 
         self::assertIsArray($features);
-        self::assertFalse($features['isHoliday']);
-        self::assertArrayNotHasKey('holidayId', $features);
+        self::assertArrayHasKey('calendar', $features);
+        self::assertFalse($features['calendar']['isHoliday']);
+        self::assertArrayNotHasKey('holidayId', $features['calendar']);
     }
 }

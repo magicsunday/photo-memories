@@ -15,9 +15,6 @@ use MagicSunday\Memories\Entity\Media;
 
 use function array_key_first;
 use function count;
-use function is_array;
-use function is_bool;
-use function is_string;
 use function trim;
 
 /**
@@ -41,38 +38,35 @@ final class CalendarFeatureHelper
      */
     public static function extract(Media $media): array
     {
-        $features = $media->getFeatures();
-
         $season    = null;
         $isWeekend = null;
         $isHoliday = null;
         $holidayId = null;
 
-        if (is_array($features)) {
-            $seasonValue = $features['season'] ?? null;
-            if (is_string($seasonValue)) {
-                $seasonValue = trim($seasonValue);
-                if ($seasonValue !== '') {
-                    $season = $seasonValue;
-                }
+        $bag         = $media->getFeatureBag();
+        $seasonValue = $bag->calendarSeason();
+        if ($seasonValue !== null) {
+            $seasonValue = trim($seasonValue);
+            if ($seasonValue !== '') {
+                $season = $seasonValue;
             }
+        }
 
-            $isWeekendValue = $features['isWeekend'] ?? null;
-            if (is_bool($isWeekendValue)) {
-                $isWeekend = $isWeekendValue;
-            }
+        $isWeekendValue = $bag->calendarIsWeekend();
+        if ($isWeekendValue !== null) {
+            $isWeekend = $isWeekendValue;
+        }
 
-            $isHolidayValue = $features['isHoliday'] ?? null;
-            if (is_bool($isHolidayValue)) {
-                $isHoliday = $isHolidayValue;
-            }
+        $isHolidayValue = $bag->calendarIsHoliday();
+        if ($isHolidayValue !== null) {
+            $isHoliday = $isHolidayValue;
+        }
 
-            $holidayIdValue = $features['holidayId'] ?? null;
-            if (is_string($holidayIdValue)) {
-                $holidayIdValue = trim($holidayIdValue);
-                if ($holidayIdValue !== '') {
-                    $holidayId = $holidayIdValue;
-                }
+        $holidayIdValue = $bag->calendarHolidayId();
+        if ($holidayIdValue !== null) {
+            $holidayIdValue = trim($holidayIdValue);
+            if ($holidayIdValue !== '') {
+                $holidayId = $holidayIdValue;
             }
         }
 

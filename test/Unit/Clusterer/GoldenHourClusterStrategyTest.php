@@ -104,7 +104,9 @@ final class GoldenHourClusterStrategyTest extends TestCase
             lon: 9.0,
             configure: static function (Media $media) use ($golden): void {
                 if ($golden !== null) {
-                    $media->setFeatures(['isGoldenHour' => $golden]);
+                    $media->setFeatures([
+                        'solar' => ['isGoldenHour' => $golden],
+                    ]);
                 }
 
                 $media->setSceneTags([

@@ -25,8 +25,10 @@ final class ContentClassifierExtractorTest extends TestCase
     {
         $media = $this->buildMedia(10, 'image/png', 1284, 2778);
         $media->setFeatures([
-            'pathTokens'   => ['2025', 'Screenshot'],
-            'filenameHint' => 'normal',
+            'file' => [
+                'pathTokens'   => ['2025', 'Screenshot'],
+                'filenameHint' => 'normal',
+            ],
         ]);
         $media->setSharpness(0.1);
         $media->setColorfulness(0.1);
@@ -43,7 +45,7 @@ final class ContentClassifierExtractorTest extends TestCase
     {
         $media = $this->buildMedia(11, 'image/jpeg', 2400, 3200);
         $media->setFeatures([
-            'pathTokens' => ['Scan'],
+            'file' => ['pathTokens' => ['Scan']],
         ]);
         $media->setColorfulness(0.15);
         $media->setContrast(0.70);
@@ -63,7 +65,7 @@ final class ContentClassifierExtractorTest extends TestCase
         $media->setIsVideo(true);
         $media->setVideoFps(60.0);
         $media->setFeatures([
-            'pathTokens' => ['Screenrecord'],
+            'file' => ['pathTokens' => ['Screenrecord']],
         ]);
 
         $extractor = new ContentClassifierExtractor();
@@ -78,7 +80,7 @@ final class ContentClassifierExtractorTest extends TestCase
     {
         $media = $this->buildMedia(13, 'image/png', 2048, 2048);
         $media->setFeatures([
-            'pathTokens' => ['City', 'Map'],
+            'file' => ['pathTokens' => ['City', 'Map']],
         ]);
         $media->setColorfulness(0.6);
         $media->setEntropy(0.5);

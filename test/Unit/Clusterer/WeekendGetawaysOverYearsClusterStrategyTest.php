@@ -125,7 +125,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
             $isWeekend = ((int) $takenAt->format('N')) >= 6;
             $media->setFeatures([
-                'isWeekend' => $isWeekend,
+                'calendar' => ['isWeekend' => $isWeekend],
             ]);
         }
 
