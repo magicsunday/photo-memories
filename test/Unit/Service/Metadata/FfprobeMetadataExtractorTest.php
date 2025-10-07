@@ -197,8 +197,10 @@ final class FfprobeMetadataExtractorTest extends TestCase
 
             self::assertNull($media->getVideoCodec());
             self::assertNull($media->getTakenAt());
-            self::assertNotNull($media->getIndexLog());
-            self::assertStringContainsString('ffprobe exited with 1', (string) $media->getIndexLog());
+            $entries = $this->decodeIndexLog($media->getIndexLog());
+            self::assertNotSame([], $entries);
+            self::assertStringContainsString('ffprobe exited with 1', (string) $entries[0]['message']);
+            self::assertSame('metadata.ffprobe', $entries[0]['component']);
         } finally {
             unlink($videoPath);
         }

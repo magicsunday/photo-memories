@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function array_keys;
@@ -75,7 +76,21 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         }
 
         $media->setSceneTags($tags);
-        IndexLogHelper::append($media, $this->formatSceneSummary($tags));
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::info(
+                'metadata.scene',
+                'tags',
+                $this->formatSceneSummary($tags),
+                [
+                    'count' => count($tags),
+                    'topTags' => array_map(
+                        static fn (array $tag): string => $tag['label'],
+                        $tags,
+                    ),
+                ],
+            ),
+        );
 
         return $media;
     }

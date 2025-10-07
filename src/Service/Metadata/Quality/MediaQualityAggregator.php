@@ -13,14 +13,13 @@ namespace MagicSunday\Memories\Service\Metadata\Quality;
 
 use DateTimeInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function abs;
-use function implode;
 use function log;
 use function max;
 use function min;
-use function sprintf;
 
 /**
  * Aggregates per-media quality metrics into reusable summary scores.
@@ -217,36 +216,44 @@ final class MediaQualityAggregator
         ?float $clippingShare,
         float $noiseThreshold,
     ): void {
-        $parts = ['quality'];
-        $parts[] = sprintf('status=%s', $isLowQuality ? 'low' : 'ok');
+        $context = [
+            'status' => $isLowQuality ? 'low' : 'ok',
+            'noiseThreshold' => $noiseThreshold,
+        ];
 
         if ($qualityScore !== null) {
-            $parts[] = sprintf('score=%.2f', $qualityScore);
+            $context['score'] = $qualityScore;
         }
 
         if ($sharpnessScore !== null) {
-            $parts[] = sprintf('sharp=%.2f', $sharpnessScore);
+            $context['sharpness'] = $sharpnessScore;
         }
 
         if ($noiseScore !== null) {
-            $parts[] = sprintf('noise=%.2f', $noiseScore);
+            $context['noise'] = $noiseScore;
         }
 
-        $parts[] = sprintf('noiseThreshold=%.2f', $noiseThreshold);
-
         if ($exposureScore !== null) {
-            $parts[] = sprintf('exposure=%.2f', $exposureScore);
+            $context['exposure'] = $exposureScore;
         }
 
         if ($clippingShare !== null) {
-            $parts[] = sprintf('clip=%.2f', $clippingShare);
+            $context['clipping'] = $clippingShare;
         }
 
         $takenAt = $media->getTakenAt();
         if ($takenAt instanceof DateTimeInterface) {
-            $parts[] = sprintf('takenAt=%s', $takenAt->format(DateTimeInterface::ATOM));
+            $context['takenAt'] = $takenAt;
         }
 
-        IndexLogHelper::append($media, implode('|', $parts));
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::info(
+                'metadata.quality',
+                'aggregate',
+                'Qualitätsmetriken aggregiert.',
+                $context,
+            ),
+        );
     }
 }

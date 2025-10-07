@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Metadata\Support\FilenameDateParser;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function abs;
@@ -196,14 +197,24 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
         $offset = $media->getTimezoneOffsetMin();
         $tzId   = $media->getTzId() ?? $this->defaultTimezone()->getName();
 
-        $summary = sprintf(
-            'time=%s; tz=%s; off=%s',
-            $source instanceof TimeSource ? $source->value : 'none',
-            $tzId,
-            $offset !== null ? sprintf('%+d', $offset) : 'n/a',
-        );
+        $context = [
+            'timeSource' => $source instanceof TimeSource ? $source->value : 'none',
+            'timezone' => $tzId,
+        ];
 
-        IndexLogHelper::append($media, $summary);
+        if ($offset !== null) {
+            $context['offsetMinutes'] = $offset;
+        }
+
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::info(
+                'metadata.time',
+                'summary',
+                'Zeitinformationen normalisiert.',
+                $context,
+            ),
+        );
     }
 
     private function defaultTimezone(): DateTimeZone
@@ -290,7 +301,17 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             $deltaMinutes,
         );
 
-        IndexLogHelper::append($media, $message);
+        IndexLogHelper::appendEntry(
+            $media,
+            IndexLogEntry::warning(
+                'metadata.time',
+                'plausibility',
+                $message,
+                [
+                    'deltaMinutes' => $deltaMinutes,
+                ],
+            ),
+        );
     }
 
     private function candidateToTimeSource(string $candidate): ?TimeSource

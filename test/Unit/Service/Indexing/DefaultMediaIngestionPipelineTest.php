@@ -38,6 +38,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
 use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
+use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\SolarEnricher;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
@@ -467,6 +468,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
                 $extractors['time']['daypart'],
                 $extractors['time']['solar'],
                 $this->createMetadataQaInspector(),
+                new MetadataQaReportCollector(),
             ),
             new GeoStage($extractors['geo']['feature']),
             new QualityStage($extractors['quality']['vision']),

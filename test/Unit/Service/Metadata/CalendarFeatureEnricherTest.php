@@ -69,6 +69,11 @@ final class CalendarFeatureEnricherTest extends TestCase
             new DateTimeImmutable('2024-10-03T14:45:00+00:00'),
             'de-unity-2024',
         ];
+
+        yield 'easter monday timezone shift' => [
+            new DateTimeImmutable('2024-04-01T00:30:00+02:00'),
+            'de-eastermon-2024',
+        ];
     }
 
     #[Test]

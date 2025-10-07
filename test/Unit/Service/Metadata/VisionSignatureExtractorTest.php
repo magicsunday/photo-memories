@@ -55,9 +55,9 @@ final class VisionSignatureExtractorTest extends TestCase
             self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
             self::assertTrue($media->isLowQuality());
 
-            $log = $media->getIndexLog();
-            self::assertNotNull($log);
-            self::assertStringContainsString('clip=1.00', $log);
+            $entries = $this->decodeIndexLog($media->getIndexLog());
+            self::assertNotSame([], $entries);
+            self::assertEqualsWithDelta(1.0, $entries[0]['context']['clipping'] ?? 0.0, 0.0001);
         } finally {
             unlink($imagePath);
         }
@@ -106,10 +106,10 @@ final class VisionSignatureExtractorTest extends TestCase
             self::assertEqualsWithDelta(1.0, $media->getQualityClipping() ?? 0.0, 0.0005);
             self::assertTrue($media->isLowQuality());
 
-            $log = $media->getIndexLog();
-            self::assertNotNull($log);
-            self::assertStringContainsString('qlt=low', $log);
-            self::assertStringContainsString('clip=1.00', $log);
+            $entries = $this->decodeIndexLog($media->getIndexLog());
+            self::assertNotSame([], $entries);
+            self::assertSame('low', $entries[0]['context']['status'] ?? null);
+            self::assertEqualsWithDelta(1.0, $entries[0]['context']['clipping'] ?? 0.0, 0.0001);
         } finally {
             unlink($videoPath);
         }

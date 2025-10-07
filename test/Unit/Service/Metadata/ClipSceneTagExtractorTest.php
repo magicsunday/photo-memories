@@ -18,6 +18,11 @@ use MagicSunday\Memories\Service\Metadata\VisionSceneTagModelInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
+use function explode;
+use function json_decode;
+
+use const JSON_THROW_ON_ERROR;
+
 final class ClipSceneTagExtractorTest extends TestCase
 {
     #[Test]
@@ -56,7 +61,12 @@ final class ClipSceneTagExtractorTest extends TestCase
         self::assertSame('Outdoor', $tags[2]['label']);
         self::assertEqualsWithDelta(0.72, $tags[2]['score'], 0.0001);
 
-        self::assertSame('scene=Porträt(0.76),Strand(0.74),Outdoor(0.72)', $result->getIndexLog());
+        $entries = $this->decodeIndexLog($result->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame('metadata.scene', $entries[0]['component']);
+        self::assertSame('scene=Porträt(0.76),Strand(0.74),Outdoor(0.72)', $entries[0]['message']);
+        self::assertSame(3, $entries[0]['context']['count'] ?? null);
+        self::assertSame(['Porträt', 'Strand', 'Outdoor'], $entries[0]['context']['topTags'] ?? []);
 
         $features = $result->getFeatures();
         self::assertIsArray($features);
@@ -137,10 +147,11 @@ final class ClipSceneTagExtractorTest extends TestCase
         $extractor = new ClipSceneTagExtractor($model, maxTags: 2, minScore: 0.3);
         $result    = $extractor->extract('/tmp/scene2.jpg', $media);
 
-        self::assertSame(
-            "time=exif; tz=UTC; off=+0\nscene=beach(0.82),sunset(0.64)",
-            $result->getIndexLog()
-        );
+        $logLines = explode("\n", (string) $result->getIndexLog());
+        self::assertSame('time=exif; tz=UTC; off=+0', $logLines[0]);
+        $entry = json_decode($logLines[1], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('metadata.scene', $entry['component']);
+        self::assertSame('scene=beach(0.82),sunset(0.64)', $entry['message']);
     }
 
     #[Test]

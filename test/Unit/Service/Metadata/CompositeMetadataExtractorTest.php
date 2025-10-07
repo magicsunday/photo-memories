@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
+use function array_key_last;
 use function chmod;
 use function file_put_contents;
 use function is_file;
@@ -52,7 +53,11 @@ final class CompositeMetadataExtractorTest extends TestCase
         $composite->extract($tmp, $media);
 
         self::assertNull($media->getMime());
-        self::assertSame('MIME-Bestimmung übersprungen: Datei nicht gefunden.', $media->getIndexLog());
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame('metadata.mime', $entries[0]['component']);
+        self::assertSame('MIME-Bestimmung übersprungen: Datei nicht gefunden.', $entries[0]['message']);
+        self::assertSame('file_missing', $entries[0]['context']['reason'] ?? null);
     }
 
     #[Test]
@@ -80,7 +85,11 @@ final class CompositeMetadataExtractorTest extends TestCase
         $composite->extract($tmp, $media);
 
         self::assertSame('text/plain', $media->getMime());
-        self::assertSame('MIME-Bestimmung erfolgreich: text/plain', $media->getIndexLog());
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame('metadata.mime', $entries[0]['component']);
+        self::assertSame('MIME-Bestimmung erfolgreich: text/plain', $entries[0]['message']);
+        self::assertSame('text/plain', $entries[0]['context']['mime'] ?? null);
 
         if (is_file($tmp) && unlink($tmp) === false) {
             self::fail('Unable to clean up temporary file.');
@@ -165,8 +174,13 @@ final class CompositeMetadataExtractorTest extends TestCase
         $composite->extract('/tmp/disabled', $media);
 
         self::assertFalse($extractor->supportsCalled);
-        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $media->getIndexLog());
-        self::assertStringContainsString('deaktiviert. Grund: Testabschaltung', (string) $media->getIndexLog());
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertNotSame([], $entries);
+        $last = $entries[array_key_last($entries)];
+        self::assertSame('metadata.pipeline', $last['component']);
+        self::assertSame('extractor.skip', $last['event']);
+        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $last['message']);
+        self::assertSame('Testabschaltung', $last['context']['reason'] ?? null);
 
         $summary = $telemetry->get($extractor::class);
         self::assertNotNull($summary);
@@ -200,8 +214,13 @@ final class CompositeMetadataExtractorTest extends TestCase
 
         $composite->extract('/tmp/failure', $media);
 
-        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $media->getIndexLog());
-        self::assertStringContainsString('fehlgeschlagen: broken for test', (string) $media->getIndexLog());
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertNotSame([], $entries);
+        $last = $entries[array_key_last($entries)];
+        self::assertSame('metadata.pipeline', $last['component']);
+        self::assertSame('extractor.failure', $last['event']);
+        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $last['message']);
+        self::assertStringContainsString('fehlgeschlagen: broken for test', (string) $last['message']);
 
         $summary = $telemetry->get($extractor::class);
         self::assertNotNull($summary);

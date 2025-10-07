@@ -24,8 +24,10 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
+use function explode;
 use function file_exists;
 use function file_put_contents;
+use function json_decode;
 use function rename;
 use function sprintf;
 use function strtotime;
@@ -33,6 +35,8 @@ use function sys_get_temp_dir;
 use function tempnam;
 use function touch;
 use function unlink;
+
+use const JSON_THROW_ON_ERROR;
 
 final class TimeNormalizerTest extends TestCase
 {
@@ -55,13 +59,12 @@ final class TimeNormalizerTest extends TestCase
 
         self::assertSame(TimeSource::EXIF, $result->getTimeSource());
         self::assertSame(1.0, $result->getTzConfidence());
-        $expectedSummary = sprintf(
-            'time=%s; tz=%s; off=%+d',
-            TimeSource::EXIF->value,
-            (string) $result->getTzId(),
-            (int) $result->getTimezoneOffsetMin(),
-        );
-        self::assertSame('initial' . "\n" . $expectedSummary, $result->getIndexLog());
+        $logLines = explode("\n", (string) $result->getIndexLog());
+        self::assertSame('initial', $logLines[0]);
+        $entry = json_decode($logLines[1], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('metadata.time', $entry['component']);
+        self::assertSame('Zeitinformationen normalisiert.', $entry['message']);
+        self::assertSame(TimeSource::EXIF->value, $entry['context']['timeSource'] ?? null);
     }
 
     #[Test]
@@ -82,13 +85,10 @@ final class TimeNormalizerTest extends TestCase
         $result = $normalizer->extract($media->getPath(), $media);
 
         self::assertSame(TimeSource::VIDEO_QUICKTIME, $result->getTimeSource());
-        $expectedSummary = sprintf(
-            'time=%s; tz=%s; off=%+d',
-            TimeSource::VIDEO_QUICKTIME->value,
-            (string) $result->getTzId(),
-            (int) $result->getTimezoneOffsetMin(),
-        );
-        self::assertSame('video' . "\n" . $expectedSummary, $result->getIndexLog());
+        $logLines = explode("\n", (string) $result->getIndexLog());
+        self::assertSame('video', $logLines[0]);
+        $entry = json_decode($logLines[1], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(TimeSource::VIDEO_QUICKTIME->value, $entry['context']['timeSource'] ?? null);
     }
 
     #[Test]
@@ -107,7 +107,10 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame('Europe/Berlin', $result->getTzId());
         self::assertSame(120, $result->getTimezoneOffsetMin());
         self::assertSame(0.4, $result->getTzConfidence());
-        self::assertSame('time=FILENAME; tz=Europe/Berlin; off=+120', $result->getIndexLog());
+        $entries = $this->decodeIndexLog($result->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame('Europe/Berlin', $entries[0]['context']['timezone'] ?? null);
+        self::assertSame(120, $entries[0]['context']['offsetMinutes'] ?? null);
     }
 
     #[Test]
@@ -139,13 +142,9 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame('Europe/Berlin', $result->getTzId());
         self::assertSame(60, $result->getTimezoneOffsetMin());
         self::assertSame(0.2, $result->getTzConfidence());
-        $expectedSummary = sprintf(
-            'time=%s; tz=%s; off=%+d',
-            TimeSource::FILE_MTIME->value,
-            (string) $result->getTzId(),
-            (int) $result->getTimezoneOffsetMin(),
-        );
-        self::assertSame($expectedSummary, $result->getIndexLog());
+        $entries = $this->decodeIndexLog($result->getIndexLog());
+        self::assertCount(1, $entries);
+        self::assertSame(TimeSource::FILE_MTIME->value, $entries[0]['context']['timeSource'] ?? null);
 
         if (file_exists($filename)) {
             unlink($filename);
@@ -176,7 +175,8 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame('Europe/Rome', $result->getTzId());
         self::assertSame(120, $result->getTimezoneOffsetMin());
         self::assertSame(0.8, $result->getTzConfidence());
-        self::assertStringContainsString('tz=Europe/Rome', (string) $result->getIndexLog());
+        $entries = $this->decodeIndexLog($result->getIndexLog());
+        self::assertSame('Europe/Rome', $entries[0]['context']['timezone'] ?? null);
     }
 
     #[Test]
@@ -243,7 +243,12 @@ final class TimeNormalizerTest extends TestCase
         $result = $normalizer->extract($media->getPath(), $media);
 
         self::assertSame(TimeSource::EXIF, $result->getTimeSource());
-        self::assertStringContainsString('Warnung: Aufnahmezeit weicht vom Dateisystem', (string) $result->getIndexLog());
+        $entries = $this->decodeIndexLog($result->getIndexLog());
+        self::assertCount(2, $entries);
+        $warning = $entries[1];
+        self::assertSame('metadata.time', $warning['component']);
+        self::assertSame('plausibility', $warning['event']);
+        self::assertStringContainsString('Warnung: Aufnahmezeit weicht vom Dateisystem', (string) $warning['message']);
 
         if (file_exists($filename)) {
             unlink($filename);
