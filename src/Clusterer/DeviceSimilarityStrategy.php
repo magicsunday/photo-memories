@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
@@ -36,10 +37,11 @@ use function trim;
 final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
 
     public function __construct(
-        private LocationHelper $locHelper,
+        private LocationHelper $locationHelper,
         private int $minItemsPerGroup = 5,
     ) {
         if ($this->minItemsPerGroup < 1) {
@@ -70,7 +72,7 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
 
         $ingest = function (Media $m, string $date) use (&$groups, &$devices): void {
             $descriptor = $this->buildDeviceDescriptor($m);
-            $locKey     = $this->locHelper->localityKeyForMedia($m) ?? 'noloc';
+            $locKey     = $this->locationHelper->localityKeyForMedia($m) ?? 'noloc';
 
             $key = $descriptor['key'] . '|' . $date . '|' . $locKey;
             $groups[$key] ??= [];
@@ -98,14 +100,10 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
 
         $drafts = [];
         foreach ($eligibleGroups as $key => $group) {
-            $label  = $this->locHelper->majorityLabel($group);
             $params = [
                 'time_range' => $this->computeTimeRange($group),
                 'device'     => $devices[$key] ?? 'Unbekanntes Gerät',
             ];
-            if ($label !== null) {
-                $params['place'] = $label;
-            }
 
             $metadata = $this->summarizeStableMetadata($group);
             if ($metadata['lensModel'] !== null) {
@@ -123,6 +121,8 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             if ($tagMetadata !== []) {
                 $params = [...$params, ...$tagMetadata];
             }
+
+            $params = $this->appendLocationMetadata($group, $params);
 
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
