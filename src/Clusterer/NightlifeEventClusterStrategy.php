@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -20,7 +21,6 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_any;
-use function array_map;
 use function array_values;
 use function assert;
 use function count;
@@ -38,6 +38,7 @@ use function usort;
 final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
@@ -156,6 +157,9 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                 'time_range' => $time,
             ];
 
+            $peopleParams = $this->buildPeopleParams($run);
+            $params       = [...$params, ...$peopleParams];
+
             if ($hasNight === true) {
                 $params['feature_daypart'] = 'night';
             }
@@ -184,7 +188,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                 algorithm: 'nightlife_event',
                 params: $params,
                 centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $run)
+                members: $this->toMemberIds($run)
             );
         }
 

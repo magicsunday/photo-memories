@@ -39,6 +39,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $cluster->setParam('people_count', $peopleMetrics['mentions']);
         $cluster->setParam('people_unique', $peopleMetrics['unique']);
         $cluster->setParam('people_coverage', $peopleMetrics['coverage']);
+        $cluster->setParam('people_face_coverage', $peopleMetrics['faceCoverage']);
     }
 
     public function score(ClusterDraft $cluster): float
@@ -58,7 +59,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
      * @param int                 $members
      * @param array<string,mixed> $params
      *
-     * @return array{score:float,unique:int,mentions:int,coverage:float}
+     * @return array{score:float,unique:int,mentions:int,coverage:float,faceCoverage:float}
      */
     private function computePeopleMetrics(array $mediaItems, int $members, array $params): array
     {
@@ -69,12 +70,14 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             $mentions = (int) ($params['people_count'] ?? 0);
             $unique   = (int) ($params['people_unique'] ?? 0);
             $coverage = $this->clamp01($this->floatOrNull($params['people_coverage'] ?? null));
+            $face     = $this->clamp01($this->floatOrNull($params['people_face_coverage'] ?? null));
 
             return [
                 'score'    => $score,
                 'unique'   => $unique,
                 'mentions' => $mentions,
                 'coverage' => $coverage,
+                'faceCoverage' => $face,
             ];
         }
 
@@ -86,6 +89,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             'unique'   => $peopleParams['people_unique'],
             'mentions' => $peopleParams['people_count'],
             'coverage' => $peopleParams['people_coverage'],
+            'faceCoverage' => $peopleParams['people_face_coverage'],
         ];
     }
 }
