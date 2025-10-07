@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -39,6 +41,9 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
+
+    private ClusterQualityAggregator $qualityAggregator;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
@@ -46,6 +51,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         private int $timeGapSeconds = 3 * 3600, // 3h
         private float $radiusMeters = 300.0,
         private int $minItemsPerRun = 5,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->timeGapSeconds < 1) {
             throw new InvalidArgumentException('timeGapSeconds must be >= 1.');
@@ -58,6 +64,8 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         if ($this->minItemsPerRun < 1) {
             throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -165,7 +173,12 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
 
             if ($sceneTags !== []) {
-                $params['scene_tags'] = $sceneTags;
+                $existingSceneTags = [];
+                if (isset($params['scene_tags']) && is_array($params['scene_tags'])) {
+                    $existingSceneTags = $this->sanitizeSceneTagList($params['scene_tags']);
+                }
+
+                $params['scene_tags'] = $this->mergeSceneTagEntries($existingSceneTags, $sceneTags);
             }
 
             if ($poi !== null) {
@@ -183,6 +196,20 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                     $params['poi_tags'] = $poi['tags'];
                 }
             }
+
+            $tagMetadata = $this->collectDominantTags($run);
+            if ($tagMetadata !== []) {
+                $params = [...$params, ...$tagMetadata];
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($run);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $params = $this->appendLocationMetadata($run, $params);
 
             $out[] = new ClusterDraft(
                 algorithm: 'nightlife_event',
@@ -331,5 +358,76 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         }
 
         return null;
+    }
+
+    /**
+     * @param list<array{label: string, score: float}> $existing
+     * @param list<array{label: string, score: float}> $additional
+     *
+     * @return list<array{label: string, score: float}>
+     */
+    private function mergeSceneTagEntries(array $existing, array $additional): array
+    {
+        $normalized = [];
+
+        foreach ($existing as $entry) {
+            $label = $entry['label'];
+            $score = $entry['score'];
+
+            if (!isset($normalized[$label]) || $normalized[$label]['score'] < $score) {
+                $normalized[$label] = [
+                    'label' => $label,
+                    'score' => $score,
+                ];
+            }
+        }
+
+        foreach ($additional as $entry) {
+            $label = $entry['label'];
+            $score = $entry['score'];
+
+            if (!isset($normalized[$label]) || $normalized[$label]['score'] < $score) {
+                $normalized[$label] = [
+                    'label' => $label,
+                    'score' => $score,
+                ];
+            }
+        }
+
+        return array_values($normalized);
+    }
+
+    /**
+     * @param array<mixed> $raw
+     *
+     * @return list<array{label: string, score: float}>
+     */
+    private function sanitizeSceneTagList(array $raw): array
+    {
+        $result = [];
+
+        foreach ($raw as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
+            $label = $entry['label'] ?? null;
+            if (!is_string($label)) {
+                continue;
+            }
+
+            $score = $entry['score'] ?? null;
+            $value = 0.0;
+            if (is_float($score) || is_int($score)) {
+                $value = (float) $score;
+            }
+
+            $result[] = [
+                'label' => $label,
+                'score' => $value,
+            ];
+        }
+
+        return $result;
     }
 }
