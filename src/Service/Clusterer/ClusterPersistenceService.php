@@ -609,9 +609,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             return $quality;
         }
 
-        $legacyRanked = $metadata['ranked'] ?? null;
-
-        return $this->extractOrderedList($legacyRanked, $original);
+        return null;
     }
 
     /**

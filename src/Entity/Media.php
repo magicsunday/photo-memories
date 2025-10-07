@@ -2251,9 +2251,9 @@ class Media
     }
 
     /**
-     * Sets the feature payload using either the legacy flat structure or the namespaced format.
+     * Sets the feature payload using the namespaced format.
      *
-     * @param array<string, scalar|array|null>|array<string, array<string, scalar|array|null>>|null $v features describing the scene
+     * @param array<string, array<string, scalar|array|null>>|null $v features describing the scene
      */
     public function setFeatures(?array $v): void
     {

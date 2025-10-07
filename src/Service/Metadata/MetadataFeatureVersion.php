@@ -28,7 +28,6 @@ final class MetadataFeatureVersion
         'calendar' => ['version' => 1, 'migration' => null],
         'solar'    => ['version' => 1, 'migration' => null],
         'file'     => ['version' => 1, 'migration' => null],
-        'legacy'   => ['version' => 1, 'migration' => null],
     ];
 
     /**

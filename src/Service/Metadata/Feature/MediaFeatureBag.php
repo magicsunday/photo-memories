@@ -15,8 +15,6 @@ final class MediaFeatureBag
     public const NAMESPACE_SOLAR = 'solar';
     public const NAMESPACE_FILE = 'file';
     public const NAMESPACE_CLASSIFICATION = 'classification';
-    public const NAMESPACE_LEGACY = 'legacy';
-
     /**
      * @var array<string, array<string, scalar|array|null>>
      */
@@ -36,7 +34,7 @@ final class MediaFeatureBag
     }
 
     /**
-     * @param array<string, scalar|array|null>|array<string, array<string, scalar|array|null>>|null $features
+     * @param array<string, array<string, scalar|array|null>>|null $features
      */
     public static function fromArray(?array $features): self
     {
@@ -48,17 +46,14 @@ final class MediaFeatureBag
             return self::create();
         }
 
-        if (self::isNamespacedFormat($features) === true) {
-            /** @var array<string, array<string, scalar|array|null>> $typed */
-            $typed = $features;
-
-            return new self($typed);
+        if (self::isNamespacedFormat($features) === false) {
+            throw new InvalidArgumentException('Media features must be provided in namespaced format.');
         }
 
-        /** @var array<string, scalar|array|null> $flat */
-        $flat = $features;
+        /** @var array<string, array<string, scalar|array|null>> $typed */
+        $typed = $features;
 
-        return new self(self::migrateLegacyFormat($flat));
+        return new self($typed);
     }
 
     /**
@@ -318,7 +313,7 @@ final class MediaFeatureBag
     }
 
     /**
-     * @param array<string, scalar|array|null>|array<string, array<string, scalar|array|null>> $features
+     * @param array<string, array<string, scalar|array|null>>|array<string, scalar|array|null> $features
      */
     private static function isNamespacedFormat(array $features): bool
     {
@@ -329,56 +324,5 @@ final class MediaFeatureBag
         }
 
         return true;
-    }
-
-    /**
-     * @param array<string, scalar|array|null> $features
-     *
-     * @return array<string, array<string, scalar|array|null>>
-     */
-    private static function migrateLegacyFormat(array $features): array
-    {
-        $namespaced = [];
-
-        foreach ($features as $key => $value) {
-            if (array_key_exists($key, self::legacyMap()) === true) {
-                [$namespace, $namespacedKey] = self::legacyMap()[$key];
-                if (array_key_exists($namespace, $namespaced) === false) {
-                    $namespaced[$namespace] = [];
-                }
-
-                $namespaced[$namespace][$namespacedKey] = $value;
-
-                continue;
-            }
-
-            if (array_key_exists(self::NAMESPACE_LEGACY, $namespaced) === false) {
-                $namespaced[self::NAMESPACE_LEGACY] = [];
-            }
-
-            $namespaced[self::NAMESPACE_LEGACY][$key] = $value;
-        }
-
-        return $namespaced;
-    }
-
-    /**
-     * @return array<string, array{0: string, 1: string}>
-     */
-    private static function legacyMap(): array
-    {
-        return [
-            'daypart' => [self::NAMESPACE_CALENDAR, 'daypart'],
-            'dow' => [self::NAMESPACE_CALENDAR, 'dow'],
-            'isWeekend' => [self::NAMESPACE_CALENDAR, 'isWeekend'],
-            'season' => [self::NAMESPACE_CALENDAR, 'season'],
-            'isHoliday' => [self::NAMESPACE_CALENDAR, 'isHoliday'],
-            'holidayId' => [self::NAMESPACE_CALENDAR, 'holidayId'],
-            'isGoldenHour' => [self::NAMESPACE_SOLAR, 'isGoldenHour'],
-            'isPolarDay' => [self::NAMESPACE_SOLAR, 'isPolarDay'],
-            'isPolarNight' => [self::NAMESPACE_SOLAR, 'isPolarNight'],
-            'pathTokens' => [self::NAMESPACE_FILE, 'pathTokens'],
-            'filenameHint' => [self::NAMESPACE_FILE, 'filenameHint'],
-        ];
     }
 }
