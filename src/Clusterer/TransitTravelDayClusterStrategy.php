@@ -189,12 +189,17 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     'segment_count'                    => $segmentCount,
                     'fast_segment_count'               => $fastSegmentCount,
                     'fast_segment_ratio'               => $segmentCount > 0 ? $fastSegmentCount / $segmentCount : null,
+                    'speed_sample_count'               => $speedSamples,
                     'avg_speed_mps'                    => $speedSamples > 0 ? $speedSum / $speedSamples : null,
                     'max_speed_mps'                    => $maxSpeedMps,
                     'heading_sample_count'             => $headingSamples,
                     'avg_heading_change_deg'           => $headingSamples > 0 ? $headingChangeSum / $headingSamples : null,
                     'consistent_heading_segment_count' => $consistentHeadingSegments,
                     'heading_consistency_ratio'        => $headingSamples > 0 ? $consistentHeadingSegments / $headingSamples : null,
+                    'fast_segment_speed_threshold_mps' => $this->minSegmentSpeedMps,
+                    'min_fast_segment_count_threshold' => $this->minFastSegments,
+                    'max_heading_change_threshold_deg' => $this->maxHeadingChangeDeg,
+                    'min_consistent_heading_segments_threshold' => $this->minConsistentHeadingSegments,
                 ];
 
                 return true;

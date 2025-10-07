@@ -59,9 +59,20 @@ final class ClusterEntityToDraftMapperTest extends TestCase
     public function mapManyPreservesExtendedParameters(): void
     {
         $movement = [
-            'segment_count'      => 5,
-            'fast_segment_ratio' => 0.4,
-            'avg_speed_mps'      => 8.1,
+            'segment_count'                             => 5,
+            'fast_segment_count'                        => 3,
+            'fast_segment_ratio'                        => 0.4,
+            'speed_sample_count'                        => 4,
+            'avg_speed_mps'                             => 8.1,
+            'max_speed_mps'                             => 12.6,
+            'heading_sample_count'                      => 3,
+            'avg_heading_change_deg'                    => 35.0,
+            'consistent_heading_segment_count'          => 2,
+            'heading_consistency_ratio'                 => 0.66,
+            'fast_segment_speed_threshold_mps'          => 5.0,
+            'min_fast_segment_count_threshold'          => 2,
+            'max_heading_change_threshold_deg'          => 90.0,
+            'min_consistent_heading_segments_threshold' => 1,
         ];
 
         $params = [
