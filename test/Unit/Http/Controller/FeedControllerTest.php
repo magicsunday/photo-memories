@@ -161,9 +161,12 @@ final class FeedControllerTest extends TestCase
 
         self::assertArrayHasKey('meta', $payload);
         $meta = $payload['meta'];
-        self::assertSame(2, $meta['gesamtVerfuegbar']);
+        self::assertSame(1, $meta['gesamtVerfuegbar']);
         self::assertSame(1, $meta['anzahlGeliefert']);
-        self::assertEqualsCanonicalizing(['holiday_event', 'hike_adventure'], $meta['verfuegbareStrategien']);
+        self::assertEqualsCanonicalizing(['holiday_event'], $meta['verfuegbareStrategien']);
+        self::assertArrayHasKey('pagination', $meta);
+        self::assertFalse($meta['pagination']['hatWeitere']);
+        self::assertNull($meta['pagination']['nextCursor']);
     }
 
     public function testFeedFormatsTakenAtWithExifOffset(): void

@@ -1,45 +1,22 @@
 # Bewertung der FeedController-Ausgabe
 
-Dieser Bericht bewertet die JSON-Antwort des `FeedController` und skizziert UI/UX-Verbesserungen, die Frontend-Clients bei der Darstellung des Rückblick-Feeds unterstützen können.
+Dieser Bericht dokumentiert den aktuellen Zustand der JSON-Antwort des `FeedController` und fasst umgesetzte Verbesserungen für UI/UX-Clients zusammen.
 
 ## Aktuelle Struktur
-- **Metadaten (`meta`)** enthalten das Erstellungsdatum, Gesamt- und Liefermengen, verfügbare Strategien/Gruppen sowie die angewandten Filter. Zeit- und Datumswerte werden im ISO-8601-Format (`DateTimeInterface::ATOM`) ausgegeben.【F:src/Http/Controller/FeedController.php†L94-L139】【F:src/Http/Controller/FeedController.php†L248-L273】
-- **Feed-Elemente (`items`)** liefern technische Kennungen, Algorithmus, Gruppenzuordnung, Titel, Untertitel, Score, Cover-Medieninformationen, Mitglieds-IDs, Vorschaudaten, Zeitspanne und Roh-Parameter. Slideshow-Informationen werden als vom Manager generiertes Status-Array zurückgegeben.【F:src/Http/Controller/FeedController.php†L274-L354】
-- **Galerieeinträge** enthalten derzeit nur IDs, Thumbnail-URLs und optionale Aufnahmedaten, jedoch keine Deskriptoren wie Personen, Orte oder Beschreibungen.【F:src/Http/Controller/FeedController.php†L306-L333】
+- **Metadaten (`meta`)** liefern Erstellungszeitpunkt, lokalisierte Darstellungen sowie relative Hinweise und stellen zusätzlich Label-Mappings und Paginierungsinformationen bereit. Damit erhalten Frontends neben der Rohzeit (`DateTimeInterface::ATOM`) nutzerfreundliche Texte (`erstelltAmText`, `hinweisErstelltAm`) sowie Cursor-Informationen für Lazy-Loading.【F:src/Http/Controller/FeedController.php†L196-L217】
+- **Feed-Elemente (`items`)** bieten sprechende Labels, Cover-Metadaten, Zeitspannen mit formatierten und relativen Angaben sowie einen angereicherten Kontextblock (Orte, Szenen, Schlagwörter). Das Feld `algorithmusLabel` liefert eine vorübersetzte Bezeichnung für die Strategie.【F:src/Http/Controller/FeedController.php†L448-L468】【F:src/Http/Controller/FeedController.php†L832-L920】
+- **Galerieeinträge** enthalten nun Beschreibungen, Personenlisten, Orte, Szenen- und Schlagwort-Tags sowie relative Aufnahmehinweise. Dadurch kann eine Galerie-Kachel ohne Zusatzabfragen reichhaltig dargestellt werden.【F:src/Http/Controller/FeedController.php†L490-L519】【F:src/Http/Controller/FeedController.php†L534-L697】
+- **Slideshow-Status** wird um `hinweis` und `fortschritt` ergänzt, sodass Clients verständliche Statusmeldungen und Fortschrittsanzeigen rendern können.【F:src/Http/Controller/FeedController.php†L923-L929】
 
-## Beobachtete UX-Herausforderungen
-1. **Hohe technische Dichte**: Feldnamen wie `strategie`, `score` oder `zeitspanne` sind wenig selbsterklärend für Endnutzer:innen und verlangen zusätzliche Mapping-Logik im Frontend.
-2. **Fehlende menschenlesbare Zeitangaben**: Datum und Zeit werden ISO-konform, aber nicht lokalisiert bereitgestellt. Für eine unmittelbare Wahrnehmung fehlen relative Angaben („vor 3 Tagen“) oder formatierte Datumsstrings.
-3. **Unvollständige Galerie-Kontexte**: Galerieeinträge liefern keine ergänzenden Informationen (z. B. Ort, Personen, Schlagwörter). Ohne weitere API-Aufrufe ist ein reichhaltiges UI schwierig.
-4. **Slideshow-Status ohne Kontext**: Das Status-Array der Slideshow enthält keine Texte oder Fortschrittsinformationen, die direkt an Nutzer:innen kommuniziert werden könnten.
-5. **Fehlende Pagination-Hinweise**: Zwar existiert `limit`, doch Informationen über Folgeseiten oder Cursor-Werte fehlen, was bei längeren Feeds zu unklarer Navigation führt.
-
-## Empfohlene Verbesserungen
-### 1. Benutzerfreundliche Feldbenennung und Tooltips
-- Frontend-seitig sprechende Labels einführen („Strategie“ → „Entdeckungsmodus“, „Score“ → „Relevanzwert“).
-- Optional ergänzende Metadaten im Backend bereitstellen (`meta.labelMapping`), damit Clients standardisierte Beschreibungen anzeigen können.
-
-### 2. Erweiterte Zeitdarstellung
-- Ergänzend zu den ISO-Stempeln vorformatierte Strings liefern (z. B. `meta.hinweisErstelltAm`: „aktualisiert vor 2 Stunden“, `galerie[].aufgenommenAmText`: „12. März 2023, 14:35“).
-- Für Zeitspannen Start- und Enddaten klar benennen (`zeitspanne.vonText`, `zeitspanne.bisText`) sowie relative Angaben (z. B. „Sommer 2018“ basierend auf Heuristiken).
-
-### 3. Kontextreichere Galerie-Einträge
-- Bereits bekannte Entitäten (Personen, Orte, Ereignisse) in `galerie` integrieren, damit Kacheln Kontext und Filterchips erhalten.
-- Alt-Texte oder Beschreibungen bereitstellen, um Barrierefreiheit zu fördern und Skeleton-Loader zu vermeiden.
-
-### 4. Slideshow-Kommunikation verbessern
-- Slideshow-Status um deklarative Felder erweitern (z. B. `status`, `progress`, `hint`), um im UI sinnvolle CTAs oder Fortschrittsanzeigen zu ermöglichen.
-- Fehlerzustände mit klaren Codes und Übersetzungs-Schlüsseln versehen, damit Clients verständliche Meldungen rendern können.
-
-### 5. Navigations- und Ladefeedback
-- Pagination- oder Cursor-Informationen im `meta`-Block ergänzen (`nextCursor`, `hasMore`), um Endless-Scroll oder Paginierung zu unterstützen.
-- Optional „Empfohlenes Limit“ oder „Verfügbare Gesamtseiten“ ausgeben, damit Clients Ladeindikatoren planen.
-
-### 6. Konsistente Medien-URLs
-- Absolute URLs (inkl. Host) bereitstellen, um Cross-Origin- oder CDN-Szenarien zu erleichtern.
-- Vorschaubilder durch Parameter wie `aspectRatio`, `width`, `height` ergänzen, damit Layout-Sprung-Effekte reduziert werden.
+## Umgesetzte Verbesserungen
+1. **Benutzerfreundliche Feldbenennung** – `labelMapping` und `algorithmusLabel` liefern sprechende Bezeichnungen für UI-Tooltips sowie Navigation.【F:src/Http/Controller/FeedController.php†L196-L217】【F:src/Http/Controller/FeedController.php†L448-L452】【F:src/Http/Controller/FeedController.php†L1127-L1180】
+2. **Erweiterte Zeitdarstellung** – Sowohl Meta-Block als auch Galerie- und Coverdaten enthalten lokal formatierte Strings und relative Hinweise (`hinweisErstelltAm`, `hinweisAufgenommenAm`). Zeitspannen werden mit `vonText`, `bisText` und beschreibenden Phrasen ausgeliefert.【F:src/Http/Controller/FeedController.php†L196-L217】【F:src/Http/Controller/FeedController.php†L458-L465】【F:src/Http/Controller/FeedController.php†L727-L768】【F:src/Http/Controller/FeedController.php†L799-L1124】
+3. **Kontextreiche Galerie-Einträge** – Personen, Orte, Szenentags und Schlagwörter werden automatisch aus Medien und Clusterparametern aggregiert. Zusätzlich wird eine kombinierte Beschreibung generiert.【F:src/Http/Controller/FeedController.php†L490-L519】【F:src/Http/Controller/FeedController.php†L534-L697】
+4. **Verbesserte Slideshow-Kommunikation** – Ergänzte Felder `hinweis` und `fortschritt` machen den Slideshow-Status verständlich und UI-freundlich.【F:src/Http/Controller/FeedController.php†L923-L929】
+5. **Navigations- und Ladefeedback** – `meta.pagination` liefert `hatWeitere`, `nextCursor` und eine Limit-Empfehlung. Cursor werden aus den aktuell ausgelieferten Items gebildet, sodass das Frontend weitere Seiten anfordern kann.【F:src/Http/Controller/FeedController.php†L196-L210】【F:src/Http/Controller/FeedController.php†L1145-L1164】
+6. **Konsistente Medien-URLs** – Thumbnail-Endpunkte werden inkl. Host zusammengesetzt, wodurch CDNs oder externe Clients ohne zusätzliche Konfiguration funktionieren.【F:src/Http/Controller/FeedController.php†L471-L476】
 
 ## Weiterführende Überlegungen
-- Eine dedizierte Übersetzungs- oder Hilfetabelle im Backend erleichtert lokalen UIs den Umgang mit fachlichen Begriffen.
-- Ein GraphQL- oder konfigurierbares REST-Endpunkt-Design könnte Clients erlauben, nur benötigte Felder anzufragen und so Antwortgröße sowie Parsing-Aufwand zu reduzieren.
-- Für responsive Layouts empfiehlt sich ein Feld, das auf verfügbare Alternative-Formate (z. B. quadratisch, Panoramabild) hinweist.
+- Eine zentrale Übersetzungstabelle könnte langfristig zusätzliche Begriffe (z. B. Gruppennamen) standardisieren.
+- Für besonders datenintensive Clients ließe sich ein GraphQL- oder Feld-Selektionsmechanismus evaluieren, um nur benötigte Informationen zu übertragen.
+- Accessibility-Optimierungen (Alt-Texte, Leseunterstützung) können künftig durch ergänzende Felder weiter verbessert werden.
