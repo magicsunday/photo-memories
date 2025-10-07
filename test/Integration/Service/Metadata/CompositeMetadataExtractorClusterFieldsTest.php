@@ -16,6 +16,8 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
 use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
+use MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration;
+use MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Test\TestCase;
@@ -83,7 +85,7 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
             $geoEnricher,
             $qualityExtractor,
             $sceneExtractor,
-        ]);
+        ], new MetadataExtractorPipelineConfiguration([], false), new MetadataExtractorTelemetry());
 
         $media = $this->makeMedia(
             id: 910,

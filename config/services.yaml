@@ -250,9 +250,18 @@ services:
         tags:
             - { name: 'memories.metadata_extractor', priority: 10 }
 
+    MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration:
+        arguments:
+            $stepConfigurations: '%memories.metadata.pipeline.steps%'
+            $telemetryEnabledByDefault: '%memories.metadata.pipeline.telemetry.enabled%'
+
+    MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry: ~
+
     MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor:
         arguments:
             $extractors: !tagged_iterator 'memories.metadata_extractor'
+            $configuration: '@MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration'
+            $telemetry: '@MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry'
 
     MagicSunday\Memories\Service\Metadata\MetadataExtractorInterface:
         alias: MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor

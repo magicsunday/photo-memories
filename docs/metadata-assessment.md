@@ -11,8 +11,8 @@
 
 ### 1. Orchestrierung & Fehlertoleranz
 - [x] Fehlerpfade im MIME-Vorab-Guessing vereinheitlichen (z. B. Exception-Handling statt Error-Suppression bei `mime_content_type`) und Logging ergänzen.【F:src/Service/Metadata/CompositeMetadataExtractor.php†L53-L124】【F:test/Unit/Service/Metadata/CompositeMetadataExtractorTest.php†L19-L120】
-- [ ] Konfigurierbare Pipeline-Schritte einführen (aktiv/deaktiv) sowie Telemetrie sammeln, um Kosten pro Extractor zu messen.
-- [ ] Einen Recovery-Pfad dokumentieren, falls einzelne Extractor-Aufrufe scheitern (z. B. Retry-Strategie oder Eskalation an QA).
+- [x] Konfigurierbare Pipeline-Schritte einführen (aktiv/deaktiv) sowie Telemetrie sammeln, um Kosten pro Extractor zu messen.【F:config/parameters.yaml†L15-L17】【F:config/services.yaml†L233-L246】【F:src/Service/Metadata/CompositeMetadataExtractor.php†L33-L140】【F:src/Service/Metadata/MetadataExtractorPipelineConfiguration.php†L13-L66】【F:src/Service/Metadata/MetadataExtractorTelemetry.php†L13-L54】【F:test/Unit/Service/Metadata/CompositeMetadataExtractorTest.php†L19-L192】
+- [x] Einen Recovery-Pfad dokumentieren, falls einzelne Extractor-Aufrufe scheitern (z. B. Retry-Strategie oder Eskalation an QA).【F:src/Service/Metadata/CompositeMetadataExtractor.php†L79-L126】【F:test/Unit/Service/Metadata/CompositeMetadataExtractorTest.php†L114-L161】
 
 ### 2. Zeit- und Zeitzonen-Normalisierung
 - [ ] `TimeNormalizer` um Quellen-Priorisierungskonfiguration erweitern, damit Deployments alternative Reihenfolgen (z. B. bevorzugte GPS-Zeitzone) festlegen können.【F:src/Service/Metadata/TimeNormalizer.php†L54-L143】
