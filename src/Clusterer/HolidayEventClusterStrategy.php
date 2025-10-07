@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Calendar;
@@ -39,13 +40,18 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocationHelper $locationHelper,
         private int $minItemsPerHoliday = 8,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerHoliday < 1) {
             throw new InvalidArgumentException('minItemsPerHoliday must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -99,6 +105,16 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $qualityParams = $this->qualityAggregator->buildParams($members);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->buildPeopleParams($members);
+            $params       = [...$params, ...$peopleParams];
 
             $params = $this->appendLocationMetadata($members, $params);
 

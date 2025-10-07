@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -26,12 +28,18 @@ use function usort;
 final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
 
+    private LocationHelper $locationHelper;
+
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
-        private LocationHelper $locHelper,
+        LocationHelper $locHelper,
         private int $maxGapSeconds = 21600,
         private int $minItemsPerBucket = 5,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->maxGapSeconds < 1) {
             throw new InvalidArgumentException('maxGapSeconds must be >= 1.');
@@ -40,6 +48,9 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
         if ($this->minItemsPerBucket < 1) {
             throw new InvalidArgumentException('minItemsPerBucket must be >= 1.');
         }
+
+        $this->locationHelper    = $locHelper;
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -70,7 +81,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
 
         foreach ($withTs as $m) {
             $ts  = $m->getTakenAt()?->getTimestamp() ?? 0;
-            $key = $this->locHelper->localityKeyForMedia($m);
+            $key = $this->locationHelper->localityKeyForMedia($m);
 
             $split = false;
             if ($prevTs !== null && ($ts - $prevTs) > $this->maxGapSeconds) {
@@ -106,18 +117,26 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface
     /** @param list<Media> $bucket */
     private function makeDraft(array $bucket): ClusterDraft
     {
-        $label  = $this->locHelper->majorityLabel($bucket);
         $params = [
             'time_range' => $this->computeTimeRange($bucket),
         ];
-        if ($label !== null) {
-            $params['place'] = $label;
-        }
+
+        $params = $this->appendLocationMetadata($bucket, $params);
 
         $tagMetadata = $this->collectDominantTags($bucket);
         foreach ($tagMetadata as $key => $value) {
             $params[$key] = $value;
         }
+
+        $qualityParams = $this->qualityAggregator->buildParams($bucket);
+        foreach ($qualityParams as $qualityKey => $qualityValue) {
+            if ($qualityValue !== null) {
+                $params[$qualityKey] = $qualityValue;
+            }
+        }
+
+        $peopleParams = $this->buildPeopleParams($bucket);
+        $params       = [...$params, ...$peopleParams];
 
         return new ClusterDraft(
             algorithm: $this->name(),

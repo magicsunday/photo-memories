@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class SeasonOverYearsClusterStrategyTest extends TestCase
@@ -23,6 +24,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     public function mergesSeasonAcrossYears(): void
     {
         $strategy = new SeasonOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minYears: 3,
             minItemsPerSeason: 6,
         );
@@ -69,6 +71,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     public function requiresMinimumYears(): void
     {
         $strategy = new SeasonOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minYears: 4,
             minItemsPerSeason: 5,
         );
@@ -87,6 +90,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
     public function featureDrivenSeasonAggregationMatchesFallback(): void
     {
         $strategy = new SeasonOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minYears: 2,
             minItemsPerSeason: 4,
         );

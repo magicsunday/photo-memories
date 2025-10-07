@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -38,6 +40,7 @@ use function count;
 final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
 
     /**
@@ -47,11 +50,12 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
      *                                  from media items for the metadata summary
      */
     public function __construct(
-        private LocationHelper $locHelper,
+        LocationHelper $locHelper,
         // Minimum media items per anniversary bucket before scoring kicks in.
         private int $minItemsPerAnniversary = 3,
         private int $minDistinctYears = 1,
         private int $maxClusters = 0,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerAnniversary < 1) {
             throw new InvalidArgumentException('minItemsPerAnniversary must be >= 1.');
@@ -64,7 +68,14 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         if ($this->maxClusters < 0) {
             throw new InvalidArgumentException('maxClusters must be >= 0.');
         }
+
+        $this->locationHelper    = $locHelper;
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
+
+    private LocationHelper $locationHelper;
+
+    private ClusterQualityAggregator $qualityAggregator;
 
     /**
      * Returns the unique identifier for this strategy.
@@ -160,20 +171,26 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         foreach ($scoredGroups as $entry) {
             /** @var list<Media> $group */
             $group = $entry['group'];
-            $label = $this->locHelper->majorityLabel($group);
-
             $params = [
                 'time_range' => $this->computeTimeRange($group),
             ];
-            if ($label !== null) {
-                // Only include a place label when there is a clear majority location.
-                $params['place'] = $label;
-            }
+
+            $params = $this->appendLocationMetadata($group, $params);
 
             $tags = $this->collectDominantTags($group);
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $qualityParams = $this->qualityAggregator->buildParams($group);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->buildPeopleParams($group);
+            $params       = [...$params, ...$peopleParams];
 
             $drafts[] = new ClusterDraft(
                 algorithm: $this->name(),
