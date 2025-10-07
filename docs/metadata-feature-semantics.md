@@ -17,7 +17,6 @@ Die Metadatenfeatures eines Mediums werden nicht mehr als flaches Array gepflegt
 | | | `isPolarNight` | `bool` | Kennzeichnet Polarnächte bei fehlendem Sonnenaufgang.【F:src/Service/Metadata/SolarEnricher.php†L70-L120】 |
 | `file` | Dateinamenheuristiken | `pathTokens` | `list<string>` | Tokenisierte Pfadbestandteile für Klassifizierer und QA.【F:src/Service/Metadata/FilenameKeywordExtractor.php†L30-L52】【F:src/Service/Metadata/ContentClassifierExtractor.php†L250-L308】 |
 | | | `filenameHint` | `string` (`normal`, `pano`, `edited`, `timelapse`, `slowmo`) | Ableitung aus Dateinamenmustern für Klassifizierung und Panorama-Erkennung.【F:src/Service/Metadata/FilenameKeywordExtractor.php†L30-L52】 |
-| `legacy` | Übergangscontainer für unbekannte Schlüssel | beliebig | Originaltyp | Alte Keys werden ohne Verlust abgelegt und können sukzessive migriert werden.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L175-L219】 |
 
 ## Verwendung im Code
 
@@ -26,6 +25,3 @@ Die Metadatenfeatures eines Mediums werden nicht mehr als flaches Array gepflegt
 - Lesezugriffe in Heuristiken nutzen `getFeatureBag()` für typsichere Abfragen, beispielsweise bei Nightlife- und Golden-Hour-Clustern.【F:src/Clusterer/NightlifeEventClusterStrategy.php†L228-L244】【F:src/Clusterer/GoldenHourClusterStrategy.php†L90-L118】
 - Tests prüfen weiterhin konkrete Feldwerte, adressieren jedoch die neuen Namensräume und spiegeln damit das Serialisierungsformat wider.【F:test/Integration/Service/Metadata/CompositeMetadataExtractorClusterFieldsTest.php†L118-L135】【F:test/Unit/Service/Metadata/CalendarFeatureEnricherTest.php†L32-L98】
 
-## Migration & Rückwärtskompatibilität
-
-Beim Setzen von Features akzeptiert die Entität weiterhin legacy-flache Arrays. Der `MediaFeatureBag` migriert solche Payloads automatisch in die korrespondierenden Namensräume und legt unbekannte Schlüssel im `legacy`-Container ab.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L123-L219】 Bestehende Datenbankeinträge bleiben dadurch gültig, während neue Enricher sukzessive auf die getypten Helfer umgestellt werden können.
