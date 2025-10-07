@@ -20,14 +20,17 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 
 use function array_filter;
+use function array_key_exists;
 use function array_map;
 use function array_slice;
 use function array_values;
 use function arsort;
 use function count;
+use function floor;
 use function is_array;
 use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_string;
 use function sprintf;
 use function usort;
@@ -47,6 +50,8 @@ use function usort;
  */
 final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 {
+    private FeedPersonalizationProfile $defaultProfile;
+
     public function __construct(
         private TitleGeneratorInterface $titleGen,
         private CoverPickerInterface $coverPicker,
@@ -56,21 +61,63 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         private int $maxPerDay = 6,
         private int $maxTotal = 60,
         private int $maxPerAlgorithm = 12,
+        private float $qualityFloor = 0.30,
+        private float $peopleCoverageThreshold = 0.25,
+        private int $recentDays = 30,
+        private int $staleDays = 365,
+        private float $recentScoreBonus = 0.03,
+        private float $staleScorePenalty = 0.05,
     ) {
+        $this->defaultProfile = new FeedPersonalizationProfile(
+            'default',
+            $this->minScore,
+            $this->minMembers,
+            $this->maxPerDay,
+            $this->maxTotal,
+            $this->maxPerAlgorithm,
+            $this->qualityFloor,
+            $this->peopleCoverageThreshold,
+            $this->recentDays,
+            $this->staleDays,
+            $this->recentScoreBonus,
+            $this->staleScorePenalty,
+        );
     }
 
-    public function build(array $clusters): array
+    public function build(array $clusters, ?FeedPersonalizationProfile $profile = null): array
     {
+        $profile ??= $this->defaultProfile;
+        $now = new DateTimeImmutable();
+
         // 1) filter
         $filtered = array_values(array_filter(
             $clusters,
-            function (ClusterDraft $c): bool {
-                $score = (float) ($c->getParams()['score'] ?? 0.0);
-                if ($score < $this->minScore) {
+            function (ClusterDraft $c) use ($profile, $now): bool {
+                $params         = $c->getParams();
+                $score          = (float) ($params['score'] ?? 0.0);
+                $ageInDays      = $this->calculateAgeInDays($c, $now);
+                $adjustedScore  = $profile->adjustScoreForAge($score, $ageInDays);
+                $qualityAverage = $this->floatParam($params, 'quality_avg');
+                $peopleMentions = (int) ($params['people_count'] ?? 0);
+                $peopleCoverage = $this->floatParam($params, 'people_coverage') ?? 0.0;
+
+                if ($adjustedScore < $profile->getMinScore()) {
                     return false;
                 }
 
-                return $c->getMembersCount() >= $this->minMembers;
+                if ($c->getMembersCount() < $profile->getMinMembers()) {
+                    return false;
+                }
+
+                if ($qualityAverage !== null && $qualityAverage < $profile->getQualityFloor()) {
+                    return false;
+                }
+
+                if ($peopleMentions > 0 && $peopleCoverage < $profile->getPeopleCoverageThreshold()) {
+                    return false;
+                }
+
+                return true;
             }
         ));
 
@@ -98,8 +145,12 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         $result = [];
 
+        $maxTotal        = $profile->getMaxTotal();
+        $maxPerDay       = $profile->getMaxPerDay();
+        $maxPerAlgorithm = $profile->getMaxPerAlgorithm();
+
         foreach ($filtered as $c) {
-            if (count($result) >= $this->maxTotal) {
+            if (count($result) >= $maxTotal) {
                 break;
             }
 
@@ -109,7 +160,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             $cap = (int) ($dayCount[$dayKey] ?? 0);
-            if ($cap >= $this->maxPerDay) {
+            if ($cap >= $maxPerDay) {
                 continue;
             }
 
@@ -120,7 +171,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            if (($algCount[$alg] ?? 0) >= $this->maxPerAlgorithm) {
+            if (($algCount[$alg] ?? 0) >= $maxPerAlgorithm) {
                 continue;
             }
 
@@ -187,6 +238,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                     $params['scene_tags'] = $aggregated;
                 }
             }
+
+            $params['personalisierungsProfil'] = $profile->getKey();
 
             $result[] = new MemoryFeedItem(
                 algorithm: $alg,
@@ -315,5 +368,46 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     */
+    private function floatParam(array $params, string $key): ?float
+    {
+        if (!array_key_exists($key, $params)) {
+            return null;
+        }
+
+        $value = $params[$key];
+        if (is_float($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
+    }
+
+    private function calculateAgeInDays(ClusterDraft $cluster, DateTimeImmutable $reference): ?int
+    {
+        $range = $cluster->getParams()['time_range'] ?? null;
+        if (!is_array($range) || !array_key_exists('to', $range)) {
+            return null;
+        }
+
+        $timestamp = (int) $range['to'];
+        if ($timestamp <= 0) {
+            return null;
+        }
+
+        $seconds = $reference->getTimestamp() - $timestamp;
+        if ($seconds <= 0) {
+            return 0;
+        }
+
+        return (int) floor($seconds / 86400);
     }
 }

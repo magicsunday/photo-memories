@@ -15,6 +15,7 @@ Dieser Bericht dokumentiert den aktuellen Zustand der JSON-Antwort des `FeedCont
 4. **Verbesserte Slideshow-Kommunikation** – Ergänzte Felder `hinweis` und `fortschritt` machen den Slideshow-Status verständlich und UI-freundlich.【F:src/Http/Controller/FeedController.php†L923-L929】
 5. **Navigations- und Ladefeedback** – `meta.pagination` liefert `hatWeitere`, `nextCursor` und eine Limit-Empfehlung. Cursor werden aus den aktuell ausgelieferten Items gebildet, sodass das Frontend weitere Seiten anfordern kann.【F:src/Http/Controller/FeedController.php†L196-L210】【F:src/Http/Controller/FeedController.php†L1145-L1164】
 6. **Konsistente Medien-URLs** – Thumbnail-Endpunkte werden inkl. Host zusammengesetzt, wodurch CDNs oder externe Clients ohne zusätzliche Konfiguration funktionieren.【F:src/Http/Controller/FeedController.php†L471-L476】
+7. **Personalisierung & Favoriten** – Der Feed wertet Nutzer- und Profilparameter aus, filtert Opt-out-Algorithmen, liefert Favoritenlisten und markiert Karten direkt in der Antwort, sodass Clients Feedback ohne Zusatzabfragen widerspiegeln können.【F:src/Http/Controller/FeedController.php†L118-L215】
 
 ## Weiterführende Überlegungen
 - Eine zentrale Übersetzungstabelle könnte langfristig zusätzliche Begriffe (z. B. Gruppennamen) standardisieren.

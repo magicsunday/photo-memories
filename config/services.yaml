@@ -1052,6 +1052,15 @@ services:
 
     MagicSunday\Memories\Service\Feed\DefaultCoverPicker: ~
 
+    MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider:
+        arguments:
+            $profiles: '%memories.feed.personalization.profiles%'
+            $defaultProfile: 'default'
+
+    MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage:
+        arguments:
+            $storagePath: '%memories.feed.preferences_path%'
+
     MagicSunday\Memories\Repository\MediaRepository:
         arguments:
             $phashPrefixLength: '%memories.hash.phash_prefix_length%'
@@ -1063,6 +1072,12 @@ services:
             $maxPerDay: '%memories.feed.max_per_day%'
             $maxTotal: '%memories.feed.max_total%'
             $maxPerAlgorithm: '%memories.feed.max_per_algorithm%'
+            $qualityFloor: '%memories.feed.quality_floor%'
+            $peopleCoverageThreshold: '%memories.feed.people_coverage_min%'
+            $recentDays: '%memories.feed.recent_days%'
+            $staleDays: '%memories.feed.stale_days%'
+            $recentScoreBonus: '%memories.feed.recent_score_bonus%'
+            $staleScorePenalty: '%memories.feed.stale_score_penalty%'
 
     MagicSunday\Memories\Service\Feed\FeedBuilderInterface:
         alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder
@@ -1087,6 +1102,8 @@ services:
             $maxThumbnailWidth: '%memories.http.feed.max_thumbnail_width%'
             $thumbnailService: '@MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface'
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
+            $profileProvider: '@MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider'
+            $preferenceStorage: '@MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage'
 
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
