@@ -46,9 +46,9 @@ final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
             default              => 'night',
         };
 
-        $features            = $media->getFeatures() ?? [];
-        $features['daypart'] = $part;
-        $media->setFeatures($features);
+        $bag = $media->getFeatureBag();
+        $bag->setCalendarDaypart($part);
+        $media->setFeatureBag($bag);
 
         return $media;
     }

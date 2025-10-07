@@ -125,8 +125,10 @@ final class HolidayEventClusterStrategyTest extends TestCase
 
         foreach ($items as $media) {
             $media->setFeatures([
-                'isHoliday' => true,
-                'holidayId' => 'de-goodfriday-2024',
+                'calendar' => [
+                    'isHoliday' => true,
+                    'holidayId' => 'de-goodfriday-2024',
+                ],
             ]);
         }
 

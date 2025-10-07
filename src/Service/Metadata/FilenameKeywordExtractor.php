@@ -33,15 +33,16 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
     {
         $tokens = $this->tokenizePath($filepath);
 
-        $features                 = $media->getFeatures() ?? [];
-        $features['pathTokens']   = $tokens;
-        $features['filenameHint'] = $this->hintFromTokens($tokens);
+        $bag  = $media->getFeatureBag();
+        $bag->setFilePathTokens($tokens);
+        $hint = $this->hintFromTokens($tokens);
+        $bag->setFileNameHint($hint);
 
-        if ($features['filenameHint'] === 'pano') {
+        if ($hint === 'pano') {
             $media->setIsPanorama(true);
         }
 
-        $media->setFeatures($features);
+        $media->setFeatureBag($bag);
 
         return $media;
     }

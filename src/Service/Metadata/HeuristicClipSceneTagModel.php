@@ -134,12 +134,9 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
      */
     private function scoreSeasonalContext(array &$scores, Media $media): void
     {
-        $features = $media->getFeatures();
-        if (!is_array($features)) {
-            return;
-        }
+        $bag = $media->getFeatureBag();
 
-        $season = $features['season'] ?? null;
+        $season = $bag->calendarSeason();
         if (is_string($season)) {
             $map = [
                 'winter' => ['Winter', 0.62],
@@ -155,12 +152,12 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
             }
         }
 
-        $isHoliday = $features['isHoliday'] ?? null;
+        $isHoliday = $bag->calendarIsHoliday();
         if ($isHoliday === true) {
             $this->bump($scores, 'Feiertag', 0.55);
         }
 
-        $isWeekend = $features['isWeekend'] ?? null;
+        $isWeekend = $bag->calendarIsWeekend();
         if ($isWeekend === true) {
             $this->bump($scores, 'Wochenende', 0.52);
         }

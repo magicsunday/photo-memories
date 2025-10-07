@@ -35,7 +35,7 @@ use function unlink;
  *
  * Verified fields are consumed by:
  * - AbstractAtHomeClusterStrategy (distanceKmFromHome/geoCell)
- * - NightlifeEventClusterStrategy & GoldenHourClusterStrategy (features['daypart'], sceneTags, keywords)
+ * - NightlifeEventClusterStrategy & GoldenHourClusterStrategy (features['calendar']['daypart'], sceneTags, keywords)
  * - ClusterQualityAggregator (quality metrics)
  * - PersonCohortClusterStrategy & ClusterBuildHelperTrait (persons/keywords)
  *
@@ -119,7 +119,8 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
 
             $features = $processed->getFeatures();
             self::assertIsArray($features);
-            self::assertSame('evening', $features['daypart'] ?? null);
+            self::assertArrayHasKey('calendar', $features);
+            self::assertSame('evening', $features['calendar']['daypart'] ?? null);
 
             $sceneTags = $processed->getSceneTags();
             self::assertIsArray($sceneTags);

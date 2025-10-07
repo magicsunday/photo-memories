@@ -43,23 +43,21 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         $d   = (int) $t->format('j');
         $dow = (int) $t->format('N');
 
-        $features              = $media->getFeatures() ?? [];
-        $features['dow']       = $dow;
-        $features['isWeekend'] = ($dow >= 6);
-        $features['season']    = match ($m) {
+        $bag = $media->getFeatureBag();
+        $bag->setCalendarDayOfWeek($dow);
+        $bag->setCalendarIsWeekend($dow >= 6);
+        $bag->setCalendarSeason(match ($m) {
             12, 1, 2 => 'winter',
             3, 4, 5 => 'spring',
             6, 7, 8 => 'summer',
             default => 'autumn',
-        };
+        });
 
-        [$isHoliday, $id]      = $this->isGermanHoliday($y, $m, $d);
-        $features['isHoliday'] = $isHoliday;
-        if ($id !== null) {
-            $features['holidayId'] = $id;
-        }
+        [$isHoliday, $id] = $this->isGermanHoliday($y, $m, $d);
+        $bag->setCalendarIsHoliday($isHoliday);
+        $bag->setCalendarHolidayId($id);
 
-        $media->setFeatures($features);
+        $media->setFeatureBag($bag);
 
         return $media;
     }

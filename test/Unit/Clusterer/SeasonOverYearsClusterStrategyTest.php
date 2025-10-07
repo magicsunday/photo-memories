@@ -106,7 +106,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
 
         foreach ($items as $media) {
             $media->setFeatures([
-                'season' => 'summer',
+                'calendar' => ['season' => 'summer'],
             ]);
         }
 

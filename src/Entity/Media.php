@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 
@@ -580,9 +581,9 @@ class Media
     private int $facesCount = 0;
 
     /**
-     * Feature set describing the scene (labels, categories, etc.).
+     * Feature set describing the scene grouped by feature namespaces.
      *
-     * @var array<string, scalar|array|null>|null $features
+     * @var array<string, array<string, scalar|array|null>>|null $features
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $features = null;
@@ -2224,9 +2225,9 @@ class Media
     }
 
     /**
-     * Returns the feature list.
+     * Returns the raw namespaced feature payload as persisted in storage.
      *
-     * @return array<int, string>|null
+     * @return array<string, array<string, scalar|array|null>>|null
      */
     public function getFeatures(): ?array
     {
@@ -2234,13 +2235,35 @@ class Media
     }
 
     /**
-     * Sets the feature list.
+     * Provides a typed view on the feature payload.
+     */
+    public function getFeatureBag(): MediaFeatureBag
+    {
+        return MediaFeatureBag::fromArray($this->features);
+    }
+
+    /**
+     * Replaces the feature payload with the values from the bag.
+     */
+    public function setFeatureBag(MediaFeatureBag $bag): void
+    {
+        $this->features = $bag->toArray();
+    }
+
+    /**
+     * Sets the feature payload using either the legacy flat structure or the namespaced format.
      *
-     * @param array<int, string>|null $v features describing the scene
+     * @param array<string, scalar|array|null>|array<string, array<string, scalar|array|null>>|null $v features describing the scene
      */
     public function setFeatures(?array $v): void
     {
-        $this->features = $v;
+        if ($v === null) {
+            $this->features = null;
+
+            return;
+        }
+
+        $this->features = MediaFeatureBag::fromArray($v)->toArray();
     }
 
     /**

@@ -94,9 +94,10 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
         $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
-                $features = $m->getFeatures();
-                if (is_array($features) && array_key_exists('isGoldenHour', $features)) {
-                    return $features['isGoldenHour'] === true;
+                $bag = $m->getFeatureBag();
+                $isGoldenHour = $bag->solarIsGoldenHour();
+                if ($isGoldenHour !== null) {
+                    return $isGoldenHour === true;
                 }
 
                 $local = $this->localTimeHelper->resolve($m);

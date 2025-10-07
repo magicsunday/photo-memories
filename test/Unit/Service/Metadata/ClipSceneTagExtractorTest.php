@@ -26,8 +26,10 @@ final class ClipSceneTagExtractorTest extends TestCase
         $media = new Media('scene.jpg', 'checksum-scene', 2048);
         $media->setMime('image/jpeg');
         $media->setFeatures([
-            'season'    => 'summer',
-            'isHoliday' => true,
+            'calendar' => [
+                'season'    => 'summer',
+                'isHoliday' => true,
+            ],
         ]);
         $media->setPersons(['Anna', 'Ben']);
         $media->setHasFaces(true);
@@ -58,7 +60,8 @@ final class ClipSceneTagExtractorTest extends TestCase
 
         $features = $result->getFeatures();
         self::assertIsArray($features);
-        self::assertSame('summer', $features['season']);
+        self::assertArrayHasKey('calendar', $features);
+        self::assertSame('summer', $features['calendar']['season']);
     }
 
     #[Test]

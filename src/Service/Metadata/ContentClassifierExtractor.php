@@ -264,23 +264,21 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     private function tokensFromMedia(Media $media, string $filepath): array
     {
         $tokens   = [];
-        $features = $media->getFeatures();
-        if (is_array($features)) {
-            $pathTokens = $features['pathTokens'] ?? null;
-            if (is_array($pathTokens)) {
-                foreach ($pathTokens as $token) {
-                    if (!is_string($token) || $token === '') {
-                        continue;
-                    }
-
-                    $tokens[] = strtolower($token);
+        $bag      = $media->getFeatureBag();
+        $pathTokens = $bag->filePathTokens();
+        if ($pathTokens !== null) {
+            foreach ($pathTokens as $token) {
+                if ($token === '') {
+                    continue;
                 }
-            }
 
-            $hint = $features['filenameHint'] ?? null;
-            if (is_string($hint) && $hint !== '') {
-                $tokens[] = strtolower($hint);
+                $tokens[] = strtolower($token);
             }
+        }
+
+        $hint = $bag->fileNameHint();
+        if ($hint !== null && $hint !== '') {
+            $tokens[] = strtolower($hint);
         }
 
         $basename = strtolower(basename($filepath));

@@ -181,8 +181,10 @@ final class DayAlbumClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             configure: static function (Media $media): void {
                 $media->setFeatures([
-                    'isWeekend' => true,
-                    'holidayId' => 'holiday-winter-2023',
+                    'calendar' => [
+                        'isWeekend' => true,
+                        'holidayId' => 'holiday-winter-2023',
+                    ],
                 ]);
                 $media->setWidth(4000);
                 $media->setHeight(3000);

@@ -44,7 +44,9 @@ final class NightlifeEventClusterStrategyTest extends TestCase
                 52.5205 + ($i * 0.0002),
                 13.4049 + ($i * 0.0002),
                 static function (Media $media): void {
-                    $media->setFeatures(['daypart' => 'night']);
+                    $media->setFeatures([
+                        'calendar' => ['daypart' => 'night'],
+                    ]);
                 },
             );
         }
@@ -206,7 +208,9 @@ final class NightlifeEventClusterStrategyTest extends TestCase
                 52.50 + ($i * 0.01),
                 13.40 + ($i * 0.01),
                 static function (Media $media): void {
-                    $media->setFeatures(['daypart' => 'night']);
+                    $media->setFeatures([
+                        'calendar' => ['daypart' => 'night'],
+                    ]);
                 },
             );
         }

@@ -30,18 +30,18 @@ final readonly class MetadataQaInspector
 
     public function inspect(string $filepath, Media $media): MetadataQaInspectionResult
     {
-        $features = $media->getFeatures() ?? [];
+        $bag = $media->getFeatureBag();
         $missing  = [];
         $suggestions = [];
 
         if ($this->daypartEnricher->supports($filepath, $media)
-            && !array_key_exists('daypart', $features)
+            && $bag->calendarDaypart() === null
         ) {
             $missing[] = 'daypart';
         }
 
         if ($this->solarEnricher->supports($filepath, $media)
-            && !array_key_exists('isGoldenHour', $features)
+            && $bag->solarIsGoldenHour() === null
         ) {
             $missing[] = 'isGoldenHour';
         }
