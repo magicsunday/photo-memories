@@ -249,6 +249,51 @@ parameters:
     memories.feed.max_per_day: 6
     memories.feed.max_total: 60
     memories.feed.max_per_algorithm: 12
+    memories.feed.preferences_path: '%kernel.project_dir%/var/feed-preferences.json'
+    memories.feed.quality_floor: 0.30
+    memories.feed.people_coverage_min: 0.25
+    memories.feed.recent_days: 30
+    memories.feed.stale_days: 365
+    memories.feed.recent_score_bonus: 0.03
+    memories.feed.stale_score_penalty: 0.05
+
+    memories.feed.personalization.profiles:
+        default:
+            min_score: '%memories.feed.min_score%'
+            min_members: '%memories.feed.min_members%'
+            max_per_day: '%memories.feed.max_per_day%'
+            max_total: '%memories.feed.max_total%'
+            max_per_algorithm: '%memories.feed.max_per_algorithm%'
+            quality_floor: '%memories.feed.quality_floor%'
+            people_coverage_min: '%memories.feed.people_coverage_min%'
+            recent_days: '%memories.feed.recent_days%'
+            stale_days: '%memories.feed.stale_days%'
+            recent_score_bonus: '%memories.feed.recent_score_bonus%'
+            stale_score_penalty: '%memories.feed.stale_score_penalty%'
+        familienfreundlich:
+            min_score: 0.32
+            min_members: 3
+            max_per_day: 8
+            max_total: 80
+            max_per_algorithm: 14
+            quality_floor: 0.28
+            people_coverage_min: 0.20
+            recent_days: 14
+            stale_days: 120
+            recent_score_bonus: 0.05
+            stale_score_penalty: 0.04
+        reisen:
+            min_score: 0.38
+            min_members: 4
+            max_per_day: 5
+            max_total: 48
+            max_per_algorithm: 10
+            quality_floor: 0.34
+            people_coverage_min: 0.18
+            recent_days: 21
+            stale_days: 240
+            recent_score_bonus: 0.04
+            stale_score_penalty: 0.06
 
     memories.http.feed.default_limit: 24
     memories.http.feed.max_limit: 120

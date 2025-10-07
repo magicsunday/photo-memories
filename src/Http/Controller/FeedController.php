@@ -24,6 +24,9 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
@@ -95,6 +98,8 @@ final class FeedController
         private readonly ThumbnailServiceInterface $thumbnailService,
         private readonly SlideshowVideoManagerInterface $slideshowManager,
         private readonly EntityManagerInterface $entityManager,
+        private readonly FeedPersonalizationProfileProvider $profileProvider,
+        private readonly FeedUserPreferenceStorage $preferenceStorage,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -153,9 +158,20 @@ final class FeedController
             }
         }
 
+        $profileKey = $this->normalizeString($request->getQueryParam('profil'));
+        $userId     = $this->normalizeString($request->getQueryParam('nutzer')) ?? 'standard';
+        $profile    = $this->profileProvider->getProfile($profileKey);
+        $preferences = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
+
         $clusters = $this->clusterRepository->findLatest($clusterLimit);
         $drafts   = $this->clusterMapper->mapMany($clusters);
-        $items    = $this->feedBuilder->build($drafts);
+        $items    = $this->feedBuilder->build($drafts, $profile);
+        $items    = array_values(array_filter(
+            $items,
+            static function (MemoryFeedItem $item) use ($preferences): bool {
+                return !$preferences->isAlgorithmOptedOut($item->getAlgorithm());
+            },
+        ));
 
         $filtered = array_values(array_filter(
             $items,
@@ -189,7 +205,7 @@ final class FeedController
 
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
-            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now),
+            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now, $preferences),
             $pagedItems,
         );
 
@@ -208,11 +224,21 @@ final class FeedController
                 'nextCursor'   => $hasMore ? $this->createCursor($pagedItems) : null,
                 'limitEmpfehlung' => $this->defaultFeedLimit,
             ],
+            'personalisierung'      => [
+                'nutzer'              => $userId,
+                'profil'              => $profile->getKey(),
+                'verfuegbareProfile'  => $this->profileProvider->listProfiles(),
+                'schwellenwerte'      => $profile->describe(),
+                'favoriten'           => $preferences->getFavourites(),
+                'optOutAlgorithmen'   => $preferences->getHiddenAlgorithms(),
+            ],
             'filter'                => [
                 'score'     => $minScore,
                 'strategie' => $strategy,
                 'datum'     => $filterDate?->format('Y-m-d'),
                 'limit'     => $limit,
+                'profil'    => $profile->getKey(),
+                'nutzer'    => $userId,
             ],
         ];
 
@@ -411,7 +437,7 @@ final class FeedController
         return $takenAt->format(DateTimeInterface::ATOM);
     }
 
-    private function transformItem(MemoryFeedItem $item, string $baseUrl, DateTimeImmutable $reference): array
+    private function transformItem(MemoryFeedItem $item, string $baseUrl, DateTimeImmutable $reference, FeedUserPreferences $preferences): array
     {
         $coverId = $item->getCoverMediaId();
         $members = $item->getMemberIds();
@@ -453,6 +479,7 @@ final class FeedController
             'titel'              => $item->getTitle(),
             'untertitel'         => $item->getSubtitle(),
             'score'              => $item->getScore(),
+            'favorit'            => $preferences->isFavourite($itemId),
             'coverMediaId'       => $coverId,
             'cover'              => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth, $baseUrl) : null,
             'coverAufgenommenAm' => $this->formatTakenAt($coverMedia),

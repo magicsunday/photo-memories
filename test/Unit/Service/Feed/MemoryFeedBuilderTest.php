@@ -16,6 +16,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -86,5 +87,165 @@ final class MemoryFeedBuilderTest extends TestCase
         $media->setNoShow($noShow);
 
         return $media;
+    }
+
+    #[Test]
+    public function honoursQualityAndPeopleThresholds(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::once())
+            ->method('findByIds')
+            ->with([101, 102], false)
+            ->willReturn([
+                $this->buildMedia(101, false),
+                $this->buildMedia(102, false),
+            ]);
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            minScore: 0.3,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            qualityFloor: 0.5,
+            peopleCoverageThreshold: 0.6,
+            recentDays: 30,
+            staleDays: 365,
+            recentScoreBonus: 0.0,
+            staleScorePenalty: 0.0,
+        );
+
+        $now = time();
+
+        $discardLowQuality = new ClusterDraft(
+            algorithm: 'discard-low-quality',
+            params: [
+                'score'       => 0.6,
+                'time_range'  => ['to' => $now],
+                'quality_avg' => 0.4,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [11, 12],
+        );
+
+        $discardLowCoverage = new ClusterDraft(
+            algorithm: 'discard-low-coverage',
+            params: [
+                'score'            => 0.7,
+                'time_range'       => ['to' => $now],
+                'quality_avg'      => 0.7,
+                'people_count'     => 2,
+                'people_coverage'  => 0.3,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [21, 22],
+        );
+
+        $keep = new ClusterDraft(
+            algorithm: 'ok',
+            params: [
+                'score'           => 0.8,
+                'time_range'      => ['to' => $now],
+                'quality_avg'     => 0.9,
+                'people_count'    => 3,
+                'people_coverage' => 0.8,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [101, 102],
+        );
+
+        $result = $builder->build([
+            $discardLowQuality,
+            $discardLowCoverage,
+            $keep,
+        ]);
+
+        self::assertCount(1, $result);
+        self::assertSame('ok', $result[0]->getAlgorithm());
+        self::assertSame('default', $result[0]->getParams()['personalisierungsProfil']);
+    }
+
+    #[Test]
+    public function appliesCustomPersonalizationProfile(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::once())
+            ->method('findByIds')
+            ->with([301], false)
+            ->willReturn([$this->buildMedia(301, false)]);
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            minScore: 0.5,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            qualityFloor: 0.4,
+            peopleCoverageThreshold: 0.5,
+            recentDays: 30,
+            staleDays: 365,
+            recentScoreBonus: 0.0,
+            staleScorePenalty: 0.0,
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'familie',
+            params: [
+                'score'           => 0.35,
+                'time_range'      => ['to' => time()],
+                'quality_avg'     => 0.32,
+                'people_count'    => 1,
+                'people_coverage' => 0.25,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [301],
+        );
+
+        $customProfile = new FeedPersonalizationProfile(
+            'familienfreundlich',
+            minScore: 0.30,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            qualityFloor: 0.30,
+            peopleCoverageThreshold: 0.20,
+            recentDays: 30,
+            staleDays: 365,
+            recentScoreBonus: 0.0,
+            staleScorePenalty: 0.0,
+        );
+
+        $result = $builder->build([$cluster], $customProfile);
+
+        self::assertCount(1, $result);
+        self::assertSame('familie', $result[0]->getAlgorithm());
+        self::assertSame('familienfreundlich', $result[0]->getParams()['personalisierungsProfil']);
     }
 }

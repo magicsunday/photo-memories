@@ -24,5 +24,5 @@ interface FeedBuilderInterface
      *
      * @return list<MemoryFeedItem>
      */
-    public function build(array $clusters): array;
+    public function build(array $clusters, ?FeedPersonalizationProfile $profile = null): array;
 }
