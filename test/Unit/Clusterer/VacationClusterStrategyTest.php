@@ -16,6 +16,9 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
+use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
+use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
@@ -47,6 +50,153 @@ use ReflectionClass;
 
 final class VacationClusterStrategyTest extends TestCase
 {
+    #[Test]
+    public function ensuresDeterministicChronologicalOrdering(): void
+    {
+        $homeLocation = $this->makeLocation('home-reference', 'Zuhause', 52.5200, 13.4050, country: 'Germany');
+
+        $noisyOrder = [
+            $this->makeMediaFixture(
+                2001,
+                'later-b.jpg',
+                new DateTimeImmutable('2024-01-05 10:00:00', new DateTimeZone('UTC')),
+                52.5205,
+                13.4055,
+                $homeLocation,
+            ),
+            $this->makeMediaFixture(
+                2003,
+                'earlier.jpg',
+                new DateTimeImmutable('2024-01-05 08:00:00', new DateTimeZone('UTC')),
+                52.5206,
+                13.4056,
+                $homeLocation,
+            ),
+            $this->makeMediaFixture(
+                2002,
+                'later-a.jpg',
+                new DateTimeImmutable('2024-01-05 10:00:00', new DateTimeZone('UTC')),
+                52.5207,
+                13.4057,
+                $homeLocation,
+            ),
+        ];
+
+        $home = [
+            'lat' => $homeLocation->getLat(),
+            'lon' => $homeLocation->getLon(),
+            'radius_km' => 5.0,
+            'country' => 'Germany',
+            'timezone_offset' => 60,
+        ];
+
+        $capturedOrder = [];
+        $receivedMembers = [];
+
+        $homeLocator = new class($home) implements HomeLocatorInterface {
+            /**
+             * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+             */
+            public function __construct(private array $home)
+            {
+            }
+
+            public function determineHome(array $items): ?array
+            {
+                return $this->home;
+            }
+        };
+
+        $daySummaryBuilder = new class($capturedOrder) implements DaySummaryBuilderInterface {
+            /**
+             * @param list<int> $capturedOrder
+             */
+            public function __construct(private array &$capturedOrder)
+            {
+            }
+
+            public function buildDaySummaries(array $items, array $home): array
+            {
+                $this->capturedOrder = array_map(static fn (Media $media): int => $media->getId(), $items);
+
+                return [
+                    '2024-01-05' => [
+                        'date' => '2024-01-05',
+                        'members' => $items,
+                        'gpsMembers' => $items,
+                        'maxDistanceKm' => 0.0,
+                        'avgDistanceKm' => 0.0,
+                        'travelKm' => 0.0,
+                        'maxSpeedKmh' => 0.0,
+                        'avgSpeedKmh' => 0.0,
+                        'hasHighSpeedTransit' => false,
+                        'countryCodes' => [],
+                        'timezoneOffsets' => [],
+                        'localTimezoneIdentifier' => 'UTC',
+                        'localTimezoneOffset' => null,
+                        'tourismHits' => 0,
+                        'poiSamples' => 0,
+                        'tourismRatio' => 0.0,
+                        'hasAirportPoi' => false,
+                        'weekday' => 5,
+                        'photoCount' => count($items),
+                        'densityZ' => 0.0,
+                        'isAwayCandidate' => false,
+                        'sufficientSamples' => true,
+                        'spotClusters' => [],
+                        'spotNoise' => [],
+                        'spotCount' => 0,
+                        'spotNoiseSamples' => 0,
+                        'spotDwellSeconds' => 0,
+                        'staypoints' => [],
+                        'baseLocation' => null,
+                        'baseAway' => false,
+                        'awayByDistance' => false,
+                        'firstGpsMedia' => null,
+                        'lastGpsMedia' => null,
+                        'isSynthetic' => false,
+                    ],
+                ];
+            }
+        };
+
+        $segmentAssembler = new class($receivedMembers) implements VacationSegmentAssemblerInterface {
+            /**
+             * @param list<int> $receivedMembers
+             */
+            public function __construct(private array &$receivedMembers)
+            {
+            }
+
+            public function detectSegments(array $days, array $home): array
+            {
+                $day = $days['2024-01-05'];
+
+                $this->receivedMembers = array_map(static fn (Media $media): int => $media->getId(), $day['members']);
+
+                return [
+                    new ClusterDraft(
+                        'vacation',
+                        ['stub' => true],
+                        ['lat' => 0.0, 'lon' => 0.0],
+                        $this->receivedMembers,
+                    ),
+                ];
+            }
+        };
+
+        $strategy = new VacationClusterStrategy($homeLocator, $daySummaryBuilder, $segmentAssembler);
+
+        $clusters = $strategy->cluster($noisyOrder);
+
+        $expected = [2003, 2002, 2001];
+
+        self::assertSame($expected, $capturedOrder);
+        self::assertNotEmpty($clusters);
+        self::assertSame($expected, $clusters[0]->getMembers());
+        self::assertSame($expected, $receivedMembers);
+    }
+
     #[Test]
     public function classifiesExtendedInternationalVacation(): void
     {
