@@ -41,4 +41,27 @@ final class PoiClusterScoreHeuristicTest extends TestCase
         self::assertEqualsWithDelta(0.95, $heuristic->score($cluster), 1e-9);
         self::assertSame('poi', $heuristic->weightKey());
     }
+
+    #[Test]
+    public function enrichUsesPersistedPoiScore(): void
+    {
+        $heuristic = new PoiClusterScoreHeuristic(['tourism/*' => 0.1]);
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test',
+            params: [
+                'poi_score' => 0.42,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [],
+        );
+
+        $heuristic->prepare([], []);
+        $heuristic->enrich($cluster, []);
+
+        $params = $cluster->getParams();
+
+        self::assertEqualsWithDelta(0.42, $params['poi_score'], 1e-9);
+        self::assertEqualsWithDelta(0.42, $heuristic->score($cluster), 1e-9);
+    }
 }

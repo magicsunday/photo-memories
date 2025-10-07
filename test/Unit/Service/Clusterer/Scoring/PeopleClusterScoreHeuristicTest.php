@@ -62,4 +62,35 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         self::assertGreaterThan(0.0, $heuristic->score($cluster));
         self::assertSame('people', $heuristic->weightKey());
     }
+
+    #[Test]
+    public function enrichUsesPersistedPeopleMetricsWhenAvailable(): void
+    {
+        $heuristic = new PeopleClusterScoreHeuristic();
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test',
+            params: [
+                'people'               => 0.75,
+                'people_count'         => 12,
+                'people_unique'        => 5,
+                'people_coverage'      => 0.8,
+                'people_face_coverage' => 0.6,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2, 3],
+        );
+
+        $heuristic->prepare([], []);
+        $heuristic->enrich($cluster, []);
+
+        $params = $cluster->getParams();
+
+        self::assertEqualsWithDelta(0.75, $params['people'], 1e-9);
+        self::assertSame(12, $params['people_count']);
+        self::assertSame(5, $params['people_unique']);
+        self::assertEqualsWithDelta(0.8, $params['people_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.6, $params['people_face_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.75, $heuristic->score($cluster), 1e-9);
+    }
 }

@@ -51,4 +51,32 @@ final class RecencyClusterScoreHeuristicTest extends TestCase
         self::assertEqualsWithDelta($expected, $heuristic->score($cluster), 1e-6);
         self::assertSame('recency', $heuristic->weightKey());
     }
+
+    #[Test]
+    public function enrichKeepsPersistedRecencyWhenNoRangeAvailable(): void
+    {
+        $heuristic = new RecencyClusterScoreHeuristic(
+            timeRangeMinSamples: 3,
+            timeRangeMinCoverage: 0.6,
+            minValidYear: 1990,
+            timeProvider: static fn (): int => (new DateTimeImmutable('2024-02-01 00:00:00'))->getTimestamp(),
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test',
+            params: [
+                'recency' => 0.55,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [],
+        );
+
+        $heuristic->prepare([], []);
+        $heuristic->enrich($cluster, []);
+
+        $params = $cluster->getParams();
+
+        self::assertEqualsWithDelta(0.55, $params['recency'], 1e-9);
+        self::assertEqualsWithDelta(0.55, $heuristic->score($cluster), 1e-9);
+    }
 }
