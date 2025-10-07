@@ -15,6 +15,9 @@ use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
+use function is_int;
+use function is_string;
+
 /**
  * Lightweight cell -> Location index backed by the DB.
  * Speeds up reverse-geocoding by reusing known Locations for a cell.
@@ -49,11 +52,23 @@ final class LocationCellIndex
 
         $n = 0;
         foreach ($it as $row) {
-            $cell = (string) $row['cell'];
-            if ($cell !== '' && !isset($this->cellToId[$cell])) {
-                $this->cellToId[$cell] = (int) $row['id'];
-                ++$n;
+            $cell = $row['cell'] ?? null;
+            $id   = $row['id'] ?? null;
+
+            if (!is_string($cell) || $cell === '' || isset($this->cellToId[$cell])) {
+                continue;
             }
+
+            if (!is_int($id)) {
+                continue;
+            }
+
+            if ($id <= 0) {
+                continue;
+            }
+
+            $this->cellToId[$cell] = $id;
+            ++$n;
         }
 
         return $n;

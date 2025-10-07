@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use MagicSunday\Memories\Entity\Media;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -18,6 +19,9 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 interface MediaGeocodingProcessorInterface
 {
+    /**
+     * @param iterable<Media> $media
+     */
     public function process(
         iterable $media,
         bool $refreshPois,

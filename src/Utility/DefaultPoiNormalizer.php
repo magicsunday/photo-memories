@@ -66,7 +66,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     }
 
     /**
-     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>}|null $raw
+     * @param array{default:string|null,localized?:array<string,string>|null,alternates?:list<string>|null}|null $raw
      *
      * @return array{default:string|null,localized:array<string,string>,alternates:list<string>}
      */
@@ -83,39 +83,43 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             }
 
             $rawLocalized = $raw['localized'] ?? [];
-            if (is_array($rawLocalized)) {
-                foreach ($rawLocalized as $locale => $value) {
-                    if (!is_string($locale)) {
-                        continue;
-                    }
+            if (!is_array($rawLocalized)) {
+                $rawLocalized = [];
+            }
 
-                    $locale = strtolower(str_replace(' ', '_', $locale));
-                    if ($locale === '') {
-                        continue;
-                    }
-
-                    if (!is_string($value) || $value === '') {
-                        continue;
-                    }
-
-                    $localized[$locale] = $value;
+            foreach ($rawLocalized as $locale => $value) {
+                if (!is_string($locale)) {
+                    continue;
                 }
+
+                $locale = strtolower(str_replace(' ', '_', $locale));
+                if ($locale === '') {
+                    continue;
+                }
+
+                if (!is_string($value) || $value === '') {
+                    continue;
+                }
+
+                $localized[$locale] = $value;
             }
 
             $rawAlternates = $raw['alternates'] ?? [];
-            if (is_array($rawAlternates)) {
-                foreach ($rawAlternates as $alternate) {
-                    if (!is_string($alternate)) {
-                        continue;
-                    }
+            if (!is_array($rawAlternates)) {
+                $rawAlternates = [];
+            }
 
-                    $trimmed = trim($alternate);
-                    if ($trimmed === '') {
-                        continue;
-                    }
-
-                    $alternates[$trimmed] = true;
+            foreach ($rawAlternates as $alternate) {
+                if (!is_string($alternate)) {
+                    continue;
                 }
+
+                $trimmed = trim($alternate);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $alternates[$trimmed] = true;
             }
         }
 
@@ -145,7 +149,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
 
         $localized = array_find(
             $names['localized'],
-            static fn ($value): bool => is_string($value) && $value !== ''
+            static fn (string $value): bool => $value !== ''
         );
         if (is_string($localized)) {
             return $localized;
@@ -153,7 +157,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
 
         $alternate = array_find(
             $names['alternates'],
-            static fn ($value): bool => is_string($value) && $value !== ''
+            static fn (string $value): bool => $value !== ''
         );
         if (is_string($alternate)) {
             return $alternate;

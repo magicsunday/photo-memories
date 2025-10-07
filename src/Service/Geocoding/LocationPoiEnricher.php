@@ -18,7 +18,9 @@ use function array_slice;
 use function ceil;
 use function count;
 use function is_array;
+use function is_int;
 use function is_numeric;
+use function is_string;
 use function max;
 use function min;
 
@@ -52,7 +54,7 @@ final readonly class LocationPoiEnricher
         $usedNetwork = $this->client->consumeLastUsedNetwork();
 
         if ($pois !== []) {
-            if ($this->maxPois > 0 && count($pois) > $this->maxPois) {
+            if (count($pois) > $this->maxPois) {
                 $pois = array_slice($pois, 0, $this->maxPois);
             }
 
@@ -96,7 +98,13 @@ final readonly class LocationPoiEnricher
         }
 
         [$south, $north, $west, $east] = $bbox;
-        if (!is_numeric($east)) {
+
+        $southFloat = $this->toFloat($south);
+        $northFloat = $this->toFloat($north);
+        $westFloat  = $this->toFloat($west);
+        $eastFloat  = $this->toFloat($east);
+
+        if ($southFloat === null || $northFloat === null || $westFloat === null || $eastFloat === null) {
             return null;
         }
 
@@ -104,10 +112,10 @@ final readonly class LocationPoiEnricher
         $centerLon = $geocode->lon;
 
         $distances = [
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $north, $centerLon),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $south, $centerLon),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $east),
-            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $west),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $northFloat, $centerLon),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $southFloat, $centerLon),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $eastFloat),
+            MediaMath::haversineDistanceInMeters($centerLat, $centerLon, $centerLat, $westFloat),
         ];
 
         $radius = (int) ceil(max($distances));
@@ -117,5 +125,18 @@ final readonly class LocationPoiEnricher
         }
 
         return max(50, min($radius, 1000));
+    }
+
+    private function toFloat(mixed $value): ?float
+    {
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && $value !== '' && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
     }
 }

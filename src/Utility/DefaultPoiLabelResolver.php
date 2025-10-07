@@ -62,12 +62,16 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
     }
 
     /**
-     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>} $names
+     * @param array{default:string|null,localized?:array<string,string>|null,alternates?:list<string>|null} $names
      */
     private function labelFromNames(array $names): ?string
     {
         $localized = $names['localized'] ?? [];
-        if (is_array($localized) && $localized !== []) {
+        if (!is_array($localized)) {
+            $localized = [];
+        }
+
+        if ($localized !== []) {
             $preferredLocaleValue = null;
             $preferredLocaleKey   = array_find(
                 $this->preferredLocaleKeys,
@@ -94,27 +98,27 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
             return $default;
         }
 
-        if (is_array($localized)) {
-            $firstLocalized = array_find(
-                $localized,
-                static fn ($value): bool => is_string($value) && $value !== ''
-            );
+        $firstLocalized = array_find(
+            $localized,
+            static fn (string $value): bool => $value !== ''
+        );
 
-            if (is_string($firstLocalized)) {
-                return $firstLocalized;
-            }
+        if (is_string($firstLocalized)) {
+            return $firstLocalized;
         }
 
         $alternates = $names['alternates'] ?? [];
-        if (is_array($alternates)) {
-            $firstAlternate = array_find(
-                $alternates,
-                static fn ($alternate): bool => is_string($alternate) && $alternate !== ''
-            );
+        if (!is_array($alternates)) {
+            $alternates = [];
+        }
 
-            if (is_string($firstAlternate)) {
-                return $firstAlternate;
-            }
+        $firstAlternate = array_find(
+            $alternates,
+            static fn (string $alternate): bool => $alternate !== ''
+        );
+
+        if (is_string($firstAlternate)) {
+            return $firstAlternate;
         }
 
         return null;
