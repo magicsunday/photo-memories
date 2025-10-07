@@ -40,15 +40,51 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 {
     private ?string $configuredPhpBinary;
 
+    /**
+     * @param list<string> $transitions
+     */
     public function __construct(
         private string $videoDirectory,
         private string $projectDirectory,
         private float $slideDuration,
+        private float $transitionDuration,
         ?string $phpBinary,
         private PhpExecutableFinder $phpExecutableFinder,
+        private array $transitions = [],
+        private ?string $musicTrack = null,
     ) {
         $phpBinary                 = is_string($phpBinary) ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
+
+        if ($this->slideDuration <= 0.0) {
+            $this->slideDuration = 3.5;
+        }
+
+        if ($this->transitionDuration < 0.0) {
+            $this->transitionDuration = 0.8;
+        }
+
+        $transitions = [];
+        foreach ($this->transitions as $transition) {
+            if (!is_string($transition)) {
+                continue;
+            }
+
+            $trimmed = trim($transition);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $transitions[] = $trimmed;
+        }
+
+        $this->transitions = $transitions;
+
+        if (!is_string($this->musicTrack) || trim($this->musicTrack) === '') {
+            $this->musicTrack = null;
+        } else {
+            $this->musicTrack = trim($this->musicTrack);
+        }
     }
 
     /**
@@ -57,10 +93,13 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      */
     public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus
     {
-        $images = $this->collectImages($memberIds, $mediaMap);
-        if ($images === []) {
+        $slides = $this->collectSlides($memberIds, $mediaMap);
+        if ($slides === []) {
             return SlideshowVideoStatus::unavailable($this->slideDuration);
         }
+
+        $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
+        $storyboard = $this->buildStoryboard($slides);
 
         $videoPath = $this->buildVideoPath($itemId);
         $lockPath  = $this->buildLockPath($videoPath);
@@ -92,7 +131,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         try {
-            $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images);
+            $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music']);
             file_put_contents($jobPath, $job->toJson(), LOCK_EX);
             $this->startGenerator($job);
         } catch (Throwable $throwable) {
@@ -119,9 +158,15 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      *
      * @return list<string>
      */
-    private function collectImages(array $memberIds, array $mediaMap): array
+    /**
+     * @param list<int>        $memberIds
+     * @param array<int,Media> $mediaMap
+     *
+     * @return list<array{mediaId:int,path:string}>
+     */
+    private function collectSlides(array $memberIds, array $mediaMap): array
     {
-        $images = [];
+        $slides = [];
         foreach ($memberIds as $memberId) {
             $media = $mediaMap[$memberId] ?? null;
             if (!$media instanceof Media) {
@@ -130,11 +175,49 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
             $path = $media->getPath();
             if ($path !== '' && is_file($path)) {
-                $images[] = $path;
+                $slides[] = [
+                    'mediaId' => $memberId,
+                    'path'    => $path,
+                ];
             }
         }
 
-        return $images;
+        return $slides;
+    }
+
+    /**
+     * @param list<array{mediaId:int,path:string}> $slides
+     */
+    private function buildStoryboard(array $slides): array
+    {
+        $storySlides     = [];
+        $transitionCount = count($this->transitions);
+
+        foreach ($slides as $index => $slide) {
+            $storySlide = [
+                'mediaId'    => $slide['mediaId'],
+                'image'      => $slide['path'],
+                'duration'   => $this->slideDuration,
+                'transition' => null,
+            ];
+
+            if ($transitionCount > 0) {
+                $transition = $this->transitions[$index % $transitionCount] ?? null;
+                if (is_string($transition) && $transition !== '') {
+                    $storySlide['transition'] = $transition;
+                }
+            }
+
+            $storySlides[] = $storySlide;
+        }
+
+        $payload = [
+            'slides'             => $storySlides,
+            'transitionDuration' => $this->transitionDuration,
+            'music'              => $this->musicTrack,
+        ];
+
+        return $payload;
     }
 
     private function buildVideoPath(string $itemId): string

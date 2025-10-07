@@ -22,6 +22,7 @@ use function count;
 use function dirname;
 use function implode;
 use function is_dir;
+use function is_string;
 use function max;
 use function mkdir;
 use function sprintf;
@@ -54,14 +55,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly int $width = 1280,
         private readonly int $height = 720,
         private readonly array $transitions = self::DEFAULT_TRANSITIONS,
+        private readonly ?string $audioTrack = null,
     ) {
     }
 
     public function generate(SlideshowJob $job): void
     {
-        $images = $job->images();
-        $count  = count($images);
-        if ($count === 0) {
+        $slides = $job->slides();
+        if ($slides === []) {
             throw new RuntimeException('Cannot render slideshow without images.');
         }
 
@@ -70,7 +71,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             throw new RuntimeException(sprintf('Could not create video directory "%s".', $directory));
         }
 
-        $command = $this->buildCommand($images, $job->outputPath());
+        $command = $this->buildCommand($job, $slides);
 
         $process = new Process($command);
         $process->setTimeout(null);
@@ -93,31 +94,40 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param list<string> $images
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
      *
      * @return list<string>
      */
-    private function buildCommand(array $images, string $output): array
+    private function buildCommand(SlideshowJob $job, array $slides): array
     {
-        if (count($images) === 1) {
-            return $this->buildSingleImageCommand($images[0], $output);
+        $transitionDuration = $this->resolveTransitionDuration($job->transitionDuration());
+        $audioTrack         = $job->audioTrack() ?? $this->audioTrack;
+
+        if (count($slides) === 1) {
+            return $this->buildSingleImageCommand($slides[0], $job->outputPath(), $audioTrack);
         }
 
-        return $this->buildMultiImageCommand($images, $output);
+        return $this->buildMultiImageCommand($slides, $transitionDuration, $job->outputPath(), $audioTrack);
     }
 
-    private function buildSingleImageCommand(string $image, string $output): array
+    /**
+     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     *
+     * @return list<string>
+     */
+    private function buildSingleImageCommand(array $slide, string $output, ?string $audioTrack): array
     {
+        $duration = $this->resolveSlideDuration($slide['duration']);
         $filter = sprintf(
             '[0:v]scale=%1$d:%2$d:force_original_aspect_ratio=decrease,' .
             'pad=%1$d:%2$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1,' .
             'trim=duration=%3$.3f,setpts=PTS-STARTPTS[vout]',
             $this->width,
             $this->height,
-            max(0.1, $this->slideDuration)
+            max(0.1, $duration)
         );
 
-        return [
+        $command = [
             $this->ffmpegBinary,
             '-y',
             '-loglevel',
@@ -125,45 +135,43 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             '-loop',
             '1',
             '-t',
-            sprintf('%0.3f', max(0.1, $this->slideDuration)),
+            sprintf('%0.3f', max(0.1, $duration)),
             '-i',
-            $image,
+            $slide['image'],
             '-filter_complex',
             $filter,
-            '-map',
-            '[vout]',
-            '-movflags',
-            '+faststart',
-            '-pix_fmt',
-            'yuv420p',
-            '-an',
-            $output,
         ];
+
+        return $this->appendAudioOptions($command, 1, $output, $audioTrack);
     }
 
     /**
-     * @param list<string> $images
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
      *
      * @return list<string>
      */
-    private function buildMultiImageCommand(array $images, string $output): array
+    private function buildMultiImageCommand(array $slides, float $transitionDuration, string $output, ?string $audioTrack): array
     {
         $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
-        $durationWithOverlap = max(0.1, $this->slideDuration + $this->transitionDuration);
-
-        foreach ($images as $image) {
+        foreach ($slides as $slide) {
+            $duration           = $this->resolveSlideDuration($slide['duration']);
+            $durationWithOverlap = max(0.1, $duration + $transitionDuration);
             $command = array_merge($command, [
                 '-loop',
                 '1',
                 '-t',
                 sprintf('%0.3f', $durationWithOverlap),
                 '-i',
-                $image,
+                $slide['image'],
             ]);
         }
 
         $filters = array_map(
-            fn (int $index): string => sprintf(
+            function (int $index) use ($slides, $transitionDuration): string {
+                $duration           = $this->resolveSlideDuration($slides[$index]['duration']);
+                $durationWithOverlap = max(0.1, $duration + $transitionDuration);
+
+                return sprintf(
                 '[%1$d:v]scale=%2$d:%3$d:force_original_aspect_ratio=decrease,' .
                 'pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1,' .
                 'trim=duration=%4$.3f,setpts=PTS-STARTPTS[s%1$d]',
@@ -171,45 +179,103 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $this->width,
                 $this->height,
                 $durationWithOverlap
-            ),
-            array_keys($images),
+                );
+            },
+            array_keys($slides),
         );
 
         $transitionCount = count($this->transitions);
         $current         = '[s0]';
-        $offset          = max(0.1, $this->slideDuration);
+        $offset          = $this->resolveSlideDuration($slides[0]['duration']);
 
-        for ($index = 1; $index < count($images); ++$index) {
-            $transition = $this->transitions[($index - 1) % $transitionCount] ?? 'fade';
-            if ($transition === '') {
-                $transition = 'fade';
-            }
-
-            $targetLabel = $index === count($images) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
+        for ($index = 1; $index < count($slides); ++$index) {
+            $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
+            $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
                 $current,
                 $index,
                 $transition,
-                max(0.1, $this->transitionDuration),
+                max(0.1, $transitionDuration),
                 $offset,
                 $targetLabel
             );
             $current = $targetLabel;
-            $offset += max(0.1, $this->slideDuration);
+            $offset += $this->resolveSlideDuration($slides[$index]['duration']);
         }
 
         $filterComplex = implode(';', $filters);
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
+        return $this->appendAudioOptions($command, count($slides), $output, $audioTrack);
+    }
+
+    private function resolveSlideDuration(float $duration): float
+    {
+        $value = $duration > 0.0 ? $duration : $this->slideDuration;
+
+        return max(0.1, $value);
+    }
+
+    private function resolveTransitionDuration(?float $duration): float
+    {
+        if ($duration !== null && $duration > 0.0) {
+            return $duration;
+        }
+
+        return max(0.1, $this->transitionDuration);
+    }
+
+    private function resolveTransition(?string $preferred, int $index, int $transitionCount): string
+    {
+        if (is_string($preferred) && $preferred !== '') {
+            return $preferred;
+        }
+
+        if ($transitionCount === 0) {
+            return 'fade';
+        }
+
+        $name = $this->transitions[$index % $transitionCount] ?? 'fade';
+        if (!is_string($name) || $name === '') {
+            return 'fade';
+        }
+
+        return $name;
+    }
+
+    /**
+     * @param list<string> $command
+     *
+     * @return list<string>
+     */
+    private function appendAudioOptions(array $command, int $videoInputs, string $output, ?string $audioTrack): array
+    {
+        if (is_string($audioTrack) && $audioTrack !== '') {
+            $command[] = '-i';
+            $command[] = $audioTrack;
+        }
+
         $command[] = '-map';
         $command[] = '[vout]';
         $command[] = '-movflags';
         $command[] = '+faststart';
         $command[] = '-pix_fmt';
         $command[] = 'yuv420p';
-        $command[] = '-an';
+
+        if (is_string($audioTrack) && $audioTrack !== '') {
+            $command[] = '-map';
+            $command[] = sprintf('%d:a:0', $videoInputs);
+            $command[] = '-shortest';
+            $command[] = '-c:a';
+            $command[] = 'aac';
+            $command[] = '-b:a';
+            $command[] = '192k';
+        } else {
+            $command[] = '-an';
+        }
+
         $command[] = $output;
 
         return $command;

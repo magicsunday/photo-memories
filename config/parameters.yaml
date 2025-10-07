@@ -311,3 +311,12 @@ parameters:
     memories.slideshow.ffmpeg_path: 'ffmpeg'
     memories.slideshow.php_binary_default: 'php'
     memories.slideshow.php_binary: "%env(default:memories.slideshow.php_binary_default:MEMORIES_PHP_BINARY)%"
+    memories.slideshow.transitions:
+        - 'fade'
+        - 'wipeleft'
+        - 'wiperight'
+        - 'circleopen'
+        - 'circleclose'
+        - 'pixelize'
+    memories.slideshow.music_path_default: ''
+    memories.slideshow.music_path: "%env(default:memories.slideshow.music_path_default:MEMORIES_SLIDESHOW_MUSIC)%"

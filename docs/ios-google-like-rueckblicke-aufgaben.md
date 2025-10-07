@@ -6,8 +6,8 @@
 - [x] Parameter für personalisierte Schwellenwerte in `config/parameters.yaml` vorbereiten: Gewichtungen, Score-Schwellen und Profilkatalog sind zentral konfigurierbar und werden vom `FeedPersonalizationProfileProvider` an den Feed übergeben.【F:config/parameters.yaml†L233-L282】【F:config/services.yaml†L1044-L1075】【F:src/Service/Feed/FeedPersonalizationProfileProvider.php†L17-L86】
 
 ## 2. Storytelling-Erlebnis aufwerten
-- Storyboards aus dem JSON-Feed ableiten und in Slideshow-Generierung sowie UI integrieren.
-- Konfigurierbare Musik-, Übergangs- und Dauerparameter definieren.
+- [x] Storyboards aus dem JSON-Feed ableiten und in Slideshow-Generierung sowie UI integrieren: `FeedController` liefert jetzt einen `storyboard`-Block mit Folieninformationen, Übergängen, Dauer- und Kontextangaben, während `SlideshowVideoManager` und `SlideshowVideoGenerator` dieselben Daten für die Videoerstellung nutzen.【F:src/Http/Controller/FeedController.php†L312-L392】【F:src/Service/Slideshow/SlideshowVideoManager.php†L41-L139】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L39-L269】
+- [x] Konfigurierbare Musik-, Übergangs- und Dauerparameter definieren: Sämtliche Werte werden nun über `config/parameters.yaml` gesteuert und in Services injiziert; FFMPEG greift optional auf eine konfigurierte Audiodatei zu.【F:config/parameters.yaml†L306-L316】【F:config/services.yaml†L90-L118】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L39-L269】
 - Automatische Titel- und Beschreibungsgenerierung mit POI- und Personeninformationen implementieren.
 - Lokalisierung für generierte Texte vorbereiten.
 

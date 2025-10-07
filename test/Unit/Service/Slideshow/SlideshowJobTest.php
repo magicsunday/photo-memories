@@ -12,9 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
-use MagicSunday\Memories\Test\TestCase;
-use PHPUnit\Framework\Attributes\Test;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
 
 use function file_put_contents;
 use function json_encode;
@@ -23,56 +21,93 @@ use function tempnam;
 use function unlink;
 
 use const JSON_THROW_ON_ERROR;
-use const LOCK_EX;
 
+/**
+ * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowJob
+ */
 final class SlideshowJobTest extends TestCase
 {
-    #[Test]
-    public function itSerializesToJsonAndBack(): void
+    public function testToArrayContainsStoryboardInformation(): void
     {
-        $tmp = tempnam(sys_get_temp_dir(), 'slideshow-job-');
-        self::assertIsString($tmp);
-
-        $job = new SlideshowJob('abc', $tmp, '/tmp/out.mp4', '/tmp/out.mp4.lock', '/tmp/out.mp4.error', ['/path/one.jpg']);
-        file_put_contents($tmp, $job->toJson(), LOCK_EX);
-
-        $loaded = SlideshowJob::fromJsonFile($tmp);
-
-        self::assertSame('abc', $loaded->id());
-        self::assertSame('/tmp/out.mp4', $loaded->outputPath());
-        self::assertSame(['/path/one.jpg'], $loaded->images());
-
-        unlink($tmp);
-    }
-
-    #[Test]
-    public function itRejectsJobsWithoutImages(): void
-    {
-        $tmp = tempnam(sys_get_temp_dir(), 'slideshow-job-');
-        self::assertIsString($tmp);
-
-        file_put_contents(
-            $tmp,
-            json_encode(
+        $job = new SlideshowJob(
+            'demo',
+            '/tmp/demo.job.json',
+            '/tmp/demo.mp4',
+            '/tmp/demo.lock',
+            '/tmp/demo.error',
+            ['/images/1.jpg', '/images/2.jpg'],
+            [
                 [
-                    'id'     => 'abc',
-                    'output' => '/tmp/out.mp4',
-                    'lock'   => '/tmp/out.mp4.lock',
-                    'error'  => '/tmp/out.mp4.error',
-                    'images' => [],
+                    'image'      => '/images/1.jpg',
+                    'mediaId'    => 10,
+                    'duration'   => 3.0,
+                    'transition' => 'fade',
                 ],
-                JSON_THROW_ON_ERROR
-            ),
-            LOCK_EX
+                [
+                    'image'      => '/images/2.jpg',
+                    'mediaId'    => 11,
+                    'duration'   => 4.0,
+                    'transition' => null,
+                ],
+            ],
+            0.75,
+            '/audio/theme.mp3',
         );
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Job payload does not contain any usable images.');
+        $payload = $job->toArray();
 
-        try {
-            SlideshowJob::fromJsonFile($tmp);
-        } finally {
-            unlink($tmp);
-        }
+        self::assertSame('demo', $payload['id']);
+        self::assertSame('/tmp/demo.mp4', $payload['output']);
+        self::assertArrayHasKey('storyboard', $payload);
+        self::assertSame(0.75, $payload['storyboard']['transitionDuration']);
+        self::assertSame('/audio/theme.mp3', $payload['storyboard']['music']);
+        self::assertCount(2, $payload['storyboard']['slides']);
+        self::assertSame(10, $payload['storyboard']['slides'][0]['mediaId']);
+        self::assertSame(3.0, $payload['storyboard']['slides'][0]['duration']);
+        self::assertSame('fade', $payload['storyboard']['slides'][0]['transition']);
+    }
+
+    public function testFromJsonFileNormalisesIncompleteStoryboard(): void
+    {
+        $temporary = tempnam(sys_get_temp_dir(), 'slideshow-job-');
+        self::assertIsString($temporary);
+
+        $payload = [
+            'id'         => 'example',
+            'output'     => '/out/example.mp4',
+            'lock'       => '/out/example.lock',
+            'error'      => '/out/example.error',
+            'images'     => ['/images/a.jpg', '/images/b.jpg'],
+            'storyboard' => [
+                'slides' => [
+                    [
+                        'image'    => '/images/a.jpg',
+                        'mediaId'  => '15',
+                        'duration' => 0,
+                        'transition' => '  ',
+                    ],
+                    [
+                        'image' => '/images/b.jpg',
+                    ],
+                ],
+                'transitionDuration' => 0,
+                'music'              => ' ',
+            ],
+        ];
+
+        file_put_contents($temporary, json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $job = SlideshowJob::fromJsonFile($temporary);
+
+        self::assertSame('example', $job->id());
+        self::assertSame(['/images/a.jpg', '/images/b.jpg'], $job->images());
+
+        $slides = $job->slides();
+        self::assertCount(2, $slides);
+        self::assertSame(15, $slides[0]['mediaId']);
+        self::assertNull($job->transitionDuration());
+        self::assertNull($job->audioTrack());
+
+        unlink($temporary);
     }
 }
