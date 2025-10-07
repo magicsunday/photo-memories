@@ -157,9 +157,6 @@ final class FeedController
         $drafts   = $this->clusterMapper->mapMany($clusters);
         $items    = $this->feedBuilder->build($drafts);
 
-        $availableStrategies = $this->collectStrategies($items);
-        $availableGroups     = $this->collectGroups($items);
-
         $filtered = array_values(array_filter(
             $items,
             function (MemoryFeedItem $item) use ($minScore, $strategy, $filterDate): bool {
@@ -179,7 +176,12 @@ final class FeedController
             }
         ));
 
-        $filtered = array_slice($filtered, 0, $limit);
+        $matchingItems = $filtered;
+        $matchingCount = count($matchingItems);
+        $pagedItems    = array_slice($matchingItems, 0, $limit);
+
+        $availableStrategies = $this->collectStrategies($matchingItems);
+        $availableGroups     = $this->collectGroups($matchingItems);
 
         $now = new DateTimeImmutable();
         $host = $request->getSchemeAndHttpHost();
@@ -188,22 +190,22 @@ final class FeedController
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
             fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now),
-            $filtered,
+            $pagedItems,
         );
 
-        $hasMore   = count($items) > count($data);
+        $hasMore   = count($data) < $matchingCount;
         $meta = [
             'erstelltAm'            => $now->format(DateTimeInterface::ATOM),
             'erstelltAmText'        => $this->formatLocalizedDate($now),
             'hinweisErstelltAm'     => $this->formatRelativeTime($now, $now),
-            'gesamtVerfuegbar'      => count($items),
+            'gesamtVerfuegbar'      => $matchingCount,
             'anzahlGeliefert'       => count($data),
             'verfuegbareStrategien' => $availableStrategies,
             'verfuegbareGruppen'    => $availableGroups,
             'labelMapping'          => $this->buildLabelMapping(),
             'pagination'            => [
                 'hatWeitere'   => $hasMore,
-                'nextCursor'   => $hasMore ? $this->createCursor($filtered) : null,
+                'nextCursor'   => $hasMore ? $this->createCursor($pagedItems) : null,
                 'limitEmpfehlung' => $this->defaultFeedLimit,
             ],
             'filter'                => [

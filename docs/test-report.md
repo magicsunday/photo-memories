@@ -1,6 +1,6 @@
 # Test Report
 
-Date: 2025-10-06T20:57:03Z
+Date: 2025-10-07T15:26:08Z
 
 ## Command
 
@@ -10,4 +10,4 @@ composer ci:test
 
 ## Result
 
-The test suite failed because PHPStan reported hundreds of type-safety violations while analysing the source directory. See the captured terminal output for the detailed list of errors.
+The aggregate CI run still fails because PHPStan aborts with 897 type-safety violations across multiple cluster and geocoding classes. The error log highlights uninitialised readonly properties as well as redundant type checks reported by level 9 rules.【20521e†L1-L88】【20521e†L214-L232】
