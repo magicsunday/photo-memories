@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Service\Metadata;
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
+use MagicSunday\Memories\Service\Metadata\Support\SolarEventCache;
+use MagicSunday\Memories\Service\Metadata\Support\SolarEventResult;
 
 use function acos;
 use function asin;
@@ -23,7 +25,9 @@ use function deg2rad;
 use function floor;
 use function fmod;
 use function rad2deg;
+use function round;
 use function sin;
+use function sprintf;
 
 /**
  * Rough sunrise/sunset and golden-hour flags without requiring php-calendar.
@@ -34,10 +38,14 @@ use function sin;
  */
 final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 {
+    private SolarEventCache $cache;
+
     public function __construct(
         private CaptureTimeResolver $captureTimeResolver,
         private int $goldenMinutes = 60,
+        ?SolarEventCache $cache = null,
     ) {
+        $this->cache = $cache ?? new SolarEventCache();
     }
 
     public function supports(string $filepath, Media $media): bool
@@ -59,8 +67,20 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $lon = $media->getGpsLon();
         assert($lat !== null && $lon !== null);
 
-        $sunUtc = $this->sunTimesUtc($local, $lat, $lon);
-        if ($sunUtc === null) {
+        $cacheKey = $this->buildCacheKey($local, $lat, $lon);
+        $sunEvents = $this->cache->get($cacheKey);
+        if (!$sunEvents instanceof SolarEventResult) {
+            $sunEvents = $this->sunTimesUtc($local, $lat, $lon);
+            $this->cache->set($cacheKey, $sunEvents);
+        }
+
+        if (!$sunEvents->isRegularDay()) {
+            $features                  = $media->getFeatures() ?? [];
+            $features['isGoldenHour']  = false;
+            $features['isPolarDay']    = $sunEvents->isPolarDay;
+            $features['isPolarNight']  = $sunEvents->isPolarNight;
+            $media->setFeatures($features);
+
             return $media;
         }
 
@@ -69,16 +89,18 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
             $offsetSec = $media->getTimezoneOffsetMin() * 60;
         }
 
-        $sunriseLocal = $sunUtc['sunrise'] + $offsetSec;
-        $sunsetLocal  = $sunUtc['sunset'] + $offsetSec;
+        $sunriseLocal = $sunEvents->sunriseUtc + $offsetSec;
+        $sunsetLocal  = $sunEvents->sunsetUtc + $offsetSec;
         $photoLocal   = $local->getTimestamp();
 
         $delta    = $this->goldenMinutes * 60;
         $isGolden = ($photoLocal >= $sunriseLocal && $photoLocal <= ($sunriseLocal + $delta))
             || ($photoLocal >= ($sunsetLocal - $delta) && $photoLocal <= $sunsetLocal);
 
-        $features                 = $media->getFeatures() ?? [];
-        $features['isGoldenHour'] = $isGolden;
+        $features                  = $media->getFeatures() ?? [];
+        $features['isGoldenHour']  = $isGolden;
+        $features['isPolarDay']    = false;
+        $features['isPolarNight']  = false;
         $media->setFeatures($features);
 
         return $media;
@@ -88,9 +110,9 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
      * Compute sunrise/sunset for the given date (UTC seconds),
      * using a calendar-free Julian day implementation.
      *
-     * @return array{sunrise:int, sunset:int}|null
+     * @return SolarEventResult
      */
-    private function sunTimesUtc(DateTimeImmutable $day, float $lat, float $lon): ?array
+    private function sunTimesUtc(DateTimeImmutable $day, float $lat, float $lon): SolarEventResult
     {
         // Date parts in UTC (we treat $day as nominal local date; that's fine for heuristics).
         $y = (int) $day->format('Y');
@@ -113,9 +135,12 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
 
         $latR = deg2rad($lat);
         $cosH = (sin(deg2rad(-0.83)) - sin($latR) * sin($delta)) / (cos($latR) * cos($delta));
-        if ($cosH < -1.0 || $cosH > 1.0) {
-            // Polar day/night for that date/lat → no golden hour
-            return null;
+        if ($cosH < -1.0) {
+            return new SolarEventResult(null, null, true, false);
+        }
+
+        if ($cosH > 1.0) {
+            return new SolarEventResult(null, null, false, true);
         }
 
         $H     = acos($cosH);
@@ -126,7 +151,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $sunriseUtc = $this->julianDayToUnix($Jrise);
         $sunsetUtc  = $this->julianDayToUnix($Jset);
 
-        return ['sunrise' => $sunriseUtc, 'sunset' => $sunsetUtc];
+        return new SolarEventResult($sunriseUtc, $sunsetUtc, false, false);
     }
 
     /**
@@ -155,5 +180,10 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
     private function julianDayToUnix(float $jd): int
     {
         return (int) floor(($jd - 2440587.5) * 86400.0);
+    }
+
+    private function buildCacheKey(DateTimeImmutable $day, float $lat, float $lon): string
+    {
+        return sprintf('%s#%.4f#%.4f', $day->format('Y-m-d'), round($lat, 4), round($lon, 4));
     }
 }

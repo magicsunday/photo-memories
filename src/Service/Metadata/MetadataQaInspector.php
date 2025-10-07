@@ -11,10 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
 use function array_key_exists;
+use function array_unique;
 use function implode;
 use function sprintf;
 
@@ -26,6 +28,7 @@ final readonly class MetadataQaInspector
     public function __construct(
         private DaypartEnricher $daypartEnricher,
         private SolarEnricher $solarEnricher,
+        private float $minimumTzConfidence = 0.5,
     ) {
     }
 
@@ -33,6 +36,7 @@ final readonly class MetadataQaInspector
     {
         $features = $media->getFeatures() ?? [];
         $missing  = [];
+        $suggestions = [];
 
         if ($this->daypartEnricher->supports($filepath, $media)
             && !array_key_exists('daypart', $features)
@@ -46,11 +50,29 @@ final readonly class MetadataQaInspector
             $missing[] = 'isGoldenHour';
         }
 
+        $takenAt = $media->getTakenAt();
+        if ($takenAt instanceof DateTimeImmutable) {
+            if ($media->getTimezoneOffsetMin() === null) {
+                $missing[]     = 'timezoneOffsetMin';
+                $suggestions[] = 'TimeNormalizer-Konfiguration prüfen';
+            }
+
+            $confidence = $media->getTzConfidence();
+            if ($confidence === null || $confidence < $this->minimumTzConfidence) {
+                $missing[]     = 'tzConfidence';
+                $suggestions[] = 'Zeitzonenquellen priorisieren';
+            }
+        }
+
         if ($missing === []) {
             return;
         }
 
-        $message = sprintf('Warnung: fehlende Zeit-Features (%s).', implode(', ', $missing));
+        $message = sprintf('Warnung: fehlende Zeit-Features (%s).', implode(', ', array_unique($missing)));
+        if ($suggestions !== []) {
+            $message .= ' Empfehlung: ' . implode('; ', array_unique($suggestions)) . '.';
+        }
+
         IndexLogHelper::append($media, $message);
     }
 }

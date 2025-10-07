@@ -25,6 +25,7 @@ use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 
 use function file_exists;
+use function file_put_contents;
 use function rename;
 use function sprintf;
 use function strtotime;
@@ -178,9 +179,82 @@ final class TimeNormalizerTest extends TestCase
         self::assertStringContainsString('tz=Europe/Rome', (string) $result->getIndexLog());
     }
 
+    #[Test]
+    public function respectsConfiguredFallbackPriority(): void
+    {
+        $normalizer = $this->createNormalizer(
+            defaultTimezone: 'Europe/Berlin',
+            priority: ['file_mtime', 'filename'],
+        );
+
+        $filename = sprintf('%s/20230721_141516.jpg', sys_get_temp_dir());
+        if (file_exists($filename)) {
+            unlink($filename);
+        }
+
+        self::assertNotFalse(file_put_contents($filename, 'test'));
+        $timestamp = strtotime('2020-02-03T04:05:06Z');
+        self::assertNotFalse($timestamp);
+        self::assertTrue(touch($filename, $timestamp));
+
+        $media = $this->makeMedia(
+            id: 6,
+            path: $filename,
+        );
+
+        $result = $normalizer->extract($media->getPath(), $media);
+
+        self::assertSame(TimeSource::FILE_MTIME, $result->getTimeSource());
+        self::assertSame(0.2, $result->getTzConfidence());
+
+        if (file_exists($filename)) {
+            unlink($filename);
+        }
+    }
+
+    #[Test]
+    public function logsFilesystemMismatchWhenBeyondThreshold(): void
+    {
+        $normalizer = $this->createNormalizer(
+            defaultTimezone: 'UTC',
+            priority: ['filename'],
+            maxOffsetMinutes: 5,
+        );
+
+        $filename = sprintf('%s/IMG_20240101_101112.jpg', sys_get_temp_dir());
+        if (file_exists($filename)) {
+            unlink($filename);
+        }
+
+        self::assertNotFalse(file_put_contents($filename, 't'));
+        $timestamp = strtotime('2024-01-01T00:00:00Z');
+        self::assertNotFalse($timestamp);
+        self::assertTrue(touch($filename, $timestamp));
+
+        $media = $this->makeMedia(
+            id: 7,
+            path: $filename,
+            takenAt: '2024-01-02T12:00:00+00:00',
+            configure: static function (Media $item): void {
+                $item->setTimeSource(TimeSource::EXIF);
+            },
+        );
+
+        $result = $normalizer->extract($media->getPath(), $media);
+
+        self::assertSame(TimeSource::EXIF, $result->getTimeSource());
+        self::assertStringContainsString('Warnung: Aufnahmezeit weicht vom Dateisystem', (string) $result->getIndexLog());
+
+        if (file_exists($filename)) {
+            unlink($filename);
+        }
+    }
+
     private function createNormalizer(
         ?DateTimeZone $resolvedTimezone = null,
         string $defaultTimezone = 'UTC',
+        array $priority = ['filename', 'file_mtime'],
+        int $maxOffsetMinutes = 720,
     ): TimeNormalizer {
         $timezoneResolver = new class($resolvedTimezone) implements TimezoneResolverInterface {
             public function __construct(private readonly ?DateTimeZone $timezone)
@@ -226,6 +300,8 @@ final class TimeNormalizerTest extends TestCase
             captureTimeResolver: $captureTimeResolver,
             defaultTimezone: $defaultTimezone,
             filenameDateParser: new FilenameDateParser(),
+            sourcePriority: $priority,
+            plausibilityThresholdMinutes: $maxOffsetMinutes,
         );
     }
 }

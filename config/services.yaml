@@ -162,6 +162,8 @@ services:
     MagicSunday\Memories\Service\Metadata\TimeNormalizer:
         arguments:
             $defaultTimezone: '%memories.timezone.default%'
+            $sourcePriority: '%memories.time.normalizer.source_priority%'
+            $plausibilityThresholdMinutes: '%memories.time.normalizer.max_offset_minutes%'
         tags:
             - { name: 'memories.metadata_extractor', priority: 100 }
 
