@@ -72,4 +72,35 @@ final class QualityClusterScoreHeuristicTest extends TestCase
         self::assertEqualsWithDelta(1.0, $heuristic->score($cluster), 1e-9);
         self::assertSame('quality', $heuristic->weightKey());
     }
+
+    #[Test]
+    public function enrichKeepsPersistedQualityMetrics(): void
+    {
+        $heuristic = new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0));
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test',
+            params: [
+                'quality_avg'        => 0.67,
+                'aesthetics_score'   => 0.7,
+                'quality_resolution' => 0.8,
+                'quality_sharpness'  => 0.6,
+                'quality_iso'        => 0.3,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1],
+        );
+
+        $heuristic->prepare([], []);
+        $heuristic->enrich($cluster, []);
+
+        $params = $cluster->getParams();
+
+        self::assertEqualsWithDelta(0.67, $params['quality_avg'], 1e-9);
+        self::assertEqualsWithDelta(0.7, $params['aesthetics_score'], 1e-9);
+        self::assertEqualsWithDelta(0.8, $params['quality_resolution'], 1e-9);
+        self::assertEqualsWithDelta(0.6, $params['quality_sharpness'], 1e-9);
+        self::assertEqualsWithDelta(0.3, $params['quality_iso'], 1e-9);
+        self::assertEqualsWithDelta(0.67, $heuristic->score($cluster), 1e-9);
+    }
 }
