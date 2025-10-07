@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Quality;
 
+use DateTimeInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Support\IndexLogHelper;
 
@@ -34,6 +35,9 @@ final class MediaQualityAggregator
         private float $lowNoiseQualityThreshold = 0.25,
         private float $clippingLowQualityThreshold = 0.15,
         private float $clippingPenaltyWeight = 0.5,
+        private int $noiseReferenceYear = 2015,
+        private float $noiseThresholdDecayPerYear = 0.01,
+        private float $noiseThresholdFloor = 0.10,
     ) {
     }
 
@@ -63,6 +67,7 @@ final class MediaQualityAggregator
         $media->setQualityNoise($noiseScore);
 
         $isLowQuality = false;
+        $noiseThreshold = $this->noiseThresholdFor($media);
         if ($qualityScore !== null && $qualityScore < $this->lowScoreThreshold) {
             $isLowQuality = true;
         }
@@ -79,7 +84,7 @@ final class MediaQualityAggregator
             $isLowQuality = true;
         }
 
-        if ($noiseScore !== null && $noiseScore < $this->lowNoiseQualityThreshold) {
+        if ($noiseScore !== null && $noiseScore < $noiseThreshold) {
             $isLowQuality = true;
         }
 
@@ -89,7 +94,16 @@ final class MediaQualityAggregator
 
         $media->setLowQuality($isLowQuality);
 
-        $this->appendQualitySummary($media, $isLowQuality, $sharpnessScore, $clippingShare);
+        $this->appendQualitySummary(
+            $media,
+            $isLowQuality,
+            $qualityScore,
+            $sharpnessScore,
+            $noiseScore,
+            $exposureScore,
+            $clippingShare,
+            $noiseThreshold,
+        );
     }
 
     private function weightedScore(array $components): ?float
@@ -176,19 +190,63 @@ final class MediaQualityAggregator
         return ((float) $width * (float) $height) / 1_000_000.0;
     }
 
-    private function appendQualitySummary(Media $media, bool $isLowQuality, ?float $sharpnessScore, ?float $clippingShare): void
+    private function noiseThresholdFor(Media $media): float
     {
-        $parts = [sprintf('qlt=%s', $isLowQuality ? 'low' : 'ok')];
+        $takenAt = $media->getTakenAt();
+        if (!$takenAt instanceof DateTimeInterface) {
+            return $this->lowNoiseQualityThreshold;
+        }
+
+        $deltaYears = $this->noiseReferenceYear - (int) $takenAt->format('Y');
+        if ($deltaYears <= 0) {
+            return $this->lowNoiseQualityThreshold;
+        }
+
+        $adjusted = $this->lowNoiseQualityThreshold - ($deltaYears * $this->noiseThresholdDecayPerYear);
+
+        return max($this->noiseThresholdFloor, $adjusted);
+    }
+
+    private function appendQualitySummary(
+        Media $media,
+        bool $isLowQuality,
+        ?float $qualityScore,
+        ?float $sharpnessScore,
+        ?float $noiseScore,
+        ?float $exposureScore,
+        ?float $clippingShare,
+        float $noiseThreshold,
+    ): void {
+        $parts = ['quality'];
+        $parts[] = sprintf('status=%s', $isLowQuality ? 'low' : 'ok');
+
+        if ($qualityScore !== null) {
+            $parts[] = sprintf('score=%.2f', $qualityScore);
+        }
 
         if ($sharpnessScore !== null) {
             $parts[] = sprintf('sharp=%.2f', $sharpnessScore);
+        }
+
+        if ($noiseScore !== null) {
+            $parts[] = sprintf('noise=%.2f', $noiseScore);
+        }
+
+        $parts[] = sprintf('noiseThreshold=%.2f', $noiseThreshold);
+
+        if ($exposureScore !== null) {
+            $parts[] = sprintf('exposure=%.2f', $exposureScore);
         }
 
         if ($clippingShare !== null) {
             $parts[] = sprintf('clip=%.2f', $clippingShare);
         }
 
-        $line = implode('; ', $parts);
-        IndexLogHelper::append($media, $line);
+        $takenAt = $media->getTakenAt();
+        if ($takenAt instanceof DateTimeInterface) {
+            $parts[] = sprintf('takenAt=%s', $takenAt->format(DateTimeInterface::ATOM));
+        }
+
+        IndexLogHelper::append($media, implode('|', $parts));
     }
 }
