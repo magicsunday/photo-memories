@@ -17,6 +17,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\OneYearAgoClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class OneYearAgoClusterStrategyTest extends TestCase
@@ -25,6 +26,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
     public function gathersItemsWithinWindowAroundLastYear(): void
     {
         $strategy = new OneYearAgoClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             windowDays: 2,
             minItemsTotal: 4,
@@ -75,6 +77,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
     public function enforcesMinimumItemCount(): void
     {
         $strategy = new OneYearAgoClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             windowDays: 1,
             minItemsTotal: 3,

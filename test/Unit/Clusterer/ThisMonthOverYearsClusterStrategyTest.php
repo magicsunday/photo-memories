@@ -16,6 +16,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class ThisMonthOverYearsClusterStrategyTest extends TestCase
@@ -24,6 +25,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
     public function aggregatesCurrentMonthAcrossYears(): void
     {
         $strategy = new ThisMonthOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             minYears: 3,
             minItemsTotal: 6,
@@ -80,6 +82,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
     public function checksDistinctDaysRequirement(): void
     {
         $strategy = new ThisMonthOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             minYears: 2,
             minItemsTotal: 4,

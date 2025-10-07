@@ -14,10 +14,12 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
 use function explode;
@@ -31,10 +33,14 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
+    private LocationHelper $locationHelper;
+
     public function __construct(
+        LocationHelper $locationHelper,
         // Minimum members per (season, year) bucket.
         private int $minItemsPerSeason = 20,
         ?ClusterQualityAggregator $qualityAggregator = null,
@@ -43,6 +49,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
             throw new InvalidArgumentException('minItemsPerSeason must be >= 1.');
         }
 
+        $this->locationHelper    = $locationHelper;
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
@@ -102,6 +109,11 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $params = $this->appendLocationMetadata($members, $params);
+
+            $peopleParams = $this->buildPeopleParams($members);
+            $params       = [...$params, ...$peopleParams];
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),

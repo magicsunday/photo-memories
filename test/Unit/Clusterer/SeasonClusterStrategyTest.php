@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class SeasonClusterStrategyTest extends TestCase
@@ -22,7 +23,10 @@ final class SeasonClusterStrategyTest extends TestCase
     #[Test]
     public function groupsItemsBySeasonPerYear(): void
     {
-        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 4);
+        $strategy = new SeasonClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerSeason: 4,
+        );
 
         $mediaItems = [
             $this->createMedia(1, '2023-12-15 09:00:00'),
@@ -74,7 +78,10 @@ final class SeasonClusterStrategyTest extends TestCase
     #[Test]
     public function skipsGroupsBelowMinimum(): void
     {
-        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 3);
+        $strategy = new SeasonClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerSeason: 3,
+        );
 
         $mediaItems = [
             $this->createMedia(11, '2024-06-01 10:00:00'),
@@ -87,7 +94,10 @@ final class SeasonClusterStrategyTest extends TestCase
     #[Test]
     public function featureDrivenSeasonMatchesFallback(): void
     {
-        $strategy = new SeasonClusterStrategy(minItemsPerSeason: 4);
+        $strategy = new SeasonClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerSeason: 4,
+        );
 
         $items = [
             $this->createMedia(101, '2022-12-12 07:45:00'),

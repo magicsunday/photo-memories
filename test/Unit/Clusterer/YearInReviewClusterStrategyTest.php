@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class YearInReviewClusterStrategyTest extends TestCase
@@ -24,7 +25,11 @@ final class YearInReviewClusterStrategyTest extends TestCase
     #[Test]
     public function buildsClusterForYearsMeetingThresholds(): void
     {
-        $strategy = new YearInReviewClusterStrategy(minItemsPerYear: 4, minDistinctMonths: 3);
+        $strategy = new YearInReviewClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerYear: 4,
+            minDistinctMonths: 3,
+        );
 
         $mediaItems = [
             $this->createMedia(501, '2021-01-05 09:00:00', 52.5200, 13.4050),
@@ -80,7 +85,11 @@ final class YearInReviewClusterStrategyTest extends TestCase
     #[Test]
     public function returnsEmptyWhenYearsLackDistinctMonths(): void
     {
-        $strategy = new YearInReviewClusterStrategy(minItemsPerYear: 3, minDistinctMonths: 4);
+        $strategy = new YearInReviewClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerYear: 3,
+            minDistinctMonths: 4,
+        );
 
         $mediaItems = [
             $this->createMedia(701, '2022-01-01 09:00:00', 40.7128, -74.0060),

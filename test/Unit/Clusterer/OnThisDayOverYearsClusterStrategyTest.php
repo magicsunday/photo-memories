@@ -16,6 +16,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 use function count;
@@ -26,6 +27,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
     public function collectsItemsAcrossYearsNearAnchorDay(): void
     {
         $strategy = new OnThisDayOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             windowDays: 1,
             minYears: 3,
@@ -93,6 +95,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
     public function requiresMinimumYearsAndItems(): void
     {
         $strategy = new OnThisDayOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             timezone: 'Europe/Berlin',
             windowDays: 0,
             minYears: 4,

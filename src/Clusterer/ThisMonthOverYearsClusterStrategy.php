@@ -17,8 +17,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_keys;
 use function array_values;
@@ -33,12 +36,19 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
+
+    private LocationHelper $locationHelper;
+
+    private ClusterQualityAggregator $qualityAggregator;
 
     public function __construct(
+        LocationHelper $locationHelper,
         private string $timezone = 'Europe/Berlin',
         private int $minYears = 3,
         private int $minItemsTotal = 24,
         private int $minDistinctDays = 8,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minYears < 1) {
             throw new InvalidArgumentException('minYears must be >= 1.');
@@ -51,6 +61,9 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
         if ($this->minDistinctDays < 1) {
             throw new InvalidArgumentException('minDistinctDays must be >= 1.');
         }
+
+        $this->locationHelper    = $locationHelper;
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -115,6 +128,18 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
         if ($tags !== []) {
             $params = [...$params, ...$tags];
         }
+
+        $params = $this->appendLocationMetadata($picked, $params);
+
+        $qualityParams = $this->qualityAggregator->buildParams($picked);
+        foreach ($qualityParams as $qualityKey => $qualityValue) {
+            if ($qualityValue !== null) {
+                $params[$qualityKey] = $qualityValue;
+            }
+        }
+
+        $peopleParams = $this->buildPeopleParams($picked);
+        $params       = [...$params, ...$peopleParams];
 
         return [
             new ClusterDraft(
