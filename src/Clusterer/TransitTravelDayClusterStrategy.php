@@ -133,16 +133,31 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                         continue;
                     }
 
-                    $distKm += MediaMath::haversineDistanceInMeters(
+                    $segmentMeters = MediaMath::haversineDistanceInMeters(
                         $pLat,
                         $pLon,
                         $qLat,
                         $qLon
-                    ) / 1000.0;
+                    );
+
+                    $distKm += $segmentMeters / 1000.0;
 
                     ++$segmentCount;
 
                     $segmentSpeedMps = self::resolveSegmentSpeed($p->getGpsSpeedMps(), $q->getGpsSpeedMps());
+
+                    if ($segmentSpeedMps === null) {
+                        $pTime = $p->getTakenAt();
+                        $qTime = $q->getTakenAt();
+
+                        if ($pTime instanceof DateTimeImmutable && $qTime instanceof DateTimeImmutable) {
+                            $deltaSeconds = $qTime->getTimestamp() - $pTime->getTimestamp();
+
+                            if ($deltaSeconds > 0) {
+                                $segmentSpeedMps = $segmentMeters / $deltaSeconds;
+                            }
+                        }
+                    }
 
                     if ($segmentSpeedMps !== null) {
                         $speedSum     += $segmentSpeedMps;
