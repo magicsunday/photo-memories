@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
+use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
 use function substr;
@@ -30,11 +32,13 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
+        private LocationHelper $locationHelper,
         private int $minItemsPerDay = 8,
         ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
@@ -106,6 +110,11 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $peopleParams = $this->buildPeopleParams($members);
+            $params       = [...$params, ...$peopleParams];
+
+            $params = $this->appendLocationMetadata($members, $params);
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
