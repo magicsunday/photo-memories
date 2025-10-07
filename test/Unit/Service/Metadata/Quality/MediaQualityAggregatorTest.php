@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Quality;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Test\TestCase;
@@ -106,7 +107,36 @@ final class MediaQualityAggregatorTest extends TestCase
 
         $log = $media->getIndexLog();
         self::assertNotNull($log);
-        self::assertStringContainsString('qlt=low; sharp=0.60; clip=0.20', $log);
+        self::assertStringContainsString('quality|status=low', $log);
+        self::assertStringContainsString('clip=0.20', $log);
+        self::assertStringContainsString('noiseThreshold=0.25', $log);
+    }
+
+    #[Test]
+    public function relaxesNoiseThresholdForLegacyCaptures(): void
+    {
+        $media = $this->createMedia(5);
+        $media->setWidth(6000);
+        $media->setHeight(4000);
+        $media->setSharpness(0.6);
+        $media->setIso(3200);
+        $media->setBrightness(0.55);
+        $media->setContrast(0.65);
+        $media->setTakenAt(new DateTimeImmutable('2000-06-01T12:00:00+00:00'));
+
+        $aggregator = new MediaQualityAggregator();
+        $aggregator->aggregate($media);
+
+        self::assertFalse($media->isLowQuality());
+
+        $noiseScore = $media->getQualityNoise();
+        self::assertNotNull($noiseScore);
+        self::assertGreaterThan(0.14, $noiseScore);
+
+        $log = $media->getIndexLog();
+        self::assertNotNull($log);
+        self::assertStringContainsString('quality|status=ok', $log);
+        self::assertStringContainsString('noiseThreshold=0.10', $log);
     }
 
     private function createMedia(int $id): Media

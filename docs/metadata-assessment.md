@@ -33,7 +33,7 @@
 ### 5. Inhaltliche Klassifikation & Qualitätsbewertung
 - [x] Schwellenwerte des `ContentClassifierExtractor` als konfigurierbare Parameter/DI-Argumente exponieren, um datengetriebenes Tuning zu ermöglichen.【F:src/Service/Metadata/ContentClassifierExtractor.php†L27-L247】
 - [x] Zusätzliche Feature-Quellen (z. B. Vision-Modelle) integrieren und mit Confidence-Scores kombinieren, bevor `noShow` gesetzt wird.【F:src/Service/Metadata/ContentClassifierExtractor.php†L128-L247】【F:test/Unit/Service/Metadata/ContentClassifierExtractorTest.php†L17-L125】
-- [ ] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L13-L132】
+- [x] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L30-L251】【F:test/Unit/Service/Metadata/Quality/MediaQualityAggregatorTest.php†L19-L149】
 
 ### 6. QA & Beobachtbarkeit
 - [x] `MetadataQaInspector` um strukturierte Ergebnisse erweitern (statt Log-Zeilen), damit der Indexprozess maschinell reagieren kann.【F:src/Service/Metadata/MetadataQaInspector.php†L24-L78】【F:src/Service/Metadata/MetadataQaInspectionResult.php†L13-L69】【F:src/Service/Indexing/Contract/MediaIngestionContext.php†L19-L214】【F:src/Service/Indexing/Stage/TimeStage.php†L19-L87】
