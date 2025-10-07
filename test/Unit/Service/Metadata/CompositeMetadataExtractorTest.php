@@ -15,15 +15,13 @@ use MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
+use function chmod;
+use function file_put_contents;
 use function is_file;
-use function restore_error_handler;
-use function set_error_handler;
 use function str_repeat;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
-
-use const E_WARNING;
 
 final class CompositeMetadataExtractorTest extends TestCase
 {
@@ -48,24 +46,88 @@ final class CompositeMetadataExtractorTest extends TestCase
 
         $composite = new CompositeMetadataExtractor([]);
 
-        $warnings = [];
-        $handler  = static function (int $severity, string $message) use (&$warnings): bool {
-            if ($severity === E_WARNING) {
-                $warnings[] = $message;
+        $composite->extract($tmp, $media);
+
+        self::assertNull($media->getMime());
+        self::assertSame('MIME-Bestimmung übersprungen: Datei nicht gefunden.', $media->getIndexLog());
+    }
+
+    #[Test]
+    public function guessMimeSetsMimeAndLogsSuccess(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'media_mime_success_');
+        if ($tmp === false) {
+            self::fail('Unable to allocate temporary filename.');
+        }
+
+        $bytesWritten = file_put_contents($tmp, 'plain-text');
+        if ($bytesWritten === false) {
+            self::fail('Unable to populate temporary file.');
+        }
+
+        $media = $this->makeMedia(
+            id: 102,
+            path: $tmp,
+            checksum: str_repeat('1', 64),
+            size: 512,
+        );
+
+        $composite = new CompositeMetadataExtractor([]);
+
+        $composite->extract($tmp, $media);
+
+        self::assertSame('text/plain', $media->getMime());
+        self::assertSame('MIME-Bestimmung erfolgreich: text/plain', $media->getIndexLog());
+
+        if (is_file($tmp) && unlink($tmp) === false) {
+            self::fail('Unable to clean up temporary file.');
+        }
+    }
+
+    #[Test]
+    public function guessMimeLogsFailureWhenFileIsUnreadable(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'media_mime_failure_');
+        if ($tmp === false) {
+            self::fail('Unable to allocate temporary filename.');
+        }
+
+        $bytesWritten = file_put_contents($tmp, 'locked');
+        if ($bytesWritten === false) {
+            self::fail('Unable to populate temporary file.');
+        }
+
+        if (chmod($tmp, 0) === false) {
+            if (is_file($tmp) && unlink($tmp) === false) {
+                self::fail('Unable to clean up temporary file after chmod failure.');
             }
 
-            return true;
-        };
+            self::markTestSkipped('Filesystem permissions cannot be adjusted in this environment.');
+        }
 
-        set_error_handler($handler);
+        $media = $this->makeMedia(
+            id: 103,
+            path: $tmp,
+            checksum: str_repeat('2', 64),
+            size: 512,
+        );
+
+        $composite = new CompositeMetadataExtractor([]);
 
         try {
             $composite->extract($tmp, $media);
         } finally {
-            restore_error_handler();
+            if (chmod($tmp, 0o644) === false) {
+                self::fail('Unable to restore permissions for cleanup.');
+            }
+
+            if (is_file($tmp) && unlink($tmp) === false) {
+                self::fail('Unable to clean up temporary file.');
+            }
         }
 
-        self::assertSame([], $warnings);
         self::assertNull($media->getMime());
+        self::assertNotNull($media->getIndexLog());
+        self::assertStringContainsString('MIME-Bestimmung fehlgeschlagen', $media->getIndexLog());
     }
 }

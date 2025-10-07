@@ -23,6 +23,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
+use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use PHPUnit\Framework\Attributes\Test;
@@ -198,6 +199,34 @@ final class ClusterPersistenceServiceTest extends TestCase
             'max_heading_change_threshold_deg'            => 90.0,
             'min_consistent_heading_segments_threshold'   => 1,
         ], $persistedParams['movement']);
+
+        $mapper    = new ClusterEntityToDraftMapper(['demo' => 'default']);
+        $roundtrip = $mapper->mapMany([$persisted]);
+
+        self::assertCount(1, $roundtrip);
+
+        $roundtripParams = $roundtrip[0]->getParams();
+        self::assertArrayHasKey('quality_avg', $roundtripParams);
+        self::assertArrayHasKey('quality_resolution', $roundtripParams);
+        self::assertArrayHasKey('people', $roundtripParams);
+        self::assertArrayHasKey('people_count', $roundtripParams);
+        self::assertArrayHasKey('movement', $roundtripParams);
+        self::assertSame([
+            'segment_count'                               => 4,
+            'fast_segment_count'                          => 2,
+            'fast_segment_ratio'                          => 0.5,
+            'speed_sample_count'                          => 3,
+            'avg_speed_mps'                               => 12.3,
+            'max_speed_mps'                               => 18.5,
+            'heading_sample_count'                        => 2,
+            'avg_heading_change_deg'                      => 45.0,
+            'consistent_heading_segment_count'            => 2,
+            'heading_consistency_ratio'                   => 1.0,
+            'fast_segment_speed_threshold_mps'            => 5.0,
+            'min_fast_segment_count_threshold'            => 2,
+            'max_heading_change_threshold_deg'            => 90.0,
+            'min_consistent_heading_segments_threshold'   => 1,
+        ], $roundtripParams['movement']);
     }
 
     /**

@@ -10,7 +10,7 @@
 ## Verbesserungsfelder & Aufgabenlisten
 
 ### 1. Orchestrierung & Fehlertoleranz
-- [ ] Fehlerpfade im MIME-Vorab-Guessing vereinheitlichen (z. B. Exception-Handling statt Error-Suppression bei `mime_content_type`) und Logging ergänzen.【F:src/Service/Metadata/CompositeMetadataExtractor.php†L53-L64】
+- [x] Fehlerpfade im MIME-Vorab-Guessing vereinheitlichen (z. B. Exception-Handling statt Error-Suppression bei `mime_content_type`) und Logging ergänzen.【F:src/Service/Metadata/CompositeMetadataExtractor.php†L53-L124】【F:test/Unit/Service/Metadata/CompositeMetadataExtractorTest.php†L19-L120】
 - [ ] Konfigurierbare Pipeline-Schritte einführen (aktiv/deaktiv) sowie Telemetrie sammeln, um Kosten pro Extractor zu messen.
 - [ ] Einen Recovery-Pfad dokumentieren, falls einzelne Extractor-Aufrufe scheitern (z. B. Retry-Strategie oder Eskalation an QA).
 
