@@ -16,6 +16,7 @@ Dieser Bericht dokumentiert den aktuellen Zustand der JSON-Antwort des `FeedCont
 5. **Navigations- und Ladefeedback** – `meta.pagination` liefert `hatWeitere`, `nextCursor` und eine Limit-Empfehlung. Cursor werden aus den aktuell ausgelieferten Items gebildet, sodass das Frontend weitere Seiten anfordern kann.【F:src/Http/Controller/FeedController.php†L196-L210】【F:src/Http/Controller/FeedController.php†L1145-L1164】
 6. **Konsistente Medien-URLs** – Thumbnail-Endpunkte werden inkl. Host zusammengesetzt, wodurch CDNs oder externe Clients ohne zusätzliche Konfiguration funktionieren.【F:src/Http/Controller/FeedController.php†L471-L476】
 7. **Personalisierung & Favoriten** – Der Feed wertet Nutzer- und Profilparameter aus, filtert Opt-out-Algorithmen, liefert Favoritenlisten und markiert Karten direkt in der Antwort, sodass Clients Feedback ohne Zusatzabfragen widerspiegeln können.【F:src/Http/Controller/FeedController.php†L118-L215】
+8. **Automatische Storyboard-Texte** – `StoryboardTextGenerator` erstellt aus Personen-, POI- und Tag-Daten lokalisierte Titel und Beschreibungen, die der `FeedController` den Storyboard-Blöcken beilegt, damit Clients sofort nutzbare Texte erhalten.【F:src/Service/Feed/StoryboardTextGenerator.php†L17-L255】【F:src/Http/Controller/FeedController.php†L492-L571】
 
 ## Weiterführende Überlegungen
 - Eine zentrale Übersetzungstabelle könnte langfristig zusätzliche Begriffe (z. B. Gruppennamen) standardisieren.

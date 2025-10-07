@@ -8,8 +8,8 @@
 ## 2. Storytelling-Erlebnis aufwerten
 - [x] Storyboards aus dem JSON-Feed ableiten und in Slideshow-Generierung sowie UI integrieren: `FeedController` liefert jetzt einen `storyboard`-Block mit Folieninformationen, Übergängen, Dauer- und Kontextangaben, während `SlideshowVideoManager` und `SlideshowVideoGenerator` dieselben Daten für die Videoerstellung nutzen.【F:src/Http/Controller/FeedController.php†L312-L392】【F:src/Service/Slideshow/SlideshowVideoManager.php†L41-L139】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L39-L269】
 - [x] Konfigurierbare Musik-, Übergangs- und Dauerparameter definieren: Sämtliche Werte werden nun über `config/parameters.yaml` gesteuert und in Services injiziert; FFMPEG greift optional auf eine konfigurierte Audiodatei zu.【F:config/parameters.yaml†L306-L316】【F:config/services.yaml†L90-L118】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L39-L269】
-- Automatische Titel- und Beschreibungsgenerierung mit POI- und Personeninformationen implementieren.
-- Lokalisierung für generierte Texte vorbereiten.
+- [x] Automatische Titel- und Beschreibungsgenerierung mit POI- und Personeninformationen implementieren: `StoryboardTextGenerator` aggregiert Orte, Personen und Tags und speist lokalisierte Texte in den Feed ein, sodass jede Erinnerung ohne Zusatzabfragen sprechende Beschreibungen liefert.【F:src/Service/Feed/StoryboardTextGenerator.php†L17-L255】【F:src/Http/Controller/FeedController.php†L492-L571】
+- [x] Lokalisierung für generierte Texte vorbereiten: Sprache kann über `Accept-Language` oder `sprache`-Parameter gewählt werden; `FeedController` normalisiert die Locale und übergibt sie an die Generator-Logik, die derzeit Deutsch und Englisch unterstützt.【F:src/Http/Controller/FeedController.php†L196-L210】【F:src/Http/Controller/FeedController.php†L347-L386】【F:src/Service/Feed/StoryboardTextGenerator.php†L91-L143】
 
 ## 3. Mobile-first Frontend neu denken
 - Komponentenbasierte SPA (z. B. Vue oder React) mit Timeline, „Für dich“-Feed und Story-Viewer entwerfen.

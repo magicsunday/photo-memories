@@ -27,6 +27,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
+use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
@@ -44,6 +45,7 @@ use function array_keys;
 use function array_map;
 use function array_replace;
 use function array_slice;
+use function explode;
 use function array_values;
 use function count;
 use function hash;
@@ -101,6 +103,7 @@ final class FeedController
         private readonly EntityManagerInterface $entityManager,
         private readonly FeedPersonalizationProfileProvider $profileProvider,
         private readonly FeedUserPreferenceStorage $preferenceStorage,
+        private readonly StoryboardTextGenerator $storyboardTextGenerator,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -197,6 +200,7 @@ final class FeedController
         $userId     = $this->normalizeString($request->getQueryParam('nutzer')) ?? 'standard';
         $profile    = $this->profileProvider->getProfile($profileKey);
         $preferences = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
+        $locale      = $this->resolveLocale($request);
 
         $clusters = $this->clusterRepository->findLatest($clusterLimit);
         $drafts   = $this->clusterMapper->mapMany($clusters);
@@ -240,7 +244,7 @@ final class FeedController
 
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
-            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now, $preferences),
+            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now, $preferences, $locale),
             $pagedItems,
         );
 
@@ -368,6 +372,34 @@ final class FeedController
         return min($int, $this->maxThumbnailWidth);
     }
 
+    private function resolveLocale(Request $request): string
+    {
+        $override = $this->normalizeString($request->getQueryParam('sprache'));
+        if ($override !== null) {
+            return $this->storyboardTextGenerator->normaliseLocale($override);
+        }
+
+        $header = $request->getHeader('accept-language');
+        if ($header !== null) {
+            foreach (explode(',', $header) as $segment) {
+                $trimmed = trim($segment);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $parts = explode(';', $trimmed);
+                $language = trim($parts[0] ?? '');
+                if ($language === '') {
+                    continue;
+                }
+
+                return $this->storyboardTextGenerator->normaliseLocale($language);
+            }
+        }
+
+        return $this->storyboardTextGenerator->getDefaultLocale();
+    }
+
     private function resolveOrGenerateThumbnail(Media $media, int $width): ?string
     {
         $resolved = $this->thumbnailResolver->resolveBest($media, $width);
@@ -472,8 +504,13 @@ final class FeedController
         return $takenAt->format(DateTimeInterface::ATOM);
     }
 
-    private function transformItem(MemoryFeedItem $item, string $baseUrl, DateTimeImmutable $reference, FeedUserPreferences $preferences): array
-    {
+    private function transformItem(
+        MemoryFeedItem $item,
+        string $baseUrl,
+        DateTimeImmutable $reference,
+        FeedUserPreferences $preferences,
+        string $locale,
+    ): array {
         $coverId = $item->getCoverMediaId();
         $members = $item->getMemberIds();
 
@@ -527,14 +564,14 @@ final class FeedController
             'zusatzdaten'        => $item->getParams(),
             'kontext'            => $clusterContext,
             'slideshow'          => $this->enrichSlideshowStatus($status),
-            'storyboard'         => $this->buildStoryboard($memberPayload),
+            'storyboard'         => $this->buildStoryboard($memberPayload, $item->getParams(), $locale),
         ];
     }
 
     /**
      * @param list<array<string,mixed>> $memberPayload
      */
-    private function buildStoryboard(array $memberPayload): ?array
+    private function buildStoryboard(array $memberPayload, array $clusterParams, string $locale): ?array
     {
         if ($memberPayload === []) {
             return null;
@@ -606,6 +643,17 @@ final class FeedController
 
         if ($this->slideshowMusic !== null) {
             $payload['musik'] = $this->slideshowMusic;
+        }
+
+        $texts = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
+        $title = trim($texts['title']);
+        if ($title !== '') {
+            $payload['titel'] = $title;
+        }
+
+        $description = trim($texts['description']);
+        if ($description !== '') {
+            $payload['beschreibung'] = $description;
         }
 
         return $payload;
