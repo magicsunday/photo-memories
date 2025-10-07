@@ -19,11 +19,13 @@ use JsonException;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
+use MagicSunday\Memories\Support\IndexLogHelper;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Process;
+use Throwable;
 
 use function array_key_exists;
 use function array_pad;
-use function escapeshellarg;
-use function escapeshellcmd;
 use function explode;
 use function intdiv;
 use function is_array;
@@ -34,7 +36,6 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 use function json_decode;
-use function shell_exec;
 use function sprintf;
 use function str_contains;
 use function str_starts_with;
@@ -49,6 +50,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     public function __construct(
         private string $ffprobePath = 'ffprobe',
         private float $slowMoFpsThreshold = 100.0,
+        private float $processTimeout = 10.0,
         private ?Closure $processRunner = null,
     ) {
     }
@@ -67,12 +69,20 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return $media;
         }
 
-        $cmd = sprintf(
-            '%s -v error -select_streams v -show_entries stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration -of json %s',
-            escapeshellcmd($this->ffprobePath),
-            escapeshellarg($filepath)
-        );
-        $out = $this->runCommand($cmd);
+        $command = [
+            $this->ffprobePath,
+            '-v',
+            'error',
+            '-select_streams',
+            'v',
+            '-show_entries',
+            'stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration',
+            '-of',
+            'json',
+            $filepath,
+        ];
+
+        $out = $this->runCommand($media, $command, 'ffprobe.streams');
         if ($out === null) {
             return $media;
         }
@@ -132,16 +142,57 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         return $media;
     }
 
-    private function runCommand(string $command): ?string
+    /**
+     * @param list<string> $command
+     */
+    private function runCommand(Media $media, array $command, string $component): ?string
     {
         $runner = $this->processRunner;
-        $result = $runner !== null ? $runner($command) : @shell_exec($command);
 
-        if (!is_string($result)) {
-            return null;
+        try {
+            if ($runner !== null) {
+                $result = $runner($command, $this->processTimeout);
+
+                if (is_array($result)) {
+                    $exitCode = $result['exitCode'] ?? 0;
+                    $stdout   = $result['stdout'] ?? '';
+                    if ($exitCode !== 0) {
+                        $stderr = trim((string) ($result['stderr'] ?? ''));
+                        IndexLogHelper::append($media, sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode, $stderr));
+
+                        return null;
+                    }
+
+                    return $this->normaliseOutput($stdout);
+                }
+
+                if (is_string($result)) {
+                    return $this->normaliseOutput($result);
+                }
+
+                return null;
+            }
+
+            $process = new Process($command);
+            $process->setTimeout($this->processTimeout);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                $stderr   = trim($process->getErrorOutput());
+                $exitCode = $process->getExitCode();
+                IndexLogHelper::append($media, sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode ?? -1, $stderr));
+
+                return null;
+            }
+
+            return $this->normaliseOutput($process->getOutput());
+        } catch (ProcessTimedOutException $exception) {
+            IndexLogHelper::append($media, sprintf('[%s] ffprobe timeout after %.1fs', $component, $exception->getExceededTimeout()));
+        } catch (Throwable $exception) {
+            IndexLogHelper::append($media, sprintf('[%s] ffprobe error: %s', $component, $exception->getMessage()));
         }
 
-        return trim($result) === '' ? null : $result;
+        return null;
     }
 
     /**
@@ -359,7 +410,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return;
         }
 
-        $capture = $this->probeQuickTimeCapture($filepath);
+        $capture = $this->probeQuickTimeCapture($filepath, $media);
         if ($capture === null) {
             return;
         }
@@ -420,15 +471,20 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
      *
      * @throws JsonException
      */
-    private function probeQuickTimeCapture(string $filepath): ?array
+    private function probeQuickTimeCapture(string $filepath, Media $media): ?array
     {
-        $cmd = sprintf(
-            '%s -v error -show_entries format_tags=creation_time:format_tags=com.apple.quicktime.creationdate -of json %s',
-            escapeshellcmd($this->ffprobePath),
-            escapeshellarg($filepath),
-        );
+        $command = [
+            $this->ffprobePath,
+            '-v',
+            'error',
+            '-show_entries',
+            'format_tags=creation_time:format_tags=com.apple.quicktime.creationdate:format_tags=com.apple.quicktime.creatordate',
+            '-of',
+            'json',
+            $filepath,
+        ];
 
-        $out = $this->runCommand($cmd);
+        $out = $this->runCommand($media, $command, 'ffprobe.quicktime');
         if ($out === null) {
             return null;
         }
@@ -455,17 +511,13 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         $candidates = [
             $tags['com.apple.quicktime.creationdate'] ?? null,
+            $tags['com.apple.quicktime.creatordate'] ?? null,
             $tags['creation_time'] ?? null,
         ];
 
         foreach ($candidates as $value) {
-            if (!is_string($value) || $value === '') {
-                continue;
-            }
-
-            try {
-                $instant = new DateTimeImmutable($value);
-            } catch (Exception) {
+            $instant = $this->parseQuickTimeDate($value);
+            if ($instant === null) {
                 continue;
             }
 
@@ -473,6 +525,37 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             $tzName   = $timezone instanceof DateTimeZone ? $timezone->getName() : null;
 
             return [$instant, $tzName];
+        }
+
+        IndexLogHelper::append($media, '[ffprobe.quicktime] Keine gültige QuickTime-Aufnahmezeit gefunden.');
+
+        return null;
+    }
+
+    private function normaliseOutput(string $output): ?string
+    {
+        $trimmed = trim($output);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function parseQuickTimeDate(mixed $value): ?DateTimeImmutable
+    {
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
+
+        $candidates = [$value];
+        if (!str_contains($value, 'Z') && !str_contains($value, '+') && !str_contains($value, '-')) {
+            $candidates[] = $value . 'Z';
+        }
+
+        foreach ($candidates as $candidate) {
+            try {
+                return new DateTimeImmutable($candidate);
+            } catch (Exception) {
+                continue;
+            }
         }
 
         return null;

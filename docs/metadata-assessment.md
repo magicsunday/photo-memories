@@ -22,17 +22,17 @@
 
 ### 3. Feature-Taxonomie & Datenmodell
 - [x] Das freie `features`-Array durch einen typisierten Value-Object-Ansatz ersetzen oder zumindest Namespaces/Hydration-Helper definieren, um Key-Kollisionen zu verhindern.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L1-L219】【F:src/Entity/Media.php†L585-L610】【F:src/Service/Metadata/DaypartEnricher.php†L41-L59】【F:src/Service/Metadata/FilenameKeywordExtractor.php†L30-L52】
-- [ ] Feature-Versionierung (`MetadataFeatureVersion`) modularisieren, sodass pro Feature-Gruppe Migrationsroutinen definiert werden können.【F:src/Service/Metadata/MetadataFeatureVersion.php†L13-L31】
+- [x] Feature-Versionierung (`MetadataFeatureVersion`) modularisieren, sodass pro Feature-Gruppe Migrationsroutinen definiert werden können.【F:src/Service/Metadata/MetadataFeatureVersion.php†L17-L95】【F:src/Service/Metadata/Feature/MetadataFeatureMigrationInterface.php†L1-L23】【F:test/Unit/Service/Metadata/MetadataFeatureVersionTest.php†L1-L47】
 - [x] Dokumentation der Feature-Semantik (z. B. `daypart`, `holidayId`, `isGoldenHour`) erstellen und automatisiert verifizieren (Schema-Validierung in Tests).【F:docs/metadata-feature-semantics.md†L1-L120】
 
 ### 4. Video-Metadaten & Prozessausführung
-- [ ] `FfprobeMetadataExtractor` auf Symfony Process bzw. asynchrone Ausführung umstellen, um Timeout/Exit-Code-Handhabung zu verbessern.【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L70-L145】
-- [ ] QuickTime-Auswertung mit Fallbacks für weitere Tag-Varianten (`creation_time`-Formate, Zeitzonen-Normalisierung) und Fehlertelemetrie erweitern.【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L348-L479】
-- [ ] Unit-Tests mit Mock-Prozessrunnern hinzufügen, die JSON-Beispiele aus Fixtures abdecken (inkl. beschädigter Payloads und Slow-Mo-Erkennung).
+- [x] `FfprobeMetadataExtractor` auf Symfony Process bzw. asynchrone Ausführung umstellen, um Timeout/Exit-Code-Handhabung zu verbessern.【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L17-L346】
+- [x] QuickTime-Auswertung mit Fallbacks für weitere Tag-Varianten (`creation_time`-Formate, Zeitzonen-Normalisierung) und Fehlertelemetrie erweitern.【F:src/Service/Metadata/FfprobeMetadataExtractor.php†L290-L346】
+- [x] Unit-Tests mit Mock-Prozessrunnern hinzufügen, die JSON-Beispiele aus Fixtures abdecken (inkl. beschädigter Payloads und Slow-Mo-Erkennung).【F:test/Unit/Service/Metadata/FfprobeMetadataExtractorTest.php†L1-L173】【F:test/Unit/Service/Metadata/fixtures/ffprobe/quicktime-metadata.json†L1-L8】
 
 ### 5. Inhaltliche Klassifikation & Qualitätsbewertung
-- [ ] Schwellenwerte des `ContentClassifierExtractor` als konfigurierbare Parameter/DI-Argumente exponieren, um datengetriebenes Tuning zu ermöglichen.【F:src/Service/Metadata/ContentClassifierExtractor.php†L137-L248】
-- [ ] Zusätzliche Feature-Quellen (z. B. Vision-Modelle) integrieren und mit Confidence-Scores kombinieren, bevor `noShow` gesetzt wird.【F:src/Service/Metadata/ContentClassifierExtractor.php†L103-L129】
+- [x] Schwellenwerte des `ContentClassifierExtractor` als konfigurierbare Parameter/DI-Argumente exponieren, um datengetriebenes Tuning zu ermöglichen.【F:src/Service/Metadata/ContentClassifierExtractor.php†L27-L247】
+- [x] Zusätzliche Feature-Quellen (z. B. Vision-Modelle) integrieren und mit Confidence-Scores kombinieren, bevor `noShow` gesetzt wird.【F:src/Service/Metadata/ContentClassifierExtractor.php†L128-L247】【F:test/Unit/Service/Metadata/ContentClassifierExtractorTest.php†L17-L125】
 - [ ] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L13-L132】
 
 ### 6. QA & Beobachtbarkeit

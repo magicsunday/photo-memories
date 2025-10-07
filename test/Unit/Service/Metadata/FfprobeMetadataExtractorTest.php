@@ -11,11 +11,15 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
+use DateTimeImmutable;
+use DateTimeInterface;
+use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
+use function in_array;
 use function file_get_contents;
 use function str_repeat;
 use function sys_get_temp_dir;
@@ -28,7 +32,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
     public function extractsRotationFromTagAndDetectsStabilisation(): void
     {
         $fixture   = $this->loadFixture('rotate-stabilised.json');
-        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (string $command): string => $fixture);
+        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
         if ($videoPath === false) {
@@ -83,7 +87,7 @@ final class FfprobeMetadataExtractorTest extends TestCase
     public function extractsDisplayMatrixRotationWithoutStabilisation(): void
     {
         $fixture   = $this->loadFixture('displaymatrix-rotation.json');
-        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (string $command): string => $fixture);
+        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
         if ($videoPath === false) {
@@ -126,6 +130,75 @@ final class FfprobeMetadataExtractorTest extends TestCase
                 ],
                 $streams
             );
+        } finally {
+            unlink($videoPath);
+        }
+    }
+
+    #[Test]
+    public function appliesQuickTimeFallbackMetadata(): void
+    {
+        $streamFixture    = $this->loadFixture('displaymatrix-rotation.json');
+        $quickTimeFixture = $this->loadFixture('quicktime-metadata.json');
+
+        $runner = static function (array $command, float $timeout) use ($streamFixture, $quickTimeFixture): string {
+            if (in_array('stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration', $command, true)) {
+                return $streamFixture;
+            }
+
+            return $quickTimeFixture;
+        };
+
+        $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+        if ($videoPath === false) {
+            self::fail('Unable to create temporary video fixture.');
+        }
+
+        try {
+            $media = new Media($videoPath, str_repeat('c', 64), 4096);
+            $media->setMime('video/quicktime');
+
+            $extractor = new FfprobeMetadataExtractor(processRunner: $runner);
+            $extractor->extract($videoPath, $media);
+
+            self::assertSame(TimeSource::VIDEO_QUICKTIME, $media->getTimeSource());
+            $takenAt = $media->getTakenAt();
+            self::assertInstanceOf(DateTimeImmutable::class, $takenAt);
+            self::assertSame('2025-01-01T04:59:58+00:00', $takenAt?->format(DateTimeInterface::ATOM));
+            self::assertSame('America/New_York', $media->getTzId());
+            self::assertSame(-300, $media->getTimezoneOffsetMin());
+        } finally {
+            unlink($videoPath);
+        }
+    }
+
+    #[Test]
+    public function logsProcessFailuresAndSkipsMetadata(): void
+    {
+        $runner = static function (array $command, float $timeout): array {
+            return [
+                'exitCode' => 1,
+                'stdout'   => '',
+                'stderr'   => 'failed',
+            ];
+        };
+
+        $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+        if ($videoPath === false) {
+            self::fail('Unable to create temporary video fixture.');
+        }
+
+        try {
+            $media = new Media($videoPath, str_repeat('d', 64), 4096);
+            $media->setMime('video/mp4');
+
+            $extractor = new FfprobeMetadataExtractor(processRunner: $runner);
+            $extractor->extract($videoPath, $media);
+
+            self::assertNull($media->getVideoCodec());
+            self::assertNull($media->getTakenAt());
+            self::assertNotNull($media->getIndexLog());
+            self::assertStringContainsString('ffprobe exited with 1', (string) $media->getIndexLog());
         } finally {
             unlink($videoPath);
         }

@@ -20,6 +20,8 @@ use function array_unique;
 use function array_values;
 use function basename;
 use function is_array;
+use function is_float;
+use function is_int;
 use function is_string;
 use function max;
 use function min;
@@ -29,13 +31,13 @@ use function str_ends_with;
 use function str_replace;
 use function str_starts_with;
 use function strtolower;
+use function usort;
 
 /**
  * Classifies media into broad content categories to support downstream filtering.
  */
 final class ContentClassifierExtractor implements SingleMetadataExtractorInterface
 {
-    /** Keywords associated with screenshot detection. */
     private const array SCREENSHOT_KEYWORDS = [
         'screenshot',
         'screen-shot',
@@ -46,7 +48,6 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'bildschirmaufnahme',
     ];
 
-    /** Keywords indicating document-style media. */
     private const array DOCUMENT_KEYWORDS = [
         'document',
         'scan',
@@ -60,7 +61,6 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'certificate',
     ];
 
-    /** Keywords used to recognise map-related media. */
     private const array MAP_KEYWORDS = [
         'map',
         'maps',
@@ -72,7 +72,6 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'osm',
     ];
 
-    /** Keywords marking screen recordings. */
     private const array SCREEN_RECORD_KEYWORDS = [
         'screenrecord',
         'screen-record',
@@ -82,6 +81,32 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'bildschirmaufnahme',
         'screenrec',
     ];
+
+    private const array VISION_KEYWORDS = [
+        'screenshot'       => ['screenshot', 'screen'],
+        'document'        => ['document', 'paper', 'receipt'],
+        'map'             => ['map', 'navigation', 'atlas'],
+        'screenRecording' => ['screen recording', 'screenrec', 'display capture'],
+    ];
+
+    public function __construct(
+        private float $screenshotAspectRatioMin = 1.55,
+        private float $screenshotAspectRatioMax = 2.40,
+        private int $screenshotMinLongSide = 720,
+        private float $screenshotSharpnessMax = 0.35,
+        private float $screenshotColorfulnessMax = 0.45,
+        private float $documentColorfulnessMax = 0.20,
+        private float $documentContrastMin = 0.55,
+        private float $documentBrightnessLow = 0.18,
+        private float $documentBrightnessHigh = 0.82,
+        private float $mapColorfulnessMin = 0.45,
+        private float $mapEntropyMax = 0.55,
+        private float $screenRecordingFpsThreshold = 45.0,
+        private float $minConfidenceToHide = 0.65,
+        private float $visionTagConfidenceThreshold = 0.55,
+        private float $visionBoostWeight = 0.25,
+    ) {
+    }
 
     public function supports(string $filepath, Media $media): bool
     {
@@ -95,55 +120,76 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
 
     public function extract(string $filepath, Media $media): Media
     {
-        $kind = $this->classify($media, $filepath);
-        if ($kind === null) {
+        $result = $this->classify($media, $filepath);
+        if ($result === null) {
             return $media;
         }
 
-        $media->setContentKind($kind);
-        if ($this->shouldHide($kind)) {
+        $media->setContentKind($result['kind']);
+        if ($result['confidence'] >= $this->minConfidenceToHide && $this->shouldHide($result['kind'])) {
             $media->setNoShow(true);
         }
 
         return $media;
     }
 
-    private function classify(Media $media, string $filepath): ?ContentKind
+    /**
+     * @return array{kind: ContentKind, confidence: float}|null
+     */
+    private function classify(Media $media, string $filepath): ?array
     {
         $tokens = $this->tokensFromMedia($media, $filepath);
 
-        if ($media->isVideo() && $this->isScreenRecording($media, $tokens)) {
-            return ContentKind::SCREEN_RECORDING;
+        $scores = [];
+
+        if ($media->isVideo()) {
+            $score = $this->scoreScreenRecording($media, $tokens);
+            if ($score !== null) {
+                $scores[] = ['kind' => ContentKind::SCREEN_RECORDING, 'confidence' => $score];
+            }
         }
 
-        if ($this->isScreenshot($media, $tokens)) {
-            return ContentKind::SCREENSHOT;
+        $screenshotScore = $this->scoreScreenshot($media, $tokens);
+        if ($screenshotScore !== null) {
+            $scores[] = ['kind' => ContentKind::SCREENSHOT, 'confidence' => $screenshotScore];
         }
 
-        if ($this->isMap($media, $tokens)) {
-            return ContentKind::MAP;
+        $mapScore = $this->scoreMap($media, $tokens);
+        if ($mapScore !== null) {
+            $scores[] = ['kind' => ContentKind::MAP, 'confidence' => $mapScore];
         }
 
-        if ($this->isDocument($media, $tokens)) {
-            return ContentKind::DOCUMENT;
+        $documentScore = $this->scoreDocument($media, $tokens);
+        if ($documentScore !== null) {
+            $scores[] = ['kind' => ContentKind::DOCUMENT, 'confidence' => $documentScore];
         }
 
-        return null;
+        if ($scores === []) {
+            return null;
+        }
+
+        usort(
+            $scores,
+            static fn (array $lhs, array $rhs): int => $rhs['confidence'] <=> $lhs['confidence']
+        );
+
+        return $scores[0];
     }
 
     /**
      * @param list<string> $tokens
      */
-    private function isScreenshot(Media $media, array $tokens): bool
+    private function scoreScreenshot(Media $media, array $tokens): ?float
     {
+        $score = 0.0;
         if ($this->matchesAnyKeyword($tokens, self::SCREENSHOT_KEYWORDS)) {
-            return true;
+            $score += 0.5;
         }
 
         $width  = $media->getWidth();
         $height = $media->getHeight();
         if ($width === null || $height === null) {
-            return false;
+            return $this->confidenceOrNull($score);
         }
 
         $cameraMake  = $media->getCameraMake();
@@ -151,100 +197,118 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         $iso         = $media->getIso();
 
         if ($cameraMake !== null || $cameraModel !== null || ($iso !== null && $iso > 0)) {
-            return false;
+            return $this->confidenceOrNull($score);
         }
 
         $longSide  = max($width, $height);
         $shortSide = min($width, $height);
         if ($shortSide === 0) {
-            return false;
+            return $this->confidenceOrNull($score);
         }
 
         $ratio = $longSide / (float) $shortSide;
-        if ($longSide < 720 || $ratio < 1.55 || $ratio > 2.40) {
-            return false;
+        if ($longSide >= $this->screenshotMinLongSide && $ratio >= $this->screenshotAspectRatioMin && $ratio <= $this->screenshotAspectRatioMax) {
+            $score += 0.35;
         }
 
         $sharpness = $media->getSharpness();
-        if ($sharpness !== null && $sharpness > 0.35) {
-            return false;
+        if ($sharpness !== null && $sharpness <= $this->screenshotSharpnessMax) {
+            $score += 0.1;
         }
 
         $colorfulness = $media->getColorfulness();
+        if ($colorfulness !== null && $colorfulness <= $this->screenshotColorfulnessMax) {
+            $score += 0.1;
+        }
 
-        return !($colorfulness !== null && $colorfulness > 0.45);
+        $score += $this->visionBoost($media, self::VISION_KEYWORDS['screenshot']);
+
+        return $this->confidenceOrNull($score);
     }
 
     /**
      * @param list<string> $tokens
      */
-    private function isDocument(Media $media, array $tokens): bool
+    private function scoreDocument(Media $media, array $tokens): ?float
     {
+        $score = 0.0;
         if ($this->matchesAnyKeyword($tokens, self::DOCUMENT_KEYWORDS)) {
-            return true;
+            $score += 0.45;
         }
 
         $colorfulness = $media->getColorfulness();
         $contrast     = $media->getContrast();
         $brightness   = $media->getBrightness();
 
-        if ($colorfulness !== null && $colorfulness <= 0.2) {
-            if ($contrast !== null && $contrast >= 0.55) {
-                return true;
-            }
-
-            if ($brightness !== null && ($brightness <= 0.18 || $brightness >= 0.82)) {
-                return true;
-            }
+        if ($colorfulness !== null && $colorfulness <= $this->documentColorfulnessMax) {
+            $score += 0.30;
         }
 
-        return false;
+        if ($contrast !== null && $contrast >= $this->documentContrastMin) {
+            $score += 0.15;
+        }
+
+        if ($brightness !== null && ($brightness <= $this->documentBrightnessLow || $brightness >= $this->documentBrightnessHigh)) {
+            $score += 0.10;
+        }
+
+        $score += $this->visionBoost($media, self::VISION_KEYWORDS['document']);
+
+        return $this->confidenceOrNull($score);
     }
 
     /**
      * @param list<string> $tokens
      */
-    private function isMap(Media $media, array $tokens): bool
+    private function scoreMap(Media $media, array $tokens): ?float
     {
+        $score = 0.0;
         if ($this->matchesAnyKeyword($tokens, self::MAP_KEYWORDS)) {
-            return true;
+            $score += 0.5;
         }
 
         $colorfulness = $media->getColorfulness();
         $entropy      = $media->getEntropy();
 
-        return $colorfulness !== null && $colorfulness >= 0.45 && $entropy !== null && $entropy <= 0.55;
+        if ($colorfulness !== null && $colorfulness >= $this->mapColorfulnessMin && $entropy !== null && $entropy <= $this->mapEntropyMax) {
+            $score += 0.30;
+        }
+
+        $score += $this->visionBoost($media, self::VISION_KEYWORDS['map']);
+
+        return $this->confidenceOrNull($score);
     }
 
     /**
      * @param list<string> $tokens
      */
-    private function isScreenRecording(Media $media, array $tokens): bool
+    private function scoreScreenRecording(Media $media, array $tokens): ?float
     {
+        $score = 0.0;
         if ($this->matchesAnyKeyword($tokens, self::SCREEN_RECORD_KEYWORDS)) {
-            return true;
+            $score += 0.5;
         }
 
-        $fps   = $media->getVideoFps();
-        $codec = $media->getVideoCodec();
-
-        if ($fps !== null && $fps >= 45.0) {
+        $fps = $media->getVideoFps();
+        if ($fps !== null && $fps >= $this->screenRecordingFpsThreshold) {
             $cameraMake  = $media->getCameraMake();
             $cameraModel = $media->getCameraModel();
-
             if ($cameraMake === null && $cameraModel === null) {
-                return true;
+                $score += 0.20;
             }
         }
 
+        $codec = $media->getVideoCodec();
         if ($codec !== null) {
             $codecLower = strtolower($codec);
             if (str_contains($codecLower, 'screen') || str_contains($codecLower, 'display')) {
-                return true;
+                $score += 0.20;
             }
         }
 
-        return false;
+        $score += $this->visionBoost($media, self::VISION_KEYWORDS['screenRecording']);
+
+        return $this->confidenceOrNull($score);
     }
 
     private function shouldHide(ContentKind $kind): bool
@@ -316,5 +380,51 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
                     || str_ends_with($token, '-' . $keyword)
             )
         );
+    }
+
+    /**
+     * @param list<string> $keywords
+     */
+    private function visionBoost(Media $media, array $keywords): float
+    {
+        $tags = $media->getSceneTags();
+        if (!is_array($tags) || $tags === []) {
+            return 0.0;
+        }
+
+        $maxScore = 0.0;
+        foreach ($tags as $tag) {
+            if (!is_array($tag)) {
+                continue;
+            }
+
+            $label = $tag['label'] ?? null;
+            $score = $tag['score'] ?? null;
+            if (!is_string($label) || !is_float($score) && !is_int($score)) {
+                continue;
+            }
+
+            $labelLower = strtolower($label);
+            foreach ($keywords as $keyword) {
+                if (str_contains($labelLower, $keyword)) {
+                    $maxScore = max($maxScore, (float) $score);
+                }
+            }
+        }
+
+        if ($maxScore < $this->visionTagConfidenceThreshold) {
+            return 0.0;
+        }
+
+        return min(1.0, $maxScore) * $this->visionBoostWeight;
+    }
+
+    private function confidenceOrNull(float $score): ?float
+    {
+        if ($score <= 0.0) {
+            return null;
+        }
+
+        return $score >= 1.0 ? 1.0 : $score;
     }
 }
