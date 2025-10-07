@@ -134,6 +134,74 @@ final class CompositeClusterScorerTest extends TestCase
         self::assertSame('travel_and_places', $params['group']);
     }
 
+    #[Test]
+    public function scoreRespectsPersistedHeuristicMetrics(): void
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $heuristics = [
+            new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
+            new PeopleClusterScoreHeuristic(),
+            new PoiClusterScoreHeuristic(['tourism/*' => 0.1]),
+            new RecencyClusterScoreHeuristic(3, 0.6, 1990, static fn (): int => 1_700_000_000),
+        ];
+
+        $scorer = new CompositeClusterScorer(
+            em: $entityManager,
+            heuristics: $heuristics,
+            weights: [
+                'quality'    => 0.4,
+                'aesthetics' => 0.1,
+                'people'     => 0.2,
+                'poi'        => 0.1,
+                'recency'    => 0.2,
+            ],
+            algorithmBoosts: [],
+            algorithmGroups: ['vacation' => 'travel_and_places'],
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'vacation',
+            params: [
+                'quality_avg'          => 0.45,
+                'aesthetics_score'     => 0.55,
+                'quality_resolution'   => 0.65,
+                'quality_sharpness'    => 0.6,
+                'quality_iso'          => 0.2,
+                'people'               => 0.35,
+                'people_count'         => 7,
+                'people_unique'        => 3,
+                'people_coverage'      => 0.5,
+                'people_face_coverage' => 0.4,
+                'poi_score'            => 0.8,
+                'recency'              => 0.65,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [],
+        );
+
+        $result = $scorer->score([$cluster]);
+
+        self::assertCount(1, $result);
+
+        $scored = $result[0];
+        $params = $scored->getParams();
+
+        self::assertEqualsWithDelta(0.45, $params['quality_avg'], 1e-9);
+        self::assertEqualsWithDelta(0.55, $params['aesthetics_score'], 1e-9);
+        self::assertEqualsWithDelta(0.65, $params['quality_resolution'], 1e-9);
+        self::assertEqualsWithDelta(0.6, $params['quality_sharpness'], 1e-9);
+        self::assertEqualsWithDelta(0.2, $params['quality_iso'], 1e-9);
+        self::assertEqualsWithDelta(0.35, $params['people'], 1e-9);
+        self::assertSame(7, $params['people_count']);
+        self::assertSame(3, $params['people_unique']);
+        self::assertEqualsWithDelta(0.5, $params['people_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.4, $params['people_face_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.8, $params['poi_score'], 1e-9);
+        self::assertEqualsWithDelta(0.65, $params['recency'], 1e-9);
+        self::assertSame('travel_and_places', $params['group']);
+    }
+
     /**
      * @return array<int, Media>
      */

@@ -12,10 +12,16 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Support\IndexLogHelper;
+use RuntimeException;
+use Throwable;
 
 use function is_file;
 use function is_string;
 use function mime_content_type;
+use function restore_error_handler;
+use function set_error_handler;
+use function sprintf;
 
 /**
  * Orchestrates a sequence of specialized extractors.
@@ -50,13 +56,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
      */
     public function extract(string $filepath, Media $media): Media
     {
-        // Ensure mime is present early (if not set yet, guess it)
-        if ($media->getMime() === null && is_file($filepath)) {
-            $mime = @mime_content_type($filepath);
-            if (is_string($mime) && $mime !== '') {
-                $media->setMime($mime);
-            }
-        }
+        $this->ensureMimeType($filepath, $media);
 
         foreach ($this->extractors as $extractor) {
             if ($extractor->supports($filepath, $media) === true) {
@@ -65,5 +65,48 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         }
 
         return $media;
+    }
+
+    private function ensureMimeType(string $filepath, Media $media): void
+    {
+        if ($media->getMime() !== null) {
+            return;
+        }
+
+        if (is_file($filepath) === false) {
+            IndexLogHelper::append($media, 'MIME-Bestimmung übersprungen: Datei nicht gefunden.');
+
+            return;
+        }
+
+        $handler = static function (int $severity, string $message): bool {
+            $text = $message !== '' ? $message : 'Unbekannter Fehler bei mime_content_type.';
+
+            throw new RuntimeException($text, $severity);
+        };
+
+        set_error_handler($handler);
+
+        try {
+            $mime = mime_content_type($filepath);
+        } catch (Throwable $exception) {
+            IndexLogHelper::append(
+                $media,
+                sprintf('MIME-Bestimmung fehlgeschlagen: %s', $exception->getMessage())
+            );
+
+            return;
+        } finally {
+            restore_error_handler();
+        }
+
+        if (is_string($mime) && $mime !== '') {
+            $media->setMime($mime);
+            IndexLogHelper::append($media, sprintf('MIME-Bestimmung erfolgreich: %s', $mime));
+
+            return;
+        }
+
+        IndexLogHelper::append($media, 'MIME-Bestimmung fehlgeschlagen: Keine gültige Antwort erhalten.');
     }
 }
