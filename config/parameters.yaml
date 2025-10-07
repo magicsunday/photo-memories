@@ -59,6 +59,9 @@ parameters:
 
     memories.timezone.default: 'UTC'
     memories.cluster.timezone.default: 'Europe/Berlin'
+    memories.time.normalizer.source_priority: ['filename','file_mtime']
+    memories.time.normalizer.max_offset_minutes_default: 720
+    memories.time.normalizer.max_offset_minutes: '%env(default:memories.time.normalizer.max_offset_minutes_default:int:MEMORIES_TIME_NORMALIZER_MAX_OFFSET_MINUTES)%'
 
     memories.cluster.transport_speed.min_leg_duration_minutes_default: 5.0
     memories.cluster.transport_speed.min_leg_distance_km_default: 10.0

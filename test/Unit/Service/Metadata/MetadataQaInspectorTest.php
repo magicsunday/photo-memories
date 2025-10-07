@@ -43,6 +43,8 @@ final class MetadataQaInspectorTest extends TestCase
         self::assertNotNull($log);
         self::assertStringContainsString('daypart', (string) $log);
         self::assertStringContainsString('isGoldenHour', (string) $log);
+        self::assertStringContainsString('tzConfidence', (string) $log);
+        self::assertStringContainsString('Empfehlung:', (string) $log);
     }
 
     #[Test]
@@ -61,10 +63,35 @@ final class MetadataQaInspectorTest extends TestCase
             'daypart'      => 'morning',
             'isGoldenHour' => true,
         ]);
+        $media->setTzConfidence(0.8);
 
         $inspector->inspect('/tmp/qa-metadata-present.jpg', $media);
 
         self::assertNull($media->getIndexLog());
+    }
+
+    #[Test]
+    public function flagsMissingTimezoneOffset(): void
+    {
+        $inspector = $this->createInspector();
+        $media     = $this->makeMediaFixture(
+            id: 3,
+            filename: 'qa-timezone-missing.jpg',
+            takenAt: new DateTimeImmutable('2023-06-03 08:00:00', new DateTimeZone('UTC')),
+            lat: 48.1,
+            lon: 11.6,
+        );
+        $media->setFeatures([
+            'daypart'      => 'morning',
+            'isGoldenHour' => false,
+        ]);
+
+        $inspector->inspect('/tmp/qa-timezone-missing.jpg', $media);
+
+        $log = $media->getIndexLog();
+        self::assertNotNull($log);
+        self::assertStringContainsString('timezoneOffsetMin', (string) $log);
+        self::assertStringContainsString('TimeNormalizer-Konfiguration prüfen', (string) $log);
     }
 
     private function createInspector(): MetadataQaInspector

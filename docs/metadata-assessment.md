@@ -15,10 +15,10 @@
 - [x] Einen Recovery-Pfad dokumentieren, falls einzelne Extractor-Aufrufe scheitern (z. B. Retry-Strategie oder Eskalation an QA).【F:src/Service/Metadata/CompositeMetadataExtractor.php†L79-L126】【F:test/Unit/Service/Metadata/CompositeMetadataExtractorTest.php†L114-L161】
 
 ### 2. Zeit- und Zeitzonen-Normalisierung
-- [ ] `TimeNormalizer` um Quellen-Priorisierungskonfiguration erweitern, damit Deployments alternative Reihenfolgen (z. B. bevorzugte GPS-Zeitzone) festlegen können.【F:src/Service/Metadata/TimeNormalizer.php†L54-L143】
-- [ ] Zusätzliche Plausibilitätsprüfungen implementieren (z. B. Abgleich zwischen `takenAt` und Dateisystemzeit zur Erkennung verdächtiger Abweichungen) inklusive Index-Log-Einträgen.
-- [ ] `SolarEnricher` mit Caching für wiederkehrende Koordinaten und verbesserter Behandlung polarer Tage/Nächte ergänzen, um unnötige Neuberechnungen zu vermeiden.【F:src/Service/Metadata/SolarEnricher.php†L35-L158】
-- [ ] QA-Checks erweitern (z. B. Prüfung auf `timezoneOffsetMin`, `tzConfidence`) und automatisch Korrekturmaßnahmen vorschlagen.【F:src/Service/Metadata/MetadataQaInspector.php†L21-L55】
+- [x] `TimeNormalizer` um Quellen-Priorisierungskonfiguration erweitern, damit Deployments alternative Reihenfolgen (z. B. bevorzugte GPS-Zeitzone) festlegen können.【F:src/Service/Metadata/TimeNormalizer.php†L33-L205】
+- [x] Zusätzliche Plausibilitätsprüfungen implementieren (z. B. Abgleich zwischen `takenAt` und Dateisystemzeit zur Erkennung verdächtiger Abweichungen) inklusive Index-Log-Einträgen.【F:src/Service/Metadata/TimeNormalizer.php†L153-L205】
+- [x] `SolarEnricher` mit Caching für wiederkehrende Koordinaten und verbesserter Behandlung polarer Tage/Nächte ergänzen, um unnötige Neuberechnungen zu vermeiden.【F:src/Service/Metadata/SolarEnricher.php†L18-L200】【F:src/Service/Metadata/Support/SolarEventCache.php†L13-L32】【F:src/Service/Metadata/Support/SolarEventResult.php†L13-L33】
+- [x] QA-Checks erweitern (z. B. Prüfung auf `timezoneOffsetMin`, `tzConfidence`) und automatisch Korrekturmaßnahmen vorschlagen.【F:src/Service/Metadata/MetadataQaInspector.php†L15-L82】
 
 ### 3. Feature-Taxonomie & Datenmodell
 - [ ] Das freie `features`-Array durch einen typisierten Value-Object-Ansatz ersetzen oder zumindest Namespaces/Hydration-Helper definieren, um Key-Kollisionen zu verhindern.【F:src/Service/Metadata/DaypartEnricher.php†L49-L51】【F:src/Service/Metadata/CalendarFeatureEnricher.php†L46-L62】
