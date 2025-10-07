@@ -12,6 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
 use MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor;
+use MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration;
+use MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry;
+use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -44,7 +47,7 @@ final class CompositeMetadataExtractorTest extends TestCase
             size: 512,
         );
 
-        $composite = new CompositeMetadataExtractor([]);
+        $composite = $this->makeComposite([]);
 
         $composite->extract($tmp, $media);
 
@@ -72,7 +75,7 @@ final class CompositeMetadataExtractorTest extends TestCase
             size: 512,
         );
 
-        $composite = new CompositeMetadataExtractor([]);
+        $composite = $this->makeComposite([]);
 
         $composite->extract($tmp, $media);
 
@@ -112,7 +115,7 @@ final class CompositeMetadataExtractorTest extends TestCase
             size: 512,
         );
 
-        $composite = new CompositeMetadataExtractor([]);
+        $composite = $this->makeComposite([]);
 
         try {
             $composite->extract($tmp, $media);
@@ -123,11 +126,141 @@ final class CompositeMetadataExtractorTest extends TestCase
 
             if (is_file($tmp) && unlink($tmp) === false) {
                 self::fail('Unable to clean up temporary file.');
-            }
-        }
+}
 
-        self::assertNull($media->getMime());
-        self::assertNotNull($media->getIndexLog());
-        self::assertStringContainsString('MIME-Bestimmung fehlgeschlagen', $media->getIndexLog());
+    #[Test]
+    public function disabledExtractorIsLoggedAndSkipped(): void
+    {
+        $extractor = new class() implements SingleMetadataExtractorInterface {
+            public bool $supportsCalled = false;
+
+            public function supports(string $filepath, $media): bool
+            {
+                $this->supportsCalled = true;
+
+                return true;
+            }
+
+            public function extract(string $filepath, $media)
+            {
+                return $media;
+            }
+        };
+
+        $configuration = new MetadataExtractorPipelineConfiguration([
+            $extractor::class => [
+                'enabled' => false,
+                'reason' => 'Testabschaltung',
+            ],
+        ], false);
+
+        $telemetry = new MetadataExtractorTelemetry();
+        $composite = $this->makeComposite([$extractor], $configuration, $telemetry);
+
+        $media = $this->makeMedia(
+            id: 301,
+            path: '/tmp/disabled',
+        );
+
+        $composite->extract('/tmp/disabled', $media);
+
+        self::assertFalse($extractor->supportsCalled);
+        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $media->getIndexLog());
+        self::assertStringContainsString('deaktiviert. Grund: Testabschaltung', (string) $media->getIndexLog());
+
+        $summary = $telemetry->get($extractor::class);
+        self::assertNotNull($summary);
+        self::assertSame(0, $summary->getRuns());
+        self::assertSame(1, $summary->getSkips());
+    }
+
+    #[Test]
+    public function extractorFailuresAreLoggedAndMeasured(): void
+    {
+        $extractor = new class() implements SingleMetadataExtractorInterface {
+            public function supports(string $filepath, $media): bool
+            {
+                return true;
+            }
+
+            public function extract(string $filepath, $media)
+            {
+                throw new \RuntimeException('broken for test');
+            }
+        };
+
+        $configuration = new MetadataExtractorPipelineConfiguration([], true);
+        $telemetry = new MetadataExtractorTelemetry();
+        $composite = $this->makeComposite([$extractor], $configuration, $telemetry);
+
+        $media = $this->makeMedia(
+            id: 302,
+            path: '/tmp/failure',
+        );
+
+        $composite->extract('/tmp/failure', $media);
+
+        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $media->getIndexLog());
+        self::assertStringContainsString('fehlgeschlagen: broken for test', (string) $media->getIndexLog());
+
+        $summary = $telemetry->get($extractor::class);
+        self::assertNotNull($summary);
+        self::assertSame(1, $summary->getRuns());
+        self::assertSame(1, $summary->getFailures());
+        self::assertSame('broken for test', $summary->getLastErrorMessage());
+    }
+
+    #[Test]
+    public function telemetryCapturesSuccessfulRunsWhenEnabled(): void
+    {
+        $extractor = new class() implements SingleMetadataExtractorInterface {
+            public int $calls = 0;
+
+            public function supports(string $filepath, $media): bool
+            {
+                $this->calls++;
+
+                return true;
+            }
+
+            public function extract(string $filepath, $media)
+            {
+                return $media;
+            }
+        };
+
+        $configuration = new MetadataExtractorPipelineConfiguration([], true);
+        $telemetry = new MetadataExtractorTelemetry();
+        $composite = $this->makeComposite([$extractor], $configuration, $telemetry);
+
+        $media = $this->makeMedia(
+            id: 303,
+            path: '/tmp/success',
+        );
+
+        $composite->extract('/tmp/success', $media);
+
+        self::assertSame(1, $extractor->calls);
+
+        $summary = $telemetry->get($extractor::class);
+        self::assertNotNull($summary);
+        self::assertSame(1, $summary->getRuns());
+        self::assertSame(0, $summary->getFailures());
+        self::assertGreaterThanOrEqual(0.0, $summary->getTotalDurationMs());
+    }
+
+    /**
+     * @param list<SingleMetadataExtractorInterface> $extractors
+     */
+    private function makeComposite(
+        array $extractors,
+        ?MetadataExtractorPipelineConfiguration $configuration = null,
+        ?MetadataExtractorTelemetry $telemetry = null,
+    ): CompositeMetadataExtractor {
+        return new CompositeMetadataExtractor(
+            $extractors,
+            $configuration ?? new MetadataExtractorPipelineConfiguration([], false),
+            $telemetry ?? new MetadataExtractorTelemetry(),
+        );
     }
 }

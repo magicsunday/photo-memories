@@ -16,6 +16,7 @@ use MagicSunday\Memories\Support\IndexLogHelper;
 use RuntimeException;
 use Throwable;
 
+use function hrtime;
 use function is_file;
 use function is_string;
 use function mime_content_type;
@@ -30,17 +31,13 @@ use function sprintf;
 final readonly class CompositeMetadataExtractor implements MetadataExtractorInterface
 {
     /**
-     * @var list<SingleMetadataExtractorInterface> prioritised extractor list executed in order of
-     *                                             likelihood/cost to build up the composite metadata set
-     */
-    private array $extractors;
-
-    /**
      * @param SingleMetadataExtractorInterface[] $extractors ordered list; cheap/likely first
      */
-    public function __construct(array $extractors)
-    {
-        $this->extractors = $extractors;
+    public function __construct(
+        private array $extractors,
+        private MetadataExtractorPipelineConfiguration $configuration,
+        private MetadataExtractorTelemetry $telemetry,
+    ) {
     }
 
     /**
@@ -59,8 +56,43 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         $this->ensureMimeType($filepath, $media);
 
         foreach ($this->extractors as $extractor) {
-            if ($extractor->supports($filepath, $media) === true) {
+            if ($this->configuration->isEnabled($extractor) === false) {
+                $reason = $this->configuration->disabledReason($extractor);
+                $description = $this->configuration->describeExtractor($extractor);
+                $message = sprintf('Extractor %s deaktiviert.', $description);
+
+                if ($reason !== null) {
+                    $message = sprintf('%s Grund: %s', $message, $reason);
+                }
+
+                IndexLogHelper::append($media, $message);
+                $this->telemetry->recordSkip($extractor::class);
+
+                continue;
+            }
+
+            $shouldCollectTelemetry = $this->configuration->shouldCollectTelemetry($extractor);
+            $startedAt = $shouldCollectTelemetry ? hrtime(true) : null;
+
+            try {
+                if ($extractor->supports($filepath, $media) === false) {
+                    $this->telemetry->recordSkip($extractor::class);
+
+                    continue;
+                }
+
                 $media = $extractor->extract($filepath, $media);
+                $this->telemetry->recordSuccess($extractor::class, $this->calculateDuration($startedAt));
+            } catch (Throwable $exception) {
+                $this->telemetry->recordFailure(
+                    $extractor::class,
+                    $this->calculateDuration($startedAt),
+                    $exception->getMessage(),
+                );
+
+                $description = $this->configuration->describeExtractor($extractor);
+                $message = sprintf('Extractor %s fehlgeschlagen: %s', $description, $exception->getMessage());
+                IndexLogHelper::append($media, $message);
             }
         }
 
@@ -108,5 +140,21 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         }
 
         IndexLogHelper::append($media, 'MIME-Bestimmung fehlgeschlagen: Keine gültige Antwort erhalten.');
+    }
+
+    private function calculateDuration(?int $startedAt): ?float
+    {
+        if ($startedAt === null) {
+            return null;
+        }
+
+        $finishedAt = hrtime(true);
+        $elapsedNs = $finishedAt - $startedAt;
+
+        if ($elapsedNs <= 0) {
+            return 0.0;
+        }
+
+        return $elapsedNs / 1_000_000.0;
     }
 }
