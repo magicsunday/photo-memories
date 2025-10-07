@@ -13,12 +13,13 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_map;
+use function is_array;
 use function assert;
 use function count;
 use function floor;
@@ -31,6 +32,7 @@ use function sprintf;
 final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ClusterBuildHelperTrait;
 
     public function __construct(
         private LocationHelper $locHelper,
@@ -142,11 +144,25 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
                 }
             }
 
+            $tagMetadata = $this->collectDominantTags($list);
+            $sceneTags   = $tagMetadata['scene_tags'] ?? null;
+            if (is_array($sceneTags) && $sceneTags !== []) {
+                $params['scene_tags'] = $sceneTags;
+            }
+
+            $keywords = $tagMetadata['keywords'] ?? null;
+            if (is_array($keywords) && $keywords !== []) {
+                $params['keywords'] = $keywords;
+            }
+
+            $peopleParams = $this->buildPeopleParams($list);
+            $params       = [...$params, ...$peopleParams];
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
                 centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: $this->toMemberIds($list)
             );
         }
 

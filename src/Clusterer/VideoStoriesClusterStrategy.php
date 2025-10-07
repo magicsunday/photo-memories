@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -35,15 +36,20 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
         private LocationHelper $locationHelper,
         // Minimum number of videos per local day to emit a story.
         private int $minItemsPerDay = 2,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -144,6 +150,16 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             if ($tags !== []) {
                 $params = [...$params, ...$tags];
             }
+
+            $qualityParams = $this->qualityAggregator->buildParams($members);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
+
+            $peopleParams = $this->buildPeopleParams($members);
+            $params       = [...$params, ...$peopleParams];
 
             $params = $this->appendLocationMetadata($members, $params);
 
