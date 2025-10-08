@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Geocoding;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -32,13 +33,11 @@ use function trim;
  */
 final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInterface
 {
-    /**
-     * @param positive-int $batchSize
-     */
     public function __construct(
         private EntityManagerInterface $entityManager,
         private PoiEnsurerInterface $locationResolver,
         private int $batchSize = 10,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -58,6 +57,12 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         $processed    = 0;
         $updated      = 0;
         $networkCalls = 0;
+
+        $this->emitMonitoring('geocoding.poi_update', 'started', [
+            'total'       => $count,
+            'refreshPois' => $refreshPois,
+            'dryRun'      => $dryRun,
+        ]);
 
         foreach ($items as $location) {
             $label = $this->resolveProgressLabel($location);
@@ -91,7 +96,15 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         $output->writeln('');
         $output->writeln('');
 
-        return new PoiUpdateSummary($processed, $updated, $networkCalls);
+        $summary = new PoiUpdateSummary($processed, $updated, $networkCalls);
+
+        $this->emitMonitoring('geocoding.poi_update', 'finished', [
+            'processed'    => $summary->getProcessed(),
+            'updated'      => $summary->getUpdated(),
+            'networkCalls' => $summary->getNetworkCalls(),
+        ]);
+
+        return $summary;
     }
 
     /**
@@ -140,5 +153,14 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         }
 
         return 'Unbenannter Ort';
+    }
+
+    private function emitMonitoring(string $job, string $status, array $context = []): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit($job, $status, $context);
     }
 }

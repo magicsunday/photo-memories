@@ -1,0 +1,8 @@
+########################################
+# Monitoring configuration
+########################################
+parameters:
+    memories.monitoring.enabled_default: true
+    memories.monitoring.enabled: '%env(default:memories.monitoring.enabled_default:bool:MEMORIES_MONITORING_ENABLED)%'
+    memories.monitoring.log_path_default: '%kernel.project_dir%/var/log/monitoring/jobs.jsonl'
+    memories.monitoring.log_path: '%env(default:memories.monitoring.log_path_default:string:MEMORIES_MONITORING_LOG_PATH)%'
