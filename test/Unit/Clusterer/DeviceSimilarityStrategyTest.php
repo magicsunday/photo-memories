@@ -74,6 +74,74 @@ final class DeviceSimilarityStrategyTest extends TestCase
     }
 
     #[Test]
+    public function aggregatesQualityMetricsIntoParams(): void
+    {
+        $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 2);
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'quality-berlin',
+            displayName: 'Berlin',
+            lat: 52.52,
+            lon: 13.405,
+            city: 'Berlin',
+            country: 'Germany',
+        );
+
+        $mediaItems = [
+            $this->createMedia(
+                901,
+                '2023-08-01 08:00:00',
+                'Canon EOS R6',
+                $location,
+                52.5201,
+                13.4051,
+                width: 4000,
+                height: 3000,
+                sharpness: 0.8,
+                iso: 100,
+                brightness: 0.55,
+                contrast: 0.5,
+                entropy: 0.6,
+                colorfulness: 0.7,
+            ),
+            $this->createMedia(
+                902,
+                '2023-08-01 08:05:00',
+                'Canon EOS R6',
+                $location,
+                52.5202,
+                13.4052,
+                width: 4000,
+                height: 3000,
+                sharpness: 0.8,
+                iso: 100,
+                brightness: 0.55,
+                contrast: 0.5,
+                entropy: 0.6,
+                colorfulness: 0.7,
+            ),
+        ];
+
+        $clusters = $strategy->cluster($mediaItems);
+
+        self::assertCount(1, $clusters);
+
+        $params = $clusters[0]->getParams();
+
+        self::assertArrayHasKey('quality_avg', $params);
+        self::assertArrayHasKey('quality_resolution', $params);
+        self::assertArrayHasKey('quality_sharpness', $params);
+        self::assertArrayHasKey('quality_iso', $params);
+        self::assertArrayHasKey('aesthetics_score', $params);
+
+        self::assertEqualsWithDelta(0.9014, $params['quality_avg'], 0.0005);
+        self::assertEqualsWithDelta(1.0, $params['quality_resolution'], 0.0005);
+        self::assertEqualsWithDelta(0.8, $params['quality_sharpness'], 0.0005);
+        self::assertEqualsWithDelta(0.8571, $params['quality_iso'], 0.0005);
+        self::assertEqualsWithDelta(0.725, $params['aesthetics_score'], 0.0005);
+    }
+
+    #[Test]
     public function returnsEmptyWhenGroupsDoNotReachMinimum(): void
     {
         $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 4);
@@ -154,6 +222,14 @@ final class DeviceSimilarityStrategyTest extends TestCase
         ?string $cameraOwner = null,
         ?string $cameraMake = null,
         ?string $cameraSerial = null,
+        ?int $width = null,
+        ?int $height = null,
+        ?float $sharpness = null,
+        ?int $iso = null,
+        ?float $brightness = null,
+        ?float $contrast = null,
+        ?float $entropy = null,
+        ?float $colorfulness = null,
     ): Media {
         return $this->makeMediaFixture(
             id: $id,
@@ -169,6 +245,14 @@ final class DeviceSimilarityStrategyTest extends TestCase
                 $cameraOwner,
                 $cameraMake,
                 $cameraSerial,
+                $width,
+                $height,
+                $sharpness,
+                $iso,
+                $brightness,
+                $contrast,
+                $entropy,
+                $colorfulness,
             ): void {
                 $media->setCameraModel($camera);
                 $media->setLensModel($lensModel);
@@ -183,6 +267,38 @@ final class DeviceSimilarityStrategyTest extends TestCase
 
                 if ($cameraSerial !== null) {
                     $media->setCameraBodySerial($cameraSerial);
+                }
+
+                if ($width !== null) {
+                    $media->setWidth($width);
+                }
+
+                if ($height !== null) {
+                    $media->setHeight($height);
+                }
+
+                if ($sharpness !== null) {
+                    $media->setSharpness($sharpness);
+                }
+
+                if ($iso !== null) {
+                    $media->setIso($iso);
+                }
+
+                if ($brightness !== null) {
+                    $media->setBrightness($brightness);
+                }
+
+                if ($contrast !== null) {
+                    $media->setContrast($contrast);
+                }
+
+                if ($entropy !== null) {
+                    $media->setEntropy($entropy);
+                }
+
+                if ($colorfulness !== null) {
+                    $media->setColorfulness($colorfulness);
                 }
             },
         );
