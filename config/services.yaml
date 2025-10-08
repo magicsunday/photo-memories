@@ -1080,6 +1080,12 @@ services:
         arguments:
             $storagePath: '%memories.feed.preferences_path%'
 
+    MagicSunday\Memories\Service\Feed\NotificationPlanner:
+        arguments:
+            $channelConfig: '%memories.feed.notifications.channels%'
+            $defaultSendTime: '%memories.feed.notifications.default_time%'
+            $defaultTimezone: '%memories.feed.notifications.timezone%'
+
     MagicSunday\Memories\Repository\MediaRepository:
         arguments:
             $phashPrefixLength: '%memories.hash.phash_prefix_length%'
@@ -1130,6 +1136,10 @@ services:
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
             $profileProvider: '@MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider'
             $preferenceStorage: '@MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage'
+            $spaTimelineMonths: '%memories.spa.timeline_months%'
+            $spaGestureConfig: '%memories.spa.gestures%'
+            $spaOfflineConfig: '%memories.spa.offline%'
+            $spaAnimationConfig: '%memories.spa.animations%'
 
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:
