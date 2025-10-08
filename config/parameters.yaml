@@ -70,6 +70,15 @@ parameters:
     memories.cluster.transport_speed.min_leg_distance_km: '%env(default:memories.cluster.transport_speed.min_leg_distance_km_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_DISTANCE_KM)%'
     memories.cluster.transport_speed.high_speed_threshold_kmh: '%env(default:memories.cluster.transport_speed.high_speed_threshold_kmh_default:float:MEMORIES_CLUSTER_TRANSPORT_HIGH_SPEED_THRESHOLD_KMH)%'
 
+    memories.cluster.vacation.min_away_distance_km_default: 120.0
+    memories.cluster.vacation.min_away_distance_km: '%env(default:memories.cluster.vacation.min_away_distance_km_default:float:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DISTANCE_KM)%'
+    memories.cluster.vacation.min_items_per_day_default: 3
+    memories.cluster.vacation.min_items_per_day: '%env(default:memories.cluster.vacation.min_items_per_day_default:int:MEMORIES_CLUSTER_VACATION_MIN_ITEMS_PER_DAY)%'
+    memories.cluster.vacation.min_away_days_default: 1
+    memories.cluster.vacation.min_away_days: '%env(default:memories.cluster.vacation.min_away_days_default:int:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DAYS)%'
+    memories.cluster.vacation.min_members_default: 0
+    memories.cluster.vacation.min_members: '%env(default:memories.cluster.vacation.min_members_default:int:MEMORIES_CLUSTER_VACATION_MIN_MEMBERS)%'
+
     memories.cluster.cohort.important_person_ids: []
     memories.cluster.cohort.fallback_person_ids: []
 

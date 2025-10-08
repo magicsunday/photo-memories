@@ -64,12 +64,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
+     * @param int   $minAwayDays         minimum number of away days required to accept a vacation
+     * @param int   $minMembers          minimum number of media required to accept a vacation
      */
     public function __construct(
         private LocationHelper $locationHelper,
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
+        private int $minAwayDays = 1,
+        private int $minMembers = 0,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -77,6 +81,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         if ($this->movementThresholdKm <= 0.0) {
             throw new InvalidArgumentException('movementThresholdKm must be > 0.');
+        }
+
+        if ($this->minAwayDays < 1) {
+            throw new InvalidArgumentException('minAwayDays must be >= 1.');
+        }
+
+        if ($this->minMembers < 0) {
+            throw new InvalidArgumentException('minMembers must be >= 0.');
         }
     }
 
@@ -285,7 +297,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
         }
 
-        if ($awayDays === 0 || $reliableDays === 0) {
+        if ($awayDays < $this->minAwayDays || $reliableDays === 0) {
+            return null;
+        }
+
+        if (count($members) < $this->minMembers) {
             return null;
         }
 

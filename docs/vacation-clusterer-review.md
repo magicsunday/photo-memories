@@ -10,15 +10,16 @@ Die aktuelle `VacationClusterStrategy` ist gut modularisiert und delegiert jede 
 - **Hohe Testabdeckung:** Die bestehende Testsuite deckt verschiedenste Urlaubsszenarien ab (internationale Reisen, GPS-Ausreißer, fehlende Heimatbasis) und dokumentiert die Erwartungen an Score-Parameter.
 
 ## Verbesserungsmöglichkeiten
-- **Deterministische Sortierung:** `usort` ist nicht stabil. Bei identischen Zeitstempeln konnte die Reihenfolge variieren, was sich auf Tagesgruppen, Score-Berechnung und Cover-Auswahl auswirkte. Lösung: eine chronologische Sortier-Hilfsfunktion mit Pfad-Fallback, damit gleiche Zeitstempel reproduzierbar bleiben.
-- **Sichtbarkeit der Vorverarbeitung:** Ein dedizierter Sortier-Helper verbessert die Lesbarkeit und ermöglicht gezieltere Tests (siehe neue Unit-Tests).
-- **Testabdeckung für Randfälle:** Ein zusätzlicher Unit-Test prüft nun, dass sowohl der Day-Summary-Builder als auch der Segment-Assembler die deterministisch sortierte Medienliste erhalten. Damit werden Regressionsrisiken minimiert.
-- **Beobachtbarkeit (Ausblick):** Perspektivisch könnten strukturierte Debug-Logs oder Telemetriehaken helfen, fehlerhafte Segmentierungen schneller zu analysieren.
-- **Konfigurierbarkeit (Ausblick):** Einige Grenzwerte (z. B. Mindestanzahl an Tagen oder Medien pro Segment) könnten über Parameter extern steuerbar gemacht werden, um ohne Codeänderung auf unterschiedliche Bibliotheken reagieren zu können.
+- [x] **Deterministische Sortierung:** `usort` ist nicht stabil. Bei identischen Zeitstempeln konnte die Reihenfolge variieren, was sich auf Tagesgruppen, Score-Berechnung und Cover-Auswahl auswirkte. Lösung: eine chronologische Sortier-Hilfsfunktion mit Pfad-Fallback, damit gleiche Zeitstempel reproduzierbar bleiben.
+- [x] **Sichtbarkeit der Vorverarbeitung:** Ein dedizierter Sortier-Helper verbessert die Lesbarkeit und ermöglicht gezieltere Tests (siehe neue Unit-Tests).
+- [x] **Testabdeckung für Randfälle:** Ein zusätzlicher Unit-Test prüft nun, dass sowohl der Day-Summary-Builder als auch der Segment-Assembler die deterministisch sortierte Medienliste erhalten. Damit werden Regressionsrisiken minimiert.
+- [ ] **Beobachtbarkeit:** Perspektivisch könnten strukturierte Debug-Logs oder Telemetriehaken helfen, fehlerhafte Segmentierungen schneller zu analysieren.
+- [x] **Konfigurierbarkeit:** Grenzwerte wie Mindestentfernung, Mindestanzahl an Away-Tagen und Medien je Segment lassen sich jetzt über Parameter steuern, womit Deployments unterschiedliche Bibliotheksgrößen berücksichtigen können.【F:config/parameters.yaml†L73-L80】【F:config/services.yaml†L739-L752】
 
 ## Ergebnis der Umsetzung
 - Neue Hilfsmethode `sortChronologically()` in `VacationClusterStrategy` sorgt für eine stabile, nachvollziehbare Reihenfolge der Medien und wird überall in der Pipeline verwendet.
 - Ein gezielter Unit-Test stellt sicher, dass die Reihenfolge in allen nachgelagerten Komponenten ankommt.
+- Konfigurationsparameter `memories.cluster.vacation.*` befüllen `RunDetector` und `VacationScoreCalculator` mit Grenzwerten für Entfernung, Tages- und Medienanzahl; neue Tests decken die Mindestanforderungen ab.【F:config/parameters.yaml†L73-L80】【F:config/services.yaml†L739-L752】【F:src/Clusterer/Service/VacationScoreCalculator.php†L65-L305】【F:test/Unit/Clusterer/VacationScoreCalculatorTest.php†L165-L277】
 - Diese Anpassungen reduzieren flüchtige Clusterergebnisse und unterstützen reproduzierbare Score-Berechnungen.
 
 Weitere Optimierungen (z. B. Logging, konfigurierbare Grenzwerte, Performance-Metriken) können schrittweise ergänzt werden, ohne die aktuelle Architektur aufzubrechen.
