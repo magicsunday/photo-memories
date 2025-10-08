@@ -33,7 +33,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
      */
     public function __construct(
         private readonly int $perMediaCap,
-        private readonly array $keepOrder,
+        array $keepOrder,
         private readonly array $algorithmGroups,
         private readonly string $defaultAlgorithmGroup,
     ) {

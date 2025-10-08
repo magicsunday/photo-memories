@@ -87,6 +87,9 @@ trait StageSupportTrait
         return $union > 0 ? $inter / (float) $union : 0.0;
     }
 
+    /**
+     * @param list<int>|null $normalizedMembers
+     */
     protected function computeScore(ClusterDraft $draft, ?array $normalizedMembers = null): float
     {
         $score = (float) ($draft->getParams()['score'] ?? 0.0);

@@ -6,8 +6,23 @@ namespace MagicSunday\Memories\Service\Metadata\Feature;
 
 use InvalidArgumentException;
 
+use function array_is_list;
+use function array_key_exists;
+use function array_values;
+use function count;
+use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_string;
+use function sprintf;
+
 /**
  * Provides a typed accessor facade for metadata feature payloads persisted on a media entity.
+ *
+ * @phpstan-type FeatureScalar bool|int|float|string
+ * @phpstan-type FeatureArray array<int|string, FeatureScalar|FeatureArray|null>
+ * @phpstan-type FeatureValue FeatureScalar|FeatureArray|null
  */
 final class MediaFeatureBag
 {
@@ -15,13 +30,11 @@ final class MediaFeatureBag
     public const NAMESPACE_SOLAR = 'solar';
     public const NAMESPACE_FILE = 'file';
     public const NAMESPACE_CLASSIFICATION = 'classification';
-    /**
-     * @var array<string, array<string, scalar|array|null>>
-     */
+    /** @var array<string, array<string, FeatureValue>> */
     private array $values;
 
     /**
-     * @param array<string, array<string, scalar|array|null>> $values
+     * @param array<string, array<string, FeatureValue>> $values
      */
     private function __construct(array $values)
     {
@@ -34,7 +47,7 @@ final class MediaFeatureBag
     }
 
     /**
-     * @param array<string, array<string, scalar|array|null>>|null $features
+     * @param array<int|string, mixed>|null $features
      */
     public static function fromArray(?array $features): self
     {
@@ -46,18 +59,21 @@ final class MediaFeatureBag
             return self::create();
         }
 
-        if (self::isNamespacedFormat($features) === false) {
-            throw new InvalidArgumentException('Media features must be provided in namespaced format.');
-        }
+        self::assertNamespacedFormat($features);
 
-        /** @var array<string, array<string, scalar|array|null>> $typed */
-        $typed = $features;
+        /** @var array<string, array<string, FeatureValue>> $typed */
+        $typed = [];
+        foreach ($features as $namespace => $payload) {
+            /** @var array<string, FeatureValue> $typedPayload */
+            $typedPayload            = $payload;
+            $typed[(string) $namespace] = $typedPayload;
+        }
 
         return new self($typed);
     }
 
     /**
-     * @return array<string, array<string, scalar|array|null>>
+     * @return array<string, array<string, FeatureValue>>
      */
     public function toArray(): array
     {
@@ -249,6 +265,12 @@ final class MediaFeatureBag
             return;
         }
 
+        foreach ($tokens as $token) {
+            if (!is_string($token)) {
+                throw new InvalidArgumentException('Filename tokens must be provided as list of strings.');
+            }
+        }
+
         $this->set(self::NAMESPACE_FILE, 'pathTokens', array_values($tokens));
     }
 
@@ -265,7 +287,7 @@ final class MediaFeatureBag
     }
 
     /**
-     * @return array<string, scalar|array|null>
+     * @return array<string, FeatureValue>
      */
     public function namespaceValues(string $namespace): array
     {
@@ -273,7 +295,10 @@ final class MediaFeatureBag
             return [];
         }
 
-        return $this->values[$namespace];
+        /** @var array<string, FeatureValue> $values */
+        $values = $this->values[$namespace];
+
+        return $values;
     }
 
     private function set(string $namespace, string $key, bool|int|float|string|array|null $value): void
@@ -292,6 +317,8 @@ final class MediaFeatureBag
             return;
         }
 
+        self::assertFeatureValue($value, sprintf('%s.%s', $namespace, $key));
+
         if (array_key_exists($namespace, $this->values) === false) {
             $this->values[$namespace] = [];
         }
@@ -299,7 +326,7 @@ final class MediaFeatureBag
         $this->values[$namespace][$key] = $value;
     }
 
-    private function get(string $namespace, string $key): scalar|array|null
+    private function get(string $namespace, string $key): bool|int|float|string|array|null
     {
         if (array_key_exists($namespace, $this->values) === false) {
             return null;
@@ -313,16 +340,50 @@ final class MediaFeatureBag
     }
 
     /**
-     * @param array<string, array<string, scalar|array|null>>|array<string, scalar|array|null> $features
+     * @param array<int|string, mixed> $features
      */
-    private static function isNamespacedFormat(array $features): bool
+    private static function assertNamespacedFormat(array $features): void
     {
-        foreach ($features as $value) {
-            if (is_array($value) === false) {
-                return false;
+        foreach ($features as $namespace => $payload) {
+            if (!is_array($payload)) {
+                throw new InvalidArgumentException('Media features must be provided in namespaced format.');
+            }
+
+            foreach ($payload as $key => $value) {
+                self::assertFeatureValue($value, sprintf('%s.%s', (string) $namespace, (string) $key));
             }
         }
+    }
 
-        return true;
+    private static function assertFeatureValue(mixed $value, string $path): void
+    {
+        if ($value === null) {
+            return;
+        }
+
+        if (self::isScalarValue($value)) {
+            return;
+        }
+
+        if (!is_array($value)) {
+            throw new InvalidArgumentException(sprintf('Unsupported feature value at "%s".', $path));
+        }
+
+        if (array_is_list($value)) {
+            foreach ($value as $index => $item) {
+                self::assertFeatureValue($item, sprintf('%s[%d]', $path, $index));
+            }
+
+            return;
+        }
+
+        foreach ($value as $key => $item) {
+            self::assertFeatureValue($item, sprintf('%s.%s', $path, (string) $key));
+        }
+    }
+
+    private static function isScalarValue(mixed $value): bool
+    {
+        return is_bool($value) || is_int($value) || is_float($value) || is_string($value);
     }
 }
