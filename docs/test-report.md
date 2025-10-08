@@ -1,6 +1,6 @@
 # Test Report
 
-Date: 2025-10-07T19:10:59+00:00
+Date: 2025-10-08T09:32:06+00:00
 
 ## Command
 
@@ -10,4 +10,5 @@ composer ci:test
 
 ## Result
 
-The aggregate CI run scheitert weiterhin, weil PHPStan mit 913 Meldungen zu deterministischen Typprüfungen abbricht. Auffällig sind redundante `is_*`-Guards, nutzlose Casts und fehlende Value-Typen in Array-PHPDocs quer durch Cluster- und Feed-Module.【cab01a†L1-L11】【b3afa9†L1-L120】
+- ✅ `phplint` läuft durch und prüft 313 Dateien ohne Beanstandung.【31f1be†L1-L11】
+- ❌ PHPStan bricht weiterhin ab (830 Findings). Neben fehlenden Iterable-Value-Typen im Feed-Bereich tauchen zahlreiche `function.alreadyNarrowedType`- und `cast.useless`-Hinweise auf; die Konsolidierungsstufen-spezifischen Warnungen sind beseitigt, größere Aufräumarbeiten im Feed- und Thumbnail-Modul bleiben offen.【86c8d5†L1-L132】【86c8d5†L396-L427】

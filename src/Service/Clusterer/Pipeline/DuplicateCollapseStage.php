@@ -31,7 +31,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     /**
      * @param list<string> $keepOrder
      */
-    public function __construct(private readonly array $keepOrder)
+    public function __construct(array $keepOrder)
     {
         $base = count($keepOrder);
         foreach ($keepOrder as $index => $algorithm) {

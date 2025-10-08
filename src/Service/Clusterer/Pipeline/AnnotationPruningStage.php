@@ -33,7 +33,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
      * @param array<string,float> $minUniqueShare
      */
     public function __construct(
-        private readonly array $annotateOnly,
+        array $annotateOnly,
         private readonly array $minUniqueShare,
     ) {
         $this->annotateOnlySet = array_fill_keys($annotateOnly, true);

@@ -22,6 +22,7 @@
 
 ### 3. Feature-Taxonomie & Datenmodell
 - [x] Das freie `features`-Array durch einen typisierten Value-Object-Ansatz ersetzen oder zumindest Namespaces/Hydration-Helper definieren, um Key-Kollisionen zu verhindern.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L1-L219】【F:src/Entity/Media.php†L585-L610】【F:src/Service/Metadata/DaypartEnricher.php†L41-L59】【F:src/Service/Metadata/FilenameKeywordExtractor.php†L30-L52】
+- [x] Eingehende Feature-Payloads validieren, sodass nur skalare Werte, Listen oder verschachtelte Maps akzeptiert werden; Unit-Tests sichern Fehlerszenarien ab.【F:src/Service/Metadata/Feature/MediaFeatureBag.php†L17-L238】【F:test/Unit/Service/Metadata/Feature/MediaFeatureBagTest.php†L13-L68】
 - [x] Feature-Versionierung (`MetadataFeatureVersion`) modularisieren, sodass pro Feature-Gruppe Migrationsroutinen definiert werden können.【F:src/Service/Metadata/MetadataFeatureVersion.php†L17-L95】【F:src/Service/Metadata/Feature/MetadataFeatureMigrationInterface.php†L1-L23】【F:test/Unit/Service/Metadata/MetadataFeatureVersionTest.php†L1-L47】
 - [x] Dokumentation der Feature-Semantik (z. B. `daypart`, `holidayId`, `isGoldenHour`) erstellen und automatisiert verifizieren (Schema-Validierung in Tests).【F:docs/metadata-feature-semantics.md†L1-L120】
 
