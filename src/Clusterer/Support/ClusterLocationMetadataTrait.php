@@ -58,7 +58,7 @@ trait ClusterLocationMetadataTrait
                 $normalizedCity = $this->normalizeLocationComponent($city);
                 if ($normalizedCity !== '') {
                     $params['place_city'] = $normalizedCity;
-                    if (!in_array($normalizedCity, $locationParts, true)) {
+                    if ($locationParts === [] || !in_array($normalizedCity, $locationParts, true)) {
                         $locationParts[] = $normalizedCity;
                     }
                 }
@@ -69,7 +69,7 @@ trait ClusterLocationMetadataTrait
                 $normalizedRegion = $this->normalizeLocationComponent($region);
                 if ($normalizedRegion !== '') {
                     $params['place_region'] = $normalizedRegion;
-                    if (!in_array($normalizedRegion, $locationParts, true)) {
+                    if ($locationParts === [] || !in_array($normalizedRegion, $locationParts, true)) {
                         $locationParts[] = $normalizedRegion;
                     }
                 }
@@ -80,7 +80,7 @@ trait ClusterLocationMetadataTrait
                 $normalizedCountry = $this->normalizeLocationComponent($country);
                 if ($normalizedCountry !== '') {
                     $params['place_country'] = $normalizedCountry;
-                    if (!in_array($normalizedCountry, $locationParts, true)) {
+                    if ($locationParts === [] || !in_array($normalizedCountry, $locationParts, true)) {
                         $locationParts[] = $normalizedCountry;
                     }
                 }
@@ -93,22 +93,22 @@ trait ClusterLocationMetadataTrait
 
         $poi = $this->locationHelper->majorityPoiContext($members);
         if ($poi !== null) {
-            $label = $poi['label'] ?? null;
-            if (is_string($label) && $label !== '') {
+            $label = $poi['label'];
+            if ($label !== '') {
                 $params['poi_label'] = $label;
             }
 
-            $categoryKey = $poi['categoryKey'] ?? null;
-            if ($categoryKey !== null) {
+            $categoryKey = $poi['categoryKey'];
+            if ($categoryKey !== null && $categoryKey !== '') {
                 $params['poi_category_key'] = $categoryKey;
             }
 
-            $categoryValue = $poi['categoryValue'] ?? null;
-            if ($categoryValue !== null) {
+            $categoryValue = $poi['categoryValue'];
+            if ($categoryValue !== null && $categoryValue !== '') {
                 $params['poi_category_value'] = $categoryValue;
             }
 
-            $tags = $poi['tags'] ?? [];
+            $tags = $poi['tags'];
             if ($tags !== []) {
                 $params['poi_tags'] = $tags;
             }

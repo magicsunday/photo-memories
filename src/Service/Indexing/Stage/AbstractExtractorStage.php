@@ -19,6 +19,7 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use Throwable;
 
 use function sprintf;
+use function trim;
 
 /**
  * Class AbstractExtractorStage.
@@ -69,11 +70,11 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
                 $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
                 $media->setIndexedAt(new DateTimeImmutable());
 
-                $message = sprintf('%s: %s', $exception::class, $exception->getMessage());
-                if ($message === '') {
+                $exceptionMessage = trim($exception->getMessage());
+                if ($exceptionMessage === '') {
                     $media->setIndexLog(null);
                 } else {
-                    $media->setIndexLog($message);
+                    $media->setIndexLog(sprintf('%s: %s', $exception::class, $exceptionMessage));
                 }
 
                 $context->getOutput()->writeln(

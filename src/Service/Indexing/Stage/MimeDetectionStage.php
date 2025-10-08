@@ -112,14 +112,14 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
 
     private function isImageExt(string $filepath): bool
     {
-        $ext = strtolower((string) pathinfo($filepath, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
 
         return $ext !== '' && in_array($ext, $this->imageExtensions, true);
     }
 
     private function isVideoExt(string $filepath): bool
     {
-        $ext = strtolower((string) pathinfo($filepath, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
 
         return $ext !== '' && in_array($ext, $this->videoExtensions, true);
     }
@@ -129,7 +129,7 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
      */
     private function detectFormatFlags(string $filepath, string $mime): array
     {
-        $extension = strtolower((string) pathinfo($filepath, PATHINFO_EXTENSION));
+        $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
 
         $isRaw = MediaFormatGuesser::isRawFromMime($mime)
             || MediaFormatGuesser::isRawFromExtension($extension);

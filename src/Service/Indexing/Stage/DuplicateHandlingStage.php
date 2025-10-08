@@ -95,10 +95,15 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
                 ->withReindexRequired();
         }
 
+        $fileSize = filesize($context->getFilePath());
+        if ($fileSize === false) {
+            $fileSize = 0;
+        }
+
         $media = $existing ?? new Media(
             $context->getFilePath(),
             $checksum,
-            filesize($context->getFilePath()) ?: 0,
+            $fileSize,
         );
 
         if ($existing === null) {
