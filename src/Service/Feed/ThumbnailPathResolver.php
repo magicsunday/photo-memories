@@ -38,6 +38,7 @@ final class ThumbnailPathResolver
 
         /** @var array<int, string> $bySize */
         $bySize = [];
+        /** @var list<string> $fallbackPaths */
         $fallbackPaths = [];
 
         foreach ($thumbs as $key => $path) {
@@ -51,8 +52,9 @@ final class ThumbnailPathResolver
                 continue;
             }
 
-            if (is_string($key) && ctype_digit($key)) {
-                $bySize[(int) $key] = $path;
+            $keyString = (string) $key;
+            if (ctype_digit($keyString)) {
+                $bySize[(int) $keyString] = $path;
 
                 continue;
             }
@@ -79,7 +81,7 @@ final class ThumbnailPathResolver
             }
 
             $first = reset($bySize);
-            if (is_string($first) && is_file($first)) {
+            if ($first !== false && is_file($first)) {
                 return $first;
             }
 

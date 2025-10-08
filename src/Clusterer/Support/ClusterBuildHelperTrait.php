@@ -33,7 +33,6 @@ use const PHP_INT_MAX;
  */
 trait ClusterBuildHelperTrait
 {
-    private ClusterPeopleAggregator $peopleAggregator;
 
     /**
      * @param list<Media> $members
@@ -247,10 +246,13 @@ trait ClusterBuildHelperTrait
      */
     private function buildPeopleParams(array $members): array
     {
-        if (!isset($this->peopleAggregator)) {
-            $this->peopleAggregator = new ClusterPeopleAggregator();
+        /** @var ClusterPeopleAggregator|null $peopleAggregator */
+        static $peopleAggregator = null;
+
+        if ($peopleAggregator === null) {
+            $peopleAggregator = new ClusterPeopleAggregator();
         }
 
-        return $this->peopleAggregator->buildParams($members);
+        return $peopleAggregator->buildParams($members);
     }
 }
