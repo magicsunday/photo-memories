@@ -14,10 +14,10 @@ namespace MagicSunday\Memories\Utility;
 use MagicSunday\Memories\Utility\Contract\PoiLabelResolverInterface;
 
 use function array_find;
+use function array_key_exists;
 use function array_keys;
 use function explode;
 use function is_array;
-use function is_string;
 use function str_contains;
 use function str_replace;
 use function strtolower;
@@ -45,16 +45,13 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
 
     public function preferredLabel(array $poi): ?string
     {
-        $names = $poi['names'] ?? null;
-        if (is_array($names)) {
-            $label = $this->labelFromNames($names);
-            if ($label !== null) {
-                return $label;
-            }
+        $label = $this->labelFromNames($poi['names']);
+        if ($label !== null) {
+            return $label;
         }
 
-        $name = $poi['name'] ?? null;
-        if (is_string($name) && $name !== '') {
+        $name = $poi['name'];
+        if ($name !== null && $name !== '') {
             return $name;
         }
 
@@ -62,39 +59,26 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
     }
 
     /**
-     * @param array{default:string|null,localized?:array<string,string>|null,alternates?:list<string>|null} $names
+     * @param array{default:string|null,localized:array<string,string>,alternates:list<string>} $names
      */
     private function labelFromNames(array $names): ?string
     {
-        $localized = $names['localized'] ?? [];
-        if (!is_array($localized)) {
-            $localized = [];
-        }
-
+        $localized = $names['localized'];
         if ($localized !== []) {
-            $preferredLocaleValue = null;
-            $preferredLocaleKey   = array_find(
+            $preferredLocaleKey = array_find(
                 $this->preferredLocaleKeys,
-                function (string $key) use ($localized, &$preferredLocaleValue): bool {
-                    $value = $localized[$key] ?? null;
-
-                    if (!is_string($value) || $value === '') {
-                        return false;
-                    }
-
-                    $preferredLocaleValue = $value;
-
-                    return true;
-                }
+                fn (string $key): bool => $key !== ''
+                    && array_key_exists($key, $localized)
+                    && $localized[$key] !== ''
             );
 
             if ($preferredLocaleKey !== null) {
-                return $preferredLocaleValue;
+                return $localized[$preferredLocaleKey];
             }
         }
 
-        $default = $names['default'] ?? null;
-        if (is_string($default) && $default !== '') {
+        $default = $names['default'];
+        if ($default !== null && $default !== '') {
             return $default;
         }
 
@@ -103,21 +87,13 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
             static fn (string $value): bool => $value !== ''
         );
 
-        if (is_string($firstLocalized)) {
+        if ($firstLocalized !== null) {
             return $firstLocalized;
         }
 
-        $alternates = $names['alternates'] ?? [];
-        if (!is_array($alternates)) {
-            $alternates = [];
-        }
+        $firstAlternate = array_find($names['alternates'], static fn (string $alternate): bool => $alternate !== '');
 
-        $firstAlternate = array_find(
-            $alternates,
-            static fn (string $alternate): bool => $alternate !== ''
-        );
-
-        if (is_string($firstAlternate)) {
+        if ($firstAlternate !== null) {
             return $firstAlternate;
         }
 
@@ -153,10 +129,6 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
 
         $filtered = [];
         foreach ($candidates as $candidate) {
-            if (!is_string($candidate)) {
-                continue;
-            }
-
             $trimmed = trim($candidate);
             if ($trimmed === '') {
                 continue;

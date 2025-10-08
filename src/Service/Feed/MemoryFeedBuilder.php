@@ -371,7 +371,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array<array-key, scalar|null>|null> $params
      */
     private function floatParam(array $params, string $key): ?float
     {

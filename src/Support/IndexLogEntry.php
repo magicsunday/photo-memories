@@ -18,7 +18,6 @@ use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
-use function is_scalar;
 use function json_encode;
 
 use const JSON_PRESERVE_ZERO_FRACTION;
@@ -94,7 +93,7 @@ final class IndexLogEntry
             $payload['context'] = $context;
         }
 
-        return (string) json_encode(
+        return json_encode(
             $payload,
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION,
         );
@@ -132,8 +131,8 @@ final class IndexLogEntry
                 continue;
             }
 
-            if (is_scalar($value)) {
-                $normalised[$key] = (string) $value;
+            if (is_string($value)) {
+                $normalised[$key] = $value;
 
                 continue;
             }
@@ -147,8 +146,8 @@ final class IndexLogEntry
                         continue;
                     }
 
-                    if (is_scalar($entry)) {
-                        $list[] = (string) $entry;
+                    if (is_string($entry)) {
+                        $list[] = $entry;
                     }
                 }
 

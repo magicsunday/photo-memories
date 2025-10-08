@@ -11,12 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
+use Stringable;
+
 use function array_key_exists;
 use function array_key_first;
 use function array_keys;
-use function array_map;
 use function array_slice;
-use function array_values;
 use function arsort;
 use function explode;
 use function count;
@@ -43,7 +43,7 @@ final readonly class StoryboardTextGenerator
     private array $supportedLocales;
 
     /**
-     * @param list<string> $supportedLocales
+     * @param array<int, string|Stringable> $supportedLocales
      */
     public function __construct(string $defaultLocale = 'de', array $supportedLocales = ['de', 'en'])
     {
@@ -53,12 +53,13 @@ final readonly class StoryboardTextGenerator
         }
 
         $locales = [];
-        foreach ($supportedLocales as $locale) {
-            if (!is_string($locale)) {
+        foreach ($supportedLocales as $localeCandidate) {
+            $localeString = $this->toLocaleString($localeCandidate);
+            if ($localeString === null) {
                 continue;
             }
 
-            $candidate = $this->normalizeLocaleCode($locale);
+            $candidate = $this->normalizeLocaleCode($localeString);
             if ($candidate === '') {
                 continue;
             }
@@ -72,13 +73,24 @@ final readonly class StoryboardTextGenerator
             $locales[] = $normalizedDefault;
         }
 
+        if ($locales === []) {
+            $locales[] = $normalizedDefault;
+        }
+
         $this->defaultLocale    = $normalizedDefault;
-        $this->supportedLocales = $locales !== [] ? $locales : ['de'];
+        $this->supportedLocales = $locales;
+    }
+
+    private function toLocaleString(string|Stringable $localeCandidate): ?string
+    {
+        $value = (string) $localeCandidate;
+
+        return $value === '' ? null : $value;
     }
 
     /**
-     * @param list<array<string, mixed>>              $entries
-     * @param array<string, int|float|string|array|null> $clusterParams
+     * @param list<array<string, mixed>> $entries
+     * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
      *
      * @return array{title: string, description: string}
      */
@@ -161,12 +173,7 @@ final readonly class StoryboardTextGenerator
             return '';
         }
 
-        $primary = substr(strtolower($trimmed), 0, 2);
-        if ($primary === false) {
-            return '';
-        }
-
-        return $primary;
+        return substr(strtolower($trimmed), 0, 2) ?: '';
     }
 
     /**
@@ -192,8 +199,8 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<array<string, mixed>>              $entries
-     * @param array<string, int|float|string|array|null> $clusterParams
+     * @param list<array<string, mixed>> $entries
+     * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
      */
     private function resolveLocation(array $entries, array $clusterParams): ?string
     {
@@ -208,12 +215,11 @@ final readonly class StoryboardTextGenerator
         $this->registerLocationCandidate($scores, $clusterParams['place_country'] ?? null, 1);
 
         foreach ($entries as $entry) {
-            $location = $entry['ort'] ?? null;
-            if (is_string($location)) {
-                $this->registerLocationCandidate($scores, $location, 1);
-            } elseif (is_array($location)) {
-                $this->registerLocationCandidate($scores, $location, 1);
+            if (!array_key_exists('ort', $entry)) {
+                continue;
             }
+
+            $this->registerLocationCandidate($scores, $entry['ort'], 1);
         }
 
         if ($scores === []) {
@@ -233,7 +239,7 @@ final readonly class StoryboardTextGenerator
 
     /**
      * @param array<string, int> $scores
-     * @param array<mixed>|int|float|string|null $value
+     * @param array<array-key, scalar|null>|scalar|null $value
      */
     private function registerLocationCandidate(array &$scores, array|int|float|string|null $value, int $weight): void
     {
@@ -341,9 +347,8 @@ final readonly class StoryboardTextGenerator
         }
 
         arsort($counts);
-        $top = array_slice(array_keys($counts), 0, 3);
 
-        return array_values($top);
+        return array_slice(array_keys($counts), 0, 3);
     }
 
     /**
@@ -351,9 +356,9 @@ final readonly class StoryboardTextGenerator
      */
     private function formatList(array $items, string $locale): string
     {
-        $values = array_values(array_map(static fn (string $item): string => trim($item), $items));
         $filtered = [];
-        foreach ($values as $value) {
+        foreach ($items as $item) {
+            $value = trim($item);
             if ($value === '') {
                 continue;
             }
