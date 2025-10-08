@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function strcmp;
 use function usort;
@@ -33,6 +34,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 {
     use MediaFilterTrait;
 
+    private const MONITORING_JOB = 'cluster.vacation';
+
     /**
      * @param HomeLocatorInterface            $homeLocator       Identifies the home location used as a reference point.
      * @param DaySummaryBuilderInterface      $daySummaryBuilder Builds daily summaries that feed the segment assembler.
@@ -42,6 +45,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         private HomeLocatorInterface $homeLocator,
         private DaySummaryBuilderInterface $daySummaryBuilder,
         private VacationSegmentAssemblerInterface $segmentAssembler,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -60,11 +64,30 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
+        $totalCount = count($items);
+
+        $this->emitMonitoring('start', [
+            'total_count' => $totalCount,
+        ]);
+
         // Cluster processing requires reliable timestamps to establish the chronology of the trip.
         $timestamped = $this->filterTimestampedItems($items);
-        if ($timestamped === []) {
+        $timestampedCount = count($timestamped);
+
+        if ($timestampedCount === 0) {
+            $this->emitMonitoring('skipped', [
+                'reason' => 'no_timestamped_media',
+                'total_count' => $totalCount,
+            ]);
+
             return [];
         }
+
+        $this->emitMonitoring('filtered', [
+            'total_count' => $totalCount,
+            'timestamped_count' => $timestampedCount,
+            'filtered_count' => $totalCount - $timestampedCount,
+        ]);
 
         // Ensure chronological ordering so day summaries receive a consistent sequence.
         $ordered = $this->sortChronologically($timestamped);
@@ -72,17 +95,69 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         // Determine the traveller's base location, which anchors day grouping and trip detection.
         $home = $this->homeLocator->determineHome($ordered);
         if ($home === null) {
+            $this->emitMonitoring('skipped', [
+                'reason' => 'no_home_location',
+                'timestamped_count' => $timestampedCount,
+            ]);
+
             return [];
         }
+
+        $this->emitMonitoring('home_determined', [
+            'timestamped_count' => $timestampedCount,
+            'home_lat' => $home['lat'],
+            'home_lon' => $home['lon'],
+            'home_radius_km' => $home['radius_km'],
+            'home_country' => $home['country'],
+            'home_timezone_offset' => $home['timezone_offset'],
+        ]);
 
         // Build per-day statistics (distances, stay points, etc.) required to evaluate candidate vacation runs.
         $days = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
-        if ($days === []) {
+        $dayCount = count($days);
+
+        if ($dayCount === 0) {
+            $this->emitMonitoring('skipped', [
+                'reason' => 'no_day_summaries',
+                'timestamped_count' => $timestampedCount,
+            ]);
+
             return [];
         }
 
+        $metrics = $this->summariseDays($days);
+
+        $this->emitMonitoring('days_aggregated', [
+            'day_count' => $dayCount,
+            'away_day_count' => $metrics['away_day_count'],
+            'away_candidate_count' => $metrics['away_candidate_count'],
+            'total_travel_km' => $metrics['total_travel_km'],
+            'max_distance_km' => $metrics['max_distance_km'],
+            'avg_travel_km' => $metrics['avg_travel_km'],
+        ]);
+
         // Translate day summaries into scored vacation segments ready for persistence.
-        return $this->segmentAssembler->detectSegments($days, $home);
+        $segments = $this->segmentAssembler->detectSegments($days, $home);
+        $segmentCount = count($segments);
+
+        if ($segmentCount === 0) {
+            $this->emitMonitoring('skipped', [
+                'reason' => 'no_segments_detected',
+                'day_count' => $dayCount,
+                'timestamped_count' => $timestampedCount,
+            ]);
+
+            return [];
+        }
+
+        $this->emitMonitoring('completed', [
+            'segment_count' => $segmentCount,
+            'day_count' => $dayCount,
+            'away_day_count' => $metrics['away_day_count'],
+            'timestamped_count' => $timestampedCount,
+        ]);
+
+        return $segments;
     }
 
     /**
@@ -114,5 +189,64 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         );
 
         return $ordered;
+    }
+
+    /**
+     * @param array<string, array{
+     *     travelKm: float,
+     *     maxDistanceKm: float,
+     *     baseAway: bool,
+     *     isAwayCandidate: bool,
+     * }> $days
+     *
+     * @return array{
+     *     away_day_count: int,
+     *     away_candidate_count: int,
+     *     total_travel_km: float,
+     *     max_distance_km: float,
+     *     avg_travel_km: float,
+     * }
+     */
+    private function summariseDays(array $days): array
+    {
+        $awayDayCount        = 0;
+        $awayCandidateCount  = 0;
+        $totalTravelKm       = 0.0;
+        $maxDistanceKm       = 0.0;
+        $dayCount            = count($days);
+
+        foreach ($days as $day) {
+            if ($day['baseAway'] === true) {
+                ++$awayDayCount;
+            }
+
+            if ($day['isAwayCandidate'] === true) {
+                ++$awayCandidateCount;
+            }
+
+            $totalTravelKm += $day['travelKm'];
+
+            if ($day['maxDistanceKm'] > $maxDistanceKm) {
+                $maxDistanceKm = $day['maxDistanceKm'];
+            }
+        }
+
+        $avgTravelKm = $dayCount > 0 ? $totalTravelKm / $dayCount : 0.0;
+
+        return [
+            'away_day_count' => $awayDayCount,
+            'away_candidate_count' => $awayCandidateCount,
+            'total_travel_km' => $totalTravelKm,
+            'max_distance_km' => $maxDistanceKm,
+            'avg_travel_km' => $avgTravelKm,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function emitMonitoring(string $status, array $context = []): void
+    {
+        $this->monitoringEmitter?->emit(self::MONITORING_JOB, $status, $context);
     }
 }
