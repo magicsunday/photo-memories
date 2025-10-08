@@ -20,6 +20,7 @@ use function array_keys;
 use function array_map;
 use function array_slice;
 use function count;
+use function is_array;
 use function is_numeric;
 use function is_string;
 use function sprintf;
@@ -36,10 +37,14 @@ final class CompositeClusterScorer
     /** @var array<string,string> */
     private array $algorithmGroups = [];
 
+    /** @var array<string,array<string,float>> */
+    private array $algorithmWeightOverrides = [];
+
     /**
      * @param iterable<ClusterScoreHeuristicInterface> $heuristics
      * @param array<string,float>                      $weights
      * @param array<string,float>                      $algorithmBoosts
+     * @param array<string,array<string,float|int>>    $algorithmWeightOverrides
      */
     public function __construct(
         private EntityManagerInterface $em,
@@ -60,6 +65,7 @@ final class CompositeClusterScorer
         private array $algorithmBoosts = [],
         array $algorithmGroups = [],
         private string $defaultAlgorithmGroup = 'default',
+        array $algorithmWeightOverrides = [],
     ) {
         $this->heuristics = [];
         foreach ($heuristics as $heuristic) {
@@ -81,6 +87,20 @@ final class CompositeClusterScorer
             }
 
             $this->algorithmGroups[$algorithm] = $group;
+        }
+
+        $this->algorithmWeightOverrides = [];
+        foreach ($algorithmWeightOverrides as $algorithm => $overrides) {
+            if (!is_string($algorithm) || $algorithm === '') {
+                continue;
+            }
+
+            $sanitized = $this->sanitizeWeightOverrides($overrides);
+            if ($sanitized === []) {
+                continue;
+            }
+
+            $this->algorithmWeightOverrides[$algorithm] = $sanitized;
         }
     }
 
@@ -172,27 +192,104 @@ final class CompositeClusterScorer
      */
     private function computeWeightedScore(ClusterDraft $cluster, array $weightedValues): float
     {
-        $params = $cluster->getParams();
+        $params  = $cluster->getParams();
+        $weights = $this->resolveWeights($cluster);
 
         $quality    = $weightedValues['quality'] ?? 0.0;
         $aesthetics = $this->floatOrNull($params['aesthetics_score'] ?? null) ?? $quality;
 
-        return ($this->weights['quality'] ?? 0.0) * $quality +
-            ($this->weights['aesthetics'] ?? 0.0) * $aesthetics +
-            ($this->weights['people'] ?? 0.0) * ($weightedValues['people'] ?? 0.0) +
-            ($this->weights['content'] ?? 0.0) * ($weightedValues['content'] ?? 0.0) +
-            ($this->weights['density'] ?? 0.0) * ($weightedValues['density'] ?? 0.0) +
-            ($this->weights['novelty'] ?? 0.0) * ($weightedValues['novelty'] ?? 0.0) +
-            ($this->weights['holiday'] ?? 0.0) * ($weightedValues['holiday'] ?? 0.0) +
-            ($this->weights['recency'] ?? 0.0) * ($weightedValues['recency'] ?? 0.0) +
-            ($this->weights['location'] ?? 0.0) * ($weightedValues['location'] ?? 0.0) +
-            ($this->weights['poi'] ?? 0.0) * ($weightedValues['poi'] ?? 0.0) +
-            ($this->weights['time_coverage'] ?? 0.0) * ($weightedValues['time_coverage'] ?? 0.0);
+        return ($weights['quality'] ?? 0.0) * $quality +
+            ($weights['aesthetics'] ?? 0.0) * $aesthetics +
+            ($weights['people'] ?? 0.0) * ($weightedValues['people'] ?? 0.0) +
+            ($weights['content'] ?? 0.0) * ($weightedValues['content'] ?? 0.0) +
+            ($weights['density'] ?? 0.0) * ($weightedValues['density'] ?? 0.0) +
+            ($weights['novelty'] ?? 0.0) * ($weightedValues['novelty'] ?? 0.0) +
+            ($weights['holiday'] ?? 0.0) * ($weightedValues['holiday'] ?? 0.0) +
+            ($weights['recency'] ?? 0.0) * ($weightedValues['recency'] ?? 0.0) +
+            ($weights['location'] ?? 0.0) * ($weightedValues['location'] ?? 0.0) +
+            ($weights['poi'] ?? 0.0) * ($weightedValues['poi'] ?? 0.0) +
+            ($weights['time_coverage'] ?? 0.0) * ($weightedValues['time_coverage'] ?? 0.0);
     }
 
     private function floatOrNull(mixed $value): ?float
     {
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * @return array<string,float>
+     */
+    private function resolveWeights(ClusterDraft $cluster): array
+    {
+        $weights = $this->weights;
+
+        $algorithm = $cluster->getAlgorithm();
+        if (isset($this->algorithmWeightOverrides[$algorithm])) {
+            $weights = $this->mergeWeights($weights, $this->algorithmWeightOverrides[$algorithm]);
+        }
+
+        $clusterOverrides = $cluster->getParams()['score_weight_overrides'] ?? null;
+        if ($clusterOverrides !== null) {
+            $weights = $this->mergeWeights($weights, $clusterOverrides);
+        }
+
+        return $weights;
+    }
+
+    /**
+     * @param array<string,float> $weights
+     * @param mixed               $overrides
+     *
+     * @return array<string,float>
+     */
+    private function mergeWeights(array $weights, mixed $overrides): array
+    {
+        if (!is_array($overrides)) {
+            return $weights;
+        }
+
+        foreach ($overrides as $key => $value) {
+            if (!is_string($key) || !is_numeric($value)) {
+                continue;
+            }
+
+            $weight = (float) $value;
+            if ($weight < 0.0) {
+                continue;
+            }
+
+            $weights[$key] = $weight;
+        }
+
+        return $weights;
+    }
+
+    /**
+     * @param mixed $overrides
+     *
+     * @return array<string,float>
+     */
+    private function sanitizeWeightOverrides(mixed $overrides): array
+    {
+        if (!is_array($overrides)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($overrides as $key => $value) {
+            if (!is_string($key) || !is_numeric($value)) {
+                continue;
+            }
+
+            $weight = (float) $value;
+            if ($weight < 0.0) {
+                continue;
+            }
+
+            $result[$key] = $weight;
+        }
+
+        return $result;
     }
 
     private function resolveGroup(string $algorithm): string

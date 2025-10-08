@@ -57,6 +57,9 @@ final class PersonCohortClusterStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame([1, 2, 3], $params['persons']);
         self::assertArrayNotHasKey('person_labels', $params);
+        self::assertSame('group_portrait', $params['quality_profile']);
+        self::assertArrayHasKey('quality_avg', $params);
+        self::assertGreaterThan(0.0, $params['quality_avg']);
     }
 
     #[Test]
@@ -154,6 +157,14 @@ final class PersonCohortClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: 52.5,
             lon: 13.4,
+            configure: static function (Media $media): void {
+                $media->setWidth(3600);
+                $media->setHeight(2400);
+                $media->setSharpness(0.6);
+                $media->setIso(200);
+                $media->setBrightness(0.57);
+                $media->setContrast(0.68);
+            },
         );
     }
 }

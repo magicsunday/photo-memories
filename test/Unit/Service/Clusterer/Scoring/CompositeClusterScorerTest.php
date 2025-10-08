@@ -202,6 +202,51 @@ final class CompositeClusterScorerTest extends TestCase
         self::assertSame('travel_and_places', $params['group']);
     }
 
+    #[Test]
+    public function appliesAlgorithmAndClusterWeightOverrides(): void
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $heuristics = [
+            new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
+            new PeopleClusterScoreHeuristic(),
+        ];
+
+        $scorer = new CompositeClusterScorer(
+            em: $entityManager,
+            heuristics: $heuristics,
+            weights: [
+                'quality' => 0.5,
+                'people'  => 0.5,
+            ],
+            algorithmBoosts: [],
+            algorithmGroups: [],
+            defaultAlgorithmGroup: 'default',
+            algorithmWeightOverrides: [
+                'time_similarity' => ['quality' => 0.7],
+            ],
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'time_similarity',
+            params: [
+                'quality_avg'            => 0.4,
+                'people'                 => 0.5,
+                'score_weight_overrides' => ['people' => 0.25, 'invalid' => 'x'],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [],
+        );
+
+        $scored = $scorer->score([$cluster]);
+
+        self::assertCount(1, $scored);
+        $params = $scored[0]->getParams();
+        // Expect algorithm override 0.7 for quality and cluster override 0.25 for people.
+        $expected = (0.7 * 0.4) + (0.25 * 0.5);
+        self::assertEqualsWithDelta($expected, $params['score'], 1e-9);
+    }
+
     /**
      * @return array<int, Media>
      */

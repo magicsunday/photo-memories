@@ -54,6 +54,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
         self::assertSame('cafe', $cluster->getParams()['poi_category_value']);
         self::assertSame(['cuisine' => 'coffee_shop'], $cluster->getParams()['poi_tags']);
         self::assertSame(3, $cluster->getParams()['visit_days']);
+        self::assertArrayHasKey('quality_avg', $cluster->getParams());
     }
 
     #[Test]
@@ -118,6 +119,14 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             lat: $lat,
             lon: $lon,
             location: $location,
+            configure: static function (Media $media): void {
+                $media->setWidth(4000);
+                $media->setHeight(3000);
+                $media->setSharpness(0.72);
+                $media->setIso(160);
+                $media->setBrightness(0.6);
+                $media->setContrast(0.65);
+            },
         );
     }
 }

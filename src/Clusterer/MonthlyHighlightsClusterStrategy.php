@@ -17,6 +17,7 @@ use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ClusterDeviceMetadataAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 
@@ -36,11 +37,14 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
     private ClusterQualityAggregator $qualityAggregator;
 
+    private ClusterDeviceMetadataAggregator $deviceAggregator;
+
     public function __construct(
         private string $timezone = 'Europe/Berlin',
         private int $minItemsPerMonth = 40,
         private int $minDistinctDays = 10,
         ?ClusterQualityAggregator $qualityAggregator = null,
+        ?ClusterDeviceMetadataAggregator $deviceAggregator = null,
     ) {
         if ($this->minItemsPerMonth < 1) {
             throw new InvalidArgumentException('minItemsPerMonth must be >= 1.');
@@ -51,6 +55,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         }
 
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
+        $this->deviceAggregator  = $deviceAggregator ?? new ClusterDeviceMetadataAggregator();
     }
 
     public function name(): string
@@ -141,6 +146,13 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
 
             $peopleParams = $this->buildPeopleParams($list);
             $params       = [...$params, ...$peopleParams];
+
+            $deviceSummary = $this->deviceAggregator->summarize($list);
+            foreach ($deviceSummary as $deviceKey => $deviceValue) {
+                if ($deviceValue !== null) {
+                    $params[$deviceKey] = $deviceValue;
+                }
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
