@@ -738,8 +738,8 @@ services:
 
     MagicSunday\Memories\Clusterer\Service\RunDetector:
         arguments:
-            $minAwayDistanceKm: 120.0
-            $minItemsPerDay: 3
+            $minAwayDistanceKm: '%memories.cluster.vacation.min_away_distance_km%'
+            $minItemsPerDay: '%memories.cluster.vacation.min_items_per_day%'
 
     MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\RunDetector
@@ -748,6 +748,8 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $movementThresholdKm: 35.0
+            $minAwayDays: '%memories.cluster.vacation.min_away_days%'
+            $minMembers: '%memories.cluster.vacation.min_members%'
 
     MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
