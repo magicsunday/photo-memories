@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Utility;
 use MagicSunday\Memories\Utility\Contract\PoiNormalizerInterface;
 
 use function array_find;
+use function array_key_exists;
 use function array_keys;
 use function is_array;
 use function is_string;
@@ -77,49 +78,47 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
         $alternates = [];
 
         if (is_array($raw)) {
-            $rawDefault = $raw['default'] ?? null;
-            if (is_string($rawDefault) && $rawDefault !== '') {
-                $default = $rawDefault;
+            if (array_key_exists('default', $raw)) {
+                $rawDefault = $raw['default'];
+                if (is_string($rawDefault) && $rawDefault !== '') {
+                    $default = $rawDefault;
+                }
             }
 
-            $rawLocalized = $raw['localized'] ?? [];
-            if (!is_array($rawLocalized)) {
-                $rawLocalized = [];
+            $rawLocalized = $raw['localized'] ?? null;
+            if (is_array($rawLocalized)) {
+                foreach ($rawLocalized as $locale => $value) {
+                    if (!is_string($locale)) {
+                        continue;
+                    }
+
+                    $localeKey = strtolower(str_replace(' ', '_', $locale));
+                    if ($localeKey === '') {
+                        continue;
+                    }
+
+                    if (!is_string($value) || $value === '') {
+                        continue;
+                    }
+
+                    $localized[$localeKey] = $value;
+                }
             }
 
-            foreach ($rawLocalized as $locale => $value) {
-                if (!is_string($locale)) {
-                    continue;
+            $rawAlternates = $raw['alternates'] ?? null;
+            if (is_array($rawAlternates)) {
+                foreach ($rawAlternates as $alternate) {
+                    if (!is_string($alternate)) {
+                        continue;
+                    }
+
+                    $trimmed = trim($alternate);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+
+                    $alternates[$trimmed] = true;
                 }
-
-                $locale = strtolower(str_replace(' ', '_', $locale));
-                if ($locale === '') {
-                    continue;
-                }
-
-                if (!is_string($value) || $value === '') {
-                    continue;
-                }
-
-                $localized[$locale] = $value;
-            }
-
-            $rawAlternates = $raw['alternates'] ?? [];
-            if (!is_array($rawAlternates)) {
-                $rawAlternates = [];
-            }
-
-            foreach ($rawAlternates as $alternate) {
-                if (!is_string($alternate)) {
-                    continue;
-                }
-
-                $trimmed = trim($alternate);
-                if ($trimmed === '') {
-                    continue;
-                }
-
-                $alternates[$trimmed] = true;
             }
         }
 
@@ -143,7 +142,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     private function coalesceName(array $names): ?string
     {
         $default = $names['default'];
-        if (is_string($default) && $default !== '') {
+        if ($default !== null && $default !== '') {
             return $default;
         }
 
@@ -151,7 +150,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             $names['localized'],
             static fn (string $value): bool => $value !== ''
         );
-        if (is_string($localized)) {
+        if ($localized !== null) {
             return $localized;
         }
 
@@ -159,7 +158,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             $names['alternates'],
             static fn (string $value): bool => $value !== ''
         );
-        if (is_string($alternate)) {
+        if ($alternate !== null) {
             return $alternate;
         }
 

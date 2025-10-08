@@ -90,7 +90,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         $poi = $this->poiContextAnalyzer->resolvePrimaryPoi($location);
         if ($poi !== null) {
             $label = $this->poiLabelResolver->preferredLabel($poi);
-            if (is_string($label)) {
+            if ($label !== null) {
                 $normalizedLabel = trim($label);
                 if ($normalizedLabel !== '') {
                     return $this->normalizeLabelCasing($normalizedLabel);
@@ -106,7 +106,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         ];
 
         foreach ($components as $component) {
-            if (!is_string($component)) {
+            if ($component === null) {
                 continue;
             }
 
@@ -117,7 +117,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         $label = $this->poiContextAnalyzer->bestLabelForLocation($location);
-        if (is_string($label)) {
+        if ($label !== null) {
             $normalizedLabel = trim($label);
             if ($normalizedLabel !== '') {
                 return $this->normalizeLabelCasing($normalizedLabel);
@@ -141,21 +141,18 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     {
         $poiContext = $this->poiContextAnalyzer->majorityPoiContext($members);
         if ($poiContext !== null) {
-            $label = $poiContext['label'] ?? null;
-            if (is_string($label)) {
-                $normalizedLabel = trim($label);
-                if ($normalizedLabel !== '') {
-                    $categoryValue = $poiContext['categoryValue'] ?? null;
-                    if (!is_string($categoryValue)) {
-                        return $this->normalizeLabelCasing($normalizedLabel);
-                    }
+            $normalizedLabel = trim($poiContext['label']);
+            if ($normalizedLabel !== '') {
+                $categoryValue = $poiContext['categoryValue'];
+                if ($categoryValue === null) {
+                    return $this->normalizeLabelCasing($normalizedLabel);
+                }
 
-                    $normalizedCategory = trim($categoryValue);
-                    if ($normalizedCategory === ''
-                        || mb_strtolower($normalizedLabel, 'UTF-8') !== mb_strtolower($normalizedCategory, 'UTF-8')
-                    ) {
-                        return $this->normalizeLabelCasing($normalizedLabel);
-                    }
+                $normalizedCategory = trim($categoryValue);
+                if ($normalizedCategory === ''
+                    || mb_strtolower($normalizedLabel, 'UTF-8') !== mb_strtolower($normalizedCategory, 'UTF-8')
+                ) {
+                    return $this->normalizeLabelCasing($normalizedLabel);
                 }
             }
         }
@@ -177,7 +174,9 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         arsort($count, SORT_NUMERIC);
 
-        return array_key_first($count);
+        $first = array_key_first($count);
+
+        return is_string($first) ? $first : null;
     }
 
     public function majorityLocationComponents(array $members): array

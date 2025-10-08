@@ -42,6 +42,9 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
     ) {
     }
 
+    /**
+     * @param iterable<Location> $locations
+     */
     public function process(iterable $locations, bool $refreshPois, bool $dryRun, OutputInterface $output): PoiUpdateSummary
     {
         $items = $this->normalizeIterable($locations);
@@ -57,7 +60,7 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         $networkCalls = 0;
 
         foreach ($items as $location) {
-            $label = $location->getDisplayName() ?? $location->getCity() ?? 'Unbenannter Ort';
+            $label = $this->resolveProgressLabel($location);
             $progressBar->setMessage($this->formatProgressLabel($label));
 
             $beforePois = $location->getPois();
@@ -119,5 +122,23 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         return strlen($normalized) > 70
             ? substr($normalized, 0, 69) . '…'
             : $normalized;
+    }
+
+    private function resolveProgressLabel(Location $location): string
+    {
+        $displayName = trim($location->getDisplayName());
+        if ($displayName !== '') {
+            return $displayName;
+        }
+
+        $city = $location->getCity();
+        if (is_string($city)) {
+            $city = trim($city);
+            if ($city !== '') {
+                return $city;
+            }
+        }
+
+        return 'Unbenannter Ort';
     }
 }

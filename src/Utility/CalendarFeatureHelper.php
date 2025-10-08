@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 
 use function array_key_first;
 use function count;
+use function is_string;
 use function trim;
 
 /**
@@ -115,7 +116,10 @@ final class CalendarFeatureHelper
 
         $holidayId = null;
         if (count($holidayIds) === 1) {
-            $holidayId = (string) array_key_first($holidayIds);
+            $first = array_key_first($holidayIds);
+            if (is_string($first)) {
+                $holidayId = $first;
+            }
         }
 
         return [
