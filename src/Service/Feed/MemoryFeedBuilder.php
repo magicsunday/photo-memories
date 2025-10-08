@@ -56,6 +56,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         private TitleGeneratorInterface $titleGen,
         private CoverPickerInterface $coverPicker,
         private MediaRepository $mediaRepo,
+        private SeriesHighlightService $seriesHighlightService,
         private float $minScore = 0.35,
         private int $minMembers = 4,
         private int $maxPerDay = 6,
@@ -150,6 +151,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $maxPerAlgorithm = $profile->getMaxPerAlgorithm();
 
         foreach ($filtered as $c) {
+            $this->seriesHighlightService->apply($c);
+
             if (count($result) >= $maxTotal) {
                 break;
             }
