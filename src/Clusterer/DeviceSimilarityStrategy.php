@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
@@ -40,13 +41,18 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
     use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocationHelper $locationHelper,
         private int $minItemsPerGroup = 5,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minItemsPerGroup < 1) {
             throw new InvalidArgumentException('minItemsPerGroup must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -120,6 +126,13 @@ final readonly class DeviceSimilarityStrategy implements ClusterStrategyInterfac
             $tagMetadata = $this->collectDominantTags($group);
             if ($tagMetadata !== []) {
                 $params = [...$params, ...$tagMetadata];
+            }
+
+            $qualityParams = $this->qualityAggregator->buildParams($group);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
             }
 
             $params = $this->appendLocationMetadata($group, $params);
