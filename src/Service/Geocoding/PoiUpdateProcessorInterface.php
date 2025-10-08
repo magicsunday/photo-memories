@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Geocoding;
 
+use MagicSunday\Memories\Entity\Location;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -18,5 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 interface PoiUpdateProcessorInterface
 {
+    /**
+     * @param iterable<Location> $locations
+     */
     public function process(iterable $locations, bool $refreshPois, bool $dryRun, OutputInterface $output): PoiUpdateSummary;
 }

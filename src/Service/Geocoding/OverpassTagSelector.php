@@ -46,6 +46,11 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
     {
     }
 
+    /**
+     * @param array<string, mixed> $tags
+     *
+     * @return array{tags: array<string, string>, names: array{default: ?string, localized: array<string, string>, alternates: list<string>}}
+     */
     public function select(array $tags): array
     {
         $selected = $this->filterAllowedTags($tags);
@@ -66,6 +71,8 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
     }
 
     /**
+     * @param array<string, mixed> $tags
+     *
      * @return array{
      *     default: ?string,
      *     localized: array<string, string>,
@@ -88,9 +95,6 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
             }
 
             $locale = substr($key, 5);
-            if ($locale === false) {
-                continue;
-            }
 
             $locale = strtolower($locale);
             if ($locale === '') {
@@ -116,7 +120,7 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
             $parts = array_map(static fn (string $part): string => trim($part), explode(';', $altName));
             $parts = array_filter($parts, static fn (string $part): bool => $part !== '');
             if ($parts !== []) {
-                /** @var list<string> $unique */
+                /** @var non-empty-list<non-empty-string> $unique */
                 $unique     = array_values(array_unique($parts));
                 $alternates = $unique;
             }
@@ -130,6 +134,8 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
     }
 
     /**
+     * @param array<string, mixed> $tags
+     *
      * @return array<string, string>
      */
     private function filterAllowedTags(array $tags): array

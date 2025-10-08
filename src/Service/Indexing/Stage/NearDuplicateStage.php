@@ -18,7 +18,6 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 
-use function is_int;
 
 /**
  * Detects perceptually similar media and records their Hamming distance.
@@ -57,18 +56,10 @@ final readonly class NearDuplicateStage implements MediaIngestionStageInterface
         }
 
         foreach ($candidates as $candidate) {
-            $other    = $candidate['media'] ?? null;
-            $distance = $candidate['distance'] ?? null;
-
-            if (!$other instanceof Media) {
-                continue;
-            }
+            $other    = $candidate['media'];
+            $distance = $candidate['distance'];
 
             if ($other === $media) {
-                continue;
-            }
-
-            if (!is_int($distance)) {
                 continue;
             }
 

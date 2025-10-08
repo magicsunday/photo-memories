@@ -98,14 +98,14 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
 
     private function isImage(string $path): bool
     {
-        $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return $ext !== '' && in_array($ext, $this->imageExtensions, true);
     }
 
     private function isVideo(string $path): bool
     {
-        $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return $ext !== '' && in_array($ext, $this->videoExtensions, true);
     }

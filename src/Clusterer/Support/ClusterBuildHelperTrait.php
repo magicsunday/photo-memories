@@ -17,10 +17,6 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function array_map;
 use function array_slice;
 use function array_values;
-use function is_array;
-use function is_float;
-use function is_int;
-use function is_string;
 use function mb_strtolower;
 use function strcasecmp;
 use function trim;
@@ -106,32 +102,17 @@ trait ClusterBuildHelperTrait
 
         foreach ($members as $media) {
             $tags = $media->getSceneTags();
-            if (!is_array($tags)) {
+            if ($tags === null) {
                 continue;
             }
 
             foreach ($tags as $tag) {
-                if (!is_array($tag)) {
-                    continue;
-                }
+                $label = $tag['label'];
+                $value = (float) $tag['score'];
 
-                $label = $tag['label'] ?? null;
-                $score = $tag['score'] ?? null;
-
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                if (!is_float($score) && !is_int($score)) {
-                    continue;
-                }
-
-                $value = (float) $score;
                 if ($value < 0.0) {
                     $value = 0.0;
-                }
-
-                if ($value > 1.0) {
+                } elseif ($value > 1.0) {
                     $value = 1.0;
                 }
 
@@ -174,15 +155,11 @@ trait ClusterBuildHelperTrait
         $keywordStats = [];
         foreach ($members as $media) {
             $keywords = $media->getKeywords();
-            if (!is_array($keywords)) {
+            if ($keywords === null) {
                 continue;
             }
 
             foreach ($keywords as $keyword) {
-                if (!is_string($keyword)) {
-                    continue;
-                }
-
                 $trimmed = trim($keyword);
                 if ($trimmed === '') {
                     continue;

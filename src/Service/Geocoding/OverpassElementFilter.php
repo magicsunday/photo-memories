@@ -72,6 +72,8 @@ final class OverpassElementFilter implements OverpassElementFilterInterface
     }
 
     /**
+     * @param array<string, mixed> $element
+     *
      * @return array{lat: float, lon: float}|null
      */
     private function extractCoordinate(array $element): ?array
