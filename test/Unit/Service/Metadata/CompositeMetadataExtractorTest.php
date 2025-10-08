@@ -135,7 +135,9 @@ final class CompositeMetadataExtractorTest extends TestCase
 
             if (is_file($tmp) && unlink($tmp) === false) {
                 self::fail('Unable to clean up temporary file.');
-}
+            }
+        }
+    }
 
     #[Test]
     public function disabledExtractorIsLoggedAndSkipped(): void
