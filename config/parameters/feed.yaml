@@ -58,3 +58,42 @@ parameters:
     memories.http.feed.cover_width: 640
     memories.http.feed.member_width: 320
     memories.http.feed.max_thumbnail_width: 2048
+    memories.feed.notifications:
+        timezone: 'Europe/Berlin'
+        default_time: '09:00'
+        channels:
+            push:
+                lead_times: ['P0D', 'P1D']
+                send_time: '09:00'
+            email:
+                lead_times: ['P2D']
+                send_time: '08:00'
+    memories.spa.timeline_months: 12
+    memories.spa.gestures:
+        feed:
+            refresh: 'pull-down'
+            openDetails: 'tap'
+        timeline:
+            open: 'tap'
+            jumpToStory: 'double-tap'
+        story_viewer:
+            next: 'swipe-left'
+            previous: 'swipe-right'
+            close: 'swipe-down'
+    memories.spa.offline:
+        service_worker: '/app/service-worker.js'
+        scope: '/'
+        precache:
+            - '/api/feed'
+            - '/api/feed/spa'
+        runtime:
+            - { pattern: '^/api/media/', strategy: 'stale-while-revalidate' }
+            - { pattern: '^/thumbnails/', strategy: 'cache-first' }
+        fallback: '/offline'
+    memories.spa.animations:
+        feed:
+            card_ms: 280
+        timeline:
+            focus_ms: 220
+        story_viewer:
+            overlay_ms: 180

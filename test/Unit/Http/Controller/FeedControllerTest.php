@@ -26,6 +26,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DateTimeExifMetadataProcessor;
@@ -177,6 +178,258 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('beschreibung', $storyboard);
         self::assertNotSame('', $storyboard['titel']);
         self::assertNotSame('', $storyboard['beschreibung']);
+
+        self::assertArrayHasKey('benachrichtigungen', $payload['items'][0]);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedAppliesCursorForLazyLoading(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $mapper = new ClusterEntityToDraftMapper([]);
+
+        $items = [
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Winter in Berlin',
+                subtitle: 'Lichterfest an der Spree',
+                coverMediaId: 10,
+                memberIds: [10],
+                score: 0.82,
+                params: [
+                    'group'      => 'city_and_events',
+                    'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+                ],
+            ),
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Silvesterfeuerwerk',
+                subtitle: 'Countdown am Brandenburger Tor',
+                coverMediaId: 11,
+                memberIds: [11],
+                score: 0.74,
+                params: [
+                    'group'      => 'city_and_events',
+                    'time_range' => ['from' => 1_600_000_000, 'to' => 1_600_000_500],
+                ],
+            ),
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Winterspaziergang',
+                subtitle: 'Frostige Elbe',
+                coverMediaId: 12,
+                memberIds: [12],
+                score: 0.63,
+                params: [
+                    'group'      => 'nature_and_seasons',
+                    'time_range' => ['from' => 1_500_000_000, 'to' => 1_500_000_400],
+                ],
+            ),
+        ];
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn($items);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+
+        $mediaMap = [
+            10 => $this->createMedia(10, '/media/10.jpg', '2024-01-01T09:00:00+00:00'),
+            11 => $this->createMedia(11, '/media/11.jpg', '2023-12-31T23:30:00+00:00'),
+            12 => $this->createMedia(12, '/media/12.jpg', '2023-12-15T15:45:00+00:00'),
+        ];
+
+        $mediaRepo->method('findByIds')
+            ->willReturnCallback(
+                static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
+                    $result = [];
+                    foreach ($ids as $id) {
+                        if (isset($mediaMap[$id])) {
+                            $result[] = $mediaMap[$id];
+                        }
+                    }
+
+                    return $result;
+                }
+            );
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/feed', 'GET', ['cursor' => 'time:1600000000']);
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertArrayHasKey('items', $payload);
+        self::assertCount(1, $payload['items']);
+        self::assertSame('Winterspaziergang', $payload['items'][0]['titel']);
+
+        $meta = $payload['meta'];
+        self::assertSame('time:1600000000', $meta['pagination']['cursor']);
+        self::assertSame('time:1500000000', $meta['pagination']['nextCursor']);
+        self::assertSame('time:1600000000', $meta['filter']['cursor']);
+
+        unlink($storagePath);
+    }
+
+    public function testSpaBootstrapBuildsComponents(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $mapper = new ClusterEntityToDraftMapper([]);
+
+        $items = [
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Jahreswechsel',
+                subtitle: 'Feuerwerk an der Elbe',
+                coverMediaId: 21,
+                memberIds: [21, 22],
+                score: 0.88,
+                params: [
+                    'group'      => 'city_and_events',
+                    'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_600],
+                ],
+            ),
+            new MemoryFeedItem(
+                algorithm: 'nightlife_event',
+                title: 'Lange Nacht',
+                subtitle: 'Jazzclub in Hamburg',
+                coverMediaId: 23,
+                memberIds: [23],
+                score: 0.67,
+                params: [
+                    'group'      => 'nightlife',
+                    'time_range' => ['from' => 1_650_000_000, 'to' => 1_650_000_400],
+                ],
+            ),
+        ];
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn($items);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+
+        $mediaMap = [
+            21 => $this->createMedia(21, '/media/21.jpg', '2023-12-31T22:30:00+00:00'),
+            22 => $this->createMedia(22, '/media/22.jpg', '2023-12-31T22:45:00+00:00'),
+            23 => $this->createMedia(23, '/media/23.jpg', '2023-11-11T23:15:00+00:00'),
+        ];
+
+        $mediaRepo->method('findByIds')
+            ->willReturnCallback(
+                static function (array $ids, bool $onlyVideos = false) use ($mediaMap): array {
+                    $result = [];
+                    foreach ($ids as $id) {
+                        if (isset($mediaMap[$id])) {
+                            $result[] = $mediaMap[$id];
+                        }
+                    }
+
+                    return $result;
+                }
+            );
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('ensureForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $spaGestures = [
+            'feed'         => ['refresh' => 'pull-down'],
+            'timeline'     => ['open' => 'tap'],
+            'story_viewer' => ['next' => 'swipe-left'],
+        ];
+
+        $spaOffline = [
+            'service_worker' => '/app/sw.js',
+            'scope'          => '/',
+            'precache'       => ['/api/feed', '/api/feed/spa'],
+            'runtime'        => [
+                ['pattern' => '^/api/media/', 'strategy' => 'stale-while-revalidate'],
+            ],
+            'fallback'       => '/offline',
+        ];
+
+        $spaAnimations = [
+            'feed'         => ['card_ms' => 220],
+            'timeline'     => ['focus_ms' => 210],
+            'story_viewer' => ['overlay_ms' => 180],
+        ];
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+            $spaGestures,
+            $spaOffline,
+            $spaAnimations,
+            6,
+        );
+
+        $request  = Request::create('/api/feed/spa', 'GET');
+        $response = $controller->spaBootstrap($request);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertArrayHasKey('components', $payload);
+        $components = $payload['components'];
+
+        self::assertArrayHasKey('fuerDich', $components);
+        self::assertCount(2, $components['fuerDich']['items']);
+        self::assertSame($spaAnimations['feed'], $components['fuerDich']['animationen']);
+
+        self::assertArrayHasKey('timeline', $components);
+        self::assertNotEmpty($components['timeline']['gruppen']);
+        self::assertSame($spaGestures['timeline'], $components['timeline']['gesten']);
+
+        self::assertArrayHasKey('storyViewer', $components);
+        self::assertNotEmpty($components['storyViewer']['stories']);
+        self::assertSame(3500, $components['storyViewer']['animationen']['bildMs']);
+        self::assertSame(180, $components['storyViewer']['animationen']['overlay_ms']);
+
+        self::assertArrayHasKey('offline', $components);
+        self::assertSame('/app/sw.js', $components['offline']['serviceWorker']['pfad']);
+        self::assertSame($spaOffline['precache'], $components['offline']['serviceWorker']['precache']);
+        self::assertSame($spaGestures, $components['offline']['gesten']);
 
         unlink($storagePath);
     }
@@ -464,6 +717,10 @@ final class FeedControllerTest extends TestCase
         ThumbnailServiceInterface $thumbnailService,
         SlideshowVideoManagerInterface $slideshowManager,
         EntityManagerInterface $entityManager,
+        array $spaGestures = [],
+        array $spaOffline = [],
+        array $spaAnimations = [],
+        int $timelineMonths = 12,
     ): array {
         $profileProvider = new FeedPersonalizationProfileProvider([
             'default' => [
@@ -486,6 +743,13 @@ final class FeedControllerTest extends TestCase
 
         $preferenceStorage = new FeedUserPreferenceStorage($storagePath);
         $storyboardGenerator = new StoryboardTextGenerator();
+        $notificationPlanner = new NotificationPlanner([
+            'push' => [
+                'lead_times' => ['P0D'],
+                'send_time'  => '09:00',
+                'timezone'   => 'UTC',
+            ],
+        ], '09:00', 'UTC');
 
         $controller = new FeedController(
             $feedBuilder,
@@ -499,8 +763,41 @@ final class FeedControllerTest extends TestCase
             $profileProvider,
             $preferenceStorage,
             $storyboardGenerator,
+            $notificationPlanner,
+            24,
+            120,
+            8,
+            4,
+            640,
+            320,
+            2048,
+            3.5,
+            0.8,
+            [],
+            null,
+            $timelineMonths,
+            $spaGestures,
+            $spaOffline,
+            $spaAnimations,
         );
 
         return [$controller, $storagePath];
+    }
+
+    private function createMedia(int $id, string $path, string $takenAt): Media
+    {
+        $media = new Media($path, 'checksum-' . $id, 128);
+
+        $property = new ReflectionProperty(Media::class, 'id');
+        $property->setAccessible(true);
+        $property->setValue($media, $id);
+
+        $timestamp = new DateTimeImmutable($takenAt);
+        $media->setTakenAt($timestamp);
+        $media->setCapturedLocal($timestamp);
+        $media->setTimeSource(TimeSource::EXIF);
+        $media->setTzId('UTC');
+
+        return $media;
     }
 }

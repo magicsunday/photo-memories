@@ -27,6 +27,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
+use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
@@ -56,7 +57,9 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 use function max;
+use function krsort;
 use function min;
+use function round;
 use function sort;
 use function sprintf;
 use function trim;
@@ -104,6 +107,7 @@ final class FeedController
         private readonly FeedPersonalizationProfileProvider $profileProvider,
         private readonly FeedUserPreferenceStorage $preferenceStorage,
         private readonly StoryboardTextGenerator $storyboardTextGenerator,
+        private readonly NotificationPlanner $notificationPlanner,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -115,6 +119,10 @@ final class FeedController
         private float $slideshowTransitionDuration = 0.8,
         private array $slideshowTransitions = [],
         private ?string $slideshowMusic = null,
+        private int $spaTimelineMonths = 12,
+        private array $spaGestureConfig = [],
+        private array $spaOfflineConfig = [],
+        private array $spaAnimationConfig = [],
     ) {
         if ($this->defaultFeedLimit < 1) {
             $this->defaultFeedLimit = 24;
@@ -173,28 +181,76 @@ final class FeedController
         } else {
             $this->slideshowMusic = trim($this->slideshowMusic);
         }
+
+        if ($this->spaTimelineMonths < 1) {
+            $this->spaTimelineMonths = 6;
+        }
+
+        $this->spaGestureConfig   = $this->sanitizeGestureConfig($this->spaGestureConfig);
+        $this->spaOfflineConfig   = $this->sanitizeOfflineConfig($this->spaOfflineConfig);
+        $this->spaAnimationConfig = $this->sanitizeAnimationConfig($this->spaAnimationConfig);
     }
 
     public function feed(Request $request): JsonResponse
     {
-        $limit        = $this->normalizeLimit($request->getQueryParam('limit'));
-        $minScore     = $this->normalizeFloat($request->getQueryParam('score'));
-        $strategy     = $this->normalizeString($request->getQueryParam('strategie'));
-        $dateParam    = $this->normalizeString($request->getQueryParam('datum'));
-        $clusterLimit = max($limit * $this->clusterFetchMultiplier, $limit);
-
-        $filterDate = null;
-        if ($dateParam !== null) {
-            $filterDate = DateTimeImmutable::createFromFormat('Y-m-d', $dateParam);
-            $errors     = DateTimeImmutable::getLastErrors();
-
-            $hasErrors = ($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0;
-            if (!$filterDate instanceof DateTimeImmutable || $hasErrors) {
-                return new JsonResponse([
-                    'error' => 'Invalid date filter format, expected YYYY-MM-DD.',
-                ], 400);
-            }
+        $dateInfo = $this->resolveDateFilter($this->normalizeString($request->getQueryParam('datum')));
+        if ($dateInfo['error'] !== null) {
+            return new JsonResponse([
+                'error' => $dateInfo['error'],
+            ], 400);
         }
+
+        $result = $this->buildFeedResult($request, $dateInfo['date']);
+
+        return new JsonResponse([
+            'meta'  => $result['meta'],
+            'items' => $result['items'],
+        ]);
+    }
+
+    public function spaBootstrap(Request $request): JsonResponse
+    {
+        $dateInfo = $this->resolveDateFilter($this->normalizeString($request->getQueryParam('datum')));
+        if ($dateInfo['error'] !== null) {
+            return new JsonResponse([
+                'error' => $dateInfo['error'],
+            ], 400);
+        }
+
+        $result = $this->buildFeedResult($request, $dateInfo['date']);
+
+        $components = [
+            'fuerDich'    => $this->buildFuerDichComponent($result['items'], $result['meta']),
+            'timeline'    => $this->buildTimelineComponent($result['matchingItems'], $result['locale']),
+            'storyViewer' => $this->buildStoryViewerComponent($result['items']),
+            'offline'     => $this->buildOfflineComponent($result['now'], $result['preferences']),
+        ];
+
+        return new JsonResponse([
+            'meta'       => [
+                'erstelltAm' => $result['meta']['erstelltAm'] ?? $result['now']->format(DateTimeInterface::ATOM),
+                'locale'     => $result['locale'],
+            ],
+            'components' => $components,
+        ]);
+    }
+
+    /**
+     * @return array{
+     *     items: list<array<string, mixed>>,
+     *     meta: array<string, mixed>,
+     *     matchingItems: list<MemoryFeedItem>,
+     *     preferences: FeedUserPreferences,
+     *     locale: string,
+     *     now: DateTimeImmutable
+     * }
+     */
+    private function buildFeedResult(Request $request, ?DateTimeImmutable $filterDate): array
+    {
+        $limit    = $this->normalizeLimit($request->getQueryParam('limit'));
+        $minScore = $this->normalizeFloat($request->getQueryParam('score'));
+        $strategy = $this->normalizeString($request->getQueryParam('strategie'));
+        $cursor   = $this->normalizeString($request->getQueryParam('cursor'));
 
         $profileKey = $this->normalizeString($request->getQueryParam('profil'));
         $userId     = $this->normalizeString($request->getQueryParam('nutzer')) ?? 'standard';
@@ -202,10 +258,11 @@ final class FeedController
         $preferences = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
         $locale      = $this->resolveLocale($request);
 
-        $clusters = $this->clusterRepository->findLatest($clusterLimit);
-        $drafts   = $this->clusterMapper->mapMany($clusters);
-        $items    = $this->feedBuilder->build($drafts, $profile);
-        $items    = array_values(array_filter(
+        $clusterLimit = max($limit * $this->clusterFetchMultiplier, $limit);
+        $clusters     = $this->clusterRepository->findLatest($clusterLimit);
+        $drafts       = $this->clusterMapper->mapMany($clusters);
+        $items        = $this->feedBuilder->build($drafts, $profile);
+        $items        = array_values(array_filter(
             $items,
             static function (MemoryFeedItem $item) use ($preferences): bool {
                 return !$preferences->isAlgorithmOptedOut($item->getAlgorithm());
@@ -231,6 +288,7 @@ final class FeedController
             }
         ));
 
+        $filtered      = $this->applyCursor($filtered, $cursor);
         $matchingItems = $filtered;
         $matchingCount = count($matchingItems);
         $pagedItems    = array_slice($matchingItems, 0, $limit);
@@ -238,8 +296,8 @@ final class FeedController
         $availableStrategies = $this->collectStrategies($matchingItems);
         $availableGroups     = $this->collectGroups($matchingItems);
 
-        $now = new DateTimeImmutable();
-        $host = $request->getSchemeAndHttpHost();
+        $now    = new DateTimeImmutable();
+        $host   = $request->getSchemeAndHttpHost();
         $baseUrl = $host !== '' ? rtrim($host, '/') : '';
 
         /** @var list<array<string, mixed>> $data */
@@ -248,7 +306,8 @@ final class FeedController
             $pagedItems,
         );
 
-        $hasMore   = count($data) < $matchingCount;
+        $hasMore = count($data) < $matchingCount;
+
         $meta = [
             'erstelltAm'            => $now->format(DateTimeInterface::ATOM),
             'erstelltAmText'        => $this->formatLocalizedDate($now),
@@ -259,17 +318,18 @@ final class FeedController
             'verfuegbareGruppen'    => $availableGroups,
             'labelMapping'          => $this->buildLabelMapping(),
             'pagination'            => [
-                'hatWeitere'   => $hasMore,
-                'nextCursor'   => $hasMore ? $this->createCursor($pagedItems) : null,
+                'hatWeitere'      => $hasMore,
+                'nextCursor'      => $hasMore ? $this->createCursor($pagedItems) : null,
                 'limitEmpfehlung' => $this->defaultFeedLimit,
+                'cursor'          => $cursor,
             ],
             'personalisierung'      => [
-                'nutzer'              => $userId,
-                'profil'              => $profile->getKey(),
-                'verfuegbareProfile'  => $this->profileProvider->listProfiles(),
-                'schwellenwerte'      => $profile->describe(),
-                'favoriten'           => $preferences->getFavourites(),
-                'optOutAlgorithmen'   => $preferences->getHiddenAlgorithms(),
+                'nutzer'             => $userId,
+                'profil'             => $profile->getKey(),
+                'verfuegbareProfile' => $this->profileProvider->listProfiles(),
+                'schwellenwerte'     => $profile->describe(),
+                'favoriten'          => $preferences->getFavourites(),
+                'optOutAlgorithmen'  => $preferences->getHiddenAlgorithms(),
             ],
             'filter'                => [
                 'score'     => $minScore,
@@ -278,13 +338,106 @@ final class FeedController
                 'limit'     => $limit,
                 'profil'    => $profile->getKey(),
                 'nutzer'    => $userId,
+                'cursor'    => $cursor,
+            ],
+            'filterKonfiguration'   => [
+                'unterstuetzt' => ['score', 'strategie', 'datum', 'profil', 'nutzer', 'cursor'],
+                'cursor'       => [
+                    'aktiv'  => $cursor,
+                    'schema' => 'time:<unix>|media:<mediaId>',
+                ],
             ],
         ];
 
-        return new JsonResponse([
-            'meta'  => $meta,
-            'items' => $data,
-        ]);
+        return [
+            'items'         => $data,
+            'meta'          => $meta,
+            'matchingItems' => $matchingItems,
+            'preferences'   => $preferences,
+            'locale'        => $locale,
+            'now'           => $now,
+        ];
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     *
+     * @return list<MemoryFeedItem>
+     */
+    private function applyCursor(array $items, ?string $cursor): array
+    {
+        if ($cursor === null) {
+            return array_values($items);
+        }
+
+        $parts = explode(':', $cursor, 2);
+        if (count($parts) !== 2) {
+            return array_values($items);
+        }
+
+        [$type, $rawValue] = $parts;
+        if ($type === 'time' && is_numeric($rawValue)) {
+            $threshold = (int) $rawValue;
+
+            return array_values(array_filter(
+                $items,
+                function (MemoryFeedItem $item) use ($threshold): bool {
+                    $params = $item->getParams();
+                    $range  = $params['time_range'] ?? null;
+
+                    if (is_array($range)) {
+                        $from = $range['from'] ?? null;
+                        if (is_numeric($from) && (int) $from >= $threshold) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                },
+            ));
+        }
+
+        if ($type === 'media' && is_numeric($rawValue)) {
+            $threshold = (int) $rawValue;
+            $result    = [];
+            $skip      = true;
+
+            foreach ($items as $item) {
+                if ($skip) {
+                    if (in_array($threshold, $item->getMemberIds(), true)) {
+                        $skip = false;
+                    }
+
+                    continue;
+                }
+
+                $result[] = $item;
+            }
+
+            return array_values($result);
+        }
+
+        return array_values($items);
+    }
+
+    /**
+     * @return array{date: ?DateTimeImmutable, error: ?string}
+     */
+    private function resolveDateFilter(?string $dateParam): array
+    {
+        if ($dateParam === null) {
+            return ['date' => null, 'error' => null];
+        }
+
+        $filterDate = DateTimeImmutable::createFromFormat('Y-m-d', $dateParam);
+        $errors     = DateTimeImmutable::getLastErrors();
+
+        $hasErrors = ($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0;
+        if (!$filterDate instanceof DateTimeImmutable || $hasErrors) {
+            return ['date' => null, 'error' => 'Invalid date filter format, expected YYYY-MM-DD.'];
+        }
+
+        return ['date' => $filterDate, 'error' => null];
     }
 
     public function thumbnail(Request $request, int $mediaId): JsonResponse|BinaryFileResponse
@@ -565,6 +718,7 @@ final class FeedController
             'kontext'            => $clusterContext,
             'slideshow'          => $this->enrichSlideshowStatus($status),
             'storyboard'         => $this->buildStoryboard($memberPayload, $item->getParams(), $locale),
+            'benachrichtigungen' => $this->notificationPlanner->planForItem($item, $reference),
         ];
     }
 
@@ -1367,6 +1521,366 @@ final class FeedController
         }
 
         return null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $items
+     * @param array<string, mixed>       $meta
+     */
+    private function buildFuerDichComponent(array $items, array $meta): array
+    {
+        return [
+            'items'                => $items,
+            'pagination'           => $meta['pagination'] ?? [],
+            'filter'               => $meta['filter'] ?? [],
+            'filterKonfiguration'  => $meta['filterKonfiguration'] ?? [],
+            'personalisierung'     => $meta['personalisierung'] ?? [],
+            'animationen'          => $this->spaAnimationConfig['feed'] ?? [],
+            'gesten'               => $this->spaGestureConfig['feed'] ?? [],
+        ];
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     */
+    private function buildTimelineComponent(array $items, string $locale): array
+    {
+        $groups = [];
+
+        foreach ($items as $item) {
+            $date = $this->resolveTimelineDate($item);
+            if (!$date instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $key = $date->format('Y-m');
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'monat'     => (int) $date->format('n'),
+                    'jahr'      => (int) $date->format('Y'),
+                    'titel'     => $this->formatMonthLabel($date, $locale),
+                    'eintraege' => [],
+                ];
+            }
+
+            $groups[$key]['eintraege'][] = [
+                'id'          => $this->createItemId($item),
+                'titel'       => $item->getTitle(),
+                'untertitel'  => $item->getSubtitle(),
+                'algorithmus' => $item->getAlgorithm(),
+                'score'       => $item->getScore(),
+                'zeitstempel' => $date->format(DateTimeInterface::ATOM),
+            ];
+        }
+
+        if ($groups === []) {
+            return [
+                'gruppen'    => [],
+                'gesten'     => $this->spaGestureConfig['timeline'] ?? [],
+                'animationen'=> $this->spaAnimationConfig['timeline'] ?? [],
+            ];
+        }
+
+        krsort($groups);
+        $groups = array_slice($groups, 0, $this->spaTimelineMonths, true);
+
+        foreach ($groups as &$group) {
+            $group['anzahl'] = count($group['eintraege']);
+        }
+
+        return [
+            'gruppen'    => array_values($groups),
+            'gesten'     => $this->spaGestureConfig['timeline'] ?? [],
+            'animationen'=> $this->spaAnimationConfig['timeline'] ?? [],
+        ];
+    }
+
+    private function resolveTimelineDate(MemoryFeedItem $item): ?DateTimeImmutable
+    {
+        $params = $item->getParams();
+        $range  = $params['time_range'] ?? null;
+
+        if (is_array($range)) {
+            $from = $range['from'] ?? null;
+            if (is_numeric($from)) {
+                return $this->timestampToDate((int) $from);
+            }
+
+            $to = $range['to'] ?? null;
+            if (is_numeric($to)) {
+                return $this->timestampToDate((int) $to);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $items
+     */
+    private function buildStoryViewerComponent(array $items): array
+    {
+        $stories = [];
+
+        foreach ($items as $item) {
+            $storyboard = $item['storyboard'] ?? null;
+            if (!is_array($storyboard)) {
+                continue;
+            }
+
+            $slides = $storyboard['folien'] ?? null;
+            if (!is_array($slides) || $slides === []) {
+                continue;
+            }
+
+            $stories[] = [
+                'id'                => $item['id'] ?? null,
+                'titel'             => $storyboard['titel'] ?? ($item['titel'] ?? null),
+                'beschreibung'      => $storyboard['beschreibung'] ?? ($item['untertitel'] ?? null),
+                'folien'            => $slides,
+                'dauerSekunden'     => $storyboard['dauerSekunden'] ?? null,
+                'uebergangSekunden' => $storyboard['uebergangSekunden'] ?? null,
+            ];
+        }
+
+        return [
+            'stories'    => $stories,
+            'gesten'     => $this->spaGestureConfig['story_viewer'] ?? [],
+            'animationen'=> $this->mergeStoryViewerAnimations(),
+        ];
+    }
+
+    private function mergeStoryViewerAnimations(): array
+    {
+        $animations = [
+            'bildMs'      => (int) round($this->slideshowImageDuration * 1000),
+            'uebergangMs' => (int) round($this->slideshowTransitionDuration * 1000),
+        ];
+
+        $config = $this->spaAnimationConfig['story_viewer'] ?? [];
+        foreach ($config as $key => $value) {
+            if (!is_string($key) || !is_numeric($value)) {
+                continue;
+            }
+
+            $animations[$key] = (int) round((float) $value);
+        }
+
+        return $animations;
+    }
+
+    private function buildOfflineComponent(DateTimeImmutable $reference, FeedUserPreferences $preferences): array
+    {
+        $serviceWorker = [
+            'pfad'      => $this->spaOfflineConfig['service_worker'] ?? '/app/service-worker.js',
+            'scope'     => $this->spaOfflineConfig['scope'] ?? '/',
+            'precache'  => $this->spaOfflineConfig['precache'] ?? ['/api/feed'],
+        ];
+
+        if (isset($this->spaOfflineConfig['runtime'])) {
+            $serviceWorker['runtimeCaching'] = $this->spaOfflineConfig['runtime'];
+        }
+
+        if (isset($this->spaOfflineConfig['fallback'])) {
+            $serviceWorker['fallbackRoute'] = $this->spaOfflineConfig['fallback'];
+        }
+
+        return [
+            'serviceWorker'       => $serviceWorker,
+            'gesten'              => $this->spaGestureConfig,
+            'animationen'         => $this->spaAnimationConfig,
+            'favoriten'           => $preferences->getFavourites(),
+            'precacheItems'       => $preferences->getFavourites(),
+            'letzteAktualisierung'=> $reference->format(DateTimeInterface::ATOM),
+        ];
+    }
+
+    private function formatMonthLabel(DateTimeImmutable $date, string $locale): string
+    {
+        if (class_exists(IntlDateFormatter::class)) {
+            $formatter = new IntlDateFormatter(
+                $locale,
+                IntlDateFormatter::LONG,
+                IntlDateFormatter::NONE,
+                $date->getTimezone()->getName(),
+                null,
+                'LLLL yyyy',
+            );
+
+            $formatted = $formatter->format($date);
+            if (is_string($formatted) && $formatted !== '') {
+                return $formatted;
+            }
+        }
+
+        return $this->formatMonthName($date) . ' ' . $date->format('Y');
+    }
+
+    /**
+     * @param array<array-key, mixed> $config
+     *
+     * @return array<string, array<string, string>>
+     */
+    private function sanitizeGestureConfig(array $config): array
+    {
+        $result = [];
+
+        foreach ($config as $section => $gestures) {
+            if (!is_string($section) || !is_array($gestures)) {
+                continue;
+            }
+
+            $entries = [];
+            foreach ($gestures as $name => $value) {
+                if (!is_string($name) || !is_string($value)) {
+                    continue;
+                }
+
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $entries[$name] = $trimmed;
+            }
+
+            if ($entries !== []) {
+                $result[$section] = $entries;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @return array<string, mixed>
+     */
+    private function sanitizeOfflineConfig(array $config): array
+    {
+        $result = [];
+
+        $serviceWorker = $config['service_worker'] ?? null;
+        if (is_string($serviceWorker)) {
+            $trimmed = trim($serviceWorker);
+            if ($trimmed !== '') {
+                $result['service_worker'] = $trimmed;
+            }
+        }
+
+        $scope = $config['scope'] ?? null;
+        if (is_string($scope)) {
+            $trimmed = trim($scope);
+            if ($trimmed !== '') {
+                $result['scope'] = $trimmed;
+            }
+        }
+
+        $precache = $config['precache'] ?? null;
+        if (is_array($precache)) {
+            $list = $this->sanitizeStringList($precache);
+            if ($list !== []) {
+                $result['precache'] = $list;
+            }
+        }
+
+        $runtime = $config['runtime'] ?? null;
+        if (is_array($runtime)) {
+            $entries = [];
+            foreach ($runtime as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+
+                $pattern  = $entry['pattern'] ?? null;
+                $strategy = $entry['strategy'] ?? null;
+                if (!is_string($pattern) || !is_string($strategy)) {
+                    continue;
+                }
+
+                $patternTrim  = trim($pattern);
+                $strategyTrim = trim($strategy);
+                if ($patternTrim === '' || $strategyTrim === '') {
+                    continue;
+                }
+
+                $entries[] = [
+                    'pattern'  => $patternTrim,
+                    'strategy' => $strategyTrim,
+                ];
+            }
+
+            if ($entries !== []) {
+                $result['runtime'] = $entries;
+            }
+        }
+
+        $fallback = $config['fallback'] ?? null;
+        if (is_string($fallback)) {
+            $trimmed = trim($fallback);
+            if ($trimmed !== '') {
+                $result['fallback'] = $trimmed;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @return array<string, mixed>
+     */
+    private function sanitizeAnimationConfig(array $config): array
+    {
+        $result = [];
+
+        foreach ($config as $key => $value) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $nested = $this->sanitizeAnimationConfig($value);
+                if ($nested !== []) {
+                    $result[$key] = $nested;
+                }
+
+                continue;
+            }
+
+            if (is_numeric($value)) {
+                $result[$key] = (int) round((float) $value);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<int|string, mixed> $values
+     *
+     * @return list<string>
+     */
+    private function sanitizeStringList(array $values): array
+    {
+        $result = [];
+
+        foreach ($values as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            $trimmed = trim($value);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $result[] = $trimmed;
+        }
+
+        return $result;
     }
 
     private function translateAlgorithm(string $algorithm): string
