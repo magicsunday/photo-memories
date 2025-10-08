@@ -1,6 +1,8 @@
 # config/services.yaml
 imports:
     - { resource: 'parameters.yaml' }
+    - { resource: 'parameters/feed.yaml' }
+    - { resource: 'parameters/monitoring.yaml' }
 
 services:
     _defaults:
@@ -40,6 +42,14 @@ services:
 
     MagicSunday\Memories\Utility\Contract\PoiScoringStrategyInterface:
         alias: MagicSunday\Memories\Utility\DefaultPoiScorer
+
+    MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter:
+        arguments:
+            $logPath: '%memories.monitoring.log_path%'
+            $enabled: '%memories.monitoring.enabled%'
+
+    MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface:
+        alias: MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter
 
     MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface:
         alias: MagicSunday\Memories\Service\Hash\Xxhash64FileHasher
@@ -108,6 +118,7 @@ services:
             $phpBinary: '%memories.slideshow.php_binary%'
             $transitions: '%memories.slideshow.transitions%'
             $musicTrack: '%memories.slideshow.music_path%'
+            $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager

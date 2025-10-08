@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Service\Geocoding\DefaultPoiUpdateProcessor;
 use MagicSunday\Memories\Service\Geocoding\PoiEnsurerInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -106,5 +107,57 @@ final class DefaultPoiUpdateProcessorTest extends TestCase
         self::assertSame(1, $summary->getProcessed());
         self::assertSame(0, $summary->getUpdated());
         self::assertSame(0, $summary->getNetworkCalls());
+    }
+
+    #[Test]
+    public function emitsMonitoringEvents(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('flush');
+
+        $location = new Location('nominatim', '4', 'Köln', 7.1, 8.2, 'cell-d');
+
+        $resolver = new class implements PoiEnsurerInterface {
+            public function ensurePois(Location $location, bool $refreshPois = false): void
+            {
+                $location->setPois([
+                    ['name' => 'Kölner Dom'],
+                ]);
+            }
+
+            public function consumeLastUsedNetwork(): bool
+            {
+                return true;
+            }
+        };
+
+        $emitter = new class implements JobMonitoringEmitterInterface {
+            /** @var list<array{job:string,status:string,context:array<string,mixed>}> */
+            public array $events = [];
+
+            public function emit(string $job, string $status, array $context = []): void
+            {
+                $this->events[] = [
+                    'job'     => $job,
+                    'status'  => $status,
+                    'context' => $context,
+                ];
+            }
+        };
+
+        $processor = new DefaultPoiUpdateProcessor($entityManager, $resolver, 10, $emitter);
+
+        $summary = $processor->process([$location], false, false, new NullOutput());
+
+        self::assertCount(2, $emitter->events);
+        self::assertSame('geocoding.poi_update', $emitter->events[0]['job']);
+        self::assertSame('started', $emitter->events[0]['status']);
+        self::assertSame(1, $emitter->events[0]['context']['total']);
+        self::assertFalse($emitter->events[0]['context']['dryRun']);
+
+        self::assertSame('finished', $emitter->events[1]['status']);
+        self::assertSame($summary->getProcessed(), $emitter->events[1]['context']['processed']);
+        self::assertSame($summary->getUpdated(), $emitter->events[1]['context']['updated']);
+        self::assertSame($summary->getNetworkCalls(), $emitter->events[1]['context']['networkCalls']);
     }
 }

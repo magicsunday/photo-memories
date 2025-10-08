@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Slideshow;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
@@ -52,6 +53,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         private PhpExecutableFinder $phpExecutableFinder,
         private array $transitions = [],
         private ?string $musicTrack = null,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $phpBinary                 = is_string($phpBinary) ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
@@ -95,6 +97,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     {
         $slides = $this->collectSlides($memberIds, $mediaMap);
         if ($slides === []) {
+            $this->emitMonitoring('skipped', [
+                'itemId'      => $itemId,
+                'memberCount' => count($memberIds),
+                'reason'      => 'no_slides',
+            ]);
+
             return SlideshowVideoStatus::unavailable($this->slideDuration);
         }
 
@@ -107,6 +115,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $jobPath   = $this->buildJobPath($videoPath);
 
         if (is_file($videoPath)) {
+            $this->emitMonitoring('ready', [
+                'itemId'    => $itemId,
+                'source'    => 'existing',
+                'videoPath' => $videoPath,
+            ]);
+
             return SlideshowVideoStatus::ready($this->buildVideoUrl($itemId), $this->slideDuration);
         }
 
@@ -114,10 +128,20 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $message = file_get_contents($errorPath);
             $message = is_string($message) && $message !== '' ? $message : 'Video konnte nicht erzeugt werden.';
 
+            $this->emitMonitoring('failed', [
+                'itemId' => $itemId,
+                'reason' => 'previous_error',
+            ]);
+
             return SlideshowVideoStatus::error($message, $this->slideDuration);
         }
 
         if (is_file($lockPath)) {
+            $this->emitMonitoring('generating', [
+                'itemId' => $itemId,
+                'reason' => 'lock_exists',
+            ]);
+
             return SlideshowVideoStatus::generating($this->slideDuration);
         }
 
@@ -134,8 +158,22 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music']);
             file_put_contents($jobPath, $job->toJson(), LOCK_EX);
             $this->startGenerator($job);
+
+            $this->emitMonitoring('queued', [
+                'itemId'     => $itemId,
+                'slideCount' => count($slides),
+                'videoPath'  => $videoPath,
+                'music'      => $storyboard['music'],
+                'transitionDuration' => $storyboard['transitionDuration'],
+            ]);
         } catch (Throwable $throwable) {
             $this->handleGenerationFailure($throwable, $lockPath, $errorPath, $jobPath);
+
+            $this->emitMonitoring('failed', [
+                'itemId'  => $itemId,
+                'reason'  => 'exception',
+                'message' => $throwable->getMessage(),
+            ]);
 
             return SlideshowVideoStatus::error($throwable->getMessage(), $this->slideDuration);
         } finally {
@@ -303,5 +341,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         return $phpBinary;
+    }
+
+    private function emitMonitoring(string $status, array $context = []): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('slideshow.generate', $status, $context);
     }
 }
