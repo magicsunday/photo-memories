@@ -176,6 +176,77 @@ parameters:
     memories.cluster.consolidate.require_valid_time: true
     memories.cluster.consolidate.min_valid_year: 1990
     memories.cluster.persistence.max_members: '%env(int:MEMORIES_CLUSTER_MAX_MEMBERS)%'
+    memories.cluster.transit.threshold_profiles:
+        default:
+            min_travel_km: 70.0
+            min_items_per_day: 6
+            min_segment_speed_mps: 5.0
+            min_fast_segments: 3
+            max_heading_change_deg: 90.0
+            min_consistent_heading_segments: 2
+        adventurer:
+            min_travel_km: 45.0
+            min_items_per_day: 4
+            min_segment_speed_mps: 4.0
+            min_fast_segments: 2
+            max_heading_change_deg: 120.0
+            min_consistent_heading_segments: 1
+    memories.cluster.transit.active_profile: '%env(default:default:MEMORIES_CLUSTER_TRANSIT_PROFILE)%'
+    memories.cluster.scoring.weight_overrides:
+        time_similarity:
+            quality: 0.24
+            people: 0.18
+            recency: 0.14
+        portrait_orientation:
+            quality: 0.23
+            people: 0.19
+            aesthetics: 0.10
+        nightlife_event:
+            quality: 0.25
+            aesthetics: 0.11
+        people_cohort:
+            people: 0.24
+            quality: 0.14
+            aesthetics: 0.10
+        golden_hour:
+            quality: 0.25
+            aesthetics: 0.11
+        significant_place:
+            quality: 0.21
+            people: 0.18
+            location: 0.08
+        holiday_event:
+            holiday: 0.12
+            quality: 0.20
+            recency: 0.10
+        anniversary:
+            holiday: 0.12
+            quality: 0.20
+            recency: 0.10
+        season:
+            holiday: 0.10
+            quality: 0.22
+            recency: 0.11
+        season_over_years:
+            holiday: 0.11
+            quality: 0.22
+            recency: 0.11
+        on_this_day_over_years:
+            holiday: 0.13
+            quality: 0.21
+            recency: 0.12
+        this_month_over_years:
+            holiday: 0.12
+            quality: 0.21
+            recency: 0.11
+        one_year_ago:
+            holiday: 0.12
+            quality: 0.21
+            recency: 0.12
+        year_in_review:
+            holiday: 0.10
+            quality: 0.22
+            recency: 0.12
 
     # Cluster Strategy Priorities
     # Higher numbers run earlier; values normalized to an evenly spaced 40-100 range.

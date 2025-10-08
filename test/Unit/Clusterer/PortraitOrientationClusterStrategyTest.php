@@ -44,6 +44,11 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
 
         self::assertSame('portrait_orientation', $cluster->getAlgorithm());
         self::assertSame([3700, 3701, 3702, 3703], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertArrayHasKey('quality_avg', $params);
+        self::assertGreaterThan(0.0, $params['quality_avg']);
+        self::assertArrayHasKey('aesthetics_score', $params);
     }
 
     #[Test]
@@ -131,6 +136,10 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
                 $media->setWidth(1000);
                 $media->setHeight(1500);
                 $media->setPersons(['Alice']);
+                $media->setSharpness(0.62);
+                $media->setIso(125);
+                $media->setBrightness(0.58);
+                $media->setContrast(0.66);
             },
         );
     }

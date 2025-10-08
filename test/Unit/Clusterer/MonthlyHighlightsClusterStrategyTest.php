@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -73,6 +74,9 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
         self::assertSame('Stadt', $sceneTags[0]['label']);
         self::assertEqualsWithDelta(0.78, $sceneTags[0]['score'], 0.0001);
         self::assertSame(['Highlights', 'Stadt'], $params['keywords']);
+        self::assertSame('Unbekanntes Gerät', $params['device_primary_label']);
+        self::assertEqualsWithDelta(1.0, $params['device_primary_share'], 0.0001);
+        self::assertSame(1, $params['device_variants']);
     }
 
     #[Test]
@@ -138,6 +142,17 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             id: $id,
             filename: sprintf('monthly-%d.jpg', $id),
             takenAt: $takenAt,
+            configure: static function (Media $media): void {
+                $media->setWidth(4032);
+                $media->setHeight(3024);
+                $media->setSharpness(0.7);
+                $media->setIso(200);
+                $media->setBrightness(0.59);
+                $media->setContrast(0.63);
+                $media->setCameraMake(null);
+                $media->setCameraModel(null);
+                $media->setContentKind(ContentKind::Photo);
+            },
         );
     }
 

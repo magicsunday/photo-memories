@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -29,11 +30,14 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocationHelper $locationHelper,
         private float $minPortraitRatio = 1.2, // height / width
         private int $sessionGapSeconds = 2 * 3600,
         private int $minItemsPerRun = 4,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minPortraitRatio <= 0.0) {
             throw new InvalidArgumentException('minPortraitRatio must be > 0.');
@@ -46,6 +50,8 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
         if ($this->minItemsPerRun < 1) {
             throw new InvalidArgumentException('minItemsPerRun must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -149,6 +155,13 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
             }
 
             $params = $this->appendLocationMetadata($run, $params);
+
+            $qualityParams = $this->qualityAggregator->buildParams($run);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),

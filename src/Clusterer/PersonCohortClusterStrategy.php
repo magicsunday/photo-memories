@@ -17,6 +17,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -47,12 +48,15 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
     private PersonSignatureHelper $personSignatureHelper;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocationHelper $locationHelper,
         private int $minPersons = 2,
         private int $minItemsTotal = 5,
         private int $windowDays = 14,
         ?PersonSignatureHelper $personSignatureHelper = null,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->minPersons < 1) {
             throw new InvalidArgumentException('minPersons must be >= 1.');
@@ -67,6 +71,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         }
 
         $this->personSignatureHelper = $personSignatureHelper ?? new PersonSignatureHelper();
+        $this->qualityAggregator     = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -212,6 +217,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
         $params = [
             'time_range' => $this->computeTimeRange($members),
+            'quality_profile' => 'group_portrait',
         ];
 
         if ($persons !== []) {
@@ -235,6 +241,13 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         }
 
         $this->applyLocationMetadata($draft, $members);
+
+        $qualityParams = $this->qualityAggregator->buildParams($members);
+        foreach ($qualityParams as $qualityKey => $qualityValue) {
+            if ($qualityValue !== null) {
+                $draft->setParam($qualityKey, $qualityValue);
+            }
+        }
 
         return $draft;
     }

@@ -778,6 +778,8 @@ services:
             $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $minTravelKm: 70.0
             $minItemsPerDay: 6
+            $profileThresholds: '%memories.cluster.transit.threshold_profiles%'
+            $activeProfile: '%memories.cluster.transit.active_profile%'
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.transit_travel_day_cluster_strategy%' }
 
@@ -1058,6 +1060,7 @@ services:
                 phash_similarity: 0.55
                 burst: 0.55
             $algorithmGroups: '%memories.cluster.consolidate.groups%'
+            $algorithmWeightOverrides: '%memories.cluster.scoring.weight_overrides%'
 
     ########################################
     # Feed

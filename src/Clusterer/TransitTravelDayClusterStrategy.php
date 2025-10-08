@@ -21,9 +21,13 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
+use function array_key_exists;
 use function array_map;
 use function assert;
 use function count;
+use function is_array;
+use function is_numeric;
+use function is_string;
 use function usort;
 
 /**
@@ -34,17 +38,58 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
     use MediaFilterTrait;
     use ClusterLocationMetadataTrait;
 
+    private float $minTravelKm;
+
+    private int $minItemsPerDay;
+
+    private float $minSegmentSpeedMps;
+
+    private int $minFastSegments;
+
+    private float $maxHeadingChangeDeg;
+
+    private int $minConsistentHeadingSegments;
+
+    private string $activeProfile;
+
+    /** @var array<string,array<string,float|int>> */
+    private array $profileThresholds;
+
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
         private LocationHelper $locationHelper,
-        private float $minTravelKm = 60.0,
+        float $minTravelKm = 60.0,
         // Counts only media items that already contain GPS coordinates.
-        private int $minItemsPerDay = 5,
-        private float $minSegmentSpeedMps = 5.0,
-        private int $minFastSegments = 3,
-        private float $maxHeadingChangeDeg = 90.0,
-        private int $minConsistentHeadingSegments = 2,
+        int $minItemsPerDay = 5,
+        float $minSegmentSpeedMps = 5.0,
+        int $minFastSegments = 3,
+        float $maxHeadingChangeDeg = 90.0,
+        int $minConsistentHeadingSegments = 2,
+        array $profileThresholds = [],
+        string $activeProfile = 'default',
     ) {
+        $this->profileThresholds = $this->sanitizeProfileThresholds($profileThresholds);
+
+        $resolved = $this->resolveProfileThresholds(
+            [
+                'min_travel_km'                   => $minTravelKm,
+                'min_items_per_day'               => $minItemsPerDay,
+                'min_segment_speed_mps'           => $minSegmentSpeedMps,
+                'min_fast_segments'               => $minFastSegments,
+                'max_heading_change_deg'          => $maxHeadingChangeDeg,
+                'min_consistent_heading_segments' => $minConsistentHeadingSegments,
+            ],
+            $activeProfile
+        );
+
+        $this->minTravelKm                 = $resolved['min_travel_km'];
+        $this->minItemsPerDay              = $resolved['min_items_per_day'];
+        $this->minSegmentSpeedMps          = $resolved['min_segment_speed_mps'];
+        $this->minFastSegments             = $resolved['min_fast_segments'];
+        $this->maxHeadingChangeDeg         = $resolved['max_heading_change_deg'];
+        $this->minConsistentHeadingSegments = $resolved['min_consistent_heading_segments'];
+        $this->activeProfile               = $resolved['profile'];
+
         if ($this->minTravelKm <= 0.0) {
             throw new InvalidArgumentException('minTravelKm must be > 0.');
         }
@@ -238,6 +283,16 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                 'movement'    => $dayMovementMetrics[$day] ?? null,
             ]);
 
+            $params['travel_profile'] = $this->activeProfile;
+            $params['travel_thresholds'] = [
+                'min_travel_km'                   => $this->minTravelKm,
+                'min_items_per_day'               => $this->minItemsPerDay,
+                'min_segment_speed_mps'           => $this->minSegmentSpeedMps,
+                'min_fast_segments'               => $this->minFastSegments,
+                'max_heading_change_deg'          => $this->maxHeadingChangeDeg,
+                'min_consistent_heading_segments' => $this->minConsistentHeadingSegments,
+            ];
+
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
@@ -247,6 +302,83 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,float|int> $base
+     *
+     * @return array{
+     *     min_travel_km: float,
+     *     min_items_per_day: int,
+     *     min_segment_speed_mps: float,
+     *     min_fast_segments: int,
+     *     max_heading_change_deg: float,
+     *     min_consistent_heading_segments: int,
+     *     profile: string,
+     * }
+     */
+    private function resolveProfileThresholds(array $base, string $activeProfile): array
+    {
+        $profileName = $activeProfile;
+        $profile     = $this->profileThresholds[$activeProfile] ?? null;
+
+        if ($profile === null && isset($this->profileThresholds['default'])) {
+            $profileName = 'default';
+            $profile     = $this->profileThresholds['default'];
+        }
+
+        if (is_array($profile)) {
+            foreach ($profile as $key => $value) {
+                if (!is_string($key) || !array_key_exists($key, $base) || !is_numeric($value)) {
+                    continue;
+                }
+
+                $base[$key] = is_float($base[$key]) ? (float) $value : (int) $value;
+            }
+        }
+
+        return [
+            'min_travel_km'                   => (float) $base['min_travel_km'],
+            'min_items_per_day'               => (int) $base['min_items_per_day'],
+            'min_segment_speed_mps'           => (float) $base['min_segment_speed_mps'],
+            'min_fast_segments'               => (int) $base['min_fast_segments'],
+            'max_heading_change_deg'          => (float) $base['max_heading_change_deg'],
+            'min_consistent_heading_segments' => (int) $base['min_consistent_heading_segments'],
+            'profile'                         => $profileName,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $profiles
+     *
+     * @return array<string,array<string,float|int>>
+     */
+    private function sanitizeProfileThresholds(array $profiles): array
+    {
+        $result = [];
+
+        foreach ($profiles as $profileName => $values) {
+            if (!is_string($profileName) || $profileName === '' || !is_array($values)) {
+                continue;
+            }
+
+            $sanitized = [];
+            foreach ($values as $key => $value) {
+                if (!is_string($key) || !is_numeric($value)) {
+                    continue;
+                }
+
+                $sanitized[$key] = $value;
+            }
+
+            if ($sanitized === []) {
+                continue;
+            }
+
+            $result[$profileName] = $sanitized;
+        }
+
+        return $result;
     }
 
     private static function resolveSegmentSpeed(?float $pSpeedMps, ?float $qSpeedMps): ?float

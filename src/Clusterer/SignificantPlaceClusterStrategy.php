@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -34,11 +35,14 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
 
+    private ClusterQualityAggregator $qualityAggregator;
+
     public function __construct(
         private LocationHelper $locHelper,
         private float $gridDegrees = 0.01, // ~1.1 km in lat (varies with lon)
         private int $minVisitDays = 3,
         private int $minItemsTotal = 20,
+        ?ClusterQualityAggregator $qualityAggregator = null,
     ) {
         if ($this->gridDegrees <= 0.0) {
             throw new InvalidArgumentException('gridDegrees must be > 0.');
@@ -51,6 +55,8 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
         if ($this->minItemsTotal < 1) {
             throw new InvalidArgumentException('minItemsTotal must be >= 1.');
         }
+
+        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
     }
 
     public function name(): string
@@ -157,6 +163,13 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
 
             $peopleParams = $this->buildPeopleParams($list);
             $params       = [...$params, ...$peopleParams];
+
+            $qualityParams = $this->qualityAggregator->buildParams($list);
+            foreach ($qualityParams as $qualityKey => $qualityValue) {
+                if ($qualityValue !== null) {
+                    $params[$qualityKey] = $qualityValue;
+                }
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
