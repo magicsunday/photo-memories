@@ -2,6 +2,8 @@
 # Feed personalization & limits
 ########################################
 parameters:
+    env(MEMORIES_FEED_NOTIFICATIONS_DEFAULT_TIME): '09:00'
+    env(MEMORIES_FEED_NOTIFICATIONS_TIMEZONE): 'Europe/Berlin'
     memories.feed.min_score: 0.35
     memories.feed.min_members: 4
     memories.feed.max_per_day: 6
@@ -58,16 +60,15 @@ parameters:
     memories.http.feed.cover_width: 640
     memories.http.feed.member_width: 320
     memories.http.feed.max_thumbnail_width: 2048
-    memories.feed.notifications:
-        timezone: 'Europe/Berlin'
-        default_time: '09:00'
-        channels:
-            push:
-                lead_times: ['P0D', 'P1D']
-                send_time: '09:00'
-            email:
-                lead_times: ['P2D']
-                send_time: '08:00'
+    memories.feed.notifications.channels:
+        push:
+            lead_times: ['P0D', 'P1D']
+            send_time: '09:00'
+        email:
+            lead_times: ['P2D']
+            send_time: '08:00'
+    memories.feed.notifications.default_time: '%env(string:MEMORIES_FEED_NOTIFICATIONS_DEFAULT_TIME)%'
+    memories.feed.notifications.timezone: '%env(string:MEMORIES_FEED_NOTIFICATIONS_TIMEZONE)%'
     memories.spa.timeline_months: 12
     memories.spa.gestures:
         feed:
