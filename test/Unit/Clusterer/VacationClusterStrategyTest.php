@@ -42,6 +42,7 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -195,6 +196,205 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertNotEmpty($clusters);
         self::assertSame($expected, $clusters[0]->getMembers());
         self::assertSame($expected, $receivedMembers);
+    }
+
+    #[Test]
+    public function emitsMonitoringEventsForClusterLifecycle(): void
+    {
+        $mediaA = $this->makeMediaFixture(
+            3101,
+            'vacation-monitoring-a.jpg',
+            '2024-08-01 09:00:00',
+        );
+
+        $mediaB = $this->makeMediaFixture(
+            3102,
+            'vacation-monitoring-b.jpg',
+            '2024-08-02 10:00:00',
+        );
+
+        $items = [$mediaA, $mediaB];
+
+        $home = [
+            'lat' => 48.1374,
+            'lon' => 11.5755,
+            'radius_km' => 7.5,
+            'country' => 'Germany',
+            'timezone_offset' => 120,
+        ];
+
+        $days = [
+            '2024-08-01' => [
+                'date' => '2024-08-01',
+                'members' => [$mediaA],
+                'gpsMembers' => [$mediaA],
+                'maxDistanceKm' => 140.0,
+                'avgDistanceKm' => 90.0,
+                'travelKm' => 160.5,
+                'maxSpeedKmh' => 110.0,
+                'avgSpeedKmh' => 75.0,
+                'hasHighSpeedTransit' => true,
+                'countryCodes' => ['de' => true],
+                'timezoneOffsets' => [120 => 1],
+                'localTimezoneIdentifier' => 'Europe/Berlin',
+                'localTimezoneOffset' => 120,
+                'tourismHits' => 5,
+                'poiSamples' => 6,
+                'tourismRatio' => 0.8,
+                'hasAirportPoi' => false,
+                'weekday' => 4,
+                'photoCount' => 1,
+                'densityZ' => 1.4,
+                'isAwayCandidate' => true,
+                'sufficientSamples' => true,
+                'spotClusters' => [],
+                'spotNoise' => [],
+                'spotCount' => 1,
+                'spotNoiseSamples' => 0,
+                'spotDwellSeconds' => 900,
+                'staypoints' => [],
+                'baseLocation' => null,
+                'baseAway' => true,
+                'awayByDistance' => true,
+                'firstGpsMedia' => $mediaA,
+                'lastGpsMedia' => $mediaA,
+                'isSynthetic' => false,
+            ],
+            '2024-08-02' => [
+                'date' => '2024-08-02',
+                'members' => [$mediaB],
+                'gpsMembers' => [$mediaB],
+                'maxDistanceKm' => 60.0,
+                'avgDistanceKm' => 35.0,
+                'travelKm' => 45.2,
+                'maxSpeedKmh' => 80.0,
+                'avgSpeedKmh' => 50.0,
+                'hasHighSpeedTransit' => false,
+                'countryCodes' => ['de' => true],
+                'timezoneOffsets' => [120 => 1],
+                'localTimezoneIdentifier' => 'Europe/Berlin',
+                'localTimezoneOffset' => 120,
+                'tourismHits' => 2,
+                'poiSamples' => 3,
+                'tourismRatio' => 0.4,
+                'hasAirportPoi' => false,
+                'weekday' => 5,
+                'photoCount' => 1,
+                'densityZ' => 0.8,
+                'isAwayCandidate' => false,
+                'sufficientSamples' => true,
+                'spotClusters' => [],
+                'spotNoise' => [],
+                'spotCount' => 0,
+                'spotNoiseSamples' => 0,
+                'spotDwellSeconds' => 600,
+                'staypoints' => [],
+                'baseLocation' => null,
+                'baseAway' => false,
+                'awayByDistance' => false,
+                'firstGpsMedia' => $mediaB,
+                'lastGpsMedia' => $mediaB,
+                'isSynthetic' => false,
+            ],
+        ];
+
+        $segments = [
+            new ClusterDraft(
+                'vacation',
+                ['classification' => 'vacation'],
+                ['lat' => 40.7128, 'lon' => -74.0060],
+                [$mediaA->getId(), $mediaB->getId()],
+            ),
+        ];
+
+        $events = [];
+
+        $homeLocator = new class($home) implements HomeLocatorInterface {
+            /**
+             * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+             */
+            public function __construct(private array $home)
+            {
+            }
+
+            public function determineHome(array $items): ?array
+            {
+                return $this->home;
+            }
+        };
+
+        $daySummaryBuilder = new class($days) implements DaySummaryBuilderInterface {
+            /**
+             * @param array<string, array<string, mixed>> $days
+             */
+            public function __construct(private array $days)
+            {
+            }
+
+            public function buildDaySummaries(array $items, array $home): array
+            {
+                return $this->days;
+            }
+        };
+
+        $segmentAssembler = new class($segments) implements VacationSegmentAssemblerInterface {
+            /**
+             * @param list<ClusterDraft> $segments
+             */
+            public function __construct(private array $segments)
+            {
+            }
+
+            public function detectSegments(array $days, array $home): array
+            {
+                return $this->segments;
+            }
+        };
+
+        $emitter = new class($events) implements JobMonitoringEmitterInterface {
+            /**
+             * @param list<array{job:string,status:string,context:array<string,mixed>}> $events
+             */
+            public function __construct(private array &$events)
+            {
+            }
+
+            public function emit(string $job, string $status, array $context = []): void
+            {
+                $this->events[] = [
+                    'job' => $job,
+                    'status' => $status,
+                    'context' => $context,
+                ];
+            }
+        };
+
+        $strategy = new VacationClusterStrategy($homeLocator, $daySummaryBuilder, $segmentAssembler, $emitter);
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertSame($segments, $clusters);
+
+        self::assertCount(5, $events);
+
+        self::assertSame('cluster.vacation', $events[0]['job']);
+        self::assertSame('start', $events[0]['status']);
+        self::assertSame(2, $events[0]['context']['total_count']);
+
+        self::assertSame('filtered', $events[1]['status']);
+        self::assertSame(2, $events[1]['context']['timestamped_count']);
+
+        self::assertSame('home_determined', $events[2]['status']);
+        self::assertSame($home['radius_km'], $events[2]['context']['home_radius_km']);
+
+        self::assertSame('days_aggregated', $events[3]['status']);
+        self::assertSame(2, $events[3]['context']['day_count']);
+        self::assertSame(1, $events[3]['context']['away_day_count']);
+        self::assertGreaterThan(0.0, $events[3]['context']['total_travel_km']);
+
+        self::assertSame('completed', $events[4]['status']);
+        self::assertSame(1, $events[4]['context']['segment_count']);
+        self::assertSame(2, $events[4]['context']['timestamped_count']);
     }
 
     #[Test]
