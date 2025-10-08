@@ -61,6 +61,9 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertSame('Berlin', $params['place']);
         self::assertSame('RF24-70mm F2.8', $params['lensModel']);
         self::assertSame(ContentKind::PHOTO->value, $params['contentKind']);
+        self::assertSame('Canon EOS R5', $params['device_model']);
+        self::assertEqualsWithDelta(1.0, $params['device_primary_share'], 0.0001);
+        self::assertSame(1, $params['device_variants']);
 
         $expectedRange = [
             'from' => (new DateTimeImmutable('2023-05-01 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -192,9 +195,14 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertCount(3, $clusters);
 
         $membersByDevice = [];
+        $ownersByDevice  = [];
+        $serialByDevice  = [];
         foreach ($clusters as $cluster) {
             $params                             = $cluster->getParams();
-            $membersByDevice[$params['device']] = $cluster->getMembers();
+            $deviceLabel                        = $params['device'];
+            $membersByDevice[$deviceLabel]      = $cluster->getMembers();
+            $ownersByDevice[$deviceLabel]       = $params['device_owner'] ?? null;
+            $serialByDevice[$deviceLabel]       = $params['device_serial'] ?? null;
         }
 
         $aliceFirstBody  = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-123';
@@ -204,6 +212,14 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertArrayHasKey($aliceFirstBody, $membersByDevice);
         self::assertArrayHasKey($aliceSecondBody, $membersByDevice);
         self::assertArrayHasKey($bobBody, $membersByDevice);
+
+        self::assertSame('Alice', $ownersByDevice[$aliceFirstBody]);
+        self::assertSame('Alice', $ownersByDevice[$aliceSecondBody]);
+        self::assertSame('Bob', $ownersByDevice[$bobBody]);
+
+        self::assertSame('SN-123', $serialByDevice[$aliceFirstBody]);
+        self::assertSame('SN-456', $serialByDevice[$aliceSecondBody]);
+        self::assertSame('SN-123', $serialByDevice[$bobBody]);
 
         self::assertSame([601, 602], $membersByDevice[$aliceFirstBody]);
         self::assertSame([603, 604], $membersByDevice[$aliceSecondBody]);

@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterDeviceMetadataAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
@@ -37,6 +38,7 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
     use ClusterLocationMetadataTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
+    private ClusterDeviceMetadataAggregator $deviceAggregator;
 
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
@@ -44,12 +46,14 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
         // Minimum number of videos per local day to emit a story.
         private int $minItemsPerDay = 2,
         ?ClusterQualityAggregator $qualityAggregator = null,
+        ?ClusterDeviceMetadataAggregator $deviceAggregator = null,
     ) {
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
 
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
+        $this->deviceAggregator  = $deviceAggregator ?? new ClusterDeviceMetadataAggregator();
     }
 
     public function name(): string
@@ -162,6 +166,44 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             $params       = [...$params, ...$peopleParams];
 
             $params = $this->appendLocationMetadata($members, $params);
+
+            $deviceSummary = $this->deviceAggregator->summarize($members);
+
+            if ($deviceSummary['device_primary_label'] !== null) {
+                $params['device_primary_label'] = $deviceSummary['device_primary_label'];
+            }
+
+            if ($deviceSummary['device_primary_share'] !== null) {
+                $params['device_primary_share'] = $deviceSummary['device_primary_share'];
+            }
+
+            if ($deviceSummary['device_variants'] > 0) {
+                $params['device_variants'] = $deviceSummary['device_variants'];
+            }
+
+            if ($deviceSummary['device_make'] !== null) {
+                $params['device_make'] = $deviceSummary['device_make'];
+            }
+
+            if ($deviceSummary['device_model'] !== null) {
+                $params['device_model'] = $deviceSummary['device_model'];
+            }
+
+            if ($deviceSummary['device_owner'] !== null) {
+                $params['device_owner'] = $deviceSummary['device_owner'];
+            }
+
+            if ($deviceSummary['device_serial'] !== null) {
+                $params['device_serial'] = $deviceSummary['device_serial'];
+            }
+
+            if ($deviceSummary['lensModel'] !== null) {
+                $params['device_lens_model'] = $deviceSummary['lensModel'];
+            }
+
+            if ($deviceSummary['contentKind'] !== null) {
+                $params['device_content_kind'] = $deviceSummary['contentKind'];
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),

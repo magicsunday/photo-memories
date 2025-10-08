@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -69,6 +70,13 @@ final class VideoStoriesClusterStrategyTest extends TestCase
                 $video->setVideoHasStabilization($hasStabilization);
             }
 
+            $video->setCameraMake('Apple');
+            $video->setCameraModel('Apple iPhone 14 Pro');
+            $video->setCameraOwner('Carla');
+            $video->setCameraBodySerial('IP14-001');
+            $video->setLensModel('iPhone 14 Pro Tele');
+            $video->setContentKind(ContentKind::VIDEO);
+
             if ($i === 0) {
                 $video->setSceneTags([
                     ['label' => 'Filmabend', 'score' => 0.88],
@@ -106,6 +114,15 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         self::assertSame('Germany', $params['place_country']);
         self::assertArrayHasKey('place', $params);
         self::assertNotSame('', $params['place']);
+        self::assertSame('Apple', $params['device_make']);
+        self::assertSame('Apple iPhone 14 Pro', $params['device_model']);
+        self::assertSame('Carla', $params['device_owner']);
+        self::assertSame('IP14-001', $params['device_serial']);
+        self::assertSame('Apple iPhone 14 Pro – Besitzer: Carla, Seriennummer: IP14-001', $params['device_primary_label']);
+        self::assertEqualsWithDelta(1.0, $params['device_primary_share'], 0.0001);
+        self::assertSame(1, $params['device_variants']);
+        self::assertSame('iPhone 14 Pro Tele', $params['device_lens_model']);
+        self::assertSame(ContentKind::VIDEO->value, $params['device_content_kind']);
     }
 
     #[Test]
