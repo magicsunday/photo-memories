@@ -10,6 +10,7 @@ const state = {
   loading: false,
   error: null,
   filters: { ...defaultFilters },
+  slideshowRequests: {},
 };
 
 let slideshowRefreshTimer = null;
@@ -205,6 +206,8 @@ async function fetchFeed() {
     state.items = Array.isArray(payload.items) ? payload.items : [];
     state.meta = payload.meta ?? null;
 
+    pruneSlideshowRequests();
+
     if (state.meta && Array.isArray(state.meta.verfuegbareStrategien)) {
       populateStrategyOptions(state.meta.verfuegbareStrategien);
     }
@@ -225,6 +228,21 @@ async function fetchFeed() {
     updateStatus();
     renderItems();
   }
+}
+
+function pruneSlideshowRequests() {
+  const activeIds = new Set();
+  state.items.forEach((item) => {
+    if (item && typeof item.id === 'string' && item.id !== '') {
+      activeIds.add(item.id);
+    }
+  });
+
+  Object.keys(state.slideshowRequests).forEach((key) => {
+    if (!activeIds.has(key)) {
+      delete state.slideshowRequests[key];
+    }
+  });
 }
 
 function renderItems() {
@@ -256,16 +274,35 @@ function renderItems() {
   });
 
   if (hasPendingSlideshows) {
-    if (slideshowRefreshTimer === null) {
-      slideshowRefreshTimer = window.setTimeout(() => {
-        slideshowRefreshTimer = null;
-        fetchFeed();
-      }, 8000);
-    }
+    ensureSlideshowRefreshTimer();
   } else if (slideshowRefreshTimer !== null) {
-    window.clearTimeout(slideshowRefreshTimer);
-    slideshowRefreshTimer = null;
+    cancelSlideshowRefreshTimer();
   }
+}
+
+function ensureSlideshowRefreshTimer(delay = 8000) {
+  if (slideshowRefreshTimer !== null) {
+    return;
+  }
+
+  slideshowRefreshTimer = window.setTimeout(() => {
+    slideshowRefreshTimer = null;
+    fetchFeed();
+  }, delay);
+}
+
+function restartSlideshowRefreshTimer(delay = 8000) {
+  cancelSlideshowRefreshTimer();
+  ensureSlideshowRefreshTimer(delay);
+}
+
+function cancelSlideshowRefreshTimer() {
+  if (slideshowRefreshTimer === null) {
+    return;
+  }
+
+  window.clearTimeout(slideshowRefreshTimer);
+  slideshowRefreshTimer = null;
 }
 
 function createCard(item) {
@@ -408,6 +445,9 @@ function createSlideshowSection(item) {
     return null;
   }
 
+  const itemId = typeof item.id === 'string' && item.id !== '' ? item.id : null;
+  const requestState = itemId ? state.slideshowRequests[itemId] ?? { loading: false, error: null } : { loading: false, error: null };
+
   const container = document.createElement('div');
   container.className = 'slideshow';
 
@@ -436,10 +476,20 @@ function createSlideshowSection(item) {
 
   const status = document.createElement('div');
   status.className = 'slideshow__status';
+  status.setAttribute('role', 'status');
 
-  if (data.status === 'in_erstellung') {
+  const showSpinner = requestState.loading || data.status === 'in_erstellung';
+
+  if (requestState.error) {
+    status.classList.add('is-error');
+    status.textContent = requestState.error;
+  } else if (requestState.loading) {
+    status.classList.add('is-loading');
+    status.textContent = 'Video-Anfrage wird gesendet …';
+  } else if (data.status === 'in_erstellung') {
     status.textContent = 'Video wird erstellt …';
   } else if (data.status === 'fehlgeschlagen') {
+    status.classList.add('is-error');
     status.textContent = typeof data.meldung === 'string' && data.meldung !== ''
       ? data.meldung
       : 'Video konnte nicht erstellt werden.';
@@ -449,9 +499,146 @@ function createSlideshowSection(item) {
       : 'Kein Video verfügbar.';
   }
 
+  if (showSpinner) {
+    const spinner = createSpinner();
+    status.prepend(spinner);
+  }
+
   container.appendChild(status);
 
+  if (itemId && (data.status === 'nicht_verfuegbar' || data.status === 'fehlgeschlagen')) {
+    const actions = document.createElement('div');
+    actions.className = 'slideshow__actions';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'slideshow__button';
+    button.textContent = data.status === 'fehlgeschlagen' ? 'Erneut erstellen' : 'Video erstellen';
+    button.disabled = requestState.loading;
+    button.addEventListener('click', () => {
+      if (!requestState.loading) {
+        void triggerSlideshowGeneration(itemId);
+      }
+    });
+
+    actions.appendChild(button);
+    container.appendChild(actions);
+  }
+
   return container;
+}
+
+function createSpinner() {
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner';
+  spinner.setAttribute('aria-hidden', 'true');
+
+  return spinner;
+}
+
+async function triggerSlideshowGeneration(itemId) {
+  if (typeof itemId !== 'string' || itemId === '') {
+    return null;
+  }
+
+  state.slideshowRequests[itemId] = { loading: true, error: null };
+  renderItems();
+
+  try {
+    const response = await fetch(`/api/feed/${encodeURIComponent(itemId)}/video`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      let message = `Fehler ${response.status}`;
+      try {
+        const body = await response.json();
+        const errorMessage = body && typeof body.error === 'string' && body.error !== '' ? body.error : null;
+        if (errorMessage) {
+          message += `: ${errorMessage}`;
+        }
+      } catch (parseError) {
+        console.warn('Antwort konnte nicht als JSON gelesen werden', parseError);
+      }
+
+      throw new Error(message);
+    }
+
+    const payload = await response.json();
+    const { slideshow, item } = normaliseSlideshowTriggerPayload(payload);
+
+    if (!slideshow || typeof slideshow.status !== 'string') {
+      throw new Error('Ungültige Antwort vom Server erhalten.');
+    }
+
+    applySlideshowUpdate(itemId, item, slideshow);
+
+    state.slideshowRequests[itemId] = { loading: false, error: null };
+    renderItems();
+
+    if (slideshow.status === 'in_erstellung') {
+      restartSlideshowRefreshTimer(4000);
+    } else if (slideshow.status === 'bereit') {
+      cancelSlideshowRefreshTimer();
+    }
+
+    return slideshow;
+  } catch (error) {
+    console.error('Video-Erstellung konnte nicht gestartet werden', error);
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler bei der Videoerstellung.';
+    state.slideshowRequests[itemId] = { loading: false, error: message };
+    renderItems();
+
+    return null;
+  }
+}
+
+function normaliseSlideshowTriggerPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return { slideshow: null, item: null };
+  }
+
+  if (payload.item && typeof payload.item === 'object') {
+    const item = payload.item;
+    const slideshow = item && typeof item === 'object' ? item.slideshow ?? null : null;
+
+    return { slideshow, item };
+  }
+
+  if (payload.slideshow && typeof payload.slideshow === 'object') {
+    return { slideshow: payload.slideshow, item: null };
+  }
+
+  if (typeof payload.status === 'string') {
+    return { slideshow: payload, item: null };
+  }
+
+  return { slideshow: null, item: null };
+}
+
+function applySlideshowUpdate(itemId, itemPayload, slideshow) {
+  let updated = false;
+
+  if (itemPayload && typeof itemPayload === 'object' && typeof itemPayload.id === 'string') {
+    const index = state.items.findIndex((entry) => entry && entry.id === itemPayload.id);
+    if (index !== -1) {
+      state.items[index] = { ...state.items[index], ...itemPayload };
+      updated = true;
+    }
+  }
+
+  if (!updated) {
+    const index = state.items.findIndex((entry) => entry && entry.id === itemId);
+    if (index !== -1) {
+      state.items[index] = { ...state.items[index], slideshow };
+      updated = true;
+    }
+  }
+
+  if (!updated) {
+    fetchFeed();
+  }
 }
 
 function createLightbox() {
