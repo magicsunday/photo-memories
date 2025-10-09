@@ -127,3 +127,16 @@ parameters:
             focus_ms: 220
         story_viewer:
             overlay_ms: 180
+    memories.feed.algorithm_labels:
+        monthly_highlights: 'Monatshighlights'
+        video_stories: 'Videogeschichten'
+        time_similarity: 'Zeitlich nahe Erinnerungen'
+        significant_place: 'Besondere Orte'
+        device_similarity: 'Geräte-Schwerpunkte'
+        portrait_orientation: 'Porträtmomente'
+        transit_travel_day: 'Reisetage'
+        nightlife_event: 'Abende und Nachtleben'
+        golden_hour: 'Goldene Stunde'
+        person_cohort: 'Personen-Gruppen'
+        day_album: 'Tagesalbum'
+        significant_place_highlights: 'Highlights am Lieblingsort'

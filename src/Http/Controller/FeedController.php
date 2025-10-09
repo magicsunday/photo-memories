@@ -24,6 +24,7 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
@@ -36,6 +37,7 @@ use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use RuntimeException;
 use IntlDateFormatter;
+use IntlException;
 
 use function array_fill_keys;
 use function array_filter;
@@ -63,8 +65,6 @@ use function round;
 use function sort;
 use function sprintf;
 use function trim;
-use function mb_convert_case;
-
 use const SORT_STRING;
 
 /**
@@ -76,24 +76,6 @@ final class FeedController
      * @var array<int, Media|null>
      */
     private array $mediaCache = [];
-
-    /**
-     * User friendly labels for well-known feed strategies.
-     */
-    private const array STRATEGY_LABELS = [
-        'monthly_highlights'           => 'Monatshighlights',
-        'video_stories'                => 'Videogeschichten',
-        'time_similarity'              => 'Zeitlich nahe Erinnerungen',
-        'significant_place'            => 'Besondere Orte',
-        'device_similarity'            => 'Geräte-Schwerpunkte',
-        'portrait_orientation'         => 'Porträtmomente',
-        'transit_travel_day'           => 'Reisetage',
-        'nightlife_event'              => 'Abende und Nachtleben',
-        'golden_hour'                  => 'Goldene Stunde',
-        'person_cohort'                => 'Personen-Gruppen',
-        'day_album'                    => 'Tagesalbum',
-        'significant_place_highlights' => 'Highlights am Lieblingsort',
-    ];
 
     public function __construct(
         private readonly FeedBuilderInterface $feedBuilder,
@@ -108,6 +90,7 @@ final class FeedController
         private readonly FeedUserPreferenceStorage $preferenceStorage,
         private readonly StoryboardTextGenerator $storyboardTextGenerator,
         private readonly NotificationPlanner $notificationPlanner,
+        private readonly AlgorithmLabelProvider $algorithmLabelProvider,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -296,9 +279,8 @@ final class FeedController
         $availableStrategies = $this->collectStrategies($matchingItems);
         $availableGroups     = $this->collectGroups($matchingItems);
 
-        $now    = new DateTimeImmutable();
-        $host   = $request->getSchemeAndHttpHost();
-        $baseUrl = $host !== '' ? rtrim($host, '/') : '';
+        $now     = new DateTimeImmutable();
+        $baseUrl = rtrim($request->getBaseUrl(), '/');
 
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
@@ -306,7 +288,8 @@ final class FeedController
             $pagedItems,
         );
 
-        $hasMore = count($data) < $matchingCount;
+        $hasMore    = count($data) < $matchingCount;
+        $nextCursor = $this->createCursor($pagedItems);
 
         $meta = [
             'erstelltAm'            => $now->format(DateTimeInterface::ATOM),
@@ -319,7 +302,7 @@ final class FeedController
             'labelMapping'          => $this->buildLabelMapping(),
             'pagination'            => [
                 'hatWeitere'      => $hasMore,
-                'nextCursor'      => $hasMore ? $this->createCursor($pagedItems) : null,
+                'nextCursor'      => ($hasMore || $cursor !== null) ? $nextCursor : null,
                 'limitEmpfehlung' => $this->defaultFeedLimit,
                 'cursor'          => $cursor,
             ],
@@ -699,7 +682,7 @@ final class FeedController
         return [
             'id'                 => $itemId,
             'algorithmus'        => $item->getAlgorithm(),
-            'algorithmusLabel'   => $this->translateAlgorithm($item->getAlgorithm()),
+            'algorithmusLabel'   => $this->algorithmLabelProvider->getLabel($item->getAlgorithm()),
             'gruppe'             => $this->extractGroup($item),
             'titel'              => $item->getTitle(),
             'untertitel'         => $item->getSubtitle(),
@@ -1334,10 +1317,14 @@ final class FeedController
     private function formatMonthName(DateTimeImmutable $date): string
     {
         if (class_exists(IntlDateFormatter::class)) {
-            $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::NONE, $date->getTimezone()->getName(), null, 'LLLL');
-            $formatted = $formatter->format($date);
-            if (is_string($formatted) && $formatted !== '') {
-                return $formatted;
+            try {
+                $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::NONE, $date->getTimezone()->getName(), null, 'LLLL');
+                $formatted = $formatter->format($date);
+                if (is_string($formatted) && $formatted !== '') {
+                    return $formatted;
+                }
+            } catch (IntlException) {
+                // Fallback handled below.
             }
         }
 
@@ -1396,10 +1383,14 @@ final class FeedController
     private function formatLocalizedDate(DateTimeImmutable $date): string
     {
         if (class_exists(IntlDateFormatter::class)) {
-            $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::SHORT, $date->getTimezone()->getName());
-            $formatted = $formatter->format($date);
-            if (is_string($formatted) && $formatted !== '') {
-                return $formatted;
+            try {
+                $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::SHORT, $date->getTimezone()->getName());
+                $formatted = $formatter->format($date);
+                if (is_string($formatted) && $formatted !== '') {
+                    return $formatted;
+                }
+            } catch (IntlException) {
+                // Fallback handled below.
             }
         }
 
@@ -1409,10 +1400,14 @@ final class FeedController
     private function formatDateOnly(DateTimeImmutable $date): string
     {
         if (class_exists(IntlDateFormatter::class)) {
-            $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::NONE, $date->getTimezone()->getName());
-            $formatted = $formatter->format($date);
-            if (is_string($formatted) && $formatted !== '') {
-                return $formatted;
+            try {
+                $formatter = new IntlDateFormatter('de_DE', IntlDateFormatter::LONG, IntlDateFormatter::NONE, $date->getTimezone()->getName());
+                $formatted = $formatter->format($date);
+                if (is_string($formatted) && $formatted !== '') {
+                    return $formatted;
+                }
+            } catch (IntlException) {
+                // Fallback handled below.
             }
         }
 
@@ -1698,18 +1693,22 @@ final class FeedController
     private function formatMonthLabel(DateTimeImmutable $date, string $locale): string
     {
         if (class_exists(IntlDateFormatter::class)) {
-            $formatter = new IntlDateFormatter(
-                $locale,
-                IntlDateFormatter::LONG,
-                IntlDateFormatter::NONE,
-                $date->getTimezone()->getName(),
-                null,
-                'LLLL yyyy',
-            );
+            try {
+                $formatter = new IntlDateFormatter(
+                    $locale,
+                    IntlDateFormatter::LONG,
+                    IntlDateFormatter::NONE,
+                    $date->getTimezone()->getName(),
+                    null,
+                    'LLLL yyyy',
+                );
 
-            $formatted = $formatter->format($date);
-            if (is_string($formatted) && $formatted !== '') {
-                return $formatted;
+                $formatted = $formatter->format($date);
+                if (is_string($formatted) && $formatted !== '') {
+                    return $formatted;
+                }
+            } catch (IntlException) {
+                // Fallback handled below.
             }
         }
 
@@ -1881,22 +1880,6 @@ final class FeedController
         }
 
         return $result;
-    }
-
-    private function translateAlgorithm(string $algorithm): string
-    {
-        $label = self::STRATEGY_LABELS[$algorithm] ?? null;
-        if ($label !== null) {
-            return $label;
-        }
-
-        $normalized = str_replace('_', ' ', $algorithm);
-        $normalized = trim($normalized);
-        if ($normalized === '') {
-            return 'Strategie';
-        }
-
-        return mb_convert_case($normalized, MB_CASE_TITLE, 'UTF-8');
     }
 
     /**

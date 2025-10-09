@@ -1078,6 +1078,10 @@ services:
             $profiles: '%memories.feed.personalization.profiles%'
             $defaultProfile: 'default'
 
+    MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider:
+        arguments:
+            $labels: '%memories.feed.algorithm_labels%'
+
     MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage:
         arguments:
             $storagePath: '%memories.feed.preferences_path%'

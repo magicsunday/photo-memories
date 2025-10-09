@@ -18,8 +18,9 @@ Dieser Bericht dokumentiert den aktuellen Zustand der JSON-Antwort des `FeedCont
 7. **Personalisierung & Favoriten** – Der Feed wertet Nutzer- und Profilparameter aus, filtert Opt-out-Algorithmen, liefert Favoritenlisten und markiert Karten direkt in der Antwort, sodass Clients Feedback ohne Zusatzabfragen widerspiegeln können.【F:src/Http/Controller/FeedController.php†L118-L215】
 8. **Automatische Storyboard-Texte** – `StoryboardTextGenerator` erstellt aus Personen-, POI- und Tag-Daten lokalisierte Titel und Beschreibungen, die der `FeedController` den Storyboard-Blöcken beilegt, damit Clients sofort nutzbare Texte erhalten.【F:src/Service/Feed/StoryboardTextGenerator.php†L17-L255】【F:src/Http/Controller/FeedController.php†L492-L571】
 9. **SPA-Bootstrap & Offline-Konfiguration** – Über `spaBootstrap()` stellt der Controller ein Komponentenmanifest mit Feed-, Timeline-, Story-Viewer- und Offline-Blöcken bereit; Gesten und Cache-Strategien stammen aus den neuen SPA-Parametern und sind durch Tests abgesichert.【F:src/Http/Controller/FeedController.php†L211-L235】【F:src/Http/Controller/FeedController.php†L1530-L1696】【F:test/Unit/Http/Controller/FeedControllerTest.php†L299-L434】
+10. **Zentrale Algorithmus-Labels** – Eine neue `AlgorithmLabelProvider`-Klasse liest konfigurierbare Strategienamen aus `memories.feed.algorithm_labels` und wird vom Controller für alle Feed-Responses verwendet, sodass UI-Klienten konsistente Übersetzungen erhalten.【F:src/Service/Feed/AlgorithmLabelProvider.php†L1-L66】【F:config/parameters/feed.yaml†L74-L86】【F:config/services.yaml†L1070-L1073】【F:src/Http/Controller/FeedController.php†L58-L90】
 
 ## Weiterführende Überlegungen
-- Eine zentrale Übersetzungstabelle könnte langfristig zusätzliche Begriffe (z. B. Gruppennamen) standardisieren.
-- Für besonders datenintensive Clients ließe sich ein GraphQL- oder Feld-Selektionsmechanismus evaluieren, um nur benötigte Informationen zu übertragen.
-- Accessibility-Optimierungen (Alt-Texte, Leseunterstützung) können künftig durch ergänzende Felder weiter verbessert werden.
+- [x] Eine zentrale Übersetzungstabelle standardisiert zusätzliche Begriffe (z. B. Gruppennamen) über `memories.feed.algorithm_labels` und den `AlgorithmLabelProvider`.
+- [ ] Für besonders datenintensive Clients ließe sich ein GraphQL- oder Feld-Selektionsmechanismus evaluieren, um nur benötigte Informationen zu übertragen.
+- [ ] Accessibility-Optimierungen (Alt-Texte, Leseunterstützung) können künftig durch ergänzende Felder weiter verbessert werden.
