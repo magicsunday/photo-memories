@@ -17,32 +17,27 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Test\TestCase;
 
+use function file_get_contents;
 use function file_put_contents;
-use function getcwd;
 use function is_dir;
 use function is_file;
 use function mkdir;
-use function microtime;
 use function rmdir;
 use function scandir;
 use function sprintf;
 use function sys_get_temp_dir;
-use function time;
-use function touch;
 use function uniqid;
 use function unlink;
-use function usleep;
 use function str_repeat;
 
 use const LOCK_EX;
-use const PHP_BINARY;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
  */
 final class SlideshowVideoManagerTest extends TestCase
 {
-    public function testEnsureForItemReschedulesStalledJob(): void
+    public function testEnsureForItemGeneratesVideoInline(): void
     {
         $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
         if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
@@ -54,18 +49,12 @@ final class SlideshowVideoManagerTest extends TestCase
 
         $media = new Media($imagePath, str_repeat('a', 64), 1024);
 
-        $videoPath = $baseDir . '/memory.mp4';
-        $jobPath   = $videoPath . '.job.json';
-        $lockPath  = $videoPath . '.lock';
-
-        file_put_contents($jobPath, '{}', LOCK_EX);
-        file_put_contents($lockPath, '99999', LOCK_EX);
-
-        $staleTime = time() - 3600;
-        touch($jobPath, $staleTime);
-        touch($lockPath, $staleTime);
-
-        $generator = $this->createMock(SlideshowVideoGeneratorInterface::class);
+        $generator = new class implements SlideshowVideoGeneratorInterface {
+            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            {
+                file_put_contents($job->outputPath(), 'video-stub', LOCK_EX);
+            }
+        };
 
         $manager = new SlideshowVideoManager(
             $baseDir,
@@ -75,39 +64,41 @@ final class SlideshowVideoManagerTest extends TestCase
             [],
             null,
             null,
-            $this->fixturePath('slideshow-runner.php'),
-            PHP_BINARY,
-            getcwd(),
         );
 
         try {
-            $status = $manager->ensureForItem('memory', [1], [1 => $media]);
+            $status    = $manager->ensureForItem('memory', [1], [1 => $media]);
+            $videoPath = $baseDir . '/memory.mp4';
+            $lockPath  = $videoPath . '.lock';
+            $errorPath = $videoPath . '.error.log';
 
-            self::assertSame(SlideshowVideoStatus::STATUS_GENERATING, $status->status());
-
-            $this->waitForFile($videoPath);
-
+            self::assertSame(SlideshowVideoStatus::STATUS_READY, $status->status());
             self::assertFileExists($videoPath);
+            self::assertFileDoesNotExist($lockPath);
+            self::assertFileDoesNotExist($errorPath);
         } finally {
             $this->cleanupDirectory($baseDir);
         }
     }
 
-    public function testEnsureForItemKeepsBackgroundProcessRunning(): void
+    public function testEnsureForItemReturnsErrorWhenGenerationFails(): void
     {
         $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
         if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
             self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
         }
 
-        $imagePath = $baseDir . '/image-two.jpg';
+        $imagePath = $baseDir . '/image-error.jpg';
         file_put_contents($imagePath, 'image-stub', LOCK_EX);
 
-        $media = new Media($imagePath, str_repeat('b', 64), 2048);
+        $media = new Media($imagePath, str_repeat('c', 64), 2048);
 
-        $videoPath = $baseDir . '/memory-delayed.mp4';
-
-        $generator = $this->createMock(SlideshowVideoGeneratorInterface::class);
+        $generator = new class implements SlideshowVideoGeneratorInterface {
+            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            {
+                throw new \RuntimeException('ffmpeg failed');
+            }
+        };
 
         $manager = new SlideshowVideoManager(
             $baseDir,
@@ -117,36 +108,24 @@ final class SlideshowVideoManagerTest extends TestCase
             [],
             null,
             null,
-            $this->fixturePath('slideshow-runner-delayed.php'),
-            PHP_BINARY,
-            getcwd(),
         );
 
         try {
-            $status = $manager->ensureForItem('memory-delayed', [2], [2 => $media]);
+            $status    = $manager->ensureForItem('memory-error', [3], [3 => $media]);
+            $videoPath = $baseDir . '/memory-error.mp4';
+            $lockPath  = $videoPath . '.lock';
+            $errorPath = $videoPath . '.error.log';
 
-            self::assertSame(SlideshowVideoStatus::STATUS_GENERATING, $status->status());
+            self::assertSame(SlideshowVideoStatus::STATUS_ERROR, $status->status());
+            self::assertFileDoesNotExist($lockPath);
+            self::assertFileExists($errorPath);
 
-            $this->waitForFile($videoPath);
-
-            self::assertFileExists($videoPath);
+            $message = file_get_contents($errorPath);
+            self::assertIsString($message);
+            self::assertStringContainsString('ffmpeg failed', $message);
         } finally {
             $this->cleanupDirectory($baseDir);
         }
-    }
-
-    private function waitForFile(string $path, int $timeoutMilliseconds = 2000): void
-    {
-        $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
-        while (microtime(true) < $deadline) {
-            if (is_file($path)) {
-                return;
-            }
-
-            usleep(50_000);
-        }
-
-        self::fail(sprintf('File "%s" was not created before timeout.', $path));
     }
 
     private function cleanupDirectory(string $path): void

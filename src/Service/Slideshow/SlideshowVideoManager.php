@@ -14,10 +14,8 @@ namespace MagicSunday\Memories\Service\Slideshow;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
-use Symfony\Component\Process\Process;
 use Throwable;
 
-use function dirname;
 use function file_get_contents;
 use function file_put_contents;
 use function filemtime;
@@ -41,7 +39,6 @@ use function unlink;
 
 use const DIRECTORY_SEPARATOR;
 use const LOCK_EX;
-use const PHP_BINARY;
 
 /**
  * Coordinates slideshow generation.
@@ -67,12 +64,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private ?string $musicTrack;
 
-    private string $consoleEntryPoint;
-
-    private string $phpBinary;
-
-    private string $consoleWorkingDirectory;
-
     /**
      * @param list<string> $transitions
      */
@@ -84,9 +75,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         array $transitions = [],
         ?string $musicTrack = null,
         ?JobMonitoringEmitterInterface $monitoringEmitter = null,
-        ?string $consoleEntryPoint = null,
-        ?string $phpBinary = null,
-        ?string $consoleWorkingDirectory = null,
     ) {
         $this->videoDirectory     = $videoDirectory;
         $this->generator           = $generator;
@@ -99,20 +87,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $musicTrack       = $musicTrack !== null ? trim($musicTrack) : '';
         $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
-
-        $defaultEntryPoint = dirname(__DIR__, 2) . '/Memories.php';
-        $this->consoleEntryPoint = $consoleEntryPoint !== null && trim($consoleEntryPoint) !== ''
-            ? $consoleEntryPoint
-            : $defaultEntryPoint;
-
-        $this->phpBinary = $phpBinary !== null && trim($phpBinary) !== ''
-            ? $phpBinary
-            : PHP_BINARY;
-
-        $defaultWorkingDirectory = dirname(__DIR__, 3);
-        $this->consoleWorkingDirectory = $consoleWorkingDirectory !== null && trim($consoleWorkingDirectory) !== ''
-            ? $consoleWorkingDirectory
-            : $defaultWorkingDirectory;
     }
 
     /**
@@ -229,7 +203,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         try {
-            $processId = $this->dispatchJob($job);
+            $this->dispatchJob($job);
         } catch (Throwable $exception) {
             $message = $exception->getMessage();
             if ($message === '') {
@@ -255,17 +229,18 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             return SlideshowVideoStatus::error($message, $this->slideDuration);
         }
 
-        $this->emitMonitoring('queued', [
+        $status = $this->getStatusForItem($itemId);
+
+        $this->emitMonitoring('generated', [
             'itemId'              => $itemId,
             'slideCount'          => count($slides),
             'videoPath'           => $videoPath,
             'music'               => $storyboard['music'],
             'transitionDuration'  => $storyboard['transitionDuration'],
-            'mode'                => 'immediate',
-            'processId'           => $processId,
+            'mode'                => 'inline',
         ]);
 
-        return SlideshowVideoStatus::generating($this->slideDuration);
+        return $status;
     }
 
     public function getStatusForItem(string $itemId): SlideshowVideoStatus
@@ -291,7 +266,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         return SlideshowVideoStatus::unavailable($this->slideDuration);
     }
 
-    private function dispatchJob(SlideshowJob $job): ?int
+    private function dispatchJob(SlideshowJob $job): void
     {
         $lockContent = (string) getmypid();
         $lockResult  = file_put_contents($job->lockPath(), $lockContent, LOCK_EX);
@@ -299,25 +274,27 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             throw new ProcessRuntimeException(sprintf('Lock file "%s" could not be created.', $job->lockPath()));
         }
 
-        $process = new Process([
-            $this->phpBinary,
-            $this->consoleEntryPoint,
-            'slideshow:generate',
-            $job->jobFile(),
-        ], $this->consoleWorkingDirectory);
-        $process->setOptions([
-            'create_new_console' => true,
-        ]);
-        $process->disableOutput();
-        $process->setTimeout(null);
-        $process->start();
+        try {
+            $this->generator->generate($job);
+        } catch (Throwable $exception) {
+            if (is_file($job->lockPath())) {
+                unlink($job->lockPath());
+            }
 
-        $pid = $process->getPid();
-        if ($pid !== null) {
-            $this->updateLockWithProcessId($job->lockPath(), $pid);
+            throw $exception;
+        } finally {
+            if (is_file($job->jobFile())) {
+                unlink($job->jobFile());
+            }
         }
 
-        return $pid;
+        if (is_file($job->errorPath())) {
+            unlink($job->errorPath());
+        }
+
+        if (is_file($job->lockPath())) {
+            unlink($job->lockPath());
+        }
     }
 
     public function resolveVideoPath(string $itemId): ?string
@@ -496,11 +473,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             'job'     => $jobPath,
             'error'   => $errorPath,
         ]);
-    }
-
-    private function updateLockWithProcessId(string $lockPath, int $pid): void
-    {
-        file_put_contents($lockPath, (string) $pid, LOCK_EX);
     }
 
     private function extractProcessId(mixed $value): ?int

@@ -700,7 +700,7 @@ final class FeedControllerTest extends TestCase
                 self::identicalTo('Winter in Berlin'),
                 self::identicalTo('Lichterzauber an der Spree'),
             )
-            ->willReturn(SlideshowVideoStatus::generating(3.5));
+            ->willReturn(SlideshowVideoStatus::ready('/api/feed/' . $itemId . '/video', 3.5));
 
         [$controller, $storagePath] = $this->createControllerWithDependencies(
             $feedBuilder,
@@ -720,8 +720,9 @@ final class FeedControllerTest extends TestCase
         $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertArrayHasKey('slideshow', $payload);
-        self::assertSame('in_erstellung', $payload['slideshow']['status']);
-        self::assertSame(0.0, $payload['slideshow']['fortschritt']);
+        self::assertSame('bereit', $payload['slideshow']['status']);
+        self::assertSame('/api/feed/' . $itemId . '/video', $payload['slideshow']['url']);
+        self::assertSame(1.0, $payload['slideshow']['fortschritt']);
 
         unlink($storagePath);
     }
