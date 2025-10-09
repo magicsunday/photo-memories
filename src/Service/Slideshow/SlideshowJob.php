@@ -46,6 +46,8 @@ final readonly class SlideshowJob
         private array $slides,
         private ?float $transitionDuration,
         private ?string $audioTrack,
+        private ?string $title = null,
+        private ?string $subtitle = null,
     ) {
     }
 
@@ -100,6 +102,16 @@ final readonly class SlideshowJob
         return $this->audioTrack;
     }
 
+    public function title(): ?string
+    {
+        return $this->title;
+    }
+
+    public function subtitle(): ?string
+    {
+        return $this->subtitle;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -135,7 +147,7 @@ final readonly class SlideshowJob
             $storyboard['music'] = $this->audioTrack;
         }
 
-        return [
+        $payload = [
             'id'         => $this->id,
             'output'     => $this->outputPath,
             'lock'       => $this->lockPath,
@@ -143,6 +155,16 @@ final readonly class SlideshowJob
             'images'     => $this->images,
             'storyboard' => $storyboard,
         ];
+
+        if ($this->title !== null) {
+            $payload['title'] = $this->title;
+        }
+
+        if ($this->subtitle !== null) {
+            $payload['subtitle'] = $this->subtitle;
+        }
+
+        return $payload;
     }
 
     public function toJson(): string
@@ -197,6 +219,9 @@ final readonly class SlideshowJob
 
         $storyboard = self::normaliseStoryboard($storyboardRaw, $images);
 
+        $title    = self::normaliseOptionalString($payload['title'] ?? null);
+        $subtitle = self::normaliseOptionalString($payload['subtitle'] ?? null);
+
         return new self(
             $id,
             $path,
@@ -207,6 +232,8 @@ final readonly class SlideshowJob
             $storyboard['slides'],
             $storyboard['transitionDuration'],
             $storyboard['music'],
+            $title,
+            $subtitle,
         );
     }
 
@@ -302,6 +329,20 @@ final readonly class SlideshowJob
             'transitionDuration' => $transitionDuration,
             'music'              => $music,
         ];
+    }
+
+    private static function normaliseOptionalString(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     private static function requireString(mixed $value, string $field): string

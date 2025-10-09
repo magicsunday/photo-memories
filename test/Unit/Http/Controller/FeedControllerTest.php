@@ -697,6 +697,8 @@ final class FeedControllerTest extends TestCase
                 self::callback(static function (array $map) use ($expectedMap): bool {
                     return $map === $expectedMap;
                 }),
+                self::identicalTo('Winter in Berlin'),
+                self::identicalTo('Lichterzauber an der Spree'),
             )
             ->willReturn(SlideshowVideoStatus::generating(3.5));
 
