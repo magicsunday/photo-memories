@@ -48,6 +48,7 @@ use function array_keys;
 use function array_map;
 use function array_replace;
 use function array_slice;
+use function array_unique;
 use function explode;
 use function array_values;
 use function count;
@@ -61,8 +62,10 @@ use function is_string;
 use function max;
 use function krsort;
 use function min;
+use function preg_split;
 use function round;
 use function sort;
+use function str_ends_with;
 use function sprintf;
 use function trim;
 use const SORT_STRING;
@@ -72,6 +75,33 @@ use const SORT_STRING;
  */
 final class FeedController
 {
+    private const DEFAULT_ITEM_FIELD_GROUPS = [
+        'basis',
+        'zeit',
+        'galerie',
+        'kontext',
+        'zusatzdaten',
+        'slideshow',
+        'storyboard',
+        'benachrichtigungen',
+    ];
+
+    private const DEFAULT_META_FIELD_GROUPS = [
+        'basis',
+        'pagination',
+        'filter',
+        'personalisierung',
+        'strategien',
+    ];
+
+    private const META_FIELD_KEY_MAP = [
+        'basis'            => ['erstelltAm', 'erstelltAmText', 'hinweisErstelltAm', 'gesamtVerfuegbar', 'anzahlGeliefert'],
+        'pagination'       => ['pagination'],
+        'filter'           => ['filter', 'filterKonfiguration'],
+        'personalisierung' => ['personalisierung'],
+        'strategien'       => ['verfuegbareStrategien', 'verfuegbareGruppen', 'labelMapping'],
+    ];
+
     /**
      * @var array<int, Media|null>
      */
@@ -282,9 +312,12 @@ final class FeedController
         $now     = new DateTimeImmutable();
         $baseUrl = rtrim($request->getBaseUrl(), '/');
 
+        $fieldSelection = $this->resolveFieldSelection($request);
+        $itemGroups     = $fieldSelection['itemGroups'];
+
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
-            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now, $preferences, $locale),
+            fn (MemoryFeedItem $item): array => $this->transformItem($item, $baseUrl, $now, $preferences, $locale, $itemGroups),
             $pagedItems,
         );
 
@@ -332,6 +365,8 @@ final class FeedController
             ],
         ];
 
+        $meta = $this->filterMetaPayload($meta, $fieldSelection['metaGroups']);
+
         return [
             'items'         => $data,
             'meta'          => $meta,
@@ -340,6 +375,106 @@ final class FeedController
             'locale'        => $locale,
             'now'           => $now,
         ];
+    }
+
+    /**
+     * @return array{itemGroups: list<string>, metaGroups: list<string>}
+     */
+    private function resolveFieldSelection(Request $request): array
+    {
+        $itemGroups = $this->parseFieldList(
+            $this->normalizeString($request->getQueryParam('felder')),
+            self::DEFAULT_ITEM_FIELD_GROUPS,
+        );
+
+        if ($itemGroups === []) {
+            $itemGroups = self::DEFAULT_ITEM_FIELD_GROUPS;
+        }
+
+        if (!in_array('basis', $itemGroups, true)) {
+            array_unshift($itemGroups, 'basis');
+        }
+
+        $itemGroups = array_values(array_unique($itemGroups));
+
+        $metaGroups = $this->parseFieldList(
+            $this->normalizeString($request->getQueryParam('metaFelder')),
+            array_keys(self::META_FIELD_KEY_MAP),
+        );
+
+        if ($metaGroups === []) {
+            $metaGroups = self::DEFAULT_META_FIELD_GROUPS;
+        }
+
+        if (!in_array('basis', $metaGroups, true)) {
+            array_unshift($metaGroups, 'basis');
+        }
+
+        $metaGroups = array_values(array_unique($metaGroups));
+
+        return [
+            'itemGroups' => $itemGroups,
+            'metaGroups' => $metaGroups,
+        ];
+    }
+
+    /**
+     * @param list<string> $allowed
+     *
+     * @return list<string>
+     */
+    private function parseFieldList(?string $value, array $allowed): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $tokens = preg_split('/[,\s]+/', $value) ?: [];
+        $result = [];
+
+        foreach ($tokens as $token) {
+            $trimmed = trim($token);
+            if ($trimmed === '' || !in_array($trimmed, $allowed, true)) {
+                continue;
+            }
+
+            if (!in_array($trimmed, $result, true)) {
+                $result[] = $trimmed;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     * @param list<string>         $selectedGroups
+     *
+     * @return array<string, mixed>
+     */
+    private function filterMetaPayload(array $meta, array $selectedGroups): array
+    {
+        $groupLookup = array_fill_keys($selectedGroups, true);
+        $orderedKeys = [];
+
+        foreach (self::META_FIELD_KEY_MAP as $group => $keys) {
+            if (!isset($groupLookup[$group])) {
+                continue;
+            }
+
+            foreach ($keys as $key) {
+                $orderedKeys[] = $key;
+            }
+        }
+
+        $filtered = [];
+        foreach ($orderedKeys as $key) {
+            if (array_key_exists($key, $meta)) {
+                $filtered[$key] = $meta[$key];
+            }
+        }
+
+        return $filtered;
     }
 
     /**
@@ -646,6 +781,7 @@ final class FeedController
         DateTimeImmutable $reference,
         FeedUserPreferences $preferences,
         string $locale,
+        array $selectedGroups,
     ): array {
         $coverId = $item->getCoverMediaId();
         $members = $item->getMemberIds();
@@ -656,30 +792,52 @@ final class FeedController
             $mediaIdsToLoad[] = $coverId;
         }
 
+        $groupSelection = array_fill_keys($selectedGroups, true);
+
         $onlyVideos     = $item->getAlgorithm() === 'video_stories';
         $memberPayload  = [];
         $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad, $onlyVideos);
-        foreach ($previewMembers as $memberId) {
-            $media = $memberMediaMap[$memberId] ?? null;
 
-            $memberPayload[] = $this->buildGalleryEntry(
-                $memberId,
-                $media,
-                $baseUrl,
-                $reference,
-                $item->getParams(),
-            );
+        if (isset($groupSelection['galerie']) || isset($groupSelection['storyboard'])) {
+            foreach ($previewMembers as $memberId) {
+                $media = $memberMediaMap[$memberId] ?? null;
+
+                $memberPayload[] = $this->buildGalleryEntry(
+                    $memberId,
+                    $media,
+                    $baseUrl,
+                    $reference,
+                    $item->getParams(),
+                );
+            }
         }
 
-        $coverMedia = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
+        $coverMedia    = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
+        $itemId        = $this->createItemId($item);
+        $slideshow     = null;
+        $timeRange     = isset($groupSelection['zeit']) ? $this->extractTimeRange($item, $reference) : null;
+        $coverAltText  = null;
 
-        $itemId = $this->createItemId($item);
-        $status = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
+        if (isset($groupSelection['slideshow'])) {
+            $slideshow = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
+        }
 
-        $clusterContext = $this->buildClusterContext($item->getParams());
-        $timeRange      = $this->extractTimeRange($item, $reference);
+        if ($memberPayload !== []) {
+            foreach ($memberPayload as $entry) {
+                if (($entry['mediaId'] ?? null) === $coverId) {
+                    $coverAltText = $entry['altText'] ?? null;
 
-        return [
+                    break;
+                }
+            }
+        }
+
+        if ($coverAltText === null) {
+            $coverContext = $this->buildMediaContext($coverMedia, $item->getParams());
+            $coverAltText = $this->generateAltText($coverMedia, $coverContext);
+        }
+
+        $payload = [
             'id'                 => $itemId,
             'algorithmus'        => $item->getAlgorithm(),
             'algorithmusLabel'   => $this->algorithmLabelProvider->getLabel($item->getAlgorithm()),
@@ -695,14 +853,41 @@ final class FeedController
             'coverHinweisAufgenommenAm' => $this->formatRelativeTakenAt($coverMedia, $reference),
             'coverAbmessungen'   => $this->extractDimensions($coverMedia),
             'mitglieder'         => $previewMembers,
-            'galerie'            => $memberPayload,
-            'zeitspanne'         => $timeRange,
-            'zusatzdaten'        => $item->getParams(),
-            'kontext'            => $clusterContext,
-            'slideshow'          => $this->enrichSlideshowStatus($status),
-            'storyboard'         => $this->buildStoryboard($memberPayload, $item->getParams(), $locale),
-            'benachrichtigungen' => $this->notificationPlanner->planForItem($item, $reference),
         ];
+
+        if ($coverAltText !== null) {
+            $payload['coverAltText'] = $coverAltText;
+        }
+
+        if (isset($groupSelection['galerie'])) {
+            $payload['galerie'] = $memberPayload;
+        }
+
+        if (isset($groupSelection['zeit'])) {
+            $payload['zeitspanne'] = $timeRange;
+        }
+
+        if (isset($groupSelection['zusatzdaten'])) {
+            $payload['zusatzdaten'] = $item->getParams();
+        }
+
+        if (isset($groupSelection['kontext'])) {
+            $payload['kontext'] = $this->buildClusterContext($item->getParams());
+        }
+
+        if (isset($groupSelection['slideshow']) && $slideshow instanceof SlideshowVideoStatus) {
+            $payload['slideshow'] = $this->enrichSlideshowStatus($slideshow);
+        }
+
+        if (isset($groupSelection['storyboard'])) {
+            $payload['storyboard'] = $this->buildStoryboard($memberPayload, $item->getParams(), $locale);
+        }
+
+        if (isset($groupSelection['benachrichtigungen'])) {
+            $payload['benachrichtigungen'] = $this->notificationPlanner->planForItem($item, $reference);
+        }
+
+        return $payload;
     }
 
     /**
@@ -859,7 +1044,77 @@ final class FeedController
             $entry['beschreibung'] = $context['beschreibung'];
         }
 
+        $altText = $this->generateAltText($media, $context);
+        if ($altText !== null) {
+            $entry['altText'] = $altText;
+        }
+
         return $entry;
+    }
+
+    /**
+     * @param array{
+     *     personen: list<string>,
+     *     schlagwoerter: list<string>,
+     *     szenen: list<string>,
+     *     ort: ?string,
+     *     beschreibung: ?string
+     * } $context
+     */
+    private function generateAltText(?Media $media, array $context): ?string
+    {
+        $segments = [];
+        $typeLabel = $media instanceof Media && $media->isVideo() ? 'Video' : 'Foto';
+        $segments[] = $typeLabel;
+
+        $description = $context['beschreibung'];
+        if (is_string($description) && $description !== '') {
+            $segments[] = $description;
+        } else {
+            $details = [];
+
+            $location = $context['ort'];
+            if (is_string($location) && $location !== '') {
+                $details[] = 'in ' . $location;
+            }
+
+            if ($context['personen'] !== []) {
+                $details[] = 'mit ' . implode(', ', $context['personen']);
+            }
+
+            if ($context['szenen'] !== []) {
+                $details[] = implode(', ', $context['szenen']);
+            }
+
+            if ($context['schlagwoerter'] !== []) {
+                $details[] = implode(', ', $context['schlagwoerter']);
+            }
+
+            if ($details !== []) {
+                $segments[] = implode(' • ', $details);
+            }
+        }
+
+        $dateText = $this->formatMediaDateText($media);
+        if ($dateText !== null) {
+            $segments[] = 'aufgenommen am ' . $dateText;
+        }
+
+        $segments = array_values(array_filter(
+            $segments,
+            static fn (string $value): bool => trim($value) !== '',
+        ));
+
+        if ($segments === []) {
+            return null;
+        }
+
+        $text = implode('. ', $segments);
+        if (!str_ends_with($text, '.')) {
+            $text .= '.';
+        }
+
+        return $text;
     }
 
     /**
