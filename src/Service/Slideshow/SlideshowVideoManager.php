@@ -39,6 +39,18 @@ use const LOCK_EX;
  */
 final readonly class SlideshowVideoManager implements SlideshowVideoManagerInterface
 {
+    private string $videoDirectory;
+
+    private string $projectDirectory;
+
+    private float $slideDuration;
+
+    private float $transitionDuration;
+
+    private PhpExecutableFinder $phpExecutableFinder;
+
+    private ?JobMonitoringEmitterInterface $monitoringEmitter;
+
     private ?string $configuredPhpBinary;
 
     /**
@@ -52,26 +64,26 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      * @param list<string> $transitions
      */
     public function __construct(
-        private string $videoDirectory,
-        private string $projectDirectory,
-        private float $slideDuration,
-        private float $transitionDuration,
+        string $videoDirectory,
+        string $projectDirectory,
+        float $slideDuration,
+        float $transitionDuration,
         ?string $phpBinary,
-        private PhpExecutableFinder $phpExecutableFinder,
+        PhpExecutableFinder $phpExecutableFinder,
         array $transitions = [],
         ?string $musicTrack = null,
-        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
+        $this->videoDirectory     = $videoDirectory;
+        $this->projectDirectory   = $projectDirectory;
+        $this->phpExecutableFinder = $phpExecutableFinder;
+        $this->monitoringEmitter  = $monitoringEmitter;
+
+        $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
+        $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.8;
+
         $phpBinary                 = $phpBinary !== null ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
-
-        if ($this->slideDuration <= 0.0) {
-            $this->slideDuration = 3.5;
-        }
-
-        if ($this->transitionDuration < 0.0) {
-            $this->transitionDuration = 0.8;
-        }
 
         $this->transitions = $this->sanitizeTransitions($transitions);
 
