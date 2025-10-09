@@ -70,7 +70,7 @@ de:
     #   - {{ poi_category_value }} (optional): POI-Kategorie-Value
     #   - {{ poi_tags }} (optional): Liste relevanter POI-Tags (Array)
     location_similarity:
-        title: "Unterwegs in {{ place }}"
+        title: "Unterwegs in {{ place_city }}"
         subtitle: "{{ date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
@@ -142,7 +142,7 @@ de:
     #   - {{ grid_cell }}: Identifier der Rasterzelle
     #   - {{ place }} (optional): Dominanter Aufnahmeort
     first_visit_place:
-        title: "Erstes Mal: {{ place }}"
+        title: "Erstes Mal: {{ place_city }}"
         subtitle: "{{ date_range }}"
 
     # Zuhause
