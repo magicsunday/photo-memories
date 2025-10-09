@@ -471,10 +471,6 @@ parameters:
     memories.slideshow.video_height: 720
     # Description: Path to the ffmpeg binary used for slideshow rendering.
     memories.slideshow.ffmpeg_path: 'ffmpeg'
-    # Description: Default PHP binary name used when invoking slideshow helpers.
-    memories.slideshow.php_binary_default: 'php'
-    # Description: Runtime PHP binary path for slideshow helpers, allowing environment overrides.
-    memories.slideshow.php_binary: "%env(default:memories.slideshow.php_binary_default:MEMORIES_PHP_BINARY)%"
     # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'
