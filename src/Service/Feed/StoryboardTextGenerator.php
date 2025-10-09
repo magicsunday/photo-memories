@@ -173,7 +173,13 @@ final readonly class StoryboardTextGenerator
             return '';
         }
 
-        return substr(strtolower($trimmed), 0, 2) ?: '';
+        $normalized = substr(strtolower($trimmed), 0, 2);
+
+        if ($normalized === false || $normalized === '') {
+            return '';
+        }
+
+        return $normalized;
     }
 
     /**

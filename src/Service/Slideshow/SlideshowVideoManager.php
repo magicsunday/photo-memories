@@ -319,7 +319,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             unlink($lockPath);
         }
 
-        file_put_contents($errorPath, $throwable->getMessage() ?: 'Unbekannter Fehler bei der Videoerstellung.', LOCK_EX);
+        $message = $throwable->getMessage();
+        if ($message === '') {
+            $message = 'Unbekannter Fehler bei der Videoerstellung.';
+        }
+
+        file_put_contents($errorPath, $message, LOCK_EX);
 
         if (file_exists($jobPath)) {
             unlink($jobPath);

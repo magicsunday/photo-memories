@@ -57,6 +57,7 @@ use function implode;
 use function in_array;
 use function is_array;
 use function is_int;
+use function is_iterable;
 use function is_numeric;
 use function is_string;
 use function max;
@@ -429,7 +430,10 @@ final class FeedController
             return [];
         }
 
-        $tokens = preg_split('/[,\s]+/', $value) ?: [];
+        $tokens = preg_split('/[,\s]+/', $value);
+        if ($tokens === false) {
+            $tokens = [];
+        }
         $result = [];
 
         foreach ($tokens as $token) {
@@ -1130,119 +1134,18 @@ final class FeedController
      */
     private function buildMediaContext(?Media $media, array $clusterParams): array
     {
-        $persons = [];
-        if ($media instanceof Media) {
-            $rawPersons = $media->getPersons();
-            if (is_array($rawPersons)) {
-                foreach ($rawPersons as $person) {
-                    if (!is_string($person)) {
-                        continue;
-                    }
+        $persons = $this->uniqueStringList($media instanceof Media ? $media->getPersons() : null);
 
-                    $trimmed = trim($person);
-                    if ($trimmed === '') {
-                        continue;
-                    }
+        $keywords = $this->uniqueStringList($media instanceof Media ? $media->getKeywords() : null);
 
-                    if (!in_array($trimmed, $persons, true)) {
-                        $persons[] = $trimmed;
-                    }
-                }
-            }
+        if ($keywords === []) {
+            $keywords = $this->uniqueStringList($clusterParams['keywords'] ?? null);
         }
 
-        $keywords = [];
-        if ($media instanceof Media) {
-            $rawKeywords = $media->getKeywords();
-            if (is_array($rawKeywords)) {
-                foreach ($rawKeywords as $keyword) {
-                    if (!is_string($keyword)) {
-                        continue;
-                    }
+        $sceneTags = $this->extractSceneTagLabels($media instanceof Media ? $media->getSceneTags() : null, 5);
 
-                    $trimmed = trim($keyword);
-                    if ($trimmed === '') {
-                        continue;
-                    }
-
-                    if (!in_array($trimmed, $keywords, true)) {
-                        $keywords[] = $trimmed;
-                    }
-                }
-            }
-        }
-
-        if ($keywords === [] && isset($clusterParams['keywords']) && is_array($clusterParams['keywords'])) {
-            foreach ($clusterParams['keywords'] as $keyword) {
-                if (!is_string($keyword)) {
-                    continue;
-                }
-
-                $trimmed = trim($keyword);
-                if ($trimmed === '') {
-                    continue;
-                }
-
-                if (!in_array($trimmed, $keywords, true)) {
-                    $keywords[] = $trimmed;
-                }
-            }
-        }
-
-        $sceneTags = [];
-        if ($media instanceof Media) {
-            $tags = $media->getSceneTags();
-            if (is_array($tags)) {
-                foreach ($tags as $tag) {
-                    if (!is_array($tag)) {
-                        continue;
-                    }
-
-                    $label = $tag['label'] ?? null;
-                    if (!is_string($label)) {
-                        continue;
-                    }
-
-                    $trimmed = trim($label);
-                    if ($trimmed === '') {
-                        continue;
-                    }
-
-                    if (!in_array($trimmed, $sceneTags, true)) {
-                        $sceneTags[] = $trimmed;
-                    }
-
-                    if (count($sceneTags) >= 5) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ($sceneTags === [] && isset($clusterParams['scene_tags']) && is_array($clusterParams['scene_tags'])) {
-            foreach ($clusterParams['scene_tags'] as $tag) {
-                if (!is_array($tag)) {
-                    continue;
-                }
-
-                $label = $tag['label'] ?? null;
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                $trimmed = trim($label);
-                if ($trimmed === '') {
-                    continue;
-                }
-
-                if (!in_array($trimmed, $sceneTags, true)) {
-                    $sceneTags[] = $trimmed;
-                }
-
-                if (count($sceneTags) >= 5) {
-                    break;
-                }
-            }
+        if ($sceneTags === []) {
+            $sceneTags = $this->extractSceneTagLabels($clusterParams['scene_tags'] ?? null, 5);
         }
 
         $location = null;
@@ -1292,6 +1195,73 @@ final class FeedController
             'ort'           => $location,
             'beschreibung'  => $description,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function uniqueStringList(mixed $values, int $limit = PHP_INT_MAX): array
+    {
+        if (!is_iterable($values)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($values as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            $trimmed = trim($value);
+            if ($trimmed === '' || in_array($trimmed, $result, true)) {
+                continue;
+            }
+
+            $result[] = $trimmed;
+
+            if (count($result) >= $limit) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractSceneTagLabels(mixed $tags, int $limit): array
+    {
+        if (!is_iterable($tags)) {
+            return [];
+        }
+
+        $labels = [];
+
+        foreach ($tags as $tag) {
+            if (!is_array($tag)) {
+                continue;
+            }
+
+            $label = $tag['label'] ?? null;
+            if (!is_string($label)) {
+                continue;
+            }
+
+            $trimmed = trim($label);
+            if ($trimmed === '' || in_array($trimmed, $labels, true)) {
+                continue;
+            }
+
+            $labels[] = $trimmed;
+
+            if (count($labels) >= $limit) {
+                break;
+            }
+        }
+
+        return $labels;
     }
 
 

@@ -27,7 +27,10 @@ trait PathTokensTrait
         $lower  = strtolower($path);
         $delims = ['/', '\\', '-', '_', '.', ' '];
         $tmp    = str_replace($delims, ' ', $lower);
-        $parts  = preg_split('~\s+~', $tmp) ?: [];
+        $parts = preg_split('~\s+~', $tmp);
+        if ($parts === false) {
+            $parts = [];
+        }
         /** @var list<string> $out */
         $out = [];
         foreach ($parts as $p) {

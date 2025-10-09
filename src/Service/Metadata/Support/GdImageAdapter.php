@@ -65,7 +65,10 @@ final readonly class GdImageAdapter implements ImageAdapterInterface
                 // Fallback: sniff via blob (helps for uncommon extensions)
                 $blob = @file_get_contents($path);
                 if (is_string($blob) && $blob !== '') {
-                    $im = @imagecreatefromstring($blob) ?: null;
+                    $created = @imagecreatefromstring($blob);
+                    if ($created instanceof GdImage) {
+                        $im = $created;
+                    }
                 }
             }
         } catch (Throwable) {
