@@ -20,12 +20,22 @@ use Throwable;
 use function dirname;
 use function file_get_contents;
 use function file_put_contents;
+use function filemtime;
+use function fclose;
+use function function_exists;
 use function getmypid;
 use function is_dir;
 use function is_file;
+use function is_numeric;
+use function is_resource;
 use function is_string;
 use function mkdir;
+use function preg_match;
+use function proc_close;
+use function proc_get_status;
+use function proc_open;
 use function sprintf;
+use function time;
 use function trim;
 use function unlink;
 
@@ -38,6 +48,8 @@ use const PHP_BINARY;
  */
 final readonly class SlideshowVideoManager implements SlideshowVideoManagerInterface
 {
+    private const int STALE_LOCK_THRESHOLD_SECONDS = 120;
+
     private string $videoDirectory;
 
     private float $slideDuration;
@@ -167,12 +179,18 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         if ($status->status() === SlideshowVideoStatus::STATUS_GENERATING) {
-            $this->emitMonitoring('generating', [
-                'itemId' => $itemId,
-                'reason' => 'lock_exists',
-            ]);
+            if ($this->shouldResetStalledJob($lockPath, $jobPath)) {
+                $this->cleanupStalledJob($itemId, $lockPath, $jobPath, $errorPath);
 
-            return $status;
+                // fall through to schedule a fresh job immediately
+            } else {
+                $this->emitMonitoring('generating', [
+                    'itemId' => $itemId,
+                    'reason' => 'lock_exists',
+                ]);
+
+                return $status;
+            }
         }
 
         if ($status->status() === SlideshowVideoStatus::STATUS_ERROR) {
@@ -291,7 +309,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $process->setTimeout(null);
         $process->start();
 
-        return $process->getPid();
+        $pid = $process->getPid();
+        if ($pid !== null) {
+            $this->updateLockWithProcessId($job->lockPath(), $pid);
+        }
+
+        return $pid;
     }
 
     public function resolveVideoPath(string $itemId): ?string
@@ -426,5 +449,112 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $this->monitoringEmitter->emit('slideshow.generate', $status, $context);
+    }
+
+    private function shouldResetStalledJob(string $lockPath, string $jobPath): bool
+    {
+        if (!is_file($lockPath) || !is_file($jobPath)) {
+            return false;
+        }
+
+        $lockContent = file_get_contents($lockPath);
+        $pid         = $this->extractProcessId($lockContent);
+
+        if ($pid !== null && $this->isProcessRunning($pid)) {
+            return false;
+        }
+
+        $lockAge = time() - max(filemtime($lockPath), filemtime($jobPath));
+        if ($lockAge < self::STALE_LOCK_THRESHOLD_SECONDS) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function cleanupStalledJob(string $itemId, string $lockPath, string $jobPath, string $errorPath): void
+    {
+        if (is_file($lockPath)) {
+            unlink($lockPath);
+        }
+
+        if (is_file($jobPath)) {
+            unlink($jobPath);
+        }
+
+        if (is_file($errorPath)) {
+            unlink($errorPath);
+        }
+
+        $this->emitMonitoring('reset', [
+            'itemId' => $itemId,
+            'reason'  => 'stale_lock',
+            'lock'    => $lockPath,
+            'job'     => $jobPath,
+            'error'   => $errorPath,
+        ]);
+    }
+
+    private function updateLockWithProcessId(string $lockPath, int $pid): void
+    {
+        file_put_contents($lockPath, (string) $pid, LOCK_EX);
+    }
+
+    private function extractProcessId(mixed $value): ?int
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (is_numeric($trimmed)) {
+            $pid = (int) $trimmed;
+
+            return $pid > 0 ? $pid : null;
+        }
+
+        if (preg_match('/pid\s*:\s*(\d+)/i', $trimmed, $matches) === 1) {
+            $pid = (int) $matches[1];
+
+            return $pid > 0 ? $pid : null;
+        }
+
+        return null;
+    }
+
+    private function isProcessRunning(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+
+        if (function_exists('posix_kill')) {
+            return @posix_kill($pid, 0);
+        }
+
+        if (function_exists('proc_open')) {
+            $handle = @proc_open(sprintf('ps -p %d', $pid), [
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ], $pipes);
+
+            if (is_resource($handle)) {
+                $status = proc_get_status($handle);
+                foreach ($pipes as $pipe) {
+                    if (is_resource($pipe)) {
+                        fclose($pipe);
+                    }
+                }
+                proc_close($handle);
+
+                return $status['running'] ?? false;
+            }
+        }
+
+        return false;
     }
 }
