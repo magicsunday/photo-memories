@@ -2,7 +2,11 @@
 # Monitoring configuration
 ########################################
 parameters:
+    # Description: Flag indicating whether job monitoring is enabled by default.
     memories.monitoring.enabled_default: true
+    # Description: Runtime switch controlling job monitoring, sourced from the environment.
     memories.monitoring.enabled: '%env(default:memories.monitoring.enabled_default:bool:MEMORIES_MONITORING_ENABLED)%'
+    # Description: Default file path where monitoring logs should be stored.
     memories.monitoring.log_path_default: '%kernel.project_dir%/var/log/monitoring/jobs.jsonl'
+    # Description: Runtime path for monitoring log output, allowing environment overrides.
     memories.monitoring.log_path: '%env(default:memories.monitoring.log_path_default:string:MEMORIES_MONITORING_LOG_PATH)%'
