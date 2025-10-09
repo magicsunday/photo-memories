@@ -25,6 +25,7 @@ use function file_put_contents;
 use function fopen;
 use function is_dir;
 use function is_file;
+use function is_resource;
 use function is_string;
 use function mkdir;
 use function sprintf;
@@ -49,6 +50,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private PhpExecutableFinder $phpExecutableFinder;
 
+    private SlideshowVideoGeneratorInterface $generator;
+
     private ?JobMonitoringEmitterInterface $monitoringEmitter;
 
     private ?string $configuredPhpBinary;
@@ -70,6 +73,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         float $transitionDuration,
         ?string $phpBinary,
         PhpExecutableFinder $phpExecutableFinder,
+        SlideshowVideoGeneratorInterface $generator,
         array $transitions = [],
         ?string $musicTrack = null,
         ?JobMonitoringEmitterInterface $monitoringEmitter = null,
@@ -77,6 +81,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $this->videoDirectory     = $videoDirectory;
         $this->projectDirectory   = $projectDirectory;
         $this->phpExecutableFinder = $phpExecutableFinder;
+        $this->generator           = $generator;
         $this->monitoringEmitter  = $monitoringEmitter;
 
         $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
@@ -180,10 +185,38 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             return SlideshowVideoStatus::generating($this->slideDuration);
         }
 
+        $job                  = null;
+        $cleanupAfterSuccess  = false;
+
         try {
             $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music']);
             file_put_contents($jobPath, $job->toJson(), LOCK_EX);
-            $this->startGenerator($job);
+
+            $started = false;
+
+            try {
+                $started = $this->startGenerator($job);
+            } catch (ProcessRuntimeException $processException) {
+                $this->emitMonitoring('fallback', [
+                    'itemId'  => $itemId,
+                    'reason'  => 'process_exception',
+                    'message' => $processException->getMessage(),
+                ]);
+                $started = false;
+            }
+
+            if ($started) {
+                $this->emitMonitoring('queued', [
+                    'itemId'     => $itemId,
+                    'slideCount' => count($slides),
+                    'videoPath'  => $videoPath,
+                    'music'      => $storyboard['music'],
+                    'transitionDuration' => $storyboard['transitionDuration'],
+                    'mode'       => 'process',
+                ]);
+
+                return SlideshowVideoStatus::generating($this->slideDuration);
+            }
 
             $this->emitMonitoring('queued', [
                 'itemId'     => $itemId,
@@ -191,7 +224,22 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
                 'videoPath'  => $videoPath,
                 'music'      => $storyboard['music'],
                 'transitionDuration' => $storyboard['transitionDuration'],
+                'mode'       => 'inline',
             ]);
+
+            $this->generator->generate($job);
+            $cleanupAfterSuccess = true;
+
+            $this->emitMonitoring('ready', [
+                'itemId'     => $itemId,
+                'source'     => 'inline',
+                'videoPath'  => $videoPath,
+                'slideCount' => count($slides),
+                'music'      => $storyboard['music'],
+                'transitionDuration' => $storyboard['transitionDuration'],
+            ]);
+
+            return SlideshowVideoStatus::ready($this->buildVideoUrl($itemId), $this->slideDuration);
         } catch (Throwable $throwable) {
             $this->handleGenerationFailure($throwable, $lockPath, $errorPath, $jobPath);
 
@@ -203,10 +251,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
             return SlideshowVideoStatus::error($throwable->getMessage(), $this->slideDuration);
         } finally {
-            fclose($handle);
-        }
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
 
-        return SlideshowVideoStatus::generating($this->slideDuration);
+            if ($cleanupAfterSuccess && $job instanceof SlideshowJob) {
+                $this->cleanupAfterSuccess($job);
+            }
+        }
     }
 
     public function resolveVideoPath(string $itemId): ?string
@@ -320,7 +372,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
     }
 
-    private function startGenerator(SlideshowJob $job): void
+    private function startGenerator(SlideshowJob $job): bool
     {
         $console = $this->projectDirectory . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Memories.php';
         if (!is_file($console)) {
@@ -339,6 +391,23 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $process->start();
         } catch (Throwable $throwable) {
             throw new ProcessRuntimeException($throwable->getMessage(), 0, $throwable);
+        }
+
+        return true;
+    }
+
+    private function cleanupAfterSuccess(SlideshowJob $job): void
+    {
+        if (file_exists($job->lockPath())) {
+            unlink($job->lockPath());
+        }
+
+        if (is_file($job->errorPath())) {
+            unlink($job->errorPath());
+        }
+
+        if (is_file($job->jobFile())) {
+            unlink($job->jobFile());
         }
     }
 
