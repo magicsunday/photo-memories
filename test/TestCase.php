@@ -11,12 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test;
 
-use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use PHPUnit\Framework\TestCase as BaseTestCase;
@@ -30,13 +30,13 @@ use const JSON_THROW_ON_ERROR;
 
 abstract class TestCase extends BaseTestCase
 {
+    use EntityIdAssignmentTrait;
+
     private ?string $fixtureDir = null;
 
     protected function assignId(Media $media, int $id): void
     {
-        Closure::bind(function (Media $m, int $value): void {
-            $m->id = $value;
-        }, null, Media::class)($media, $id);
+        $this->assignEntityId($media, $id);
     }
 
     protected function makeMedia(

@@ -16,7 +16,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\ContentClassifierExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 
 final class ContentClassifierExtractorTest extends TestCase
 {
@@ -141,9 +140,7 @@ final class ContentClassifierExtractorTest extends TestCase
         $media->setWidth($width);
         $media->setHeight($height);
 
-        $ref = new ReflectionProperty(Media::class, 'id');
-        $ref->setAccessible(true);
-        $ref->setValue($media, $id);
+        $this->assignEntityId($media, $id);
 
         return $media;
     }
