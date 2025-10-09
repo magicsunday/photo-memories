@@ -75,4 +75,44 @@ final class MediaFeatureBagTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $bag->setFilePathTokens(['foo', 42]);
     }
+
+    public function testSetCalendarDaypartRejectsInvalidValue(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setCalendarDaypart('sunrise');
+    }
+
+    public function testSetCalendarDayOfWeekRejectsOutOfRange(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setCalendarDayOfWeek(8);
+    }
+
+    public function testSetCalendarSeasonRejectsInvalidValue(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setCalendarSeason('monsoon');
+    }
+
+    public function testSetFileNameHintRejectsInvalidValue(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setFileNameHint('unknown');
+    }
+
+    public function testSetCalendarHolidayIdRejectsInvalidFormat(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setCalendarHolidayId('Weihnachten');
+    }
 }

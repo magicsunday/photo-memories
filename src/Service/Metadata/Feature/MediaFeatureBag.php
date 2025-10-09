@@ -10,11 +10,14 @@ use function array_is_list;
 use function array_key_exists;
 use function array_values;
 use function count;
+use function implode;
+use function in_array;
 use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
 use function is_string;
+use function preg_match;
 use function sprintf;
 
 /**
@@ -30,6 +33,12 @@ final class MediaFeatureBag
     public const NAMESPACE_SOLAR = 'solar';
     public const NAMESPACE_FILE = 'file';
     public const NAMESPACE_CLASSIFICATION = 'classification';
+
+    private const CALENDAR_DAYPART_VALUES = ['morning', 'noon', 'evening', 'night'];
+
+    private const CALENDAR_SEASON_VALUES = ['winter', 'spring', 'summer', 'autumn'];
+
+    private const FILENAME_HINT_VALUES = ['normal', 'pano', 'edited', 'timelapse', 'slowmo'];
     /** @var array<string, array<string, FeatureValue>> */
     private array $values;
 
@@ -89,6 +98,10 @@ final class MediaFeatureBag
 
     public function setCalendarDaypart(?string $value): void
     {
+        if ($value !== null && in_array($value, self::CALENDAR_DAYPART_VALUES, true) === false) {
+            throw new InvalidArgumentException('Calendar daypart must be one of: ' . implode(', ', self::CALENDAR_DAYPART_VALUES) . '.');
+        }
+
         $this->set(self::NAMESPACE_CALENDAR, 'daypart', $value);
     }
 
@@ -109,6 +122,10 @@ final class MediaFeatureBag
 
     public function setCalendarDayOfWeek(?int $value): void
     {
+        if ($value !== null && ($value < 1 || $value > 7)) {
+            throw new InvalidArgumentException('Calendar day-of-week expects a value between 1 (Monday) and 7 (Sunday).');
+        }
+
         $this->set(self::NAMESPACE_CALENDAR, 'dow', $value);
     }
 
@@ -141,6 +158,10 @@ final class MediaFeatureBag
 
     public function setCalendarSeason(?string $value): void
     {
+        if ($value !== null && in_array($value, self::CALENDAR_SEASON_VALUES, true) === false) {
+            throw new InvalidArgumentException('Calendar season must be one of: ' . implode(', ', self::CALENDAR_SEASON_VALUES) . '.');
+        }
+
         $this->set(self::NAMESPACE_CALENDAR, 'season', $value);
     }
 
@@ -173,6 +194,10 @@ final class MediaFeatureBag
 
     public function setCalendarHolidayId(?string $value): void
     {
+        if ($value !== null && preg_match('/^[a-z]{2}-[a-z0-9_-]+$/', $value) !== 1) {
+            throw new InvalidArgumentException('Calendar holiday identifier must match the pattern ll-slug (e.g. de-weihnachten).');
+        }
+
         $this->set(self::NAMESPACE_CALENDAR, 'holidayId', $value);
     }
 
@@ -283,6 +308,10 @@ final class MediaFeatureBag
 
     public function setFileNameHint(?string $value): void
     {
+        if ($value !== null && in_array($value, self::FILENAME_HINT_VALUES, true) === false) {
+            throw new InvalidArgumentException('Filename hint must be one of: ' . implode(', ', self::FILENAME_HINT_VALUES) . '.');
+        }
+
         $this->set(self::NAMESPACE_FILE, 'filenameHint', $value);
     }
 
