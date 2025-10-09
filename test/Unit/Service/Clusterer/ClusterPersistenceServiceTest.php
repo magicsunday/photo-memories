@@ -27,7 +27,6 @@ use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 
 final class ClusterPersistenceServiceTest extends TestCase
 {
@@ -271,8 +270,6 @@ final class ClusterPersistenceServiceTest extends TestCase
 
     private function setId(object $entity, int $id): void
     {
-        $ref = new ReflectionProperty($entity, 'id');
-        $ref->setAccessible(true);
-        $ref->setValue($entity, $id);
+        $this->assignEntityId($entity, $id);
     }
 }

@@ -23,6 +23,7 @@ use function extension_loaded;
 use function file_exists;
 use function function_exists;
 use function is_int;
+use function method_exists;
 use function sprintf;
 
 /**
@@ -484,11 +485,56 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     protected function applyOrientationWithImagick(Imagick $imagick, ?int $orientation): void
     {
-        if ($orientation !== null) {
-            $imagick->setImageOrientation($orientation);
+        if ($orientation === null || $orientation === self::ORIENTATION_TOPLEFT) {
+            $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+
+            return;
         }
 
-        $imagick->autoOrientImage();
+        $imagick->setImageOrientation($orientation);
+
+        if (method_exists($imagick, 'autoOrientImage')) {
+            $imagick->autoOrientImage();
+            $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+
+            return;
+        }
+
+        $background = new ImagickPixel('none');
+
+        switch ($orientation) {
+            case self::ORIENTATION_TOPRIGHT:
+                $imagick->flopImage();
+
+                break;
+            case self::ORIENTATION_BOTTOMRIGHT:
+                $imagick->rotateImage($background, 180);
+
+                break;
+            case self::ORIENTATION_BOTTOMLEFT:
+                $imagick->flipImage();
+
+                break;
+            case self::ORIENTATION_LEFTTOP:
+                $imagick->flopImage();
+                $imagick->rotateImage($background, 90);
+
+                break;
+            case self::ORIENTATION_RIGHTTOP:
+                $imagick->rotateImage($background, -90);
+
+                break;
+            case self::ORIENTATION_RIGHTBOTTOM:
+                $imagick->flopImage();
+                $imagick->rotateImage($background, -90);
+
+                break;
+            case self::ORIENTATION_LEFTBOTTOM:
+                $imagick->rotateImage($background, 90);
+
+                break;
+        }
+
         $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
     }
 

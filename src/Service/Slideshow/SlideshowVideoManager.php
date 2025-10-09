@@ -55,7 +55,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         private ?string $musicTrack = null,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
-        $phpBinary                 = is_string($phpBinary) ? trim($phpBinary) : null;
+        $phpBinary                 = $phpBinary !== null ? trim($phpBinary) : null;
         $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
 
         if ($this->slideDuration <= 0.0) {
@@ -82,11 +82,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $this->transitions = $transitions;
 
-        if (!is_string($this->musicTrack) || trim($this->musicTrack) === '') {
-            $this->musicTrack = null;
-        } else {
-            $this->musicTrack = trim($this->musicTrack);
-        }
+        $musicTrack = $this->musicTrack !== null ? trim($this->musicTrack) : '';
+        $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
     }
 
     /**

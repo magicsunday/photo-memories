@@ -28,4 +28,11 @@ php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limi
 
 - [x] PHPUnit-Suite auf den aktuellen Änderungen erneut grün ausgeführt (mit bekannten Skip-Gründen dokumentiert).
 - [x] Dokumentation des Testlaufs aktualisiert.
-- [ ] PHPStan-Bereinigung: Typannotationen, Guard-Reduktion, Imagick-API-Überprüfung und Doctrine-ID-Deklarationen sind noch offen.
+- [x] PHPStan-Bereinigung: Typannotationen, Guard-Reduktion, Imagick-API-Überprüfung und Doctrine-ID-Deklarationen wurden umgesetzt (siehe Anmerkungen unten).
+
+### Aktualisierte Maßnahmen
+
+- **Typannotationen präzisiert:** Die `Media`-Entität importiert jetzt die `FeatureValue`-Definition aus dem `MediaFeatureBag` und kennzeichnet Feature-Payloads konsequent mit generischen Array-Typen, sodass PHPStan verschachtelte Werte korrekt ableitet.【F:src/Entity/Media.php†L14-L18】【F:src/Entity/Media.php†L593-L607】【F:src/Entity/Media.php†L2232-L2259】
+- **Imagick-Fallback ergänzt:** `ThumbnailService::applyOrientationWithImagick()` prüft, ob `autoOrientImage()` verfügbar ist, und bietet andernfalls eine manuelle Transformationsroutine inklusive Flips und Rotationen, um ältere Imagick-Builds zu unterstützen.【F:src/Service/Thumbnail/ThumbnailService.php†L18-L25】【F:src/Service/Thumbnail/ThumbnailService.php†L486-L535】
+- **Redundante Guards reduziert:** Der `SlideshowVideoManager` normalisiert optionale Parameter ohne zusätzliche `is_string`-Prüfungen und behält damit die gleiche Semantik bei schlankerem Guarding.【F:src/Service/Slideshow/SlideshowVideoManager.php†L41-L74】
+- **Doctrine-IDs in Tests zugewiesen:** Ein neues Trait `EntityIdAssignmentTrait` kapselt die ID-Zuweisung via Reflection und wird in der Basistestklasse sowie im `FeedControllerTest` verwendet. Dadurch entfällt duplizierter Reflection-Code und PHPStan erkennt die Test-spezifische ID-Vergabe.【F:test/Support/EntityIdAssignmentTrait.php†L1-L22】【F:test/TestCase.php†L18-L47】【F:test/Unit/Http/Controller/FeedControllerTest.php†L29-L118】【F:test/Unit/Service/Clusterer/ClusterPersistenceServiceTest.php†L29-L274】

@@ -16,7 +16,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 
 use function explode;
 use function json_decode;
@@ -147,9 +146,7 @@ final class MediaQualityAggregatorTest extends TestCase
     {
         $media = new Media(path: 'media-' . $id . '.jpg', checksum: 'checksum-' . $id, size: 1024);
 
-        $ref = new ReflectionProperty(Media::class, 'id');
-        $ref->setAccessible(true);
-        $ref->setValue($media, $id);
+        $this->assignEntityId($media, $id);
 
         return $media;
     }

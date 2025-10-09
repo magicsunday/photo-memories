@@ -17,7 +17,6 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 
 final class MemberQualityRankingStageTest extends TestCase
 {
@@ -335,9 +334,7 @@ final class MemberQualityRankingStageTest extends TestCase
     ): Media {
         $media = new Media(path: 'media-' . $id . '.jpg', checksum: 'checksum-' . $id, size: 1024);
 
-        $ref = new ReflectionProperty(Media::class, 'id');
-        $ref->setAccessible(true);
-        $ref->setValue($media, $id);
+        $this->assignEntityId($media, $id);
 
         $media->setWidth($width);
         $media->setHeight($height);

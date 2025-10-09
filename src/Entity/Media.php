@@ -22,9 +22,6 @@ use function count;
 use function max;
 use function min;
 
-/**
- * Doctrine entity describing an imported photo or video including its metadata.
- */
 #[ORM\Entity]
 #[ORM\Table(
     name: 'media',
@@ -47,6 +44,11 @@ use function min;
         new ORM\Index(name: 'idx_media_candidate', columns: ['noShow', 'lowQuality', 'takenAt']),
     ]
 )]
+/**
+ * Doctrine entity describing an imported photo or video including its metadata.
+ *
+ * @phpstan-import-type FeatureValue from MediaFeatureBag
+ */
 class Media
 {
     /**
@@ -583,7 +585,7 @@ class Media
     /**
      * Feature set describing the scene grouped by feature namespaces.
      *
-     * @var array<string, array<string, scalar|array|null>>|null $features
+     * @var array<string, array<string, FeatureValue>>|null $features
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $features = null;
@@ -2227,7 +2229,7 @@ class Media
     /**
      * Returns the raw namespaced feature payload as persisted in storage.
      *
-     * @return array<string, array<string, scalar|array|null>>|null
+     * @return array<string, array<string, FeatureValue>>|null
      */
     public function getFeatures(): ?array
     {
@@ -2253,7 +2255,7 @@ class Media
     /**
      * Sets the feature payload using the namespaced format.
      *
-     * @param array<string, array<string, scalar|array|null>>|null $v features describing the scene
+     * @param array<string, array<string, FeatureValue>>|null $v features describing the scene
      */
     public function setFeatures(?array $v): void
     {

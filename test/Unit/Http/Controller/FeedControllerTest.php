@@ -35,8 +35,8 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
+use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 use function file_put_contents;
 use function json_decode;
@@ -53,6 +53,8 @@ use const JSON_THROW_ON_ERROR;
  */
 final class FeedControllerTest extends TestCase
 {
+    use EntityIdAssignmentTrait;
+
     public function testFeedAppliesScoreFilterAndBuildsMeta(): void
     {
         $clusterRepo = $this->createMock(ClusterRepository::class);
@@ -107,11 +109,9 @@ final class FeedControllerTest extends TestCase
         $mediaTwo   = new Media('/media/2.jpg', 'checksum-2', 110);
         $mediaThree = new Media('/media/3.jpg', 'checksum-3', 120);
 
-        $idProperty = new ReflectionProperty(Media::class, 'id');
-        $idProperty->setAccessible(true);
-        $idProperty->setValue($mediaOne, 1);
-        $idProperty->setValue($mediaTwo, 2);
-        $idProperty->setValue($mediaThree, 3);
+        $this->assignEntityId($mediaOne, 1);
+        $this->assignEntityId($mediaTwo, 2);
+        $this->assignEntityId($mediaThree, 3);
 
         $mediaOneTakenAt   = new DateTimeImmutable('2024-01-01T10:00:00+00:00');
         $mediaTwoTakenAt   = new DateTimeImmutable('2024-01-02T11:15:00+00:00');
@@ -449,9 +449,7 @@ final class FeedControllerTest extends TestCase
         $media = new Media('/media/offset.jpg', 'checksum-offset', 512);
         $processor->process($exif, $media);
 
-        $reflection = new ReflectionProperty(Media::class, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($media, 42);
+        $this->assignEntityId($media, 42);
 
         $clusterRepo = $this->createMock(ClusterRepository::class);
         $clusterRepo->expects(self::once())
@@ -665,9 +663,7 @@ final class FeedControllerTest extends TestCase
         $media = new Media($tempFile, 'checksum', 4);
         $media->setThumbnails([320 => $tempFile]);
 
-        $reflection = new ReflectionProperty(Media::class, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($media, 99);
+        $this->assignEntityId($media, 99);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -757,10 +753,8 @@ final class FeedControllerTest extends TestCase
         file_put_contents($original, 'original');
         file_put_contents($generated, 'generated');
 
-        $media      = new Media($original, 'checksum-123', 10);
-        $reflection = new ReflectionProperty(Media::class, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($media, 12);
+        $media = new Media($original, 'checksum-123', 10);
+        $this->assignEntityId($media, 12);
 
         $mediaRepo->expects(self::once())
             ->method('findByIds')
@@ -885,9 +879,7 @@ final class FeedControllerTest extends TestCase
     {
         $media = new Media($path, 'checksum-' . $id, 128);
 
-        $property = new ReflectionProperty(Media::class, 'id');
-        $property->setAccessible(true);
-        $property->setValue($media, $id);
+        $this->assignEntityId($media, $id);
 
         $timestamp = new DateTimeImmutable($takenAt);
         $media->setTakenAt($timestamp);

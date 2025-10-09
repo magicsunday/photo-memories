@@ -21,7 +21,6 @@ use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 
 final class MemoryFeedBuilderTest extends TestCase
 {
@@ -84,9 +83,7 @@ final class MemoryFeedBuilderTest extends TestCase
     {
         $media = new Media('path-' . $id . '.jpg', 'checksum-' . $id, 1024);
 
-        $ref = new ReflectionProperty(Media::class, 'id');
-        $ref->setAccessible(true);
-        $ref->setValue($media, $id);
+        $this->assignEntityId($media, $id);
 
         $media->setNoShow($noShow);
 
