@@ -107,15 +107,11 @@ services:
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
 
-    Symfony\Component\Process\PhpExecutableFinder: ~
-
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager:
         arguments:
             $videoDirectory: '%memories.slideshow.video_dir%'
-            $projectDirectory: '%kernel.project_dir%'
             $slideDuration: '%memories.slideshow.image_duration_s%'
             $transitionDuration: '%memories.slideshow.transition_duration_s%'
-            $phpBinary: '%memories.slideshow.php_binary%'
             $generator: '@MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface'
             $transitions: '%memories.slideshow.transitions%'
             $musicTrack: '%memories.slideshow.music_path%'

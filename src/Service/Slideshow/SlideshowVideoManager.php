@@ -14,8 +14,6 @@ namespace MagicSunday\Memories\Service\Slideshow;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
-use Symfony\Component\Process\PhpExecutableFinder;
-use Symfony\Component\Process\Process;
 use Throwable;
 
 use function fclose;
@@ -42,19 +40,13 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 {
     private string $videoDirectory;
 
-    private string $projectDirectory;
-
     private float $slideDuration;
 
     private float $transitionDuration;
 
-    private PhpExecutableFinder $phpExecutableFinder;
-
     private SlideshowVideoGeneratorInterface $generator;
 
     private ?JobMonitoringEmitterInterface $monitoringEmitter;
-
-    private ?string $configuredPhpBinary;
 
     /**
      * @var list<string>
@@ -68,27 +60,19 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      */
     public function __construct(
         string $videoDirectory,
-        string $projectDirectory,
         float $slideDuration,
         float $transitionDuration,
-        ?string $phpBinary,
-        PhpExecutableFinder $phpExecutableFinder,
         SlideshowVideoGeneratorInterface $generator,
         array $transitions = [],
         ?string $musicTrack = null,
         ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $this->videoDirectory     = $videoDirectory;
-        $this->projectDirectory   = $projectDirectory;
-        $this->phpExecutableFinder = $phpExecutableFinder;
         $this->generator           = $generator;
         $this->monitoringEmitter  = $monitoringEmitter;
 
         $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
         $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.8;
-
-        $phpBinary                 = $phpBinary !== null ? trim($phpBinary) : null;
-        $this->configuredPhpBinary = $phpBinary !== '' ? $phpBinary : null;
 
         $this->transitions = $this->sanitizeTransitions($transitions);
 
@@ -191,32 +175,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         try {
             $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music']);
             file_put_contents($jobPath, $job->toJson(), LOCK_EX);
-
-            $started = false;
-
-            try {
-                $started = $this->startGenerator($job);
-            } catch (ProcessRuntimeException $processException) {
-                $this->emitMonitoring('fallback', [
-                    'itemId'  => $itemId,
-                    'reason'  => 'process_exception',
-                    'message' => $processException->getMessage(),
-                ]);
-                $started = false;
-            }
-
-            if ($started) {
-                $this->emitMonitoring('queued', [
-                    'itemId'     => $itemId,
-                    'slideCount' => count($slides),
-                    'videoPath'  => $videoPath,
-                    'music'      => $storyboard['music'],
-                    'transitionDuration' => $storyboard['transitionDuration'],
-                    'mode'       => 'process',
-                ]);
-
-                return SlideshowVideoStatus::generating($this->slideDuration);
-            }
 
             $this->emitMonitoring('queued', [
                 'itemId'     => $itemId,
@@ -372,30 +330,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
     }
 
-    private function startGenerator(SlideshowJob $job): bool
-    {
-        $console = $this->projectDirectory . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Memories.php';
-        if (!is_file($console)) {
-            throw new ProcessRuntimeException('Console entry point not found.');
-        }
-
-        $process = new Process([
-            $this->resolvePhpBinary(),
-            $console,
-            'slideshow:generate',
-            $job->jobFile(),
-        ]);
-
-        try {
-            $process->disableOutput();
-            $process->start();
-        } catch (Throwable $throwable) {
-            throw new ProcessRuntimeException($throwable->getMessage(), 0, $throwable);
-        }
-
-        return true;
-    }
-
     private function cleanupAfterSuccess(SlideshowJob $job): void
     {
         if (file_exists($job->lockPath())) {
@@ -427,20 +361,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         if (file_exists($jobPath)) {
             unlink($jobPath);
         }
-    }
-
-    private function resolvePhpBinary(): string
-    {
-        if ($this->configuredPhpBinary !== null) {
-            return $this->configuredPhpBinary;
-        }
-
-        $phpBinary = $this->phpExecutableFinder->find(false);
-        if (!is_string($phpBinary) || $phpBinary === '') {
-            throw new ProcessRuntimeException('PHP CLI executable could not be located.');
-        }
-
-        return $phpBinary;
     }
 
     private function emitMonitoring(string $status, array $context = []): void
