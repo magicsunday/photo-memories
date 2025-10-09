@@ -24,5 +24,7 @@ interface SlideshowVideoManagerInterface
      */
     public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus;
 
+    public function getStatusForItem(string $itemId): SlideshowVideoStatus;
+
     public function resolveVideoPath(string $itemId): ?string;
 }

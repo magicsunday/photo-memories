@@ -249,6 +249,36 @@ final class FeedController
         ]);
     }
 
+    public function triggerSlideshow(Request $request, string $itemId): JsonResponse
+    {
+        $dateInfo = $this->resolveDateFilter($this->normalizeString($request->getQueryParam('datum')));
+        if ($dateInfo['error'] !== null) {
+            return new JsonResponse([
+                'error' => $dateInfo['error'],
+            ], 400);
+        }
+
+        $result = $this->buildFeedResult($request, $dateInfo['date']);
+
+        foreach ($result['matchingItems'] as $item) {
+            if ($this->createItemId($item) !== $itemId) {
+                continue;
+            }
+
+            $memberIds = $item->getMemberIds();
+            $mediaMap  = $this->loadMediaMap($memberIds, $item->getAlgorithm() === 'video_stories');
+            $status    = $this->slideshowManager->ensureForItem($itemId, $memberIds, $mediaMap);
+
+            return new JsonResponse([
+                'slideshow' => $this->enrichSlideshowStatus($status),
+            ]);
+        }
+
+        return new JsonResponse([
+            'error' => 'Feed item not found.',
+        ], 404);
+    }
+
     /**
      * @return array{
      *     items: list<array<string, mixed>>,
@@ -823,7 +853,7 @@ final class FeedController
         $coverAltText  = null;
 
         if (isset($groupSelection['slideshow'])) {
-            $slideshow = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
+            $slideshow = $this->slideshowManager->getStatusForItem($itemId);
         }
 
         if ($memberPayload !== []) {
