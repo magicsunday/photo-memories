@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class DayAlbumClusterStrategyTest extends TestCase
@@ -27,6 +28,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     {
         $strategy = new DayAlbumClusterStrategy(
             localTimeHelper: new LocalTimeHelper('America/Los_Angeles'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 2,
         );
 
@@ -85,6 +87,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     {
         $strategy = new DayAlbumClusterStrategy(
             localTimeHelper: new LocalTimeHelper('UTC'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 3,
         );
 
@@ -101,6 +104,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     {
         $strategy = new DayAlbumClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 2,
         );
 
@@ -121,6 +125,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
     {
         $strategy = new DayAlbumClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 2,
         );
 

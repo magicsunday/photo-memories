@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor;
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorPipelineConfiguration;
 use MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry;
@@ -22,6 +23,7 @@ use function array_key_last;
 use function chmod;
 use function file_put_contents;
 use function is_file;
+use function str_contains;
 use function str_repeat;
 use function sys_get_temp_dir;
 use function tempnam;
@@ -137,6 +139,17 @@ final class CompositeMetadataExtractorTest extends TestCase
                 self::fail('Unable to clean up temporary file.');
             }
         }
+
+        $entries = $this->decodeIndexLog($media->getIndexLog());
+        self::assertNotSame([], $entries);
+        $last = $entries[array_key_last($entries)];
+        if (str_contains((string) $last['message'], 'MIME-Bestimmung erfolgreich')) {
+            self::markTestSkipped('Testumgebung erlaubt trotz chmod(0) noch Lesezugriff; Fehlerfall kann nicht simuliert werden.');
+        }
+
+        self::assertSame('metadata.mime', $last['component']);
+        self::assertSame('probe', $last['event']);
+        self::assertStringContainsString('MIME-Bestimmung fehlgeschlagen', (string) $last['message']);
     }
 
     #[Test]
@@ -145,14 +158,14 @@ final class CompositeMetadataExtractorTest extends TestCase
         $extractor = new class() implements SingleMetadataExtractorInterface {
             public bool $supportsCalled = false;
 
-            public function supports(string $filepath, $media): bool
+            public function supports(string $filepath, Media $media): bool
             {
                 $this->supportsCalled = true;
 
                 return true;
             }
 
-            public function extract(string $filepath, $media)
+            public function extract(string $filepath, Media $media): Media
             {
                 return $media;
             }
@@ -181,7 +194,7 @@ final class CompositeMetadataExtractorTest extends TestCase
         $last = $entries[array_key_last($entries)];
         self::assertSame('metadata.pipeline', $last['component']);
         self::assertSame('extractor.skip', $last['event']);
-        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $last['message']);
+        self::assertStringContainsString('Extractor SingleMetadataExtractorInterface@anonymous', (string) $last['message']);
         self::assertSame('Testabschaltung', $last['context']['reason'] ?? null);
 
         $summary = $telemetry->get($extractor::class);
@@ -194,12 +207,12 @@ final class CompositeMetadataExtractorTest extends TestCase
     public function extractorFailuresAreLoggedAndMeasured(): void
     {
         $extractor = new class() implements SingleMetadataExtractorInterface {
-            public function supports(string $filepath, $media): bool
+            public function supports(string $filepath, Media $media): bool
             {
                 return true;
             }
 
-            public function extract(string $filepath, $media)
+            public function extract(string $filepath, Media $media): Media
             {
                 throw new \RuntimeException('broken for test');
             }
@@ -221,7 +234,7 @@ final class CompositeMetadataExtractorTest extends TestCase
         $last = $entries[array_key_last($entries)];
         self::assertSame('metadata.pipeline', $last['component']);
         self::assertSame('extractor.failure', $last['event']);
-        self::assertStringContainsString('Extractor CompositeMetadataExtractorTest@anonymous', (string) $last['message']);
+        self::assertStringContainsString('Extractor SingleMetadataExtractorInterface@anonymous', (string) $last['message']);
         self::assertStringContainsString('fehlgeschlagen: broken for test', (string) $last['message']);
 
         $summary = $telemetry->get($extractor::class);
@@ -237,14 +250,14 @@ final class CompositeMetadataExtractorTest extends TestCase
         $extractor = new class() implements SingleMetadataExtractorInterface {
             public int $calls = 0;
 
-            public function supports(string $filepath, $media): bool
+            public function supports(string $filepath, Media $media): bool
             {
                 $this->calls++;
 
                 return true;
             }
 
-            public function extract(string $filepath, $media)
+            public function extract(string $filepath, Media $media): Media
             {
                 return $media;
             }

@@ -9,6 +9,17 @@
 
 declare(strict_types=1);
 
+namespace Psr\Clock;
+
+use DateTimeImmutable;
+
+if (!interface_exists(ClockInterface::class)) {
+    interface ClockInterface
+    {
+        public function now(): DateTimeImmutable;
+    }
+}
+
 namespace MagicSunday\Memories\Test\Unit\Service\Monitoring;
 
 use DateTimeImmutable;

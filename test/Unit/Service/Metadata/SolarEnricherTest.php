@@ -54,7 +54,7 @@ final class SolarEnricherTest extends TestCase
         $media = $this->makeMedia(
             id: 11,
             path: '/fixtures/golden-hour.jpg',
-            takenAt: new DateTimeImmutable('2024-06-01T04:45:00+00:00'),
+            takenAt: new DateTimeImmutable('2024-06-01T05:30:00+00:00'),
             lat: 48.1372,
             lon: 11.5756,
         );

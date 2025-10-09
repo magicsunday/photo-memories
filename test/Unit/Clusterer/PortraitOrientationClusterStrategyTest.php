@@ -17,6 +17,7 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\PortraitOrientationClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class PortraitOrientationClusterStrategyTest extends TestCase
@@ -25,6 +26,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     public function clustersPortraitSessions(): void
     {
         $strategy = new PortraitOrientationClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minPortraitRatio: 1.2,
             sessionGapSeconds: 900,
             minItemsPerRun: 4,
@@ -54,7 +56,9 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     #[Test]
     public function skipsLandscapePhotos(): void
     {
-        $strategy = new PortraitOrientationClusterStrategy();
+        $strategy = new PortraitOrientationClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $start = new DateTimeImmutable('2024-04-11 10:00:00', new DateTimeZone('UTC'));
         $items = [];
@@ -69,7 +73,12 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     #[Test]
     public function acceptsPortraitFlagWithoutDimensions(): void
     {
-        $strategy = new PortraitOrientationClusterStrategy(minPortraitRatio: 1.2, sessionGapSeconds: 900, minItemsPerRun: 1);
+        $strategy = new PortraitOrientationClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minPortraitRatio: 1.2,
+            sessionGapSeconds: 900,
+            minItemsPerRun: 1,
+        );
 
         $media = $this->makeMediaFixture(
             id: 3900,
@@ -90,7 +99,12 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     #[Test]
     public function rejectsItemsWithFalsePortraitFlagEvenWithPortraitRatio(): void
     {
-        $strategy = new PortraitOrientationClusterStrategy(minPortraitRatio: 1.2, sessionGapSeconds: 900, minItemsPerRun: 1);
+        $strategy = new PortraitOrientationClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minPortraitRatio: 1.2,
+            sessionGapSeconds: 900,
+            minItemsPerRun: 1,
+        );
 
         $media = $this->makeMediaFixture(
             id: 3901,
@@ -110,7 +124,12 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
     #[Test]
     public function requiresFacesOrPersonsEvenWhenPortraitFlagIsTrue(): void
     {
-        $strategy = new PortraitOrientationClusterStrategy(minPortraitRatio: 1.2, sessionGapSeconds: 900, minItemsPerRun: 1);
+        $strategy = new PortraitOrientationClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minPortraitRatio: 1.2,
+            sessionGapSeconds: 900,
+            minItemsPerRun: 1,
+        );
 
         $media = $this->makeMediaFixture(
             id: 3902,

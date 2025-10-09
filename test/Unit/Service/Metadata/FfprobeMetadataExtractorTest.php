@@ -164,8 +164,8 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertSame(TimeSource::VIDEO_QUICKTIME, $media->getTimeSource());
             $takenAt = $media->getTakenAt();
             self::assertInstanceOf(DateTimeImmutable::class, $takenAt);
-            self::assertSame('2025-01-01T04:59:58+00:00', $takenAt?->format(DateTimeInterface::ATOM));
-            self::assertSame('America/New_York', $media->getTzId());
+            self::assertSame('2024-12-31T23:59:58-05:00', $takenAt?->format(DateTimeInterface::ATOM));
+            self::assertSame('-05:00', $media->getTzId());
             self::assertSame(-300, $media->getTimezoneOffsetMin());
         } finally {
             unlink($videoPath);

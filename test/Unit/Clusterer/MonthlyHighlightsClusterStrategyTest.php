@@ -151,7 +151,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
                 $media->setContrast(0.63);
                 $media->setCameraMake(null);
                 $media->setCameraModel(null);
-                $media->setContentKind(ContentKind::Photo);
+                $media->setContentKind(ContentKind::PHOTO);
             },
         );
     }

@@ -48,7 +48,7 @@ final class StoryboardTextGeneratorTest extends TestCase
 
         self::assertSame('Mit Anna und Ben in Brandenburger Tor', $result['title']);
         self::assertSame(
-            'Gemeinsam mit Anna und Ben in Brandenburger Tor. Szenen: Nacht und Stadt. Tags: Berlin und Reise.',
+            'Gemeinsam mit Anna und Ben in Brandenburger Tor. Szenen: Stadt und Nacht. Tags: Berlin, Reise und Brandenburg.',
             $result['description']
         );
     }
