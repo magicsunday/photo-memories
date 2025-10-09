@@ -42,6 +42,13 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private ?string $configuredPhpBinary;
 
     /**
+     * @var list<string>
+     */
+    private array $transitions;
+
+    private ?string $musicTrack;
+
+    /**
      * @param list<string> $transitions
      */
     public function __construct(
@@ -51,8 +58,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         private float $transitionDuration,
         ?string $phpBinary,
         private PhpExecutableFinder $phpExecutableFinder,
-        private array $transitions = [],
-        private ?string $musicTrack = null,
+        array $transitions = [],
+        ?string $musicTrack = null,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $phpBinary                 = $phpBinary !== null ? trim($phpBinary) : null;
@@ -66,8 +73,21 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $this->transitionDuration = 0.8;
         }
 
-        $transitions = [];
-        foreach ($this->transitions as $transition) {
+        $this->transitions = $this->sanitizeTransitions($transitions);
+
+        $musicTrack       = $musicTrack !== null ? trim($musicTrack) : '';
+        $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
+    }
+
+    /**
+     * @param array<int, mixed> $transitions
+     *
+     * @return list<string>
+     */
+    private function sanitizeTransitions(array $transitions): array
+    {
+        $sanitized = [];
+        foreach ($transitions as $transition) {
             if (!is_string($transition)) {
                 continue;
             }
@@ -77,13 +97,10 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
                 continue;
             }
 
-            $transitions[] = $trimmed;
+            $sanitized[] = $trimmed;
         }
 
-        $this->transitions = $transitions;
-
-        $musicTrack = $this->musicTrack !== null ? trim($this->musicTrack) : '';
-        $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
+        return $sanitized;
     }
 
     /**
