@@ -5,6 +5,12 @@ const pixelPng = Buffer.from(
   'base64'
 );
 
+declare global {
+  interface Window {
+    __timeouts?: number[];
+  }
+}
+
 test.describe('Rückblick SPA', () => {
   test('lädt Feed, filtert nach Score und Strategie', async ({ page }) => {
     await page.route('**/api/feed**', async (route) => {
@@ -121,5 +127,94 @@ test.describe('Rückblick SPA', () => {
 
     await page.getByRole('button', { name: 'Zurücksetzen' }).click();
     await expect(page.locator('.card')).toHaveCount(2);
+  });
+
+  test('startet die Videoerstellung bei Bedarf neu', async ({ page }) => {
+    await page.addInitScript(() => {
+      const originalSetTimeout = window.setTimeout;
+      window.__timeouts = [];
+      window.setTimeout = function patchedSetTimeout(handler, timeout, ...args) {
+        window.__timeouts.push(typeof timeout === 'number' ? timeout : Number(timeout));
+
+        return originalSetTimeout.call(this, handler, timeout, ...args);
+      };
+    });
+
+    await page.route('**/api/feed**', async (route) => {
+      const body = {
+        meta: {
+          erstelltAm: '2024-03-02T12:00:00+01:00',
+          gesamtVerfuegbar: 1,
+          anzahlGeliefert: 1,
+          verfuegbareStrategien: ['holiday_event'],
+        },
+        items: [
+          {
+            id: 'skyline-trip',
+            titel: 'Skyline-Tour',
+            untertitel: 'Abendstimmung in der Stadt',
+            score: 0.42,
+            coverMediaId: 101,
+            cover: '/api/media/101/thumbnail?breite=640',
+            galerie: [
+              { mediaId: 101, thumbnail: '/api/media/101/thumbnail?breite=320' },
+            ],
+            slideshow: {
+              status: 'nicht_verfuegbar',
+              meldung: 'Noch kein Video vorhanden.',
+              dauerProBildSekunden: 3.5,
+            },
+          },
+        ],
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.route('**/api/media/**/thumbnail**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: pixelPng,
+      });
+    });
+
+    let videoRequestCount = 0;
+    await page.route('**/api/feed/skyline-trip/video', async (route) => {
+      videoRequestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'in_erstellung',
+          meldung: 'Video wird erstellt …',
+          dauerProBildSekunden: 3.5,
+        }),
+      });
+    });
+
+    await page.goto('/app/');
+
+    const actionButton = page.getByRole('button', { name: 'Video erstellen' });
+    await expect(actionButton).toBeVisible();
+
+    const response = await Promise.all([
+      page.waitForResponse('**/api/feed/skyline-trip/video'),
+      actionButton.click(),
+    ]).then(([videoResponse]) => videoResponse);
+
+    await expect(page.locator('.slideshow__status')).toContainText('Video wird erstellt');
+    await expect(page.locator('.slideshow__status .spinner')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Video erstellen' })).toHaveCount(0);
+
+    const lastTimeout = await page.evaluate(() => window.__timeouts?.[window.__timeouts.length - 1] ?? null);
+    expect(lastTimeout).toBe(4000);
+
+    expect(videoRequestCount).toBe(1);
+    expect(await response.json()).toMatchObject({ status: 'in_erstellung' });
   });
 });
