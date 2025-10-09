@@ -280,18 +280,18 @@ function renderItems() {
   }
 }
 
-function ensureSlideshowRefreshTimer(delay = 10000) {
+function ensureSlideshowRefreshTimer(delay = 4000) {
   if (slideshowRefreshTimer !== null) {
     return;
   }
 
   slideshowRefreshTimer = window.setTimeout(() => {
     slideshowRefreshTimer = null;
-    fetchFeed();
+    void refreshPendingSlideshows();
   }, delay);
 }
 
-function restartSlideshowRefreshTimer(delay = 10000) {
+function restartSlideshowRefreshTimer(delay = 4000) {
   cancelSlideshowRefreshTimer();
   ensureSlideshowRefreshTimer(delay);
 }
@@ -578,7 +578,7 @@ async function triggerSlideshowGeneration(itemId) {
     renderItems();
 
     if (slideshow.status === 'in_erstellung') {
-      restartSlideshowRefreshTimer(10000);
+      restartSlideshowRefreshTimer(4000);
     } else if (slideshow.status === 'bereit') {
       cancelSlideshowRefreshTimer();
     }
@@ -637,7 +637,75 @@ function applySlideshowUpdate(itemId, itemPayload, slideshow) {
   }
 
   if (!updated) {
-    fetchFeed();
+    console.warn('Konnte Slideshow-Update nicht anwenden: Element nicht im Feed gefunden.', {
+      itemId,
+      itemPayload,
+    });
+  }
+
+  return updated;
+}
+
+async function refreshPendingSlideshows() {
+  const pendingIds = getPendingSlideshowItemIds();
+  if (pendingIds.length === 0) {
+    cancelSlideshowRefreshTimer();
+
+    return;
+  }
+
+  const results = await Promise.all(
+    pendingIds.map((pendingId) => fetchSlideshowStatus(pendingId)),
+  );
+
+  const hasUpdates = results.some((result) => result.updated);
+
+  if (hasUpdates) {
+    renderItems();
+  }
+
+  const pendingAfterUpdate = getPendingSlideshowItemIds();
+  if (pendingAfterUpdate.length > 0) {
+    ensureSlideshowRefreshTimer();
+  } else {
+    cancelSlideshowRefreshTimer();
+  }
+}
+
+function getPendingSlideshowItemIds() {
+  return state.items
+    .filter((item) => item && typeof item === 'object')
+    .filter((item) => item.slideshow && item.slideshow.status === 'in_erstellung')
+    .filter((item) => typeof item.id === 'string' && item.id !== '')
+    .map((item) => item.id);
+}
+
+async function fetchSlideshowStatus(itemId) {
+  try {
+    const response = await fetch(`/api/feed/${encodeURIComponent(itemId)}/video`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return { slideshow: null, updated: false };
+    }
+
+    const payload = await response.json();
+    const { slideshow, item } = normaliseSlideshowTriggerPayload(payload);
+
+    if (!slideshow) {
+      return { slideshow: null, updated: false };
+    }
+
+    const updated = applySlideshowUpdate(itemId, item, slideshow);
+
+    return { slideshow, updated };
+  } catch (error) {
+    console.error('Konnte Videostatus nicht abrufen.', error);
+
+    return { slideshow: null, updated: false };
   }
 }
 
