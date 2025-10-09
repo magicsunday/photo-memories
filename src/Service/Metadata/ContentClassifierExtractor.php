@@ -120,15 +120,30 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
 
     public function extract(string $filepath, Media $media): Media
     {
+        $bag = $media->getFeatureBag();
+        $bag->setClassificationKind(null);
+        $bag->setClassificationConfidence(null);
+        $bag->setClassificationShouldHide(null);
+
         $result = $this->classify($media, $filepath);
         if ($result === null) {
+            $media->setFeatureBag($bag);
+
             return $media;
         }
 
         $media->setContentKind($result['kind']);
-        if ($result['confidence'] >= $this->minConfidenceToHide && $this->shouldHide($result['kind'])) {
+        $bag->setClassificationKind($result['kind']);
+        $bag->setClassificationConfidence($result['confidence']);
+
+        $shouldHide = $result['confidence'] >= $this->minConfidenceToHide && $this->shouldHide($result['kind']);
+        $bag->setClassificationShouldHide($shouldHide);
+
+        if ($shouldHide) {
             $media->setNoShow(true);
         }
+
+        $media->setFeatureBag($bag);
 
         return $media;
     }
