@@ -18,11 +18,11 @@ php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limi
 
 ### Beobachtungen zu PHPStan
 
-1. **Fehlende Iterable-Werttypen:** Mehrere Entitäten (`Media`, `Location`) sowie Feed-Datenklassen liefern Arrays ohne Werttyp. Hier sollten generische Typannotationen (`array<string, string>` bzw. `list<MemoryFeedItem>`) ergänzt oder Value Objects eingeführt werden.
-2. **Überholte Laufzeitprüfungen:** Viele `is_*`-Kontrollen verifizieren bereits streng getypte Werte und können zugunsten von Guard-Klassen oder präziseren Typannotationen entfernt werden.
-3. **Imagick-Integration prüfen:** `ThumbnailService` referenziert `Imagick::autoOrientImage()`, die im aktuellen Binding fehlt; entweder ist eine Polyfill-Hilfsmethode nötig oder die Logik muss angepasst werden.
-4. **Ternärstil & Null-Koaleszenz:** Kurze Ternär-Operatoren und redundante `??`-Absicherungen widersprechen den PHPStan-Regeln und sollten refaktoriert werden.
-5. **Doctrine IDs:** Die als `read-only` gemeldeten Identifikatoren benötigen dedizierte Schreib-Extensions oder explizite Setter in Tests, um PHPStan die Persistenzzuweisung zu erklären.
+- [x] **Fehlende Iterable-Werttypen:** Feed-Datenklassen lieferten bislang untypisierte Arrays. `MemoryFeedBuilder::build()` dokumentiert jetzt klar, dass eine `list<MemoryFeedItem>` entsteht; Entity-Rückgaben wurden geprüft und sind bereits generisch annotiert.【F:src/Service/Feed/MemoryFeedBuilder.php†L88-L179】
+- [ ] **Überholte Laufzeitprüfungen:** Viele `is_*`-Kontrollen verifizieren bereits streng getypte Werte und können zugunsten von Guard-Klassen oder präziseren Typannotationen entfernt werden.
+- [ ] **Imagick-Integration prüfen:** `ThumbnailService` referenziert `Imagick::autoOrientImage()`, die im aktuellen Binding fehlt; entweder ist eine Polyfill-Hilfsmethode nötig oder die Logik muss angepasst werden.
+- [ ] **Ternärstil & Null-Koaleszenz:** Kurze Ternär-Operatoren und redundante `??`-Absicherungen widersprechen den PHPStan-Regeln und sollten refaktoriert werden.
+- [ ] **Doctrine IDs:** Die als `read-only` gemeldeten Identifikatoren benötigen dedizierte Schreib-Extensions oder explizite Setter in Tests, um PHPStan die Persistenzzuweisung zu erklären.
 
 ## Status der Aufgaben
 
@@ -36,3 +36,4 @@ php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limi
 - **Imagick-Fallback ergänzt:** `ThumbnailService::applyOrientationWithImagick()` prüft, ob `autoOrientImage()` verfügbar ist, und bietet andernfalls eine manuelle Transformationsroutine inklusive Flips und Rotationen, um ältere Imagick-Builds zu unterstützen.【F:src/Service/Thumbnail/ThumbnailService.php†L18-L25】【F:src/Service/Thumbnail/ThumbnailService.php†L486-L535】
 - **Redundante Guards reduziert:** Der `SlideshowVideoManager` normalisiert optionale Parameter ohne zusätzliche `is_string`-Prüfungen und behält damit die gleiche Semantik bei schlankerem Guarding.【F:src/Service/Slideshow/SlideshowVideoManager.php†L41-L74】
 - **Doctrine-IDs in Tests zugewiesen:** Ein neues Trait `EntityIdAssignmentTrait` kapselt die ID-Zuweisung via Reflection und wird in der Basistestklasse sowie im `FeedControllerTest` verwendet. Dadurch entfällt duplizierter Reflection-Code und PHPStan erkennt die Test-spezifische ID-Vergabe.【F:test/Support/EntityIdAssignmentTrait.php†L1-L22】【F:test/TestCase.php†L18-L47】【F:test/Unit/Http/Controller/FeedControllerTest.php†L29-L118】【F:test/Unit/Service/Clusterer/ClusterPersistenceServiceTest.php†L29-L274】
+- **Feed-Builder typisiert:** `MemoryFeedBuilder::build()` kennzeichnet die Eingabe als `list<ClusterDraft>` und liefert explizit `list<MemoryFeedItem>`, womit PHPStan-Zweifel zu Array-Werttypen entfallen.【F:src/Service/Feed/MemoryFeedBuilder.php†L88-L179】
