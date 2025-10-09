@@ -305,6 +305,9 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             'slideshow:generate',
             $job->jobFile(),
         ], $this->consoleWorkingDirectory);
+        $process->setOptions([
+            'create_new_console' => true,
+        ]);
         $process->disableOutput();
         $process->setTimeout(null);
         $process->start();
