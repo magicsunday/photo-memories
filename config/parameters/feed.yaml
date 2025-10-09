@@ -2,20 +2,35 @@
 # Feed personalization & limits
 ########################################
 parameters:
+    # Description: Default time of day when feed notifications should be sent if not overridden.
     env(MEMORIES_FEED_NOTIFICATIONS_DEFAULT_TIME): '09:00'
+    # Description: Timezone used for scheduling feed notifications.
     env(MEMORIES_FEED_NOTIFICATIONS_TIMEZONE): 'Europe/Berlin'
+    # Description: Minimum score threshold for including a cluster in the feed.
     memories.feed.min_score: 0.35
+    # Description: Minimum number of members required for a cluster to appear in the feed.
     memories.feed.min_members: 4
+    # Description: Maximum number of feed items delivered per day.
     memories.feed.max_per_day: 6
+    # Description: Maximum total number of feed items returned across pagination.
     memories.feed.max_total: 60
+    # Description: Maximum number of feed items contributed by a single algorithm.
     memories.feed.max_per_algorithm: 12
+    # Description: File path storing user feed personalization preferences.
     memories.feed.preferences_path: '%kernel.project_dir%/var/feed-preferences.json'
+    # Description: Minimum acceptable quality score for feed entries.
     memories.feed.quality_floor: 0.30
+    # Description: Minimum share of people coverage expected in feed clusters.
     memories.feed.people_coverage_min: 0.25
+    # Description: Number of days considered "recent" for feed scoring.
     memories.feed.recent_days: 30
+    # Description: Number of days after which a cluster is considered stale for feed scoring.
     memories.feed.stale_days: 365
+    # Description: Bonus score applied to recent clusters.
     memories.feed.recent_score_bonus: 0.03
+    # Description: Penalty score applied to stale clusters.
     memories.feed.stale_score_penalty: 0.05
+    # Description: Personalization profiles controlling feed thresholds for different audience types.
     memories.feed.personalization.profiles:
         default:
             min_score: '%memories.feed.min_score%'
@@ -53,13 +68,21 @@ parameters:
             stale_days: 240
             recent_score_bonus: 0.04
             stale_score_penalty: 0.06
+    # Description: Default number of feed items returned by HTTP endpoints.
     memories.http.feed.default_limit: 24
+    # Description: Maximum number of feed items allowed per HTTP request.
     memories.http.feed.max_limit: 120
+    # Description: Number of preview images returned for each cluster in HTTP responses.
     memories.http.feed.preview_images: 20
+    # Description: Multiplier used to expand cluster membership when fetching feed items.
     memories.http.feed.cluster_multiplier: 4
+    # Description: Width in pixels for feed cover images served via HTTP.
     memories.http.feed.cover_width: 640
+    # Description: Width in pixels for feed member thumbnails served via HTTP.
     memories.http.feed.member_width: 320
+    # Description: Maximum thumbnail width in pixels allowed for feed imagery.
     memories.http.feed.max_thumbnail_width: 2048
+    # Description: Notification channels and their schedules for feed reminders.
     memories.feed.notifications.channels:
         push:
             lead_times: ['P0D', 'P1D']
@@ -67,9 +90,13 @@ parameters:
         email:
             lead_times: ['P2D']
             send_time: '08:00'
+    # Description: Runtime default notification send time sourced from the environment.
     memories.feed.notifications.default_time: '%env(string:MEMORIES_FEED_NOTIFICATIONS_DEFAULT_TIME)%'
+    # Description: Runtime timezone used for feed notification scheduling.
     memories.feed.notifications.timezone: '%env(string:MEMORIES_FEED_NOTIFICATIONS_TIMEZONE)%'
+    # Description: Number of months displayed in the SPA timeline view.
     memories.spa.timeline_months: 12
+    # Description: Gesture mapping for SPA interactions across views.
     memories.spa.gestures:
         feed:
             refresh: 'pull-down'
@@ -81,6 +108,7 @@ parameters:
             next: 'swipe-left'
             previous: 'swipe-right'
             close: 'swipe-down'
+    # Description: Offline configuration for the SPA service worker and caches.
     memories.spa.offline:
         service_worker: '/app/service-worker.js'
         scope: '/'
@@ -91,6 +119,7 @@ parameters:
             - { pattern: '^/api/media/', strategy: 'stale-while-revalidate' }
             - { pattern: '^/thumbnails/', strategy: 'cache-first' }
         fallback: '/offline'
+    # Description: Animation timings for SPA interface components.
     memories.spa.animations:
         feed:
             card_ms: 280

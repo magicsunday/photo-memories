@@ -2,97 +2,171 @@
 # Projekt-Parameter (zentral steuerbar)
 ########################################
 parameters:
+    # Description: File extensions that are considered images during indexing.
     memories.index.image_ext: ['jpg','jpeg','jpe','jxl','avif','heic','heif','png','webp','gif','bmp','tiff','tif','cr2','cr3','nef','arw','rw2','raf','dng']
+    # Description: File extensions that are treated as videos during indexing.
     memories.index.video_ext: []
 #    memories.index.video_ext: ['mp4','m4v','mov','3gp','3g2','avi','mkv','webm']
+    # Description: Default batch size for the media indexing command when no environment override exists.
     env(MEMORIES_INDEX_BATCH_SIZE): '25'
+    # Description: Configured batch size for indexing operations, derived from the environment.
     memories.index.batch_size: '%env(int:MEMORIES_INDEX_BATCH_SIZE)%'
 
+    # Description: Timestamp in seconds of the frame extracted as poster image for generated video thumbnails.
     memories.video.poster_frame_second: 1.5
+    # Description: Default name of the ffmpeg binary used for video processing.
     memories.video.ffmpeg_binary_default: 'ffmpeg'
+    # Description: Resolved path to the ffmpeg binary, allowing environment overrides.
     memories.video.ffmpeg_path: "%env(default:memories.video.ffmpeg_binary_default:FFMPEG_PATH)%"
+    # Description: Default name of the ffprobe binary used for video inspection.
     memories.video.ffprobe_binary_default: 'ffprobe'
+    # Description: Resolved path to the ffprobe binary, allowing environment overrides.
     memories.video.ffprobe_path: "%env(default:memories.video.ffprobe_binary_default:FFPROBE_PATH)%"
 
+    # Description: Ordered list of metadata pipeline step service identifiers.
     memories.metadata.pipeline.steps: {}
+    # Description: Flag controlling whether telemetry collection for the metadata pipeline is enabled by default.
     memories.metadata.pipeline.telemetry.enabled_default: false
+    # Description: Runtime flag for metadata pipeline telemetry sourced from the environment.
     memories.metadata.pipeline.telemetry.enabled: '%env(default:memories.metadata.pipeline.telemetry.enabled_default:bool:MEMORIES_METADATA_PIPELINE_TELEMETRY)%'
 
+    # Description: Default executable path for the face detection binary if none is provided.
     memories.face_detection.binary_default: ''
+    # Description: Resolved face detection binary path allowing environment overrides.
     memories.face_detection.binary: "%env(default:memories.face_detection.binary_default:MEMORIES_FACE_DETECTOR_BIN)%"
+    # Description: Default cascade classifier path for the face detection engine.
     memories.face_detection.cascade_default: ''
+    # Description: Resolved cascade classifier path allowing environment overrides.
     memories.face_detection.cascade: "%env(default:memories.face_detection.cascade_default:MEMORIES_FACE_DETECTOR_CASCADE)%"
+    # Description: Scale factor applied per image pyramid level during face detection.
     memories.face_detection.scale_factor: 1.1
+    # Description: Minimum number of neighbor detections required to keep a face candidate.
     memories.face_detection.min_neighbors: 4
+    # Description: Minimum pixel size for detected faces to be considered valid.
     memories.face_detection.min_size: 72
+    # Description: Maximum time in seconds allowed for a single face detection run.
     memories.face_detection.timeout: 10.0
 
     # Hash Defaults
+    # Description: Sample size used for discrete cosine transform hashing.
     memories.hash.dct_sample: 32
+    # Description: Number of low-frequency coefficients used for perceptual hashing.
     memories.hash.lowfreq: 16
+    # Description: Number of leading bits stored for the perceptual hash prefix.
     memories.hash.phash_prefix_length: 16
 
     # Home configuration
+    # Description: Default latitude of the home location used for clustering logic.
     memories.home.lat_default: 0.0
+    # Description: Default longitude of the home location used for clustering logic.
     memories.home.lon_default: 0.0
+    # Description: Default radius in kilometers defining the proximity of the home area.
     memories.home.radius_km_default: 15.0
+    # Description: Default maximum number of center points representing the home location.
     memories.home.max_centers_default: 2
+    # Description: Default factor applied when expanding the fallback search radius around home.
     memories.home.fallback_radius_scale_default: 1.75
+    # Description: Default hash string identifying the current home configuration schema.
     env(MEMORIES_HOME_VERSION_HASH): 'home_config_v1'
+    # Description: Runtime hash string for home configuration versioning, allowing overrides.
     memories.home.version_hash: '%env(string:MEMORIES_HOME_VERSION_HASH)%'
 
     # Geocoding Defaults
+    # Description: Base URL for the Nominatim geocoding API.
     memories.geocoding.nominatim.base_url: '%env(string:NOMINATIM_BASE_URL)%'
+    # Description: Contact email provided to the Nominatim service for identification.
     memories.geocoding.nominatim.email:    '%env(string:NOMINATIM_EMAIL)%'
+    # Description: User agent string used in requests to Nominatim.
     memories.geocoding.nominatim.user_agent: 'Rueckblick/1.0'
+    # Description: Default zoom level requested from the Nominatim API for reverse geocoding.
     memories.geocoding.nominatim.zoom: 14
+    # Description: Delay in milliseconds enforced between consecutive geocoding requests.
     memories.geocoding.delay_ms: 1200
+    # Description: Number of geocoding entries processed in a single refresh batch.
     memories.geocoding.refresh.batch_size: 25
+    # Description: Base URL of the Overpass API endpoint for point-of-interest lookups.
     memories.geocoding.overpass.base_url: 'https://overpass-api.de/api'
+    # Description: Request timeout in seconds used for Overpass API calls.
     memories.geocoding.overpass.timeout: 25
+    # Description: Search radius in meters used for Overpass point-of-interest queries.
     memories.geocoding.overpass.radius_m: 250
+    # Description: Maximum number of points of interest fetched per Overpass request.
     memories.geocoding.overpass.max_pois: 15
+    # Description: Multiplier applied to extend Overpass fetch limits beyond the default amount.
     memories.geocoding.overpass.fetch_limit_multiplier: 3.0
+    # Description: Whitelist of point-of-interest categories allowed from Overpass responses.
     memories.geocoding.overpass.allowed_pois: []
+    # Description: Default locale preference for localized labels and formatting.
     memories.localization.preferred_locale_default: 'de'
+    # Description: Runtime locale preference sourced from the environment.
     memories.localization.preferred_locale: '%env(default:memories.localization.preferred_locale_default:string:MEMORIES_PREFERRED_LOCALE)%'
 
+    # Description: Fallback timezone used when no specific timezone information is available.
     memories.timezone.default: 'UTC'
+    # Description: Default timezone used for clustering operations that require local context.
     memories.cluster.timezone.default: 'Europe/Berlin'
+    # Description: Ordered list determining which time sources are used to normalize media timestamps.
     memories.time.normalizer.source_priority: ['filename','file_mtime']
+    # Description: Default maximum offset in minutes allowed when aligning timestamps from different sources.
     memories.time.normalizer.max_offset_minutes_default: 720
+    # Description: Runtime maximum offset in minutes sourced from the environment.
     memories.time.normalizer.max_offset_minutes: '%env(default:memories.time.normalizer.max_offset_minutes_default:int:MEMORIES_TIME_NORMALIZER_MAX_OFFSET_MINUTES)%'
 
+    # Description: Default minimum duration in minutes that qualifies as a transport leg.
     memories.cluster.transport_speed.min_leg_duration_minutes_default: 5.0
+    # Description: Default minimum travel distance in kilometers to consider a transport leg.
     memories.cluster.transport_speed.min_leg_distance_km_default: 10.0
+    # Description: Default speed threshold in km/h above which a transport leg is considered high speed.
     memories.cluster.transport_speed.high_speed_threshold_kmh_default: 160.0
+    # Description: Runtime minimum duration in minutes for transport legs, allowing environment overrides.
     memories.cluster.transport_speed.min_leg_duration_minutes: '%env(default:memories.cluster.transport_speed.min_leg_duration_minutes_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_MINUTES)%'
+    # Description: Runtime minimum distance in kilometers for transport legs, allowing environment overrides.
     memories.cluster.transport_speed.min_leg_distance_km: '%env(default:memories.cluster.transport_speed.min_leg_distance_km_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_DISTANCE_KM)%'
+    # Description: Runtime high-speed threshold in km/h for transport legs, allowing environment overrides.
     memories.cluster.transport_speed.high_speed_threshold_kmh: '%env(default:memories.cluster.transport_speed.high_speed_threshold_kmh_default:float:MEMORIES_CLUSTER_TRANSPORT_HIGH_SPEED_THRESHOLD_KMH)%'
 
+    # Description: Default distance in kilometers from home that qualifies as a vacation trip.
     memories.cluster.vacation.min_away_distance_km_default: 120.0
+    # Description: Runtime distance in kilometers defining vacation trips, allowing environment overrides.
     memories.cluster.vacation.min_away_distance_km: '%env(default:memories.cluster.vacation.min_away_distance_km_default:float:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DISTANCE_KM)%'
+    # Description: Default minimum number of media items per day to consider a vacation day.
     memories.cluster.vacation.min_items_per_day_default: 3
+    # Description: Runtime minimum number of media items per day for vacation detection, allowing environment overrides.
     memories.cluster.vacation.min_items_per_day: '%env(default:memories.cluster.vacation.min_items_per_day_default:int:MEMORIES_CLUSTER_VACATION_MIN_ITEMS_PER_DAY)%'
+    # Description: Default minimum number of days away from home to identify a vacation.
     memories.cluster.vacation.min_away_days_default: 1
+    # Description: Runtime minimum number of days away from home for vacation detection, allowing environment overrides.
     memories.cluster.vacation.min_away_days: '%env(default:memories.cluster.vacation.min_away_days_default:int:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DAYS)%'
+    # Description: Default minimum number of members in a cluster to qualify as a vacation highlight.
     memories.cluster.vacation.min_members_default: 0
+    # Description: Runtime minimum cluster members for vacation highlights, allowing environment overrides.
     memories.cluster.vacation.min_members: '%env(default:memories.cluster.vacation.min_members_default:int:MEMORIES_CLUSTER_VACATION_MIN_MEMBERS)%'
 
+    # Description: List of person identifiers that should always be treated as important for clustering.
     memories.cluster.cohort.important_person_ids: []
+    # Description: List of fallback person identifiers used when important people are missing.
     memories.cluster.cohort.fallback_person_ids: []
 
     # Thumbnail-Größen (px)
+    # Description: Thumbnail sizes in pixels generated for media assets.
     memories.thumbnail_sizes: [320, 1024]
+    # Description: Default flag controlling whether EXIF orientation should be applied to thumbnails.
     memories.thumbnail.apply_orientation_default: false
+    # Description: Runtime flag indicating whether thumbnail orientation correction is active.
     memories.thumbnail.apply_orientation: '%env(default:memories.thumbnail.apply_orientation_default:bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
 
     # Consolidation Defaults
+    # Description: Minimum aggregate score required for a cluster to be consolidated.
     memories.cluster.consolidate.min_score: 0.30
+    # Description: Minimum number of media items required for a cluster during consolidation.
     memories.cluster.consolidate.min_size: 3
+    # Description: Overlap ratio threshold above which clusters are merged during consolidation.
     memories.cluster.consolidate.overlap_merge_threshold: 0.50
+    # Description: Overlap ratio threshold above which clusters are dropped during consolidation.
     memories.cluster.consolidate.overlap_drop_threshold: 0.70
+    # Description: Maximum number of consolidated results a single media item may appear in.
     memories.cluster.consolidate.per_media_cap: 2
+    # Description: Ordered list defining which cluster types should be retained when conflicts arise.
     memories.cluster.consolidate.keep_order:
         - 'vacation'
         - 'hike_adventure'
@@ -130,12 +204,15 @@ parameters:
         - 'device_similarity'
         - 'phash_similarity'
         - 'burst'
+    # Description: Ordered ranking of cluster types per classification category.
     memories.cluster.consolidate.classification_priority:
         vacation:
             - 'vacation'
             - 'short_trip'
             - 'day_trip'
+    # Description: Default group name assigned when no specific grouping is matched.
     memories.cluster.consolidate.default_group: 'default'
+    # Description: Mapping of cluster types to consolidated group identifiers.
     memories.cluster.consolidate.groups:
         time_similarity: 'time_and_basics'
         day_album: 'time_and_basics'
@@ -173,18 +250,24 @@ parameters:
         device_similarity: 'similarity_algorithms'
         phash_similarity: 'similarity_algorithms'
         cross_dimension: 'similarity_algorithms'
+    # Description: Cluster types that should be annotated but not promoted during consolidation.
     memories.cluster.consolidate.annotate_only:
         - 'phash_similarity'
         - 'burst'
+    # Description: Minimum share of unique media items required to keep certain cluster types.
     memories.cluster.consolidate.min_unique_share:
         photo_motif: 0.25
         device_similarity: 0.40
         panorama: 0.25
         portrait_orientation: 0.25
         video_stories: 0.25
+    # Description: Flag indicating whether clusters must have valid timestamps to be consolidated.
     memories.cluster.consolidate.require_valid_time: true
+    # Description: Minimum year required for a cluster to be considered valid during consolidation.
     memories.cluster.consolidate.min_valid_year: 1990
+    # Description: Maximum number of members stored in persistence for a single cluster.
     memories.cluster.persistence.max_members: '%env(int:MEMORIES_CLUSTER_MAX_MEMBERS)%'
+    # Description: Threshold profiles describing transit detection parameters by name.
     memories.cluster.transit.threshold_profiles:
         default:
             min_travel_km: 70.0
@@ -200,8 +283,11 @@ parameters:
             min_fast_segments: 2
             max_heading_change_deg: 120.0
             min_consistent_heading_segments: 1
+    # Description: Name of the default transit threshold profile applied when none is specified.
     memories.cluster.transit.default_profile: 'default'
+    # Description: Active transit threshold profile selected via the environment.
     memories.cluster.transit.active_profile: '%env(default:memories.cluster.transit.default_profile:MEMORIES_CLUSTER_TRANSIT_PROFILE)%'
+    # Description: Weights overriding default cluster scoring contributions per cluster type.
     memories.cluster.scoring.weight_overrides:
         time_similarity:
             quality: 0.24
@@ -260,55 +346,103 @@ parameters:
 
     # Cluster Strategy Priorities
     # Higher numbers run earlier; values normalized to an evenly spaced 40-100 range.
+    # Description: Priority assigned to the "this month over years" cluster strategy.
     memories.cluster.priority.this_month_over_years_cluster_strategy: 100
+    # Description: Priority assigned to the perceptual hash similarity cluster strategy.
     memories.cluster.priority.phash_similarity_strategy: 99
+    # Description: Priority assigned to the burst cluster strategy.
     memories.cluster.priority.burst_cluster_strategy: 98
+    # Description: Priority assigned to the vacation cluster strategy.
     memories.cluster.priority.vacation_cluster_strategy: 96
+    # Description: Priority assigned to the transit travel day cluster strategy.
     memories.cluster.priority.transit_travel_day_cluster_strategy: 94
+    # Description: Priority assigned to the first visit place cluster strategy.
     memories.cluster.priority.first_visit_place_cluster_strategy: 91
+    # Description: Priority assigned to the significant place cluster strategy.
     memories.cluster.priority.significant_place_cluster_strategy: 89
+    # Description: Priority assigned to the location similarity cluster strategy.
     memories.cluster.priority.location_similarity_strategy: 88
+    # Description: Priority assigned to the person cohort cluster strategy.
     memories.cluster.priority.person_cohort_cluster_strategy: 87
+    # Description: Priority assigned to the holiday event cluster strategy.
     memories.cluster.priority.holiday_event_cluster_strategy: 86
+    # Description: Priority assigned to the New Year's Eve cluster strategy.
     memories.cluster.priority.new_year_eve_cluster_strategy: 85
+    # Description: Priority assigned to the cityscape night cluster strategy.
     memories.cluster.priority.cityscape_night_cluster_strategy: 81
+    # Description: Priority assigned to the nightlife event cluster strategy.
     memories.cluster.priority.nightlife_event_cluster_strategy: 80
+    # Description: Priority assigned to the hike adventure cluster strategy.
     memories.cluster.priority.hike_adventure_cluster_strategy: 79
+    # Description: Priority assigned to the cross dimension cluster strategy.
     memories.cluster.priority.cross_dimension_cluster_strategy: 75
+    # Description: Priority assigned to the on this day over years cluster strategy.
     memories.cluster.priority.on_this_day_over_years_cluster_strategy: 74
+    # Description: Priority assigned to the one year ago cluster strategy.
     memories.cluster.priority.one_year_ago_cluster_strategy: 73
+    # Description: Priority assigned to the anniversary cluster strategy.
     memories.cluster.priority.anniversary_cluster_strategy: 72
+    # Description: Priority assigned to the snow vacation over years cluster strategy.
     memories.cluster.priority.snow_vacation_over_years_cluster_strategy: 68
+    # Description: Priority assigned to the season over years cluster strategy.
     memories.cluster.priority.season_over_years_cluster_strategy: 66
+    # Description: Priority assigned to the weekend getaways over years cluster strategy.
     memories.cluster.priority.weekend_getaways_over_years_cluster_strategy: 64
+    # Description: Priority assigned to the year in review cluster strategy.
     memories.cluster.priority.year_in_review_cluster_strategy: 62
+    # Description: Priority assigned to the monthly highlights cluster strategy.
     memories.cluster.priority.monthly_highlights_cluster_strategy: 61
+    # Description: Priority assigned to the season cluster strategy.
     memories.cluster.priority.season_cluster_strategy: 60
+    # Description: Priority assigned to the golden hour cluster strategy.
     memories.cluster.priority.golden_hour_cluster_strategy: 59
+    # Description: Priority assigned to the snow day cluster strategy.
     memories.cluster.priority.snow_day_cluster_strategy: 56
+    # Description: Priority assigned to the day album cluster strategy.
     memories.cluster.priority.day_album_cluster_strategy: 54
+    # Description: Priority assigned to the time similarity cluster strategy.
     memories.cluster.priority.time_similarity_strategy: 51
+    # Description: Priority assigned to the photo motif cluster strategy.
     memories.cluster.priority.photo_motif_cluster_strategy: 48
+    # Description: Priority assigned to the panorama cluster strategy.
     memories.cluster.priority.panorama_cluster_strategy: 47
+    # Description: Priority assigned to the panorama over years cluster strategy.
     memories.cluster.priority.panorama_over_years_cluster_strategy: 46
+    # Description: Priority assigned to the portrait orientation cluster strategy.
     memories.cluster.priority.portrait_orientation_cluster_strategy: 45
+    # Description: Priority assigned to the at home weekend cluster strategy.
     memories.cluster.priority.at_home_weekend_cluster_strategy: 44
+    # Description: Priority assigned to the at home weekday cluster strategy.
     memories.cluster.priority.at_home_weekday_cluster_strategy: 42
+    # Description: Priority assigned to the video stories cluster strategy.
     memories.cluster.priority.video_stories_cluster_strategy: 41
+    # Description: Priority assigned to the device similarity cluster strategy.
     memories.cluster.priority.device_similarity_strategy: 40
 
     # Scoring Defaults
+    # Description: Megapixel baseline used to determine high quality imagery.
     memories.score.quality_baseline_megapixels: 12.0
+    # Description: Minimum acceptable resolution in megapixels for quality scoring.
     memories.score.quality.min_resolution_megapixels: 2.0
+    # Description: Score threshold below which an image is considered low quality.
     memories.score.quality.low_score_threshold: 0.35
+    # Description: Sharpness score threshold below which an image is penalized.
     memories.score.quality.low_sharpness_threshold: 0.20
+    # Description: Exposure score threshold below which an image is penalized.
     memories.score.quality.low_exposure_threshold: 0.25
+    # Description: Noise quality threshold below which an image is penalized.
     memories.score.quality.low_noise_quality_threshold: 0.25
+    # Description: Clipping threshold indicating how much over or underexposure is tolerated.
     memories.score.quality.clipping_threshold: 0.15
+    # Description: Weight applied when penalizing clipping artifacts in scoring.
     memories.score.quality.clipping_penalty_weight: 0.5
+    # Description: Minimum acceptable year for quality evaluations.
     memories.score.min_valid_year: 1995
+    # Description: Minimum number of samples required when evaluating the time range.
     memories.score.time_range.min_samples: 3
+    # Description: Minimum coverage ratio required when evaluating the time range.
     memories.score.time_range.min_coverage: 0.6
+    # Description: Boost factors applied to specific points-of-interest categories during scoring.
     memories.score.poi_category_boosts:
         'tourism/*': 0.20
         'tourism/museum': 0.30
@@ -325,14 +459,23 @@ parameters:
         'shop/mall': 0.06
 
 
+    # Description: Directory where generated slideshow videos are stored.
     memories.slideshow.video_dir: '%env(string:MEMORIES_SLIDESHOW_DIR)%'
+    # Description: Duration in seconds each slideshow image remains on screen.
     memories.slideshow.image_duration_s: 3.5
+    # Description: Duration in seconds used for transitions between slideshow images.
     memories.slideshow.transition_duration_s: 0.8
+    # Description: Width in pixels of the generated slideshow video.
     memories.slideshow.video_width: 1280
+    # Description: Height in pixels of the generated slideshow video.
     memories.slideshow.video_height: 720
+    # Description: Path to the ffmpeg binary used for slideshow rendering.
     memories.slideshow.ffmpeg_path: 'ffmpeg'
+    # Description: Default PHP binary name used when invoking slideshow helpers.
     memories.slideshow.php_binary_default: 'php'
+    # Description: Runtime PHP binary path for slideshow helpers, allowing environment overrides.
     memories.slideshow.php_binary: "%env(default:memories.slideshow.php_binary_default:MEMORIES_PHP_BINARY)%"
+    # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'
         - 'wipeleft'
@@ -340,5 +483,7 @@ parameters:
         - 'circleopen'
         - 'circleclose'
         - 'pixelize'
+    # Description: Default music track path for slideshow videos when no override is provided.
     memories.slideshow.music_path_default: ''
+    # Description: Runtime music track path for slideshow videos, allowing environment overrides.
     memories.slideshow.music_path: "%env(default:memories.slideshow.music_path_default:MEMORIES_SLIDESHOW_MUSIC)%"
