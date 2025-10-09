@@ -165,8 +165,8 @@ services:
 
     MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher:
         arguments:
-            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
             $homeRadiusKm: '%env(default:memories.home.radius_km_default:float:MEMORIES_HOME_RADIUS_KM)%'
             $homeVersionHash: '%memories.home.version_hash%'
             $cellDegrees: 0.01
@@ -589,8 +589,8 @@ services:
 
     MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy:
         arguments:
-            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
             $homeRadiusMeters: 260.0
             $minHomeShare: 0.62
             $minItemsPerDay: 3
@@ -601,8 +601,8 @@ services:
 
     MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy:
         arguments:
-            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
             $homeRadiusMeters: 250.0
             $minHomeShare: 0.60
             $minItemsPerDay: 3

@@ -200,7 +200,8 @@ parameters:
             min_fast_segments: 2
             max_heading_change_deg: 120.0
             min_consistent_heading_segments: 1
-    memories.cluster.transit.active_profile: '%env(default:default:MEMORIES_CLUSTER_TRANSIT_PROFILE)%'
+    memories.cluster.transit.default_profile: 'default'
+    memories.cluster.transit.active_profile: '%env(default:memories.cluster.transit.default_profile:MEMORIES_CLUSTER_TRANSIT_PROFILE)%'
     memories.cluster.scoring.weight_overrides:
         time_similarity:
             quality: 0.24
