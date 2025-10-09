@@ -116,6 +116,7 @@ services:
             $slideDuration: '%memories.slideshow.image_duration_s%'
             $transitionDuration: '%memories.slideshow.transition_duration_s%'
             $phpBinary: '%memories.slideshow.php_binary%'
+            $generator: '@MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface'
             $transitions: '%memories.slideshow.transitions%'
             $musicTrack: '%memories.slideshow.music_path%'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
