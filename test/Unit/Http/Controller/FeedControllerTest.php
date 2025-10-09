@@ -23,6 +23,7 @@ use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
@@ -740,6 +741,7 @@ final class FeedControllerTest extends TestCase
 
         $storagePath = tempnam(sys_get_temp_dir(), 'prefs');
         self::assertIsString($storagePath);
+        file_put_contents($storagePath, '[]');
 
         $preferenceStorage = new FeedUserPreferenceStorage($storagePath);
         $storyboardGenerator = new StoryboardTextGenerator();
@@ -750,6 +752,9 @@ final class FeedControllerTest extends TestCase
                 'timezone'   => 'UTC',
             ],
         ], '09:00', 'UTC');
+        $labelProvider = new AlgorithmLabelProvider([
+            'holiday_event' => 'Feiertage',
+        ]);
 
         $controller = new FeedController(
             $feedBuilder,
@@ -764,6 +769,7 @@ final class FeedControllerTest extends TestCase
             $preferenceStorage,
             $storyboardGenerator,
             $notificationPlanner,
+            $labelProvider,
             24,
             120,
             8,
