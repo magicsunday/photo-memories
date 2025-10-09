@@ -514,8 +514,99 @@ final class FeedControllerTest extends TestCase
         $item = $payload['items'][0];
         self::assertSame('2024-05-01T14:20:30+01:30', $item['coverAufgenommenAm']);
         self::assertSame('2024-05-01T14:20:30+01:30', $item['galerie'][0]['aufgenommenAm']);
+        self::assertArrayHasKey('coverAltText', $item);
+        self::assertStringContainsString('Foto', $item['coverAltText']);
+        self::assertArrayHasKey('altText', $item['galerie'][0]);
+        self::assertNotSame('', trim($item['galerie'][0]['altText']));
 
         self::assertSame(90, $media->getTimezoneOffsetMin());
+
+        unlink($storagePath);
+    }
+
+    public function testFeedSupportsFieldSelection(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $items = [
+            new MemoryFeedItem(
+                algorithm: 'time_similarity',
+                title: 'Frühlingsmomente',
+                subtitle: 'Spaziergang im Park',
+                coverMediaId: 7,
+                memberIds: [7, 8],
+                score: 0.72,
+                params: [
+                    'group'      => 'nature',
+                    'time_range' => ['from' => 1_710_000_000, 'to' => 1_710_086_400],
+                ],
+            ),
+        ];
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn($items);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+
+        $mediaSeven = $this->createMedia(7, '/media/7.jpg', '2024-04-01T10:00:00+00:00');
+        $mediaSeven->setPersons(['Alex']);
+        $mediaSeven->setKeywords(['Frühling']);
+        $mediaSeven->setSceneTags([
+            ['label' => 'Park'],
+        ]);
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([7, 8], false)
+            ->willReturn([$mediaSeven]);
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->expects(self::never())->method('ensureForItem');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/feed', 'GET', ['felder' => 'basis,zeit', 'metaFelder' => 'basis']);
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(1, $payload['items']);
+        $item = $payload['items'][0];
+
+        self::assertArrayHasKey('coverAltText', $item);
+        self::assertArrayHasKey('zeitspanne', $item);
+        self::assertArrayNotHasKey('galerie', $item);
+        self::assertArrayNotHasKey('kontext', $item);
+        self::assertArrayNotHasKey('zusatzdaten', $item);
+        self::assertArrayNotHasKey('slideshow', $item);
+        self::assertArrayNotHasKey('storyboard', $item);
+        self::assertArrayNotHasKey('benachrichtigungen', $item);
+
+        self::assertArrayHasKey('meta', $payload);
+        self::assertArrayHasKey('erstelltAm', $payload['meta']);
+        self::assertArrayNotHasKey('pagination', $payload['meta']);
+        self::assertArrayNotHasKey('filter', $payload['meta']);
+        self::assertArrayNotHasKey('personalisierung', $payload['meta']);
 
         unlink($storagePath);
     }
