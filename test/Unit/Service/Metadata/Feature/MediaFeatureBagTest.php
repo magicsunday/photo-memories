@@ -182,4 +182,30 @@ final class MediaFeatureBagTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $bag->classificationShouldHide();
     }
+
+    public function testMigratesDotSeparatedLegacyPayload(): void
+    {
+        $bag = MediaFeatureBag::fromArray([
+            'calendar.daypart'   => 'night',
+            'file.filenameHint'  => 'pano',
+            'solar.isGoldenHour' => true,
+        ]);
+
+        self::assertSame('night', $bag->calendarDaypart());
+        self::assertSame('pano', $bag->fileNameHint());
+        self::assertTrue($bag->solarIsGoldenHour());
+    }
+
+    public function testMigratesLegacyTopLevelKeys(): void
+    {
+        $bag = MediaFeatureBag::fromArray([
+            'daypart'    => 'evening',
+            'dow'        => 6,
+            'pathTokens' => ['foo', 'bar'],
+        ]);
+
+        self::assertSame('evening', $bag->calendarDaypart());
+        self::assertSame(6, $bag->calendarDayOfWeek());
+        self::assertSame(['foo', 'bar'], $bag->filePathTokens());
+    }
 }

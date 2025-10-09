@@ -12,6 +12,7 @@ use function array_is_list;
 use function array_key_exists;
 use function array_values;
 use function count;
+use function explode;
 use function implode;
 use function in_array;
 use function is_array;
@@ -21,6 +22,7 @@ use function is_int;
 use function is_string;
 use function preg_match;
 use function sprintf;
+use function str_contains;
 
 /**
  * Provides a typed accessor facade for metadata feature payloads persisted on a media entity.
@@ -41,6 +43,26 @@ final class MediaFeatureBag
     private const CALENDAR_SEASON_VALUES = ['winter', 'spring', 'summer', 'autumn'];
 
     private const FILENAME_HINT_VALUES = ['normal', 'pano', 'edited', 'timelapse', 'slowmo'];
+
+    /**
+     * @var array<string, string>
+     */
+    private const LEGACY_NAMESPACE_FALLBACKS = [
+        'daypart'      => self::NAMESPACE_CALENDAR,
+        'dow'          => self::NAMESPACE_CALENDAR,
+        'isWeekend'    => self::NAMESPACE_CALENDAR,
+        'season'       => self::NAMESPACE_CALENDAR,
+        'isHoliday'    => self::NAMESPACE_CALENDAR,
+        'holidayId'    => self::NAMESPACE_CALENDAR,
+        'isGoldenHour' => self::NAMESPACE_SOLAR,
+        'isPolarDay'   => self::NAMESPACE_SOLAR,
+        'isPolarNight' => self::NAMESPACE_SOLAR,
+        'pathTokens'   => self::NAMESPACE_FILE,
+        'filenameHint' => self::NAMESPACE_FILE,
+        'kind'         => self::NAMESPACE_CLASSIFICATION,
+        'confidence'   => self::NAMESPACE_CLASSIFICATION,
+        'shouldHide'   => self::NAMESPACE_CLASSIFICATION,
+    ];
     /** @var array<string, array<string, FeatureValue>> */
     private array $values;
 
@@ -70,6 +92,8 @@ final class MediaFeatureBag
             return self::create();
         }
 
+        $features = self::normaliseFeatureNamespaces($features);
+
         self::assertNamespacedFormat($features);
 
         /** @var array<string, array<string, FeatureValue>> $typed */
@@ -81,6 +105,50 @@ final class MediaFeatureBag
         }
 
         return new self($typed);
+    }
+
+    /**
+     * @param array<int|string, mixed> $features
+     *
+     * @return array<int|string, mixed>
+     */
+    private static function normaliseFeatureNamespaces(array $features): array
+    {
+        $normalised = [];
+
+        foreach ($features as $key => $value) {
+            if (is_string($key) && array_key_exists($key, self::LEGACY_NAMESPACE_FALLBACKS)) {
+                $namespace = self::LEGACY_NAMESPACE_FALLBACKS[$key];
+
+                if (array_key_exists($namespace, $normalised) === false || !is_array($normalised[$namespace])) {
+                    $normalised[$namespace] = [];
+                }
+
+                $normalised[$namespace][$key] = $value;
+
+                continue;
+            }
+
+            if (is_string($key) && str_contains($key, '.')) {
+                $segments = explode('.', $key, 2);
+
+                if (count($segments) === 2 && $segments[0] !== '' && $segments[1] !== '') {
+                    [$namespace, $subKey] = $segments;
+
+                    if (array_key_exists($namespace, $normalised) === false || !is_array($normalised[$namespace])) {
+                        $normalised[$namespace] = [];
+                    }
+
+                    $normalised[$namespace][$subKey] = $value;
+
+                    continue;
+                }
+            }
+
+            $normalised[(string) $key] = $value;
+        }
+
+        return $normalised;
     }
 
     /**
