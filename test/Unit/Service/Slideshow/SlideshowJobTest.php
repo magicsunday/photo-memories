@@ -52,6 +52,8 @@ final class SlideshowJobTest extends TestCase
             ],
             0.75,
             '/audio/theme.mp3',
+            'Ein Tag am Meer',
+            'Sommer 2024',
         );
 
         $payload = $job->toArray();
@@ -65,6 +67,8 @@ final class SlideshowJobTest extends TestCase
         self::assertSame(10, $payload['storyboard']['slides'][0]['mediaId']);
         self::assertSame(3.0, $payload['storyboard']['slides'][0]['duration']);
         self::assertSame('fade', $payload['storyboard']['slides'][0]['transition']);
+        self::assertSame('Ein Tag am Meer', $payload['title']);
+        self::assertSame('Sommer 2024', $payload['subtitle']);
     }
 
     public function testFromJsonFileNormalisesIncompleteStoryboard(): void
@@ -93,6 +97,8 @@ final class SlideshowJobTest extends TestCase
                 'transitionDuration' => 0,
                 'music'              => ' ',
             ],
+            'title'     => '  ',
+            'subtitle'  => 'Erinnerungen ',
         ];
 
         file_put_contents($temporary, json_encode($payload, JSON_THROW_ON_ERROR));
@@ -107,6 +113,8 @@ final class SlideshowJobTest extends TestCase
         self::assertSame(15, $slides[0]['mediaId']);
         self::assertNull($job->transitionDuration());
         self::assertNull($job->audioTrack());
+        self::assertNull($job->title());
+        self::assertSame('Erinnerungen', $job->subtitle());
 
         unlink($temporary);
     }

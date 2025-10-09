@@ -131,7 +131,13 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
-    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus
+    public function ensureForItem(
+        string $itemId,
+        array $memberIds,
+        array $mediaMap,
+        ?string $title = null,
+        ?string $subtitle = null,
+    ): SlideshowVideoStatus
     {
         $slides = $this->collectSlides($memberIds, $mediaMap);
         if ($slides === []) {
@@ -181,6 +187,9 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
         $storyboard = $this->buildStoryboard($slides);
 
+        $title    = $this->normaliseMetadata($title);
+        $subtitle = $this->normaliseMetadata($subtitle);
+
         $this->ensureVideoDirectory();
 
         $job = new SlideshowJob(
@@ -193,6 +202,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $storyboard['slides'],
             $storyboard['transitionDuration'],
             $storyboard['music'],
+            $title,
+            $subtitle,
         );
         $writtenBytes = file_put_contents($jobPath, $job->toJson(), LOCK_EX);
         if ($writtenBytes === false) {
@@ -356,6 +367,20 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         ];
 
         return $payload;
+    }
+
+    private function normaliseMetadata(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     private function buildVideoPath(string $itemId): string

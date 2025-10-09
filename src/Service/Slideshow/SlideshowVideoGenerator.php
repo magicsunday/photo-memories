@@ -104,10 +104,23 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $audioTrack         = $job->audioTrack() ?? $this->audioTrack;
 
         if (count($slides) === 1) {
-            return $this->buildSingleImageCommand($slides[0], $job->outputPath(), $audioTrack);
+            return $this->buildSingleImageCommand(
+                $slides[0],
+                $job->outputPath(),
+                $audioTrack,
+                $job->title(),
+                $job->subtitle(),
+            );
         }
 
-        return $this->buildMultiImageCommand($slides, $transitionDuration, $job->outputPath(), $audioTrack);
+        return $this->buildMultiImageCommand(
+            $slides,
+            $transitionDuration,
+            $job->outputPath(),
+            $audioTrack,
+            $job->title(),
+            $job->subtitle(),
+        );
     }
 
     /**
@@ -115,7 +128,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function buildSingleImageCommand(array $slide, string $output, ?string $audioTrack): array
+    private function buildSingleImageCommand(
+        array $slide,
+        string $output,
+        ?string $audioTrack,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         $duration = $this->resolveSlideDuration($slide['duration']);
         $filter = sprintf(
@@ -142,7 +161,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filter,
         ];
 
-        return $this->appendAudioOptions($command, 1, $output, $audioTrack);
+        return $this->appendAudioOptions($command, 1, $output, $audioTrack, $title, $subtitle);
     }
 
     /**
@@ -150,7 +169,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function buildMultiImageCommand(array $slides, float $transitionDuration, string $output, ?string $audioTrack): array
+    private function buildMultiImageCommand(
+        array $slides,
+        float $transitionDuration,
+        string $output,
+        ?string $audioTrack,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
         foreach ($slides as $slide) {
@@ -208,7 +234,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
-        return $this->appendAudioOptions($command, count($slides), $output, $audioTrack);
+        return $this->appendAudioOptions($command, count($slides), $output, $audioTrack, $title, $subtitle);
     }
 
     private function resolveSlideDuration(float $duration): float
@@ -250,7 +276,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function appendAudioOptions(array $command, int $videoInputs, string $output, ?string $audioTrack): array
+    private function appendAudioOptions(
+        array $command,
+        int $videoInputs,
+        string $output,
+        ?string $audioTrack,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         if (is_string($audioTrack) && $audioTrack !== '') {
             $command[] = '-i';
@@ -263,6 +296,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = '+faststart';
         $command[] = '-pix_fmt';
         $command[] = 'yuv420p';
+
+        if (is_string($title) && $title !== '') {
+            $command[] = '-metadata';
+            $command[] = sprintf('title=%s', $title);
+        }
+
+        if (is_string($subtitle) && $subtitle !== '') {
+            $command[] = '-metadata';
+            $command[] = sprintf('subtitle=%s', $subtitle);
+        }
 
         if (is_string($audioTrack) && $audioTrack !== '') {
             $command[] = '-map';
