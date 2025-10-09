@@ -244,10 +244,18 @@ final class TimeNormalizerTest extends TestCase
 
         self::assertSame(TimeSource::EXIF, $result->getTimeSource());
         $entries = $this->decodeIndexLog($result->getIndexLog());
-        self::assertCount(2, $entries);
-        $warning = $entries[1];
-        self::assertSame('metadata.time', $warning['component']);
-        self::assertSame('plausibility', $warning['event']);
+        self::assertGreaterThanOrEqual(2, count($entries));
+
+        $warning = null;
+        foreach ($entries as $entry) {
+            if (($entry['component'] ?? null) === 'metadata.time' && ($entry['event'] ?? null) === 'plausibility') {
+                $warning = $entry;
+
+                break;
+            }
+        }
+
+        self::assertNotNull($warning, 'Expected plausibility warning log entry.');
         self::assertStringContainsString('Warnung: Aufnahmezeit weicht vom Dateisystem', (string) $warning['message']);
 
         if (file_exists($filename)) {

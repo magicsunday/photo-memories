@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\PersonCohortClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class PersonCohortClusterStrategyTest extends TestCase
@@ -26,6 +27,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     public function clustersStablePersonGroupWithinWindow(): void
     {
         $strategy = new PersonCohortClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minPersons: 2,
             minItemsTotal: 5,
             windowDays: 7,
@@ -66,6 +68,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     public function requiresMinimumPersons(): void
     {
         $strategy = new PersonCohortClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minPersons: 3,
             minItemsTotal: 5,
             windowDays: 7,
@@ -89,6 +92,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
     public function includesMediaWithImportedPersonsMetadata(): void
     {
         $strategy = new PersonCohortClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
             minPersons: 2,
             minItemsTotal: 4,
             windowDays: 5,

@@ -61,7 +61,8 @@ final class IndexCommandTest extends TestCase
         $pipeline->expects(self::never())->method('process');
         $pipeline->expects(self::never())->method('finalize');
 
-        $command = new IndexCommand($locator, $pipeline, sys_get_temp_dir());
+        $qaCollector = new \MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector();
+        $command = new IndexCommand($locator, $pipeline, $qaCollector, sys_get_temp_dir());
         $tester  = new CommandTester($command);
 
         $status = $tester->execute([
@@ -120,7 +121,8 @@ final class IndexCommandTest extends TestCase
             ->method('finalize')
             ->with(false);
 
-        $command = new IndexCommand($locator, $pipeline, $baseDir);
+        $qaCollector = new \MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector();
+        $command = new IndexCommand($locator, $pipeline, $qaCollector, $baseDir);
         $tester  = new CommandTester($command);
 
         $tester->execute([

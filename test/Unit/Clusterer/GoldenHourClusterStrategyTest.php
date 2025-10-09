@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\GoldenHourClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class GoldenHourClusterStrategyTest extends TestCase
@@ -27,6 +28,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
     {
         $strategy = new GoldenHourClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             morningHours: [6, 7, 8],
             eveningHours: [18, 19, 20],
             sessionGapSeconds: 1200,
@@ -59,7 +61,10 @@ final class GoldenHourClusterStrategyTest extends TestCase
     #[Test]
     public function clustersGoldenHourSequenceWithHourFallback(): void
     {
-        $strategy = new GoldenHourClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new GoldenHourClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
         $items = [];
@@ -79,7 +84,10 @@ final class GoldenHourClusterStrategyTest extends TestCase
     #[Test]
     public function ignoresMediaMarkedAsNotGoldenHour(): void
     {
-        $strategy = new GoldenHourClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new GoldenHourClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $base  = new DateTimeImmutable('2024-08-10 18:00:00', new DateTimeZone('UTC'));
         $items = [];

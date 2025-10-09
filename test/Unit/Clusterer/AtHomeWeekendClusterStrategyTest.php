@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekendClusterStrategyTest extends TestCase
@@ -28,6 +29,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
     {
         $strategy = new AtHomeWeekendClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             homeLat: 52.5200,
             homeLon: 13.4050,
             homeRadiusMeters: 400.0,
@@ -91,6 +93,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
     {
         $strategy = new AtHomeWeekendClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             homeLat: 52.5200,
             homeLon: 13.4050,
             homeRadiusMeters: 300.0,

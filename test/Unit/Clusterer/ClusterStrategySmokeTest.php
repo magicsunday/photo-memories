@@ -103,14 +103,16 @@ final class ClusterStrategySmokeTest extends TestCase
             AtHomeWeekdayClusterStrategy::class,
             'at_home_weekday',
             static fn (): ClusterStrategyInterface => new AtHomeWeekdayClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'AtHomeWeekendClusterStrategy' => [
             AtHomeWeekendClusterStrategy::class,
             'at_home_weekend',
             static fn (): ClusterStrategyInterface => new AtHomeWeekendClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'BurstClusterStrategy' => [
@@ -129,7 +131,8 @@ final class ClusterStrategySmokeTest extends TestCase
             DayAlbumClusterStrategy::class,
             'day_album',
             static fn (): ClusterStrategyInterface => new DayAlbumClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'DeviceSimilarityStrategy' => [
@@ -150,7 +153,8 @@ final class ClusterStrategySmokeTest extends TestCase
             GoldenHourClusterStrategy::class,
             'golden_hour',
             static fn (): ClusterStrategyInterface => new GoldenHourClusterStrategy(
-                localTimeHelper: self::localTimeHelper()
+                localTimeHelper: self::localTimeHelper(),
+                locationHelper: self::locationHelper()
             ),
         ];
         yield 'HolidayEventClusterStrategy' => [
@@ -211,12 +215,16 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'OnThisDayOverYearsClusterStrategy' => [
             OnThisDayOverYearsClusterStrategy::class,
             'on_this_day_over_years',
-            null,
+            static fn (): ClusterStrategyInterface => new OnThisDayOverYearsClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'OneYearAgoClusterStrategy' => [
             OneYearAgoClusterStrategy::class,
             'one_year_ago',
-            null,
+            static fn (): ClusterStrategyInterface => new OneYearAgoClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'PanoramaClusterStrategy' => [
             PanoramaClusterStrategy::class,
@@ -231,7 +239,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'PersonCohortClusterStrategy' => [
             PersonCohortClusterStrategy::class,
             'people_cohort',
-            null,
+            static fn (): ClusterStrategyInterface => new PersonCohortClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'PhashSimilarityStrategy' => [
             PhashSimilarityStrategy::class,
@@ -243,17 +253,23 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'PortraitOrientationClusterStrategy' => [
             PortraitOrientationClusterStrategy::class,
             'portrait_orientation',
-            null,
+            static fn (): ClusterStrategyInterface => new PortraitOrientationClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'SeasonClusterStrategy' => [
             SeasonClusterStrategy::class,
             'season',
-            null,
+            static fn (): ClusterStrategyInterface => new SeasonClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'SeasonOverYearsClusterStrategy' => [
             SeasonOverYearsClusterStrategy::class,
             'season_over_years',
-            null,
+            static fn (): ClusterStrategyInterface => new SeasonOverYearsClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'SignificantPlaceClusterStrategy' => [
             SignificantPlaceClusterStrategy::class,
@@ -265,7 +281,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'ThisMonthOverYearsClusterStrategy' => [
             ThisMonthOverYearsClusterStrategy::class,
             'this_month_over_years',
-            null,
+            static fn (): ClusterStrategyInterface => new ThisMonthOverYearsClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'TimeSimilarityStrategy' => [
             TimeSimilarityStrategy::class,
@@ -300,7 +318,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'YearInReviewClusterStrategy' => [
             YearInReviewClusterStrategy::class,
             'year_in_review',
-            null,
+            static fn (): ClusterStrategyInterface => new YearInReviewClusterStrategy(
+                self::locationHelper()
+            ),
         ];
     }
 

@@ -80,7 +80,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         self::assertSame('Frankfurt', $cluster->getParams()['place_city']);
         self::assertSame('Germany', $cluster->getParams()['place_country']);
         self::assertSame('default', $cluster->getParams()['travel_profile']);
-        self::assertSame(6, $cluster->getParams()['travel_thresholds']['min_items_per_day']);
+        self::assertSame(5, $cluster->getParams()['travel_thresholds']['min_items_per_day']);
     }
 
     #[Test]

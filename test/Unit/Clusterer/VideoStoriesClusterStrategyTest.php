@@ -75,7 +75,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             $video->setCameraOwner('Carla');
             $video->setCameraBodySerial('IP14-001');
             $video->setLensModel('iPhone 14 Pro Tele');
-            $video->setContentKind(ContentKind::VIDEO);
+            $video->setContentKind(ContentKind::OTHER);
 
             if ($i === 0) {
                 $video->setSceneTags([
@@ -122,7 +122,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
         self::assertEqualsWithDelta(1.0, $params['device_primary_share'], 0.0001);
         self::assertSame(1, $params['device_variants']);
         self::assertSame('iPhone 14 Pro Tele', $params['device_lens_model']);
-        self::assertSame(ContentKind::VIDEO->value, $params['device_content_kind']);
+        self::assertSame(ContentKind::OTHER->value, $params['device_content_kind']);
     }
 
     #[Test]

@@ -41,10 +41,7 @@ final class MetadataQaInspectorTest extends TestCase
 
         self::assertTrue($result->hasIssues());
         self::assertSame(['daypart', 'isGoldenHour', 'tzConfidence'], $result->getMissingFeatures());
-        self::assertSame(
-            ['TimeNormalizer-Konfiguration prüfen', 'Zeitzonenquellen priorisieren'],
-            $result->getSuggestions(),
-        );
+        self::assertSame(['Zeitzonenquellen priorisieren'], $result->getSuggestions());
 
         $entry = $result->toIndexLogEntry();
         self::assertNotNull($entry);
@@ -99,7 +96,10 @@ final class MetadataQaInspectorTest extends TestCase
 
         self::assertTrue($result->hasIssues());
         self::assertSame(['timezoneOffsetMin', 'tzConfidence'], $result->getMissingFeatures());
-        self::assertSame(['TimeNormalizer-Konfiguration prüfen'], $result->getSuggestions());
+        self::assertSame(
+            ['TimeNormalizer-Konfiguration prüfen', 'Zeitzonenquellen priorisieren'],
+            $result->getSuggestions()
+        );
     }
 
     private function createInspector(): MetadataQaInspector

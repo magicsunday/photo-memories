@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekdayClusterStrategyTest extends TestCase
@@ -28,6 +29,7 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
     {
         $strategy = new AtHomeWeekdayClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
             homeLat: 52.5200,
             homeLon: 13.4050,
             homeRadiusMeters: 500.0,
@@ -82,7 +84,10 @@ final class AtHomeWeekdayClusterStrategyTest extends TestCase
     #[Test]
     public function requiresHomeLocationToBeConfigured(): void
     {
-        $strategy = new AtHomeWeekdayClusterStrategy(localTimeHelper: new LocalTimeHelper('Europe/Berlin'));
+        $strategy = new AtHomeWeekdayClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
+            locationHelper: LocationHelper::createDefault(),
+        );
 
         $mediaItems = [
             $this->createMedia(201, '2023-04-03 07:30:00', 52.5201, 13.4051),

@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
+use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
@@ -46,10 +47,13 @@ final class MemoryFeedBuilderTest extends TestCase
             ->with([1, 2], false)
             ->willReturn([$visible, $hidden]);
 
+        $seriesHighlightService = new SeriesHighlightService();
+
         $builder = new MemoryFeedBuilder(
             $titleGen,
             $coverPicker,
             $mediaRepository,
+            $seriesHighlightService,
             minScore: 0.0,
             minMembers: 1,
             maxPerDay: 5,
@@ -111,10 +115,13 @@ final class MemoryFeedBuilderTest extends TestCase
                 $this->buildMedia(102, false),
             ]);
 
+        $seriesHighlightService = new SeriesHighlightService();
+
         $builder = new MemoryFeedBuilder(
             $titleGen,
             $coverPicker,
             $mediaRepository,
+            $seriesHighlightService,
             minScore: 0.3,
             minMembers: 1,
             maxPerDay: 5,
@@ -197,10 +204,13 @@ final class MemoryFeedBuilderTest extends TestCase
             ->with([301], false)
             ->willReturn([$this->buildMedia(301, false)]);
 
+        $seriesHighlightService = new SeriesHighlightService();
+
         $builder = new MemoryFeedBuilder(
             $titleGen,
             $coverPicker,
             $mediaRepository,
+            $seriesHighlightService,
             minScore: 0.5,
             minMembers: 1,
             maxPerDay: 5,
