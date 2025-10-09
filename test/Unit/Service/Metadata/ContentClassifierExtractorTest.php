@@ -38,6 +38,11 @@ final class ContentClassifierExtractorTest extends TestCase
 
         self::assertSame(ContentKind::SCREENSHOT, $media->getContentKind());
         self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::SCREENSHOT, $bag->classificationKind());
+        self::assertNotNull($bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
     }
 
     #[Test]
@@ -56,6 +61,11 @@ final class ContentClassifierExtractorTest extends TestCase
 
         self::assertSame(ContentKind::DOCUMENT, $media->getContentKind());
         self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::DOCUMENT, $bag->classificationKind());
+        self::assertNotNull($bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
     }
 
     #[Test]
@@ -73,6 +83,11 @@ final class ContentClassifierExtractorTest extends TestCase
 
         self::assertSame(ContentKind::SCREEN_RECORDING, $media->getContentKind());
         self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::SCREEN_RECORDING, $bag->classificationKind());
+        self::assertNotNull($bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
     }
 
     #[Test]
@@ -90,6 +105,11 @@ final class ContentClassifierExtractorTest extends TestCase
 
         self::assertSame(ContentKind::MAP, $media->getContentKind());
         self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::MAP, $bag->classificationKind());
+        self::assertNotNull($bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
     }
 
     #[Test]
@@ -107,6 +127,11 @@ final class ContentClassifierExtractorTest extends TestCase
 
         self::assertSame(ContentKind::SCREENSHOT, $media->getContentKind());
         self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::SCREENSHOT, $bag->classificationKind());
+        self::assertNotNull($bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
     }
 
     private function buildMedia(int $id, string $mime, int $width, int $height): Media

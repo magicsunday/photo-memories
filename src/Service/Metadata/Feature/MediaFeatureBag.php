@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata\Feature;
 
 use InvalidArgumentException;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
+use ValueError;
 
 use function array_is_list;
 use function array_key_exists;
@@ -259,6 +261,79 @@ final class MediaFeatureBag
     public function setSolarIsPolarNight(?bool $value): void
     {
         $this->set(self::NAMESPACE_SOLAR, 'isPolarNight', $value);
+    }
+
+    public function classificationKind(): ?ContentKind
+    {
+        $value = $this->get(self::NAMESPACE_CLASSIFICATION, 'kind');
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value) === false) {
+            throw new InvalidArgumentException('Classification kind expects a string payload.');
+        }
+
+        try {
+            return ContentKind::from($value);
+        } catch (ValueError $exception) {
+            throw new InvalidArgumentException('Classification kind must be a valid ContentKind value.', 0, $exception);
+        }
+    }
+
+    public function setClassificationKind(?ContentKind $kind): void
+    {
+        $this->set(self::NAMESPACE_CLASSIFICATION, 'kind', $kind?->value);
+    }
+
+    public function classificationConfidence(): ?float
+    {
+        $value = $this->get(self::NAMESPACE_CLASSIFICATION, 'confidence');
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_float($value) === false && is_int($value) === false) {
+            throw new InvalidArgumentException('Classification confidence expects a numeric payload.');
+        }
+
+        $confidence = (float) $value;
+        if ($confidence < 0.0 || $confidence > 1.0) {
+            throw new InvalidArgumentException('Classification confidence must be between 0.0 and 1.0.');
+        }
+
+        return $confidence;
+    }
+
+    public function setClassificationConfidence(?float $confidence): void
+    {
+        if ($confidence !== null && ($confidence < 0.0 || $confidence > 1.0)) {
+            throw new InvalidArgumentException('Classification confidence must be between 0.0 and 1.0.');
+        }
+
+        $this->set(self::NAMESPACE_CLASSIFICATION, 'confidence', $confidence);
+    }
+
+    public function classificationShouldHide(): ?bool
+    {
+        $value = $this->get(self::NAMESPACE_CLASSIFICATION, 'shouldHide');
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) === false) {
+            throw new InvalidArgumentException('Classification visibility flag expects a boolean payload.');
+        }
+
+        return $value;
+    }
+
+    public function setClassificationShouldHide(?bool $shouldHide): void
+    {
+        $this->set(self::NAMESPACE_CLASSIFICATION, 'shouldHide', $shouldHide);
     }
 
     /**

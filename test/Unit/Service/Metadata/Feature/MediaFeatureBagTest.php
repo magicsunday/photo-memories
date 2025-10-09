@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata\Feature;
 
 use InvalidArgumentException;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use PHPUnit\Framework\TestCase;
 
@@ -114,5 +115,71 @@ final class MediaFeatureBagTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $bag->setCalendarHolidayId('Weihnachten');
+    }
+
+    public function testClassificationNamespaceRoundtrip(): void
+    {
+        $bag = MediaFeatureBag::create();
+        $bag->setClassificationKind(ContentKind::DOCUMENT);
+        $bag->setClassificationConfidence(0.75);
+        $bag->setClassificationShouldHide(true);
+
+        self::assertSame(ContentKind::DOCUMENT, $bag->classificationKind());
+        self::assertSame(0.75, $bag->classificationConfidence());
+        self::assertTrue($bag->classificationShouldHide());
+
+        $values = $bag->namespaceValues(MediaFeatureBag::NAMESPACE_CLASSIFICATION);
+        self::assertSame(
+            [
+                'kind'        => ContentKind::DOCUMENT->value,
+                'confidence'  => 0.75,
+                'shouldHide'  => true,
+            ],
+            $values
+        );
+    }
+
+    public function testClassificationConfidenceRejectsOutOfRange(): void
+    {
+        $bag = MediaFeatureBag::create();
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->setClassificationConfidence(1.5);
+    }
+
+    public function testClassificationKindRejectsUnknownValue(): void
+    {
+        $bag = MediaFeatureBag::fromArray([
+            MediaFeatureBag::NAMESPACE_CLASSIFICATION => [
+                'kind' => 'invalid',
+            ],
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->classificationKind();
+    }
+
+    public function testClassificationConfidenceRejectsNonNumeric(): void
+    {
+        $bag = MediaFeatureBag::fromArray([
+            MediaFeatureBag::NAMESPACE_CLASSIFICATION => [
+                'confidence' => 'high',
+            ],
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->classificationConfidence();
+    }
+
+    public function testClassificationShouldHideRejectsNonBoolean(): void
+    {
+        $bag = MediaFeatureBag::fromArray([
+            MediaFeatureBag::NAMESPACE_CLASSIFICATION => [
+                'shouldHide' => 'yes',
+            ],
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $bag->classificationShouldHide();
     }
 }
