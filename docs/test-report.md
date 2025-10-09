@@ -1,16 +1,16 @@
 # Test Report
 
-Date: 2025-10-09T06:54:48+00:00
+Date: 2025-10-09T07:41:38+00:00
 
 ## Commands
 
 ```
 composer ci:test
-./vendor/bin/phpunit -c .build/phpunit.xml test/Unit/Service/Metadata/Feature/MediaFeatureBagTest.php
+./vendor/bin/phpunit -c .build/phpunit.xml
 ```
 
 ## Result
 
-- ⚠️ `composer ci:test` scheitert in dieser Umgebung, weil das erwartete `bin/php`-Binary fehlt; weitere Skripte werden dadurch nicht ausgeführt.【533aec†L1-L5】
-- ✅ Die gezielte PHPUnit-Suite für den `MediaFeatureBag` validiert die neuen Wertprüfungen erfolgreich.【17608f†L1-L11】
+- ⚠️ `composer ci:test` scheitert weiterhin, weil das erwartete `bin/php`-Binary in dieser Umgebung fehlt; alle nachgelagerten Skripte werden deshalb übersprungen.【39ccc0†L1-L4】
+- ✅ `./vendor/bin/phpunit -c .build/phpunit.xml` läuft erfolgreich durch; fünf Tests werden aufgrund von Umfeld-Beschränkungen übersprungen (u. a. fehlende Dateisystem-Beschränkungen bei MIME-Checks).【658075†L1-L10】
 - ❌ PHPStan-Fehler (ca. 586 Findings) bestehen weiterhin und erfordern umfangreiche Typ-Aufräumarbeiten außerhalb dieses Scopes.
