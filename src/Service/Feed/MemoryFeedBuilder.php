@@ -85,6 +85,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         );
     }
 
+    /**
+     * @param list<ClusterDraft> $clusters
+     *
+     * @return list<MemoryFeedItem>
+     */
     public function build(array $clusters, ?FeedPersonalizationProfile $profile = null): array
     {
         $profile ??= $this->defaultProfile;
@@ -144,6 +149,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         /** @var array<string,int> $algCount */
         $algCount = [];
 
+        /** @var list<MemoryFeedItem> $result */
         $result = [];
 
         $maxTotal        = $profile->getMaxTotal();
