@@ -52,6 +52,8 @@ final class SlideshowJobTest extends TestCase
             ],
             0.75,
             '/audio/theme.mp3',
+            'Sommermomente',
+            'Juli 2024',
         );
 
         $payload = $job->toArray();
@@ -65,6 +67,8 @@ final class SlideshowJobTest extends TestCase
         self::assertSame(10, $payload['storyboard']['slides'][0]['mediaId']);
         self::assertSame(3.0, $payload['storyboard']['slides'][0]['duration']);
         self::assertSame('fade', $payload['storyboard']['slides'][0]['transition']);
+        self::assertSame('Sommermomente', $payload['title']);
+        self::assertSame('Juli 2024', $payload['subtitle']);
     }
 
     public function testFromJsonFileNormalisesIncompleteStoryboard(): void
@@ -78,6 +82,8 @@ final class SlideshowJobTest extends TestCase
             'lock'       => '/out/example.lock',
             'error'      => '/out/example.error',
             'images'     => ['/images/a.jpg', '/images/b.jpg'],
+            'title'      => '  Reise nach Italien  ',
+            'subtitle'   => ' ',
             'storyboard' => [
                 'slides' => [
                     [
@@ -101,6 +107,8 @@ final class SlideshowJobTest extends TestCase
 
         self::assertSame('example', $job->id());
         self::assertSame(['/images/a.jpg', '/images/b.jpg'], $job->images());
+        self::assertSame('Reise nach Italien', $job->title());
+        self::assertNull($job->subtitle());
 
         $slides = $job->slides();
         self::assertCount(2, $slides);

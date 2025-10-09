@@ -823,7 +823,13 @@ final class FeedController
         $coverAltText  = null;
 
         if (isset($groupSelection['slideshow'])) {
-            $slideshow = $this->slideshowManager->ensureForItem($itemId, $previewMembers, $memberMediaMap);
+            $slideshow = $this->slideshowManager->ensureForItem(
+                $itemId,
+                $previewMembers,
+                $memberMediaMap,
+                $item->getTitle(),
+                $item->getSubtitle(),
+            );
         }
 
         if ($memberPayload !== []) {

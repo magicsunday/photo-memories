@@ -22,7 +22,7 @@ interface SlideshowVideoManagerInterface
      * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
-    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus;
+    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap, ?string $title = null, ?string $subtitle = null): SlideshowVideoStatus;
 
     public function resolveVideoPath(string $itemId): ?string;
 }

@@ -108,7 +108,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
-    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus
+    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap, ?string $title = null, ?string $subtitle = null): SlideshowVideoStatus
     {
         $slides = $this->collectSlides($memberIds, $mediaMap);
         if ($slides === []) {
@@ -162,6 +162,9 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $this->ensureVideoDirectory();
 
+        $videoTitle    = $this->normaliseMetadata($title);
+        $videoSubtitle = $this->normaliseMetadata($subtitle);
+
         $handle = @fopen($lockPath,
             'xb'
         );
@@ -173,29 +176,49 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $cleanupAfterSuccess  = false;
 
         try {
-            $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music']);
+            $job = new SlideshowJob($itemId, $jobPath, $videoPath, $lockPath, $errorPath, $images, $storyboard['slides'], $storyboard['transitionDuration'], $storyboard['music'], $videoTitle, $videoSubtitle);
             file_put_contents($jobPath, $job->toJson(), LOCK_EX);
 
-            $this->emitMonitoring('queued', [
+            $queuedContext = [
                 'itemId'     => $itemId,
                 'slideCount' => count($slides),
                 'videoPath'  => $videoPath,
                 'music'      => $storyboard['music'],
                 'transitionDuration' => $storyboard['transitionDuration'],
                 'mode'       => 'inline',
-            ]);
+            ];
+
+            if ($videoTitle !== null) {
+                $queuedContext['title'] = $videoTitle;
+            }
+
+            if ($videoSubtitle !== null) {
+                $queuedContext['subtitle'] = $videoSubtitle;
+            }
+
+            $this->emitMonitoring('queued', $queuedContext);
 
             $this->generator->generate($job);
             $cleanupAfterSuccess = true;
 
-            $this->emitMonitoring('ready', [
+            $readyContext = [
                 'itemId'     => $itemId,
                 'source'     => 'inline',
                 'videoPath'  => $videoPath,
                 'slideCount' => count($slides),
                 'music'      => $storyboard['music'],
                 'transitionDuration' => $storyboard['transitionDuration'],
-            ]);
+            ];
+
+            if ($videoTitle !== null) {
+                $readyContext['title'] = $videoTitle;
+            }
+
+            if ($videoSubtitle !== null) {
+                $readyContext['subtitle'] = $videoSubtitle;
+            }
+
+            $this->emitMonitoring('ready', $readyContext);
 
             return SlideshowVideoStatus::ready($this->buildVideoUrl($itemId), $this->slideDuration);
         } catch (Throwable $throwable) {
@@ -297,6 +320,17 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     private function buildVideoPath(string $itemId): string
     {
         return $this->videoDirectory . DIRECTORY_SEPARATOR . $itemId . '.mp4';
+    }
+
+    private function normaliseMetadata(?string $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     private function buildLockPath(string $videoPath): string
