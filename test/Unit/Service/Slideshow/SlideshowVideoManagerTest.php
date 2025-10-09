@@ -93,6 +93,48 @@ final class SlideshowVideoManagerTest extends TestCase
         }
     }
 
+    public function testEnsureForItemKeepsBackgroundProcessRunning(): void
+    {
+        $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
+        if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
+            self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
+        }
+
+        $imagePath = $baseDir . '/image-two.jpg';
+        file_put_contents($imagePath, 'image-stub', LOCK_EX);
+
+        $media = new Media($imagePath, str_repeat('b', 64), 2048);
+
+        $videoPath = $baseDir . '/memory-delayed.mp4';
+
+        $generator = $this->createMock(SlideshowVideoGeneratorInterface::class);
+
+        $manager = new SlideshowVideoManager(
+            $baseDir,
+            1.0,
+            0.5,
+            $generator,
+            [],
+            null,
+            null,
+            $this->fixturePath('slideshow-runner-delayed.php'),
+            PHP_BINARY,
+            getcwd(),
+        );
+
+        try {
+            $status = $manager->ensureForItem('memory-delayed', [2], [2 => $media]);
+
+            self::assertSame(SlideshowVideoStatus::STATUS_GENERATING, $status->status());
+
+            $this->waitForFile($videoPath);
+
+            self::assertFileExists($videoPath);
+        } finally {
+            $this->cleanupDirectory($baseDir);
+        }
+    }
+
     private function waitForFile(string $path, int $timeoutMilliseconds = 2000): void
     {
         $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
