@@ -98,11 +98,31 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         return $sanitized;
     }
 
+    private function normaliseMetadataText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
     /**
      * @param list<int>        $memberIds
      * @param array<int,Media> $mediaMap
      */
-    public function ensureForItem(string $itemId, array $memberIds, array $mediaMap): SlideshowVideoStatus
+    public function ensureForItem(
+        string $itemId,
+        array $memberIds,
+        array $mediaMap,
+        ?string $title = null,
+        ?string $subtitle = null,
+    ): SlideshowVideoStatus
     {
         $slides = $this->collectSlides($memberIds, $mediaMap);
         if ($slides === []) {
@@ -151,6 +171,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
         $storyboard = $this->buildStoryboard($slides);
+        $title      = $this->normaliseMetadataText($title);
+        $subtitle   = $this->normaliseMetadataText($subtitle);
 
         $this->ensureVideoDirectory();
 
@@ -164,17 +186,29 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $storyboard['slides'],
             $storyboard['transitionDuration'],
             $storyboard['music'],
+            $title,
+            $subtitle,
         );
         file_put_contents($jobPath, $job->toJson(), LOCK_EX);
 
-        $this->emitMonitoring('queued', [
+        $context = [
             'itemId'              => $itemId,
             'slideCount'          => count($slides),
             'videoPath'           => $videoPath,
             'music'               => $storyboard['music'],
             'transitionDuration'  => $storyboard['transitionDuration'],
             'mode'                => 'deferred',
-        ]);
+        ];
+
+        if ($title !== null) {
+            $context['title'] = $title;
+        }
+
+        if ($subtitle !== null) {
+            $context['subtitle'] = $subtitle;
+        }
+
+        $this->emitMonitoring('queued', $context);
 
         return SlideshowVideoStatus::generating($this->slideDuration);
     }

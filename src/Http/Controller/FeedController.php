@@ -267,7 +267,13 @@ final class FeedController
 
             $memberIds = $item->getMemberIds();
             $mediaMap  = $this->loadMediaMap($memberIds, $item->getAlgorithm() === 'video_stories');
-            $status    = $this->slideshowManager->ensureForItem($itemId, $memberIds, $mediaMap);
+            $status    = $this->slideshowManager->ensureForItem(
+                $itemId,
+                $memberIds,
+                $mediaMap,
+                $item->getTitle(),
+                $item->getSubtitle(),
+            );
 
             return new JsonResponse([
                 'slideshow' => $this->enrichSlideshowStatus($status),

@@ -104,10 +104,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $audioTrack         = $job->audioTrack() ?? $this->audioTrack;
 
         if (count($slides) === 1) {
-            return $this->buildSingleImageCommand($slides[0], $job->outputPath(), $audioTrack);
+            return $this->buildSingleImageCommand($slides[0], $job, $job->outputPath(), $audioTrack);
         }
 
-        return $this->buildMultiImageCommand($slides, $transitionDuration, $job->outputPath(), $audioTrack);
+        return $this->buildMultiImageCommand($slides, $job, $transitionDuration, $job->outputPath(), $audioTrack);
     }
 
     /**
@@ -115,7 +115,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function buildSingleImageCommand(array $slide, string $output, ?string $audioTrack): array
+    private function buildSingleImageCommand(array $slide, SlideshowJob $job, string $output, ?string $audioTrack): array
     {
         $duration = $this->resolveSlideDuration($slide['duration']);
         $filter = sprintf(
@@ -142,6 +142,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filter,
         ];
 
+        $command = $this->appendMetadataOptions($command, $job);
+
         return $this->appendAudioOptions($command, 1, $output, $audioTrack);
     }
 
@@ -150,8 +152,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function buildMultiImageCommand(array $slides, float $transitionDuration, string $output, ?string $audioTrack): array
-    {
+    private function buildMultiImageCommand(
+        array $slides,
+        SlideshowJob $job,
+        float $transitionDuration,
+        string $output,
+        ?string $audioTrack,
+    ): array {
         $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
         foreach ($slides as $slide) {
             $duration           = $this->resolveSlideDuration($slide['duration']);
@@ -208,6 +215,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
+        $command   = $this->appendMetadataOptions($command, $job);
+
         return $this->appendAudioOptions($command, count($slides), $output, $audioTrack);
     }
 
@@ -243,6 +252,48 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return $name;
+    }
+
+    /**
+     * @param list<string> $command
+     *
+     * @return list<string>
+     */
+    private function appendMetadataOptions(array $command, SlideshowJob $job): array
+    {
+        $metadata = [];
+
+        $title = $this->normaliseMetadataValue($job->title());
+        if ($title !== null) {
+            $metadata['title'] = $title;
+        }
+
+        $subtitle = $this->normaliseMetadataValue($job->subtitle());
+        if ($subtitle !== null) {
+            $metadata['comment']      = $subtitle;
+            $metadata['description'] = $subtitle;
+        }
+
+        foreach ($metadata as $key => $value) {
+            $command[] = '-metadata';
+            $command[] = sprintf('%s=%s', $key, $value);
+        }
+
+        return $command;
+    }
+
+    private function normaliseMetadataValue(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     /**
