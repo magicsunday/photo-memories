@@ -280,7 +280,7 @@ function renderItems() {
   }
 }
 
-function ensureSlideshowRefreshTimer(delay = 8000) {
+function ensureSlideshowRefreshTimer(delay = 10000) {
   if (slideshowRefreshTimer !== null) {
     return;
   }
@@ -291,7 +291,7 @@ function ensureSlideshowRefreshTimer(delay = 8000) {
   }, delay);
 }
 
-function restartSlideshowRefreshTimer(delay = 8000) {
+function restartSlideshowRefreshTimer(delay = 10000) {
   cancelSlideshowRefreshTimer();
   ensureSlideshowRefreshTimer(delay);
 }
@@ -578,7 +578,7 @@ async function triggerSlideshowGeneration(itemId) {
     renderItems();
 
     if (slideshow.status === 'in_erstellung') {
-      restartSlideshowRefreshTimer(4000);
+      restartSlideshowRefreshTimer(10000);
     } else if (slideshow.status === 'bereit') {
       cancelSlideshowRefreshTimer();
     }
