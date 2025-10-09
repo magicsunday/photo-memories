@@ -11,8 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Support;
 
-use ReflectionProperty;
-
 /**
  * Helper trait that assigns Doctrine identifiers in unit tests.
  */
@@ -23,7 +21,23 @@ trait EntityIdAssignmentTrait
      */
     protected function assignEntityId(object $entity, int|string $id, string $property = 'id'): void
     {
-        $reflection = new ReflectionProperty($entity, $property);
+        $class      = new \ReflectionClass($entity);
+        $reflection = null;
+
+        while ($class !== false) {
+            if ($class->hasProperty($property)) {
+                $reflection = $class->getProperty($property);
+
+                break;
+            }
+
+            $class = $class->getParentClass();
+        }
+
+        if ($reflection === null) {
+            throw new \RuntimeException(sprintf('Property "%s" could not be located on %s or its parents.', $property, $entity::class));
+        }
+
         $reflection->setAccessible(true);
         $reflection->setValue($entity, $id);
     }
