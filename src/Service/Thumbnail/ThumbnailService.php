@@ -493,7 +493,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $imagick->setImageOrientation($orientation);
 
-        if (method_exists($imagick, 'autoOrientImage')) {
+        if ($this->canAutoOrientImagick($imagick)) {
             $imagick->autoOrientImage();
             $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
 
@@ -536,6 +536,14 @@ class ThumbnailService implements ThumbnailServiceInterface
         }
 
         $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
+    }
+
+    /**
+     * Determines whether the current Imagick build exposes auto orientation support.
+     */
+    protected function canAutoOrientImagick(Imagick $imagick): bool
+    {
+        return method_exists($imagick, 'autoOrientImage');
     }
 
     /**

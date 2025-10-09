@@ -18,11 +18,14 @@ use ReflectionProperty;
  */
 trait EntityIdAssignmentTrait
 {
-    protected function assignEntityId(object $entity, int $id): void
+    /**
+     * @param int|string $id accepts either integer or string identifiers to support UUID entities
+     */
+    protected function assignEntityId(object $entity, int|string $id, string $property = 'id'): void
     {
-        $property = new ReflectionProperty($entity, 'id');
-        $property->setAccessible(true);
-        $property->setValue($entity, $id);
+        $reflection = new ReflectionProperty($entity, $property);
+        $reflection->setAccessible(true);
+        $reflection->setValue($entity, $id);
     }
 }
 

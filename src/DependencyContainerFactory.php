@@ -77,8 +77,21 @@ final class DependencyContainerFactory
 
         $containerBuilder = new ContainerBuilder();
         $containerBuilder->setParameter('kernel.project_dir', $this->resolveProjectDir());
-        $containerBuilder->setParameter('kernel.environment', getenv('APP_ENV') ?: 'prod');
-        $containerBuilder->setParameter('kernel.debug', (bool) (getenv('APP_DEBUG') ?: false));
+
+        $environment = getenv('APP_ENV');
+        if (!is_string($environment) || $environment === '') {
+            $environment = 'prod';
+        }
+
+        $debugRaw = getenv('APP_DEBUG');
+        $debug    = false;
+        if (is_string($debugRaw) && $debugRaw !== '') {
+            $normalized = strtolower($debugRaw);
+            $debug      = $normalized !== '0' && $normalized !== 'false';
+        }
+
+        $containerBuilder->setParameter('kernel.environment', $environment);
+        $containerBuilder->setParameter('kernel.debug', $debug);
 
         $yamlFileLoader = new YamlFileLoader($containerBuilder, new FileLocator(__DIR__ . '/../config'));
         $yamlFileLoader->load('services.yaml');

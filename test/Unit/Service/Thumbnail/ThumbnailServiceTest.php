@@ -1271,6 +1271,20 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             yield 'rotate-counter-clockwise' => [8, ['rotate--90']];
         }
 
+        #[Test]
+        public function usesManualImagickOrientationWhenAutoOrientIsUnavailable(): void
+        {
+            if (!extension_loaded('imagick')) {
+                self::markTestSkipped('Imagick extension is required for this test.');
+            }
+
+            $service      = new OrientationThumbnailServiceStub(false);
+            $baseLayout   = $this->createBaseOrientationLayout();
+            $storedLayout = $this->applyLayoutOperations($baseLayout, ['rotate-90']);
+
+            $this->assertOrientationWithImagick($service, ThumbnailService::ORIENTATION_RIGHTTOP, $storedLayout, $baseLayout);
+        }
+
         private function assertOrientationWithGd(OrientationThumbnailServiceStub $service, int $orientation, array $storedLayout, array $expectedLayout): void
         {
             $image    = $this->createGdImageFromLayout($storedLayout);
@@ -1618,10 +1632,12 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     final class OrientationThumbnailServiceStub extends ThumbnailService
     {
         private string $orientationDir;
+        private bool $supportsAutoOrient;
 
-        public function __construct()
+        public function __construct(bool $supportsAutoOrient = true)
         {
             $this->orientationDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-orientation-' . uniqid('', true);
+            $this->supportsAutoOrient = $supportsAutoOrient;
 
             parent::__construct($this->orientationDir, [1], true);
         }
@@ -1641,6 +1657,11 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
         public function orientImagickImage(Imagick $imagick, ?int $orientation): void
         {
             $this->applyOrientationWithImagick($imagick, $orientation);
+        }
+
+        protected function canAutoOrientImagick(Imagick $imagick): bool
+        {
+            return $this->supportsAutoOrient && parent::canAutoOrientImagick($imagick);
         }
     }
 }

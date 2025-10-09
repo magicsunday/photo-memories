@@ -363,7 +363,10 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         $basename = strtolower(basename($filepath));
         $tokens[] = str_replace([' ', '_'], '-', $basename);
 
-        $extra = preg_split('/[^a-z0-9]+/i', $basename) ?: [];
+        $extra = preg_split('/[^a-z0-9]+/i', $basename);
+        if ($extra === false) {
+            $extra = [];
+        }
         foreach ($extra as $token) {
             if ($token !== '') {
                 $tokens[] = strtolower($token);

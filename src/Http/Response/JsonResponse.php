@@ -39,7 +39,8 @@ final class JsonResponse extends Response
                 $data,
                 JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION
             );
-            parent::__construct($encoded ?: 'null', $statusCode, $headers);
+            $payload = $encoded === false || $encoded === '' ? 'null' : $encoded;
+            parent::__construct($payload, $statusCode, $headers);
 
             return;
         } catch (JsonException) {
@@ -47,7 +48,8 @@ final class JsonResponse extends Response
                 ['error' => 'Failed to encode response'],
                 JSON_THROW_ON_ERROR
             );
-            parent::__construct($fallback ?: 'null', 500, $headers);
+            $payload = $fallback === false || $fallback === '' ? 'null' : $fallback;
+            parent::__construct($payload, 500, $headers);
         }
     }
 }
