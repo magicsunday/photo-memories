@@ -226,7 +226,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
             $targetLabel = $index === count($slides) - 1 ? $finalLabel : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
-                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
+                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f%s',
                 $current,
                 $index,
                 $transition,
