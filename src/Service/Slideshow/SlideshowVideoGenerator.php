@@ -276,50 +276,53 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $targetAspectRatio = $this->formatFloat($this->width / $this->height);
         $durationSeconds   = $this->formatFloat(max(0.1, $duration));
-        $progressExpr      = sprintf('min(PTS/%s,1)', $durationSeconds);
+        $progressExpr      = $this->escapeFilterExpression(sprintf('min(t/%s,1)', $durationSeconds));
 
         if ($this->kenBurnsEnabled) {
-            $zoomExpr = sprintf(
+            $zoomExpr = $this->escapeFilterExpression(sprintf(
                 'if(gte(iw/ih,%1$s),%2$s+(%3$s-%2$s)*%4$s,1)',
                 $targetAspectRatio,
                 $this->formatFloat($this->zoomStart),
                 $this->formatFloat($this->zoomEnd),
                 $progressExpr,
-            );
+            ));
 
-            $panXExpr = sprintf(
+            $panXExpr = $this->escapeFilterExpression(sprintf(
                 'if(gte(iw/ih,%1$s),clip((iw-zoom*w)/2 + %2$s*(iw-zoom*w)/2*%3$s,0,max(iw-zoom*w,0)),(iw-ow)/2)',
                 $targetAspectRatio,
                 $this->formatFloat($this->panX),
                 $progressExpr,
-            );
+            ));
 
-            $panYExpr = sprintf(
+            $panYExpr = $this->escapeFilterExpression(sprintf(
                 'if(gte(iw/ih,%1$s),clip((ih-zoom*h)/2 + %2$s*(ih-zoom*h)/2*%3$s,0,max(ih-zoom*h,0)),(ih-oh)/2)',
                 $targetAspectRatio,
                 $this->formatFloat($this->panY),
                 $progressExpr,
-            );
+            ));
         } else {
             $zoomExpr = '1';
-            $panXExpr = sprintf('if(gte(iw/ih,%1$s),(iw-ow)/2,(iw-ow)/2)', $targetAspectRatio);
-            $panYExpr = sprintf('if(gte(iw/ih,%1$s),(ih-oh)/2,(ih-oh)/2)', $targetAspectRatio);
+            $panXExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(iw-ow)/2,(iw-ow)/2)', $targetAspectRatio));
+            $panYExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(ih-oh)/2,(ih-oh)/2)', $targetAspectRatio));
         }
 
         $zoomSizeExpr = sprintf('%1$dx%2$d', $this->width, $this->height);
+        $cropWidthExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,iw)', $targetAspectRatio, $this->width));
+        $cropHeightExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,ih)', $targetAspectRatio, $this->height));
 
         $foreground = sprintf(
             "[fg%1\$d]scale=%2\$d:%3\$d:force_original_aspect_ratio=increase," .
-            "zoompan=z=%4\$s:x=%5\$s:y=%6\$s:d=1:s=%8\$s," .
-            "crop=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih):(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
+            "zoompan=z=%4\$s:x=%5\$s:y=%6\$s:d=1:s=%7\$s," .
+            "crop=%8\$s:%9\$s:(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
             $index,
             $this->width,
             $this->height,
             $zoomExpr,
             $panXExpr,
             $panYExpr,
-            $targetAspectRatio,
             $zoomSizeExpr,
+            $cropWidthExpr,
+            $cropHeightExpr,
         );
 
         return sprintf(
@@ -512,6 +515,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
+    }
+
+    private function escapeFilterExpression(string $expression): string
+    {
+        return (string) preg_replace('/(?<!\\\\),/', '\\,', $expression);
     }
 
     private function formatFloat(float $value): string
