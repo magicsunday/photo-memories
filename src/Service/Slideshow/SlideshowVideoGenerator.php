@@ -29,6 +29,7 @@ use function implode;
 use function in_array;
 use function is_dir;
 use function is_file;
+use function is_readable;
 use function is_string;
 use function hash;
 use function max;
@@ -109,6 +110,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $slides = $job->slides();
         if ($slides === []) {
             throw new RuntimeException('Cannot render slideshow without images.');
+        }
+
+        foreach ($slides as $slide) {
+            if (!is_file($slide['image']) || !is_readable($slide['image'])) {
+                throw new RuntimeException(sprintf('Slideshow image file "%s" is not readable.', $slide['image']));
+            }
         }
 
         $directory = dirname($job->outputPath());
