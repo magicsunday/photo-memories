@@ -1384,6 +1384,18 @@ function createLightbox() {
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Bildvorschau');
 
+  const previousButton = document.createElement('button');
+  previousButton.type = 'button';
+  previousButton.className = 'lightbox__nav lightbox__nav--previous';
+  previousButton.setAttribute('aria-label', 'Vorheriges Bild');
+  previousButton.textContent = '‹';
+
+  const nextButton = document.createElement('button');
+  nextButton.type = 'button';
+  nextButton.className = 'lightbox__nav lightbox__nav--next';
+  nextButton.setAttribute('aria-label', 'Nächstes Bild');
+  nextButton.textContent = '›';
+
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'lightbox__close';
@@ -1404,6 +1416,8 @@ function createLightbox() {
   figure.appendChild(image);
   figure.appendChild(caption);
 
+  overlay.appendChild(previousButton);
+  overlay.appendChild(nextButton);
   overlay.appendChild(closeButton);
   overlay.appendChild(figure);
 
@@ -1417,6 +1431,39 @@ function createLightbox() {
   const groups = new Map();
 
   const normaliseCaption = (text) => (typeof text === 'string' ? text : '');
+
+  const resolveAvailableEntries = (group) => {
+    if (!(group instanceof HTMLElement)) {
+      return 0;
+    }
+
+    const registeredEntries = groups.get(group);
+    if (!Array.isArray(registeredEntries)) {
+      return 0;
+    }
+
+    return registeredEntries.reduce((count, entry) => (entry ? count + 1 : count), 0);
+  };
+
+  const updateNavigationControls = () => {
+    const hasGroup = currentGroup instanceof HTMLElement;
+    if (!hasGroup) {
+      previousButton.hidden = true;
+      previousButton.disabled = true;
+      nextButton.hidden = true;
+      nextButton.disabled = true;
+
+      return;
+    }
+
+    const availableEntries = resolveAvailableEntries(currentGroup);
+    const navigable = availableEntries > 1;
+
+    previousButton.hidden = !navigable;
+    nextButton.hidden = !navigable;
+    previousButton.disabled = !navigable;
+    nextButton.disabled = !navigable;
+  };
 
   const renderEntry = (entry, group, index, triggerOverride) => {
     if (!entry || typeof entry.source !== 'string' || entry.source === '') {
@@ -1464,6 +1511,7 @@ function createLightbox() {
     }
 
     closeButton.focus({ preventScroll: true });
+    updateNavigationControls();
   };
 
   const registerGroup = (group, entries) => {
@@ -1499,6 +1547,10 @@ function createLightbox() {
     }
 
     groups.set(group, normalised);
+
+    if (group === currentGroup) {
+      updateNavigationControls();
+    }
   };
 
   const unregisterGroup = (group) => {
@@ -1511,6 +1563,7 @@ function createLightbox() {
     if (currentGroup === group) {
       currentGroup = null;
       currentIndex = -1;
+      updateNavigationControls();
     }
   };
 
@@ -1588,11 +1641,23 @@ function createLightbox() {
     currentSource = '';
     currentGroup = null;
     currentIndex = -1;
+    updateNavigationControls();
 
     if (activeTrigger) {
       activeTrigger.focus({ preventScroll: true });
       activeTrigger = null;
     }
+  };
+
+  const navigateGroup = (direction) => {
+    const group = currentGroup;
+    if (!(group instanceof HTMLElement)) {
+      return;
+    }
+
+    const delta = direction > 0 ? 1 : -1;
+    const startIndex = currentIndex === -1 ? (delta > 0 ? 0 : -1) : currentIndex + delta;
+    showGroupEntry(group, startIndex, delta);
   };
 
   const show = (source, altText, captionText, trigger, context) => {
@@ -1636,6 +1701,14 @@ function createLightbox() {
     }
   });
 
+  previousButton.addEventListener('click', () => {
+    navigateGroup(-1);
+  });
+
+  nextButton.addEventListener('click', () => {
+    navigateGroup(1);
+  });
+
   document.addEventListener('keydown', (event) => {
     if (!visible) {
       return;
@@ -1649,17 +1722,8 @@ function createLightbox() {
     }
 
     if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-      const group = currentGroup;
-      if (!(group instanceof HTMLElement)) {
-        return;
-      }
-
       event.preventDefault();
-      const delta = event.key === 'ArrowRight' ? 1 : -1;
-      const nextIndex = currentIndex === -1
-        ? (delta > 0 ? 0 : -1)
-        : currentIndex + delta;
-      showGroupEntry(group, nextIndex, delta);
+      navigateGroup(event.key === 'ArrowRight' ? 1 : -1);
     }
   });
 
