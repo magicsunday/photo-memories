@@ -79,8 +79,10 @@ final class SelectionProfileProvider
         /** @var array<string, int|float> $merged */
         $merged = array_merge($baseOverrides, $this->runtimeOverrides, $this->sanitizeOverrides($overrides));
 
+        $targetTotal = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
+
         return new VacationSelectionOptions(
-            targetTotal: $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal),
+            targetTotal: $targetTotal,
             maxPerDay: $this->intValue($merged, 'max_per_day', $this->defaultOptions->maxPerDay),
             timeSlotHours: $this->intValue($merged, 'time_slot_hours', $this->defaultOptions->timeSlotHours),
             minSpacingSeconds: $this->intValue($merged, 'min_spacing_seconds', $this->defaultOptions->minSpacingSeconds),
@@ -90,7 +92,7 @@ final class SelectionProfileProvider
             faceBonus: $this->floatValue($merged, 'face_bonus', $this->defaultOptions->faceBonus),
             selfiePenalty: $this->floatValue($merged, 'selfie_penalty', $this->defaultOptions->selfiePenalty),
             qualityFloor: $this->floatValue($merged, 'quality_floor', $this->defaultOptions->qualityFloor),
-            minimumTotal: $this->intValue($merged, 'minimum_total', $this->defaultOptions->minimumTotal),
+            minimumTotal: $this->intValue($merged, 'minimum_total', $targetTotal),
         );
     }
 
