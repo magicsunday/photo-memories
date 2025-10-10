@@ -24,10 +24,10 @@ final class Phash
 {
     public static function hammingFromHex(string $a, string $b): int
     {
-        $ab = hex2bin($a);
-        $bb = hex2bin($b);
+        $ab = self::decodeHex($a);
+        $bb = self::decodeHex($b);
 
-        if ($ab === false || $bb === false) {
+        if ($ab === null || $bb === null) {
             return 64;
         }
 
@@ -39,6 +39,24 @@ final class Phash
         }
 
         return $dist + 8 * abs(strlen($ab) - strlen($bb));
+    }
+
+    /**
+     * Decode a hexadecimal string to binary representation while validating its format.
+     */
+    private static function decodeHex(string $value): ?string
+    {
+        if ((strlen($value) & 1) === 1) {
+            return null;
+        }
+
+        $decoded = hex2bin($value);
+
+        if ($decoded === false) {
+            return null;
+        }
+
+        return $decoded;
     }
 
     private static function bitcount(int $v): int
