@@ -139,6 +139,44 @@ body {
   font-size: 20px;
 }
 
+.card-title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.card-title-button::after {
+  content: '\2192';
+  font-size: 18px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.card-title-button:hover,
+.card-title-button:focus-visible {
+  color: var(--accent);
+}
+
+.card-title-button:hover::after,
+.card-title-button:focus-visible::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.card-title-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .card-header p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -359,6 +397,195 @@ body {
 
 .error {
   color: #ff9da4;
+}
+
+body.detail-open {
+  overflow: hidden;
+}
+
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 48px 16px;
+  background: rgba(11, 12, 16, 0.78);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s ease;
+  z-index: 1100;
+}
+
+.detail-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.detail-overlay[hidden] {
+  display: none;
+}
+
+.detail-panel {
+  position: relative;
+  width: min(960px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 36px 32px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 320ms ease;
+}
+
+.detail-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #0b0c10;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.detail-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(88, 166, 255, 0.35);
+}
+
+.detail-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.detail-header h2 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.detail-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detail-badges span {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+}
+
+.detail-timeline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detail-loading,
+.detail-error,
+.detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 15px;
+  text-align: center;
+}
+
+.detail-loading .spinner {
+  margin: 0;
+}
+
+.detail-error {
+  color: #ff9da4;
+  border: 1px solid rgba(255, 157, 164, 0.4);
+}
+
+.detail-empty {
+  color: var(--muted);
+}
+
+.detail-gallery {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.detail-gallery figure {
+  position: relative;
+  margin: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  aspect-ratio: 4 / 3;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.detail-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.detail-gallery figure:hover img {
+  transform: scale(1.05);
+}
+
+.detail-gallery figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgba(11, 12, 16, 0) 0%, rgba(11, 12, 16, 0.88) 100%);
+  color: var(--text);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .detail-panel {
+    padding: 28px 20px 32px;
+  }
+
+  .detail-close {
+    top: 16px;
+    right: 16px;
+  }
+
+  .detail-header h2 {
+    font-size: 24px;
+  }
+
+  .detail-gallery {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
 body.has-lightbox {

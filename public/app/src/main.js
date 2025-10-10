@@ -11,6 +11,15 @@ const state = {
   error: null,
   filters: { ...defaultFilters },
   slideshowRequests: {},
+  detail: {
+    visible: false,
+    itemId: null,
+    loading: false,
+    error: null,
+    data: null,
+    preview: null,
+  },
+  detailCache: {},
 };
 
 let slideshowRefreshTimer = null;
@@ -40,8 +49,15 @@ let applyButton = null;
 let resetButton = null;
 let statusLine = null;
 let cardsContainer = null;
+let detailOverlay = null;
 
 const lightbox = createLightbox();
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.detail.visible && !lightbox.isVisible()) {
+    closeDetail();
+  }
+});
 
 const appContainer = document.querySelector('#app');
 if (appContainer instanceof HTMLElement) {
@@ -95,6 +111,16 @@ function initialiseApp(app) {
   filterForm = form;
   statusLine = status;
   cardsContainer = cards;
+
+  detailOverlay = document.createElement('div');
+  detailOverlay.className = 'detail-overlay';
+  detailOverlay.setAttribute('hidden', '');
+  detailOverlay.addEventListener('click', (event) => {
+    if (event.target === detailOverlay) {
+      closeDetail();
+    }
+  });
+  app.appendChild(detailOverlay);
 
   const score = filterForm.querySelector('input[name="score"]');
   const scoreDisplay = filterForm.querySelector('[data-score-value]');
@@ -158,7 +184,28 @@ function initialiseApp(app) {
 
   updateStatus();
   renderItems();
+  renderDetail();
   fetchFeed();
+}
+
+function createFilterParams() {
+  const params = new URLSearchParams();
+
+  const scoreRaw = typeof state.filters.score === 'string' ? state.filters.score : String(state.filters.score ?? '');
+  const scoreValue = Number.parseFloat(scoreRaw);
+  if (!Number.isNaN(scoreValue) && scoreValue > 0) {
+    params.set('score', scoreValue.toString());
+  }
+
+  if (typeof state.filters.strategie === 'string' && state.filters.strategie !== '') {
+    params.set('strategie', state.filters.strategie);
+  }
+
+  if (typeof state.filters.datum === 'string' && state.filters.datum !== '') {
+    params.set('datum', state.filters.datum);
+  }
+
+  return params;
 }
 
 async function fetchFeed() {
@@ -166,24 +213,13 @@ async function fetchFeed() {
   state.error = null;
   updateStatus();
 
-  const params = new URLSearchParams();
-  const scoreValue = Number.parseFloat(state.filters.score);
-  if (!Number.isNaN(scoreValue) && scoreValue > 0) {
-    params.set('score', scoreValue.toString());
-  }
-
-  if (state.filters.strategie) {
-    params.set('strategie', state.filters.strategie);
-  }
-
-  if (state.filters.datum) {
-    params.set('datum', state.filters.datum);
-  }
-
+  const params = createFilterParams();
   params.set('limit', '24');
+  const query = params.toString();
+  const url = query !== '' ? `/api/feed?${query}` : '/api/feed';
 
   try {
-    const response = await fetch(`/api/feed?${params.toString()}`, {
+    const response = await fetch(url, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
@@ -250,6 +286,12 @@ function renderItems() {
     return;
   }
 
+  const openDetailId = state.detail.visible && typeof state.detail.itemId === 'string' ? state.detail.itemId : null;
+  let detailPreview = null;
+  if (openDetailId) {
+    detailPreview = state.items.find((entry) => entry && entry.id === openDetailId) ?? null;
+  }
+
   cardsContainer.textContent = '';
 
   if (!state.items || state.items.length === 0) {
@@ -277,6 +319,14 @@ function renderItems() {
     ensureSlideshowRefreshTimer();
   } else if (slideshowRefreshTimer !== null) {
     cancelSlideshowRefreshTimer();
+  }
+
+  if (detailPreview) {
+    state.detail.preview = detailPreview;
+  }
+
+  if (state.detail.visible) {
+    renderDetail();
   }
 }
 
@@ -313,7 +363,14 @@ function createCard(item) {
   header.className = 'card-header';
 
   const title = document.createElement('h2');
-  title.textContent = item.titel ?? 'Ohne Titel';
+  const titleButton = document.createElement('button');
+  titleButton.type = 'button';
+  titleButton.className = 'card-title-button';
+  titleButton.textContent = item.titel ?? 'Ohne Titel';
+  titleButton.addEventListener('click', () => {
+    openDetail(item);
+  });
+  title.appendChild(titleButton);
   header.appendChild(title);
 
   const subtitle = document.createElement('p');
@@ -378,61 +435,312 @@ function createCard(item) {
     gallery.appendChild(placeholder);
   } else {
     images.forEach((image) => {
-      if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
-        return;
+      const figure = createGalleryFigure(image);
+      if (figure) {
+        gallery.appendChild(figure);
       }
-
-      const figure = document.createElement('figure');
-      figure.classList.add('is-interactive');
-      figure.tabIndex = 0;
-      figure.setAttribute('role', 'button');
-
-      const img = document.createElement('img');
-      img.src = image.thumbnail;
-      const takenAtLabel = formatDateTime(image.aufgenommenAm);
-      const mediaIdLabel = image.mediaId ? `Medien-ID ${image.mediaId}` : 'Medienvorschau';
-      img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      if (takenAtLabel) {
-        img.title = `Aufgenommen am ${takenAtLabel}`;
-      }
-      figure.appendChild(img);
-
-      const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
-      figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
-
-      if (takenAtLabel) {
-        const caption = document.createElement('figcaption');
-        caption.textContent = captionText;
-        figure.appendChild(caption);
-      }
-
-      const activateLightbox = () => {
-        if (lightbox.isVisible() && lightbox.getCurrentSource() === image.thumbnail) {
-          lightbox.hide();
-
-          return;
-        }
-
-        lightbox.show(image.thumbnail, img.alt, captionText, figure);
-      };
-
-      figure.addEventListener('click', activateLightbox);
-      figure.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          activateLightbox();
-        }
-      });
-
-      gallery.appendChild(figure);
     });
   }
 
   card.appendChild(gallery);
 
   return card;
+}
+
+function createGalleryFigure(image, variant = 'card') {
+  if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
+    return null;
+  }
+
+  const figure = document.createElement('figure');
+  figure.classList.add('is-interactive');
+  if (variant === 'detail') {
+    figure.classList.add('detail-gallery__item');
+  }
+  figure.tabIndex = 0;
+  figure.setAttribute('role', 'button');
+
+  const img = document.createElement('img');
+  img.src = image.thumbnail;
+  const takenAtLabel = formatDateTime(image.aufgenommenAm);
+  const mediaIdLabel = image.mediaId ? `Medien-ID ${image.mediaId}` : 'Medienvorschau';
+  img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  if (takenAtLabel) {
+    img.title = `Aufgenommen am ${takenAtLabel}`;
+  }
+  figure.appendChild(img);
+
+  const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
+  figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
+
+  if (takenAtLabel) {
+    const caption = document.createElement('figcaption');
+    caption.textContent = captionText;
+    figure.appendChild(caption);
+  }
+
+  const activateLightbox = () => {
+    if (lightbox.isVisible() && lightbox.getCurrentSource() === image.thumbnail) {
+      lightbox.hide();
+
+      return;
+    }
+
+    lightbox.show(image.thumbnail, img.alt, captionText, figure);
+  };
+
+  figure.addEventListener('click', activateLightbox);
+  figure.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      activateLightbox();
+    }
+  });
+
+  return figure;
+}
+
+function openDetail(item) {
+  if (!item || typeof item.id !== 'string' || item.id === '') {
+    return;
+  }
+
+  state.detail.visible = true;
+  state.detail.itemId = item.id;
+  state.detail.preview = item;
+  state.detail.error = null;
+
+  const cached = state.detailCache[item.id] ?? null;
+  state.detail.data = cached ?? null;
+  state.detail.loading = cached === null;
+
+  renderDetail();
+
+  if (cached === null) {
+    void loadDetailItem(item.id);
+  }
+}
+
+function closeDetail() {
+  if (!state.detail.visible) {
+    return;
+  }
+
+  state.detail.visible = false;
+  state.detail.itemId = null;
+  state.detail.preview = null;
+  state.detail.data = null;
+  state.detail.error = null;
+  state.detail.loading = false;
+
+  renderDetail();
+}
+
+async function loadDetailItem(itemId) {
+  if (typeof itemId !== 'string' || itemId === '') {
+    return;
+  }
+
+  if (state.detail.itemId !== itemId) {
+    return;
+  }
+
+  state.detail.loading = true;
+  renderDetail();
+
+  const params = createFilterParams();
+  params.set('felder', 'basis,galerie,zeit,kontext');
+  const query = params.toString();
+  const baseUrl = `/api/feed/${encodeURIComponent(itemId)}`;
+  const url = query !== '' ? `${baseUrl}?${query}` : baseUrl;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      let message = `Fehler ${response.status}`;
+      try {
+        const body = await response.json();
+        if (body && typeof body.error === 'string' && body.error !== '') {
+          message += `: ${body.error}`;
+        }
+      } catch (error) {
+        console.warn('Konnte Fehlermeldung nicht parsen', error);
+      }
+
+      throw new Error(message);
+    }
+
+    const payload = await response.json();
+    const detail = payload && typeof payload === 'object' ? payload.item ?? null : null;
+
+    if (!detail || typeof detail !== 'object') {
+      throw new Error('Ungültige Galerie-Antwort erhalten.');
+    }
+
+    state.detailCache[itemId] = detail;
+
+    if (state.detail.itemId === itemId) {
+      state.detail.data = detail;
+      state.detail.loading = false;
+      state.detail.error = null;
+      renderDetail();
+    }
+  } catch (error) {
+    console.error('Detailansicht konnte nicht geladen werden', error);
+    const message = error instanceof Error ? error.message : 'Unbekannter Fehler beim Laden der Galerie.';
+
+    if (state.detail.itemId === itemId) {
+      state.detail.loading = false;
+      state.detail.error = message;
+      renderDetail();
+    }
+  }
+}
+
+function renderDetail() {
+  if (!(detailOverlay instanceof HTMLElement)) {
+    return;
+  }
+
+  detailOverlay.textContent = '';
+
+  if (!state.detail.visible) {
+    detailOverlay.classList.remove('is-visible');
+    detailOverlay.setAttribute('hidden', '');
+    document.body.classList.remove('detail-open');
+
+    return;
+  }
+
+  detailOverlay.removeAttribute('hidden');
+  detailOverlay.classList.add('is-visible');
+  document.body.classList.add('detail-open');
+
+  const panel = document.createElement('div');
+  panel.className = 'detail-panel';
+  detailOverlay.appendChild(panel);
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'detail-close';
+  closeButton.textContent = 'Schließen';
+  closeButton.addEventListener('click', () => {
+    closeDetail();
+  });
+  panel.appendChild(closeButton);
+
+  const detailItem = state.detail.data ?? state.detail.preview ?? null;
+
+  const header = document.createElement('header');
+  header.className = 'detail-header';
+
+  const heading = document.createElement('h2');
+  heading.textContent = detailItem && typeof detailItem.titel === 'string' && detailItem.titel !== ''
+    ? detailItem.titel
+    : 'Ohne Titel';
+  header.appendChild(heading);
+
+  if (detailItem && typeof detailItem.untertitel === 'string' && detailItem.untertitel !== '') {
+    const subtitle = document.createElement('p');
+    subtitle.textContent = detailItem.untertitel;
+    header.appendChild(subtitle);
+  }
+
+  panel.appendChild(header);
+
+  const badges = document.createElement('div');
+  badges.className = 'detail-badges';
+
+  if (detailItem && typeof detailItem.gruppe === 'string' && detailItem.gruppe !== '') {
+    const group = document.createElement('span');
+    group.textContent = formatLabel(detailItem.gruppe);
+    badges.appendChild(group);
+  }
+
+  if (detailItem) {
+    const algorithmLabel = typeof detailItem.algorithmusLabel === 'string' && detailItem.algorithmusLabel !== ''
+      ? detailItem.algorithmusLabel
+      : (typeof detailItem.algorithmus === 'string' ? formatLabel(detailItem.algorithmus) : '');
+    if (algorithmLabel) {
+      const algo = document.createElement('span');
+      algo.textContent = algorithmLabel;
+      badges.appendChild(algo);
+    }
+  }
+
+  if (detailItem && typeof detailItem.score !== 'undefined') {
+    const scoreBadge = document.createElement('span');
+    scoreBadge.textContent = `Score ${formatScore(detailItem.score)}`;
+    badges.appendChild(scoreBadge);
+  }
+
+  if (badges.children.length > 0) {
+    panel.appendChild(badges);
+  }
+
+  const timelineText = detailItem ? buildTimeline(detailItem.zeitspanne) : '';
+  if (timelineText) {
+    const timeline = document.createElement('p');
+    timeline.className = 'detail-timeline';
+    timeline.textContent = `Zeitraum: ${timelineText}`;
+    panel.appendChild(timeline);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'detail-body';
+
+  if (state.detail.loading) {
+    const loading = document.createElement('div');
+    loading.className = 'detail-loading';
+    const spinner = createSpinner();
+    loading.appendChild(spinner);
+    const loadingText = document.createElement('span');
+    loadingText.textContent = 'Galerie wird geladen …';
+    loading.appendChild(loadingText);
+    body.appendChild(loading);
+  } else if (state.detail.error) {
+    const errorBox = document.createElement('div');
+    errorBox.className = 'detail-error';
+    errorBox.textContent = state.detail.error;
+    body.appendChild(errorBox);
+  } else if (detailItem) {
+    const gallery = document.createElement('div');
+    gallery.className = 'detail-gallery';
+    const images = Array.isArray(detailItem.galerie) ? detailItem.galerie : [];
+
+    if (images.length === 0) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'detail-empty';
+      placeholder.textContent = 'Keine Bilder verfügbar.';
+      gallery.appendChild(placeholder);
+    } else {
+      images.forEach((image) => {
+        const figure = createGalleryFigure(image, 'detail');
+        if (figure) {
+          gallery.appendChild(figure);
+        }
+      });
+    }
+
+    body.appendChild(gallery);
+  } else {
+    const empty = document.createElement('div');
+    empty.className = 'detail-empty';
+    empty.textContent = 'Keine Daten für diese Galerie vorhanden.';
+    body.appendChild(empty);
+  }
+
+  panel.appendChild(body);
+
+  window.requestAnimationFrame(() => {
+    closeButton.focus({ preventScroll: true });
+  });
 }
 
 function createSlideshowSection(item) {
