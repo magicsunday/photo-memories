@@ -15,12 +15,16 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use RuntimeException;
 
 use function array_map;
 use function array_search;
 use function count;
 use function preg_match;
 use function preg_match_all;
+use function sprintf;
+use function sys_get_temp_dir;
+use function uniqid;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -196,6 +200,41 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
 
         self::assertNotNull($audioLabelIndex);
+    }
+
+    public function testGenerateThrowsExceptionWhenImageFileIsNotReadable(): void
+    {
+        $missingImage = sys_get_temp_dir() . '/missing-' . uniqid('', true) . '.jpg';
+
+        $slides = [
+            [
+                'image'      => $missingImage,
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'unreadable-image',
+            sys_get_temp_dir() . '/job.json',
+            sys_get_temp_dir() . '/slideshow.mp4',
+            sys_get_temp_dir() . '/slideshow.lock',
+            sys_get_temp_dir() . '/slideshow.error',
+            [$missingImage],
+            $slides,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(sprintf('Slideshow image file "%s" is not readable.', $missingImage));
+
+        $generator->generate($job);
     }
 
     public function testZoompanExpressionsRespectConfiguredValues(): void
