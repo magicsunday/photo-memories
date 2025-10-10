@@ -56,6 +56,7 @@ use function hash;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_file;
 use function is_int;
 use function is_iterable;
 use function is_numeric;
@@ -714,16 +715,29 @@ final class FeedController
     private function resolveOrGenerateThumbnail(Media $media, int $width): ?string
     {
         $resolved = $this->thumbnailResolver->resolveBest($media, $width);
-        if (is_string($resolved)) {
-            if ($resolved !== $media->getPath()) {
-                return $resolved;
-            }
+        if (is_string($resolved) && $resolved !== $media->getPath()) {
+            return $resolved;
+        }
 
-            $existing = $media->getThumbnails();
+        $existing            = $media->getThumbnails();
+        $hasUsableThumbnails = false;
 
-            if (is_array($existing) && $existing !== []) {
-                return $resolved;
+        if (is_array($existing) && $existing !== []) {
+            foreach ($existing as $path) {
+                if (!is_string($path) || $path === '') {
+                    continue;
+                }
+
+                if (is_file($path)) {
+                    $hasUsableThumbnails = true;
+
+                    break;
+                }
             }
+        }
+
+        if ($hasUsableThumbnails && is_string($resolved)) {
+            return $resolved;
         }
 
         try {
