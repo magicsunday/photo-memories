@@ -834,9 +834,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         return $isWeekend || $isHoliday;
     }
 
-    }
-
-
+    /**
+     * Normalizes a location component by replacing separators and capitalizing each word.
+     */
     private function formatLocationComponent(string $value): string
     {
         $value = str_replace('_', ' ', $value);
