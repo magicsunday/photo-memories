@@ -835,7 +835,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * Normalizes a location label by replacing separators and capitalising its parts.
+     * Normalizes a location component by replacing separators and capitalizing each word.
      */
     private function formatLocationComponent(string $value): string
     {

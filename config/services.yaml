@@ -764,9 +764,9 @@ services:
 
     MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector:
         arguments:
-            $qualityAggregator: '@MagicSunday\\Memories\\Service\\Metadata\\Quality\\MediaQualityAggregator'
-            $metrics: '@MagicSunday\\Memories\\Clusterer\\Selection\\SimilarityMetrics'
-            $defaultOptions: '@MagicSunday\\Memories\\Clusterer\\Selection\\VacationSelectionOptions'
+            $qualityAggregator: '@MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator'
+            $metrics: '@MagicSunday\Memories\Clusterer\Selection\SimilarityMetrics'
+            $defaultOptions: '@MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions'
 
     MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface:
         alias: MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector
@@ -777,9 +777,9 @@ services:
             $movementThresholdKm: 35.0
             $minAwayDays: '%memories.cluster.vacation.min_away_days%'
             $minMembers: '%memories.cluster.vacation.min_members%'
-            $memberSelector: '@MagicSunday\\Memories\\Clusterer\\Selection\\MemberSelectorInterface'
-            $selectionOptions: '@MagicSunday\\Memories\\Clusterer\\Selection\\VacationSelectionOptions'
-            $monitoringEmitter: '@MagicSunday\\Memories\\Service\\Monitoring\\Contract\\JobMonitoringEmitterInterface'
+            $memberSelector: '@MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface'
+            $selectionOptions: '@MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions'
+            $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
