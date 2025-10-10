@@ -255,11 +255,15 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
+        $targetAspectRatio = $this->formatFloat($this->width / $this->height);
+
         $foreground = sprintf(
-            '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease[fg%1$dout];',
+            "[fg%1\$d]scale='if(gte(iw/ih,%4\$s),%2\$d,-1)':'if(gte(iw/ih,%4\$s),-1,%3\$d)'," .
+            "crop='min(iw,%2\$d)':'min(ih,%3\$d)'[fg%1\$dout];",
             $index,
             $this->width,
             $this->height,
+            $targetAspectRatio,
         );
 
         return sprintf(
