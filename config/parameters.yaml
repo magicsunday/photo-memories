@@ -471,6 +471,14 @@ parameters:
     memories.slideshow.video_height: 720
     # Description: Path to the ffmpeg binary used for slideshow rendering.
     memories.slideshow.ffmpeg_path: 'ffmpeg'
+    # Description: Default font family for drawtext overlays when no font file is provided.
+    memories.slideshow.font_family_default: 'DejaVu Sans'
+    # Description: Font family used for drawtext overlays.
+    memories.slideshow.font_family: "%env(default:memories.slideshow.font_family_default:MEMORIES_SLIDESHOW_FONT_FAMILY)%"
+    # Description: Default font file path for drawtext overlays.
+    memories.slideshow.font_file_default: ''
+    # Description: Font file path for drawtext overlays. Leave empty to rely on the configured font family.
+    memories.slideshow.font_file: "%env(default:memories.slideshow.font_file_default:MEMORIES_SLIDESHOW_FONT_FILE)%"
     # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'
