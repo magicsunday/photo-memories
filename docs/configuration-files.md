@@ -18,7 +18,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 - **Thumbnails** – Zielgrößen und Orientierungsbehandlung (`memories.thumbnail_*`).
 - **Konsolidierung & Prioritäten** – Gewichtungen und Reihenfolgen für Clusterstrategien (`memories.cluster.consolidate.*`, `memories.cluster.priority.*`).
 - **Scoring** – Basiswerte und POI-spezifische Verstärkungen zur Qualitätsbewertung (`memories.score.*`).
-- **Slideshow** – Verzeichnisse, Laufzeiten und Übergänge der Slideshow-Funktion (`memories.slideshow.*`).
+- **Slideshow** – Verzeichnisse, Laufzeiten, Übergänge sowie Schrifteinstellungen der Slideshow-Funktion (`memories.slideshow.*`).
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 

@@ -23,6 +23,7 @@ use function count;
 use function dirname;
 use function implode;
 use function is_dir;
+use function is_file;
 use function is_string;
 use function max;
 use function mkdir;
@@ -58,6 +59,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly int $height = 720,
         private readonly array $transitions = self::DEFAULT_TRANSITIONS,
         private readonly ?string $audioTrack = null,
+        private readonly ?string $fontFile = null,
+        private readonly string $fontFamily = 'DejaVu Sans',
     ) {
     }
 
@@ -371,22 +374,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $titleText = $this->normaliseDrawText($title);
         if ($titleText !== null) {
-            $filters[] = sprintf(
-                "drawtext=text='%s':fontcolor=white:fontsize=64:box=1:boxcolor=0x000000AA:boxborderw=20:" .
-                'x=(w-text_w)/2:y=h*0.08',
-                $titleText
-            );
+            $filters[] = $this->buildDrawTextFilter($titleText, 64, 'h*0.08');
         }
 
         $subtitleText = $this->normaliseDrawText($subtitle);
         if ($subtitleText !== null) {
             $subtitleY = $titleText !== null ? 'h*0.08+line_h+40' : 'h*0.08';
-            $filters[]  = sprintf(
-                "drawtext=text='%s':fontcolor=white:fontsize=48:box=1:boxcolor=0x000000AA:boxborderw=20:" .
-                'x=(w-text_w)/2:y=%s',
-                $subtitleText,
-                $subtitleY
-            );
+            $filters[]  = $this->buildDrawTextFilter($subtitleText, 48, $subtitleY);
         }
 
         return implode(',', array_filter($filters));
@@ -398,12 +392,47 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             return null;
         }
 
-        $escaped = str_replace(
+        return trim($this->escapeDrawTextValue($value));
+    }
+
+    private function buildDrawTextFilter(string $text, int $fontSize, string $positionY): string
+    {
+        $fontDirective = $this->resolveFontDirective();
+        $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
+
+        return sprintf(
+            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:box=1:boxcolor=0x000000AA:boxborderw=20:" .
+            'x=(w-text_w)/2:y=%s',
+            $text,
+            $fontSegment,
+            $fontSize,
+            $positionY
+        );
+    }
+
+    private function resolveFontDirective(): string
+    {
+        if (is_string($this->fontFile)) {
+            $fontFile = trim($this->fontFile);
+            if ($fontFile !== '' && is_file($fontFile)) {
+                return sprintf("fontfile='%s'", $this->escapeDrawTextValue($fontFile));
+            }
+        }
+
+        $fontFamily = trim($this->fontFamily);
+        if ($fontFamily !== '') {
+            return sprintf("font='%s'", $this->escapeDrawTextValue($fontFamily));
+        }
+
+        return '';
+    }
+
+    private function escapeDrawTextValue(string $value): string
+    {
+        return str_replace(
             ['\\', ':', '%', "'", ',', '[', ']'],
             ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
-
-        return trim($escaped);
     }
 }

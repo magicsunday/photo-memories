@@ -47,7 +47,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
 
 - Persistierte Cluster werden über `FeedBuilder` in `MemoryFeedItem`-Objekte transformiert. `memories:feed:preview` zeigt die daraus resultierende Konsolidierung im Terminal; `memories:feed:export-html` erzeugt statische HTML-Previews inklusive Thumbnails.
 - Die HTTP-Schicht bietet `/api/feed` (JSON-Feed mit Filterparametern für Score, Strategie oder Datum), `/api/media/{id}/thumbnail` (Thumbnail-Auslieferung mit dynamischer Breite) und `/api/feed/{id}/video` für generierte Rückblick-Videos.
-- Slideshow-Jobs werden asynchron über `slideshow:generate` abgearbeitet; Parameter wie Bilddauer, Übergänge, Zielverzeichnis oder Pfade zu `ffmpeg`/`php` sind konfigurierbar.
+- Slideshow-Jobs werden asynchron über `slideshow:generate` abgearbeitet; Parameter wie Bilddauer, Übergänge, Zielverzeichnis, Schriftfamilie/-datei oder Pfade zu `ffmpeg`/`php` sind konfigurierbar.
 
 ## Installation & Vorbereitung
 
@@ -64,7 +64,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
    ```
 4. **Umgebung konfigurieren**
    - `.env` anlegen (siehe `.env.dist`, falls vorhanden) oder Environment-Variablen setzen. `EnvironmentBootstrap::boot()` sucht nacheinander im Arbeitsverzeichnis, in PHAR-Pfaden und im Repository-Root nach `.env`-Dateien und lädt `.env.local`-Varianten automatisch.
-   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_HOME_LAT/LON`, `MEMORIES_THUMBNAIL_DIR`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`.
+   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_HOME_LAT/LON`, `MEMORIES_THUMBNAIL_DIR`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`.
 5. **Datenbank vorbereiten**
    ```bash
    bin/console doctrine:database:create

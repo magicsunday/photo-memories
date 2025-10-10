@@ -103,6 +103,8 @@ services:
             $height: '%memories.slideshow.video_height%'
             $transitions: '%memories.slideshow.transitions%'
             $audioTrack: '%memories.slideshow.music_path%'
+            $fontFile: '%memories.slideshow.font_file%'
+            $fontFamily: '%memories.slideshow.font_family%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
