@@ -25,7 +25,7 @@ interface ThumbnailServiceInterface
      * @param string $filepath absolute file path
      * @param Media  $media    Media entity for contextual info (e.g., mime, id).
      *
-     * @return array<int,string> map of width (px) to absolute thumbnail path
+     * @return array<int,string> map of maximum dimension (px) to absolute thumbnail path
      *
      * @throws RuntimeException when thumbnail generation fails
      */
