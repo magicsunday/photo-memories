@@ -26,6 +26,8 @@ use function is_string;
 use function max;
 use function mkdir;
 use function sprintf;
+use function str_contains;
+use function strtolower;
 use function trim;
 
 /**
@@ -71,26 +73,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             throw new RuntimeException(sprintf('Could not create video directory "%s".', $directory));
         }
 
-        $command = $this->buildCommand($job, $slides);
-
-        $process = new Process($command);
-        $process->setTimeout(null);
-        $process->disableOutput();
-
-        try {
-            $process->mustRun();
-        } catch (ProcessFailedException $exception) {
-            $message = trim($exception->getProcess()->getErrorOutput());
-            if ($message === '') {
-                $message = trim($exception->getProcess()->getOutput());
-            }
-
-            if ($message === '') {
-                $message = $exception->getMessage();
-            }
-
-            throw new RuntimeException($message, 0, $exception);
-        }
+        $this->runProcess($job, $slides, true);
     }
 
     /**
@@ -98,18 +81,22 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      *
      * @return list<string>
      */
-    private function buildCommand(SlideshowJob $job, array $slides): array
+    private function buildCommand(SlideshowJob $job, array $slides, bool $useShortestOption): array
     {
         $transitionDuration = $this->resolveTransitionDuration($job->transitionDuration());
         $audioTrack         = $job->audioTrack() ?? $this->audioTrack;
 
         if (count($slides) === 1) {
+            $duration = $this->resolveSlideDuration($slides[0]['duration']);
+
             return $this->buildSingleImageCommand(
                 $slides[0],
                 $job->outputPath(),
                 $audioTrack,
                 $job->title(),
                 $job->subtitle(),
+                $duration,
+                $useShortestOption,
             );
         }
 
@@ -120,11 +107,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $audioTrack,
             $job->title(),
             $job->subtitle(),
+            $this->calculateVideoDuration($slides, $transitionDuration),
+            $useShortestOption,
         );
     }
 
     /**
      * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     * @param float $videoDuration
      *
      * @return list<string>
      */
@@ -134,6 +124,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
+        float $videoDuration,
+        bool $useShortestOption,
     ): array
     {
         $duration = $this->resolveSlideDuration($slide['duration']);
@@ -161,11 +153,21 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filter,
         ];
 
-        return $this->appendAudioOptions($command, 1, $output, $audioTrack, $title, $subtitle);
+        return $this->appendAudioOptions(
+            $command,
+            1,
+            $output,
+            $audioTrack,
+            $title,
+            $subtitle,
+            $videoDuration,
+            $useShortestOption,
+        );
     }
 
     /**
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param float $videoDuration
      *
      * @return list<string>
      */
@@ -176,6 +178,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
+        float $videoDuration,
+        bool $useShortestOption,
     ): array
     {
         $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
@@ -217,15 +221,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         for ($index = 1; $index < count($slides); ++$index) {
             $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
             $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
-            $filters[]   = sprintf(
-                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
+            $xfade = sprintf(
+                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f',
                 $current,
                 $index,
                 $transition,
                 max(0.1, $transitionDuration),
                 $offset,
-                $targetLabel
             );
+
+            $filters[] = sprintf('%s%s', $xfade, $targetLabel);
             $current = $targetLabel;
             $offset += $this->resolveSlideDuration($slides[$index]['duration']);
         }
@@ -234,7 +239,34 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
-        return $this->appendAudioOptions($command, count($slides), $output, $audioTrack, $title, $subtitle);
+        return $this->appendAudioOptions(
+            $command,
+            count($slides),
+            $output,
+            $audioTrack,
+            $title,
+            $subtitle,
+            $videoDuration,
+            $useShortestOption,
+        );
+    }
+
+    /**
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     */
+    private function calculateVideoDuration(array $slides, float $transitionDuration): float
+    {
+        $total = 0.0;
+
+        foreach ($slides as $slide) {
+            $total += $this->resolveSlideDuration($slide['duration']);
+        }
+
+        if (count($slides) > 1) {
+            $total += max(0.1, $transitionDuration);
+        }
+
+        return max(0.1, $total);
     }
 
     private function resolveSlideDuration(float $duration): float
@@ -273,6 +305,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<string> $command
+     * @param float $videoDuration
      *
      * @return list<string>
      */
@@ -283,6 +316,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
+        float $videoDuration,
+        bool $useShortestOption,
     ): array
     {
         if (is_string($audioTrack) && $audioTrack !== '') {
@@ -310,7 +345,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         if (is_string($audioTrack) && $audioTrack !== '') {
             $command[] = '-map';
             $command[] = sprintf('%d:a:0', $videoInputs);
-            $command[] = '-shortest';
+            if ($useShortestOption) {
+                $command[] = '-shortest';
+            } else {
+                $command[] = '-to';
+                $command[] = sprintf('%0.3f', $videoDuration);
+            }
             $command[] = '-c:a';
             $command[] = 'aac';
             $command[] = '-b:a';
@@ -322,5 +362,64 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = $output;
 
         return $command;
+    }
+
+    /**
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     */
+    private function runProcess(SlideshowJob $job, array $slides, bool $useShortestOption): void
+    {
+        $command = $this->buildCommand($job, $slides, $useShortestOption);
+
+        $process = new Process($command);
+        $process->setTimeout(null);
+
+        try {
+            $process->mustRun();
+        } catch (ProcessFailedException $exception) {
+            $message = trim($exception->getProcess()->getErrorOutput());
+            if ($message === '') {
+                $message = trim($exception->getProcess()->getOutput());
+            }
+
+            if ($message === '') {
+                $message = $exception->getMessage();
+            }
+
+            if ($useShortestOption && $this->isShortestOptionUnsupported($message)) {
+                $this->runProcess($job, $slides, false);
+
+                return;
+            }
+
+            throw new RuntimeException($message, 0, $exception);
+        }
+    }
+
+    private function isShortestOptionUnsupported(string $message): bool
+    {
+        $normalized = strtolower($message);
+
+        if (!str_contains($normalized, 'shortest')) {
+            return false;
+        }
+
+        if (str_contains($normalized, 'not available')) {
+            return true;
+        }
+
+        if (str_contains($normalized, 'option not found')) {
+            return true;
+        }
+
+        if (str_contains($normalized, 'unknown option')) {
+            return true;
+        }
+
+        if (str_contains($normalized, 'unrecognized option')) {
+            return true;
+        }
+
+        return false;
     }
 }
