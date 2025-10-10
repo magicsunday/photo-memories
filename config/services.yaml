@@ -1132,6 +1132,7 @@ services:
             $clusterFetchMultiplier: '%memories.http.feed.cluster_multiplier%'
             $defaultCoverWidth: '%memories.http.feed.cover_width%'
             $defaultMemberWidth: '%memories.http.feed.member_width%'
+            $defaultLightboxWidth: '%memories.http.feed.lightbox_width%'
             $maxThumbnailWidth: '%memories.http.feed.max_thumbnail_width%'
             $slideshowImageDuration: '%memories.slideshow.image_duration_s%'
             $slideshowTransitionDuration: '%memories.slideshow.transition_duration_s%'

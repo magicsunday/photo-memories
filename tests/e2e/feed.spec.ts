@@ -30,9 +30,21 @@ test.describe('Rückblick SPA', () => {
           cover: '/api/media/1/thumbnail?breite=640',
           mitglieder: [1, 2, 3, 4],
           galerie: [
-            { mediaId: 1, thumbnail: '/api/media/1/thumbnail?breite=320' },
-            { mediaId: 2, thumbnail: '/api/media/2/thumbnail?breite=320' },
-            { mediaId: 3, thumbnail: '/api/media/3/thumbnail?breite=320' },
+            {
+              mediaId: 1,
+              thumbnail: '/api/media/1/thumbnail?breite=320',
+              lightbox: '/api/media/1/thumbnail?breite=1024',
+            },
+            {
+              mediaId: 2,
+              thumbnail: '/api/media/2/thumbnail?breite=320',
+              lightbox: '/api/media/2/thumbnail?breite=1024',
+            },
+            {
+              mediaId: 3,
+              thumbnail: '/api/media/3/thumbnail?breite=320',
+              lightbox: '/api/media/3/thumbnail?breite=1024',
+            },
           ],
           zeitspanne: {
             von: '2024-01-03T10:00:00+01:00',
@@ -53,9 +65,21 @@ test.describe('Rückblick SPA', () => {
           cover: '/api/media/4/thumbnail?breite=640',
           mitglieder: [4, 5, 6, 7],
           galerie: [
-            { mediaId: 4, thumbnail: '/api/media/4/thumbnail?breite=320' },
-            { mediaId: 5, thumbnail: '/api/media/5/thumbnail?breite=320' },
-            { mediaId: 6, thumbnail: '/api/media/6/thumbnail?breite=320' },
+            {
+              mediaId: 4,
+              thumbnail: '/api/media/4/thumbnail?breite=320',
+              lightbox: '/api/media/4/thumbnail?breite=1024',
+            },
+            {
+              mediaId: 5,
+              thumbnail: '/api/media/5/thumbnail?breite=320',
+              lightbox: '/api/media/5/thumbnail?breite=1024',
+            },
+            {
+              mediaId: 6,
+              thumbnail: '/api/media/6/thumbnail?breite=320',
+              lightbox: '/api/media/6/thumbnail?breite=1024',
+            },
           ],
           zeitspanne: {
             von: '2023-08-12T05:30:00+02:00',
@@ -157,7 +181,11 @@ test.describe('Rückblick SPA', () => {
             coverMediaId: 101,
             cover: '/api/media/101/thumbnail?breite=640',
             galerie: [
-              { mediaId: 101, thumbnail: '/api/media/101/thumbnail?breite=320' },
+              {
+                mediaId: 101,
+                thumbnail: '/api/media/101/thumbnail?breite=320',
+                lightbox: '/api/media/101/thumbnail?breite=1024',
+              },
             ],
             slideshow: {
               status: 'nicht_verfuegbar',
