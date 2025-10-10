@@ -479,6 +479,8 @@ parameters:
     memories.slideshow.font_file_default: ''
     # Description: Font file path for drawtext overlays. Leave empty to rely on the configured font family.
     memories.slideshow.font_file: "%env(default:memories.slideshow.font_file_default:MEMORIES_SLIDESHOW_FONT_FILE)%"
+    # Description: Sigma value of the gaussian blur used for slideshow backgrounds.
+    memories.slideshow.background_blur_sigma: 32.0
     # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'
