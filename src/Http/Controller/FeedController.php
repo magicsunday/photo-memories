@@ -32,6 +32,7 @@ use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
+use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
@@ -1014,10 +1015,26 @@ final class FeedController
             return null;
         }
 
-        $slides           = [];
-        $transitionCount  = count($this->slideshowTransitions);
+        $slides = [];
 
-        foreach ($memberPayload as $index => $entry) {
+        $mediaIds = [];
+        foreach ($memberPayload as $entry) {
+            $mediaId = $entry['mediaId'] ?? null;
+            if (!is_int($mediaId)) {
+                continue;
+            }
+
+            $mediaIds[] = $mediaId;
+        }
+
+        $transitionSequence = TransitionSequenceGenerator::generate(
+            $this->slideshowTransitions,
+            $mediaIds,
+            count($mediaIds)
+        );
+        $transitionIndex = 0;
+
+        foreach ($memberPayload as $entry) {
             $mediaId = $entry['mediaId'] ?? null;
             if (!is_int($mediaId)) {
                 continue;
@@ -1027,8 +1044,10 @@ final class FeedController
                 'mediaId'        => $mediaId,
                 'dauerSekunden'  => $this->slideshowImageDuration,
                 'thumbnail'      => $entry['thumbnail'] ?? null,
-                'uebergang'      => $this->resolveStoryboardTransition($index, $transitionCount),
+                'uebergang'      => $this->resolveStoryboardTransition($transitionSequence[$transitionIndex] ?? null),
             ];
+
+            ++$transitionIndex;
 
             $beschreibung = $entry['beschreibung'] ?? null;
             if (is_string($beschreibung) && trim($beschreibung) !== '') {
@@ -1096,18 +1115,18 @@ final class FeedController
         return $payload;
     }
 
-    private function resolveStoryboardTransition(int $index, int $transitionCount): ?string
+    private function resolveStoryboardTransition(?string $transition): ?string
     {
-        if ($transitionCount === 0) {
-            return null;
-        }
-
-        $transition = $this->slideshowTransitions[$index % $transitionCount] ?? null;
         if (!is_string($transition) || $transition === '') {
             return null;
         }
 
-        return $transition;
+        $trimmed = trim($transition);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return $trimmed;
     }
 
     private function buildThumbnailUrl(int $mediaId, int $width, string $baseUrl): string

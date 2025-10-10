@@ -177,4 +177,58 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("y='if(gte(iw/ih,1.778),clip((ih-zoom*h)/2 + -0.25*(ih-zoom*h)/2*min(PTS/", $filterComplex);
         self::assertStringContainsString("s=if(gte(iw/ih,1.778),1280,iw):if(gte(iw/ih,1.778),720,ih)", $filterComplex);
     }
+
+    public function testBuildCommandUsesStoryboardTransitions(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/first.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => ' pixelize ',
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 3.0,
+                'transition' => '   ',
+            ],
+            [
+                'image'      => '/tmp/third.jpg',
+                'mediaId'    => 3,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'transitions',
+            '/tmp/transitions.job.json',
+            '/tmp/transitions.mp4',
+            '/tmp/transitions.lock',
+            '/tmp/transitions.error',
+            ['/tmp/first.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
+            $slides,
+            0.8,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator(transitions: ['wiperight']);
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplex = $command[$filterIndex + 1];
+        self::assertStringContainsString('xfade=transition=pixelize:duration=', $filterComplex);
+        self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
+    }
 }

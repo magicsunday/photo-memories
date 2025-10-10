@@ -331,8 +331,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private function resolveTransition(?string $preferred, int $index, int $transitionCount): string
     {
-        if (is_string($preferred) && $preferred !== '') {
-            return $preferred;
+        if (is_string($preferred)) {
+            $trimmed = trim($preferred);
+            if ($trimmed !== '') {
+                return $trimmed;
+            }
         }
 
         if ($transitionCount === 0) {
@@ -340,11 +343,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $name = $this->transitions[$index % $transitionCount] ?? 'fade';
-        if (!is_string($name) || $name === '') {
+        if (!is_string($name)) {
             return 'fade';
         }
 
-        return $name;
+        $trimmedName = trim($name);
+        if ($trimmedName === '') {
+            return 'fade';
+        }
+
+        return $trimmedName;
     }
 
     /**
