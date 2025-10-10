@@ -38,6 +38,9 @@ const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', {
 
 document.title = 'Rückblick-Galerie';
 
+const detailRouteMatch = window.location.pathname.match(/^\/app\/galerie\/([^/]+)\/?$/);
+const detailPageId = detailRouteMatch ? decodeURIComponent(detailRouteMatch[1]) : null;
+
 let filterForm = null;
 let scoreInput = null;
 let scoreValue = null;
@@ -61,7 +64,11 @@ const lightbox = createLightbox();
 
 const appContainer = document.querySelector('#app');
 if (appContainer instanceof HTMLElement) {
-  initialiseApp(appContainer);
+  if (typeof detailPageId === 'string' && detailPageId !== '') {
+    initialiseDetailPage(appContainer, detailPageId);
+  } else {
+    initialiseApp(appContainer);
+  }
 } else {
   console.error('Konnte die Anwendung nicht initialisieren: Container "#app" fehlt.');
 }
@@ -179,6 +186,69 @@ function initialiseApp(app) {
   updateStatus();
   renderItems();
   fetchFeed();
+}
+
+function initialiseDetailPage(app, itemId) {
+  app.innerHTML = `
+    <article class="detail-page" data-detail-page>
+      <header class="detail-page__header">
+        <a class="detail-page__back-link" href="/app/">← Zur Übersicht</a>
+        <h1 class="detail-page__title" data-detail-title>Galerie</h1>
+        <p class="detail-page__subtitle" data-detail-subtitle></p>
+        <div class="detail-page__badges" data-detail-badges></div>
+        <p class="detail-page__timeline" data-detail-timeline></p>
+        <p class="detail-page__status" data-detail-status></p>
+      </header>
+      <div class="detail-page__gallery gallery" data-detail-gallery></div>
+    </article>
+  `;
+
+  const page = app.querySelector('[data-detail-page]');
+  const title = app.querySelector('[data-detail-title]');
+  const subtitle = app.querySelector('[data-detail-subtitle]');
+  const badges = app.querySelector('[data-detail-badges]');
+  const timeline = app.querySelector('[data-detail-timeline]');
+  const status = app.querySelector('[data-detail-status]');
+  const gallery = app.querySelector('[data-detail-gallery]');
+
+  const elements = {
+    container: page instanceof HTMLElement ? page : null,
+    title: title instanceof HTMLElement ? title : null,
+    subtitle: subtitle instanceof HTMLElement ? subtitle : null,
+    badges: badges instanceof HTMLElement ? badges : null,
+    timeline: timeline instanceof HTMLElement ? timeline : null,
+    status: status instanceof HTMLElement ? status : null,
+    gallery: gallery instanceof HTMLElement ? gallery : null,
+  };
+
+  renderDetailPage(elements, { loading: true, error: null, item: null });
+  void loadDetailPage(itemId, elements);
+}
+
+async function loadDetailPage(itemId, elements) {
+  const result = await fetchDetailData(itemId);
+
+  if (result.item) {
+    renderDetailPage(elements, { loading: false, error: null, item: result.item });
+
+    return;
+  }
+
+  renderDetailPage(elements, { loading: false, error: result.error ?? 'Es wurden keine Details zur Galerie gefunden.', item: null });
+}
+
+function renderDetailPage(elements, detailState) {
+  if (elements.container instanceof HTMLElement) {
+    elements.container.classList.toggle('is-loading', Boolean(detailState.loading));
+  }
+
+  const { title } = updateDetailElements(detailState, elements);
+
+  if (typeof title === 'string' && title !== '') {
+    document.title = `Rückblick-Galerie – ${title}`;
+  } else {
+    document.title = 'Rückblick-Galerie';
+  }
 }
 
 async function fetchFeed() {
@@ -333,22 +403,24 @@ function createCard(item) {
   header.className = 'card-header';
 
   const title = document.createElement('h2');
-  const titleButton = document.createElement('button');
-  titleButton.type = 'button';
-  titleButton.className = 'card-title-button';
+  const titleLink = document.createElement('a');
+  titleLink.className = 'card-title-button';
+  titleLink.rel = 'bookmark';
   const resolvedTitle = typeof item?.titel === 'string' && item.titel !== '' ? item.titel : 'Ohne Titel';
-  titleButton.textContent = resolvedTitle;
-  titleButton.setAttribute('aria-label', `Galerie „${resolvedTitle}“ öffnen`);
+  titleLink.textContent = resolvedTitle;
+  titleLink.setAttribute('aria-label', `Galerie „${resolvedTitle}“ öffnen`);
 
   if (item && typeof item.id === 'string' && item.id !== '') {
-    titleButton.addEventListener('click', () => {
-      openDetail(item, titleButton);
-    });
+    titleLink.href = `/app/galerie/${encodeURIComponent(item.id)}`;
   } else {
-    titleButton.disabled = true;
+    titleLink.href = '#';
+    titleLink.setAttribute('aria-disabled', 'true');
+    titleLink.addEventListener('click', (event) => {
+      event.preventDefault();
+    });
   }
 
-  title.appendChild(titleButton);
+  title.appendChild(titleLink);
   header.appendChild(title);
 
   const subtitle = document.createElement('p');
@@ -438,6 +510,87 @@ function populateGallery(container, images) {
   }
 }
 
+function updateDetailElements(detailState, elements) {
+  const item = detailState && typeof detailState.item === 'object' && detailState.item !== null
+    ? detailState.item
+    : null;
+
+  const resolvedTitle = item && typeof item.titel === 'string' && item.titel !== '' ? item.titel : 'Galerie';
+
+  if (elements.title instanceof HTMLElement) {
+    elements.title.textContent = resolvedTitle;
+  }
+
+  if (elements.subtitle instanceof HTMLElement) {
+    const subtitleText = item && typeof item.untertitel === 'string' ? item.untertitel : '';
+    elements.subtitle.textContent = subtitleText;
+    elements.subtitle.hidden = subtitleText === '';
+  }
+
+  if (elements.badges instanceof HTMLElement) {
+    elements.badges.textContent = '';
+    const badges = [];
+
+    if (item && item.gruppe) {
+      badges.push(formatLabel(item.gruppe));
+    }
+
+    if (item && (item.algorithmusLabel || item.algorithmus)) {
+      badges.push(item.algorithmusLabel ?? formatLabel(item.algorithmus));
+    }
+
+    if (item && typeof item.score === 'number') {
+      badges.push(`Score ${formatScore(item.score)}`);
+    }
+
+    badges.forEach((label) => {
+      const badge = document.createElement('span');
+      badge.textContent = label;
+      elements.badges.appendChild(badge);
+    });
+
+    elements.badges.hidden = elements.badges.childElementCount === 0;
+  }
+
+  if (elements.timeline instanceof HTMLElement) {
+    const timelineText = item ? buildTimeline(item.zeitspanne) : null;
+    if (timelineText) {
+      elements.timeline.textContent = `Zeitraum: ${timelineText}`;
+      elements.timeline.hidden = false;
+    } else {
+      elements.timeline.textContent = '';
+      elements.timeline.hidden = true;
+    }
+  }
+
+  if (elements.status instanceof HTMLElement) {
+    if (detailState && detailState.loading) {
+      elements.status.textContent = 'Galerie wird geladen …';
+      elements.status.classList.remove('is-error');
+      elements.status.hidden = false;
+    } else if (detailState && typeof detailState.error === 'string' && detailState.error !== '') {
+      elements.status.textContent = detailState.error;
+      elements.status.classList.add('is-error');
+      elements.status.hidden = false;
+    } else {
+      elements.status.textContent = '';
+      elements.status.classList.remove('is-error');
+      elements.status.hidden = true;
+    }
+  }
+
+  if (elements.gallery instanceof HTMLElement) {
+    if (item) {
+      const galleryItems = Array.isArray(item.galerie) ? item.galerie : [];
+      populateGallery(elements.gallery, galleryItems);
+    } else {
+      elements.gallery.textContent = '';
+    }
+  }
+
+  return { title: resolvedTitle };
+}
+
 function createGalleryFigure(image) {
   if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
     return null;
@@ -516,16 +669,15 @@ function openDetail(item, triggerElement) {
   void fetchDetail(item.id);
 }
 
-async function fetchDetail(itemId) {
+async function fetchDetailData(itemId) {
   const params = buildDetailQueryParams();
-  state.detail.loading = true;
-  renderDetailOverlay();
-
-  const targetId = itemId;
-  let requiresRender = false;
+  const query = params.toString();
+  const url = query === ''
+    ? `/api/feed/${encodeURIComponent(itemId)}`
+    : `/api/feed/${encodeURIComponent(itemId)}?${query}`;
 
   try {
-    const response = await fetch(`/api/feed/${encodeURIComponent(targetId)}?${params.toString()}`, {
+    const response = await fetch(url, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
@@ -545,33 +697,43 @@ async function fetchDetail(itemId) {
     }
 
     const payload = await response.json();
-    if (!state.detail.visible || !state.detail.item || state.detail.item.id !== targetId) {
-      return;
-    }
-
     if (payload && typeof payload.item === 'object' && payload.item !== null) {
-      state.detail.item = payload.item;
-      state.detail.error = null;
-    } else {
-      state.detail.error = 'Es wurden keine Details zur Galerie gefunden.';
+      return { item: payload.item, error: null };
     }
 
-    requiresRender = true;
+    return { item: null, error: 'Es wurden keine Details zur Galerie gefunden.' };
   } catch (error) {
-    if (state.detail.visible && state.detail.item && state.detail.item.id === targetId) {
-      state.detail.error = error instanceof Error
-        ? error.message
-        : 'Unbekannter Fehler beim Laden der Galerie.';
-      requiresRender = true;
-    }
-  } finally {
-    if (state.detail.visible && state.detail.item && state.detail.item.id === targetId) {
-      state.detail.loading = false;
-      if (requiresRender) {
-        renderDetailOverlay();
-      }
-    }
+    const message = error instanceof Error
+      ? error.message
+      : 'Unbekannter Fehler beim Laden der Galerie.';
+
+    return { item: null, error: message };
   }
+}
+
+async function fetchDetail(itemId) {
+  state.detail.loading = true;
+  state.detail.error = null;
+  renderDetailOverlay();
+
+  const targetId = itemId;
+  const result = await fetchDetailData(targetId);
+
+  if (!state.detail.visible || !state.detail.item || state.detail.item.id !== targetId) {
+    state.detail.loading = false;
+    return;
+  }
+
+  state.detail.loading = false;
+
+  if (result.item) {
+    state.detail.item = result.item;
+    state.detail.error = null;
+  } else {
+    state.detail.error = result.error ?? 'Es wurden keine Details zur Galerie gefunden.';
+  }
+
+  renderDetailOverlay();
 }
 
 function buildDetailQueryParams() {
@@ -641,72 +803,18 @@ function renderDetailOverlay() {
   detailOverlay.classList.add('is-visible');
   document.body.classList.add('has-detail-overlay');
 
-  const item = state.detail.item;
-
-  if (detailTitle instanceof HTMLElement) {
-    const title = item && typeof item.titel === 'string' && item.titel !== '' ? item.titel : 'Galerie';
-    detailTitle.textContent = title;
-  }
-
-  if (detailSubtitle instanceof HTMLElement) {
-    const subtitleText = item && typeof item.untertitel === 'string' ? item.untertitel : '';
-    detailSubtitle.textContent = subtitleText;
-    detailSubtitle.hidden = subtitleText === '';
-  }
-
-  if (detailBadges instanceof HTMLElement) {
-    detailBadges.textContent = '';
-    const badges = [];
-    if (item && item.gruppe) {
-      badges.push(formatLabel(item.gruppe));
-    }
-    if (item && (item.algorithmusLabel || item.algorithmus)) {
-      badges.push(item.algorithmusLabel ?? formatLabel(item.algorithmus));
-    }
-    if (item && typeof item.score === 'number') {
-      badges.push(`Score ${formatScore(item.score)}`);
-    }
-
-    badges.forEach((label) => {
-      const badge = document.createElement('span');
-      badge.textContent = label;
-      detailBadges.appendChild(badge);
-    });
-
-    detailBadges.hidden = detailBadges.childElementCount === 0;
-  }
-
-  if (detailTimeline instanceof HTMLElement) {
-    const timelineText = item ? buildTimeline(item.zeitspanne) : null;
-    if (timelineText) {
-      detailTimeline.textContent = `Zeitraum: ${timelineText}`;
-      detailTimeline.hidden = false;
-    } else {
-      detailTimeline.textContent = '';
-      detailTimeline.hidden = true;
-    }
-  }
-
-  if (detailStatusMessage instanceof HTMLElement) {
-    if (state.detail.loading) {
-      detailStatusMessage.textContent = 'Galerie wird geladen …';
-      detailStatusMessage.classList.remove('is-error');
-      detailStatusMessage.hidden = false;
-    } else if (typeof state.detail.error === 'string' && state.detail.error !== '') {
-      detailStatusMessage.textContent = state.detail.error;
-      detailStatusMessage.classList.add('is-error');
-      detailStatusMessage.hidden = false;
-    } else {
-      detailStatusMessage.textContent = '';
-      detailStatusMessage.classList.remove('is-error');
-      detailStatusMessage.hidden = true;
-    }
-  }
-
-  if (detailGallery instanceof HTMLElement) {
-    const galleryItems = item && Array.isArray(item.galerie) ? item.galerie : [];
-    populateGallery(detailGallery, galleryItems);
-  }
+  updateDetailElements({
+    item: state.detail.item,
+    loading: state.detail.loading,
+    error: state.detail.error,
+  }, {
+    title: detailTitle,
+    subtitle: detailSubtitle,
+    badges: detailBadges,
+    timeline: detailTimeline,
+    status: detailStatusMessage,
+    gallery: detailGallery,
+  });
 }
 
 function initialiseDetailOverlay() {
