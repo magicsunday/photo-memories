@@ -109,8 +109,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString('scale=-1:720,zoompan=z=if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(PTS/3.75,1),1)', $filterComplex);
-        self::assertStringContainsString('s=if(gte(iw/ih,1.778),1280,iw)xif(gte(iw/ih,1.778),720,ih)', $filterComplex);
+        self::assertStringContainsString("scale=-1:720,zoompan=z='if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(PTS/3.75,1),1)'", $filterComplex);
+        self::assertStringContainsString("s='if(gte(iw/ih,1.778),1280,iw)xif(gte(iw/ih,1.778),720,ih)'", $filterComplex);
         self::assertStringContainsString("crop=if(gte(iw/ih,1.778),1280,iw):if(gte(iw/ih,1.778),720,ih)", $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
@@ -173,10 +173,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString('zoompan=z=if(gte(iw/ih,1.778),1.2+(1.3-1.2)*min(PTS/', $filterComplex);
+        self::assertStringContainsString("zoompan=z='if(gte(iw/ih,1.778),1.2+(1.3-1.2)*min(PTS/", $filterComplex);
         self::assertStringContainsString('x=if(gte(iw/ih,1.778),clip((iw-zoom*w)/2 + 0.4*(iw-zoom*w)/2*min(PTS/', $filterComplex);
         self::assertStringContainsString('y=if(gte(iw/ih,1.778),clip((ih-zoom*h)/2 + -0.25*(ih-zoom*h)/2*min(PTS/', $filterComplex);
-        self::assertStringContainsString('s=if(gte(iw/ih,1.778),1280,iw)xif(gte(iw/ih,1.778),720,ih)', $filterComplex);
+        self::assertStringContainsString("s='if(gte(iw/ih,1.778),1280,iw)xif(gte(iw/ih,1.778),720,ih)'", $filterComplex);
     }
 
     public function testBuildCommandUsesStoryboardTransitions(): void
