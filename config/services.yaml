@@ -749,12 +749,37 @@ services:
     MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\RunDetector
 
+    MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions:
+        arguments:
+            $targetTotal: '%memories.cluster.selection.target_total%'
+            $maxPerDay: '%memories.cluster.selection.max_per_day%'
+            $timeSlotHours: '%memories.cluster.selection.time_slot_hours%'
+            $minSpacingSeconds: '%memories.cluster.selection.min_spacing_seconds%'
+            $phashMinHamming: '%memories.cluster.selection.phash_min_hamming%'
+            $maxPerStaypoint: '%memories.cluster.selection.max_per_staypoint%'
+            $videoBonus: '%memories.cluster.selection.video_bonus%'
+            $faceBonus: '%memories.cluster.selection.face_bonus%'
+            $selfiePenalty: '%memories.cluster.selection.selfie_penalty%'
+            $qualityFloor: '%memories.cluster.selection.quality_floor%'
+
+    MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector:
+        arguments:
+            $qualityAggregator: '@MagicSunday\\Memories\\Service\\Metadata\\Quality\\MediaQualityAggregator'
+            $metrics: '@MagicSunday\\Memories\\Clusterer\\Selection\\SimilarityMetrics'
+            $defaultOptions: '@MagicSunday\\Memories\\Clusterer\\Selection\\VacationSelectionOptions'
+
+    MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface:
+        alias: MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector
+
     MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator:
         arguments:
             $timezone: 'Europe/Berlin'
             $movementThresholdKm: 35.0
             $minAwayDays: '%memories.cluster.vacation.min_away_days%'
             $minMembers: '%memories.cluster.vacation.min_members%'
+            $memberSelector: '@MagicSunday\\Memories\\Clusterer\\Selection\\MemberSelectorInterface'
+            $selectionOptions: '@MagicSunday\\Memories\\Clusterer\\Selection\\VacationSelectionOptions'
+            $monitoringEmitter: '@MagicSunday\\Memories\\Service\\Monitoring\\Contract\\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator
