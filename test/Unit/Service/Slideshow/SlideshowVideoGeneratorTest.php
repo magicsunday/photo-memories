@@ -231,4 +231,55 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('xfade=transition=pixelize:duration=', $filterComplex);
         self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
     }
+
+    public function testResolveTransitionFallsBackToCuratedDefaults(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+
+        $property = $reflector->getProperty('transitions');
+        $property->setAccessible(true);
+
+        /** @var list<string> $defaults */
+        $defaults = $property->getValue($generator);
+
+        self::assertSame(
+            [
+                'fade',
+                'dissolve',
+                'fadeblack',
+                'fadewhite',
+                'wipeleft',
+                'wiperight',
+                'wipeup',
+                'wipedown',
+                'slideleft',
+                'slideright',
+                'smoothleft',
+                'smoothright',
+                'circleopen',
+                'circleclose',
+                'vertopen',
+                'vertclose',
+                'horzopen',
+                'horzclose',
+                'radial',
+                'pixelize',
+            ],
+            $defaults
+        );
+
+        $method = $reflector->getMethod('resolveTransition');
+        $method->setAccessible(true);
+
+        $transitionCount = count($defaults);
+        foreach ($defaults as $index => $expected) {
+            $resolved = $method->invoke($generator, null, $index, $transitionCount);
+            self::assertSame($expected, $resolved);
+        }
+
+        $wrapped = $method->invoke($generator, null, $transitionCount, $transitionCount);
+        self::assertSame($defaults[0], $wrapped);
+    }
 }
