@@ -488,17 +488,35 @@ function populateGallery(container, images) {
   }
 
   container.textContent = '';
+  lightbox.unregisterGroup(container);
 
   const galleryItems = Array.isArray(images) ? images : [];
   let appended = 0;
+  const lightboxEntries = [];
 
-  galleryItems.forEach((image) => {
-    const figure = createGalleryFigure(image);
+  galleryItems.forEach((image, index) => {
+    const figure = createGalleryFigure(image, () => ({ group: container, index }));
     if (figure instanceof HTMLElement) {
       container.appendChild(figure);
       appended += 1;
+
+      const source = typeof figure.dataset.lightboxSource === 'string' ? figure.dataset.lightboxSource : '';
+      if (source !== '') {
+        lightboxEntries[index] = {
+          source,
+          alt: typeof figure.dataset.lightboxAlt === 'string' ? figure.dataset.lightboxAlt : '',
+          caption: typeof figure.dataset.lightboxCaption === 'string' ? figure.dataset.lightboxCaption : '',
+          trigger: figure,
+        };
+      } else {
+        lightboxEntries[index] = null;
+      }
     }
   });
+
+  if (lightboxEntries.length > 0 && lightboxEntries.some((entry) => entry && typeof entry.source === 'string' && entry.source !== '')) {
+    lightbox.registerGroup(container, lightboxEntries);
+  }
 
   if (appended === 0) {
     const placeholder = document.createElement('figure');
@@ -591,7 +609,7 @@ function updateDetailElements(detailState, elements) {
   return { title: resolvedTitle };
 }
 
-function createGalleryFigure(image) {
+function createGalleryFigure(image, contextProvider) {
   if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
     return null;
   }
@@ -620,6 +638,9 @@ function createGalleryFigure(image) {
 
   const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
   figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
+  figure.dataset.lightboxSource = detailSource;
+  figure.dataset.lightboxAlt = img.alt ?? '';
+  figure.dataset.lightboxCaption = captionText;
 
   if (captionText !== '') {
     const caption = document.createElement('figcaption');
@@ -628,13 +649,11 @@ function createGalleryFigure(image) {
   }
 
   const activateLightbox = () => {
-    if (lightbox.isVisible() && lightbox.getCurrentSource() === detailSource) {
-      lightbox.hide();
+    const context = typeof contextProvider === 'function'
+      ? contextProvider()
+      : null;
 
-      return;
-    }
-
-    lightbox.show(detailSource, img.alt, captionText, figure);
+    lightbox.show(detailSource, img.alt, captionText, figure, context);
   };
 
   figure.addEventListener('click', activateLightbox);
@@ -1229,7 +1248,169 @@ function createLightbox() {
 
   let visible = false;
   let currentSource = '';
+  let currentGroup = null;
+  let currentIndex = -1;
   let activeTrigger = null;
+  const groups = new Map();
+
+  const normaliseCaption = (text) => (typeof text === 'string' ? text : '');
+
+  const renderEntry = (entry, group, index, triggerOverride) => {
+    if (!entry || typeof entry.source !== 'string' || entry.source === '') {
+      return;
+    }
+
+    const isGrouped = group instanceof HTMLElement;
+
+    if (visible) {
+      if (isGrouped && currentGroup === group && currentIndex === index) {
+        return;
+      }
+
+      if (!isGrouped && currentSource === entry.source) {
+        hide();
+
+        return;
+      }
+    }
+
+    image.src = entry.source;
+    image.alt = entry.alt ?? '';
+
+    const captionText = normaliseCaption(entry.caption);
+    if (captionText !== '') {
+      caption.textContent = captionText;
+      caption.hidden = false;
+    } else {
+      caption.textContent = '';
+      caption.hidden = true;
+    }
+
+    overlay.hidden = false;
+    overlay.classList.add('is-visible');
+    document.body.classList.add('has-lightbox');
+    visible = true;
+    currentSource = entry.source;
+    currentGroup = isGrouped ? group : null;
+    currentIndex = isGrouped ? index : -1;
+
+    if (triggerOverride instanceof HTMLElement) {
+      activeTrigger = triggerOverride;
+    } else if (entry.trigger instanceof HTMLElement) {
+      activeTrigger = entry.trigger;
+    }
+
+    closeButton.focus({ preventScroll: true });
+  };
+
+  const registerGroup = (group, entries) => {
+    if (!(group instanceof HTMLElement)) {
+      return;
+    }
+
+    const normalised = Array.isArray(entries)
+      ? entries.map((entry) => {
+        if (!entry || typeof entry.source !== 'string' || entry.source === '') {
+          return null;
+        }
+
+        return {
+          source: entry.source,
+          alt: entry.alt ?? '',
+          caption: normaliseCaption(entry.caption),
+          trigger: entry.trigger instanceof HTMLElement ? entry.trigger : null,
+        };
+      })
+      : [];
+
+    const hasValidEntry = normalised.some((entry) => entry !== null);
+    if (!hasValidEntry) {
+      groups.delete(group);
+
+      if (currentGroup === group) {
+        currentGroup = null;
+        currentIndex = -1;
+      }
+
+      return;
+    }
+
+    groups.set(group, normalised);
+  };
+
+  const unregisterGroup = (group) => {
+    if (!(group instanceof HTMLElement)) {
+      return;
+    }
+
+    groups.delete(group);
+
+    if (currentGroup === group) {
+      currentGroup = null;
+      currentIndex = -1;
+    }
+  };
+
+  const resolveGroupIndex = (entries, index, direction) => {
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return null;
+    }
+
+    const size = entries.length;
+    let candidate = ((index % size) + size) % size;
+
+    if (entries[candidate]) {
+      return candidate;
+    }
+
+    if (direction === 0) {
+      let forward = (candidate + 1) % size;
+      while (forward !== candidate) {
+        if (entries[forward]) {
+          return forward;
+        }
+
+        forward = (forward + 1) % size;
+      }
+
+      return null;
+    }
+
+    const step = direction > 0 ? 1 : -1;
+    let pointer = candidate;
+
+    for (let i = 0; i < size; i += 1) {
+      pointer = (pointer + step + size) % size;
+      if (entries[pointer]) {
+        return pointer;
+      }
+    }
+
+    return null;
+  };
+
+  const showGroupEntry = (group, index, direction = 0) => {
+    if (!(group instanceof HTMLElement)) {
+      return;
+    }
+
+    const entries = groups.get(group);
+    if (!entries || entries.length === 0) {
+      return;
+    }
+
+    const targetIndex = resolveGroupIndex(entries, index, direction);
+    if (targetIndex === null) {
+      return;
+    }
+
+    const entry = entries[targetIndex];
+    if (!entry) {
+      return;
+    }
+
+    renderEntry(entry, group, targetIndex, entry.trigger ?? activeTrigger);
+  };
 
   const hide = () => {
     if (!visible) {
@@ -1242,6 +1423,8 @@ function createLightbox() {
     document.body.classList.remove('has-lightbox');
     visible = false;
     currentSource = '';
+    currentGroup = null;
+    currentIndex = -1;
 
     if (activeTrigger) {
       activeTrigger.focus({ preventScroll: true });
@@ -1249,35 +1432,37 @@ function createLightbox() {
     }
   };
 
-  const show = (source, altText, captionText, trigger) => {
+  const show = (source, altText, captionText, trigger, context) => {
     if (typeof source !== 'string' || source === '') {
       return;
     }
 
-    if (visible && currentSource === source) {
-      hide();
+    const group = context && context.group instanceof HTMLElement ? context.group : null;
+    const index = context && typeof context.index === 'number' ? context.index : -1;
+
+    if (group) {
+      if (groups.has(group)) {
+        showGroupEntry(group, index, 0);
+
+        return;
+      }
+
+      renderEntry({
+        source,
+        alt: altText ?? '',
+        caption: captionText ?? '',
+        trigger: trigger ?? null,
+      }, group, index, trigger ?? null);
 
       return;
     }
 
-    image.src = source;
-    image.alt = altText ?? '';
-
-    if (captionText) {
-      caption.textContent = captionText;
-      caption.hidden = false;
-    } else {
-      caption.textContent = '';
-      caption.hidden = true;
-    }
-
-    overlay.hidden = false;
-    overlay.classList.add('is-visible');
-    document.body.classList.add('has-lightbox');
-    visible = true;
-    currentSource = source;
-    activeTrigger = trigger ?? null;
-    closeButton.focus({ preventScroll: true });
+    renderEntry({
+      source,
+      alt: altText ?? '',
+      caption: captionText ?? '',
+      trigger: trigger ?? null,
+    }, null, -1, trigger ?? null);
   };
 
   closeButton.addEventListener('click', hide);
@@ -1289,9 +1474,29 @@ function createLightbox() {
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && visible) {
+    if (!visible) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
       event.preventDefault();
       hide();
+
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      const group = currentGroup;
+      if (!(group instanceof HTMLElement)) {
+        return;
+      }
+
+      event.preventDefault();
+      const delta = event.key === 'ArrowRight' ? 1 : -1;
+      const nextIndex = currentIndex === -1
+        ? (delta > 0 ? 0 : -1)
+        : currentIndex + delta;
+      showGroupEntry(group, nextIndex, delta);
     }
   });
 
@@ -1300,6 +1505,8 @@ function createLightbox() {
     hide,
     isVisible: () => visible,
     getCurrentSource: () => currentSource,
+    registerGroup,
+    unregisterGroup,
   };
 }
 
