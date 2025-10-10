@@ -16,16 +16,20 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface;
 use MagicSunday\Memories\Utility\Contract\PoiContextAnalyzerInterface;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 
@@ -37,10 +41,11 @@ final class VacationScoreCalculatorTest extends TestCase
     #[Test]
     public function buildDraftScoresMultiDayTripAsVacation(): void
     {
-        $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $locationHelper    = LocationHelper::createDefault();
+        $selectionOptions  = new VacationSelectionOptions(targetTotal: 40, maxPerDay: 8);
+        $calculator        = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: $selectionOptions,
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
         );
@@ -117,7 +122,8 @@ final class VacationScoreCalculatorTest extends TestCase
             );
         }
 
-        $draft = $calculator->buildDraft(array_keys($days), $days, $home);
+        $dayKeys = array_keys($days);
+        $draft   = $calculator->buildDraft($dayKeys, $days, $home);
 
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params = $draft->getParams();
@@ -141,6 +147,33 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertArrayHasKey('countries', $params);
         self::assertSame(['pt'], $params['countries']);
         self::assertGreaterThan(8.0, $params['score']);
+
+        self::assertArrayHasKey('member_selection', $params);
+        $memberSelection = $params['member_selection'];
+        self::assertSame(9, $memberSelection['counts']['pre']);
+        self::assertSame(9, $memberSelection['counts']['post']);
+        self::assertSame(0, $memberSelection['counts']['dropped']);
+        self::assertSame(0, $memberSelection['near_duplicates']['blocked']);
+        self::assertSame(0, $memberSelection['near_duplicates']['replacements']);
+        self::assertSame(
+            [
+                $dayKeys[0] => 3,
+                $dayKeys[1] => 3,
+                $dayKeys[2] => 3,
+            ],
+            $memberSelection['per_day_distribution'],
+        );
+        self::assertSame(
+            VacationTestMemberSelector::class,
+            $memberSelection['options']['selector'],
+        );
+        self::assertSame($selectionOptions->targetTotal, $memberSelection['options']['target_total']);
+        self::assertSame($selectionOptions->maxPerDay, $memberSelection['options']['max_per_day']);
+        self::assertGreaterThan(0.0, $memberSelection['spacing']['average_seconds']);
+        self::assertSame(
+            $memberSelection['counts']['post'],
+            $memberSelection['telemetry']['selected_total'],
+        );
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
@@ -165,9 +198,9 @@ final class VacationScoreCalculatorTest extends TestCase
     public function buildDraftRequiresConfiguredMinimumAwayDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
             minAwayDays: 2,
@@ -222,9 +255,9 @@ final class VacationScoreCalculatorTest extends TestCase
     public function buildDraftRequiresConfiguredMinimumMembers(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
             minAwayDays: 1,
@@ -342,9 +375,9 @@ final class VacationScoreCalculatorTest extends TestCase
         };
 
         $locationHelper = new LocationHelper($labelResolver, $poiAnalyzer);
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(targetTotal: 20, maxPerDay: 4),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
         );
@@ -483,9 +516,9 @@ final class VacationScoreCalculatorTest extends TestCase
         };
 
         $locationHelper = new LocationHelper($labelResolver, $poiAnalyzer);
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(targetTotal: 16, maxPerDay: 4),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
         );
@@ -546,9 +579,9 @@ final class VacationScoreCalculatorTest extends TestCase
     public function buildDraftBackfillsRegionIntoLocationWhenPrimaryStaypointProvidesIt(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
         );
@@ -657,9 +690,9 @@ final class VacationScoreCalculatorTest extends TestCase
     public function buildDraftExposesCountriesListWhenVisitingMultipleCountries(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: new VacationSelectionOptions(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
         );
@@ -747,12 +780,106 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function buildDraftEmitsSelectionTelemetryAndDropsNearDuplicates(): void
+    {
+        $locationHelper    = LocationHelper::createDefault();
+        $emitter           = new RecordingMonitoringEmitter();
+        $selectionOptions  = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3);
+        $filter = static function (array $members): array {
+            return [
+                'members'   => [$members[0], $members[2]],
+                'telemetry' => [
+                    'near_duplicate_blocked'      => 1,
+                    'near_duplicate_replacements' => 1,
+                    'spacing_rejections'          => 2,
+                ],
+            ];
+        };
+
+        $calculator = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: $selectionOptions,
+            curationFilter: $filter,
+            emitter: $emitter,
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+        );
+
+        $dayDate = new DateTimeImmutable('2024-09-01 10:00:00');
+        $members = $this->makeMembersForDay(99, $dayDate, 3);
+        $dayKey  = $dayDate->format('Y-m-d');
+
+        $days = [
+            $dayKey => $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 4,
+                poiSamples: 6,
+                travelKm: 120.0,
+                timezoneOffset: 0,
+                hasAirport: false,
+                spotCount: 1,
+                spotDwellSeconds: 3600,
+            ),
+        ];
+
+        $home = [
+            'lat'             => 48.2082,
+            'lon'             => 16.3738,
+            'radius_km'       => 12.0,
+            'country'         => 'at',
+            'timezone_offset' => 60,
+        ];
+
+        $draft = $calculator->buildDraft([$dayKey], $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params          = $draft->getParams();
+        $memberSelection = $params['member_selection'];
+
+        self::assertSame(3, $memberSelection['counts']['pre']);
+        self::assertSame(2, $memberSelection['counts']['post']);
+        self::assertSame(1, $memberSelection['counts']['dropped']);
+        self::assertSame(1, $memberSelection['near_duplicates']['blocked']);
+        self::assertSame(1, $memberSelection['near_duplicates']['replacements']);
+        self::assertSame([$dayKey => 2], $memberSelection['per_day_distribution']);
+        self::assertGreaterThan(0.0, $memberSelection['spacing']['average_seconds']);
+        self::assertSame(
+            VacationTestMemberSelector::class,
+            $memberSelection['options']['selector'],
+        );
+
+        self::assertCount(2, $draft->getMembers());
+
+        self::assertCount(2, $emitter->events);
+        $startEvent = $emitter->events[0];
+        self::assertSame('vacation_curation', $startEvent['job']);
+        self::assertSame('selection_start', $startEvent['status']);
+        self::assertSame(3, $startEvent['context']['pre_count']);
+        self::assertSame(1, $startEvent['context']['day_count']);
+
+        $completeEvent = $emitter->events[1];
+        self::assertSame('vacation_curation', $completeEvent['job']);
+        self::assertSame('selection_completed', $completeEvent['status']);
+        self::assertSame(2, $completeEvent['context']['post_count']);
+        self::assertSame(1, $completeEvent['context']['dropped_total']);
+        self::assertSame(1, $completeEvent['context']['near_duplicates_removed']);
+        self::assertSame(1, $completeEvent['context']['near_duplicates_replaced']);
+        self::assertSame(2, $completeEvent['context']['spacing_rejections']);
+        self::assertGreaterThanOrEqual(0.0, $completeEvent['context']['average_spacing_seconds']);
+    }
+
+    #[Test]
     public function buildDraftInterleavesMembersAcrossDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
-        $calculator     = new VacationScoreCalculator(
+        $selectionOptions = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
+        $calculator     = $this->createCalculator(
             locationHelper: $locationHelper,
-            holidayResolver: new NullHolidayResolver(),
+            options: $selectionOptions,
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
         );
@@ -801,64 +928,76 @@ final class VacationScoreCalculatorTest extends TestCase
         $draft = $calculator->buildDraft($dayKeys, $days, $home);
 
         self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params    = $draft->getParams();
         $memberIds = $draft->getMembers();
-        self::assertGreaterThan(20, count($memberIds));
 
-        $clamped = $this->clampMemberList($memberIds, 20);
+        self::assertCount($selectionOptions->targetTotal, $memberIds);
 
-        $represented = [];
-        foreach ($clamped as $memberId) {
-            $dayIndex               = intdiv($memberId - 100, 100);
-            $represented[$dayIndex] = true;
-        }
-
-        $expectedDays = [];
-        for ($i = 0; $i < $dayCount; ++$i) {
-            $expectedDays[] = $i;
-        }
-
-        $actualDays = array_keys($represented);
-        sort($actualDays);
-
-        self::assertSame($expectedDays, $actualDays);
-
-        $remaining = array_slice($clamped, count($dayKeys));
-        self::assertNotSame([], $remaining);
-
-        $reflection  = new ReflectionClass(VacationScoreCalculator::class);
-        $scoreMethod = $reflection->getMethod('evaluateMediaScore');
-        $scoreMethod->setAccessible(true);
-
-        /** @var list<array{id:int,score:float,timestamp:int}> $scored */
-        $scored = [];
-        foreach ($remaining as $memberId) {
-            $media   = $mediaIndex[$memberId];
-            $takenAt = $media->getTakenAt();
-            /** @var float $score */
-            $score    = $scoreMethod->invoke($calculator, $media);
-            $scored[] = [
-                'id'        => $memberId,
-                'score'     => $score,
-                'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
-            ];
-        }
-
-        $sorted = $scored;
-        usort($sorted, static function (array $a, array $b): int {
-            if ($a['score'] === $b['score']) {
-                if ($a['timestamp'] === $b['timestamp']) {
-                    return $a['id'] <=> $b['id'];
+        $expectedOrder = [];
+        $perDayCounts  = [];
+        foreach ($dayKeys as $dayKey) {
+            foreach ($days[$dayKey]['members'] as $media) {
+                $perDayCounts[$dayKey] = ($perDayCounts[$dayKey] ?? 0) + 1;
+                if ($perDayCounts[$dayKey] > $selectionOptions->maxPerDay) {
+                    continue;
                 }
 
-                return $a['timestamp'] <=> $b['timestamp'];
+                $expectedOrder[] = $media->getId();
+                if (count($expectedOrder) >= $selectionOptions->targetTotal) {
+                    break 2;
+                }
+            }
+        }
+
+        self::assertSame($expectedOrder, array_slice($memberIds, 0, count($expectedOrder)));
+
+        $selection = $params['member_selection'];
+        self::assertSame(28, $selection['counts']['pre']);
+        self::assertSame($selectionOptions->targetTotal, $selection['counts']['post']);
+        self::assertSame(4, $selection['counts']['dropped']);
+
+        $expectedDistribution = [];
+        $remaining            = $selectionOptions->targetTotal;
+        foreach ($dayKeys as $dayKey) {
+            $limit = min($selectionOptions->maxPerDay, count($days[$dayKey]['members']));
+            if ($limit > $remaining) {
+                $limit = $remaining;
             }
 
-            return $a['score'] < $b['score'] ? 1 : -1;
-        });
+            $expectedDistribution[$dayKey] = $limit;
+            $remaining -= $limit;
+        }
 
-        $expectedOrder = array_map(static fn (array $entry): int => $entry['id'], $sorted);
+        self::assertSame($expectedDistribution, $selection['per_day_distribution']);
+        self::assertSame($selection['counts']['post'], $selection['telemetry']['selected_total']);
+    }
 
-        self::assertSame($expectedOrder, $remaining);
+    /**
+     * @return list<Media>
+     */
+    private function createCalculator(
+        LocationHelper $locationHelper,
+        ?VacationSelectionOptions $options = null,
+        ?callable $curationFilter = null,
+        array $telemetryOverrides = [],
+        ?RecordingMonitoringEmitter $emitter = null,
+        ?HolidayResolverInterface $holidayResolver = null,
+        string $timezone = 'Europe/Berlin',
+        float $movementThresholdKm = 35.0,
+        int $minAwayDays = 1,
+        int $minMembers = 0,
+    ): VacationScoreCalculator {
+        return new VacationScoreCalculator(
+            locationHelper: $locationHelper,
+            memberSelector: new VacationTestMemberSelector($curationFilter, $telemetryOverrides),
+            selectionOptions: $options ?? new VacationSelectionOptions(),
+            holidayResolver: $holidayResolver ?? new NullHolidayResolver(),
+            timezone: $timezone,
+            movementThresholdKm: $movementThresholdKm,
+            minAwayDays: $minAwayDays,
+            minMembers: $minMembers,
+            monitoringEmitter: $emitter,
+        );
     }
 
     /**

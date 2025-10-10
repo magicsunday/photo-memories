@@ -28,6 +28,7 @@ use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Entity\Location;
@@ -36,6 +37,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 
 final class DefaultVacationSegmentAssemblerTest extends TestCase
 {
@@ -68,6 +70,8 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         );
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
+            memberSelector: new VacationTestMemberSelector(),
+            selectionOptions: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
             holidayResolver: new NullHolidayResolver(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
@@ -120,5 +124,6 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertEqualsCanonicalizing([0, 60], $params['timezones']);
         self::assertArrayHasKey('countries', $params);
         self::assertSame(['pt'], $params['countries']);
+        self::assertArrayHasKey('member_selection', $params);
     }
 }

@@ -27,11 +27,12 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
+use function array_flip;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
 use function array_map;
-use function array_slice;
+use function array_sum;
 use function count;
 use function explode;
 use function implode;
@@ -48,7 +49,6 @@ use function str_replace;
 use function trim;
 use function mb_strtoupper;
 use function mb_substr;
-use function usort;
 use function spl_object_id;
 
 use const SORT_NUMERIC;
@@ -61,11 +61,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 {
     use VacationTimezoneTrait;
 
-    private const float WEEKEND_OR_HOLIDAY_BONUS    = 0.35;
-    private const int DAY_SLOT_HOURS                = 6;
-    private const float QUALITY_BASELINE_MEGAPIXELS = 12.0;
-
-    private VacationSelectionOptions $selectionOptions;
+    private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
 
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
@@ -74,13 +70,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      */
     public function __construct(
         private LocationHelper $locationHelper,
+        private MemberSelectorInterface $memberSelector,
+        private VacationSelectionOptions $selectionOptions,
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
         private int $minAwayDays = 1,
         private int $minMembers = 0,
-        private ?MemberSelectorInterface $memberSelector = null,
-        ?VacationSelectionOptions $selectionOptions = null,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         if ($this->timezone === '') {
@@ -99,7 +95,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             throw new InvalidArgumentException('minMembers must be >= 0.');
         }
 
-        $this->selectionOptions = $selectionOptions ?? new VacationSelectionOptions();
     }
 
     /**
@@ -170,9 +165,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        $members = [];
-        /** @var array<string, list<Media>> $dayMembers */
-        $dayMembers              = [];
+        $rawMembers              = [];
+        /** @var array<int, string> $memberDayIndex */
+        $memberDayIndex          = [];
         $gpsMembers              = [];
         $maxDistance             = 0.0;
         $avgDistanceSum          = 0.0;
@@ -204,12 +199,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         foreach ($dayKeys as $key) {
             $summary = $days[$key];
             foreach ($summary['members'] as $media) {
-                $members[] = $media;
-                if (!isset($dayMembers[$key])) {
-                    $dayMembers[$key] = [];
-                }
-
-                $dayMembers[$key][] = $media;
+                $rawMembers[] = $media;
+                $memberDayIndex[spl_object_id($media)] = $key;
             }
 
             foreach ($summary['gpsMembers'] as $gpsMedia) {
@@ -311,7 +302,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        if (count($members) < $this->minMembers) {
+        if (count($rawMembers) < $this->minMembers) {
             return null;
         }
 
@@ -474,22 +465,108 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        usort($members, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
+        $acceptedSummaries = array_intersect_key($days, array_flip($dayKeys));
+        $preSelectionCount = count($rawMembers);
 
-        $orderedMembers = $this->buildInterleavedMembers($dayKeys, $dayMembers, $days, $home);
-        if ($orderedMembers === [] || count($orderedMembers) !== count($members)) {
-            $orderedMembers = $members;
+        if ($this->monitoringEmitter !== null) {
+            $startPayload = [
+                'pre_count'                 => $preSelectionCount,
+                'day_count'                 => $dayCount,
+                'away_days'                 => $awayDays,
+                'staypoint_detected'        => $primaryStaypoint !== null,
+            ];
+
+            if ($primaryStaypoint !== null) {
+                $startPayload['primary_staypoint_dwell_s'] = (int) $primaryStaypoint['dwell'];
+            }
+
+            $this->monitoringEmitter->emit('vacation_curation', 'selection_start', $startPayload);
         }
 
-        $timeRange = MediaMath::timeRange($members);
+        $selectionResult    = $this->memberSelector->select($acceptedSummaries, $home, $this->selectionOptions);
+        $curatedMembers     = $selectionResult->getMembers();
+        $selectionTelemetry = $selectionResult->getTelemetry();
+        $selectedCount      = count($curatedMembers);
+        $droppedCount       = $preSelectionCount > $selectedCount ? $preSelectionCount - $selectedCount : 0;
+
+        $spacingSamples   = [];
+        $previousTimestamp = null;
+        foreach ($curatedMembers as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $timestamp = $takenAt->getTimestamp();
+            if ($previousTimestamp !== null) {
+                $spacingSamples[] = abs($timestamp - $previousTimestamp);
+            }
+
+            $previousTimestamp = $timestamp;
+        }
+
+        $averageSpacingSeconds = $spacingSamples !== []
+            ? array_sum($spacingSamples) / count($spacingSamples)
+            : 0.0;
+
+        $nearDupBlocked    = (int) ($selectionTelemetry['near_duplicate_blocked'] ?? 0);
+        $nearDupReplaced   = (int) ($selectionTelemetry['near_duplicate_replacements'] ?? 0);
+        $spacingRejections = (int) ($selectionTelemetry['spacing_rejections'] ?? 0);
+
+        if ($this->monitoringEmitter !== null) {
+            $this->monitoringEmitter->emit(
+                'vacation_curation',
+                'selection_completed',
+                [
+                    'pre_count'                => $preSelectionCount,
+                    'post_count'               => $selectedCount,
+                    'dropped_total'            => $droppedCount,
+                    'near_duplicates_removed'  => $nearDupBlocked,
+                    'near_duplicates_replaced' => $nearDupReplaced,
+                    'spacing_rejections'       => $spacingRejections,
+                    'average_spacing_seconds'  => $averageSpacingSeconds,
+                ]
+            );
+        }
+
+        if ($curatedMembers === []) {
+            return null;
+        }
+
+        $perDayCounts = [];
+        foreach ($curatedMembers as $media) {
+            $objectId = spl_object_id($media);
+            $dayKey   = $memberDayIndex[$objectId] ?? null;
+
+            if ($dayKey === null) {
+                continue;
+            }
+
+            if (!isset($perDayCounts[$dayKey])) {
+                $perDayCounts[$dayKey] = 0;
+            }
+
+            ++$perDayCounts[$dayKey];
+        }
+
+        $orderedDistribution = [];
+        foreach ($dayKeys as $dayKey) {
+            if (isset($perDayCounts[$dayKey])) {
+                $orderedDistribution[$dayKey] = $perDayCounts[$dayKey];
+            }
+        }
+
+        $timeRange = MediaMath::timeRange($curatedMembers);
 
         $memberIds = array_map(
             static fn (Media $media): int => $media->getId(),
-            $orderedMembers
+            $curatedMembers
         );
 
-        $place           = $this->locationHelper->majorityLabel($members);
-        $placeComponents = $this->locationHelper->majorityLocationComponents($members);
+        // Raw member aggregates continue to inform scoring metrics, while
+        // curated members drive presentation metadata below.
+        $place           = $this->locationHelper->majorityLabel($curatedMembers);
+        $placeComponents = $this->locationHelper->majorityLocationComponents($curatedMembers);
 
         $classificationLabels = [
             'vacation'   => 'Urlaub',
@@ -528,27 +605,40 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'cohort_members'            => $cohortMemberAggregate,
             'work_day_penalty_days'    => $workDayPenalty,
             'work_day_penalty_score'   => round($penalty, 2),
-            'curation_selector'        => $this->memberSelector !== null ? $this->memberSelector::class : null,
-            'curation_target_total'    => $this->selectionOptions->targetTotal,
-            'curation_max_per_day'     => $this->selectionOptions->maxPerDay,
-            'curation_min_spacing_s'   => $this->selectionOptions->minSpacingSeconds,
-            'curation_phash_min_hamming'=> $this->selectionOptions->phashMinHamming,
             'timezones'                => $timezones,
             'countries'                => $countries,
         ];
 
-        if ($this->monitoringEmitter !== null) {
-            $this->monitoringEmitter->emit(
-                'vacation_curation',
-                'configured',
-                [
-                    'selector'      => $params['curation_selector'],
-                    'target_total'  => $this->selectionOptions->targetTotal,
-                    'max_per_day'   => $this->selectionOptions->maxPerDay,
-                    'quality_floor' => $this->selectionOptions->qualityFloor,
-                ]
-            );
-        }
+        $params['member_selection'] = [
+            'counts' => [
+                'pre'     => $preSelectionCount,
+                'post'    => $selectedCount,
+                'dropped' => $droppedCount,
+            ],
+            'near_duplicates' => [
+                'blocked'      => $nearDupBlocked,
+                'replacements' => $nearDupReplaced,
+            ],
+            'spacing' => [
+                'average_seconds' => $averageSpacingSeconds,
+                'rejections'      => $spacingRejections,
+            ],
+            'per_day_distribution' => $orderedDistribution,
+            'options' => [
+                'selector'            => $this->memberSelector::class,
+                'target_total'        => $this->selectionOptions->targetTotal,
+                'max_per_day'         => $this->selectionOptions->maxPerDay,
+                'time_slot_hours'     => $this->selectionOptions->timeSlotHours,
+                'min_spacing_seconds' => $this->selectionOptions->minSpacingSeconds,
+                'phash_min_hamming'   => $this->selectionOptions->phashMinHamming,
+                'max_per_staypoint'   => $this->selectionOptions->maxPerStaypoint,
+                'video_bonus'         => $this->selectionOptions->videoBonus,
+                'face_bonus'          => $this->selectionOptions->faceBonus,
+                'selfie_penalty'      => $this->selectionOptions->selfiePenalty,
+                'quality_floor'       => $this->selectionOptions->qualityFloor,
+            ],
+            'telemetry' => $selectionTelemetry,
+        ];
 
         if ($placeComponents !== []) {
             $city    = $placeComponents['city'] ?? null;
@@ -744,291 +834,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         return $isWeekend || $isHoliday;
     }
 
-    /**
-     * @param list<string>                                                                                                                                     $dayKeys
-     * @param array<string, list<Media>>                                                                                                                       $dayMembers
-     * @param array<string, array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                          $home
-     *
-     * @return list<Media>
-     */
-    private function buildInterleavedMembers(array $dayKeys, array $dayMembers, array $days, array $home): array
-    {
-        if ($dayKeys === []) {
-            return [];
-        }
-
-        /** @var array<string, list<Media>> $queues */
-        $queues = [];
-        foreach ($dayKeys as $dayKey) {
-            $members = $dayMembers[$dayKey] ?? null;
-            if ($members === null) {
-                continue;
-            }
-
-            $summary = $days[$dayKey] ?? null;
-            if ($summary === null) {
-                continue;
-            }
-
-            $queue = $this->buildPrioritizedDayQueue($summary, $home);
-            if ($queue !== []) {
-                $queues[$dayKey] = $queue;
-            }
-        }
-
-        if ($queues === []) {
-            return [];
-        }
-
-        $interleaved = [];
-        /** @var list<array{media: Media, score: float, timestamp: int}> $leftovers */
-        $leftovers = [];
-
-        foreach ($dayKeys as $dayKey) {
-            $queue = $queues[$dayKey] ?? null;
-            if ($queue === null) {
-                continue;
-            }
-
-            $first = $queue[0] ?? null;
-            if ($first instanceof Media) {
-                $interleaved[] = $first;
-            }
-
-            $queueCount = count($queue);
-            for ($index = 1; $index < $queueCount; ++$index) {
-                $media       = $queue[$index];
-                $takenAt     = $media->getTakenAt();
-                $leftovers[] = [
-                    'media'     => $media,
-                    'score'     => $this->evaluateMediaScore($media),
-                    'timestamp' => $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : 0,
-                ];
-            }
-        }
-
-        usort($leftovers, static function (array $a, array $b): int {
-            if ($a['score'] === $b['score']) {
-                if ($a['timestamp'] === $b['timestamp']) {
-                    return $a['media']->getId() <=> $b['media']->getId();
-                }
-
-                return $a['timestamp'] <=> $b['timestamp'];
-            }
-
-            return $a['score'] < $b['score'] ? 1 : -1;
-        });
-
-        foreach ($leftovers as $entry) {
-            $interleaved[] = $entry['media'];
-        }
-
-        return $interleaved;
     }
 
-    /**
-     * @param array{members:list<Media>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>,date:string} $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                           $home
-     *
-     * @return list<Media>
-     */
-    private function buildPrioritizedDayQueue(array $summary, array $home): array
-    {
-        $timezone = $this->resolveSummaryTimezone($summary, $home);
-
-        /** @var array<int, list<array{media:Media,score:float,timestamp:int,slotTimestamp:int}>> $slotBuckets */
-        $slotBuckets = [];
-        /** @var list<array{media:Media,score:float,timestamp:int,slotTimestamp:int}> $fallback */
-        $fallback = [];
-
-        foreach ($summary['members'] as $media) {
-            $takenAt = $media->getTakenAt();
-            $score   = $this->evaluateMediaScore($media);
-
-            if ($takenAt instanceof DateTimeImmutable) {
-                $localTime  = $takenAt->setTimezone($timezone);
-                $localHour  = (int) $localTime->format('H');
-                $slotIndex  = intdiv($localHour, self::DAY_SLOT_HOURS);
-                $slotHour   = $slotIndex * self::DAY_SLOT_HOURS;
-                $slotStart  = $localTime->setTime($slotHour, 0);
-                $bucketItem = [
-                    'media'         => $media,
-                    'score'         => $score,
-                    'timestamp'     => $takenAt->getTimestamp(),
-                    'slotTimestamp' => $slotStart->getTimestamp(),
-                ];
-
-                if (!isset($slotBuckets[$slotIndex])) {
-                    $slotBuckets[$slotIndex] = [];
-                }
-
-                $slotBuckets[$slotIndex][] = $bucketItem;
-                continue;
-            }
-
-            $fallback[] = [
-                'media'         => $media,
-                'score'         => $score,
-                'timestamp'     => 0,
-                'slotTimestamp' => 0,
-            ];
-        }
-
-        /** @var list<array{media:Media,score:float,timestamp:int,slotTimestamp:int}> $winners */
-        $winners = [];
-        foreach ($slotBuckets as $entries) {
-            usort($entries, static function (array $a, array $b): int {
-                if ($a['score'] === $b['score']) {
-                    if ($a['timestamp'] === $b['timestamp']) {
-                        return $a['media']->getId() <=> $b['media']->getId();
-                    }
-
-                    return $a['timestamp'] <=> $b['timestamp'];
-                }
-
-                return $a['score'] < $b['score'] ? 1 : -1;
-            });
-
-            $winner = $entries[0] ?? null;
-            if ($winner !== null) {
-                $winners[] = $winner;
-            }
-
-            foreach (array_slice($entries, 1) as $entry) {
-                $fallback[] = $entry;
-            }
-        }
-
-        usort($winners, static function (array $a, array $b): int {
-            if ($a['slotTimestamp'] === $b['slotTimestamp']) {
-                return $a['timestamp'] <=> $b['timestamp'];
-            }
-
-            return $a['slotTimestamp'] <=> $b['slotTimestamp'];
-        });
-
-        usort($fallback, static function (array $a, array $b): int {
-            if ($a['score'] === $b['score']) {
-                return $a['timestamp'] <=> $b['timestamp'];
-            }
-
-            return $a['score'] < $b['score'] ? 1 : -1;
-        });
-
-        $ordered = [];
-        foreach ($winners as $winner) {
-            $ordered[] = $winner['media'];
-        }
-
-        foreach ($fallback as $entry) {
-            $ordered[] = $entry['media'];
-        }
-
-        return $ordered;
-    }
-
-    private function evaluateMediaScore(Media $media): float
-    {
-        $resolution = $this->resolveResolutionScore($media);
-        $sharpness  = $media->getSharpness();
-        $isoValue   = $media->getIso();
-        $isoScore   = $isoValue !== null && $isoValue > 0 ? $this->normalizeIso($isoValue) : null;
-
-        $quality = $this->combineScores([
-            [$resolution, 0.45],
-            [$sharpness !== null ? $this->clamp01($sharpness) : null, 0.35],
-            [$isoScore, 0.20],
-        ], 0.0);
-
-        $brightness = $media->getBrightness();
-        $contrast   = $media->getContrast();
-        $entropy    = $media->getEntropy();
-        $color      = $media->getColorfulness();
-
-        $aesthetics = $this->combineScores([
-            [$brightness !== null ? $this->balancedScore($this->clamp01($brightness), 0.55, 0.35) : null, 0.30],
-            [$contrast !== null ? $this->clamp01($contrast) : null, 0.20],
-            [$entropy !== null ? $this->clamp01($entropy) : null, 0.25],
-            [$color !== null ? $this->clamp01($color) : null, 0.25],
-        ], 0.0);
-
-        return (0.7 * $quality) + (0.3 * $aesthetics);
-    }
-
-    private function resolveResolutionScore(Media $media): ?float
-    {
-        $width  = $media->getWidth();
-        $height = $media->getHeight();
-        if ($width === null || $height === null || $width <= 0 || $height <= 0) {
-            return null;
-        }
-
-        $megapixels = ((float) $width * (float) $height) / 1_000_000.0;
-
-        return $this->clamp01($megapixels / max(0.000001, self::QUALITY_BASELINE_MEGAPIXELS));
-    }
-
-    private function clamp01(?float $value): float
-    {
-        if ($value === null) {
-            return 0.0;
-        }
-
-        if ($value < 0.0) {
-            return 0.0;
-        }
-
-        if ($value > 1.0) {
-            return 1.0;
-        }
-
-        return $value;
-    }
-
-    /**
-     * @param array<array{0: float|null, 1: float}> $components
-     */
-    private function combineScores(array $components, float $default): float
-    {
-        $sum       = 0.0;
-        $weightSum = 0.0;
-
-        foreach ($components as [$value, $weight]) {
-            if ($value === null) {
-                continue;
-            }
-
-            $sum += $this->clamp01($value) * $weight;
-            $weightSum += $weight;
-        }
-
-        if ($weightSum <= 0.0) {
-            return $default;
-        }
-
-        return $sum / $weightSum;
-    }
-
-    private function balancedScore(float $value, float $target, float $tolerance): float
-    {
-        $delta = abs($value - $target);
-        if ($delta >= $tolerance) {
-            return 0.0;
-        }
-
-        return $this->clamp01(1.0 - ($delta / $tolerance));
-    }
-
-    private function normalizeIso(int $iso): float
-    {
-        $min   = 50.0;
-        $max   = 6400.0;
-        $value = (float) max($min, min($max, $iso));
-        $ratio = log($value / $min) / log($max / $min);
-
-        return $this->clamp01(1.0 - $ratio);
-    }
 
     private function formatLocationComponent(string $value): string
     {

@@ -48,6 +48,7 @@ use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
@@ -61,6 +62,7 @@ use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -186,6 +188,8 @@ final class ClusterStrategySmokeTest extends TestCase
                     new RunDetector(new TransportDayExtender()),
                     new VacationScoreCalculator(
                         locationHelper: self::locationHelper(),
+                        memberSelector: new VacationTestMemberSelector(),
+                        selectionOptions: new VacationSelectionOptions(),
                         holidayResolver: new NullHolidayResolver(),
                     ),
                 ),
