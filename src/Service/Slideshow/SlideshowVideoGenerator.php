@@ -263,7 +263,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
 
         return sprintf(
-            '%s%s[bg%1$dout][fg%1$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,format=yuv420p,setsar=1',
+            '%1$s%2$s[bg%3$dout][fg%3$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,format=yuv420p,setsar=1',
             $background,
             $foreground,
             $index,
