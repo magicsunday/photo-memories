@@ -32,6 +32,7 @@ use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
@@ -45,6 +46,7 @@ use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
@@ -1801,6 +1803,8 @@ final class VacationClusterStrategyTest extends TestCase
 
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
+            memberSelector: new VacationTestMemberSelector(),
+            selectionOptions: new VacationSelectionOptions(targetTotal: 32, maxPerDay: 8),
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
