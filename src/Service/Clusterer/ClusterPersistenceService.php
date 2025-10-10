@@ -20,6 +20,7 @@ use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
@@ -57,6 +58,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     public function __construct(
         private EntityManagerInterface $em,
         private MemberMediaLookupInterface $mediaLookup,
+        private ClusterMemberSelectionServiceInterface $memberSelection,
         private CoverPickerInterface $coverPicker,
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
@@ -88,6 +90,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $batchSize = $batchSize > 0 ? $batchSize : $this->defaultBatchSize;
 
         // 1) Build pair list (alg, fp) for all drafts
+        $drafts = $this->curateDrafts($drafts);
+
         /** @var list<array{alg:string, fp:string}> $pairs */
         $pairs = [];
         foreach ($drafts as $d) {
@@ -748,5 +752,24 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return array_slice($members, 0, $this->maxMembers);
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<ClusterDraft>
+     */
+    private function curateDrafts(array $drafts): array
+    {
+        if ($drafts === []) {
+            return [];
+        }
+
+        $curated = [];
+        foreach ($drafts as $draft) {
+            $curated[] = $this->memberSelection->curate($draft);
+        }
+
+        return $curated;
     }
 }

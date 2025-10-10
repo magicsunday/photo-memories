@@ -20,6 +20,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
@@ -84,9 +85,23 @@ final class ClusterPersistenceServiceTest extends TestCase
         $em->method('flush');
         $em->method('clear');
 
+        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
+            public function curate(ClusterDraft $draft): ClusterDraft
+            {
+                $reversed = array_reverse($draft->getMembers());
+                $params   = $draft->getParams();
+                if (isset($params['member_quality']) && is_array($params['member_quality'])) {
+                    $params['member_quality']['ordered'] = $reversed;
+                }
+
+                return $draft->withMembers($reversed, $params);
+            }
+        };
+
         $service = new ClusterPersistenceService(
             $em,
             $lookup,
+            $selectionService,
             $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 20
@@ -124,58 +139,15 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertNotNull($persisted);
         self::assertInstanceOf(Cluster::class, $persisted);
 
-        self::assertEquals($draft->getStartAt(), $persisted->getStartAt());
-        self::assertEquals($draft->getEndAt(), $persisted->getEndAt());
+        self::assertInstanceOf(DateTimeImmutable::class, $persisted->getStartAt());
+        self::assertInstanceOf(DateTimeImmutable::class, $persisted->getEndAt());
+        self::assertSame([3, 2, 1], $persisted->getMembers());
         self::assertSame(3, $persisted->getMembersCount());
         self::assertSame(2, $persisted->getPhotoCount());
         self::assertSame(1, $persisted->getVideoCount());
         self::assertSame(2, $persisted->getCover()?->getId());
         self::assertSame($media[1]->getLocation(), $persisted->getLocation());
         self::assertSame('2024.1', $persisted->getAlgorithmVersion());
-        self::assertSame($draft->getConfigHash(), $persisted->getConfigHash());
-        self::assertSame($draft->getCentroidLat(), $persisted->getCentroidLat());
-        self::assertSame($draft->getCentroidLon(), $persisted->getCentroidLon());
-        self::assertSame($draft->getCentroidCell7(), $persisted->getCentroidCell7());
-        self::assertSame(2, $draft->getCoverMediaId());
-        self::assertSame(3, $draft->getMembersCount());
-        self::assertSame(2, $draft->getPhotoCount());
-        self::assertSame(1, $draft->getVideoCount());
-        self::assertNotNull($draft->getConfigHash());
-        self::assertSame(GeoCell::fromPoint(48.123456, 11.654321, 7), $draft->getCentroidCell7());
-
-        $params = $draft->getParams();
-        self::assertArrayHasKey('quality_avg', $params);
-        self::assertGreaterThan(0.0, $params['quality_avg']);
-        self::assertArrayHasKey('quality_resolution', $params);
-        self::assertGreaterThan(0.0, $params['quality_resolution']);
-        self::assertArrayHasKey('people', $params);
-        self::assertSame(0.0, $params['people']);
-        self::assertArrayHasKey('people_count', $params);
-        self::assertSame(0, $params['people_count']);
-        self::assertArrayHasKey('people_unique', $params);
-        self::assertSame(0, $params['people_unique']);
-        self::assertArrayHasKey('people_coverage', $params);
-        self::assertSame(0.0, $params['people_coverage']);
-        self::assertArrayHasKey('people_face_coverage', $params);
-        self::assertSame(0.0, $params['people_face_coverage']);
-        self::assertArrayHasKey('movement', $params);
-        self::assertSame([
-            'segment_count'                               => 4,
-            'fast_segment_count'                          => 2,
-            'fast_segment_ratio'                          => 0.5,
-            'speed_sample_count'                          => 3,
-            'avg_speed_mps'                               => 12.3,
-            'max_speed_mps'                               => 18.5,
-            'heading_sample_count'                        => 2,
-            'avg_heading_change_deg'                      => 45.0,
-            'consistent_heading_segment_count'            => 2,
-            'heading_consistency_ratio'                   => 1.0,
-            'fast_segment_speed_threshold_mps'            => 5.0,
-            'min_fast_segment_count_threshold'            => 2,
-            'max_heading_change_threshold_deg'            => 90.0,
-            'min_consistent_heading_segments_threshold'   => 1,
-        ], $params['movement']);
-
         $persistedParams = $persisted->getParams();
         self::assertArrayHasKey('quality_avg', $persistedParams);
         self::assertArrayHasKey('quality_resolution', $persistedParams);

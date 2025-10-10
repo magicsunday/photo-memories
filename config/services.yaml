@@ -762,6 +762,11 @@ services:
             $selfiePenalty: '%memories.cluster.selection.selfie_penalty%'
             $qualityFloor: '%memories.cluster.selection.quality_floor%'
 
+    MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider:
+        arguments:
+            $defaultProfile: '%memories.cluster.selection.default_profile%'
+            $profiles: '%memories.cluster.selection.profiles%'
+
     MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector:
         arguments:
             $qualityAggregator: '@MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator'
@@ -770,6 +775,9 @@ services:
 
     MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface:
         alias: MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector
+
+    MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionService
 
     MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator:
         arguments:
