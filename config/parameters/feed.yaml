@@ -7,13 +7,13 @@ parameters:
     # Description: Timezone used for scheduling feed notifications.
     env(MEMORIES_FEED_NOTIFICATIONS_TIMEZONE): 'Europe/Berlin'
     # Description: Minimum score threshold for including a cluster in the feed.
-    memories.feed.min_score: 0.35
+    memories.feed.min_score: 0.45
     # Description: Minimum number of members required for a cluster to appear in the feed.
     memories.feed.min_members: 4
     # Description: Maximum number of feed items delivered per day.
     memories.feed.max_per_day: 6
     # Description: Maximum total number of feed items returned across pagination.
-    memories.feed.max_total: 60
+    memories.feed.max_total: 70
     # Description: Maximum number of feed items contributed by a single algorithm.
     memories.feed.max_per_algorithm: 12
     # Description: File path storing user feed personalization preferences.
@@ -75,7 +75,7 @@ parameters:
     # Description: Number of preview images returned for each cluster in HTTP responses.
     memories.http.feed.preview_images: 8
     # Description: Multiplier used to expand cluster membership when fetching feed items.
-    memories.http.feed.cluster_multiplier: 4
+    memories.http.feed.cluster_multiplier: 5
     # Description: Width in pixels for feed cover images served via HTTP.
     memories.http.feed.cover_width: 640
     # Description: Width in pixels for feed member thumbnails served via HTTP.

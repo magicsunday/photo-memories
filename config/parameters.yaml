@@ -81,7 +81,7 @@ parameters:
     # Description: Default zoom level requested from the Nominatim API for reverse geocoding.
     memories.geocoding.nominatim.zoom: 14
     # Description: Delay in milliseconds enforced between consecutive geocoding requests.
-    memories.geocoding.delay_ms: 1200
+    memories.geocoding.delay_ms: 1500
     # Description: Number of geocoding entries processed in a single refresh batch.
     memories.geocoding.refresh.batch_size: 25
     # Description: Base URL of the Overpass API endpoint for point-of-interest lookups.
@@ -91,7 +91,7 @@ parameters:
     # Description: Search radius in meters used for Overpass point-of-interest queries.
     memories.geocoding.overpass.radius_m: 250
     # Description: Maximum number of points of interest fetched per Overpass request.
-    memories.geocoding.overpass.max_pois: 15
+    memories.geocoding.overpass.max_pois: 20
     # Description: Multiplier applied to extend Overpass fetch limits beyond the default amount.
     memories.geocoding.overpass.fetch_limit_multiplier: 3.0
     # Description: Whitelist of point-of-interest categories allowed from Overpass responses.
@@ -117,7 +117,7 @@ parameters:
     # Description: Default minimum travel distance in kilometers to consider a transport leg.
     memories.cluster.transport_speed.min_leg_distance_km_default: 10.0
     # Description: Default speed threshold in km/h above which a transport leg is considered high speed.
-    memories.cluster.transport_speed.high_speed_threshold_kmh_default: 160.0
+    memories.cluster.transport_speed.high_speed_threshold_kmh_default: 200.0
     # Description: Runtime minimum duration in minutes for transport legs, allowing environment overrides.
     memories.cluster.transport_speed.min_leg_duration_minutes: '%env(default:memories.cluster.transport_speed.min_leg_duration_minutes_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_MINUTES)%'
     # Description: Runtime minimum distance in kilometers for transport legs, allowing environment overrides.
@@ -149,7 +149,7 @@ parameters:
 
     # Thumbnail-Größen (px)
     # Description: Thumbnail sizes in pixels generated for media assets.
-    memories.thumbnail_sizes: [320, 1024]
+    memories.thumbnail_sizes: [320, 1024, 2048]
     # Description: Default flag controlling whether EXIF orientation should be applied to thumbnails.
     memories.thumbnail.apply_orientation_default: true
     # Description: Runtime flag indicating whether thumbnail orientation correction is active.
@@ -157,13 +157,13 @@ parameters:
 
     # Consolidation Defaults
     # Description: Minimum aggregate score required for a cluster to be consolidated.
-    memories.cluster.consolidate.min_score: 0.30
+    memories.cluster.consolidate.min_score: 0.4
     # Description: Minimum number of media items required for a cluster during consolidation.
     memories.cluster.consolidate.min_size: 3
     # Description: Overlap ratio threshold above which clusters are merged during consolidation.
-    memories.cluster.consolidate.overlap_merge_threshold: 0.50
+    memories.cluster.consolidate.overlap_merge_threshold: 0.55
     # Description: Overlap ratio threshold above which clusters are dropped during consolidation.
-    memories.cluster.consolidate.overlap_drop_threshold: 0.70
+    memories.cluster.consolidate.overlap_drop_threshold: 0.7
     # Description: Maximum number of consolidated results a single media item may appear in.
     memories.cluster.consolidate.per_media_cap: 2
     # Description: Ordered list defining which cluster types should be retained when conflicts arise.
