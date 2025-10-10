@@ -547,9 +547,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private function quoteFilterExpression(string $expression): string
     {
-        $normalized = str_replace('\\,', ',', $expression);
-
-        return sprintf("'%s'", str_replace("'", "\\'", $normalized));
+        return sprintf("'%s'", str_replace("'", "\\'", $expression));
     }
 
     private function formatFloat(float $value): string
