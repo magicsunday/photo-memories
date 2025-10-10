@@ -21,6 +21,7 @@ use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_merge;
+use function array_search;
 use function ceil;
 use function count;
 use function dirname;
@@ -185,9 +186,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $filter   = $this->buildBlurredSlideFilter(0, $duration);
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
-        $filter .= sprintf(
+        $clipDuration = max(0.1, $duration);
+        $filter       .= sprintf(
             ',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]',
-            max(0.1, $duration)
+            $clipDuration
         );
 
         $command = [
@@ -207,7 +209,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filter,
         ];
 
-        return $this->appendAudioOptions($command, 1, $output, $audioTrack, $title, $subtitle);
+        return $this->appendAudioOptions($command, 1, $output, $audioTrack, $title, $subtitle, $clipDuration);
     }
 
     /**
@@ -334,11 +336,20 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $previousChoice = $transition;
         }
 
+        $totalDuration = $offset;
         $filterComplex = implode(';', $filters);
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
-        return $this->appendAudioOptions($command, count($slides), $output, $audioTrack, $title, $subtitle);
+        return $this->appendAudioOptions(
+            $command,
+            count($slides),
+            $output,
+            $audioTrack,
+            $title,
+            $subtitle,
+            $totalDuration,
+        );
     }
 
     private function buildBlurredSlideFilter(int $index, float $duration): string
@@ -590,6 +601,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<string> $command
+     * @param float        $totalDuration
      *
      * @return list<string>
      */
@@ -600,9 +612,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
+        float $totalDuration,
     ): array
     {
-        if (is_string($audioTrack) && $audioTrack !== '') {
+        $hasAudio = is_string($audioTrack) && $audioTrack !== '';
+
+        if ($hasAudio) {
             $command[] = '-i';
             $command[] = $audioTrack;
         }
@@ -632,9 +647,34 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $command[] = sprintf('subtitle=%s', $subtitle);
         }
 
-        if (is_string($audioTrack) && $audioTrack !== '') {
+        if ($hasAudio) {
+            $filterIndex = array_search('-filter_complex', $command, true);
+            if ($filterIndex !== false) {
+                $filterComplexIndex = $filterIndex + 1;
+                $audioInputLabel    = sprintf('[%d:a:0]', $videoInputs);
+                $audioFilter        = sprintf('%sanull[aout]', $audioInputLabel);
+
+                if ($totalDuration > 6.0) {
+                    $fadeDuration = 1.5;
+                    $fadeOutStart = max(0.0, $totalDuration - $fadeDuration);
+                    $audioFilter  = sprintf(
+                        '%safade=t=in:st=0:d=%s,afade=t=out:st=%s:d=%s[aout]',
+                        $audioInputLabel,
+                        $this->formatFloat($fadeDuration),
+                        $this->formatFloat($fadeOutStart),
+                        $this->formatFloat($fadeDuration),
+                    );
+                }
+
+                $command[$filterComplexIndex] = sprintf(
+                    '%s;%s',
+                    $command[$filterComplexIndex],
+                    $audioFilter,
+                );
+            }
+
             $command[] = '-map';
-            $command[] = sprintf('%d:a:0', $videoInputs);
+            $command[] = '[aout]';
             $command[] = '-shortest';
             $command[] = '-c:a';
             $command[] = 'aac';

@@ -43,6 +43,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             null,
             'Ein Tag am Meer',
             '01.02.2024 – 14.02.2024',
+            0.0,
         );
 
         $metadataEntries = [];
@@ -126,6 +127,75 @@ final class SlideshowVideoGeneratorTest extends TestCase
             preg_match('/\\[1:v][^;\\[]*drawtext/', $filterComplex),
             'Overlay should only appear on the cover slide.'
         );
+    }
+
+    public function testAudioFadeIsConfiguredWhenAudioTrackExceedsThreshold(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'audio-fade',
+            '/tmp/example.json',
+            '/tmp/out.mp4',
+            '/tmp/out.lock',
+            '/tmp/out.error',
+            ['/tmp/cover.jpg', '/tmp/second.jpg'],
+            $slides,
+            null,
+            '/tmp/music.mp3',
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=6.5:d=1.5[aout]', $filterComplex);
+
+        $audioMapIndex = array_search('-map', $command, true);
+        self::assertNotFalse($audioMapIndex);
+
+        $audioLabelIndex = null;
+        $commandLength   = count($command);
+        for ($index = 0; $index < $commandLength; ++$index) {
+            if ($command[$index] !== '-map') {
+                continue;
+            }
+
+            $candidateIndex = $index + 1;
+            if ($candidateIndex < $commandLength && $command[$candidateIndex] === '[aout]') {
+                $audioLabelIndex = $candidateIndex;
+                break;
+            }
+        }
+
+        self::assertNotNull($audioLabelIndex);
     }
 
     public function testZoompanExpressionsRespectConfiguredValues(): void
