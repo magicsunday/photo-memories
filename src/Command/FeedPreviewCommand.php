@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
@@ -44,11 +46,14 @@ use function sprintf;
 )]
 final class FeedPreviewCommand extends Command
 {
+    use SelectionOverrideInputTrait;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterConsolidatorInterface $consolidation,
         private readonly ClusterEntityToDraftMapper $mapper,
+        private readonly SelectionProfileProvider $selectionProfiles,
         private readonly int $defaultClusterLimit = 5000,
     ) {
         parent::__construct();
@@ -82,12 +87,24 @@ final class FeedPreviewCommand extends Command
                 InputOption::VALUE_NONE,
                 'Mitglieds-IDs der Items mit ausgeben'
             );
+
+        $this->configureSelectionOverrideOptions();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('📰 Rückblick-Feed Vorschau');
+
+        try {
+            $selectionOverrides = $this->resolveSelectionOverrides($input);
+        } catch (InvalidArgumentException $exception) {
+            $io->error($exception->getMessage());
+
+            return Command::INVALID;
+        }
+
+        $this->selectionProfiles->setRuntimeOverrides($selectionOverrides);
 
         $limit = max(1, (int) $input->getOption('limit-clusters'));
 

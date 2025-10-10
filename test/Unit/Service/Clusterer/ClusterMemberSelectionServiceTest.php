@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider;
@@ -67,7 +68,8 @@ final class ClusterMemberSelectionServiceTest extends TestCase
                 return new SelectionResult([$media1, $media3], ['near_duplicate_blocked' => 1]);
             });
 
-        $provider = new ClusterMemberSelectionProfileProvider(new VacationSelectionOptions(), 'default', []);
+        $profileProvider = new SelectionProfileProvider(new VacationSelectionOptions());
+        $provider        = new ClusterMemberSelectionProfileProvider($profileProvider);
 
         $service = new ClusterMemberSelectionService($selector, $lookup, $provider);
 

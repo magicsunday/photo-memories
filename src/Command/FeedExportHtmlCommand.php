@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -37,8 +39,11 @@ use function sprintf;
 )]
 final class FeedExportHtmlCommand extends Command
 {
+    use SelectionOverrideInputTrait;
+
     public function __construct(
         private readonly FeedExportServiceInterface $exportService,
+        private readonly SelectionProfileProvider $selectionProfiles,
     ) {
         parent::__construct();
     }
@@ -53,11 +58,23 @@ final class FeedExportHtmlCommand extends Command
             ->addOption('symlink', null, InputOption::VALUE_NONE, 'Anstatt zu kopieren werden Symlinks verwendet (sofern möglich)')
             ->addArgument('out-dir', InputArgument::OPTIONAL, 'Ausgabeverzeichnis', 'var/export')
         ;
+
+        $this->configureSelectionOverrideOptions();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io            = new SymfonyStyle($input, $output);
+        try {
+            $selectionOverrides = $this->resolveSelectionOverrides($input);
+        } catch (InvalidArgumentException $exception) {
+            $io->error($exception->getMessage());
+
+            return Command::INVALID;
+        }
+
+        $this->selectionProfiles->setRuntimeOverrides($selectionOverrides);
+
         $limitClusters = max(1, (int) $input->getOption('limit-clusters'));
         $maxItems      = max(1, (int) $input->getOption('max-items'));
         $imagesPerItem = max(1, (int) $input->getOption('images-per-item'));

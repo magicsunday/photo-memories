@@ -12,10 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
-use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 
-use function array_merge;
 use function is_array;
 use function is_int;
 use function is_numeric;
@@ -26,16 +24,8 @@ use function is_string;
  */
 final class ClusterMemberSelectionProfileProvider
 {
-    /**
-     * @param array<string, array<string, mixed>> $profiles
-     */
-    public function __construct(
-        private readonly VacationSelectionOptions $defaultOptions,
-        #[Autowire('%memories.cluster.selection.default_profile%')]
-        private readonly string $defaultProfile = 'default',
-        #[Autowire('%memories.cluster.selection.profiles%')]
-        private readonly array $profiles = [],
-    ) {
+    public function __construct(private readonly SelectionProfileProvider $profiles)
+    {
     }
 
     public function resolve(ClusterDraft $draft): ClusterMemberSelectionProfile
@@ -43,12 +33,10 @@ final class ClusterMemberSelectionProfileProvider
         $params          = $draft->getParams();
         $selectionConfig = $this->extractSelectionConfig($params['member_selection'] ?? null);
 
-        $profileKey = $selectionConfig['profile'] ?? $this->defaultProfile;
-        if (!is_string($profileKey) || $profileKey === '') {
-            $profileKey = $this->defaultProfile;
-        }
-
-        $options = $this->buildOptions($profileKey, $selectionConfig['overrides'] ?? []);
+        $requestedProfile = $this->stringValue($selectionConfig, 'profile');
+        $profileKey       = $this->profiles->determineProfileKey($draft->getAlgorithm(), $requestedProfile);
+        $overrides        = $this->extractOverrides($selectionConfig['overrides'] ?? null);
+        $options          = $this->profiles->createOptions($profileKey, $overrides);
         $home    = $this->resolveHomeDescriptor($selectionConfig['home'] ?? null);
 
         return new ClusterMemberSelectionProfile($profileKey, $options, $home);
@@ -69,30 +57,17 @@ final class ClusterMemberSelectionProfileProvider
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param mixed $overrides
+     *
+     * @return array<string, mixed>
      */
-    private function buildOptions(string $profileKey, array $overrides): VacationSelectionOptions
+    private function extractOverrides(mixed $overrides): array
     {
-        $profileOverrides = $this->profiles[$profileKey] ?? [];
-        if (!is_array($profileOverrides)) {
-            $profileOverrides = [];
+        if (!is_array($overrides)) {
+            return [];
         }
 
-        /** @var array<string, mixed> $merged */
-        $merged = array_merge($profileOverrides, $overrides);
-
-        return new VacationSelectionOptions(
-            targetTotal: $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal),
-            maxPerDay: $this->intValue($merged, 'max_per_day', $this->defaultOptions->maxPerDay),
-            timeSlotHours: $this->intValue($merged, 'time_slot_hours', $this->defaultOptions->timeSlotHours),
-            minSpacingSeconds: $this->intValue($merged, 'min_spacing_seconds', $this->defaultOptions->minSpacingSeconds),
-            phashMinHamming: $this->intValue($merged, 'phash_min_hamming', $this->defaultOptions->phashMinHamming),
-            maxPerStaypoint: $this->intValue($merged, 'max_per_staypoint', $this->defaultOptions->maxPerStaypoint),
-            videoBonus: $this->floatValue($merged, 'video_bonus', $this->defaultOptions->videoBonus),
-            faceBonus: $this->floatValue($merged, 'face_bonus', $this->defaultOptions->faceBonus),
-            selfiePenalty: $this->floatValue($merged, 'selfie_penalty', $this->defaultOptions->selfiePenalty),
-            qualityFloor: $this->floatValue($merged, 'quality_floor', $this->defaultOptions->qualityFloor),
-        );
+        return $overrides;
     }
 
     /**
@@ -128,20 +103,6 @@ final class ClusterMemberSelectionProfileProvider
             'country'         => $country,
             'timezone_offset' => $timezoneOffset,
         ];
-    }
-
-    private function intValue(array $values, string $key, int $default): int
-    {
-        $value = $values[$key] ?? null;
-        if (is_int($value)) {
-            return $value;
-        }
-
-        if (is_numeric($value)) {
-            return (int) $value;
-        }
-
-        return $default;
     }
 
     private function floatValue(array $values, string $key, float $default): float
