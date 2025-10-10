@@ -11,24 +11,32 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Slideshow;
 
+use Random\Engine\Xoshiro256StarStar;
+use Random\Randomizer;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 use function array_filter;
+use function array_keys;
+use function array_map;
 use function array_merge;
 use function ceil;
 use function count;
 use function dirname;
 use function implode;
+use function in_array;
 use function is_dir;
 use function is_file;
 use function is_string;
+use function hash;
 use function max;
+use function min;
 use function mkdir;
 use function rtrim;
 use function sprintf;
 use function str_replace;
+use function strtolower;
 use function trim;
 
 /**
@@ -36,10 +44,13 @@ use function trim;
  */
 final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
 {
-    /**
-     * Default list of transition names used when no custom set is provided.
-     */
-    private const array DEFAULT_TRANSITIONS = [
+    private const float MIN_TRANSITION_DURATION = 0.3;
+
+    private const float MAX_TRANSITION_DURATION = 1.2;
+
+    private const float MINIMUM_SLIDE_DURATION = 0.1;
+
+    private const array TRANSITION_WHITELIST = [
         'fade',
         'dissolve',
         'fadeblack',
@@ -61,6 +72,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'radial',
         'pixelize',
     ];
+
+    /**
+     * Default list of transition names used when no custom set is provided.
+     */
+    private const array DEFAULT_TRANSITIONS = self::TRANSITION_WHITELIST;
 
     private const int ZOOMPAN_FPS = 30;
 
@@ -142,6 +158,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         return $this->buildMultiImageCommand(
             $slides,
+            $job->images(),
             $transitionDuration,
             $job->outputPath(),
             $audioTrack,
@@ -194,11 +211,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<string>                                                                      $imagePaths
      *
      * @return list<string>
      */
     private function buildMultiImageCommand(
         array $slides,
+        array $imagePaths,
         float $transitionDuration,
         string $output,
         ?string $audioTrack,
@@ -206,10 +225,28 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $command             = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
-        foreach ($slides as $slide) {
-            $duration           = $this->resolveSlideDuration($slide['duration']);
-            $durationWithOverlap = max(0.1, $duration + $transitionDuration);
+        $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
+
+        $availableTransitions = $this->filterAllowedTransitions($this->transitions);
+        $requiredTransitions  = max(0, count($slides) - 1);
+        $fallbackTransitions  = $this->buildDeterministicTransitionSequence(
+            $availableTransitions,
+            $imagePaths,
+            $title,
+            $subtitle,
+            $requiredTransitions,
+        );
+
+        $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration);
+
+        foreach ($slides as $index => $slide) {
+            $duration = $this->resolveSlideDuration($slide['duration']);
+
+            $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
+            $nextTransition      = $transitionDurations[$index] ?? 0.0;
+            $overlap             = max($previousTransition, $nextTransition);
+            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
+
             $command = array_merge($command, [
                 '-loop',
                 '1',
@@ -222,13 +259,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ]);
         }
 
-        $filters             = [];
-        $overlayFilterChain  = $this->buildTextOverlayFilterChain($title, $subtitle);
-        $transitionCount     = count($this->transitions);
+        $filters            = [];
+        $overlayFilterChain = $this->buildTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
-            $duration            = $this->resolveSlideDuration($slide['duration']);
-            $durationWithOverlap = max(0.1, $duration + $transitionDuration);
+            $duration = $this->resolveSlideDuration($slide['duration']);
+
+            $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
+            $nextTransition      = $transitionDurations[$index] ?? 0.0;
+            $overlap             = max($previousTransition, $nextTransition);
+            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
 
             $filter = $this->buildBlurredSlideFilter($index, $durationWithOverlap);
 
@@ -240,23 +280,43 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filters[] = $filter;
         }
 
-        $current = '[s0]';
-        $offset  = $this->resolveSlideDuration($slides[0]['duration']);
+        $current        = '[s0]';
+        $offset         = $this->resolveSlideDuration($slides[0]['duration']);
+        $fallbackIndex  = 0;
+        $previousChoice = null;
 
         for ($index = 1; $index < count($slides); ++$index) {
-            $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
+            $preferred = $this->normaliseTransitionName($slides[$index - 1]['transition'] ?? null);
+            if ($preferred === null) {
+                $transition = 'fade';
+                $fallbackCount = count($fallbackTransitions);
+                while ($fallbackIndex < $fallbackCount) {
+                    $candidate = $fallbackTransitions[$fallbackIndex];
+                    ++$fallbackIndex;
+                    if ($candidate !== $previousChoice || $fallbackCount === 1) {
+                        $transition = $candidate;
+                        break;
+                    }
+                }
+            } else {
+                $transition = $preferred;
+            }
+
+            $transitionDurationValue = $transitionDurations[$index - 1] ?? $transitionDuration;
+
             $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f%s',
                 $current,
                 $index,
                 $transition,
-                max(0.1, $transitionDuration),
+                max(self::MINIMUM_SLIDE_DURATION, $transitionDurationValue),
                 $offset,
                 $targetLabel
             );
-            $current = $targetLabel;
-            $offset += $this->resolveSlideDuration($slides[$index]['duration']);
+            $current        = $targetLabel;
+            $offset        += $this->resolveSlideDuration($slides[$index]['duration']);
+            $previousChoice = $transition;
         }
 
         $filterComplex = implode(';', $filters);
@@ -354,37 +414,163 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private function resolveTransitionDuration(?float $duration): float
     {
-        if ($duration !== null && $duration > 0.0) {
-            return $duration;
+        $candidate = $duration ?? $this->transitionDuration;
+
+        if ($candidate <= 0.0) {
+            $candidate = $this->transitionDuration;
         }
 
-        return max(0.1, $this->transitionDuration);
+        if ($candidate <= 0.0) {
+            $candidate = self::MIN_TRANSITION_DURATION;
+        }
+
+        return max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $candidate));
     }
 
-    private function resolveTransition(?string $preferred, int $index, int $transitionCount): string
+    /**
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     *
+     * @return list<float>
+     */
+    private function resolveTransitionDurationsForSlides(array $slides, float $baseDuration): array
     {
-        if (is_string($preferred)) {
-            $trimmed = trim($preferred);
-            if ($trimmed !== '') {
-                return $trimmed;
+        $count = count($slides);
+        if ($count <= 1) {
+            return [];
+        }
+
+        $clampedBase = max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $baseDuration));
+
+        $durations = [];
+        for ($index = 0; $index < $count - 1; ++$index) {
+            $currentDuration  = $this->resolveSlideDuration($slides[$index]['duration']);
+            $nextDuration     = $this->resolveSlideDuration($slides[$index + 1]['duration']);
+            $maxOverlap       = min($currentDuration, $nextDuration);
+            $transitionLength = $clampedBase;
+
+            if ($maxOverlap < $transitionLength) {
+                $transitionLength = max(self::MINIMUM_SLIDE_DURATION, $maxOverlap);
             }
+
+            $durations[$index] = $transitionLength;
         }
 
-        if ($transitionCount === 0) {
-            return 'fade';
+        return $durations;
+    }
+
+    /**
+     * @param list<string> $transitions
+     *
+     * @return list<string>
+     */
+    private function filterAllowedTransitions(array $transitions): array
+    {
+        $filtered = [];
+        foreach ($transitions as $transition) {
+            if (!is_string($transition)) {
+                continue;
+            }
+
+            $normalised = $this->normaliseTransitionName($transition);
+            if ($normalised === null) {
+                continue;
+            }
+
+            $filtered[$normalised] = true;
         }
 
-        $name = $this->transitions[$index % $transitionCount] ?? 'fade';
-        if (!is_string($name)) {
-            return 'fade';
+        if ($filtered === []) {
+            $filtered['fade'] = true;
         }
 
-        $trimmedName = trim($name);
-        if ($trimmedName === '') {
-            return 'fade';
+        return array_keys($filtered);
+    }
+
+    private function normaliseTransitionName(?string $transition): ?string
+    {
+        if ($transition === null) {
+            return null;
         }
 
-        return $trimmedName;
+        $trimmed = trim($transition);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $normalised = strtolower($trimmed);
+
+        if (!in_array($normalised, self::TRANSITION_WHITELIST, true)) {
+            return null;
+        }
+
+        return $normalised;
+    }
+
+    /**
+     * @param list<string> $transitions
+     * @param list<string> $imagePaths
+     *
+     * @return list<string>
+     */
+    private function buildDeterministicTransitionSequence(
+        array $transitions,
+        array $imagePaths,
+        ?string $title,
+        ?string $subtitle,
+        int $requiredTransitions,
+    ): array {
+        if ($requiredTransitions === 0 || $transitions === []) {
+            return [];
+        }
+
+        $seed      = $this->buildTransitionSeed($imagePaths, $title, $subtitle, $transitions);
+        $randomizer = new Randomizer(new Xoshiro256StarStar($seed));
+
+        $pool = $randomizer->shuffleArray($transitions);
+        $count = count($pool);
+
+        $sequence = [];
+        $previous = null;
+        $index    = 0;
+
+        while (count($sequence) < $requiredTransitions) {
+            if ($index >= $count) {
+                $pool  = $randomizer->shuffleArray($transitions);
+                $count = count($pool);
+                $index = 0;
+            }
+
+            $candidate = $pool[$index];
+            ++$index;
+
+            if ($candidate === $previous && $count > 1) {
+                continue;
+            }
+
+            $sequence[] = $candidate;
+            $previous   = $candidate;
+        }
+
+        return $sequence;
+    }
+
+    /**
+     * @param list<string> $imagePaths
+     * @param list<string> $transitions
+     */
+    private function buildTransitionSeed(array $imagePaths, ?string $title, ?string $subtitle, array $transitions): string
+    {
+        $normalisedPaths = array_map(
+            static fn (string $path): string => trim($path),
+            $imagePaths,
+        );
+
+        $payload = implode('|', $normalisedPaths)
+            . '|' . trim((string) ($title ?? ''))
+            . '|' . trim((string) ($subtitle ?? ''))
+            . '|' . implode('|', $transitions);
+
+        return hash('sha256', $payload, true);
     }
 
     /**
