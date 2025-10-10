@@ -18,6 +18,8 @@ use InvalidArgumentException;
  */
 final readonly class VacationSelectionOptions
 {
+    public int $minimumTotal;
+
     public function __construct(
         public int $targetTotal = 40,
         public int $maxPerDay = 8,
@@ -29,6 +31,7 @@ final readonly class VacationSelectionOptions
         public float $faceBonus = 0.10,
         public float $selfiePenalty = 0.15,
         public float $qualityFloor = 0.35,
+        ?int $minimumTotal = null,
     ) {
         if ($this->targetTotal < 1) {
             throw new InvalidArgumentException('targetTotal must be at least 1.');
@@ -68,6 +71,16 @@ final readonly class VacationSelectionOptions
 
         if ($this->qualityFloor < 0.0 || $this->qualityFloor > 1.0) {
             throw new InvalidArgumentException('qualityFloor must be within [0,1].');
+        }
+
+        $this->minimumTotal = $minimumTotal ?? $this->targetTotal;
+
+        if ($this->minimumTotal < 1) {
+            throw new InvalidArgumentException('minimumTotal must be at least 1.');
+        }
+
+        if ($this->minimumTotal > $this->targetTotal) {
+            throw new InvalidArgumentException('minimumTotal must not exceed targetTotal.');
         }
     }
 }

@@ -90,6 +90,7 @@ final class SelectionProfileProvider
             faceBonus: $this->floatValue($merged, 'face_bonus', $this->defaultOptions->faceBonus),
             selfiePenalty: $this->floatValue($merged, 'selfie_penalty', $this->defaultOptions->selfiePenalty),
             qualityFloor: $this->floatValue($merged, 'quality_floor', $this->defaultOptions->qualityFloor),
+            minimumTotal: $this->intValue($merged, 'minimum_total', $this->defaultOptions->minimumTotal),
         );
     }
 
@@ -146,7 +147,7 @@ final class SelectionProfileProvider
     {
         $result = [];
 
-        foreach (['target_total', 'max_per_day', 'time_slot_hours', 'min_spacing_seconds', 'phash_min_hamming', 'max_per_staypoint'] as $key) {
+        foreach (['target_total', 'max_per_day', 'time_slot_hours', 'min_spacing_seconds', 'phash_min_hamming', 'max_per_staypoint', 'minimum_total'] as $key) {
             $value = $values[$key] ?? null;
             if ($value === null) {
                 continue;

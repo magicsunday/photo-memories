@@ -69,27 +69,141 @@ final class VacationMemberSelector implements MemberSelectorInterface
     public function select(array $daySummaries, array $home, ?VacationSelectionOptions $options = null): SelectionResult
     {
         $options ??= $this->defaultOptions;
+        $minimumTotal = max(1, min($options->targetTotal, $options->minimumTotal));
+
+        [$members, $telemetry] = $this->attemptSelection($daySummaries, $options);
+
+        $finalMembers   = $members;
+        $finalTelemetry = $telemetry;
+        $relaxations    = [];
+        $attemptOptions = $options;
+
+        if (count($finalMembers) < $minimumTotal) {
+            $relaxationPlan = [
+                function (VacationSelectionOptions $current): ?array {
+                    if ($current->minSpacingSeconds === 0) {
+                        return null;
+                    }
+
+                    $next = $this->cloneOptions($current, ['minSpacingSeconds' => 0]);
+
+                    return [
+                        'options' => $next,
+                        'changes' => [[
+                            'rule' => 'min_spacing_seconds',
+                            'from' => $current->minSpacingSeconds,
+                            'to'   => $next->minSpacingSeconds,
+                        ]],
+                    ];
+                },
+                function (VacationSelectionOptions $current): ?array {
+                    if ($current->phashMinHamming === 0) {
+                        return null;
+                    }
+
+                    $next = $this->cloneOptions($current, ['phashMinHamming' => 0]);
+
+                    return [
+                        'options' => $next,
+                        'changes' => [[
+                            'rule' => 'phash_min_hamming',
+                            'from' => $current->phashMinHamming,
+                            'to'   => $next->phashMinHamming,
+                        ]],
+                    ];
+                },
+                function (VacationSelectionOptions $current): ?array {
+                    $changes   = [];
+                    $overrides = [];
+
+                    if ($current->maxPerDay < $current->targetTotal) {
+                        $overrides['maxPerDay'] = $current->targetTotal;
+                        $changes[] = [
+                            'rule' => 'max_per_day',
+                            'from' => $current->maxPerDay,
+                            'to'   => $current->targetTotal,
+                        ];
+                    }
+
+                    if ($current->maxPerStaypoint < $current->targetTotal) {
+                        $overrides['maxPerStaypoint'] = $current->targetTotal;
+                        $changes[] = [
+                            'rule' => 'max_per_staypoint',
+                            'from' => $current->maxPerStaypoint,
+                            'to'   => $current->targetTotal,
+                        ];
+                    }
+
+                    if ($overrides === []) {
+                        return null;
+                    }
+
+                    $next = $this->cloneOptions($current, $overrides);
+
+                    return [
+                        'options' => $next,
+                        'changes' => $changes,
+                    ];
+                },
+            ];
+
+            foreach ($relaxationPlan as $stage) {
+                if (count($finalMembers) >= $minimumTotal) {
+                    break;
+                }
+
+                $result = $stage($attemptOptions);
+                if ($result === null) {
+                    continue;
+                }
+
+                $attemptOptions = $result['options'];
+                foreach ($result['changes'] as $change) {
+                    $relaxations[] = $change;
+                }
+
+                [$finalMembers, $finalTelemetry] = $this->attemptSelection($daySummaries, $attemptOptions);
+            }
+        }
+
+        $finalTelemetry['relaxations']        = $relaxations;
+        $finalTelemetry['minimum_total']      = $minimumTotal;
+        $finalTelemetry['minimum_total_met']  = count($finalMembers) >= $minimumTotal;
+
+        $this->telemetry = $finalTelemetry;
+
+        return new SelectionResult($finalMembers, $this->telemetry);
+    }
+
+    /**
+     * @param array<string, DaySummary> $daySummaries
+     *
+     * @return array{0: list<Media>, 1: array<string, mixed>}
+     */
+    private function attemptSelection(array $daySummaries, VacationSelectionOptions $options): array
+    {
         $this->telemetry = [
-            'prefilter_total'            => 0,
-            'prefilter_no_show'          => 0,
-            'prefilter_low_quality'      => 0,
-            'prefilter_quality_floor'    => 0,
-            'burst_collapsed'            => 0,
-            'day_limit_rejections'       => 0,
-            'staypoint_rejections'       => 0,
-            'spacing_rejections'         => 0,
-            'near_duplicate_blocked'     => 0,
-            'near_duplicate_replacements'=> 0,
-            'fallback_used'              => 0,
+            'prefilter_total'             => 0,
+            'prefilter_no_show'           => 0,
+            'prefilter_low_quality'       => 0,
+            'prefilter_quality_floor'     => 0,
+            'burst_collapsed'             => 0,
+            'day_limit_rejections'        => 0,
+            'staypoint_rejections'        => 0,
+            'spacing_rejections'          => 0,
+            'near_duplicate_blocked'      => 0,
+            'near_duplicate_replacements' => 0,
+            'fallback_used'               => 0,
+            'relaxations'                 => [],
         ];
 
         if ($daySummaries === []) {
-            return new SelectionResult([], $this->telemetry);
+            return [[], $this->telemetry];
         }
 
         $filtered = $this->prefilter($daySummaries, $options);
         if ($filtered['unique'] === [] && $filtered['fallback'] === []) {
-            return new SelectionResult([], $this->telemetry);
+            return [[], $this->telemetry];
         }
 
         $primaryByDay  = $filtered['unique'];
@@ -140,7 +254,27 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $this->telemetry['selected_total'] = count($members);
 
-        return new SelectionResult($members, $this->telemetry);
+        return [$members, $this->telemetry];
+    }
+
+    /**
+     * @param array<string, int|float> $overrides
+     */
+    private function cloneOptions(VacationSelectionOptions $source, array $overrides): VacationSelectionOptions
+    {
+        return new VacationSelectionOptions(
+            targetTotal: $overrides['targetTotal'] ?? $source->targetTotal,
+            maxPerDay: $overrides['maxPerDay'] ?? $source->maxPerDay,
+            timeSlotHours: $overrides['timeSlotHours'] ?? $source->timeSlotHours,
+            minSpacingSeconds: $overrides['minSpacingSeconds'] ?? $source->minSpacingSeconds,
+            phashMinHamming: $overrides['phashMinHamming'] ?? $source->phashMinHamming,
+            maxPerStaypoint: $overrides['maxPerStaypoint'] ?? $source->maxPerStaypoint,
+            videoBonus: $overrides['videoBonus'] ?? $source->videoBonus,
+            faceBonus: $overrides['faceBonus'] ?? $source->faceBonus,
+            selfiePenalty: $overrides['selfiePenalty'] ?? $source->selfiePenalty,
+            qualityFloor: $overrides['qualityFloor'] ?? $source->qualityFloor,
+            minimumTotal: $overrides['minimumTotal'] ?? $source->minimumTotal,
+        );
     }
 
     /**
