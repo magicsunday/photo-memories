@@ -151,7 +151,7 @@ parameters:
     # Description: Thumbnail sizes in pixels generated for media assets.
     memories.thumbnail_sizes: [320, 1024]
     # Description: Default flag controlling whether EXIF orientation should be applied to thumbnails.
-    memories.thumbnail.apply_orientation_default: false
+    memories.thumbnail.apply_orientation_default: true
     # Description: Runtime flag indicating whether thumbnail orientation correction is active.
     memories.thumbnail.apply_orientation: '%env(default:memories.thumbnail.apply_orientation_default:bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
 
