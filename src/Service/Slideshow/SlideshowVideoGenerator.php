@@ -61,6 +61,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly ?string $fontFile = null,
         private readonly string $fontFamily = 'DejaVu Sans',
         private readonly float $backgroundBlurSigma = 32.0,
+        private readonly bool $kenBurnsEnabled = false,
+        private readonly float $zoomStart = 1.05,
+        private readonly float $zoomEnd = 1.15,
+        private readonly float $panX = 0.0,
+        private readonly float $panY = 0.0,
     ) {
     }
 
@@ -142,7 +147,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     ): array
     {
         $duration = $this->resolveSlideDuration($slide['duration']);
-        $filter = $this->buildBlurredSlideFilter(0);
+        $filter   = $this->buildBlurredSlideFilter(0, $duration);
 
         $filter = $this->appendTextOverlayFilter($filter, $title, $subtitle);
         $filter .= sprintf(
@@ -204,7 +209,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $duration            = $this->resolveSlideDuration($slide['duration']);
             $durationWithOverlap = max(0.1, $duration + $transitionDuration);
 
-            $filter = $this->buildBlurredSlideFilter($index);
+            $filter = $this->buildBlurredSlideFilter($index, $durationWithOverlap);
 
             if ($index === 0 && $overlayFilterChain !== '') {
                 $filter = sprintf('%s,%s', $filter, $overlayFilterChain);
@@ -240,7 +245,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return $this->appendAudioOptions($command, count($slides), $output, $audioTrack, $title, $subtitle);
     }
 
-    private function buildBlurredSlideFilter(int $index): string
+    private function buildBlurredSlideFilter(int $index, float $duration): string
     {
         $background = sprintf(
             '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase,crop=%2$d:%3$d',
@@ -256,13 +261,47 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $background .= sprintf('[bg%1$dout];', $index);
 
         $targetAspectRatio = $this->formatFloat($this->width / $this->height);
+        $durationSeconds   = $this->formatFloat(max(0.1, $duration));
+        $progressExpr      = sprintf('min(PTS/%s,1)', $durationSeconds);
+
+        if ($this->kenBurnsEnabled) {
+            $zoomExpr = sprintf(
+                'if(gte(iw/ih,%1$s),%2$s+(%3$s-%2$s)*%4$s,1)',
+                $targetAspectRatio,
+                $this->formatFloat($this->zoomStart),
+                $this->formatFloat($this->zoomEnd),
+                $progressExpr,
+            );
+
+            $panXExpr = sprintf(
+                'if(gte(iw/ih,%1$s),clip((iw-zoom*w)/2 + %2$s*(iw-zoom*w)/2*%3$s,0,max(iw-zoom*w,0)),(iw-ow)/2)',
+                $targetAspectRatio,
+                $this->formatFloat($this->panX),
+                $progressExpr,
+            );
+
+            $panYExpr = sprintf(
+                'if(gte(iw/ih,%1$s),clip((ih-zoom*h)/2 + %2$s*(ih-zoom*h)/2*%3$s,0,max(ih-zoom*h,0)),(ih-oh)/2)',
+                $targetAspectRatio,
+                $this->formatFloat($this->panY),
+                $progressExpr,
+            );
+        } else {
+            $zoomExpr = '1';
+            $panXExpr = sprintf('if(gte(iw/ih,%1$s),(iw-ow)/2,(iw-ow)/2)', $targetAspectRatio);
+            $panYExpr = sprintf('if(gte(iw/ih,%1$s),(ih-oh)/2,(ih-oh)/2)', $targetAspectRatio);
+        }
 
         $foreground = sprintf(
-            "[fg%1\$d]scale='if(gte(iw/ih,%4\$s),%2\$d,-1)':'if(gte(iw/ih,%4\$s),-1,%3\$d)'," .
-            "crop='min(iw,%2\$d)':'min(ih,%3\$d)'[fg%1\$dout];",
+            "[fg%1\$d]scale=-1:%3\$d," .
+            "zoompan=z='%4\$s':x='%5\$s':y='%6\$s':d=1:s=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih)," .
+            "crop=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih):(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
             $index,
             $this->width,
             $this->height,
+            $zoomExpr,
+            $panXExpr,
+            $panYExpr,
             $targetAspectRatio,
         );
 

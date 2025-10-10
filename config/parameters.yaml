@@ -481,6 +481,26 @@ parameters:
     memories.slideshow.font_file: "%env(default:memories.slideshow.font_file_default:MEMORIES_SLIDESHOW_FONT_FILE)%"
     # Description: Sigma value of the gaussian blur used for slideshow backgrounds.
     memories.slideshow.background_blur_sigma: 32.0
+    # Description: Flag indicating whether animated zoom/pan is enabled for slideshow slides by default.
+    memories.slideshow.ken_burns_enabled_default: false
+    # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.
+    memories.slideshow.ken_burns_enabled: '%env(default:memories.slideshow.ken_burns_enabled_default:bool:MEMORIES_SLIDESHOW_KEN_BURNS)%'
+    # Description: Initial zoom factor used when the animated zoom/pan effect is enabled.
+    memories.slideshow.zoom_start_default: 1.05
+    # Description: Runtime initial zoom factor for the animated zoom/pan effect.
+    memories.slideshow.zoom_start: '%env(default:memories.slideshow.zoom_start_default:float:MEMORIES_SLIDESHOW_ZOOM_START)%'
+    # Description: Final zoom factor used when the animated zoom/pan effect is enabled.
+    memories.slideshow.zoom_end_default: 1.15
+    # Description: Runtime final zoom factor for the animated zoom/pan effect.
+    memories.slideshow.zoom_end: '%env(default:memories.slideshow.zoom_end_default:float:MEMORIES_SLIDESHOW_ZOOM_END)%'
+    # Description: Horizontal pan factor (range -1 to 1) applied across the slide duration during animation.
+    memories.slideshow.pan_x_default: 0.0
+    # Description: Runtime horizontal pan factor for the animated zoom/pan effect.
+    memories.slideshow.pan_x: '%env(default:memories.slideshow.pan_x_default:float:MEMORIES_SLIDESHOW_PAN_X)%'
+    # Description: Vertical pan factor (range -1 to 1) applied across the slide duration during animation.
+    memories.slideshow.pan_y_default: 0.0
+    # Description: Runtime vertical pan factor for the animated zoom/pan effect.
+    memories.slideshow.pan_y: '%env(default:memories.slideshow.pan_y_default:float:MEMORIES_SLIDESHOW_PAN_Y)%'
     # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'
