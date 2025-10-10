@@ -611,6 +611,135 @@ final class FeedControllerTest extends TestCase
         unlink($storagePath);
     }
 
+    public function testFeedItemReturnsCompleteGallery(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $members = range(1, 10);
+        $item     = new MemoryFeedItem(
+            algorithm: 'holiday_event',
+            title: 'Winter in Berlin',
+            subtitle: 'Lichterzauber an der Spree',
+            coverMediaId: 1,
+            memberIds: $members,
+            score: 0.68,
+            params: [
+                'group'      => 'city_and_events',
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+            ],
+        );
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn([$item]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+
+        $mediaRepo->expects(self::exactly(2))
+            ->method('findByIds')
+            ->withConsecutive(
+                [self::equalTo(array_slice($members, 0, 8)), self::equalTo(false)],
+                [self::equalTo($members), self::equalTo(false)],
+            )
+            ->willReturnOnConsecutiveCalls(
+                array_map(
+                    fn (int $id): Media => $this->createMedia($id, '/media/' . $id . '.jpg', '2024-04-01T10:00:00+00:00'),
+                    array_slice($members, 0, 8),
+                ),
+                array_map(
+                    fn (int $id): Media => $this->createMedia($id, '/media/' . $id . '.jpg', '2024-04-01T10:00:00+00:00'),
+                    $members,
+                ),
+            );
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $itemId   = hash('sha1', 'holiday_event|' . implode(',', $members));
+        $request  = Request::create('/api/feed/' . $itemId, 'GET');
+        $response = $controller->feedItem($request, $itemId);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertArrayHasKey('item', $payload);
+        self::assertArrayHasKey('galerie', $payload['item']);
+        self::assertCount(count($members), $payload['item']['galerie']);
+        self::assertSame($members, $payload['item']['mitglieder']);
+        self::assertSame(
+            end($members),
+            $payload['item']['galerie'][count($members) - 1]['mediaId'],
+        );
+        self::assertArrayHasKey('meta', $payload);
+        self::assertContains('galerie', $payload['meta']['feldgruppen']);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedItemReturnsNotFoundForUnknownIdentifier(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn([]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $mediaRepo->expects(self::never())->method('findByIds');
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $entityManager    = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $unknownId = hash('sha1', 'holiday_event|1,2,3');
+        $request   = Request::create('/api/feed/' . $unknownId, 'GET');
+        $response  = $controller->feedItem($request, $unknownId);
+
+        self::assertSame(404, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('Feed item not found.', $payload['error']);
+
+        unlink($storagePath);
+    }
+
     public function testFeedRejectsInvalidDate(): void
     {
         $clusterRepo = $this->createMock(ClusterRepository::class);

@@ -232,6 +232,48 @@ final class FeedController
         ]);
     }
 
+    public function feedItem(Request $request, string $itemId): JsonResponse
+    {
+        $dateInfo = $this->resolveDateFilter($this->normalizeString($request->getQueryParam('datum')));
+        if ($dateInfo['error'] !== null) {
+            return new JsonResponse([
+                'error' => $dateInfo['error'],
+            ], 400);
+        }
+
+        $fieldSelection = $this->resolveFieldSelection($request);
+        $result         = $this->buildFeedResult($request, $dateInfo['date'], $fieldSelection);
+        $baseUrl        = rtrim($request->getBaseUrl(), '/');
+
+        foreach ($result['matchingItems'] as $item) {
+            if ($this->createItemId($item) !== $itemId) {
+                continue;
+            }
+
+            $payload = $this->transformItem(
+                $item,
+                $baseUrl,
+                $result['now'],
+                $result['preferences'],
+                $result['locale'],
+                $fieldSelection['itemGroups'],
+                true,
+            );
+
+            return new JsonResponse([
+                'item' => $payload,
+                'meta' => [
+                    'erstelltAm'  => $result['now']->format(DateTimeInterface::ATOM),
+                    'feldgruppen' => $fieldSelection['itemGroups'],
+                ],
+            ]);
+        }
+
+        return new JsonResponse([
+            'error' => 'Feed item not found.',
+        ], 404);
+    }
+
     public function spaBootstrap(Request $request): JsonResponse
     {
         $dateInfo = $this->resolveDateFilter($this->normalizeString($request->getQueryParam('datum')));
@@ -302,10 +344,15 @@ final class FeedController
      *     matchingItems: list<MemoryFeedItem>,
      *     preferences: FeedUserPreferences,
      *     locale: string,
-     *     now: DateTimeImmutable
+     *     now: DateTimeImmutable,
+     *     fieldSelection: array{itemGroups: list<string>, metaGroups: list<string>}
      * }
      */
-    private function buildFeedResult(Request $request, ?DateTimeImmutable $filterDate): array
+    private function buildFeedResult(
+        Request $request,
+        ?DateTimeImmutable $filterDate,
+        ?array $fieldSelection = null,
+    ): array
     {
         $limit    = $this->normalizeLimit($request->getQueryParam('limit'));
         $minScore = $this->normalizeFloat($request->getQueryParam('score'));
@@ -359,8 +406,11 @@ final class FeedController
         $now     = new DateTimeImmutable();
         $baseUrl = rtrim($request->getBaseUrl(), '/');
 
-        $fieldSelection = $this->resolveFieldSelection($request);
-        $itemGroups     = $fieldSelection['itemGroups'];
+        if ($fieldSelection === null) {
+            $fieldSelection = $this->resolveFieldSelection($request);
+        }
+
+        $itemGroups = $fieldSelection['itemGroups'];
 
         /** @var list<array<string, mixed>> $data */
         $data = array_map(
@@ -421,6 +471,7 @@ final class FeedController
             'preferences'   => $preferences,
             'locale'        => $locale,
             'now'           => $now,
+            'fieldSelection'=> $fieldSelection,
         ];
     }
 
@@ -845,12 +896,13 @@ final class FeedController
         FeedUserPreferences $preferences,
         string $locale,
         array $selectedGroups,
+        bool $includeAllGalleryMembers = false,
     ): array {
         $coverId = $item->getCoverMediaId();
         $members = $item->getMemberIds();
 
-        $previewMembers = array_slice($members, 0, $this->previewImageCount);
-        $mediaIdsToLoad = $previewMembers;
+        $selectedMembers = $includeAllGalleryMembers ? $members : array_slice($members, 0, $this->previewImageCount);
+        $mediaIdsToLoad  = $includeAllGalleryMembers ? $members : $selectedMembers;
         if ($coverId !== null && !in_array($coverId, $mediaIdsToLoad, true)) {
             $mediaIdsToLoad[] = $coverId;
         }
@@ -862,7 +914,7 @@ final class FeedController
         $memberMediaMap = $this->loadMediaMap($mediaIdsToLoad, $onlyVideos);
 
         if (isset($groupSelection['galerie']) || isset($groupSelection['storyboard'])) {
-            foreach ($previewMembers as $memberId) {
+            foreach ($selectedMembers as $memberId) {
                 $media = $memberMediaMap[$memberId] ?? null;
 
                 $memberPayload[] = $this->buildGalleryEntry(
@@ -915,7 +967,7 @@ final class FeedController
             'coverAufgenommenAmText' => $this->formatMediaDateText($coverMedia),
             'coverHinweisAufgenommenAm' => $this->formatRelativeTakenAt($coverMedia, $reference),
             'coverAbmessungen'   => $this->extractDimensions($coverMedia),
-            'mitglieder'         => $previewMembers,
+            'mitglieder'         => $includeAllGalleryMembers ? $members : $selectedMembers,
         ];
 
         if ($coverAltText !== null) {

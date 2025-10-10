@@ -11,6 +11,13 @@ const state = {
   error: null,
   filters: { ...defaultFilters },
   slideshowRequests: {},
+  detail: {
+    visible: false,
+    item: null,
+    loading: false,
+    error: null,
+    anchor: null,
+  },
 };
 
 let slideshowRefreshTimer = null;
@@ -40,6 +47,15 @@ let applyButton = null;
 let resetButton = null;
 let statusLine = null;
 let cardsContainer = null;
+let detailOverlay = null;
+let detailDialog = null;
+let detailTitle = null;
+let detailSubtitle = null;
+let detailBadges = null;
+let detailTimeline = null;
+let detailStatusMessage = null;
+let detailGallery = null;
+let detailPrimaryCloseButton = null;
 
 const lightbox = createLightbox();
 
@@ -155,6 +171,10 @@ function initialiseApp(app) {
     updateScoreLabel();
     fetchFeed();
   });
+
+  initialiseDetailOverlay();
+  renderDetailOverlay();
+  document.addEventListener('keydown', handleDetailKeydown);
 
   updateStatus();
   renderItems();
@@ -313,11 +333,27 @@ function createCard(item) {
   header.className = 'card-header';
 
   const title = document.createElement('h2');
-  title.textContent = item.titel ?? 'Ohne Titel';
+  const titleButton = document.createElement('button');
+  titleButton.type = 'button';
+  titleButton.className = 'card-title-button';
+  const resolvedTitle = typeof item?.titel === 'string' && item.titel !== '' ? item.titel : 'Ohne Titel';
+  titleButton.textContent = resolvedTitle;
+  titleButton.setAttribute('aria-label', `Galerie „${resolvedTitle}“ öffnen`);
+
+  if (item && typeof item.id === 'string' && item.id !== '') {
+    titleButton.addEventListener('click', () => {
+      openDetail(item, titleButton);
+    });
+  } else {
+    titleButton.disabled = true;
+  }
+
+  title.appendChild(titleButton);
   header.appendChild(title);
 
   const subtitle = document.createElement('p');
   subtitle.textContent = item.untertitel ?? '';
+  subtitle.hidden = subtitle.textContent === '';
   header.appendChild(subtitle);
 
   card.appendChild(header);
@@ -368,74 +404,412 @@ function createCard(item) {
             aufgenommenAm: item.coverAufgenommenAm ?? null,
           }]
         : []);
+  populateGallery(gallery, images);
+  card.appendChild(gallery);
 
-  if (images.length === 0) {
+  return card;
+}
+
+function populateGallery(container, images) {
+  if (!(container instanceof HTMLElement)) {
+    return;
+  }
+
+  container.textContent = '';
+
+  const galleryItems = Array.isArray(images) ? images : [];
+  let appended = 0;
+
+  galleryItems.forEach((image) => {
+    const figure = createGalleryFigure(image);
+    if (figure instanceof HTMLElement) {
+      container.appendChild(figure);
+      appended += 1;
+    }
+  });
+
+  if (appended === 0) {
     const placeholder = document.createElement('figure');
     placeholder.className = 'empty';
     const note = document.createElement('figcaption');
     note.textContent = 'Keine Vorschau verfügbar';
     placeholder.appendChild(note);
-    gallery.appendChild(placeholder);
-  } else {
-    images.forEach((image) => {
-      if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
-        return;
-      }
+    container.appendChild(placeholder);
+  }
+}
 
-      const figure = document.createElement('figure');
-      figure.classList.add('is-interactive');
-      figure.tabIndex = 0;
-      figure.setAttribute('role', 'button');
-
-      const img = document.createElement('img');
-      img.src = image.thumbnail;
-      const detailSource = typeof image.lightbox === 'string' && image.lightbox !== ''
-        ? image.lightbox
-        : image.thumbnail;
-      const takenAtLabel = formatDateTime(image.aufgenommenAm);
-      const mediaIdLabel = image.mediaId ? `Medien-ID ${image.mediaId}` : 'Medienvorschau';
-      img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      if (takenAtLabel) {
-        img.title = `Aufgenommen am ${takenAtLabel}`;
-      }
-      figure.appendChild(img);
-
-      const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
-      figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
-
-      if (takenAtLabel) {
-        const caption = document.createElement('figcaption');
-        caption.textContent = captionText;
-        figure.appendChild(caption);
-      }
-
-      const activateLightbox = () => {
-        if (lightbox.isVisible() && lightbox.getCurrentSource() === detailSource) {
-          lightbox.hide();
-
-          return;
-        }
-
-        lightbox.show(detailSource, img.alt, captionText, figure);
-      };
-
-      figure.addEventListener('click', activateLightbox);
-      figure.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          activateLightbox();
-        }
-      });
-
-      gallery.appendChild(figure);
-    });
+function createGalleryFigure(image) {
+  if (!image || typeof image.thumbnail !== 'string' || image.thumbnail === '') {
+    return null;
   }
 
-  card.appendChild(gallery);
+  const figure = document.createElement('figure');
+  figure.classList.add('is-interactive');
+  figure.tabIndex = 0;
+  figure.setAttribute('role', 'button');
 
-  return card;
+  const img = document.createElement('img');
+  img.src = image.thumbnail;
+  const detailSource = typeof image.lightbox === 'string' && image.lightbox !== ''
+    ? image.lightbox
+    : image.thumbnail;
+  const takenAtLabel = formatDateTime(image.aufgenommenAm);
+  const mediaIdLabel = typeof image.mediaId === 'number'
+    ? `Medien-ID ${image.mediaId}`
+    : 'Medienvorschau';
+  img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  if (takenAtLabel) {
+    img.title = `Aufgenommen am ${takenAtLabel}`;
+  }
+  figure.appendChild(img);
+
+  const captionText = takenAtLabel ? `Aufgenommen am ${takenAtLabel}` : '';
+  figure.setAttribute('aria-label', captionText !== '' ? captionText : img.alt);
+
+  if (captionText !== '') {
+    const caption = document.createElement('figcaption');
+    caption.textContent = captionText;
+    figure.appendChild(caption);
+  }
+
+  const activateLightbox = () => {
+    if (lightbox.isVisible() && lightbox.getCurrentSource() === detailSource) {
+      lightbox.hide();
+
+      return;
+    }
+
+    lightbox.show(detailSource, img.alt, captionText, figure);
+  };
+
+  figure.addEventListener('click', activateLightbox);
+  figure.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      activateLightbox();
+    }
+  });
+
+  return figure;
+}
+
+function openDetail(item, triggerElement) {
+  if (!item || typeof item.id !== 'string' || item.id === '') {
+    return;
+  }
+
+  const gallery = Array.isArray(item.galerie) ? item.galerie.slice() : [];
+  state.detail.visible = true;
+  state.detail.loading = true;
+  state.detail.error = null;
+  state.detail.anchor = triggerElement instanceof HTMLElement ? triggerElement : null;
+  state.detail.item = { ...item, galerie: gallery };
+
+  renderDetailOverlay();
+
+  window.setTimeout(() => {
+    focusDetailOverlay();
+  }, 0);
+
+  void fetchDetail(item.id);
+}
+
+async function fetchDetail(itemId) {
+  const params = buildDetailQueryParams();
+  state.detail.loading = true;
+  renderDetailOverlay();
+
+  const targetId = itemId;
+  let requiresRender = false;
+
+  try {
+    const response = await fetch(`/api/feed/${encodeURIComponent(targetId)}?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      let message = `Fehler ${response.status}`;
+      try {
+        const body = await response.json();
+        if (body && typeof body.error === 'string' && body.error !== '') {
+          message += `: ${body.error}`;
+        }
+      } catch (parseError) {
+        console.warn('Antwort konnte nicht als JSON gelesen werden', parseError);
+      }
+
+      throw new Error(message);
+    }
+
+    const payload = await response.json();
+    if (!state.detail.visible || !state.detail.item || state.detail.item.id !== targetId) {
+      return;
+    }
+
+    if (payload && typeof payload.item === 'object' && payload.item !== null) {
+      state.detail.item = payload.item;
+      state.detail.error = null;
+    } else {
+      state.detail.error = 'Es wurden keine Details zur Galerie gefunden.';
+    }
+
+    requiresRender = true;
+  } catch (error) {
+    if (state.detail.visible && state.detail.item && state.detail.item.id === targetId) {
+      state.detail.error = error instanceof Error
+        ? error.message
+        : 'Unbekannter Fehler beim Laden der Galerie.';
+      requiresRender = true;
+    }
+  } finally {
+    if (state.detail.visible && state.detail.item && state.detail.item.id === targetId) {
+      state.detail.loading = false;
+      if (requiresRender) {
+        renderDetailOverlay();
+      }
+    }
+  }
+}
+
+function buildDetailQueryParams() {
+  const params = new URLSearchParams();
+
+  const scoreValue = Number.parseFloat(state.filters.score);
+  if (!Number.isNaN(scoreValue) && scoreValue > 0) {
+    params.set('score', scoreValue.toString());
+  }
+
+  if (state.filters.strategie) {
+    params.set('strategie', state.filters.strategie);
+  }
+
+  if (state.filters.datum) {
+    params.set('datum', state.filters.datum);
+  }
+
+  params.set('felder', 'basis,zeit,galerie,slideshow');
+  params.set('metaFelder', 'basis');
+
+  return params;
+}
+
+function closeDetail() {
+  const anchor = state.detail.anchor instanceof HTMLElement ? state.detail.anchor : null;
+
+  state.detail.visible = false;
+  state.detail.loading = false;
+  state.detail.error = null;
+  state.detail.item = null;
+  state.detail.anchor = null;
+
+  renderDetailOverlay();
+
+  if (anchor) {
+    anchor.focus();
+  }
+}
+
+function renderDetailOverlay() {
+  if (!(detailOverlay instanceof HTMLElement)) {
+    return;
+  }
+
+  if (!state.detail.visible) {
+    detailOverlay.classList.remove('is-visible');
+    detailOverlay.setAttribute('aria-hidden', 'true');
+    detailOverlay.setAttribute('hidden', '');
+    document.body.classList.remove('has-detail-overlay');
+
+    if (detailStatusMessage instanceof HTMLElement) {
+      detailStatusMessage.textContent = '';
+      detailStatusMessage.classList.remove('is-error');
+      detailStatusMessage.hidden = true;
+    }
+
+    if (detailGallery instanceof HTMLElement) {
+      detailGallery.textContent = '';
+    }
+
+    return;
+  }
+
+  detailOverlay.removeAttribute('hidden');
+  detailOverlay.setAttribute('aria-hidden', 'false');
+  detailOverlay.classList.add('is-visible');
+  document.body.classList.add('has-detail-overlay');
+
+  const item = state.detail.item;
+
+  if (detailTitle instanceof HTMLElement) {
+    const title = item && typeof item.titel === 'string' && item.titel !== '' ? item.titel : 'Galerie';
+    detailTitle.textContent = title;
+  }
+
+  if (detailSubtitle instanceof HTMLElement) {
+    const subtitleText = item && typeof item.untertitel === 'string' ? item.untertitel : '';
+    detailSubtitle.textContent = subtitleText;
+    detailSubtitle.hidden = subtitleText === '';
+  }
+
+  if (detailBadges instanceof HTMLElement) {
+    detailBadges.textContent = '';
+    const badges = [];
+    if (item && item.gruppe) {
+      badges.push(formatLabel(item.gruppe));
+    }
+    if (item && (item.algorithmusLabel || item.algorithmus)) {
+      badges.push(item.algorithmusLabel ?? formatLabel(item.algorithmus));
+    }
+    if (item && typeof item.score === 'number') {
+      badges.push(`Score ${formatScore(item.score)}`);
+    }
+
+    badges.forEach((label) => {
+      const badge = document.createElement('span');
+      badge.textContent = label;
+      detailBadges.appendChild(badge);
+    });
+
+    detailBadges.hidden = detailBadges.childElementCount === 0;
+  }
+
+  if (detailTimeline instanceof HTMLElement) {
+    const timelineText = item ? buildTimeline(item.zeitspanne) : null;
+    if (timelineText) {
+      detailTimeline.textContent = `Zeitraum: ${timelineText}`;
+      detailTimeline.hidden = false;
+    } else {
+      detailTimeline.textContent = '';
+      detailTimeline.hidden = true;
+    }
+  }
+
+  if (detailStatusMessage instanceof HTMLElement) {
+    if (state.detail.loading) {
+      detailStatusMessage.textContent = 'Galerie wird geladen …';
+      detailStatusMessage.classList.remove('is-error');
+      detailStatusMessage.hidden = false;
+    } else if (typeof state.detail.error === 'string' && state.detail.error !== '') {
+      detailStatusMessage.textContent = state.detail.error;
+      detailStatusMessage.classList.add('is-error');
+      detailStatusMessage.hidden = false;
+    } else {
+      detailStatusMessage.textContent = '';
+      detailStatusMessage.classList.remove('is-error');
+      detailStatusMessage.hidden = true;
+    }
+  }
+
+  if (detailGallery instanceof HTMLElement) {
+    const galleryItems = item && Array.isArray(item.galerie) ? item.galerie : [];
+    populateGallery(detailGallery, galleryItems);
+  }
+}
+
+function initialiseDetailOverlay() {
+  if (detailOverlay instanceof HTMLElement) {
+    return;
+  }
+
+  const overlay = document.createElement('section');
+  overlay.className = 'detail-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.setAttribute('hidden', '');
+
+  overlay.innerHTML = `
+    <div class="detail-overlay__backdrop" data-detail-close></div>
+    <div class="detail-overlay__dialog" data-detail-dialog role="dialog" aria-modal="true" aria-labelledby="detail-overlay-title">
+      <header class="detail-overlay__header">
+        <div class="detail-overlay__headline">
+          <h2 id="detail-overlay-title" data-detail-title>Galerie</h2>
+          <p class="detail-overlay__subtitle" data-detail-subtitle></p>
+        </div>
+        <button type="button" class="detail-overlay__close" data-detail-close data-detail-initial-focus aria-label="Schließen">
+          Schließen
+        </button>
+      </header>
+      <div class="detail-overlay__badges" data-detail-badges></div>
+      <p class="detail-overlay__timeline" data-detail-timeline></p>
+      <p class="detail-overlay__status" data-detail-status></p>
+      <div class="detail-overlay__gallery gallery" data-detail-gallery></div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  detailOverlay = overlay;
+  detailDialog = overlay.querySelector('[data-detail-dialog]');
+  detailTitle = overlay.querySelector('[data-detail-title]');
+  detailSubtitle = overlay.querySelector('[data-detail-subtitle]');
+  detailBadges = overlay.querySelector('[data-detail-badges]');
+  detailTimeline = overlay.querySelector('[data-detail-timeline]');
+  detailStatusMessage = overlay.querySelector('[data-detail-status]');
+  detailGallery = overlay.querySelector('[data-detail-gallery]');
+  detailPrimaryCloseButton = overlay.querySelector('[data-detail-initial-focus]');
+
+  overlay.querySelectorAll('[data-detail-close]').forEach((element) => {
+    element.addEventListener('click', () => {
+      closeDetail();
+    });
+  });
+}
+
+function focusDetailOverlay() {
+  if (!state.detail.visible) {
+    return;
+  }
+
+  if (detailPrimaryCloseButton instanceof HTMLElement) {
+    detailPrimaryCloseButton.focus();
+
+    return;
+  }
+
+  if (detailDialog instanceof HTMLElement) {
+    const fallback = detailDialog.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (fallback instanceof HTMLElement) {
+      fallback.focus();
+    }
+  }
+}
+
+function handleDetailKeydown(event) {
+  if (!state.detail.visible || !(detailOverlay instanceof HTMLElement)) {
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeDetail();
+
+    return;
+  }
+
+  if (event.key === 'Tab') {
+    const focusable = Array.from(
+      detailOverlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+    ).filter((element) => element instanceof HTMLElement && !element.hasAttribute('disabled') && element.closest('[hidden]') === null);
+
+    if (focusable.length === 0) {
+      event.preventDefault();
+
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  }
 }
 
 function createSlideshowSection(item) {
