@@ -182,6 +182,10 @@ parameters:
     memories.cluster.selection.quality_floor_default: 0.35
     # Description: Runtime minimum media quality score required to enter the curated selection.
     memories.cluster.selection.quality_floor: '%env(default:memories.cluster.selection.quality_floor_default:float:MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR)%'
+    # Description: Default profile identifier used for member selection when none is provided by the draft.
+    memories.cluster.selection.default_profile: 'default'
+    # Description: Named selection profiles overriding the default curator options.
+    memories.cluster.selection.profiles: []
 
     # Description: List of person identifiers that should always be treated as important for clustering.
     memories.cluster.cohort.important_person_ids: []

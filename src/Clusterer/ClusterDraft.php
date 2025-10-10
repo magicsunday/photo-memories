@@ -418,4 +418,45 @@ final class ClusterDraft
     {
         $this->centroidCell7 = $cell;
     }
+
+    /**
+     * Creates a copy of the draft with a different member list and optional parameter overrides.
+     *
+     * @param list<int>                                 $members
+     * @param array<string, int|float|string|bool|array|null>|null $params
+     */
+    public function withMembers(array $members, ?array $params = null): self
+    {
+        $copy = new self(
+            $this->algorithm,
+            $params ?? $this->params,
+            $this->centroid,
+            $members,
+        );
+
+        $copy->setStartAt($this->startAt);
+        $copy->setEndAt($this->endAt);
+        $copy->setMembersCount(count($members));
+        $copy->setPhotoCount($this->photoCount);
+        $copy->setVideoCount($this->videoCount);
+        $copy->setCoverMediaId($this->coverMediaId);
+        $copy->setLocation($this->location);
+        $copy->setAlgorithmVersion($this->algorithmVersion);
+        $copy->setConfigHash($this->configHash);
+        $copy->setCentroidLat($this->centroidLat);
+        $copy->setCentroidLon($this->centroidLon);
+        $copy->setCentroidCell7($this->centroidCell7);
+
+        return $copy;
+    }
+
+    /**
+     * Creates a copy of the draft with updated parameters while keeping the member list intact.
+     *
+     * @param array<string, int|float|string|bool|array|null> $params
+     */
+    public function withParams(array $params): self
+    {
+        return $this->withMembers($this->members, $params);
+    }
 }
