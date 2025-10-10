@@ -545,6 +545,17 @@ body.has-lightbox {
   background: rgba(255, 91, 91, 0.12);
 }
 
+.detail-overlay__slideshow {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-overlay__slideshow[hidden] {
+  display: none;
+}
+
 .detail-overlay__gallery {
   flex: 1 1 auto;
   overflow: auto;
@@ -745,6 +756,16 @@ body.has-lightbox {
 .detail-page__status.is-error {
   color: #ffb4b4;
   background: rgba(255, 91, 91, 0.12);
+}
+
+.detail-page__slideshow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-page__slideshow[hidden] {
+  display: none;
 }
 
 .detail-page__gallery {

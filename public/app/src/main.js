@@ -57,8 +57,10 @@ let detailSubtitle = null;
 let detailBadges = null;
 let detailTimeline = null;
 let detailStatusMessage = null;
+let detailSlideshow = null;
 let detailGallery = null;
 let detailPrimaryCloseButton = null;
+let detailPageContext = null;
 
 const lightbox = createLightbox();
 
@@ -74,6 +76,8 @@ if (appContainer instanceof HTMLElement) {
 }
 
 function initialiseApp(app) {
+  detailPageContext = null;
+
   app.innerHTML = `
     <section class="toolbar">
       <div>
@@ -199,6 +203,7 @@ function initialiseDetailPage(app, itemId) {
         <p class="detail-page__timeline" data-detail-timeline></p>
         <p class="detail-page__status" data-detail-status></p>
       </header>
+      <div class="detail-page__slideshow" data-detail-slideshow></div>
       <div class="detail-page__gallery gallery" data-detail-gallery></div>
     </article>
   `;
@@ -209,6 +214,7 @@ function initialiseDetailPage(app, itemId) {
   const badges = app.querySelector('[data-detail-badges]');
   const timeline = app.querySelector('[data-detail-timeline]');
   const status = app.querySelector('[data-detail-status]');
+  const slideshow = app.querySelector('[data-detail-slideshow]');
   const gallery = app.querySelector('[data-detail-gallery]');
 
   const elements = {
@@ -218,10 +224,17 @@ function initialiseDetailPage(app, itemId) {
     badges: badges instanceof HTMLElement ? badges : null,
     timeline: timeline instanceof HTMLElement ? timeline : null,
     status: status instanceof HTMLElement ? status : null,
+    slideshow: slideshow instanceof HTMLElement ? slideshow : null,
     gallery: gallery instanceof HTMLElement ? gallery : null,
   };
 
-  renderDetailPage(elements, { loading: true, error: null, item: null });
+  detailPageContext = {
+    itemId,
+    elements,
+    state: { loading: true, error: null, item: null },
+  };
+
+  renderDetailPage(elements, detailPageContext.state);
   void loadDetailPage(itemId, elements);
 }
 
@@ -229,12 +242,27 @@ async function loadDetailPage(itemId, elements) {
   const result = await fetchDetailData(itemId);
 
   if (result.item) {
-    renderDetailPage(elements, { loading: false, error: null, item: result.item });
+    const state = { loading: false, error: null, item: result.item };
+    if (detailPageContext && detailPageContext.itemId === itemId) {
+      detailPageContext.state = state;
+    }
+
+    renderDetailPage(elements, state);
 
     return;
   }
 
-  renderDetailPage(elements, { loading: false, error: result.error ?? 'Es wurden keine Details zur Galerie gefunden.', item: null });
+  const failureState = {
+    loading: false,
+    error: result.error ?? 'Es wurden keine Details zur Galerie gefunden.',
+    item: null,
+  };
+
+  if (detailPageContext && detailPageContext.itemId === itemId) {
+    detailPageContext.state = failureState;
+  }
+
+  renderDetailPage(elements, failureState);
 }
 
 function renderDetailPage(elements, detailState) {
@@ -242,7 +270,13 @@ function renderDetailPage(elements, detailState) {
     elements.container.classList.toggle('is-loading', Boolean(detailState.loading));
   }
 
-  const { title } = updateDetailElements(detailState, elements);
+  if (detailPageContext && detailPageContext.elements === elements) {
+    detailPageContext.state = detailState;
+  }
+
+  const { title } = updateDetailElements(detailState, elements, {
+    slideshow: { requestStateProvider: getSlideshowRequestState },
+  });
 
   if (typeof title === 'string' && title !== '') {
     document.title = `Rückblick-Galerie – ${title}`;
@@ -528,7 +562,7 @@ function populateGallery(container, images) {
   }
 }
 
-function updateDetailElements(detailState, elements) {
+function updateDetailElements(detailState, elements, options = {}) {
   const item = detailState && typeof detailState.item === 'object' && detailState.item !== null
     ? detailState.item
     : null;
@@ -594,6 +628,30 @@ function updateDetailElements(detailState, elements) {
       elements.status.textContent = '';
       elements.status.classList.remove('is-error');
       elements.status.hidden = true;
+    }
+  }
+
+  if (elements.slideshow instanceof HTMLElement) {
+    const slideshowOptions = options && typeof options === 'object' ? options.slideshow ?? null : null;
+    const requestStateProvider = slideshowOptions && typeof slideshowOptions.requestStateProvider === 'function'
+      ? slideshowOptions.requestStateProvider
+      : null;
+
+    elements.slideshow.textContent = '';
+
+    if (item) {
+      const slideshowSection = createSlideshowSection(item, {
+        requestStateProvider,
+      });
+
+      if (slideshowSection) {
+        elements.slideshow.appendChild(slideshowSection);
+        elements.slideshow.hidden = false;
+      } else {
+        elements.slideshow.hidden = true;
+      }
+    } else {
+      elements.slideshow.hidden = true;
     }
   }
 
@@ -810,6 +868,11 @@ function renderDetailOverlay() {
       detailStatusMessage.hidden = true;
     }
 
+    if (detailSlideshow instanceof HTMLElement) {
+      detailSlideshow.textContent = '';
+      detailSlideshow.hidden = true;
+    }
+
     if (detailGallery instanceof HTMLElement) {
       detailGallery.textContent = '';
     }
@@ -832,7 +895,10 @@ function renderDetailOverlay() {
     badges: detailBadges,
     timeline: detailTimeline,
     status: detailStatusMessage,
+    slideshow: detailSlideshow,
     gallery: detailGallery,
+  }, {
+    slideshow: { requestStateProvider: getSlideshowRequestState },
   });
 }
 
@@ -861,6 +927,7 @@ function initialiseDetailOverlay() {
       <div class="detail-overlay__badges" data-detail-badges></div>
       <p class="detail-overlay__timeline" data-detail-timeline></p>
       <p class="detail-overlay__status" data-detail-status></p>
+      <div class="detail-overlay__slideshow" data-detail-slideshow></div>
       <div class="detail-overlay__gallery gallery" data-detail-gallery></div>
     </div>
   `;
@@ -874,6 +941,7 @@ function initialiseDetailOverlay() {
   detailBadges = overlay.querySelector('[data-detail-badges]');
   detailTimeline = overlay.querySelector('[data-detail-timeline]');
   detailStatusMessage = overlay.querySelector('[data-detail-status]');
+  detailSlideshow = overlay.querySelector('[data-detail-slideshow]');
   detailGallery = overlay.querySelector('[data-detail-gallery]');
   detailPrimaryCloseButton = overlay.querySelector('[data-detail-initial-focus]');
 
@@ -939,7 +1007,18 @@ function handleDetailKeydown(event) {
   }
 }
 
-function createSlideshowSection(item) {
+function normaliseSlideshowRequestState(candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    return { loading: false, error: null };
+  }
+
+  const loading = candidate.loading === true;
+  const error = typeof candidate.error === 'string' && candidate.error !== '' ? candidate.error : null;
+
+  return { loading, error };
+}
+
+function createSlideshowSection(item, options = {}) {
   if (!item || typeof item !== 'object') {
     return null;
   }
@@ -950,7 +1029,13 @@ function createSlideshowSection(item) {
   }
 
   const itemId = typeof item.id === 'string' && item.id !== '' ? item.id : null;
-  const requestState = itemId ? state.slideshowRequests[itemId] ?? { loading: false, error: null } : { loading: false, error: null };
+  const requestStateProvider = options && typeof options.requestStateProvider === 'function'
+    ? options.requestStateProvider
+    : null;
+  const requestStateCandidate = itemId
+    ? (requestStateProvider ? requestStateProvider(itemId) : state.slideshowRequests[itemId])
+    : null;
+  const requestState = normaliseSlideshowRequestState(requestStateCandidate);
 
   const container = document.createElement('div');
   container.className = 'slideshow';
@@ -1040,6 +1125,79 @@ function createSpinner() {
   return spinner;
 }
 
+function getSlideshowRequestState(itemId) {
+  if (typeof itemId !== 'string' || itemId === '') {
+    return { loading: false, error: null };
+  }
+
+  const candidate = state.slideshowRequests[itemId] ?? null;
+
+  return normaliseSlideshowRequestState(candidate);
+}
+
+function updateSlideshowRequestViews(itemId) {
+  if (typeof itemId !== 'string' || itemId === '') {
+    return;
+  }
+
+  if (state.detail.visible && state.detail.item && state.detail.item.id === itemId) {
+    renderDetailOverlay();
+  }
+
+  if (detailPageContext && detailPageContext.itemId === itemId && detailPageContext.elements && detailPageContext.state) {
+    renderDetailPage(detailPageContext.elements, detailPageContext.state);
+  }
+}
+
+function notifySlideshowUpdate(itemId, itemPayload, slideshow) {
+  if (typeof itemId !== 'string' || itemId === '') {
+    return;
+  }
+
+  const payloadObject = itemPayload && typeof itemPayload === 'object' ? itemPayload : null;
+  const slideshowData = slideshow && typeof slideshow === 'object' ? slideshow : null;
+  const hasPayloadSlideshow = payloadObject ? Object.prototype.hasOwnProperty.call(payloadObject, 'slideshow') : false;
+  const payloadSlideshow = hasPayloadSlideshow ? payloadObject.slideshow : undefined;
+
+  if (state.detail.visible && state.detail.item && state.detail.item.id === itemId) {
+    const updatedItem = { ...state.detail.item };
+
+    if (payloadObject) {
+      Object.assign(updatedItem, payloadObject);
+    }
+
+    if (slideshowData) {
+      updatedItem.slideshow = slideshowData;
+    } else if (hasPayloadSlideshow) {
+      updatedItem.slideshow = payloadSlideshow;
+    }
+
+    state.detail.item = updatedItem;
+    renderDetailOverlay();
+  }
+
+  if (detailPageContext && detailPageContext.itemId === itemId && detailPageContext.state && detailPageContext.elements) {
+    const currentState = detailPageContext.state;
+    if (currentState.item) {
+      const updatedDetailItem = { ...currentState.item };
+
+      if (payloadObject) {
+        Object.assign(updatedDetailItem, payloadObject);
+      }
+
+      if (slideshowData) {
+        updatedDetailItem.slideshow = slideshowData;
+      } else if (hasPayloadSlideshow) {
+        updatedDetailItem.slideshow = payloadSlideshow;
+      }
+
+      const nextState = { ...currentState, item: updatedDetailItem };
+      detailPageContext.state = nextState;
+      renderDetailPage(detailPageContext.elements, nextState);
+    }
+  }
+}
+
 async function triggerSlideshowGeneration(itemId) {
   if (typeof itemId !== 'string' || itemId === '') {
     return null;
@@ -1047,6 +1205,7 @@ async function triggerSlideshowGeneration(itemId) {
 
   state.slideshowRequests[itemId] = { loading: true, error: null };
   renderItems();
+  updateSlideshowRequestViews(itemId);
 
   try {
     const response = await fetch(`/api/feed/${encodeURIComponent(itemId)}/video`, {
@@ -1080,6 +1239,8 @@ async function triggerSlideshowGeneration(itemId) {
 
     state.slideshowRequests[itemId] = { loading: false, error: null };
     renderItems();
+    updateSlideshowRequestViews(itemId);
+    notifySlideshowUpdate(itemId, item, slideshow);
 
     if (slideshow.status === 'in_erstellung') {
       restartSlideshowRefreshTimer(4000);
@@ -1093,6 +1254,7 @@ async function triggerSlideshowGeneration(itemId) {
     const message = error instanceof Error ? error.message : 'Unbekannter Fehler bei der Videoerstellung.';
     state.slideshowRequests[itemId] = { loading: false, error: message };
     renderItems();
+    updateSlideshowRequestViews(itemId);
 
     return null;
   }
@@ -1204,6 +1366,7 @@ async function fetchSlideshowStatus(itemId) {
     }
 
     const updated = applySlideshowUpdate(itemId, item, slideshow);
+    notifySlideshowUpdate(itemId, item, slideshow);
 
     return { slideshow, updated };
   } catch (error) {
