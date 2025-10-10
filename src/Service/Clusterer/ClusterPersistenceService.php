@@ -60,7 +60,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         private CoverPickerInterface $coverPicker,
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
-        private int $maxMembers = 20,
+        private int $maxMembers = 500,
         ?ClusterQualityAggregator $qualityAggregator = null,
         ?ClusterPeopleAggregator $peopleAggregator = null,
         ?TravelWaypointAnnotator $travelWaypointAnnotator = null,
