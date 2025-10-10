@@ -16,9 +16,11 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function array_map;
 use function array_search;
 use function count;
 use function preg_match;
+use function preg_match_all;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -109,10 +111,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString("scale=1280:720:force_original_aspect_ratio=increase,zoompan=z='if(gte(iw/ih\\,1.778)\\,1.05+(1.15-1.05)*min(on/224\\,1)\\,1)'", $filterComplex);
-        self::assertStringContainsString('s=1280x720', $filterComplex);
-        self::assertStringContainsString(':fps=60', $filterComplex);
-        self::assertStringContainsString("crop='if(gte(iw/ih\\,1.778)\\,1280\\,iw)':'if(gte(iw/ih\\,1.778)\\,720\\,ih)'", $filterComplex);
+        self::assertStringContainsString("scale=1920:1080:force_original_aspect_ratio=increase,zoompan=z='if(gte(iw/ih\\,1.778)\\,1.05+(1.15-1.05)*min(on/112\\,1)\\,1)'", $filterComplex);
+        self::assertStringContainsString('s=1920x1080', $filterComplex);
+        self::assertStringContainsString(':fps=30', $filterComplex);
+        self::assertStringContainsString("crop='if(gte(iw/ih\\,1.778)\\,1920\\,iw)':'if(gte(iw/ih\\,1.778)\\,1080\\,ih)'", $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringNotContainsString('pad=', $filterComplex);
@@ -174,11 +176,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString("zoompan=z='if(gte(iw/ih\\,1.778)\\,1.2+(1.3-1.2)*min(on/239\\,1)\\,1)'", $filterComplex);
-        self::assertStringContainsString("x='if(gte(iw/ih\\,1.778)\\,clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/239\\,1)\\,0\\,max(iw-(w/zoom)\\,0))\\,(iw-w)/2)'", $filterComplex);
-        self::assertStringContainsString("y='if(gte(iw/ih\\,1.778)\\,clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/239\\,1)\\,0\\,max(ih-(h/zoom)\\,0))\\,(ih-h)/2)'", $filterComplex);
-        self::assertStringContainsString(':fps=60', $filterComplex);
-        self::assertStringContainsString('s=1280x720', $filterComplex);
+        self::assertStringContainsString("zoompan=z='if(gte(iw/ih\\,1.778)\\,1.2+(1.3-1.2)*min(on/119\\,1)\\,1)'", $filterComplex);
+        self::assertStringContainsString("x='if(gte(iw/ih\\,1.778)\\,clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(w/zoom)\\,0))\\,(iw-w)/2)'", $filterComplex);
+        self::assertStringContainsString("y='if(gte(iw/ih\\,1.778)\\,clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(h/zoom)\\,0))\\,(ih-h)/2)'", $filterComplex);
+        self::assertStringContainsString(':fps=30', $filterComplex);
+        self::assertStringContainsString('s=1920x1080', $filterComplex);
     }
 
     public function testBuildCommandUsesStoryboardTransitions(): void
@@ -235,55 +237,121 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
     }
 
-    public function testResolveTransitionFallsBackToCuratedDefaults(): void
+    public function testDeterministicFallbackTransitionsUseWhitelist(): void
     {
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
 
-        $property = $reflector->getProperty('transitions');
-        $property->setAccessible(true);
+        $defaultsProperty = $reflector->getProperty('transitions');
+        $defaultsProperty->setAccessible(true);
 
         /** @var list<string> $defaults */
-        $defaults = $property->getValue($generator);
+        $defaults = $defaultsProperty->getValue($generator);
 
-        self::assertSame(
-            [
-                'fade',
-                'dissolve',
-                'fadeblack',
-                'fadewhite',
-                'wipeleft',
-                'wiperight',
-                'wipeup',
-                'wipedown',
-                'slideleft',
-                'slideright',
-                'smoothleft',
-                'smoothright',
-                'circleopen',
-                'circleclose',
-                'vertopen',
-                'vertclose',
-                'horzopen',
-                'horzclose',
-                'radial',
-                'pixelize',
-            ],
-            $defaults
-        );
+        /** @var list<string> $whitelist */
+        $whitelist = $reflector->getConstant('TRANSITION_WHITELIST');
 
-        $method = $reflector->getMethod('resolveTransition');
-        $method->setAccessible(true);
+        self::assertSame($whitelist, $defaults);
 
-        $transitionCount = count($defaults);
-        foreach ($defaults as $index => $expected) {
-            $resolved = $method->invoke($generator, null, $index, $transitionCount);
-            self::assertSame($expected, $resolved);
+        $filterMethod = $reflector->getMethod('filterAllowedTransitions');
+        $filterMethod->setAccessible(true);
+
+        /** @var list<string> $filtered */
+        $filtered = $filterMethod->invoke($generator, [' fade ', 'invalid', '', 'pixelize', 'wipedown']);
+
+        self::assertSame(['fade', 'pixelize', 'wipedown'], $filtered);
+
+        $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
+        $buildMethod->setAccessible(true);
+
+        $images = ['/tmp/a.jpg', '/tmp/b.jpg', '/tmp/c.jpg', '/tmp/d.jpg'];
+
+        /** @var list<string> $first */
+        $first = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Bravo', 3);
+        /** @var list<string> $second */
+        $second = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Bravo', 3);
+        /** @var list<string> $different */
+        $different = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Charlie', 3);
+
+        self::assertSame($first, $second);
+        self::assertCount(3, $first);
+
+        foreach ($first as $index => $transition) {
+            self::assertContains($transition, $filtered);
+
+            if ($index > 0 && count($filtered) > 1) {
+                self::assertNotSame($first[$index - 1], $transition);
+            }
         }
 
-        $wrapped = $method->invoke($generator, null, $transitionCount, $transitionCount);
-        self::assertSame($defaults[0], $wrapped);
+        self::assertNotSame($first, $different);
+    }
+
+    public function testTransitionDurationsAreClampedAndShortened(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/slide-1.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-2.jpg',
+                'mediaId'    => 2,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-3.jpg',
+                'mediaId'    => 3,
+                'duration'   => 0.25,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-4.jpg',
+                'mediaId'    => 4,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'durations',
+            '/tmp/durations.job.json',
+            '/tmp/durations.mp4',
+            '/tmp/durations.lock',
+            '/tmp/durations.error',
+            ['/tmp/slide-1.jpg', '/tmp/slide-2.jpg', '/tmp/slide-3.jpg', '/tmp/slide-4.jpg'],
+            $slides,
+            5.0,
+            null,
+            'Test',
+            'Alpha',
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $parsed = $this->parseTransitionsFromCommand($command);
+
+        self::assertSame(3, count($parsed['durations']));
+
+        self::assertEqualsWithDelta(1.2, $parsed['durations'][0], 0.0001);
+        self::assertEqualsWithDelta(0.25, $parsed['durations'][1], 0.0001);
+        self::assertEqualsWithDelta(0.25, $parsed['durations'][2], 0.0001);
+
+        self::assertSame(3, count($parsed['offsets']));
+        self::assertEqualsWithDelta(3.0, $parsed['offsets'][0], 0.0001);
+        self::assertEqualsWithDelta(6.0, $parsed['offsets'][1], 0.0001);
+        self::assertEqualsWithDelta(6.25, $parsed['offsets'][2], 0.0001);
     }
 
     public function testEscapeFilterExpressionMasksEveryCommaExactlyOnce(): void
@@ -312,5 +380,37 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $alreadyEscaped = $method->invoke($generator, $preEscapedExpression);
 
         self::assertSame($preEscapedExpression, $alreadyEscaped);
+    }
+
+    /**
+     * @param list<string> $command
+     *
+     * @return array{transitions:list<string>,durations:list<float>,offsets:list<float>}
+     */
+    private function parseTransitionsFromCommand(array $command): array
+    {
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+
+        $matches = [];
+        preg_match_all('/xfade=transition=([^:]+):duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
+
+        /** @var list<string> $transitions */
+        $transitions = $matches[1] ?? [];
+        /** @var list<float> $durations */
+        $durations = array_map(static fn (string $value): float => (float) $value, $matches[2] ?? []);
+        /** @var list<float> $offsets */
+        $offsets = array_map(static fn (string $value): float => (float) $value, $matches[3] ?? []);
+
+        return [
+            'transitions' => $transitions,
+            'durations'   => $durations,
+            'offsets'     => $offsets,
+        ];
     }
 }
