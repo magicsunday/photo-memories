@@ -380,15 +380,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $filters = [];
 
-        $titleText = $this->normaliseDrawText($title);
-        if ($titleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($titleText, 64, 'h*0.08');
+        $subtitleText = $this->normaliseDrawText($subtitle);
+        $titleText    = $this->normaliseDrawText($title);
+
+        if ($subtitleText !== null) {
+            $filters[] = $this->buildDrawTextFilter($subtitleText, 48, 'w*0.05', 'h-80');
         }
 
-        $subtitleText = $this->normaliseDrawText($subtitle);
-        if ($subtitleText !== null) {
-            $subtitleY = $titleText !== null ? 'h*0.08+line_h+40' : 'h*0.08';
-            $filters[]  = $this->buildDrawTextFilter($subtitleText, 48, $subtitleY);
+        if ($titleText !== null) {
+            $titleY    = $subtitleText !== null ? 'h-80-line_h-30' : 'h-80';
+            $filters[] = $this->buildDrawTextFilter($titleText, 64, 'w*0.05', $titleY);
         }
 
         return implode(',', array_filter($filters));
@@ -403,17 +404,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return trim($this->escapeDrawTextValue($value));
     }
 
-    private function buildDrawTextFilter(string $text, int $fontSize, string $positionY): string
+    private function buildDrawTextFilter(string $text, int $fontSize, string $positionX, string $positionY): string
     {
         $fontDirective = $this->resolveFontDirective();
         $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
         return sprintf(
-            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:box=1:boxcolor=0x000000AA:boxborderw=20:" .
-            'x=(w-text_w)/2:y=%s',
+            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=0x000000AA:shadowx=0:shadowy=6:" .
+            'borderw=2:bordercolor=0x00000066:x=%s:y=%s',
             $text,
             $fontSegment,
             $fontSize,
+            $positionX,
             $positionY
         );
     }
