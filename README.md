@@ -47,7 +47,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
 
 - Persistierte Cluster werden über `FeedBuilder` in `MemoryFeedItem`-Objekte transformiert. `memories:feed:preview` zeigt die daraus resultierende Konsolidierung im Terminal; `memories:feed:export-html` erzeugt statische HTML-Previews inklusive Thumbnails.
 - Die HTTP-Schicht bietet `/api/feed` (JSON-Feed mit Filterparametern für Score, Strategie oder Datum), `/api/feed/{id}` (Detaildatensatz mit vollständiger Galerie und Metadaten), `/api/media/{id}/thumbnail` (Thumbnail-Auslieferung mit dynamischer Breite) und `/api/feed/{id}/video` für generierte Rückblick-Videos.
-- Slideshow-Jobs werden asynchron über `slideshow:generate` abgearbeitet; Parameter wie Bilddauer, Übergänge, Zielverzeichnis, Schriftfamilie/-datei oder Pfade zu `ffmpeg`/`php` sind konfigurierbar.
+- Slideshow-Jobs werden asynchron über `slideshow:generate` abgearbeitet; Parameter wie Bilddauer, Übergänge, Zielverzeichnis, Schriftfamilie/-datei oder Pfade zu `ffmpeg`/`php` sind konfigurierbar. Übergangslisten werden pro Rückblick deterministisch gemischt, damit API-Storyboard und Videorendering dieselbe Abfolge nutzen.
 
 ## Installation & Vorbereitung
 

@@ -16,6 +16,8 @@ use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterfa
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 use Throwable;
 
+use function array_map;
+use function count;
 use function file_get_contents;
 use function file_put_contents;
 use function filemtime;
@@ -342,10 +344,17 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
      */
     private function buildStoryboard(array $slides): array
     {
-        $storySlides     = [];
-        $transitionCount = count($this->transitions);
+        $storySlides = [];
 
-        foreach ($slides as $index => $slide) {
+        $mediaIds          = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
+        $transitionSequence = TransitionSequenceGenerator::generate(
+            $this->transitions,
+            $mediaIds,
+            count($slides)
+        );
+        $sequenceIndex = 0;
+
+        foreach ($slides as $slide) {
             $storySlide = [
                 'mediaId'    => $slide['mediaId'],
                 'image'      => $slide['path'],
@@ -353,12 +362,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
                 'transition' => null,
             ];
 
-            if ($transitionCount > 0) {
-                $transition = $this->transitions[$index % $transitionCount] ?? null;
-                if (is_string($transition) && $transition !== '') {
-                    $storySlide['transition'] = $transition;
-                }
+            $transition = $transitionSequence[$sequenceIndex] ?? null;
+            if (is_string($transition) && $transition !== '') {
+                $storySlide['transition'] = $transition;
             }
+
+            ++$sequenceIndex;
 
             $storySlides[] = $storySlide;
         }

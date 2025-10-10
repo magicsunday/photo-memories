@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
+use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Test\TestCase;
 
@@ -44,14 +45,23 @@ final class SlideshowVideoManagerTest extends TestCase
             self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
         }
 
-        $imagePath = $baseDir . '/image-one.jpg';
-        file_put_contents($imagePath, 'image-stub', LOCK_EX);
+        $imageOnePath   = $baseDir . '/image-one.jpg';
+        $imageTwoPath   = $baseDir . '/image-two.jpg';
+        $imageThreePath = $baseDir . '/image-three.jpg';
+        file_put_contents($imageOnePath, 'image-stub', LOCK_EX);
+        file_put_contents($imageTwoPath, 'image-stub', LOCK_EX);
+        file_put_contents($imageThreePath, 'image-stub', LOCK_EX);
 
-        $media = new Media($imagePath, str_repeat('a', 64), 1024);
+        $mediaOne   = new Media($imageOnePath, str_repeat('a', 64), 1024);
+        $mediaTwo   = new Media($imageTwoPath, str_repeat('b', 64), 1024);
+        $mediaThree = new Media($imageThreePath, str_repeat('c', 64), 1024);
 
         $generator = new class implements SlideshowVideoGeneratorInterface {
+            public ?\MagicSunday\Memories\Service\Slideshow\SlideshowJob $capturedJob = null;
+
             public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
             {
+                $this->capturedJob = $job;
                 file_put_contents($job->outputPath(), 'video-stub', LOCK_EX);
             }
         };
@@ -61,13 +71,21 @@ final class SlideshowVideoManagerTest extends TestCase
             1.0,
             0.5,
             $generator,
-            [],
+            ['wipeleft', 'fade', 'pixelize'],
             null,
             null,
         );
 
         try {
-            $status    = $manager->ensureForItem('memory', [1], [1 => $media]);
+            $status    = $manager->ensureForItem(
+                'memory',
+                [1, 2, 3],
+                [
+                    1 => $mediaOne,
+                    2 => $mediaTwo,
+                    3 => $mediaThree,
+                ]
+            );
             $videoPath = $baseDir . '/memory.mp4';
             $lockPath  = $videoPath . '.lock';
             $errorPath = $videoPath . '.error.log';
@@ -76,6 +94,20 @@ final class SlideshowVideoManagerTest extends TestCase
             self::assertFileExists($videoPath);
             self::assertFileDoesNotExist($lockPath);
             self::assertFileDoesNotExist($errorPath);
+
+            self::assertNotNull($generator->capturedJob);
+            $slides = $generator->capturedJob->slides();
+            self::assertCount(3, $slides);
+
+            $expectedTransitions = TransitionSequenceGenerator::generate(
+                ['wipeleft', 'fade', 'pixelize'],
+                [1, 2, 3],
+                3
+            );
+
+            foreach ($expectedTransitions as $index => $expected) {
+                self::assertSame($expected, $slides[$index]['transition']);
+            }
         } finally {
             $this->cleanupDirectory($baseDir);
         }
