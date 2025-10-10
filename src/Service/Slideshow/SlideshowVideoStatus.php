@@ -46,7 +46,7 @@ final readonly class SlideshowVideoStatus
 
     public static function unavailable(float $secondsPerImage): self
     {
-        return new self(self::STATUS_UNAVAILABLE, null, 'Nicht genug Medien für ein Video vorhanden.', $secondsPerImage);
+        return new self(self::STATUS_UNAVAILABLE, null, null, $secondsPerImage);
     }
 
     public static function error(string $message, float $secondsPerImage): self
