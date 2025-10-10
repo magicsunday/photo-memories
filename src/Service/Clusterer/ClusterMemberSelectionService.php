@@ -12,21 +12,25 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfile;
+use MagicSunday\Memories\Utility\Phash;
+use Throwable;
 
 use function array_key_exists;
 use function array_map;
 use function array_sum;
 use function count;
 use function gmdate;
-use function hex2bin;
 use function is_array;
 use function is_int;
+use function is_string;
 use function max;
 use function spl_object_id;
 
@@ -43,6 +47,9 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
     /** @var array<int, string> */
     private array $dayIndex = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $daySummaries = [];
 
     public function __construct(
         private readonly MemberSelectorInterface $memberSelector,
@@ -71,6 +78,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return $draft;
         }
 
+        $this->daySummaries = $daySummaries;
         $result = $this->memberSelector->select($daySummaries, $profile->getHome(), $profile->getOptions());
 
         return $this->applySelection($draft, $media, $result, $profile);
@@ -243,22 +251,37 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         SelectionResult $result,
         array $members,
     ): array {
-        $droppedCount = $preCount > $postCount ? $preCount - $postCount : 0;
-        $spacing      = $this->computeSpacingSamples($members);
+        $droppedCount       = $preCount > $postCount ? $preCount - $postCount : 0;
+        $spacing            = $this->computeSpacingSamples($members);
+        $perDayDistribution = $this->countPerDay($members);
+        $hashSamples        = $this->collectHashSamples($members);
+        $telemetry          = $this->buildSelectionTelemetry(
+            $profile,
+            $result,
+            $preCount,
+            $postCount,
+            $droppedCount,
+            $spacing,
+            $perDayDistribution,
+            $hashSamples,
+            $members,
+        );
 
         return [
-            'profile' => $profile->getKey(),
-            'counts'  => [
-                'pre'     => $preCount,
-                'post'    => $postCount,
-                'dropped' => $droppedCount,
-            ],
-            'spacing' => [
+            'profile'                => $profile->getKey(),
+            'counts'                 => $telemetry['counts'],
+            'spacing'                => [
                 'average_seconds' => $spacing['average'],
                 'samples'         => $spacing['samples'],
+                'rejections'      => $telemetry['drops']['selection']['spacing_rejections'] ?? 0,
             ],
-            'per_day_distribution' => $this->countPerDay($members),
-            'options' => [
+            'near_duplicates'        => [
+                'blocked'      => $telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0,
+                'replacements' => $telemetry['drops']['selection']['near_duplicate_replacements'] ?? 0,
+            ],
+            'per_day_distribution'   => $perDayDistribution,
+            'per_bucket_distribution'=> $telemetry['distribution']['per_bucket'],
+            'options'                => [
                 'selector'            => $this->memberSelector::class,
                 'target_total'        => $profile->getOptions()->targetTotal,
                 'max_per_day'         => $profile->getOptions()->maxPerDay,
@@ -271,8 +294,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 'selfie_penalty'      => $profile->getOptions()->selfiePenalty,
                 'quality_floor'       => $profile->getOptions()->qualityFloor,
             ],
-            'hash_samples' => $this->collectHashSamples($members),
-            'telemetry'    => $result->getTelemetry(),
+            'hash_samples'           => $hashSamples,
+            'telemetry'              => $telemetry,
         ];
     }
 
@@ -335,10 +358,300 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $hashes = [];
         foreach ($members as $media) {
             $id      = $media->getId();
-            $hashes[$id ?? spl_object_id($media)] = $this->decodePhash($media);
+            $hashes[$id ?? spl_object_id($media)] = $this->resolvePhashHex($media);
         }
 
         return $hashes;
+    }
+
+    /**
+     * @param ClusterMemberSelectionProfile $profile
+     * @param SelectionResult               $result
+     * @param int                           $preCount
+     * @param int                           $postCount
+     * @param int                           $droppedCount
+     * @param array{average: float, samples: list<int>} $spacing
+     * @param array<string, int>                     $perDayDistribution
+     * @param array<int, string|null>                $hashSamples
+     * @param list<Media>                            $members
+     *
+     * @return array<string, mixed>
+     */
+    private function buildSelectionTelemetry(
+        ClusterMemberSelectionProfile $profile,
+        SelectionResult $result,
+        int $preCount,
+        int $postCount,
+        int $droppedCount,
+        array $spacing,
+        array $perDayDistribution,
+        array $hashSamples,
+        array $members,
+    ): array {
+        $rawTelemetry = $result->getTelemetry();
+
+        $drops = [
+            'prefilter' => [
+                'total'             => (int) ($rawTelemetry['prefilter_total'] ?? 0),
+                'no_show'           => (int) ($rawTelemetry['prefilter_no_show'] ?? 0),
+                'low_quality'       => (int) ($rawTelemetry['prefilter_low_quality'] ?? 0),
+                'quality_floor'     => (int) ($rawTelemetry['prefilter_quality_floor'] ?? 0),
+            ],
+            'selection' => [
+                'burst_collapsed'          => (int) ($rawTelemetry['burst_collapsed'] ?? 0),
+                'day_limit_rejections'     => (int) ($rawTelemetry['day_limit_rejections'] ?? 0),
+                'staypoint_rejections'     => (int) ($rawTelemetry['staypoint_rejections'] ?? 0),
+                'spacing_rejections'       => (int) ($rawTelemetry['spacing_rejections'] ?? 0),
+                'near_duplicate_blocked'   => (int) ($rawTelemetry['near_duplicate_blocked'] ?? 0),
+                'near_duplicate_replacements'=> (int) ($rawTelemetry['near_duplicate_replacements'] ?? 0),
+                'fallback_used'            => (int) ($rawTelemetry['fallback_used'] ?? 0),
+            ],
+        ];
+
+        $perBucket = $this->countPerBucket($members, $profile);
+        $phash     = $this->buildPhashTelemetry($members);
+        $averages  = $this->buildSelectionAverages(
+            $preCount,
+            $postCount,
+            $perDayDistribution,
+            $perBucket,
+            $spacing,
+            $phash,
+        );
+        $hints = $this->buildRelaxationHints($profile, $drops, $averages, $preCount, $postCount);
+
+        $telemetry = $rawTelemetry;
+        $telemetry['counts'] = [
+            'pre'     => $preCount,
+            'post'    => $postCount,
+            'dropped' => $droppedCount,
+        ];
+        $telemetry['drops'] = $drops;
+        $telemetry['spacing'] = [
+            'average_seconds' => $spacing['average'],
+            'samples'         => $spacing['samples'],
+        ];
+        $telemetry['phash'] = $phash;
+        $telemetry['distribution'] = [
+            'per_day'    => $perDayDistribution,
+            'per_bucket' => $perBucket,
+        ];
+        $telemetry['hash_samples'] = $hashSamples;
+        $telemetry['averages'] = $averages;
+        $telemetry['relaxation_hints'] = $hints;
+
+        return $telemetry;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return array<string, int>
+     */
+    private function countPerBucket(array $members, ClusterMemberSelectionProfile $profile): array
+    {
+        $distribution = [];
+        $slotSize     = max(1, $profile->getOptions()->timeSlotHours);
+
+        foreach ($members as $media) {
+            $objectId = spl_object_id($media);
+            $dayKey   = $this->dayIndex[$objectId] ?? null;
+            $summary  = $dayKey !== null ? ($this->daySummaries[$dayKey] ?? null) : null;
+
+            $timezoneIdentifier = $this->resolveTimezoneIdentifier($media, $summary);
+            $bucketKey          = $this->buildBucketKey($media, $timezoneIdentifier, $slotSize, $dayKey);
+
+            $distribution[$bucketKey] = ($distribution[$bucketKey] ?? 0) + 1;
+        }
+
+        return $distribution;
+    }
+
+    /**
+     * @param array<string, mixed>|null $summary
+     */
+    private function resolveTimezoneIdentifier(Media $media, ?array $summary): string
+    {
+        $identifier = null;
+        if ($summary !== null && isset($summary['localTimezoneIdentifier']) && is_string($summary['localTimezoneIdentifier'])) {
+            $identifier = $summary['localTimezoneIdentifier'];
+        }
+
+        if (is_string($identifier) && $identifier !== '') {
+            return $identifier;
+        }
+
+        $takenAt = $media->getTakenAt();
+        if ($takenAt instanceof DateTimeImmutable) {
+            return $takenAt->getTimezone()->getName();
+        }
+
+        return 'UTC';
+    }
+
+    private function buildBucketKey(Media $media, string $timezoneIdentifier, int $slotSize, ?string $dayKey): string
+    {
+        try {
+            $timezone = new DateTimeZone($timezoneIdentifier);
+        } catch (Throwable) {
+            $timezone = new DateTimeZone('UTC');
+        }
+
+        $time  = $media->getTakenAt() ?? $media->getCreatedAt();
+        $local = $time->setTimezone($timezone);
+        $hour  = (int) $local->format('H');
+        $slot  = intdiv($hour, $slotSize);
+        $day   = $dayKey ?? $local->format('Y-m-d');
+
+        return $day . '#slot_' . $slot;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return array{
+     *     samples: array<int, string|null>,
+     *     consecutive_hamming: list<int>,
+     *     average_consecutive_hamming: float|null
+     * }
+     */
+    private function buildPhashTelemetry(array $members): array
+    {
+        $samples   = [];
+        $distances = [];
+        $sum       = 0;
+        $count     = 0;
+
+        $previous = null;
+
+        foreach ($members as $media) {
+            $key      = $media->getId() ?? spl_object_id($media);
+            $hashHex  = $this->resolvePhashHex($media);
+            $samples[$key] = $hashHex;
+
+            if ($hashHex === null || $previous === null) {
+                $previous = $hashHex;
+
+                continue;
+            }
+
+            $distance   = Phash::hammingFromHex($previous, $hashHex);
+            $distances[] = $distance;
+            $sum        += $distance;
+            ++$count;
+            $previous    = $hashHex;
+        }
+
+        $average = null;
+        if ($count > 0) {
+            $average = $sum / $count;
+        }
+
+        return [
+            'samples'                     => $samples,
+            'consecutive_hamming'         => $distances,
+            'average_consecutive_hamming' => $average,
+        ];
+    }
+
+    /**
+     * @param array<string, int>                     $perDayDistribution
+     * @param array<string, int>                     $perBucket
+     * @param array{average: float, samples: list<int>} $spacing
+     * @param array{
+     *     samples: array<int, string|null>,
+     *     consecutive_hamming: list<int>,
+     *     average_consecutive_hamming: float|null
+     * } $phash
+     *
+     * @return array<string, float|null>
+     */
+    private function buildSelectionAverages(
+        int $preCount,
+        int $postCount,
+        array $perDayDistribution,
+        array $perBucket,
+        array $spacing,
+        array $phash,
+    ): array {
+        $keepRatio = 0.0;
+        if ($preCount > 0) {
+            $keepRatio = $postCount / $preCount;
+        }
+
+        $averagePerDay = 0.0;
+        if ($perDayDistribution !== []) {
+            $averagePerDay = array_sum($perDayDistribution) / count($perDayDistribution);
+        }
+
+        $averagePerBucket = 0.0;
+        if ($perBucket !== []) {
+            $averagePerBucket = array_sum($perBucket) / count($perBucket);
+        }
+
+        return [
+            'keep_ratio'                 => $keepRatio,
+            'per_day'                    => $averagePerDay,
+            'per_bucket'                 => $averagePerBucket,
+            'spacing_seconds'            => $spacing['average'],
+            'phash_hamming'              => $phash['average_consecutive_hamming'],
+        ];
+    }
+
+    /**
+     * @param array{
+     *     prefilter: array<string, int>,
+     *     selection: array<string, int>
+     * } $drops
+     * @param array<string, float|null> $averages
+     *
+     * @return list<string>
+     */
+    private function buildRelaxationHints(
+        ClusterMemberSelectionProfile $profile,
+        array $drops,
+        array $averages,
+        int $preCount,
+        int $postCount,
+    ): array {
+        $hints      = [];
+        $selection  = $drops['selection'];
+        $prefilter  = $drops['prefilter'];
+        $options    = $profile->getOptions();
+
+        if (($selection['day_limit_rejections'] ?? 0) > 0) {
+            $hints[] = 'max_per_day erhöhen, um Tagesbegrenzungen zu lockern.';
+        }
+
+        if (($selection['staypoint_rejections'] ?? 0) > 0) {
+            $hints[] = 'max_per_staypoint anheben, um mehr Medien pro Aufenthaltsort zu behalten.';
+        }
+
+        if (($selection['spacing_rejections'] ?? 0) > 0) {
+            $hints[] = 'min_spacing_seconds reduzieren, um engere Serien zu erlauben.';
+        }
+
+        if (($selection['near_duplicate_blocked'] ?? 0) > 0) {
+            $hints[] = 'phash_min_hamming senken, damit ähnliche Motive nicht verworfen werden.';
+        }
+
+        if (($prefilter['quality_floor'] ?? 0) > 0) {
+            $hints[] = 'quality_floor absenken, falls mehr schwächere Aufnahmen akzeptiert werden sollen.';
+        }
+
+        if (($prefilter['no_show'] ?? 0) > 0) {
+            $hints[] = 'No-Show-Markierungen prüfen, um ausgeschlossene Medien freizugeben.';
+        }
+
+        if ($postCount < $options->targetTotal && ($selection['fallback_used'] ?? 0) > 0) {
+            $hints[] = 'target_total oder Fallback-Strategie anpassen, weil zusätzliche Slots benötigt wurden.';
+        }
+
+        if ($preCount > 0 && $averages['keep_ratio'] !== null && $averages['keep_ratio'] < 0.5) {
+            $hints[] = 'Auswahlquote ist niedrig: Zielwerte für target_total oder Filter prüfen.';
+        }
+
+        return $hints;
     }
 
     private function resetCaches(): void
@@ -346,6 +659,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $this->timestampCache = [];
         $this->phashCache     = [];
         $this->dayIndex       = [];
+        $this->daySummaries   = [];
     }
 
     private function resolveTimestamp(Media $media): int
@@ -367,7 +681,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         return $timestamp;
     }
 
-    private function decodePhash(Media $media): ?string
+    private function resolvePhashHex(Media $media): ?string
     {
         $key = spl_object_id($media);
         if (array_key_exists($key, $this->phashCache)) {
@@ -375,25 +689,21 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         $hash = $media->getPhash64();
-        if ($hash === null) {
-            $hash = $media->getPhash();
-        }
-
-        if ($hash === null) {
-            $this->phashCache[$key] = null;
-
-            return null;
-        }
-
-        $decoded = hex2bin($hash);
-        if ($decoded === false) {
+        if (is_string($hash) && $hash !== '') {
             $this->phashCache[$key] = $hash;
 
             return $hash;
         }
 
-        $this->phashCache[$key] = $decoded;
+        $hash = $media->getPhash();
+        if (is_string($hash) && $hash !== '') {
+            $this->phashCache[$key] = $hash;
 
-        return $decoded;
+            return $hash;
+        }
+
+        $this->phashCache[$key] = null;
+
+        return null;
     }
 }

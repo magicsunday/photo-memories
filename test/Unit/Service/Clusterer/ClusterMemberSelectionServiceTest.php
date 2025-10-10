@@ -89,12 +89,24 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         self::assertSame(['pre' => 3, 'post' => 2, 'dropped' => 1], $selection['counts']);
         self::assertArrayHasKey('telemetry', $selection);
         self::assertSame(1, $selection['telemetry']['near_duplicate_blocked']);
+        self::assertSame($selection['counts'], $selection['telemetry']['counts']);
+        self::assertArrayHasKey('averages', $selection['telemetry']);
+        self::assertArrayHasKey('relaxation_hints', $selection['telemetry']);
         self::assertArrayHasKey('per_day_distribution', $selection);
         self::assertSame(['2024-05-20' => 1, '2024-05-21' => 1], $selection['per_day_distribution']);
+        self::assertArrayHasKey('per_bucket_distribution', $selection);
         self::assertArrayHasKey('spacing', $selection);
         self::assertGreaterThan(0.0, $selection['spacing']['average_seconds']);
+        self::assertArrayHasKey('rejections', $selection['spacing']);
+        self::assertSame(0, $selection['spacing']['rejections']);
+        self::assertArrayHasKey('near_duplicates', $selection);
+        self::assertSame(['blocked' => 1, 'replacements' => 0], $selection['near_duplicates']);
         self::assertArrayHasKey('hash_samples', $selection);
         self::assertCount(2, $selection['hash_samples']);
+        self::assertSame(
+            $selection['per_day_distribution'],
+            $selection['telemetry']['distribution']['per_day'],
+        );
     }
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, bool $isVideo, string $phash): Media
