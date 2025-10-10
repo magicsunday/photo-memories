@@ -109,10 +109,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString('scale=1280:720:force_original_aspect_ratio=increase,zoompan=z=if(gte(iw/ih\,1.778)\,1.05+(1.15-1.05)*min(on/224\,1)\,1)', $filterComplex);
+        self::assertStringContainsString("scale=1280:720:force_original_aspect_ratio=increase,zoompan=z='if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(on/224,1),1)'", $filterComplex);
         self::assertStringContainsString('s=1280x720', $filterComplex);
         self::assertStringContainsString(':fps=60', $filterComplex);
-        self::assertStringContainsString('crop=if(gte(iw/ih\,1.778)\,1280\,iw):if(gte(iw/ih\,1.778)\,720\,ih)', $filterComplex);
+        self::assertStringContainsString("crop='if(gte(iw/ih,1.778),1280,iw)':'if(gte(iw/ih,1.778),720,ih)'", $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringNotContainsString('pad=', $filterComplex);
@@ -174,9 +174,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString('zoompan=z=if(gte(iw/ih\,1.778)\,1.2+(1.3-1.2)*min(on/239', $filterComplex);
-        self::assertStringContainsString('x=if(gte(iw/ih\,1.778)\,clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/239', $filterComplex);
-        self::assertStringContainsString('y=if(gte(iw/ih\,1.778)\,clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/239', $filterComplex);
+        self::assertStringContainsString("zoompan=z='if(gte(iw/ih,1.778),1.2+(1.3-1.2)*min(on/239,1),1)'", $filterComplex);
+        self::assertStringContainsString("x='if(gte(iw/ih,1.778),clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/239,1),0,max(iw-(w/zoom),0)),(iw-w)/2)'", $filterComplex);
+        self::assertStringContainsString("y='if(gte(iw/ih,1.778),clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/239,1),0,max(ih-(h/zoom),0)),(ih-h)/2)'", $filterComplex);
         self::assertStringContainsString(':fps=60', $filterComplex);
         self::assertStringContainsString('s=1280x720', $filterComplex);
     }

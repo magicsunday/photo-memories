@@ -324,13 +324,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $index,
             $this->width,
             $this->height,
-            $zoomExpr,
-            $panXExpr,
-            $panYExpr,
+            $this->quoteFilterExpression($zoomExpr),
+            $this->quoteFilterExpression($panXExpr),
+            $this->quoteFilterExpression($panYExpr),
             $zoomSizeExpr,
             $zoompanFps,
-            $cropWidthExpr,
-            $cropHeightExpr,
+            $this->quoteFilterExpression($cropWidthExpr),
+            $this->quoteFilterExpression($cropHeightExpr),
         );
 
         return sprintf(
@@ -543,6 +543,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return $escaped;
+    }
+
+    private function quoteFilterExpression(string $expression): string
+    {
+        $normalized = str_replace('\\,', ',', $expression);
+
+        return sprintf("'%s'", str_replace("'", "\\'", $normalized));
     }
 
     private function formatFloat(float $value): string
