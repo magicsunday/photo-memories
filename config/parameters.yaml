@@ -142,6 +142,47 @@ parameters:
     # Description: Runtime minimum cluster members for vacation highlights, allowing environment overrides.
     memories.cluster.vacation.min_members: '%env(default:memories.cluster.vacation.min_members_default:int:MEMORIES_CLUSTER_VACATION_MIN_MEMBERS)%'
 
+    # Description: Default total number of curated media items selected for a vacation cluster.
+    memories.cluster.selection.target_total_default: 40
+    # Description: Runtime total number of curated media items selected for a vacation cluster.
+    memories.cluster.selection.target_total: '%env(default:memories.cluster.selection.target_total_default:int:MEMORIES_CLUSTER_SELECTION_TARGET_TOTAL)%'
+    # Description: Default maximum number of curated items per vacation day.
+    memories.cluster.selection.max_per_day_default: 8
+    # Description: Runtime maximum number of curated items per vacation day.
+    memories.cluster.selection.max_per_day: '%env(default:memories.cluster.selection.max_per_day_default:int:MEMORIES_CLUSTER_SELECTION_MAX_PER_DAY)%'
+    # Description: Default time slot width in hours for distributing curated selections across the day.
+    memories.cluster.selection.time_slot_hours_default: 3
+    # Description: Runtime time slot width in hours for distributing curated selections across the day.
+    memories.cluster.selection.time_slot_hours: '%env(default:memories.cluster.selection.time_slot_hours_default:int:MEMORIES_CLUSTER_SELECTION_TIME_SLOT_HOURS)%'
+    # Description: Default minimum spacing in seconds enforced between curated media items.
+    memories.cluster.selection.min_spacing_seconds_default: 900
+    # Description: Runtime minimum spacing in seconds enforced between curated media items.
+    memories.cluster.selection.min_spacing_seconds: '%env(default:memories.cluster.selection.min_spacing_seconds_default:int:MEMORIES_CLUSTER_SELECTION_MIN_SPACING_SECONDS)%'
+    # Description: Default minimum Hamming distance for perceptual hash comparisons between curated items.
+    memories.cluster.selection.phash_min_hamming_default: 6
+    # Description: Runtime minimum Hamming distance for perceptual hash comparisons between curated items.
+    memories.cluster.selection.phash_min_hamming: '%env(default:memories.cluster.selection.phash_min_hamming_default:int:MEMORIES_CLUSTER_SELECTION_PHASH_MIN_HAMMING)%'
+    # Description: Default maximum number of curated items sourced from a single staypoint.
+    memories.cluster.selection.max_per_staypoint_default: 4
+    # Description: Runtime maximum number of curated items sourced from a single staypoint.
+    memories.cluster.selection.max_per_staypoint: '%env(default:memories.cluster.selection.max_per_staypoint_default:int:MEMORIES_CLUSTER_SELECTION_MAX_PER_STAYPOINT)%'
+    # Description: Default bonus applied to the quality score of video media during curation.
+    memories.cluster.selection.video_bonus_default: 0.2
+    # Description: Runtime bonus applied to the quality score of video media during curation.
+    memories.cluster.selection.video_bonus: '%env(default:memories.cluster.selection.video_bonus_default:float:MEMORIES_CLUSTER_SELECTION_VIDEO_BONUS)%'
+    # Description: Default bonus applied when curated media contain faces.
+    memories.cluster.selection.face_bonus_default: 0.1
+    # Description: Runtime bonus applied when curated media contain faces.
+    memories.cluster.selection.face_bonus: '%env(default:memories.cluster.selection.face_bonus_default:float:MEMORIES_CLUSTER_SELECTION_FACE_BONUS)%'
+    # Description: Default penalty applied when curated media are classified as selfies.
+    memories.cluster.selection.selfie_penalty_default: 0.15
+    # Description: Runtime penalty applied when curated media are classified as selfies.
+    memories.cluster.selection.selfie_penalty: '%env(default:memories.cluster.selection.selfie_penalty_default:float:MEMORIES_CLUSTER_SELECTION_SELFIE_PENALTY)%'
+    # Description: Default minimum media quality score required to enter the curated selection.
+    memories.cluster.selection.quality_floor_default: 0.35
+    # Description: Runtime minimum media quality score required to enter the curated selection.
+    memories.cluster.selection.quality_floor: '%env(default:memories.cluster.selection.quality_floor_default:float:MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR)%'
+
     # Description: List of person identifiers that should always be treated as important for clustering.
     memories.cluster.cohort.important_person_ids: []
     # Description: List of fallback person identifiers used when important people are missing.

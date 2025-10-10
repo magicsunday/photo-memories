@@ -16,10 +16,13 @@ use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
+use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -62,6 +65,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private const int DAY_SLOT_HOURS                = 6;
     private const float QUALITY_BASELINE_MEGAPIXELS = 12.0;
 
+    private VacationSelectionOptions $selectionOptions;
+
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
      * @param int   $minAwayDays         minimum number of away days required to accept a vacation
@@ -74,6 +79,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private float $movementThresholdKm = 35.0,
         private int $minAwayDays = 1,
         private int $minMembers = 0,
+        private ?MemberSelectorInterface $memberSelector = null,
+        ?VacationSelectionOptions $selectionOptions = null,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -90,6 +98,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($this->minMembers < 0) {
             throw new InvalidArgumentException('minMembers must be >= 0.');
         }
+
+        $this->selectionOptions = $selectionOptions ?? new VacationSelectionOptions();
     }
 
     /**
@@ -518,9 +528,27 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'cohort_members'            => $cohortMemberAggregate,
             'work_day_penalty_days'    => $workDayPenalty,
             'work_day_penalty_score'   => round($penalty, 2),
+            'curation_selector'        => $this->memberSelector !== null ? $this->memberSelector::class : null,
+            'curation_target_total'    => $this->selectionOptions->targetTotal,
+            'curation_max_per_day'     => $this->selectionOptions->maxPerDay,
+            'curation_min_spacing_s'   => $this->selectionOptions->minSpacingSeconds,
+            'curation_phash_min_hamming'=> $this->selectionOptions->phashMinHamming,
             'timezones'                => $timezones,
             'countries'                => $countries,
         ];
+
+        if ($this->monitoringEmitter !== null) {
+            $this->monitoringEmitter->emit(
+                'vacation_curation',
+                'configured',
+                [
+                    'selector'      => $params['curation_selector'],
+                    'target_total'  => $this->selectionOptions->targetTotal,
+                    'max_per_day'   => $this->selectionOptions->maxPerDay,
+                    'quality_floor' => $this->selectionOptions->qualityFloor,
+                ]
+            );
+        }
 
         if ($placeComponents !== []) {
             $city    = $placeComponents['city'] ?? null;

@@ -23,8 +23,9 @@ interface MemberSelectorInterface
     /**
      * Selects a curated list of media for the provided day summaries.
      *
-     * @param array<string, DaySummary> $daySummaries indexed by ISO date (Y-m-d)
-     * @param HomeDescriptor            $home          descriptor of the primary home location
+     * @param array<string, DaySummary>         $daySummaries indexed by ISO date (Y-m-d)
+     * @param HomeDescriptor                    $home          descriptor of the primary home location
+     * @param VacationSelectionOptions|null     $options       curated selection configuration
      */
-    public function select(array $daySummaries, array $home, VacationSelectionOptions $options): SelectionResult;
+    public function select(array $daySummaries, array $home, ?VacationSelectionOptions $options = null): SelectionResult;
 }

@@ -52,18 +52,23 @@ final class VacationMemberSelector implements MemberSelectorInterface
      */
     private array $telemetry = [];
 
+    private readonly VacationSelectionOptions $defaultOptions;
+
     public function __construct(
         private readonly MediaQualityAggregator $qualityAggregator,
         private readonly SimilarityMetrics $metrics,
+        ?VacationSelectionOptions $defaultOptions = null,
     ) {
+        $this->defaultOptions = $defaultOptions ?? new VacationSelectionOptions();
     }
 
     /**
      * @param array<string, DaySummary> $daySummaries
      * @param HomeDescriptor            $home
      */
-    public function select(array $daySummaries, array $home, VacationSelectionOptions $options): SelectionResult
+    public function select(array $daySummaries, array $home, ?VacationSelectionOptions $options = null): SelectionResult
     {
+        $options ??= $this->defaultOptions;
         $this->telemetry = [
             'prefilter_total'            => 0,
             'prefilter_no_show'          => 0,
