@@ -64,7 +64,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
    ```
 4. **Umgebung konfigurieren**
    - `.env` anlegen (siehe `.env.dist`, falls vorhanden) oder Environment-Variablen setzen. `EnvironmentBootstrap::boot()` sucht nacheinander im Arbeitsverzeichnis, in PHAR-Pfaden und im Repository-Root nach `.env`-Dateien und lädt `.env.local`-Varianten automatisch.
-   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_HOME_LAT/LON`, `MEMORIES_THUMBNAIL_DIR`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`.
+   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_HOME_LAT/LON`, `MEMORIES_THUMBNAIL_DIR`, `MEMORIES_THUMBNAIL_APPLY_ORIENTATION`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`.
 5. **Datenbank vorbereiten**
    ```bash
    bin/console doctrine:database:create
@@ -105,7 +105,7 @@ make web-dev
 
 ## Konfiguration & Tuning
 
-- **Indexierung**: Dateiendungen, Batch-Größe, Hash-Parameter und Thumbnail-Ausrichtung sind in `config/parameters.yaml` definiert und via `.env` überschreibbar.
+- **Indexierung**: Dateiendungen, Batch-Größe, Hash-Parameter und die (standardmäßig aktive) EXIF-Thumbnail-Ausrichtung sind in `config/parameters.yaml` definiert und via `.env` überschreibbar.
 - **Geocoding**: Zeitversatz, POI-Radius, erlaubte Kategorien und bevorzugte Locale lassen sich zentral konfigurieren.
 - **Cluster & Feed**: Konsolidierungsregeln, Gruppen, Prioritäten sowie Limits pro Strategie stehen in `config/parameters.yaml`. Anpassungen wirken sich unmittelbar auf Konsolidierung und Feed-Ranking aus.
 - **Video/Thumbnails**: Pfade zu `ffmpeg`/`ffprobe`, Ausgabeverzeichnisse, Bildgrößen und Orientierungsverhalten sind parametrisiert.
