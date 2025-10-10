@@ -11,11 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
+use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function array_search;
 use function count;
+use function preg_match;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -54,5 +57,63 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
 
         self::assertContains('subtitle=01.02.2024 – 14.02.2024', $metadataEntries);
+    }
+
+    public function testTitleOverlayIsAppliedOnlyToFirstSlide(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'example',
+            '/tmp/example.json',
+            '/tmp/out.mp4',
+            '/tmp/out.lock',
+            '/tmp/out.error',
+            ['/tmp/cover.jpg', '/tmp/second.jpg'],
+            $slides,
+            null,
+            null,
+            'Rückblick',
+            '01.01.2024 – 31.01.2024'
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+        self::assertStringContainsString("[0:v]scale=", $filterComplex);
+        self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
+        self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
+        self::assertStringNotContainsString('[vtmp]', $filterComplex);
+        self::assertSame(
+            0,
+            preg_match('/\\[1:v][^;\\[]*drawtext/', $filterComplex),
+            'Overlay should only appear on the cover slide.'
+        );
     }
 }

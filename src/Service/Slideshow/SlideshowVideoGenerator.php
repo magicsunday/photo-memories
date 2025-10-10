@@ -16,8 +16,6 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 use function array_filter;
-use function array_keys;
-use function array_map;
 use function array_merge;
 use function count;
 use function dirname;
@@ -201,33 +199,36 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ]);
         }
 
-        $filters = array_map(
-            function (int $index) use ($slides, $transitionDuration): string {
-                $duration           = $this->resolveSlideDuration($slides[$index]['duration']);
-                $durationWithOverlap = max(0.1, $duration + $transitionDuration);
+        $filters             = [];
+        $overlayFilterChain  = $this->buildTextOverlayFilterChain($title, $subtitle);
+        $transitionCount     = count($this->transitions);
 
-                return sprintf(
+        foreach ($slides as $index => $slide) {
+            $duration            = $this->resolveSlideDuration($slide['duration']);
+            $durationWithOverlap = max(0.1, $duration + $transitionDuration);
+
+            $filter = sprintf(
                 '[%1$d:v]scale=%2$d:%3$d:force_original_aspect_ratio=decrease,' .
-                'pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1,' .
-                'trim=duration=%4$.3f,setpts=PTS-STARTPTS[s%1$d]',
+                'pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1',
                 $index,
                 $this->width,
-                $this->height,
-                $durationWithOverlap
-                );
-            },
-            array_keys($slides),
-        );
+                $this->height
+            );
 
-        $transitionCount = count($this->transitions);
-        $current         = '[s0]';
-        $offset          = $this->resolveSlideDuration($slides[0]['duration']);
-        $needsOverlay    = $this->hasTextOverlay($title, $subtitle);
-        $finalLabel      = $needsOverlay ? '[vtmp]' : '[vout]';
+            if ($index === 0 && $overlayFilterChain !== '') {
+                $filter = sprintf('%s,%s', $filter, $overlayFilterChain);
+            }
+
+            $filter .= sprintf(',trim=duration=%1$.3f,setpts=PTS-STARTPTS[s%2$d]', $durationWithOverlap, $index);
+            $filters[] = $filter;
+        }
+
+        $current = '[s0]';
+        $offset  = $this->resolveSlideDuration($slides[0]['duration']);
 
         for ($index = 1; $index < count($slides); ++$index) {
             $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
-            $targetLabel = $index === count($slides) - 1 ? $finalLabel : sprintf('[tmp%d]', $index);
+            $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f%s',
                 $current,
@@ -239,10 +240,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             );
             $current = $targetLabel;
             $offset += $this->resolveSlideDuration($slides[$index]['duration']);
-        }
-
-        if ($needsOverlay) {
-            $filters[] = $this->buildOverlayFilter($finalLabel, '[vout]', $title, $subtitle);
         }
 
         $filterComplex = implode(';', $filters);
@@ -347,16 +344,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return sprintf('%s,%s', $filter, $overlay);
-    }
-
-    private function buildOverlayFilter(string $inputLabel, string $outputLabel, ?string $title, ?string $subtitle): string
-    {
-        $overlay = $this->buildTextOverlayFilterChain($title, $subtitle);
-        if ($overlay === '') {
-            return sprintf('%sformat=yuv420p%s', $inputLabel, $outputLabel);
-        }
-
-        return sprintf('%s%s%s', $inputLabel, $overlay, $outputLabel);
     }
 
     private function hasTextOverlay(?string $title, ?string $subtitle): bool
