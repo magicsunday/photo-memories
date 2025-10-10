@@ -937,6 +937,65 @@ final class FeedControllerTest extends TestCase
         unlink($storagePath);
     }
 
+    public function testThumbnailRegeneratesWhenMetadataIsStale(): void
+    {
+        $feedBuilder       = $this->createMock(FeedBuilderInterface::class);
+        $clusterRepo       = $this->createMock(ClusterRepository::class);
+        $mapper            = new ClusterEntityToDraftMapper([]);
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $original = tempnam(sys_get_temp_dir(), 'orig');
+        $generated = tempnam(sys_get_temp_dir(), 'regen');
+        self::assertIsString($original);
+        self::assertIsString($generated);
+        file_put_contents($original, 'original');
+        file_put_contents($generated, 'generated');
+
+        $media = new Media($original, 'checksum-987', 11);
+        $media->setThumbnails([320 => $original . '-missing.jpg']);
+        $this->assignEntityId($media, 44);
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([44], false)
+            ->willReturn([$media]);
+
+        $thumbnailService->expects(self::once())
+            ->method('generateAll')
+            ->with($original, $media)
+            ->willReturn([320 => $generated]);
+
+        $entityManager->expects(self::once())
+            ->method('flush');
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/media/44/thumbnail', 'GET', ['breite' => '320']);
+        $response = $controller->thumbnail($request, 44);
+
+        self::assertInstanceOf(BinaryFileResponse::class, $response);
+        self::assertSame($generated, $response->getFilePath());
+        self::assertSame([320 => $generated], $media->getThumbnails());
+
+        unlink($original);
+        unlink($generated);
+        unlink($storagePath);
+    }
+
     /**
      * @return array{0: FeedController, 1: string}
      */
