@@ -834,9 +834,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         return $isWeekend || $isHoliday;
     }
 
-    }
-
-
+    /**
+     * Normalizes a location label by replacing separators and capitalising its parts.
+     */
     private function formatLocationComponent(string $value): string
     {
         $value = str_replace('_', ' ', $value);
