@@ -73,7 +73,7 @@ parameters:
     # Description: Maximum number of feed items allowed per HTTP request.
     memories.http.feed.max_limit: 120
     # Description: Number of preview images returned for each cluster in HTTP responses.
-    memories.http.feed.preview_images: 20
+    memories.http.feed.preview_images: 8
     # Description: Multiplier used to expand cluster membership when fetching feed items.
     memories.http.feed.cluster_multiplier: 4
     # Description: Width in pixels for feed cover images served via HTTP.
