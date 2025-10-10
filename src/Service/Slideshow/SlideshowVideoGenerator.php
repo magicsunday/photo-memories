@@ -292,9 +292,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $panYExpr = sprintf('if(gte(iw/ih,%1$s),(ih-oh)/2,(ih-oh)/2)', $targetAspectRatio);
         }
 
+        $zoomWidthExpr  = sprintf('if(gte(iw/ih,%1$s),%2$d,iw)', $targetAspectRatio, $this->width);
+        $zoomHeightExpr = sprintf('if(gte(iw/ih,%1$s),%2$d,ih)', $targetAspectRatio, $this->height);
+        $zoomSizeExpr   = sprintf('%1$sx%2$s', $zoomWidthExpr, $zoomHeightExpr);
+
         $foreground = sprintf(
             "[fg%1\$d]scale=-1:%3\$d," .
-            "zoompan=z='%4\$s':x='%5\$s':y='%6\$s':d=1:s=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih)," .
+            "zoompan=z='%4\$s':x='%5\$s':y='%6\$s':d=1:s='%8\$s'," .
             "crop=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih):(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
             $index,
             $this->width,
@@ -303,6 +307,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $panXExpr,
             $panYExpr,
             $targetAspectRatio,
+            $zoomSizeExpr,
         );
 
         return sprintf(
