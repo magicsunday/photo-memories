@@ -62,7 +62,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'pixelize',
     ];
 
-    private const int ZOOMPAN_FPS = 60;
+    private const int ZOOMPAN_FPS = 30;
 
     /**
      * @param list<string> $transitions
@@ -71,8 +71,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly string $ffmpegBinary = 'ffmpeg',
         private readonly float $slideDuration = 3.0,
         private readonly float $transitionDuration = 0.75,
-        private readonly int $width = 1280,
-        private readonly int $height = 720,
+        private readonly int $width = 1920,
+        private readonly int $height = 1080,
         private readonly array $transitions = self::DEFAULT_TRANSITIONS,
         private readonly ?string $audioTrack = null,
         private readonly ?string $fontFile = null,
@@ -179,6 +179,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             'error',
             '-loop',
             '1',
+            '-framerate',
+            '30',
             '-t',
             sprintf('%0.3f', max(0.1, $duration)),
             '-i',
@@ -211,6 +213,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $command = array_merge($command, [
                 '-loop',
                 '1',
+                '-framerate',
+                '30',
                 '-t',
                 sprintf('%0.3f', $durationWithOverlap),
                 '-i',
@@ -404,6 +408,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-map';
         $command[] = '[vout]';
+        $command[] = '-r';
+        $command[] = '30';
+        $command[] = '-c:v';
+        $command[] = 'libx264';
+        $command[] = '-crf';
+        $command[] = '18';
+        $command[] = '-preset';
+        $command[] = 'medium';
         $command[] = '-movflags';
         $command[] = '+faststart';
         $command[] = '-pix_fmt';
