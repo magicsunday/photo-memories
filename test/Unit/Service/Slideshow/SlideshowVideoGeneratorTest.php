@@ -283,4 +283,32 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $wrapped = $method->invoke($generator, null, $transitionCount, $transitionCount);
         self::assertSame($defaults[0], $wrapped);
     }
+
+    public function testEscapeFilterExpressionMasksEveryCommaExactlyOnce(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('escapeFilterExpression');
+        $method->setAccessible(true);
+
+        $expression = 'if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(t/4.3,1),1)';
+
+        /** @var string $escaped */
+        $escaped = $method->invoke($generator, $expression);
+
+        self::assertSame(
+            'if(gte(iw/ih\,1.778)\,1.05+(1.15-1.05)*min(t/4.3\,1)\,1)',
+            $escaped,
+        );
+
+        self::assertSame(0, preg_match('/(?<!\\\\),/', $escaped));
+
+        $preEscapedExpression = 'min(t/4.3\,1)';
+
+        /** @var string $alreadyEscaped */
+        $alreadyEscaped = $method->invoke($generator, $preEscapedExpression);
+
+        self::assertSame($preEscapedExpression, $alreadyEscaped);
+    }
 }

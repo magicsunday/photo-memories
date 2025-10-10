@@ -519,7 +519,22 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private function escapeFilterExpression(string $expression): string
     {
-        return (string) preg_replace('/(?<!\\\\),/', '\\,', $expression);
+        $length  = strlen($expression);
+        $escaped = '';
+
+        for ($index = 0; $index < $length; ++$index) {
+            $character = $expression[$index];
+            if ($character === ',') {
+                $previous = $index > 0 ? $expression[$index - 1] : null;
+                if ($previous !== '\\') {
+                    $escaped .= '\\';
+                }
+            }
+
+            $escaped .= $character;
+        }
+
+        return $escaped;
     }
 
     private function formatFloat(float $value): string
