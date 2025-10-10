@@ -482,7 +482,7 @@ parameters:
     # Description: Sigma value of the gaussian blur used for slideshow backgrounds.
     memories.slideshow.background_blur_sigma: 32.0
     # Description: Flag indicating whether animated zoom/pan is enabled for slideshow slides by default.
-    memories.slideshow.ken_burns_enabled_default: false
+    memories.slideshow.ken_burns_enabled_default: true
     # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.
     memories.slideshow.ken_burns_enabled: '%env(default:memories.slideshow.ken_burns_enabled_default:bool:MEMORIES_SLIDESHOW_KEN_BURNS)%'
     # Description: Initial zoom factor used when the animated zoom/pan effect is enabled.

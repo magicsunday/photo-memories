@@ -109,7 +109,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString("scale=-1:720,zoompan=z='1'", $filterComplex);
+        self::assertStringContainsString("scale=-1:720,zoompan=z='if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(PTS/3.75,1),1)'", $filterComplex);
         self::assertStringContainsString("crop=if(gte(iw/ih,1.778),1280,iw):if(gte(iw/ih,1.778),720,ih)", $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
