@@ -17,6 +17,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -63,6 +64,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
 
+    private SelectionProfileProvider $selectionProfiles;
+
+    private string $selectionProfileKey;
+
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
      * @param int   $minAwayDays         minimum number of away days required to accept a vacation
@@ -71,7 +76,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     public function __construct(
         private LocationHelper $locationHelper,
         private MemberSelectorInterface $memberSelector,
-        private VacationSelectionOptions $selectionOptions,
+        SelectionProfileProvider $selectionProfiles,
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
@@ -79,6 +84,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private int $minMembers = 0,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
+        $this->selectionProfiles   = $selectionProfiles;
+        $this->selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation');
+
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
         }
@@ -483,7 +491,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $this->monitoringEmitter->emit('vacation_curation', 'selection_start', $startPayload);
         }
 
-        $selectionResult    = $this->memberSelector->select($acceptedSummaries, $home, $this->selectionOptions);
+        $selectionOptions   = $this->selectionProfiles->createOptions($this->selectionProfileKey);
+        $selectionResult    = $this->memberSelector->select($acceptedSummaries, $home, $selectionOptions);
         $curatedMembers     = $selectionResult->getMembers();
         $selectionTelemetry = $selectionResult->getTelemetry();
         $selectedCount      = count($curatedMembers);
@@ -626,16 +635,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'per_day_distribution' => $orderedDistribution,
             'options' => [
                 'selector'            => $this->memberSelector::class,
-                'target_total'        => $this->selectionOptions->targetTotal,
-                'max_per_day'         => $this->selectionOptions->maxPerDay,
-                'time_slot_hours'     => $this->selectionOptions->timeSlotHours,
-                'min_spacing_seconds' => $this->selectionOptions->minSpacingSeconds,
-                'phash_min_hamming'   => $this->selectionOptions->phashMinHamming,
-                'max_per_staypoint'   => $this->selectionOptions->maxPerStaypoint,
-                'video_bonus'         => $this->selectionOptions->videoBonus,
-                'face_bonus'          => $this->selectionOptions->faceBonus,
-                'selfie_penalty'      => $this->selectionOptions->selfiePenalty,
-                'quality_floor'       => $this->selectionOptions->qualityFloor,
+                'target_total'        => $selectionOptions->targetTotal,
+                'max_per_day'         => $selectionOptions->maxPerDay,
+                'time_slot_hours'     => $selectionOptions->timeSlotHours,
+                'min_spacing_seconds' => $selectionOptions->minSpacingSeconds,
+                'phash_min_hamming'   => $selectionOptions->phashMinHamming,
+                'max_per_staypoint'   => $selectionOptions->maxPerStaypoint,
+                'video_bonus'         => $selectionOptions->videoBonus,
+                'face_bonus'          => $selectionOptions->faceBonus,
+                'selfie_penalty'      => $selectionOptions->selfiePenalty,
+                'quality_floor'       => $selectionOptions->qualityFloor,
             ],
             'telemetry' => $selectionTelemetry,
         ];

@@ -184,8 +184,77 @@ parameters:
     memories.cluster.selection.quality_floor: '%env(default:memories.cluster.selection.quality_floor_default:float:MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR)%'
     # Description: Default profile identifier used for member selection when none is provided by the draft.
     memories.cluster.selection.default_profile: 'default'
-    # Description: Named selection profiles overriding the default curator options.
-    memories.cluster.selection.profiles: []
+    # Description: Named selection profiles overriding default curator options per algorithm family.
+    memories.cluster.selection.profile_values:
+        default: []
+        vacation_weekend_transit:
+            target_total: 48
+            max_per_day: 10
+            min_spacing_seconds: 600
+        location:
+            target_total: 36
+            max_per_day: 9
+            min_spacing_seconds: 540
+        scene:
+            target_total: 28
+            max_per_day: 8
+            min_spacing_seconds: 480
+        device:
+            target_total: 24
+            max_per_day: 12
+            min_spacing_seconds: 300
+        this_day_month:
+            target_total: 24
+            max_per_day: 8
+            min_spacing_seconds: 600
+        people_friends:
+            target_total: 32
+            max_per_day: 9
+            min_spacing_seconds: 480
+        highlights:
+            target_total: 36
+            max_per_day: 12
+            min_spacing_seconds: 360
+    # Description: Mapping between cluster algorithms and selection profile keys.
+    memories.cluster.selection.algorithm_profiles:
+        vacation: 'vacation_weekend_transit'
+        weekend_getaways_over_years: 'vacation_weekend_transit'
+        transit_travel_day: 'vacation_weekend_transit'
+        significant_place: 'location'
+        first_visit_place: 'location'
+        location_similarity: 'location'
+        cross_dimension: 'location'
+        day_album: 'this_day_month'
+        time_similarity: 'this_day_month'
+        on_this_day_over_years: 'this_day_month'
+        one_year_ago: 'this_day_month'
+        this_month_over_years: 'this_day_month'
+        monthly_highlights: 'highlights'
+        year_in_review: 'highlights'
+        video_stories: 'highlights'
+        snow_vacation_over_years: 'vacation_weekend_transit'
+        snow_day: 'scene'
+        cityscape_night: 'scene'
+        hike_adventure: 'vacation_weekend_transit'
+        significant_place_highlights: 'highlights'
+        golden_hour: 'scene'
+        holiday_event: 'scene'
+        nightlife_event: 'scene'
+        new_year_eve: 'scene'
+        season: 'scene'
+        season_over_years: 'scene'
+        panorama: 'scene'
+        panorama_over_years: 'scene'
+        portrait_orientation: 'scene'
+        photo_motif: 'scene'
+        burst: 'device'
+        device_similarity: 'device'
+        phash_similarity: 'device'
+        people_cohort: 'people_friends'
+        person_cohort: 'people_friends'
+        anniversary: 'people_friends'
+        at_home_weekday: 'people_friends'
+        at_home_weekend: 'people_friends'
 
     # Description: List of person identifiers that should always be treated as important for clustering.
     memories.cluster.cohort.important_person_ids: []

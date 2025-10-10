@@ -762,10 +762,13 @@ services:
             $selfiePenalty: '%memories.cluster.selection.selfie_penalty%'
             $qualityFloor: '%memories.cluster.selection.quality_floor%'
 
-    MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider:
+    MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider:
         arguments:
             $defaultProfile: '%memories.cluster.selection.default_profile%'
-            $profiles: '%memories.cluster.selection.profiles%'
+            $profiles: '%memories.cluster.selection.profile_values%'
+            $algorithmProfiles: '%memories.cluster.selection.algorithm_profiles%'
+
+    MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider: ~
 
     MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector:
         arguments:
@@ -786,7 +789,7 @@ services:
             $minAwayDays: '%memories.cluster.vacation.min_away_days%'
             $minMembers: '%memories.cluster.vacation.min_members%'
             $memberSelector: '@MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface'
-            $selectionOptions: '@MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions'
+            $selectionProfiles: '@MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:

@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
@@ -35,7 +37,12 @@ use function sprintf;
 )]
 final class ClusterCommand extends Command
 {
-    public function __construct(private readonly ClusterJobRunnerInterface $runner)
+    use SelectionOverrideInputTrait;
+
+    public function __construct(
+        private readonly ClusterJobRunnerInterface $runner,
+        private readonly SelectionProfileProvider $selectionProfiles,
+    )
     {
         parent::__construct();
     }
@@ -47,6 +54,8 @@ final class ClusterCommand extends Command
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl Medien')
             ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD)')
             ->addOption('replace', null, InputOption::VALUE_NONE, 'Bestehende Cluster vor dem Speichern löschen');
+
+        $this->configureSelectionOverrideOptions();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -82,6 +91,16 @@ final class ClusterCommand extends Command
                 $limitValue = $limitAsInt;
             }
         }
+
+        try {
+            $selectionOverrides = $this->resolveSelectionOverrides($input);
+        } catch (InvalidArgumentException $exception) {
+            $io->error($exception->getMessage());
+
+            return Command::INVALID;
+        }
+
+        $this->selectionProfiles->setRuntimeOverrides($selectionOverrides);
 
         $options = new ClusterJobOptions($dryRun, $limitValue, $sinceValue, $replace);
 
