@@ -33,6 +33,7 @@ use function hash;
 use function max;
 use function min;
 use function mkdir;
+use function round;
 use function rtrim;
 use function sprintf;
 use function str_replace;
@@ -180,10 +181,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $duration = $this->resolveSlideDuration($slide['duration']);
+        $duration = max(2.5, $this->resolveSlideDuration($slide['duration']));
         $filter   = $this->buildBlurredSlideFilter(0, $duration);
 
-        $filter = $this->appendTextOverlayFilter($filter, $title, $subtitle);
+        $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
         $filter .= sprintf(
             ',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]',
             max(0.1, $duration)
@@ -241,11 +242,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         foreach ($slides as $index => $slide) {
             $duration = $this->resolveSlideDuration($slide['duration']);
+            if ($index === 0) {
+                $duration = max(2.5, $duration);
+            }
 
             $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
             $nextTransition      = $transitionDurations[$index] ?? 0.0;
             $overlap             = max($previousTransition, $nextTransition);
             $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
+
+            if ($index === 0) {
+                $durationWithOverlap = max(2.5, $durationWithOverlap);
+            }
 
             $command = array_merge($command, [
                 '-loop',
@@ -259,21 +267,28 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ]);
         }
 
-        $filters            = [];
-        $overlayFilterChain = $this->buildTextOverlayFilterChain($title, $subtitle);
+        $filters             = [];
+        $introOverlayFilter  = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
             $duration = $this->resolveSlideDuration($slide['duration']);
+            if ($index === 0) {
+                $duration = max(2.5, $duration);
+            }
 
             $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
             $nextTransition      = $transitionDurations[$index] ?? 0.0;
             $overlap             = max($previousTransition, $nextTransition);
             $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
 
+            if ($index === 0) {
+                $durationWithOverlap = max(2.5, $durationWithOverlap);
+            }
+
             $filter = $this->buildBlurredSlideFilter($index, $durationWithOverlap);
 
-            if ($index === 0 && $overlayFilterChain !== '') {
-                $filter = sprintf('%s,%s', $filter, $overlayFilterChain);
+            if ($index === 0 && $introOverlayFilter !== '') {
+                $filter = sprintf('%s,%s', $filter, $introOverlayFilter);
             }
 
             $filter .= sprintf(',trim=duration=%1$.3f,setpts=PTS-STARTPTS[s%2$d]', $durationWithOverlap, $index);
@@ -281,7 +296,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $current        = '[s0]';
-        $offset         = $this->resolveSlideDuration($slides[0]['duration']);
+        $offset         = max(2.5, $this->resolveSlideDuration($slides[0]['duration']));
         $fallbackIndex  = 0;
         $previousChoice = null;
 
@@ -341,7 +356,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
-        $targetAspectRatio   = $this->formatFloat($this->width / $this->height);
         $durationSecondsValue = max(0.1, $duration);
         $frameCount           = max(2, (int) ceil($durationSecondsValue * self::ZOOMPAN_FPS));
         $maxFrameIndex        = $frameCount - 1;
@@ -349,52 +363,53 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->kenBurnsEnabled) {
             $zoomExpr = $this->escapeFilterExpression(sprintf(
-                'if(gte(iw/ih,%1$s),%2$s+(%3$s-%2$s)*%4$s,1)',
-                $targetAspectRatio,
+                '%1$s+(%2$s-%1$s)*%3$s',
                 $this->formatFloat($this->zoomStart),
                 $this->formatFloat($this->zoomEnd),
                 $progressExpr,
             ));
 
             $panXExpr = $this->escapeFilterExpression(sprintf(
-                'if(gte(iw/ih,%1$s),clip((iw-(w/zoom))/2 + %2$s*(iw-(w/zoom))/2*%3$s,0,max(iw-(w/zoom),0)),(iw-w)/2)',
-                $targetAspectRatio,
+                'clip((iw-(iw/zoom))/2 + %1$s*(iw-(iw/zoom))/2*%2$s,0,max(iw-(iw/zoom),0))',
                 $this->formatFloat($this->panX),
                 $progressExpr,
             ));
 
             $panYExpr = $this->escapeFilterExpression(sprintf(
-                'if(gte(iw/ih,%1$s),clip((ih-(h/zoom))/2 + %2$s*(ih-(h/zoom))/2*%3$s,0,max(ih-(h/zoom),0)),(ih-h)/2)',
-                $targetAspectRatio,
+                'clip((ih-(ih/zoom))/2 + %1$s*(ih-(ih/zoom))/2*%2$s,0,max(ih-(ih/zoom),0))',
                 $this->formatFloat($this->panY),
                 $progressExpr,
             ));
         } else {
             $zoomExpr = '1';
-            $panXExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(iw-w)/2,(iw-w)/2)', $targetAspectRatio));
-            $panYExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(ih-h)/2,(ih-h)/2)', $targetAspectRatio));
+            $panXExpr = '0';
+            $panYExpr = '0';
         }
-
-        $zoomSizeExpr = sprintf('%1$dx%2$d', $this->width, $this->height);
-        $cropWidthExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,iw)', $targetAspectRatio, $this->width));
-        $cropHeightExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,ih)', $targetAspectRatio, $this->height));
 
         $zoompanFps = $this->formatFloat((float) self::ZOOMPAN_FPS);
 
         $foreground = sprintf(
-            "[fg%1\$d]scale=%2\$d:%3\$d:force_original_aspect_ratio=increase," .
-            "zoompan=z=%4\$s:x=%5\$s:y=%6\$s:d=1:s=%7\$s:fps=%8\$s," .
-            "crop=%9\$s:%10\$s:(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
+            '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease',
             $index,
             $this->width,
             $this->height,
-            $this->quoteFilterExpression($zoomExpr),
-            $this->quoteFilterExpression($panXExpr),
-            $this->quoteFilterExpression($panYExpr),
-            $zoomSizeExpr,
-            $zoompanFps,
-            $this->quoteFilterExpression($cropWidthExpr),
-            $this->quoteFilterExpression($cropHeightExpr),
+        );
+
+        if ($this->kenBurnsEnabled) {
+            $foreground .= sprintf(
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:s=iwxih:fps=%4$s',
+                $this->quoteFilterExpression($zoomExpr),
+                $this->quoteFilterExpression($panXExpr),
+                $this->quoteFilterExpression($panYExpr),
+                $zoompanFps,
+            );
+        }
+
+        $foreground .= sprintf(
+            ',pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2,crop=%2$d:%3$d:(in_w-out_w)/2:(in_h-out_h)/2[fg%1$dout];',
+            $index,
+            $this->width,
+            $this->height,
         );
 
         return sprintf(
@@ -634,6 +649,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return $command;
     }
 
+    private function appendIntroOverlayFilter(string $filter, ?string $title, ?string $subtitle): string
+    {
+        $overlay = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
+        if ($overlay === '') {
+            return $filter;
+        }
+
+        return sprintf('%s,%s', $filter, $overlay);
+    }
+
     private function appendTextOverlayFilter(string $filter, ?string $title, ?string $subtitle): string
     {
         $overlay = $this->buildTextOverlayFilterChain($title, $subtitle);
@@ -667,6 +692,35 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         if ($titleText !== null) {
             $titleY    = $subtitleText !== null ? 'h-80-line_h-30' : 'h-80';
             $filters[] = $this->buildDrawTextFilter($titleText, 64, 'w*0.05', $titleY);
+        }
+
+        return implode(',', array_filter($filters));
+    }
+
+    private function buildIntroTextOverlayFilterChain(?string $title, ?string $subtitle): string
+    {
+        if (!$this->hasTextOverlay($title, $subtitle)) {
+            return '';
+        }
+
+        $filters          = [];
+        $marginXExpr      = 'w*0.07';
+        $marginYExpr      = 'h*0.07';
+        $titleFontSize    = max(1, (int) round($this->height * 0.055));
+        $subtitleFontSize = max(1, (int) round($this->height * 0.034));
+
+        $titleText    = $this->normaliseDrawText($title);
+        $subtitleText = $this->normaliseDrawText($subtitle);
+
+        if ($titleText !== null) {
+            $filters[] = $this->buildDrawTextFilter($titleText, $titleFontSize, $marginXExpr, sprintf('%s+line_h', $marginYExpr));
+        }
+
+        if ($subtitleText !== null) {
+            $subtitleY = $titleText !== null
+                ? sprintf('%s+%d+h*0.02+line_h', $marginYExpr, $titleFontSize)
+                : sprintf('%s+line_h', $marginYExpr);
+            $filters[] = $this->buildDrawTextFilter($subtitleText, $subtitleFontSize, $marginXExpr, $subtitleY);
         }
 
         return implode(',', array_filter($filters));
