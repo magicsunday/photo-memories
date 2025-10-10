@@ -389,6 +389,9 @@ function createCard(item) {
 
       const img = document.createElement('img');
       img.src = image.thumbnail;
+      const detailSource = typeof image.lightbox === 'string' && image.lightbox !== ''
+        ? image.lightbox
+        : image.thumbnail;
       const takenAtLabel = formatDateTime(image.aufgenommenAm);
       const mediaIdLabel = image.mediaId ? `Medien-ID ${image.mediaId}` : 'Medienvorschau';
       img.alt = takenAtLabel ? `${mediaIdLabel}, aufgenommen am ${takenAtLabel}` : mediaIdLabel;
@@ -409,13 +412,13 @@ function createCard(item) {
       }
 
       const activateLightbox = () => {
-        if (lightbox.isVisible() && lightbox.getCurrentSource() === image.thumbnail) {
+        if (lightbox.isVisible() && lightbox.getCurrentSource() === detailSource) {
           lightbox.hide();
 
           return;
         }
 
-        lightbox.show(image.thumbnail, img.alt, captionText, figure);
+        lightbox.show(detailSource, img.alt, captionText, figure);
       };
 
       figure.addEventListener('click', activateLightbox);

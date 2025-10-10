@@ -80,6 +80,8 @@ parameters:
     memories.http.feed.cover_width: 640
     # Description: Width in pixels for feed member thumbnails served via HTTP.
     memories.http.feed.member_width: 320
+    # Description: Width in pixels for lightbox previews served via HTTP.
+    memories.http.feed.lightbox_width: 1024
     # Description: Maximum thumbnail width in pixels allowed for feed imagery.
     memories.http.feed.max_thumbnail_width: 2048
     # Description: Notification channels and their schedules for feed reminders.

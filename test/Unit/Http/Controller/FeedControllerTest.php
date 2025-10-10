@@ -160,6 +160,8 @@ final class FeedControllerTest extends TestCase
         self::assertSame('2024-01-01T10:00:00+00:00', $payload['items'][0]['coverAufgenommenAm']);
 
         $gallery = $payload['items'][0]['galerie'];
+        self::assertSame('http://localhost/api/media/1/thumbnail?breite=320', $gallery[0]['thumbnail']);
+        self::assertSame('http://localhost/api/media/1/thumbnail?breite=1024', $gallery[0]['lightbox']);
         self::assertSame('2024-01-01T10:00:00+00:00', $gallery[0]['aufgenommenAm']);
         self::assertSame('2024-01-02T11:15:00+00:00', $gallery[1]['aufgenommenAm']);
         self::assertSame('2024-01-03T12:30:00+00:00', $gallery[2]['aufgenommenAm']);
@@ -1066,6 +1068,7 @@ final class FeedControllerTest extends TestCase
             4,
             640,
             320,
+            1024,
             2048,
             3.5,
             0.8,

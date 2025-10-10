@@ -129,6 +129,7 @@ final class FeedController
         private int $clusterFetchMultiplier = 4,
         private int $defaultCoverWidth = 640,
         private int $defaultMemberWidth = 320,
+        private int $defaultLightboxWidth = 1024,
         private int $maxThumbnailWidth = 2048,
         private float $slideshowImageDuration = 3.5,
         private float $slideshowTransitionDuration = 0.8,
@@ -163,8 +164,16 @@ final class FeedController
             $this->defaultMemberWidth = 320;
         }
 
+        if ($this->defaultLightboxWidth < $this->defaultMemberWidth) {
+            $this->defaultLightboxWidth = $this->defaultMemberWidth;
+        }
+
         if ($this->maxThumbnailWidth < $this->defaultCoverWidth) {
             $this->maxThumbnailWidth = $this->defaultCoverWidth;
+        }
+
+        if ($this->defaultLightboxWidth > $this->maxThumbnailWidth) {
+            $this->defaultLightboxWidth = $this->maxThumbnailWidth;
         }
 
         if ($this->slideshowImageDuration <= 0.0) {
@@ -1056,6 +1065,13 @@ final class FeedController
         return $baseUrl !== '' ? $baseUrl . $path : $path;
     }
 
+    private function resolveLightboxWidth(): int
+    {
+        $width = max($this->defaultMemberWidth, $this->defaultLightboxWidth);
+
+        return min($width, $this->maxThumbnailWidth);
+    }
+
     /**
      * @param array<string, scalar|array|null> $clusterParams
      *
@@ -1071,6 +1087,7 @@ final class FeedController
         $entry = [
             'mediaId'           => $mediaId,
             'thumbnail'         => $this->buildThumbnailUrl($mediaId, $this->defaultMemberWidth, $baseUrl),
+            'lightbox'          => $this->buildThumbnailUrl($mediaId, $this->resolveLightboxWidth(), $baseUrl),
             'aufgenommenAm'     => $this->formatTakenAt($media),
             'aufgenommenAmText' => $this->formatMediaDateText($media),
             'hinweisAufgenommenAm' => $this->formatRelativeTakenAt($media, $reference),
