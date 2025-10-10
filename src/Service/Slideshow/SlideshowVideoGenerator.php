@@ -15,6 +15,7 @@ use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
+use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -26,6 +27,7 @@ use function is_string;
 use function max;
 use function mkdir;
 use function sprintf;
+use function str_replace;
 use function trim;
 
 /**
@@ -139,10 +141,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $duration = $this->resolveSlideDuration($slide['duration']);
         $filter = sprintf(
             '[0:v]scale=%1$d:%2$d:force_original_aspect_ratio=decrease,' .
-            'pad=%1$d:%2$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1,' .
-            'trim=duration=%3$.3f,setpts=PTS-STARTPTS[vout]',
+            'pad=%1$d:%2$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1',
             $this->width,
-            $this->height,
+            $this->height
+        );
+
+        $filter = $this->appendTextOverlayFilter($filter, $title, $subtitle);
+        $filter .= sprintf(
+            ',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]',
             max(0.1, $duration)
         );
 
@@ -213,10 +219,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $transitionCount = count($this->transitions);
         $current         = '[s0]';
         $offset          = $this->resolveSlideDuration($slides[0]['duration']);
+        $needsOverlay    = $this->hasTextOverlay($title, $subtitle);
+        $finalLabel      = $needsOverlay ? '[vtmp]' : '[vout]';
 
         for ($index = 1; $index < count($slides); ++$index) {
             $transition  = $this->resolveTransition($slides[$index - 1]['transition'], $index - 1, $transitionCount);
-            $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
+            $targetLabel = $index === count($slides) - 1 ? $finalLabel : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f:shortest=1%s',
                 $current,
@@ -228,6 +236,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             );
             $current = $targetLabel;
             $offset += $this->resolveSlideDuration($slides[$index]['duration']);
+        }
+
+        if ($needsOverlay) {
+            $filters[] = $this->buildOverlayFilter($finalLabel, '[vout]', $title, $subtitle);
         }
 
         $filterComplex = implode(';', $filters);
@@ -322,5 +334,76 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = $output;
 
         return $command;
+    }
+
+    private function appendTextOverlayFilter(string $filter, ?string $title, ?string $subtitle): string
+    {
+        $overlay = $this->buildTextOverlayFilterChain($title, $subtitle);
+        if ($overlay === '') {
+            return $filter;
+        }
+
+        return sprintf('%s,%s', $filter, $overlay);
+    }
+
+    private function buildOverlayFilter(string $inputLabel, string $outputLabel, ?string $title, ?string $subtitle): string
+    {
+        $overlay = $this->buildTextOverlayFilterChain($title, $subtitle);
+        if ($overlay === '') {
+            return sprintf('%sformat=yuv420p%s', $inputLabel, $outputLabel);
+        }
+
+        return sprintf('%s%s%s', $inputLabel, $overlay, $outputLabel);
+    }
+
+    private function hasTextOverlay(?string $title, ?string $subtitle): bool
+    {
+        return (is_string($title) && $title !== '') || (is_string($subtitle) && $subtitle !== '');
+    }
+
+    private function buildTextOverlayFilterChain(?string $title, ?string $subtitle): string
+    {
+        if (!$this->hasTextOverlay($title, $subtitle)) {
+            return '';
+        }
+
+        $filters = [];
+
+        $titleText = $this->normaliseDrawText($title);
+        if ($titleText !== null) {
+            $filters[] = sprintf(
+                "drawtext=text='%s':fontcolor=white:fontsize=64:box=1:boxcolor=0x000000AA:boxborderw=20:" .
+                'x=(w-text_w)/2:y=h*0.08',
+                $titleText
+            );
+        }
+
+        $subtitleText = $this->normaliseDrawText($subtitle);
+        if ($subtitleText !== null) {
+            $subtitleY = $titleText !== null ? 'h*0.08+line_h+40' : 'h*0.08';
+            $filters[]  = sprintf(
+                "drawtext=text='%s':fontcolor=white:fontsize=48:box=1:boxcolor=0x000000AA:boxborderw=20:" .
+                'x=(w-text_w)/2:y=%s',
+                $subtitleText,
+                $subtitleY
+            );
+        }
+
+        return implode(',', array_filter($filters));
+    }
+
+    private function normaliseDrawText(?string $value): ?string
+    {
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
+
+        $escaped = str_replace(
+            ['\\', ':', '%', "'", ',', '[', ']'],
+            ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
+            $value
+        );
+
+        return trim($escaped);
     }
 }
