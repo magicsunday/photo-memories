@@ -126,7 +126,7 @@ final class SlideshowJobTest extends TestCase
     public function testToJsonPersistsTransitionOrder(): void
     {
         $transitions = TransitionSequenceGenerator::generate(
-            ['wipeleft', 'fade', 'pixelize'],
+            ['fade', 'dissolve', 'fadeblack', 'radial'],
             [10, 11, 12, 13],
             4
         );

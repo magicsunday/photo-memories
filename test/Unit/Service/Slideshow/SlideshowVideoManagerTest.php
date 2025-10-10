@@ -66,12 +66,20 @@ final class SlideshowVideoManagerTest extends TestCase
             }
         };
 
+        $transitions = [
+            'fade',
+            'dissolve',
+            'fadeblack',
+            'wipeup',
+            'pixelize',
+        ];
+
         $manager = new SlideshowVideoManager(
             $baseDir,
             1.0,
             0.5,
             $generator,
-            ['wipeleft', 'fade', 'pixelize'],
+            $transitions,
             null,
             null,
         );
@@ -99,11 +107,7 @@ final class SlideshowVideoManagerTest extends TestCase
             $slides = $generator->capturedJob->slides();
             self::assertCount(3, $slides);
 
-            $expectedTransitions = TransitionSequenceGenerator::generate(
-                ['wipeleft', 'fade', 'pixelize'],
-                [1, 2, 3],
-                3
-            );
+            $expectedTransitions = TransitionSequenceGenerator::generate($transitions, [1, 2, 3], 3);
 
             foreach ($expectedTransitions as $index => $expected) {
                 self::assertSame($expected, $slides[$index]['transition']);

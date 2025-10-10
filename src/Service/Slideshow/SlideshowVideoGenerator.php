@@ -40,10 +40,24 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private const array DEFAULT_TRANSITIONS = [
         'fade',
+        'dissolve',
+        'fadeblack',
+        'fadewhite',
         'wipeleft',
         'wiperight',
+        'wipeup',
+        'wipedown',
+        'slideleft',
+        'slideright',
+        'smoothleft',
+        'smoothright',
         'circleopen',
         'circleclose',
+        'vertopen',
+        'vertclose',
+        'horzopen',
+        'horzclose',
+        'radial',
         'pixelize',
     ];
 
