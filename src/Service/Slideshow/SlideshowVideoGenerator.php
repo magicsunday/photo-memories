@@ -312,7 +312,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $foreground = sprintf(
             "[fg%1\$d]scale=-1:%3\$d," .
-            'zoompan=z=%4$s:x=%5$s:y=%6$s:d=1:s=%8$s,' .
+            "zoompan=z='%4\$s':x='%5\$s':y='%6\$s':d=1:s='%8\$s'," .
             "crop=if(gte(iw/ih,%7\$s),%2\$d,iw):if(gte(iw/ih,%7\$s),%3\$d,ih):(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
             $index,
             $this->width,
