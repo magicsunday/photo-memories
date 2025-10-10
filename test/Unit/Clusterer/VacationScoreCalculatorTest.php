@@ -955,6 +955,9 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(28, $selection['counts']['pre']);
         self::assertSame($selectionOptions->targetTotal, $selection['counts']['post']);
         self::assertSame(4, $selection['counts']['dropped']);
+        self::assertArrayHasKey('per_bucket_distribution', $selection);
+        self::assertArrayHasKey('averages', $selection['telemetry']);
+        self::assertArrayHasKey('relaxation_hints', $selection['telemetry']);
 
         $expectedDistribution = [];
         $remaining            = $selectionOptions->targetTotal;

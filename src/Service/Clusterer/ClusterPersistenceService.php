@@ -92,6 +92,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         // 1) Build pair list (alg, fp) for all drafts
         $drafts = $this->curateDrafts($drafts);
 
+        foreach ($drafts as $draft) {
+            $this->persistSelectionTelemetryOnDraft($draft);
+        }
+
         /** @var list<array{alg:string, fp:string}> $pairs */
         $pairs = [];
         foreach ($drafts as $d) {
@@ -771,5 +775,21 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return $curated;
+    }
+
+    private function persistSelectionTelemetryOnDraft(ClusterDraft $draft): void
+    {
+        $params     = $draft->getParams();
+        $selection  = $params['member_selection'] ?? null;
+
+        if (!is_array($selection)) {
+            return;
+        }
+
+        if (!isset($selection['telemetry']) || !is_array($selection['telemetry'])) {
+            return;
+        }
+
+        $draft->setParam('member_selection', $selection);
     }
 }
