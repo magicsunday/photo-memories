@@ -49,7 +49,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     private readonly string $thumbnailDir;
 
     /**
-     * @var list<int> list of thumbnail widths that should be generated
+     * @var list<int> list of maximum thumbnail dimensions that should be generated
      */
     private readonly array $sizes;
 
@@ -60,7 +60,7 @@ class ThumbnailService implements ThumbnailServiceInterface
 
     /**
      * @param string $thumbnailDir     absolute path to the thumbnail directory
-     * @param int[]  $sizes            desired thumbnail widths (in pixels)
+     * @param int[]  $sizes            desired maximum thumbnail dimensions (in pixels)
      * @param bool   $applyOrientation whether the EXIF orientation should be applied
      */
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024], bool $applyOrientation = false)
@@ -91,7 +91,7 @@ class ThumbnailService implements ThumbnailServiceInterface
      * @param string $filepath absolute path to the original media file
      * @param Media  $media    media metadata containing orientation and checksum
      *
-     * @return array<int, string> map of thumbnail width to created file path
+     * @return array<int, string> map of thumbnail maximum dimension to created file path
      */
     public function generateAll(string $filepath, Media $media): array
     {
@@ -152,7 +152,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     /**
      * @param string   $filepath      absolute path to the original media file
      * @param int|null $orientation   EXIF orientation value of the source media
-     * @param int[]    $sizes         desired thumbnail widths (in pixels)
+     * @param int[]    $sizes         desired maximum thumbnail dimensions (in pixels)
      * @param string   $checksum      media checksum used for generating file names
      * @param bool     $allowFallback when <code>true</code> Imagick failures may fall back to GD
      *
@@ -178,33 +178,40 @@ class ThumbnailService implements ThumbnailServiceInterface
                 $this->applyOrientationWithImagick($imagick, $orientation);
             }
 
-            $sourceWidth = $imagick->getImageWidth();
+            $sourceWidth  = $imagick->getImageWidth();
+            $sourceHeight = $imagick->getImageHeight();
+
+            if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+                return [];
+            }
+
+            $maxSourceDimension = max($sourceWidth, $sourceHeight);
 
             $results       = [];
             $generatedKeys = [];
             foreach ($sizes as $size) {
-                $targetWidth = min($size, $sourceWidth);
+                $targetDimension = min($size, $maxSourceDimension);
 
-                if ($targetWidth <= 0) {
+                if ($targetDimension <= 0) {
                     continue;
                 }
 
-                if (isset($generatedKeys[$targetWidth])) {
+                if (isset($generatedKeys[$targetDimension])) {
                     continue;
                 }
 
-                // Remember that this width was already generated to avoid duplicates.
-                $generatedKeys[$targetWidth] = true;
+                // Remember that this dimension was already generated to avoid duplicates.
+                $generatedKeys[$targetDimension] = true;
 
                 $clone          = $this->cloneImagick($imagick);
                 $isSameInstance = $clone === $imagick;
 
                 try {
-                    $resizeResult = $clone->thumbnailImage($targetWidth, 0);
+                    $resizeResult = $clone->thumbnailImage($targetDimension, $targetDimension, true);
 
                     if ($resizeResult === false) {
                         throw new ImagickException(
-                            sprintf('Unable to resize image for thumbnail width %d.', $targetWidth)
+                            sprintf('Unable to resize image for thumbnail dimension %d.', $targetDimension)
                         );
                     }
 
@@ -214,7 +221,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     $clone->setImageCompression(Imagick::COMPRESSION_JPEG);
                     $clone->setImageCompressionQuality(self::JPEG_QUALITY);
 
-                    $out         = $this->buildThumbnailPath($checksum, $targetWidth);
+                    $out         = $this->buildThumbnailPath($checksum, $targetDimension);
                     $writeResult = $clone->writeImage($out);
 
                     if ($writeResult === false) {
@@ -223,7 +230,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         );
                     }
 
-                    $results[$targetWidth] = $out;
+                    $results[$targetDimension] = $out;
                 } finally {
                     try {
                         $clone->clear();
@@ -283,7 +290,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     /**
      * @param string      $filepath    absolute path to the original media file
      * @param int|null    $orientation EXIF orientation value of the source media
-     * @param int[]       $sizes       desired thumbnail widths (in pixels)
+     * @param int[]       $sizes       desired maximum thumbnail dimensions (in pixels)
      * @param string      $checksum    media checksum used for generating file names
      * @param string|null $mime        optional MIME type hint for GD loader selection
      *
@@ -344,30 +351,43 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $width  = imagesx($src);
         $height = imagesy($src);
-        $ratio  = $height > 0 ? ($width / $height) : 1;
+
+        if ($width <= 0 || $height <= 0) {
+            imagedestroy($src);
+
+            return [];
+        }
+
+        $maxSourceDimension = max($width, $height);
 
         try {
             $results       = [];
             $generatedKeys = [];
             foreach ($sizes as $size) {
-                $newWidth = min($size, $width);
+                $targetDimension = min($size, $maxSourceDimension);
 
-                if ($newWidth <= 0) {
+                if ($targetDimension <= 0) {
                     continue;
                 }
 
-                if (isset($generatedKeys[$newWidth])) {
+                if (isset($generatedKeys[$targetDimension])) {
                     continue;
                 }
 
-                // Remember that this width was already generated to avoid duplicates.
-                $generatedKeys[$newWidth] = true;
+                // Remember that this dimension was already generated to avoid duplicates.
+                $generatedKeys[$targetDimension] = true;
 
-                $newHeight = (int) round($newWidth / $ratio);
-
-                if ($newHeight <= 0) {
-                    continue;
+                if ($width >= $height) {
+                    $newWidth  = $targetDimension;
+                    $newHeight = (int) round($targetDimension * $height / $width);
+                } else {
+                    $newHeight = $targetDimension;
+                    $newWidth  = (int) round($targetDimension * $width / $height);
                 }
+
+                $newWidth  = max(1, $newWidth);
+                $newHeight = max(1, $newHeight);
+
                 $dst = imagecreatetruecolor($newWidth, $newHeight);
 
                 if (!$dst instanceof GdImage) {
@@ -394,7 +414,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         throw new RuntimeException('Unable to resample image for thumbnail.');
                     }
 
-                    $out         = $this->buildThumbnailPath($checksum, $newWidth);
+                    $out         = $this->buildThumbnailPath($checksum, $targetDimension);
                     $writeResult = @imagejpeg($dst, $out, self::JPEG_QUALITY);
                 } finally {
                     imagedestroy($dst);
@@ -405,7 +425,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                         sprintf('Unable to create thumbnail at path "%s".', $out));
                 }
 
-                $results[$newWidth] = $out;
+                $results[$targetDimension] = $out;
             }
 
             return $results;
@@ -427,14 +447,14 @@ class ThumbnailService implements ThumbnailServiceInterface
     /**
      * Builds the target path for a generated thumbnail.
      *
-     * @param string $checksum media checksum used for naming
-     * @param int    $width    thumbnail width in pixels
+     * @param string $checksum  media checksum used for naming
+     * @param int    $dimension thumbnail maximum dimension in pixels
      *
      * @return string
      */
-    private function buildThumbnailPath(string $checksum, int $width): string
+    private function buildThumbnailPath(string $checksum, int $dimension): string
     {
-        return $this->thumbnailDir . DIRECTORY_SEPARATOR . $checksum . '-' . $width . '.jpg';
+        return $this->thumbnailDir . DIRECTORY_SEPARATOR . $checksum . '-' . $dimension . '.jpg';
     }
 
     /**
