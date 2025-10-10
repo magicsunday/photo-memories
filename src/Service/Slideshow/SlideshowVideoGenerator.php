@@ -293,22 +293,22 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ));
 
             $panXExpr = $this->escapeFilterExpression(sprintf(
-                'if(gte(iw/ih,%1$s),clip((iw-zoom*w)/2 + %2$s*(iw-zoom*w)/2*%3$s,0,max(iw-zoom*w,0)),(iw-ow)/2)',
+                'if(gte(iw/ih,%1$s),clip((iw-(w/zoom))/2 + %2$s*(iw-(w/zoom))/2*%3$s,0,max(iw-(w/zoom),0)),(iw-w)/2)',
                 $targetAspectRatio,
                 $this->formatFloat($this->panX),
                 $progressExpr,
             ));
 
             $panYExpr = $this->escapeFilterExpression(sprintf(
-                'if(gte(iw/ih,%1$s),clip((ih-zoom*h)/2 + %2$s*(ih-zoom*h)/2*%3$s,0,max(ih-zoom*h,0)),(ih-oh)/2)',
+                'if(gte(iw/ih,%1$s),clip((ih-(h/zoom))/2 + %2$s*(ih-(h/zoom))/2*%3$s,0,max(ih-(h/zoom),0)),(ih-h)/2)',
                 $targetAspectRatio,
                 $this->formatFloat($this->panY),
                 $progressExpr,
             ));
         } else {
             $zoomExpr = '1';
-            $panXExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(iw-ow)/2,(iw-ow)/2)', $targetAspectRatio));
-            $panYExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(ih-oh)/2,(ih-oh)/2)', $targetAspectRatio));
+            $panXExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(iw-w)/2,(iw-w)/2)', $targetAspectRatio));
+            $panYExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),(ih-h)/2,(ih-h)/2)', $targetAspectRatio));
         }
 
         $zoomSizeExpr = sprintf('%1$dx%2$d', $this->width, $this->height);

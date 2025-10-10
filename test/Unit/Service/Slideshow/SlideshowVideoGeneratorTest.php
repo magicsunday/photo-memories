@@ -175,8 +175,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterComplexIndex];
 
         self::assertStringContainsString('zoompan=z=if(gte(iw/ih\,1.778)\,1.2+(1.3-1.2)*min(on/239', $filterComplex);
-        self::assertStringContainsString('x=if(gte(iw/ih\,1.778)\,clip((iw-zoom*w)/2 + 0.4*(iw-zoom*w)/2*min(on/239', $filterComplex);
-        self::assertStringContainsString('y=if(gte(iw/ih\,1.778)\,clip((ih-zoom*h)/2 + -0.25*(ih-zoom*h)/2*min(on/239', $filterComplex);
+        self::assertStringContainsString('x=if(gte(iw/ih\,1.778)\,clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/239', $filterComplex);
+        self::assertStringContainsString('y=if(gte(iw/ih\,1.778)\,clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/239', $filterComplex);
         self::assertStringContainsString(':fps=60', $filterComplex);
         self::assertStringContainsString('s=1280x720', $filterComplex);
     }
