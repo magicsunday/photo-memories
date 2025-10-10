@@ -109,6 +109,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
+        self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringNotContainsString('pad=', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
