@@ -17,6 +17,7 @@ use Symfony\Component\Process\Process;
 
 use function array_filter;
 use function array_merge;
+use function ceil;
 use function count;
 use function dirname;
 use function implode;
@@ -60,6 +61,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'radial',
         'pixelize',
     ];
+
+    private const int ZOOMPAN_FPS = 60;
 
     /**
      * @param list<string> $transitions
@@ -274,9 +277,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
-        $targetAspectRatio = $this->formatFloat($this->width / $this->height);
-        $durationSeconds   = $this->formatFloat(max(0.1, $duration));
-        $progressExpr      = $this->escapeFilterExpression(sprintf('min(t/%s,1)', $durationSeconds));
+        $targetAspectRatio   = $this->formatFloat($this->width / $this->height);
+        $durationSecondsValue = max(0.1, $duration);
+        $frameCount           = max(2, (int) ceil($durationSecondsValue * self::ZOOMPAN_FPS));
+        $maxFrameIndex        = $frameCount - 1;
+        $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
         if ($this->kenBurnsEnabled) {
             $zoomExpr = $this->escapeFilterExpression(sprintf(
@@ -310,10 +315,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $cropWidthExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,iw)', $targetAspectRatio, $this->width));
         $cropHeightExpr = $this->escapeFilterExpression(sprintf('if(gte(iw/ih,%1$s),%2$d,ih)', $targetAspectRatio, $this->height));
 
+        $zoompanFps = $this->formatFloat((float) self::ZOOMPAN_FPS);
+
         $foreground = sprintf(
             "[fg%1\$d]scale=%2\$d:%3\$d:force_original_aspect_ratio=increase," .
-            "zoompan=z=%4\$s:x=%5\$s:y=%6\$s:d=1:s=%7\$s," .
-            "crop=%8\$s:%9\$s:(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
+            "zoompan=z=%4\$s:x=%5\$s:y=%6\$s:d=1:s=%7\$s:fps=%8\$s," .
+            "crop=%9\$s:%10\$s:(in_w-out_w)/2:(in_h-out_h)/2[fg%1\$dout];",
             $index,
             $this->width,
             $this->height,
@@ -321,6 +328,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $panXExpr,
             $panYExpr,
             $zoomSizeExpr,
+            $zoompanFps,
             $cropWidthExpr,
             $cropHeightExpr,
         );

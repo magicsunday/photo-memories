@@ -16,17 +16,18 @@ Der Filtergraph enthält verschachtelte `if()`-, `min()`-, `max()`- oder `clip()
 1. **Kommata escapen**  
    Innerhalb von Ausdrücken müssen alle Kommata mit einem Backslash (`\,`) maskiert werden. Beispiel:
    ```
-   zoompan=z=if(gte(iw/ih\,1.778)\,1.05+(1.15-1.05)*min(t/4.3\,1)\,1):
+   zoompan=z=if(gte(iw/ih\,1.778)\,1.05+(1.15-1.05)*min(on/257\,1)\,1):
            x=if(gte(iw/ih\,1.778)\,clip(...)):
            y=if(...)
    ```
    Erst dadurch erkennt der Parser, dass die Kommata zu den Funktionen gehören.
 
-2. **Zeitvariable wählen**  
-   In `zoompan` ist `PTS` unpraktisch, weil es den Präsentationszeitstempel der Pipeline repräsentiert. Verwende stattdessen `t` (Sekunden) oder `on` (Frame-Zähler) für reproduzierbare Animationen:
+2. **Fortschritt über `on` berechnen**
+   In `zoompan` ist `PTS` unpraktisch, weil es den Präsentationszeitstempel der Pipeline repräsentiert. Verwende stattdessen den Ausgabeframe-Zähler `on` in Kombination mit einer festen Bildrate. Für eine Dauer von 4,3 Sekunden bei 60 fps ergibt sich eine Bildanzahl von `ceil(4.3 * 60) = 258` Frames, der maximale Index lautet also `257`:
    ```
-   min(t/4.3\, 1)
+   min(on/257\, 1)
    ```
+   Damit erreicht der Fortschritt zuverlässig den Wert `1`, sobald der letzte Frame der Sequenz berechnet wird.
 
 3. **Fehlerstellen prüfen**  
    Iteriere über jede Filterstufe (`[fg0]`, `[fg1]`, ...), kontrolliere die Ausdrücke und stelle sicher, dass dort keine unbeabsichtigten Kommata verbleiben.
@@ -34,6 +35,6 @@ Der Filtergraph enthält verschachtelte `if()`-, `min()`-, `max()`- oder `clip()
 ## Zusammenfassung
 - FFmpeg trennt Optionen an Kommata.
 - Maskiere Kommata in Funktionsaufrufen mit `\,`.
-- Nutze `t` oder `on` im `zoompan`-Filter anstelle von `PTS`.
+- Nutze `on` im `zoompan`-Filter und leite den Divisor aus Dauer und Bildrate ab.
 
 Nach diesen Anpassungen lässt sich der Filtergraph fehlerfrei parsen und das Video rendert wie erwartet.
