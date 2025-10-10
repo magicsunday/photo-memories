@@ -19,6 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use PHPUnit\Framework\TestCase;
 use function array_filter;
+use function array_map;
 use function array_replace;
 use function count;
 use function sha1;
@@ -79,7 +80,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary = $this->createDaySummary('2024-05-03', [$first, $second]);
 
-        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, minSpacingSeconds: 900, qualityFloor: 0.1);
+        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, minSpacingSeconds: 900, qualityFloor: 0.1, minimumTotal: 1);
         $result  = $this->selector->select(['2024-05-03' => $summary], $this->createHome(), $options);
 
         $members = $result->getMembers();
@@ -133,7 +134,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary = $this->createDaySummary('2024-05-05', [$first, $second, $third], ['staypoints' => [$staypoint]]);
 
-        $options = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3, maxPerStaypoint: 1, qualityFloor: 0.1, minSpacingSeconds: 0);
+        $options = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3, maxPerStaypoint: 1, qualityFloor: 0.1, minSpacingSeconds: 0, minimumTotal: 1);
         $result  = $this->selector->select(['2024-05-05' => $summary], $this->createHome(), $options);
 
         self::assertCount(1, $result->getMembers());
@@ -192,6 +193,85 @@ final class VacationMemberSelectorTest extends TestCase
         $dayTwoOccurrences = count(array_filter($dates, static fn (?string $day): bool => $day === '2024-05-08'));
         self::assertSame(2, $dayOneOccurrences);
         self::assertSame(1, $dayTwoOccurrences);
+    }
+
+    public function testRelaxationStopsAfterMinSpacingAdjustment(): void
+    {
+        $first  = $this->createMedia('relax-first.jpg', '2024-05-10T10:00:00+00:00', 0.85);
+        $second = $this->createMedia('relax-second.jpg', '2024-05-10T10:10:00+00:00', 0.8);
+        $third  = $this->createMedia('relax-third.jpg', '2024-05-10T10:20:00+00:00', 0.78);
+
+        $summary = $this->createDaySummary('2024-05-10', [$first, $second, $third]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 3,
+            maxPerDay: 3,
+            minSpacingSeconds: 1200,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+        );
+
+        $result = $this->selector->select(['2024-05-10' => $summary], $this->createHome(), $options);
+
+        $members   = $result->getMembers();
+        $telemetry = $result->getTelemetry();
+
+        self::assertCount(3, $members);
+        self::assertSame(2, $telemetry['minimum_total']);
+        self::assertTrue($telemetry['minimum_total_met']);
+        self::assertCount(1, $telemetry['relaxations']);
+
+        $relaxation = $telemetry['relaxations'][0];
+        self::assertSame('min_spacing_seconds', $relaxation['rule']);
+        self::assertSame(1200, $relaxation['from']);
+        self::assertSame(0, $relaxation['to']);
+    }
+
+    public function testRelaxationEscalatesWhenMultipleConstraintsApply(): void
+    {
+        $first  = $this->createMedia('multi-first.jpg', '2024-05-11T08:00:00+00:00', 0.9);
+        $second = $this->createMedia('multi-second.jpg', '2024-05-11T08:10:00+00:00', 0.85);
+        $third  = $this->createMedia('multi-third.jpg', '2024-05-11T08:20:00+00:00', 0.83);
+
+        $second->setPhash64('0000000000000000');
+        $third->setPhash64('0000000000000001');
+
+        $timestamp = $first->getTakenAt()?->getTimestamp();
+        self::assertNotNull($timestamp);
+
+        $staypoint = [
+            'lat'   => 0.0,
+            'lon'   => 0.0,
+            'start' => $timestamp - 60,
+            'end'   => $timestamp + 3600,
+            'dwell' => 3600,
+        ];
+
+        $summary = $this->createDaySummary('2024-05-11', [$first, $second, $third], ['staypoints' => [$staypoint]]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 3,
+            maxPerDay: 1,
+            minSpacingSeconds: 1800,
+            phashMinHamming: 2,
+            maxPerStaypoint: 1,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+        );
+
+        $result = $this->selector->select(['2024-05-11' => $summary], $this->createHome(), $options);
+
+        $members   = $result->getMembers();
+        $telemetry = $result->getTelemetry();
+
+        self::assertCount(3, $members);
+        self::assertTrue($telemetry['minimum_total_met']);
+
+        $rules = array_map(static fn (array $entry): string => $entry['rule'], $telemetry['relaxations']);
+        self::assertContains('min_spacing_seconds', $rules);
+        self::assertContains('phash_min_hamming', $rules);
+        self::assertContains('max_per_day', $rules);
+        self::assertContains('max_per_staypoint', $rules);
     }
 
     /**
