@@ -25,6 +25,7 @@ use function is_file;
 use function is_string;
 use function max;
 use function mkdir;
+use function rtrim;
 use function sprintf;
 use function str_replace;
 use function trim;
@@ -59,6 +60,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly ?string $audioTrack = null,
         private readonly ?string $fontFile = null,
         private readonly string $fontFamily = 'DejaVu Sans',
+        private readonly float $backgroundBlurSigma = 32.0,
     ) {
     }
 
@@ -140,12 +142,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     ): array
     {
         $duration = $this->resolveSlideDuration($slide['duration']);
-        $filter = sprintf(
-            '[0:v]scale=%1$d:%2$d:force_original_aspect_ratio=decrease,' .
-            'pad=%1$d:%2$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1',
-            $this->width,
-            $this->height
-        );
+        $filter = $this->buildBlurredSlideFilter(0);
 
         $filter = $this->appendTextOverlayFilter($filter, $title, $subtitle);
         $filter .= sprintf(
@@ -207,13 +204,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $duration            = $this->resolveSlideDuration($slide['duration']);
             $durationWithOverlap = max(0.1, $duration + $transitionDuration);
 
-            $filter = sprintf(
-                '[%1$d:v]scale=%2$d:%3$d:force_original_aspect_ratio=decrease,' .
-                'pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p,setsar=1',
-                $index,
-                $this->width,
-                $this->height
-            );
+            $filter = $this->buildBlurredSlideFilter($index);
 
             if ($index === 0 && $overlayFilterChain !== '') {
                 $filter = sprintf('%s,%s', $filter, $overlayFilterChain);
@@ -247,6 +238,36 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
         return $this->appendAudioOptions($command, count($slides), $output, $audioTrack, $title, $subtitle);
+    }
+
+    private function buildBlurredSlideFilter(int $index): string
+    {
+        $background = sprintf(
+            '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase,crop=%2$d:%3$d',
+            $index,
+            $this->width,
+            $this->height,
+        );
+
+        if ($this->backgroundBlurSigma > 0.0) {
+            $background .= sprintf(',gblur=sigma=%s', $this->formatFloat($this->backgroundBlurSigma));
+        }
+
+        $background .= sprintf('[bg%1$dout];', $index);
+
+        $foreground = sprintf(
+            '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease[fg%1$dout];',
+            $index,
+            $this->width,
+            $this->height,
+        );
+
+        return sprintf(
+            '%s%s[bg%1$dout][fg%1$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,format=yuv420p,setsar=1',
+            $background,
+            $foreground,
+            $index,
+        );
     }
 
     private function resolveSlideDuration(float $duration): float
@@ -421,5 +442,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
+    }
+
+    private function formatFloat(float $value): string
+    {
+        $formatted = sprintf('%0.3F', $value);
+
+        return rtrim(rtrim($formatted, '0'), '.');
     }
 }

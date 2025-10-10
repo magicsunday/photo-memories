@@ -7,8 +7,9 @@ Der aktuelle Slideshow-Generator setzt beim Einpassen von Bildern auf einen schw
 - Für dynamische Akzentfarben kann vor der Filterkette ein `palettegen`/`paletteuse`-Durchlauf oder eine Durchschnittsfarb-Berechnung aus den Bildpixeln erfolgen, deren Ergebnis dann in den `pad`-Parameter injiziert wird.
 
 ## 2. Weichgezeichneter Hintergrund wie bei iOS
-- Dupliziere das Bild in der Filterkette (`[0:v]split[a][b];[a]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=20:1[bg];[b]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=0x00000000[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2`).
+- Dupliziere das Bild in der Filterkette (`[0:v]split[a][b];[a]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,gblur=sigma=32[bg];[b]scale=1280:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2`).
 - Das Ergebnis ist ein weichgezeichneter, vollflächiger Hintergrund. Für leichte Parallax-Effekte kann zusätzlich `zoompan` auf dem Hintergrundkanal verwendet werden.
+- Diese Variante ist nun standardmäßig aktiv. Die Intensität steuerst du über den Parameter `memories.slideshow.background_blur_sigma`.
 
 ## 3. Verläufe oder Muster
 - Mit `geq`, `colorchannelmixer` oder vorbereiteten PNGs lässt sich ein Farbverlauf oder Muster erzeugen (`color=c=#101820@1:s=1280x720,format=rgba`). Anschließend den Vordergrund mit `overlay` kombinieren.
@@ -19,7 +20,8 @@ Der aktuelle Slideshow-Generator setzt beim Einpassen von Bildern auf einen schw
 - Eine anschließende leichte Unschärfe verhindert harte Übergänge.
 
 ## Integration in den Generator
-- Die Filterketten werden in `buildSingleImageCommand()` und `buildMultiImageCommand()` erzeugt. Dort kann man die `pad`-Sequenz durch eine der oben genannten Varianten ersetzen oder zusätzliche Inputs registrieren.
+- Die Filterketten werden in `buildSingleImageCommand()` und `buildMultiImageCommand()` erzeugt. Dort kann man die Hintergründe anpassen oder zusätzliche Inputs registrieren.
+- Die Blur-Stärke des Standard-Hintergrunds lässt sich in `config/parameters.yaml` über `memories.slideshow.background_blur_sigma` konfigurieren.
 - Für konfigurierbare Hintergründe empfiehlt sich ein neuer Parameter wie `memories.slideshow.background` in `config/parameters.yaml`, der anschließend via DI in den `SlideshowVideoGenerator` injiziert wird.
 
 Mit diesen Ansätzen lassen sich schwarze Balken vermeiden und das Erscheinungsbild stärker an Plattformen wie iOS anlehnen.

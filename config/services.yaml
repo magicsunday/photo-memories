@@ -105,6 +105,7 @@ services:
             $audioTrack: '%memories.slideshow.music_path%'
             $fontFile: '%memories.slideshow.font_file%'
             $fontFamily: '%memories.slideshow.font_family%'
+            $backgroundBlurSigma: '%memories.slideshow.background_blur_sigma%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
