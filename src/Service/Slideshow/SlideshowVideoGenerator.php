@@ -98,11 +98,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly ?string $audioTrack = null,
         private readonly ?string $fontFile = null,
         private readonly string $fontFamily = 'DejaVu Sans',
-        private readonly float $backgroundBlurSigma = 32.0,
+        private readonly float $backgroundBlurSigma = 20.0,
         private readonly bool $kenBurnsEnabled = true,
         private readonly float $zoomStart = 1.05,
         private readonly float $zoomEnd = 1.15,
-        private readonly float $panX = 0.0,
+        private readonly float $panX = 0.15,
         private readonly float $panY = 0.0,
     ) {
     }

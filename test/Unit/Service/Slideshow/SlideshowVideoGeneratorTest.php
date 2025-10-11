@@ -291,13 +291,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $filterComplex = $command[$filterComplexIndex];
 
-            self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.05+(1.15-1.05)*min(on/112\\,1))'", $filterComplex);
+            self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
             self::assertStringContainsString("x='if(eq(", $filterComplex);
             self::assertStringContainsString("y='if(eq(", $filterComplex);
             self::assertStringNotContainsString("x='clip(", $filterComplex);
             self::assertStringNotContainsString("y='clip(", $filterComplex);
-            self::assertStringContainsString("\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/112\\,1)", $filterComplex);
-            self::assertStringContainsString("\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/112\\,1)", $filterComplex);
+            self::assertStringContainsString("\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/89\\,1)", $filterComplex);
+            self::assertStringContainsString("\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/89\\,1)", $filterComplex);
         } finally {
             @unlink($portraitImage);
         }
@@ -589,7 +589,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/transitions.error',
             ['/tmp/first.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
             $slides,
-            0.8,
+            0.75,
             null,
             null,
             null,

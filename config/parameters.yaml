@@ -637,11 +637,11 @@ parameters:
     # Description: Duration in seconds each slideshow image remains on screen.
     memories.slideshow.image_duration_s: 3.5
     # Description: Duration in seconds used for transitions between slideshow images.
-    memories.slideshow.transition_duration_s: 0.8
+    memories.slideshow.transition_duration_s: 0.75
     # Description: Width in pixels of the generated slideshow video.
-    memories.slideshow.video_width: 1280
+    memories.slideshow.video_width: 1920
     # Description: Height in pixels of the generated slideshow video.
-    memories.slideshow.video_height: 720
+    memories.slideshow.video_height: 1080
     # Description: Path to the ffmpeg binary used for slideshow rendering.
     memories.slideshow.ffmpeg_path: 'ffmpeg'
     # Description: Default font family for drawtext overlays when no font file is provided.
@@ -653,7 +653,7 @@ parameters:
     # Description: Font file path for drawtext overlays. Leave empty to rely on the configured font family.
     memories.slideshow.font_file: "%env(default:memories.slideshow.font_file_default:MEMORIES_SLIDESHOW_FONT_FILE)%"
     # Description: Sigma value of the gaussian blur used for slideshow backgrounds.
-    memories.slideshow.background_blur_sigma: 32.0
+    memories.slideshow.background_blur_sigma: 20.0
     # Description: Flag indicating whether animated zoom/pan is enabled for slideshow slides by default.
     memories.slideshow.ken_burns_enabled_default: true
     # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.
@@ -667,7 +667,7 @@ parameters:
     # Description: Runtime final zoom factor for the animated zoom/pan effect.
     memories.slideshow.zoom_end: '%env(default:memories.slideshow.zoom_end_default:float:MEMORIES_SLIDESHOW_ZOOM_END)%'
     # Description: Horizontal pan factor (range -1 to 1) applied across the slide duration during animation.
-    memories.slideshow.pan_x_default: 0.0
+    memories.slideshow.pan_x_default: 0.15
     # Description: Runtime horizontal pan factor for the animated zoom/pan effect.
     memories.slideshow.pan_x: '%env(default:memories.slideshow.pan_x_default:float:MEMORIES_SLIDESHOW_PAN_X)%'
     # Description: Vertical pan factor (range -1 to 1) applied across the slide duration during animation.

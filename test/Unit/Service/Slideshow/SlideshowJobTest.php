@@ -149,7 +149,7 @@ final class SlideshowJobTest extends TestCase
             '/tmp/transitions.error',
             array_map(static fn (array $slide): string => $slide['image'], $slides),
             $slides,
-            0.8,
+            0.75,
             null,
             null,
             null,
