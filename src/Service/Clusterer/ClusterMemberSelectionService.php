@@ -21,6 +21,8 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfile;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
+use MagicSunday\Memories\Service\Monitoring\PhaseMetricsCollector;
 use MagicSunday\Memories\Utility\Phash;
 use Throwable;
 
@@ -30,7 +32,9 @@ use function array_sum;
 use function count;
 use function gmdate;
 use function is_array;
+use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_string;
 use function max;
 use function spl_object_id;
@@ -58,6 +62,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         private readonly MemberMediaLookupInterface $mediaLookup,
         private readonly ClusterMemberSelectionProfileProvider $profileProvider,
         private readonly StaypointDetectorInterface $staypointDetector,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -68,23 +73,72 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return $draft;
         }
 
+        $phaseMetrics = $this->monitoringEmitter !== null ? new PhaseMetricsCollector() : null;
+        $initialCount = count($members);
+
         $this->resetCaches();
 
+        $phaseMetrics?->begin('filtering');
+        $phaseMetrics?->addCounts('filtering', 'members', ['input' => $initialCount]);
+
         $media = $this->loadMedia($members);
+        $phaseMetrics?->addCounts('filtering', 'members', ['loaded' => count($media)]);
+        $phaseMetrics?->end('filtering');
+
         if ($media === []) {
+            $this->emitPhaseSummary($draft, $phaseMetrics, 'skipped', [
+                'reason'       => 'media_lookup_empty',
+                'members_pre'  => $initialCount,
+                'members_post' => 0,
+            ]);
+
             return $draft;
         }
 
         $profile      = $this->profileProvider->resolve($draft);
+
+        $phaseMetrics?->begin('summarising');
         $daySummaries = $this->buildDaySummaries($media);
+        if ($phaseMetrics !== null) {
+            $this->recordSummaryMetrics($daySummaries, $phaseMetrics);
+        }
+        $phaseMetrics?->end('summarising');
+
         if ($daySummaries === []) {
+            $this->emitPhaseSummary($draft, $phaseMetrics, 'skipped', [
+                'reason'       => 'day_summary_empty',
+                'members_pre'  => $initialCount,
+                'members_post' => 0,
+                'profile'      => $profile->getKey(),
+            ]);
+
             return $draft;
         }
 
         $this->daySummaries = $daySummaries;
+        $phaseMetrics?->begin('selecting');
         $result = $this->memberSelector->select($daySummaries, $profile->getHome(), $profile->getOptions());
+        if ($phaseMetrics !== null) {
+            $this->recordSelectionMetrics(
+                $result->getTelemetry(),
+                $phaseMetrics,
+                count($result->getMembers()),
+                count($media),
+            );
+        }
+        $phaseMetrics?->end('selecting');
 
-        return $this->applySelection($draft, $media, $result, $profile);
+        $phaseMetrics?->begin('consolidating');
+        $updated = $this->applySelection($draft, $media, $result, $profile, $phaseMetrics);
+        $phaseMetrics?->end('consolidating');
+
+        $this->emitPhaseSummary($updated, $phaseMetrics, 'completed', [
+            'members_pre'  => $initialCount,
+            'members_post' => $updated->getMembersCount(),
+            'profile'      => $profile->getKey(),
+        ]);
+
+        return $updated;
     }
 
     /**
@@ -214,10 +268,19 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         array $media,
         SelectionResult $result,
         ClusterMemberSelectionProfile $profile,
+        ?PhaseMetricsCollector $phaseMetrics = null,
     ): ClusterDraft {
         $curatedMembers = $result->getMembers();
         $preCount       = count($media);
         $postCount      = count($curatedMembers);
+
+        if ($phaseMetrics !== null) {
+            $phaseMetrics->addCounts('consolidating', 'members', [
+                'pre'     => $preCount,
+                'post'    => $postCount,
+                'dropped' => $preCount > $postCount ? $preCount - $postCount : 0,
+            ]);
+        }
 
         $params = $draft->getParams();
         $params['member_selection'] = $this->buildSelectionMetadata(
@@ -226,6 +289,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $postCount,
             $result,
             $curatedMembers,
+            $phaseMetrics,
         );
 
         if ($curatedMembers === []) {
@@ -249,6 +313,13 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             }
         }
 
+        if ($phaseMetrics !== null) {
+            $phaseMetrics->addCounts('consolidating', 'media_types', [
+                'photos' => $photoCount,
+                'videos' => $videoCount,
+            ]);
+        }
+
         $updated->setMembersCount($postCount);
         $updated->setPhotoCount($photoCount);
         $updated->setVideoCount($videoCount);
@@ -267,6 +338,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         int $postCount,
         SelectionResult $result,
         array $members,
+        ?PhaseMetricsCollector $phaseMetrics = null,
     ): array {
         $droppedCount       = $preCount > $postCount ? $preCount - $postCount : 0;
         $spacing            = $this->computeSpacingSamples($members);
@@ -283,6 +355,21 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $hashSamples,
             $members,
         );
+
+        if ($phaseMetrics !== null) {
+            $phaseMetrics->addSamples('consolidating', 'spacing_seconds', $spacing['samples']);
+
+            $phashTelemetry = $telemetry['phash'] ?? null;
+            $consecutive    = [];
+            if (is_array($phashTelemetry)) {
+                $values = $phashTelemetry['consecutive_hamming'] ?? null;
+                if (is_array($values)) {
+                    $consecutive = $values;
+                }
+            }
+
+            $phaseMetrics->addSamples('consolidating', 'phash_hamming', $consecutive);
+        }
 
         return [
             'profile'                => $profile->getKey(),
@@ -315,8 +402,120 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 'repeat_penalty'        => $profile->getOptions()->repeatPenalty,
             ],
             'hash_samples'           => $hashSamples,
+            'exclusion_reasons'      => $telemetry['rejections'] ?? [],
             'telemetry'              => $telemetry,
         ];
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $daySummaries
+     */
+    private function recordSummaryMetrics(array $daySummaries, PhaseMetricsCollector $phaseMetrics): void
+    {
+        $totalDays      = count($daySummaries);
+        $gpsDays        = 0;
+        $staypointCount = 0;
+
+        foreach ($daySummaries as $summary) {
+            $gpsMembers = $summary['gpsMembers'] ?? null;
+            if (is_array($gpsMembers) && $gpsMembers !== []) {
+                ++$gpsDays;
+            }
+
+            $staypoints = $summary['staypoints'] ?? null;
+            if (is_array($staypoints)) {
+                $staypointCount += count($staypoints);
+            }
+        }
+
+        $phaseMetrics->addCounts('summarising', 'days', [
+            'total'    => $totalDays,
+            'with_gps' => $gpsDays,
+        ]);
+        $phaseMetrics->addCounts('summarising', 'staypoints', [
+            'total' => $staypointCount,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $telemetry
+     */
+    private function recordSelectionMetrics(
+        array $telemetry,
+        PhaseMetricsCollector $phaseMetrics,
+        int $selectedCount,
+        int $eligibleFallback,
+    ): void {
+        $counts = [];
+        $telemetryCounts = $telemetry['counts'] ?? null;
+        if (is_array($telemetryCounts)) {
+            $counts = $this->normaliseCounts($telemetryCounts);
+        }
+
+        if ($counts === []) {
+            $counts = [
+                'eligible' => $eligibleFallback,
+                'selected' => $selectedCount,
+            ];
+        } else {
+            if (!array_key_exists('eligible', $counts)) {
+                $counts['eligible'] = $eligibleFallback;
+            }
+
+            $counts['selected'] = $counts['selected'] ?? $selectedCount;
+        }
+
+        $phaseMetrics->addCounts('selecting', 'members', $counts);
+
+        $rejections = $telemetry['rejections'] ?? null;
+        if (is_array($rejections)) {
+            $phaseMetrics->addCounts('selecting', 'rejections', $this->normaliseCounts($rejections));
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function emitPhaseSummary(
+        ClusterDraft $draft,
+        ?PhaseMetricsCollector $phaseMetrics,
+        string $status,
+        array $context = [],
+    ): void {
+        if ($this->monitoringEmitter === null || $phaseMetrics === null) {
+            return;
+        }
+
+        $payload = $phaseMetrics->summarise(['algorithm' => $draft->getAlgorithm()] + $context);
+
+        $this->monitoringEmitter->emit('cluster_member_selection', $status, $payload);
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     *
+     * @return array<string, int|float>
+     */
+    private function normaliseCounts(array $values): array
+    {
+        $result = [];
+        foreach ($values as $key => $value) {
+            if (!is_string($key) || $value === null) {
+                continue;
+            }
+
+            if (!is_int($value) && !is_float($value)) {
+                if (!is_numeric($value)) {
+                    continue;
+                }
+
+                $value = (float) $value;
+            }
+
+            $result[$key] = is_float($value) ? $value : (int) $value;
+        }
+
+        return $result;
     }
 
     /**
