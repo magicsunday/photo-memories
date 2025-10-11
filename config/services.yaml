@@ -1165,8 +1165,8 @@ services:
                 season: 0.95
                 golden_hour: 1.00
                 snow_day: 1.00
-                day_album: 0.98
-                time_similarity: 0.94
+                day_album: 1.00
+                time_similarity: 1.00
                 photo_motif: 0.88
                 panorama: 0.95
                 panorama_over_years: 1.00
