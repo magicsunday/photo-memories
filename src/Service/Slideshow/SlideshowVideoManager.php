@@ -83,7 +83,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $this->monitoringEmitter  = $monitoringEmitter;
 
         $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
-        $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.8;
+        $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.75;
 
         $this->transitions = $this->sanitizeTransitions($transitions);
 
