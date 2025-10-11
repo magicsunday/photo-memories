@@ -14,6 +14,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 - **Heimatregion** – Referenzkoordinaten und Suchradien für „Zuhause“-Logik (`memories.home.*`).
 - **Geocoding** – Zugriffspunkte, Drosselung und erlaubte POI-Typen für Nominatim/Overpass (`memories.geocoding.*`).
 - **Zeit & Cluster** – Zeitzonen, Zeitnormalisierung und Transportgeschwindigkeitsgrenzen (`memories.time.*`, `memories.cluster.transport_speed.*`).
+- **Staypoint-Erkennung** – Radius, Mindestaufenthaltsdauer und DBSCAN-Fallback der Aufenthaltsort-Erkennung (`memories.cluster.staypoint.*`).
 - **Urlaubs- und Kohortenclustering** – Schwellenwerte und Personenlisten zur Bildung von Clustern (`memories.cluster.vacation.*`, `memories.cluster.cohort.*`).
 - **Thumbnails** – Zielgrößen und Orientierungsbehandlung (`memories.thumbnail_*`).
 - **Konsolidierung & Prioritäten** – Gewichtungen und Reihenfolgen für Clusterstrategien (`memories.cluster.consolidate.*`, `memories.cluster.priority.*`).

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Selection;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 
@@ -958,7 +959,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $slot      = $this->computeSlot($media, $summary, $options, $timestamp);
         $quality   = $media->getQualityScore() ?? 0.5;
         $score     = $this->scoreMedia($media, $options, $quality);
-        $staypoint = $this->staypointKey($timestamp, $summary, $date);
+        $staypoint = null;
+        $index     = $summary['staypointIndex'] ?? null;
+        if ($index instanceof StaypointIndex) {
+            $staypoint = $index->get($media);
+        } else {
+            $staypoint = $this->staypointKey($timestamp, $summary, $date);
+        }
         $persons   = $media->getPersons();
         $normalizedPersons = $persons !== null ? array_values(array_unique($persons)) : [];
 

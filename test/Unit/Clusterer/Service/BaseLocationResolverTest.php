@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -40,15 +41,24 @@ final class BaseLocationResolverTest extends TestCase
             11.5755,
         );
 
+        $staypoints = [[
+            'lat'   => 48.1371,
+            'lon'   => 11.5754,
+            'start' => $startMedia->getTakenAt()?->getTimestamp() ?? 0,
+            'end'   => $endMedia->getTakenAt()?->getTimestamp() ?? 0,
+            'dwell' => 35000,
+        ]];
+
+        $index = StaypointIndex::build('2024-07-01', $staypoints, [$startMedia, $endMedia]);
+
         $summary = [
             'date'       => '2024-07-01',
-            'staypoints' => [[
-                'lat'   => 48.1371,
-                'lon'   => 11.5754,
-                'start' => $startMedia->getTakenAt()?->getTimestamp() ?? 0,
-                'end'   => $endMedia->getTakenAt()?->getTimestamp() ?? 0,
-                'dwell' => 35000,
-            ]],
+            'staypoints' => $staypoints,
+            'staypointIndex' => $index,
+            'staypointCounts' => $index->getCounts(),
+            'dominantStaypoints' => [],
+            'transitRatio' => 0.0,
+            'poiDensity' => 0.0,
             'firstGpsMedia' => $startMedia,
             'lastGpsMedia'  => $endMedia,
             'gpsMembers'    => [$startMedia, $endMedia],
@@ -57,6 +67,11 @@ final class BaseLocationResolverTest extends TestCase
         $nextSummary = [
             'date'          => '2024-07-02',
             'staypoints'    => [],
+            'staypointIndex'=> StaypointIndex::empty(),
+            'staypointCounts'=> [],
+            'dominantStaypoints' => [],
+            'transitRatio'       => 0.0,
+            'poiDensity'         => 0.0,
             'firstGpsMedia' => null,
         ];
 
@@ -101,6 +116,11 @@ final class BaseLocationResolverTest extends TestCase
         $summary = [
             'date'          => '2024-08-05',
             'staypoints'    => [],
+            'staypointIndex'=> StaypointIndex::empty(),
+            'staypointCounts'=> [],
+            'dominantStaypoints' => [],
+            'transitRatio'       => 0.0,
+            'poiDensity'         => 0.0,
             'firstGpsMedia' => $lastMedia,
             'lastGpsMedia'  => $lastMedia,
             'gpsMembers'    => [$lastMedia],
@@ -109,6 +129,11 @@ final class BaseLocationResolverTest extends TestCase
         $nextSummary = [
             'date'          => '2024-08-06',
             'staypoints'    => [],
+            'staypointIndex'=> StaypointIndex::empty(),
+            'staypointCounts'=> [],
+            'dominantStaypoints' => [],
+            'transitRatio'       => 0.0,
+            'poiDensity'         => 0.0,
             'firstGpsMedia' => $nextFirst,
         ];
 

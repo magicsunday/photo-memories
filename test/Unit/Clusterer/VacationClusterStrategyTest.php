@@ -19,6 +19,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
@@ -152,6 +153,11 @@ final class VacationClusterStrategyTest extends TestCase
                         'spotNoiseSamples' => 0,
                         'spotDwellSeconds' => 0,
                         'staypoints' => [],
+                        'staypointIndex' => StaypointIndex::empty(),
+                        'staypointCounts' => [],
+                        'dominantStaypoints' => [],
+                        'transitRatio' => 0.0,
+                        'poiDensity' => 0.0,
                         'baseLocation' => null,
                         'baseAway' => false,
                         'awayByDistance' => false,
@@ -255,6 +261,11 @@ final class VacationClusterStrategyTest extends TestCase
                 'spotNoiseSamples' => 0,
                 'spotDwellSeconds' => 900,
                 'staypoints' => [],
+                'staypointIndex' => StaypointIndex::empty(),
+                'staypointCounts' => [],
+                'dominantStaypoints' => [],
+                'transitRatio' => 0.0,
+                'poiDensity' => 0.0,
                 'baseLocation' => null,
                 'baseAway' => true,
                 'awayByDistance' => true,
@@ -291,6 +302,11 @@ final class VacationClusterStrategyTest extends TestCase
                 'spotNoiseSamples' => 0,
                 'spotDwellSeconds' => 600,
                 'staypoints' => [],
+                'staypointIndex' => StaypointIndex::empty(),
+                'staypointCounts' => [],
+                'dominantStaypoints' => [],
+                'transitRatio' => 0.0,
+                'poiDensity' => 0.0,
                 'baseLocation' => null,
                 'baseAway' => false,
                 'awayByDistance' => false,

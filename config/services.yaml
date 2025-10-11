@@ -674,7 +674,13 @@ services:
     MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultHomeLocator
 
-    MagicSunday\Memories\Clusterer\Service\StaypointDetector: ~
+    MagicSunday\Memories\Clusterer\Service\StaypointDetector:
+        arguments:
+            $staypointRadiusKm: '%memories.cluster.staypoint.radius_km%'
+            $minDwellMinutes: '%memories.cluster.staypoint.min_dwell_minutes%'
+            $fallbackRadiusKm: '%memories.cluster.staypoint.fallback_radius_km%'
+            $fallbackMinSamples: '%memories.cluster.staypoint.fallback_min_samples%'
+            $fallbackMinDwellMinutes: '%memories.cluster.staypoint.fallback_min_dwell_minutes%'
 
     MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\StaypointDetector
@@ -716,6 +722,12 @@ services:
             $minItemsPerDay: 3
         tags:
             - { name: 'memories.day_summary_stage', priority: 300 }
+
+    MagicSunday\Memories\Clusterer\DaySummaryStage\StaypointStage:
+        arguments:
+            $dominantStaypointLimit: 3
+        tags:
+            - { name: 'memories.day_summary_stage', priority: 275 }
 
     MagicSunday\Memories\Clusterer\DaySummaryStage\TransportSpeedStage:
         arguments:

@@ -142,6 +142,27 @@ parameters:
     # Description: Runtime minimum cluster members for vacation highlights, allowing environment overrides.
     memories.cluster.vacation.min_members: '%env(default:memories.cluster.vacation.min_members_default:int:MEMORIES_CLUSTER_VACATION_MIN_MEMBERS)%'
 
+    # Description: Default maximum radius in kilometres used to merge sequential samples into a staypoint.
+    memories.cluster.staypoint.radius_km_default: 0.25
+    # Description: Runtime maximum radius in kilometres used to merge sequential samples into a staypoint.
+    memories.cluster.staypoint.radius_km: '%env(default:memories.cluster.staypoint.radius_km_default:float:MEMORIES_CLUSTER_STAYPOINT_RADIUS_KM)%'
+    # Description: Default minimum dwell time in minutes for sequential staypoint detection.
+    memories.cluster.staypoint.min_dwell_minutes_default: 20
+    # Description: Runtime minimum dwell time in minutes for sequential staypoint detection.
+    memories.cluster.staypoint.min_dwell_minutes: '%env(default:memories.cluster.staypoint.min_dwell_minutes_default:int:MEMORIES_CLUSTER_STAYPOINT_MIN_DWELL_MINUTES)%'
+    # Description: Default radius in kilometres for the DBSCAN staypoint fallback (set to 0 to disable).
+    memories.cluster.staypoint.fallback_radius_km_default: 0.18
+    # Description: Runtime radius in kilometres for the DBSCAN staypoint fallback.
+    memories.cluster.staypoint.fallback_radius_km: '%env(default:memories.cluster.staypoint.fallback_radius_km_default:float:MEMORIES_CLUSTER_STAYPOINT_FALLBACK_RADIUS_KM)%'
+    # Description: Default minimum sample count for DBSCAN staypoint fallback clustering.
+    memories.cluster.staypoint.fallback_min_samples_default: 3
+    # Description: Runtime minimum sample count for DBSCAN staypoint fallback clustering.
+    memories.cluster.staypoint.fallback_min_samples: '%env(default:memories.cluster.staypoint.fallback_min_samples_default:int:MEMORIES_CLUSTER_STAYPOINT_FALLBACK_MIN_SAMPLES)%'
+    # Description: Default minimum dwell time in minutes for DBSCAN-derived staypoints.
+    memories.cluster.staypoint.fallback_min_dwell_minutes_default: 20
+    # Description: Runtime minimum dwell time in minutes for DBSCAN-derived staypoints.
+    memories.cluster.staypoint.fallback_min_dwell_minutes: '%env(default:memories.cluster.staypoint.fallback_min_dwell_minutes_default:int:MEMORIES_CLUSTER_STAYPOINT_FALLBACK_MIN_DWELL_MINUTES)%'
+
     # Description: Default total number of curated media items selected for a vacation cluster.
     memories.cluster.selection.target_total_default: 40
     # Description: Runtime total number of curated media items selected for a vacation cluster.

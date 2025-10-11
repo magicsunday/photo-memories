@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Selection\SimilarityMetrics;
 use MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use PHPUnit\Framework\TestCase;
@@ -425,6 +426,11 @@ final class VacationMemberSelectorTest extends TestCase
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
+            'staypointIndex'          => StaypointIndex::empty(),
+            'staypointCounts'         => [],
+            'dominantStaypoints'      => [],
+            'transitRatio'            => 0.0,
+            'poiDensity'              => 0.0,
             'cohortPresenceRatio'     => 0.0,
             'cohortMembers'           => [],
             'baseLocation'            => null,
@@ -436,7 +442,27 @@ final class VacationMemberSelectorTest extends TestCase
             'isSynthetic'             => false,
         ];
 
-        return array_replace($base, $overrides);
+        $summary = array_replace($base, $overrides);
+
+        if (!isset($summary['staypointIndex']) || !$summary['staypointIndex'] instanceof StaypointIndex) {
+            $summary['staypointIndex'] = StaypointIndex::build($date, $summary['staypoints'], $summary['members']);
+        }
+
+        $summary['staypointCounts'] = $summary['staypointIndex']->getCounts();
+
+        if (!isset($summary['dominantStaypoints'])) {
+            $summary['dominantStaypoints'] = [];
+        }
+
+        if (!isset($summary['transitRatio'])) {
+            $summary['transitRatio'] = 0.0;
+        }
+
+        if (!isset($summary['poiDensity'])) {
+            $summary['poiDensity'] = 0.0;
+        }
+
+        return $summary;
     }
 
     private function createPersonMedia(string $filename, string $time, float $quality, string $person): Media
