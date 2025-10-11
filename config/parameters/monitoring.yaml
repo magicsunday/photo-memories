@@ -10,3 +10,5 @@ parameters:
     memories.monitoring.log_path_default: '%kernel.project_dir%/var/log/monitoring/jobs.jsonl'
     # Description: Runtime path for monitoring log output, allowing environment overrides.
     memories.monitoring.log_path: '%env(default:memories.monitoring.log_path_default:string:MEMORIES_MONITORING_LOG_PATH)%'
+    # Description: Schema version attached to emitted monitoring payloads.
+    memories.monitoring.schema_version: '2024-08'

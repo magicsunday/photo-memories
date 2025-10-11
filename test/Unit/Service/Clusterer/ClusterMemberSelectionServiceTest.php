@@ -109,6 +109,8 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         self::assertSame(['blocked' => 1, 'replacements' => 0], $selection['near_duplicates']);
         self::assertArrayHasKey('hash_samples', $selection);
         self::assertCount(2, $selection['hash_samples']);
+        self::assertArrayHasKey('exclusion_reasons', $selection);
+        self::assertIsArray($selection['exclusion_reasons']);
         self::assertSame(
             $selection['per_day_distribution'],
             $selection['telemetry']['distribution']['per_day'],

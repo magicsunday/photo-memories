@@ -20,6 +20,7 @@ use function array_key_exists;
 use function array_merge;
 use function dirname;
 use function is_dir;
+use function is_array;
 use function is_string;
 use function json_encode;
 use function mkdir;
@@ -41,6 +42,7 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
         private readonly string $logPath,
         private readonly bool $enabled = true,
         private readonly ?ClockInterface $clock = null,
+        private readonly string $schemaVersion = '1.0',
     ) {
     }
 
@@ -90,6 +92,10 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
             $context['timestamp'] = $timestamp->format(DateTimeImmutable::ATOM);
         }
 
+        if (!array_key_exists('schema_version', $context)) {
+            $context['schema_version'] = $this->schemaVersion;
+        }
+
         $extra = [];
         foreach ($context as $key => $value) {
             if (!is_string($key)) {
@@ -102,6 +108,23 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
             }
 
             $extra[$normalizedKey] = $value;
+        }
+
+        $metrics = $extra['phase_metrics'] ?? null;
+        if (is_array($metrics)) {
+            unset($extra['phase_metrics']);
+
+            foreach ([
+                'counts'       => 'phase_counts',
+                'medians'      => 'phase_medians',
+                'percentiles'  => 'phase_percentiles',
+                'durations_ms' => 'phase_durations_ms',
+            ] as $source => $target) {
+                $values = $metrics[$source] ?? null;
+                if (is_array($values)) {
+                    $extra[$target] = $values;
+                }
+            }
         }
 
         return $extra;

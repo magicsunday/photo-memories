@@ -184,6 +184,12 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         $telemetry['per_bucket_distribution'] = $telemetry['distribution']['per_bucket'] ?? [];
         $telemetry['algorithm'] = $draft->getAlgorithm();
 
+        if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
+            $telemetry['exclusion_reasons'] = $telemetry['rejections'];
+        } else {
+            $telemetry['exclusion_reasons'] = [];
+        }
+
         unset($telemetry['distance_samples'], $telemetry['distribution']);
 
         return $telemetry;

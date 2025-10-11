@@ -81,7 +81,52 @@ final class FileJobMonitoringEmitterTest extends TestCase
         self::assertSame('geocoding.poi_update', $payload['job']);
         self::assertSame('started', $payload['status']);
         self::assertSame('bar', $payload['foo']);
+        self::assertSame('1.0', $payload['schema_version']);
         self::assertSame('2024-01-01T12:00:00+00:00', $payload['timestamp']);
+
+        unlink($path);
+    }
+
+    #[Test]
+    public function mergesPhaseMetricsIntoPayload(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'monitoring-test-');
+        if (!is_string($path)) {
+            self::markTestSkipped('Temp file could not be created.');
+        }
+
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
+        $emitter = new FileJobMonitoringEmitter($path, true, null, '2.0');
+        $emitter->emit('member.selection', 'completed', [
+            'phase_metrics' => [
+                'counts'       => ['filtering' => ['members' => ['input' => 5]]],
+                'medians'      => ['selecting' => ['spacing_seconds' => 2.5]],
+                'percentiles'  => ['selecting' => ['spacing_seconds' => ['p90' => 3.0]]],
+                'durations_ms' => ['filtering' => 12.4],
+            ],
+        ]);
+
+        self::assertFileExists($path);
+
+        $contents = file_get_contents($path);
+        self::assertIsString($contents);
+        $lines = array_filter(explode("\n", trim($contents)));
+        self::assertCount(1, $lines);
+
+        try {
+            $payload = json_decode($lines[0], true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            self::fail($exception->getMessage());
+        }
+
+        self::assertSame('2.0', $payload['schema_version']);
+        self::assertArrayHasKey('phase_counts', $payload);
+        self::assertArrayHasKey('phase_medians', $payload);
+        self::assertArrayHasKey('phase_percentiles', $payload);
+        self::assertArrayHasKey('phase_durations_ms', $payload);
 
         unlink($path);
     }

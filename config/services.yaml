@@ -48,6 +48,7 @@ services:
         arguments:
             $logPath: '%memories.monitoring.log_path%'
             $enabled: '%memories.monitoring.enabled%'
+            $schemaVersion: '%memories.monitoring.schema_version%'
 
     MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface:
         alias: MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter
