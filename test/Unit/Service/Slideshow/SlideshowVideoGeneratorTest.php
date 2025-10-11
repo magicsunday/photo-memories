@@ -367,9 +367,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterMethod->setAccessible(true);
 
         /** @var list<string> $filtered */
-        $filtered = $filterMethod->invoke($generator, [' fade ', 'invalid', '', 'pixelize', 'wipedown']);
+        $filtered = $filterMethod->invoke(
+            $generator,
+            [' fade ', 'invalid', '', 'pixelize', 'wipedown', 'hlslice', 'Distance', 'Vertopen']
+        );
 
-        self::assertSame(['fade', 'pixelize', 'wipedown'], $filtered);
+        self::assertSame(['fade', 'pixelize', 'wipedown', 'hlslice', 'distance'], $filtered);
 
         $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
         $buildMethod->setAccessible(true);
