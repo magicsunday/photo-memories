@@ -91,12 +91,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     /**
      * @var list<string>|null
      */
-    private static ?array $cachedTransitionWhitelist = null;
+    private static ?array $cachedTransitionWhitelist;
 
     /**
      * @var array<string, bool>|null
      */
-    private static ?array $cachedTransitionLookup = null;
+    private static ?array $cachedTransitionLookup;
 
     /**
      * @param list<string> $transitions
