@@ -425,6 +425,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $backgroundStages[] = sprintf(
                 'gblur=sigma=%1$s:enable=%2$s',
                 $this->formatFloat($this->backgroundBlurSigma),
+                $blurEnableExpr,
             );
         }
 
