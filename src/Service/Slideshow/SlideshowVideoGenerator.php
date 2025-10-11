@@ -419,23 +419,25 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $maxFrameIndex        = $frameCount - 1;
         $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
+        $kenBurns = $this->resolveKenBurnsParameters($index);
+
         if ($this->kenBurnsEnabled) {
             $animatedZoomExpr = sprintf(
                 'max(1,%1$s+(%2$s-%1$s)*%3$s)',
-                $this->formatFloat($this->zoomStart),
-                $this->formatFloat($this->zoomEnd),
+                $this->formatFloat($kenBurns['zoomStart']),
+                $this->formatFloat($kenBurns['zoomEnd']),
                 $progressExpr,
             );
             $zoomExpr         = $this->escapeFilterExpression($animatedZoomExpr);
 
             $panXAnimatedExpr = sprintf(
                 'clip((iw-(iw/zoom))/2 + %1$s*(iw-(iw/zoom))/2*%2$s,0,max(iw-(iw/zoom),0))',
-                $this->formatFloat($this->panX),
+                $this->formatFloat($kenBurns['panX']),
                 $progressExpr,
             );
             $panYAnimatedExpr = sprintf(
                 'clip((ih-(ih/zoom))/2 + %1$s*(ih-(ih/zoom))/2*%2$s,0,max(ih-(ih/zoom),0))',
-                $this->formatFloat($this->panY),
+                $this->formatFloat($kenBurns['panY']),
                 $progressExpr,
             );
 
@@ -474,6 +476,31 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $foreground,
             $index,
         );
+    }
+
+    /**
+     * @return array{zoomStart: float, zoomEnd: float, panX: float, panY: float}
+     */
+    private function resolveKenBurnsParameters(int $index): array
+    {
+        $minimumZoom = max(1.0, min($this->zoomStart, $this->zoomEnd));
+        $maximumZoom = max(1.0, max($this->zoomStart, $this->zoomEnd));
+
+        if (($index % 2) === 0) {
+            return [
+                'zoomStart' => $minimumZoom,
+                'zoomEnd'   => $maximumZoom,
+                'panX'      => $this->panX,
+                'panY'      => $this->panY,
+            ];
+        }
+
+        return [
+            'zoomStart' => $maximumZoom,
+            'zoomEnd'   => $minimumZoom,
+            'panX'      => $this->panX !== 0.0 ? -$this->panX : 0.0,
+            'panY'      => $this->panY !== 0.0 ? -$this->panY : 0.0,
+        ];
     }
 
     private function resolveSlideDuration(float $duration): float
@@ -773,6 +800,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($collecting) {
                 if ($trimmed === '' || preg_match('/^[a-z0-9_]+\s+<[^>]+>/', $trimmed) === 1) {
                     $collecting = false;
+                } elseif (preg_match('/\b(?:possible|available)\s+(?:values|transitions)\b/i', $trimmed) === 1) {
+                    if (preg_match('/:\s*(.*)$/', $trimmed, $matches) === 1) {
+                        $content = trim($matches[1]);
+                        if ($content !== '') {
+                            $names = array_merge(
+                                $names,
+                                $this->extractTransitionNamesFromLine($content, true),
+                            );
+                        }
+                    }
+
+                    continue;
                 } else {
                     $names = array_merge(
                         $names,
