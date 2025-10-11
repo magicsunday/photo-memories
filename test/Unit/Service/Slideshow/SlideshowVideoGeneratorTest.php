@@ -233,7 +233,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             self::assertSame(1, preg_match('/\\[bg0\\]([^;]+)\\[bg0out\\]/', $filterComplex, $portraitMatch));
             self::assertStringContainsString('gblur=', $portraitMatch[1]);
-            self::assertStringContainsString("enable='lt(iw/ih,", $portraitMatch[1]);
+            self::assertStringContainsString("enable='lt(iw/ih\\,", $portraitMatch[1]);
+            self::assertStringNotContainsString("enable='lt(iw/ih,", $portraitMatch[1]);
 
             self::assertSame(1, preg_match('/\\[bg1\\]([^;]+)\\[bg1out\\]/', $filterComplex, $landscapeMatch));
             self::assertStringNotContainsString('gblur=', $landscapeMatch[1]);

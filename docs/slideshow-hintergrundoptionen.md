@@ -7,7 +7,7 @@ Der aktuelle Slideshow-Generator setzt beim Einpassen von Bildern auf einen schw
 - Für dynamische Akzentfarben kann vor der Filterkette ein `palettegen`/`paletteuse`-Durchlauf oder eine Durchschnittsfarb-Berechnung aus den Bildpixeln erfolgen, deren Ergebnis dann in den `pad`-Parameter injiziert wird.
 
 ## 2. Weichgezeichneter Hintergrund wie bei iOS
-- Dupliziere das Bild in der Filterkette (`[0:v]split[a][b];[a]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=20[bg];[b]scale=1920:1080:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2`).
+- Dupliziere das Bild in der Filterkette (`[0:v]split[a][b];[a]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=20:enable='lt(iw/ih\,1.778)'[bg];[b]scale=1920:1080:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2`).
 - Das Ergebnis ist ein weichgezeichneter, vollflächiger Hintergrund. Für leichte Parallax-Effekte kann zusätzlich `zoompan` auf dem Hintergrundkanal verwendet werden.
 - Diese Variante ist nun standardmäßig aktiv. Die Intensität steuerst du über den Parameter `memories.slideshow.background_blur_sigma`.
 
