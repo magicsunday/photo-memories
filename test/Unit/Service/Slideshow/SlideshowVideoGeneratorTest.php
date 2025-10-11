@@ -12,17 +12,21 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
+use MagicSunday\Memories\Service\Slideshow\SlideshowTransitionCache;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 
+use function array_fill_keys;
 use function array_map;
 use function array_search;
 use function base64_decode;
 use function count;
 use function explode;
 use function file_put_contents;
+use function hash;
+use function implode;
 use function preg_match;
 use function preg_match_all;
 use function round;
@@ -934,6 +938,51 @@ HELP;
         );
     }
 
+    public function testTransitionLookupIsRebuiltWhenWhitelistChanges(): void
+    {
+        $this->resetTransitionCache();
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+
+        $cacheMethod = $reflector->getMethod('transitionCache');
+        $cacheMethod->setAccessible(true);
+
+        /** @var SlideshowTransitionCache $cache */
+        $cache = $cacheMethod->invoke(null);
+
+        $initialWhitelist = ['fade'];
+        $initialKey       = hash('sha256', implode('|', $initialWhitelist));
+
+        $cache->whitelist = $initialWhitelist;
+        $cache->lookup    = array_fill_keys($initialWhitelist, true);
+        $cache->lookupKey = $initialKey;
+
+        $lookupMethod = $reflector->getMethod('getTransitionLookup');
+        $lookupMethod->setAccessible(true);
+
+        /** @var array<string, bool> $initialLookup */
+        $initialLookup = $lookupMethod->invoke($generator);
+
+        self::assertSame($cache->lookup, $initialLookup);
+        self::assertSame($initialKey, $cache->lookupKey);
+
+        $updatedWhitelist = ['fade', 'wipeleft'];
+
+        $cache->whitelist = $updatedWhitelist;
+        $cache->lookup    = $initialLookup;
+        $cache->lookupKey = $initialKey;
+
+        /** @var array<string, bool> $updatedLookup */
+        $updatedLookup = $lookupMethod->invoke($generator);
+
+        self::assertSame(array_fill_keys($updatedWhitelist, true), $updatedLookup);
+
+        $expectedKey = hash('sha256', implode('|', $updatedWhitelist));
+        self::assertSame($expectedKey, $cache->lookupKey);
+    }
+
     public function testTransitionDiscoveryFallsBackToWhitelistWhenCommandFails(): void
     {
         $this->resetTransitionCache();
@@ -994,10 +1043,8 @@ HELP;
     {
         $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
 
-        foreach (['cachedTransitionWhitelist', 'cachedTransitionLookup'] as $propertyName) {
-            $property = $reflector->getProperty($propertyName);
-            $property->setAccessible(true);
-            $property->setValue(null, null);
-        }
+        $method = $reflector->getMethod('resetTransitionCache');
+        $method->setAccessible(true);
+        $method->invoke(null);
     }
 }

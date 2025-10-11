@@ -49,6 +49,24 @@ use function strtolower;
 use function trim;
 
 /**
+ * @internal
+ */
+final class SlideshowTransitionCache
+{
+    /**
+     * @var list<string>|null
+     */
+    public ?array $whitelist = null;
+
+    /**
+     * @var array<string, bool>|null
+     */
+    public ?array $lookup = null;
+
+    public ?string $lookupKey = null;
+}
+
+/**
  * FFmpeg based slideshow generator.
  */
 final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
@@ -87,16 +105,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private const array DEFAULT_TRANSITIONS = self::TRANSITION_WHITELIST;
 
     private const int ZOOMPAN_FPS = 30;
-
-    /**
-     * @var list<string>|null
-     */
-    private static ?array $cachedTransitionWhitelist;
-
-    /**
-     * @var array<string, bool>|null
-     */
-    private static ?array $cachedTransitionLookup;
 
     /**
      * @param list<string> $transitions
@@ -670,8 +678,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function getTransitionWhitelist(): array
     {
-        if (self::$cachedTransitionWhitelist !== null) {
-            return self::$cachedTransitionWhitelist;
+        $cache = self::transitionCache();
+
+        if ($cache->whitelist !== null) {
+            return $cache->whitelist;
         }
 
         $discovered = $this->discoverAvailableTransitions();
@@ -679,10 +689,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $discovered = self::TRANSITION_WHITELIST;
         }
 
-        self::$cachedTransitionLookup    = null;
-        self::$cachedTransitionWhitelist = $discovered;
+        $cache->lookup    = null;
+        $cache->lookupKey = null;
+        $cache->whitelist = $discovered;
 
-        return self::$cachedTransitionWhitelist;
+        return $cache->whitelist;
     }
 
     /**
@@ -690,13 +701,39 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function getTransitionLookup(): array
     {
-        if (self::$cachedTransitionLookup !== null) {
-            return self::$cachedTransitionLookup;
+        $cache = self::transitionCache();
+
+        $whitelist = $this->getTransitionWhitelist();
+        $lookupKey = hash('sha256', implode('|', $whitelist));
+
+        if ($cache->lookup !== null && $cache->lookupKey === $lookupKey) {
+            return $cache->lookup;
         }
 
-        self::$cachedTransitionLookup = array_fill_keys($this->getTransitionWhitelist(), true);
+        $cache->lookup    = array_fill_keys($whitelist, true);
+        $cache->lookupKey = $lookupKey;
 
-        return self::$cachedTransitionLookup;
+        return $cache->lookup;
+    }
+
+    private static function transitionCache(): SlideshowTransitionCache
+    {
+        static $cache = null;
+
+        if ($cache === null) {
+            $cache = new SlideshowTransitionCache();
+        }
+
+        return $cache;
+    }
+
+    private static function resetTransitionCache(): void
+    {
+        $cache = self::transitionCache();
+
+        $cache->whitelist = null;
+        $cache->lookup    = null;
+        $cache->lookupKey = null;
     }
 
     /**
