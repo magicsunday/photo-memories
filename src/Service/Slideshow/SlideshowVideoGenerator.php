@@ -836,23 +836,24 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $filters          = [];
-        $marginXExpr      = 'w*0.07';
-        $marginYExpr      = 'h*0.07';
-        $titleFontSize    = max(1, (int) round($this->height * 0.055));
-        $subtitleFontSize = max(1, (int) round($this->height * 0.034));
+        $safeXExpr        = 'safeX';
+        $safeYExpr        = 'safeY';
+        $titleFontSize    = max(1, (int) round($this->height * 0.060));
+        $subtitleFontSize = max(1, (int) round($this->height * 0.038));
+        $lineGap          = max(0, (int) round($this->height * 0.012));
 
         $titleText    = $this->normaliseDrawText($title);
         $subtitleText = $this->normaliseDrawText($subtitle);
 
-        if ($titleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($titleText, $titleFontSize, $marginXExpr, sprintf('%s+line_h', $marginYExpr));
+        if ($subtitleText !== null) {
+            $filters[] = $this->buildDrawTextFilter($subtitleText, $subtitleFontSize, $safeXExpr, sprintf('h-th-%s', $safeYExpr));
         }
 
-        if ($subtitleText !== null) {
-            $subtitleY = $titleText !== null
-                ? sprintf('%s+%d+h*0.02+line_h', $marginYExpr, $titleFontSize)
-                : sprintf('%s+line_h', $marginYExpr);
-            $filters[] = $this->buildDrawTextFilter($subtitleText, $subtitleFontSize, $marginXExpr, $subtitleY);
+        if ($titleText !== null) {
+            $titleY = $subtitleText !== null
+                ? sprintf('h-th-%s-%d-%d', $safeYExpr, $subtitleFontSize, $lineGap)
+                : sprintf('h-th-%s', $safeYExpr);
+            $filters[] = $this->buildDrawTextFilter($titleText, $titleFontSize, $safeXExpr, $titleY);
         }
 
         return implode(',', array_filter($filters));
@@ -873,8 +874,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
         return sprintf(
-            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=0x000000AA:shadowx=0:shadowy=6:" .
-            'borderw=2:bordercolor=0x00000066:x=%s:y=%s',
+            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=2:shadowy=2:" .
+            'borderw=2:bordercolor=black@0.20:x=%s:y=%s',
             $text,
             $fontSegment,
             $fontSize,
