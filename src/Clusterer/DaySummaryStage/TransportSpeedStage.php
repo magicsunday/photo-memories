@@ -27,6 +27,8 @@ use function usort;
  */
 final readonly class TransportSpeedStage implements DaySummaryStageInterface
 {
+    private const HIGH_TRAVEL_THRESHOLD_KM = 150.0;
+
     public function __construct(
         private float $minLegDurationMinutes = 5.0,
         private float $minLegDistanceKm = 10.0,
@@ -55,6 +57,11 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             $summary['maxSpeedKmh']         = 0.0;
             $summary['avgSpeedKmh']         = 0.0;
             $summary['hasHighSpeedTransit'] = false;
+
+            $travelKm = (float) ($summary['travelKm'] ?? 0.0);
+            if ($travelKm > self::HIGH_TRAVEL_THRESHOLD_KM) {
+                $summary['hasHighSpeedTransit'] = true;
+            }
 
             $gpsMembers = $summary['gpsMembers'] ?? [];
             if ($gpsMembers === [] || count($gpsMembers) < 2) {
@@ -117,7 +124,9 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             if ($speedSamples > 0) {
                 $summary['avgSpeedKmh'] = $totalSpeedKmh / $speedSamples;
                 $summary['maxSpeedKmh'] = $maxSpeedKmh;
-                $summary['hasHighSpeedTransit'] = $maxSpeedKmh >= $this->highSpeedThresholdKmh;
+                if ($maxSpeedKmh >= $this->highSpeedThresholdKmh) {
+                    $summary['hasHighSpeedTransit'] = true;
+                }
             }
         }
 

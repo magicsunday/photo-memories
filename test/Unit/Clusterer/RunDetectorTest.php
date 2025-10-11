@@ -136,7 +136,7 @@ final class RunDetectorTest extends TestCase
             'gpsMembers'              => $gpsMembers,
             'maxDistanceKm'           => $maxDistanceKm,
             'avgDistanceKm'           => $avgDistanceKm,
-            'travelKm'                => 0.0,
+            'travelKm'                => $hasHighSpeedTransit ? 180.0 : 0.0,
             'maxSpeedKmh'             => $hasHighSpeedTransit ? 220.0 : 0.0,
             'avgSpeedKmh'             => $hasHighSpeedTransit ? 160.0 : 0.0,
             'hasHighSpeedTransit'     => $hasHighSpeedTransit,
