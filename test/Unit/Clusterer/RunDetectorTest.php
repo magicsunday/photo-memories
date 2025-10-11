@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -159,6 +160,11 @@ final class RunDetectorTest extends TestCase
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
+            'staypointIndex'          => StaypointIndex::empty(),
+            'staypointCounts'         => [],
+            'dominantStaypoints'      => [],
+            'transitRatio'            => 0.0,
+            'poiDensity'              => 0.0,
             'cohortPresenceRatio'     => 0.0,
             'cohortMembers'           => [],
             'baseLocation'            => null,

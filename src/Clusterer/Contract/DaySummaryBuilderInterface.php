@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Contract;
 
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 
 /**
@@ -51,6 +52,11 @@ interface DaySummaryBuilderInterface
      *     spotNoiseSamples: int,
      *     spotDwellSeconds: int,
      *     staypoints: list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,
+     *     staypointIndex: StaypointIndex,
+     *     staypointCounts: array<string, int>,
+     *     dominantStaypoints: list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,
+     *     transitRatio: float,
+     *     poiDensity: float,
      *     baseLocation: array{lat:float,lon:float,distance_km:float,source:string}|null,
      *     baseAway: bool,
      *     awayByDistance: bool,

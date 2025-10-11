@@ -19,6 +19,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
@@ -1337,6 +1338,8 @@ final class VacationScoreCalculatorTest extends TestCase
         $first = $gpsMembers[0];
         $last  = $gpsMembers[count($gpsMembers) - 1];
 
+        $index = StaypointIndex::build($date, $staypoints, $members);
+
         return [
             'date'                    => $date,
             'members'                 => $members,
@@ -1366,6 +1369,11 @@ final class VacationScoreCalculatorTest extends TestCase
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => $spotDwellSeconds,
             'staypoints'              => $staypoints,
+            'staypointIndex'          => $index,
+            'staypointCounts'         => $index->getCounts(),
+            'dominantStaypoints'      => [],
+            'transitRatio'            => 0.0,
+            'poiDensity'              => 0.0,
             'cohortPresenceRatio'     => $cohortPresenceRatio,
             'cohortMembers'           => $cohortMembers,
             'baseLocation'            => null,

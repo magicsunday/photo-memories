@@ -19,6 +19,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\PoiClassifierInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 
@@ -65,6 +66,11 @@ use const SORT_STRING;
  *     spotNoiseSamples: int,
  *     spotDwellSeconds: int,
  *     staypoints: list<Staypoint>,
+ *     staypointIndex: StaypointIndex,
+ *     staypointCounts: array<string, int>,
+ *     dominantStaypoints: list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,
+ *     transitRatio: float,
+ *     poiDensity: float,
  *     cohortPresenceRatio: float,
  *     cohortMembers: array<int, int>,
  *     baseLocation: BaseLocation|null,
@@ -153,6 +159,11 @@ final readonly class InitializationStage implements DaySummaryStageInterface
                     'spotNoiseSamples'        => 0,
                     'spotDwellSeconds'        => 0,
                     'staypoints'              => [],
+                    'staypointIndex'          => StaypointIndex::empty(),
+                    'staypointCounts'         => [],
+                    'dominantStaypoints'      => [],
+                    'transitRatio'            => 0.0,
+                    'poiDensity'              => 0.0,
                     'cohortPresenceRatio'     => 0.0,
                     'cohortMembers'           => [],
                     'baseLocation'            => null,
@@ -317,6 +328,11 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             'spotNoiseSamples'        => 0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
+            'staypointIndex'          => StaypointIndex::empty(),
+            'staypointCounts'         => [],
+            'dominantStaypoints'      => [],
+            'transitRatio'            => 0.0,
+            'poiDensity'              => 0.0,
             'baseLocation'            => null,
             'baseAway'                => false,
             'awayByDistance'          => false,
