@@ -130,8 +130,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString(',crop=1920:1080[bg0out]', $filterComplex);
         self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
-        self::assertStringContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
+        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
@@ -146,6 +148,60 @@ final class SlideshowVideoGeneratorTest extends TestCase
             preg_match('/\\[1:v][^;\\[]*drawtext/', $filterComplex),
             'Overlay should only appear on the cover slide.'
         );
+    }
+
+    public function testBuildCommandBuildsCorrectFilterChain(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'filter-chain',
+            '/tmp/filter-chain.json',
+            '/tmp/filter-chain.mp4',
+            '/tmp/filter-chain.lock',
+            '/tmp/filter-chain.error',
+            ['/tmp/cover.jpg', '/tmp/second.jpg'],
+            $slides,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+
+        self::assertStringContainsString('zoompan=z=', $filterComplex);
+        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
     }
 
     public function testBuildIntroTextOverlayFilterChainStacksTitleAboveSubtitle(): void
@@ -694,7 +750,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("x='if(eq(max(1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(iw/zoom)\\,0)))'", $filterComplex);
         self::assertStringContainsString("y='if(eq(max(1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(ih/zoom)\\,0)))'", $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
     }
 
     public function testBuildCommandUsesStoryboardTransitions(): void
