@@ -74,8 +74,15 @@ de:
         subtitle: "{{ date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
-    #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
-    #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
+    #   - {{ start_date }}: Startdatum (kurzes Datumsformat)
+    #   - {{ end_date }}: Enddatum (kurzes Datumsformat)
+    #   - {{ vacation_title }}: Zusammenfassung des Trips (Route oder Klassifikation)
+    #   - {{ vacation_subtitle }}: Untertitel inkl. Distanz/Etappen und Datum
+    #   - {{ route_label }}: Route der markantesten Stopps (z. B. "A → B → C")
+    #   - {{ route_distance_label }}: Gerundete Gesamtdistanz (z. B. "ca. 420 km")
+    #   - {{ route_stop_label }}: Anzahl der Stopps (z. B. "3 Stopps")
+    #   - {{ route_leg_label }}: Anzahl der Etappen (z. B. "2 Etappen")
+    #   - {{ route_metrics_label }}: Kombinierter Distanz-/Stopp-String
     #   - {{ classification }}: Klassifikation des Trips (vacation/short_trip/day_trip)
     #   - {{ classification_label }}: Lesbare Bezeichnung der Klassifikation
     #   - {{ score }}: Bewerteter Reise-Score
@@ -103,8 +110,8 @@ de:
     #   - {{ primaryStaypointLocation }} (optional): Formatierter Aufenthaltsort des Haupt-Staypoints
     #   - {{ countries }}: Liste eindeutiger ISO-Ländercodes (kann leer sein)
     vacation:
-        title: "{{ classification_label }} – {{ place_country }}"
-        subtitle: "{{ start_date }} – {{ end_date }}"
+        title: "{{ vacation_title }}"
+        subtitle: "{{ vacation_subtitle }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
@@ -134,7 +141,7 @@ de:
     #   - {{ poi_tags }} (optional): Liste relevanter POI-Tags (Array)
     significant_place:
         title: "Besonderer Ort: {{ place }}"
-        subtitle: "{{ date_range }}"
+        subtitle: "{{ subtitle_special|date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
@@ -143,7 +150,7 @@ de:
     #   - {{ place }} (optional): Dominanter Aufnahmeort
     first_visit_place:
         title: "Erstes Mal: {{ place_city }}"
-        subtitle: "{{ date_range }}"
+        subtitle: "{{ subtitle_special|date_range }}"
 
     # Zuhause
     # Platzhalter:
@@ -216,7 +223,7 @@ de:
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     nightlife_event:
         title: "Abend in der Stadt"
-        subtitle: "{{ date_range }}"
+        subtitle: "{{ subtitle_special|date_range }}"
     # Platzhalter:
     #   - {{ date_range }}: Formatierter Zeitraum der Aufnahmen
     #   - {{ start_date }}: Startdatum (TT.MM.JJJJ)
@@ -242,7 +249,7 @@ de:
     #   - {{ end_date }}: Enddatum (TT.MM.JJJJ)
     golden_hour:
         title: "Goldene Stunde"
-        subtitle: "{{ date_range }}"
+        subtitle: "{{ subtitle_special|date_range }}"
 
     # Personen & Tiere
     # Platzhalter:

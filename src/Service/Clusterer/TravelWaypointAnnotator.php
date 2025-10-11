@@ -62,7 +62,10 @@ final class TravelWaypointAnnotator
      *         region: ?string,
      *         country: ?string,
      *         countryCode: ?string,
-     *         count: int
+     *         count: int,
+     *         first_seen_at: int,
+     *         lat: float,
+     *         lon: float
      *     }>,
      *     events: list<array{label: string, count: int}>
      * }
@@ -92,6 +95,8 @@ final class TravelWaypointAnnotator
                 'countryCode'=> $this->normaliseCountryCode($location->getCountryCode()),
                 'count'      => 0,
                 'firstSeen'  => $timestamp ?? PHP_INT_MAX,
+                'lat'        => $location->getLat(),
+                'lon'        => $location->getLon(),
             ];
 
             ++$waypointCounters[$key]['count'];
@@ -106,13 +111,15 @@ final class TravelWaypointAnnotator
         $waypoints = array_map(
             static function (array $entry): array {
                 return [
-                    'label'       => $entry['label'],
-                    'city'        => $entry['city'],
-                    'region'      => $entry['region'],
-                    'country'     => $entry['country'],
-                    'countryCode' => $entry['countryCode'],
-                    'count'       => $entry['count'],
-                    'firstSeen'   => $entry['firstSeen'],
+                    'label'         => $entry['label'],
+                    'city'          => $entry['city'],
+                    'region'        => $entry['region'],
+                    'country'       => $entry['country'],
+                    'countryCode'   => $entry['countryCode'],
+                    'count'         => $entry['count'],
+                    'first_seen_at' => $entry['firstSeen'],
+                    'lat'           => (float) $entry['lat'],
+                    'lon'           => (float) $entry['lon'],
                 ];
             },
             $waypointCounters
@@ -136,15 +143,6 @@ final class TravelWaypointAnnotator
         );
 
         $waypoints = array_slice($waypoints, 0, $this->maxWaypoints);
-
-        $waypoints = array_map(
-            static function (array $entry): array {
-                unset($entry['firstSeen']);
-
-                return $entry;
-            },
-            $waypoints
-        );
 
         $events = $this->buildEventList($eventCounters);
 

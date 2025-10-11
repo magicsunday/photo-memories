@@ -15,6 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -71,7 +73,7 @@ YAML
         );
 
         self::assertSame('Trip nach Berlin', $generator->makeTitle($cluster));
-        self::assertSame('01.06. – 03.06.2024', $generator->makeSubtitle($cluster));
+        self::assertSame('1.–3. Jun. 2024', $generator->makeSubtitle($cluster));
     }
 
     #[Test]
@@ -99,7 +101,7 @@ YAML
         );
 
         self::assertSame('Reise nach Hamburg', $generator->makeTitle($cluster, 'en'));
-        self::assertSame('05.07.2024 – 07.07.2024', $generator->makeSubtitle($cluster, 'en'));
+        self::assertSame('5.–7. Jul. 2024', $generator->makeSubtitle($cluster, 'en'));
     }
 
     #[Test]
@@ -119,7 +121,7 @@ YAML
         );
 
         self::assertSame('Sommer 2024', $generator->makeTitle($cluster));
-        self::assertSame('12.08.2024', $generator->makeSubtitle($cluster));
+        self::assertSame('12. Aug. 2024', $generator->makeSubtitle($cluster));
     }
 
     #[Test]
@@ -203,6 +205,109 @@ YAML
         self::assertSame('Monterosso Al Mare, Ligurien, Italien', $generator->makeSubtitle($cluster));
     }
 
+    #[Test]
+    public function rendersVacationRouteWithMetrics(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  vacation:
+    title: "{{ vacation_title }}"
+    subtitle: "{{ vacation_subtitle }}"
+YAML
+        );
+
+        $cluster = $this->createCluster(
+            algorithm: 'vacation',
+            params: [
+                'classification_label' => 'Urlaub',
+                'place_country'       => 'Deutschland',
+                'time_range'          => [
+                    'from' => (new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-06-03 20:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+                'travel_waypoints'    => [
+                    [
+                        'label'         => 'Alpha',
+                        'city'          => 'Alpha',
+                        'region'        => null,
+                        'country'       => null,
+                        'countryCode'   => null,
+                        'count'         => 5,
+                        'first_seen_at' => 100,
+                        'lat'           => 0.0,
+                        'lon'           => 0.0,
+                    ],
+                    [
+                        'label'         => 'Beta',
+                        'city'          => 'Beta',
+                        'region'        => null,
+                        'country'       => null,
+                        'countryCode'   => null,
+                        'count'         => 4,
+                        'first_seen_at' => 200,
+                        'lat'           => 0.0,
+                        'lon'           => 1.0,
+                    ],
+                    [
+                        'label'         => 'Gamma',
+                        'city'          => 'Gamma',
+                        'region'        => null,
+                        'country'       => null,
+                        'countryCode'   => null,
+                        'count'         => 3,
+                        'first_seen_at' => 300,
+                        'lat'           => 1.0,
+                        'lon'           => 1.0,
+                    ],
+                ],
+            ],
+        );
+
+        self::assertSame('Alpha → Beta → Gamma', $generator->makeTitle($cluster));
+        self::assertSame('ca. 220 km • 3 Stopps • 1.–3. Jun. 2024', $generator->makeSubtitle($cluster));
+    }
+
+    #[Test]
+    public function rendersSpecialSubtitlesForHighlightedPlaces(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  significant_place:
+    title: "Besonderer Ort: {{ place }}"
+    subtitle: "{{ subtitle_special|date_range }}"
+  nightlife_event:
+    title: "Abend in der Stadt"
+    subtitle: "{{ subtitle_special|date_range }}"
+YAML
+        );
+
+        $significant = $this->createCluster(
+            algorithm: 'significant_place',
+            params: [
+                'place'      => 'Berlin',
+                'time_range' => [
+                    'from' => (new DateTimeImmutable('2024-03-15 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-03-15 18:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+            ],
+        );
+
+        self::assertSame('Lieblingsort • Berlin • 15. Mär. 2024', $generator->makeSubtitle($significant));
+
+        $nightlife = $this->createCluster(
+            algorithm: 'nightlife_event',
+            params: [
+                'place_city' => 'Hamburg',
+                'time_range' => [
+                    'from' => (new DateTimeImmutable('2024-04-01 18:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-04-02 02:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+            ],
+        );
+
+        self::assertSame('Nachtleben • Hamburg • 1.–2. Apr. 2024', $generator->makeSubtitle($nightlife));
+    }
+
     private function createGenerator(string $yaml, string $defaultLocale = 'de'): SmartTitleGenerator
     {
         $path = tempnam(sys_get_temp_dir(), 'titles_');
@@ -217,9 +322,11 @@ YAML
 
         $this->tempFiles[] = $path;
 
-        $provider = new TitleTemplateProvider($path, $defaultLocale);
+        $provider       = new TitleTemplateProvider($path, $defaultLocale);
+        $routeSummarizer = new RouteSummarizer();
+        $dateFormatter   = new LocalizedDateFormatter();
 
-        return new SmartTitleGenerator($provider);
+        return new SmartTitleGenerator($provider, $routeSummarizer, $dateFormatter);
     }
 
     /**
