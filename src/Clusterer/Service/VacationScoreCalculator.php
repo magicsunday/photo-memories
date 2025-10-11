@@ -20,6 +20,7 @@ use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
@@ -807,6 +808,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $params['primaryStaypointLocationParts'] = $primaryStaypointLocationParts;
         }
 
+        $staypointMetadata = $this->buildStaypointMetadata($dayKeys, $days, $curatedMembers);
+        if ($staypointMetadata['keys'] !== [] || $staypointMetadata['counts'] !== []) {
+            $params['staypoints'] = $staypointMetadata;
+        }
+
         $placeCityMissing = !isset($params['place_city']) || $params['place_city'] === '';
         if ($placeCityMissing && $primaryStaypointCity !== null) {
             $params['place_city'] = $primaryStaypointCity;
@@ -857,6 +863,102 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             members: $memberIds,
         );
         return $draft;
+    }
+
+    /**
+     * @param list<string> $dayKeys
+     * @param array<string, array{staypointIndex?:StaypointIndex,staypointCounts?:array<string,int>,members:list<Media>,gpsMembers:list<Media>}> $days
+     * @param list<Media>  $members
+     *
+     * @return array{keys: array<int,string>, counts: array<string,int>}
+     */
+    private function buildStaypointMetadata(array $dayKeys, array $days, array $members): array
+    {
+        $indexMap = [];
+        $counts   = [];
+
+        foreach ($dayKeys as $dayKey) {
+            $summary = $days[$dayKey] ?? null;
+            if (!is_array($summary)) {
+                continue;
+            }
+
+            $index = $summary['staypointIndex'] ?? null;
+            if ($index instanceof StaypointIndex) {
+                foreach ($index->getCounts() as $key => $count) {
+                    $counts[$key] = ($counts[$key] ?? 0) + (int) $count;
+                }
+
+                foreach ($summary['members'] as $media) {
+                    if (!$media instanceof Media) {
+                        continue;
+                    }
+
+                    $id = $media->getId();
+                    if ($id === null) {
+                        continue;
+                    }
+
+                    $key = $index->get($media);
+                    if ($key === null) {
+                        continue;
+                    }
+
+                    $indexMap[(int) $id] = $key;
+                }
+
+                foreach ($summary['gpsMembers'] as $media) {
+                    if (!$media instanceof Media) {
+                        continue;
+                    }
+
+                    $id = $media->getId();
+                    if ($id === null) {
+                        continue;
+                    }
+
+                    $key = $index->get($media);
+                    if ($key === null) {
+                        continue;
+                    }
+
+                    $indexMap[(int) $id] = $key;
+                }
+            }
+
+            $staypointCounts = $summary['staypointCounts'] ?? [];
+            if (is_array($staypointCounts)) {
+                foreach ($staypointCounts as $key => $count) {
+                    if (!is_string($key)) {
+                        continue;
+                    }
+
+                    $counts[$key] = ($counts[$key] ?? 0) + (int) $count;
+                }
+            }
+        }
+
+        $filtered = [];
+        foreach ($members as $media) {
+            if (!$media instanceof Media) {
+                continue;
+            }
+
+            $id = $media->getId();
+            if ($id === null) {
+                continue;
+            }
+
+            $intId = (int) $id;
+            if (isset($indexMap[$intId])) {
+                $filtered[$intId] = $indexMap[$intId];
+            }
+        }
+
+        return [
+            'keys'   => $filtered,
+            'counts' => $counts,
+        ];
     }
 
     /**
