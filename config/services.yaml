@@ -762,6 +762,8 @@ services:
             $faceBonus: '%memories.cluster.selection.face_bonus%'
             $selfiePenalty: '%memories.cluster.selection.selfie_penalty%'
             $qualityFloor: '%memories.cluster.selection.quality_floor%'
+            $enablePeopleBalance: '%memories.cluster.selection.enable_people_balance%'
+            $peopleBalanceWeight: '%memories.cluster.selection.people_balance_weight%'
 
     MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider:
         arguments:

@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Clusterer\Selection;
 
 use InvalidArgumentException;
 use function is_finite;
+use function max;
+use function round;
 
 /**
  * Configuration options steering the greedy vacation member selector.
@@ -23,17 +25,17 @@ final readonly class VacationSelectionOptions
 
     public function __construct(
         public int $targetTotal = 40,
-        public int $maxPerDay = 8,
-        public int $timeSlotHours = 3,
-        public int $minSpacingSeconds = 900,
-        public int $phashMinHamming = 6,
-        public int $maxPerStaypoint = 4,
-        public float $videoBonus = 0.20,
-        public float $faceBonus = 0.10,
-        public float $selfiePenalty = 0.15,
-        public float $qualityFloor = 0.35,
-        public bool $enablePeopleBalance = false,
-        public float $peopleBalanceWeight = 0.65,
+        public int $maxPerDay = 5,
+        public int $timeSlotHours = 4,
+        public int $minSpacingSeconds = 2400,
+        public int $phashMinHamming = 9,
+        public int $maxPerStaypoint = 2,
+        public float $videoBonus = 0.15,
+        public float $faceBonus = 0.20,
+        public float $selfiePenalty = 0.25,
+        public float $qualityFloor = 0.48,
+        public bool $enablePeopleBalance = true,
+        public float $peopleBalanceWeight = 0.35,
         public float $repeatPenalty = 0.0,
         ?int $minimumTotal = null,
     ) {
@@ -85,7 +87,14 @@ final readonly class VacationSelectionOptions
             throw new InvalidArgumentException('repeatPenalty must be a finite number.');
         }
 
-        $this->minimumTotal = $minimumTotal ?? $this->targetTotal;
+        $computedMinimum = (int) round($this->targetTotal * 0.6);
+        $computedMinimum = max(24, $computedMinimum);
+
+        if ($computedMinimum > $this->targetTotal) {
+            $computedMinimum = $this->targetTotal;
+        }
+
+        $this->minimumTotal = $minimumTotal ?? $computedMinimum;
 
         if ($this->minimumTotal < 1) {
             throw new InvalidArgumentException('minimumTotal must be at least 1.');
