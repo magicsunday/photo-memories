@@ -87,6 +87,40 @@ final class TransportSpeedStageTest extends TestCase
         self::assertTrue($summary['hasHighSpeedTransit']);
     }
 
+    #[Test]
+    public function marksHighSpeedTransitWhenTravelDistanceIsLarge(): void
+    {
+        $timezoneResolver = new TimezoneResolver('UTC');
+        $initialStage     = new InitializationStage($timezoneResolver, new PoiClassifier(), 'UTC');
+        $speedStage       = new TransportSpeedStage(5.0, 10.0, 200.0);
+
+        $home = [
+            'lat'             => 0.0,
+            'lon'             => 0.0,
+            'radius_km'       => 10.0,
+            'country'         => 'xx',
+            'timezone_offset' => 0,
+        ];
+
+        $base   = new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC'));
+        $items  = [
+            $this->makeMediaFixture(10, 'travel-a.jpg', $base, 0.0, 0.0),
+        ];
+
+        $summaries = $initialStage->process($items, $home);
+        $dayKey    = '2024-06-01';
+
+        $summaries[$dayKey]['travelKm']   = 180.0;
+        $summaries[$dayKey]['gpsMembers'] = [];
+
+        $processed = $speedStage->process($summaries, $home);
+        $summary   = $processed[$dayKey];
+
+        self::assertTrue($summary['hasHighSpeedTransit']);
+        self::assertSame(0.0, $summary['maxSpeedKmh']);
+        self::assertSame(0.0, $summary['avgSpeedKmh']);
+    }
+
     private function computeSpeedKmh(Media $previous, Media $current): float
     {
         $prevTakenAt = $previous->getTakenAt();

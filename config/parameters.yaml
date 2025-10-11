@@ -117,7 +117,7 @@ parameters:
     # Description: Default minimum travel distance in kilometers to consider a transport leg.
     memories.cluster.transport_speed.min_leg_distance_km_default: 10.0
     # Description: Default speed threshold in km/h above which a transport leg is considered high speed.
-    memories.cluster.transport_speed.high_speed_threshold_kmh_default: 200.0
+    memories.cluster.transport_speed.high_speed_threshold_kmh_default: 90.0
     # Description: Runtime minimum duration in minutes for transport legs, allowing environment overrides.
     memories.cluster.transport_speed.min_leg_duration_minutes: '%env(default:memories.cluster.transport_speed.min_leg_duration_minutes_default:float:MEMORIES_CLUSTER_TRANSPORT_MIN_LEG_MINUTES)%'
     # Description: Runtime minimum distance in kilometers for transport legs, allowing environment overrides.
