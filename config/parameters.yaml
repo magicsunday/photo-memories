@@ -216,7 +216,7 @@ parameters:
             max_per_day: 5
             time_slot_hours: 4
             min_spacing_seconds: 150
-            phash_min_hamming: 17
+            phash_min_hamming: 14
             max_per_staypoint: 2
             video_bonus: 0.22
             face_bonus: 0.15
