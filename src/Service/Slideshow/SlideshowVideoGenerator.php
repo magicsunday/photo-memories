@@ -421,24 +421,29 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
         if ($this->kenBurnsEnabled) {
-            $zoomExpr = $this->escapeFilterExpression(sprintf(
+            $targetAspectRatio  = $this->formatFloat($this->width / $this->height);
+            $animatedZoomExpr   = sprintf(
                 '%1$s+(%2$s-%1$s)*%3$s',
                 $this->formatFloat($this->zoomStart),
                 $this->formatFloat($this->zoomEnd),
                 $progressExpr,
-            ));
+            );
+            $conditionalZoomExpr = sprintf('if(lt(iw/ih,%1$s),1,%2$s)', $targetAspectRatio, $animatedZoomExpr);
+            $zoomExpr            = $this->escapeFilterExpression($conditionalZoomExpr);
 
-            $panXExpr = $this->escapeFilterExpression(sprintf(
+            $panXAnimatedExpr = sprintf(
                 'clip((iw-(iw/zoom))/2 + %1$s*(iw-(iw/zoom))/2*%2$s,0,max(iw-(iw/zoom),0))',
                 $this->formatFloat($this->panX),
                 $progressExpr,
-            ));
-
-            $panYExpr = $this->escapeFilterExpression(sprintf(
+            );
+            $panYAnimatedExpr = sprintf(
                 'clip((ih-(ih/zoom))/2 + %1$s*(ih-(ih/zoom))/2*%2$s,0,max(ih-(ih/zoom),0))',
                 $this->formatFloat($this->panY),
                 $progressExpr,
-            ));
+            );
+
+            $panXExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $conditionalZoomExpr, $panXAnimatedExpr));
+            $panYExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $conditionalZoomExpr, $panYAnimatedExpr));
         } else {
             $zoomExpr = '1';
             $panXExpr = '0';

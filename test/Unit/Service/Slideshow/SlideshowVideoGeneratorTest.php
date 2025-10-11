@@ -120,7 +120,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080', $filterComplex);
-        self::assertStringContainsString("zoompan=z='1.05+(1.15-1.05)*min(on/112\\,1)'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.05+(1.15-1.05)*min(on/112\\,1))'", $filterComplex);
         self::assertStringContainsString('s=1920x1080', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString('pad=1920:1080:(ow-iw)/2:(oh-ih)/2,crop=1920:1080:(in_w-out_w)/2:(in_h-out_h)/2', $filterComplex);
@@ -239,6 +239,67 @@ final class SlideshowVideoGeneratorTest extends TestCase
         } finally {
             @unlink($portraitImage);
             @unlink($landscapeImage);
+        }
+    }
+
+    public function testPortraitSlideFilterUsesConditionalZoomAndZeroPan(): void
+    {
+        $portraitImage = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
+
+        try {
+            $slides = [
+                [
+                    'image'      => $portraitImage,
+                    'mediaId'    => 1,
+                    'duration'   => 3.0,
+                    'transition' => null,
+                ],
+            ];
+
+            $job = new SlideshowJob(
+                'portrait-ken-burns',
+                '/tmp/example.json',
+                '/tmp/out.mp4',
+                '/tmp/out.lock',
+                '/tmp/out.error',
+                [$portraitImage],
+                $slides,
+                null,
+                null,
+                null,
+                null,
+            );
+
+            $generator = new SlideshowVideoGenerator(
+                kenBurnsEnabled: true,
+                panX: 0.4,
+                panY: -0.25,
+            );
+
+            $reflector = new ReflectionClass($generator);
+            $method    = $reflector->getMethod('buildCommand');
+            $method->setAccessible(true);
+
+            /** @var list<string> $command */
+            $command = $method->invoke($generator, $job, $job->slides());
+
+            $filterIndex = array_search('-filter_complex', $command, true);
+            self::assertNotFalse($filterIndex);
+
+            $filterComplexIndex = $filterIndex + 1;
+            self::assertArrayHasKey($filterComplexIndex, $command);
+
+            $filterComplex = $command[$filterComplexIndex];
+
+            self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.05+(1.15-1.05)*min(on/112\\,1))'", $filterComplex);
+            self::assertStringContainsString("x='if(eq(", $filterComplex);
+            self::assertStringContainsString("y='if(eq(", $filterComplex);
+            self::assertStringNotContainsString("x='clip(", $filterComplex);
+            self::assertStringNotContainsString("y='clip(", $filterComplex);
+            self::assertStringContainsString("\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/112\\,1)", $filterComplex);
+            self::assertStringContainsString("\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/112\\,1)", $filterComplex);
+        } finally {
+            @unlink($portraitImage);
         }
     }
 
@@ -490,9 +551,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString("zoompan=z='1.2+(1.3-1.2)*min(on/119\\,1)'", $filterComplex);
-        self::assertStringContainsString("x='clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(iw/zoom)\\,0))'", $filterComplex);
-        self::assertStringContainsString("y='clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(ih/zoom)\\,0))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.2+(1.3-1.2)*min(on/119\\,1))'", $filterComplex);
+        self::assertStringContainsString("x='if(eq(if(lt(iw/ih\\,1.778)\\,1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(iw/zoom)\\,0)))'", $filterComplex);
+        self::assertStringContainsString("y='if(eq(if(lt(iw/ih\\,1.778)\\,1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(ih/zoom)\\,0)))'", $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString('s=1920x1080', $filterComplex);
     }
