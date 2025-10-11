@@ -416,10 +416,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
 
         if ($this->backgroundBlurSigma > 0.0 && ($isPortrait === null || $isPortrait)) {
+            $blurEnableExpr = $this->escapeFilterExpression(
+                sprintf('lt(iw/ih,%s)', $this->formatFloat($this->width / $this->height)),
+            );
+
             $background .= sprintf(
-                ',gblur=sigma=%1$s:enable=\'lt(iw/ih,%2$s)\'',
+                ',gblur=sigma=%1$s:enable=%2$s',
                 $this->formatFloat($this->backgroundBlurSigma),
-                $this->formatFloat($this->width / $this->height),
+                $this->quoteFilterExpression($blurEnableExpr),
             );
         }
 
