@@ -2,140 +2,141 @@ parameters:
     memories.selection.default_profile: 'highlights'
     memories.selection.profiles:
         vacation:
-            target_total: 60
-            minimum_total: 36
-            max_per_day: 5
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 9
-            max_per_staypoint: 2
-            quality_floor: 0.56
-            video_bonus: 0.22
-            face_bonus: 0.32
-            selfie_penalty: 0.25
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.25
-        location:
-            target_total: 45
-            minimum_total: 27
-            max_per_day: 4
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.52
-            video_bonus: 0.2
-            face_bonus: 0.3
-            selfie_penalty: 0.28
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.18
-        scene:
-            target_total: 40
-            minimum_total: 24
-            max_per_day: 4
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.5
-            video_bonus: 0.18
-            face_bonus: 0.26
-            selfie_penalty: 0.26
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.15
-        device:
-            target_total: 36
-            minimum_total: 24
-            max_per_day: 4
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.5
-            video_bonus: 0.18
-            face_bonus: 0.24
-            selfie_penalty: 0.25
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.15
-        over_years:
-            target_total: 32
-            minimum_total: 24
-            max_per_day: 4
+            target_total: 72
+            minimum_total: 48
+            max_per_day: 6
             time_slot_hours: 3
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.55
-            video_bonus: 0.22
-            face_bonus: 0.32
-            selfie_penalty: 0.25
-            max_per_year: 3
-            max_per_bucket: 3
-            video_heavy_bonus: 0.12
-        highlights:
-            target_total: 30
-            minimum_total: 24
-            max_per_day: 4
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.58
-            video_bonus: 0.35
-            face_bonus: 0.35
-            selfie_penalty: 0.25
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.28
-        panorama:
-            target_total: 26
-            minimum_total: 24
-            max_per_day: 3
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 10
-            max_per_staypoint: 2
-            quality_floor: 0.52
-            video_bonus: 0.24
-            face_bonus: 0.28
-            selfie_penalty: 0.25
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.2
-        nightlife:
-            target_total: 24
-            minimum_total: 24
-            max_per_day: 4
-            time_slot_hours: 3
-            min_spacing_seconds: 2400
-            phash_min_hamming: 9
-            max_per_staypoint: 2
-            quality_floor: 0.5
+            min_spacing_seconds: 1800
+            phash_min_hamming: 8
+            max_per_staypoint: 1
+            max_per_staypoint_relaxed: 2
+            quality_floor: 0.6
             video_bonus: 0.28
-            face_bonus: 0.3
-            selfie_penalty: 0.25
-            max_per_year: null
-            max_per_bucket: null
-            video_heavy_bonus: 0.22
-        video:
-            target_total: 26
-            minimum_total: 24
-            max_per_day: 4
-            time_slot_hours: 4
-            min_spacing_seconds: 2400
-            phash_min_hamming: 9
-            max_per_staypoint: 2
-            quality_floor: 0.5
-            video_bonus: 0.4
-            face_bonus: 0.35
+            face_bonus: 0.36
             selfie_penalty: 0.22
             max_per_year: null
             max_per_bucket: null
+            video_heavy_bonus: 0.34
+        location:
+            target_total: 50
+            minimum_total: 32
+            max_per_day: 5
+            time_slot_hours: 3
+            min_spacing_seconds: 1800
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.55
+            video_bonus: 0.24
+            face_bonus: 0.32
+            selfie_penalty: 0.26
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.24
+        scene:
+            target_total: 46
+            minimum_total: 30
+            max_per_day: 5
+            time_slot_hours: 3
+            min_spacing_seconds: 2100
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.54
+            video_bonus: 0.22
+            face_bonus: 0.3
+            selfie_penalty: 0.24
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.2
+        device:
+            target_total: 40
+            minimum_total: 28
+            max_per_day: 5
+            time_slot_hours: 3
+            min_spacing_seconds: 2100
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.52
+            video_bonus: 0.2
+            face_bonus: 0.28
+            selfie_penalty: 0.23
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.18
+        over_years:
+            target_total: 36
+            minimum_total: 28
+            max_per_day: 4
+            time_slot_hours: 3
+            min_spacing_seconds: 2100
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.58
+            video_bonus: 0.26
+            face_bonus: 0.34
+            selfie_penalty: 0.22
+            max_per_year: 4
+            max_per_bucket: 4
+            video_heavy_bonus: 0.18
+        highlights:
+            target_total: 34
+            minimum_total: 26
+            max_per_day: 4
+            time_slot_hours: 3
+            min_spacing_seconds: 2100
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.6
+            video_bonus: 0.38
+            face_bonus: 0.36
+            selfie_penalty: 0.24
+            max_per_year: null
+            max_per_bucket: null
             video_heavy_bonus: 0.32
+        panorama:
+            target_total: 30
+            minimum_total: 24
+            max_per_day: 3
+            time_slot_hours: 3
+            min_spacing_seconds: 2100
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            quality_floor: 0.54
+            video_bonus: 0.26
+            face_bonus: 0.3
+            selfie_penalty: 0.24
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.22
+        nightlife:
+            target_total: 28
+            minimum_total: 24
+            max_per_day: 4
+            time_slot_hours: 2
+            min_spacing_seconds: 1800
+            phash_min_hamming: 8
+            max_per_staypoint: 2
+            quality_floor: 0.52
+            video_bonus: 0.32
+            face_bonus: 0.34
+            selfie_penalty: 0.24
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.26
+        video:
+            target_total: 32
+            minimum_total: 26
+            max_per_day: 4
+            time_slot_hours: 3
+            min_spacing_seconds: 1800
+            phash_min_hamming: 8
+            max_per_staypoint: 2
+            quality_floor: 0.52
+            video_bonus: 0.45
+            face_bonus: 0.36
+            selfie_penalty: 0.2
+            max_per_year: null
+            max_per_bucket: null
+            video_heavy_bonus: 0.36
     memories.selection.algorithm_profiles:
         vacation: 'vacation'
         transit_travel_day: 'vacation'

@@ -27,6 +27,7 @@ final class SelectionPolicy
      * @param int           $minSpacingSeconds  minimum spacing in seconds between picks
      * @param int           $phashMinHamming    minimum perceptual hash distance
      * @param int|null      $maxPerStaypoint    optional staypoint cap
+     * @param int|null      $relaxedMaxPerStaypoint optional staypoint cap used for policy relaxations
      * @param float         $qualityFloor       minimum quality score accepted
      * @param float         $videoBonus         additive score boost for videos
      * @param float         $faceBonus          additive score boost for media with faces
@@ -44,6 +45,7 @@ final class SelectionPolicy
         private readonly int $minSpacingSeconds,
         private readonly int $phashMinHamming,
         private readonly ?int $maxPerStaypoint,
+        private readonly ?int $relaxedMaxPerStaypoint,
         private readonly float $qualityFloor,
         private readonly float $videoBonus,
         private readonly float $faceBonus,
@@ -70,6 +72,10 @@ final class SelectionPolicy
 
         if ($qualityFloor < 0.0) {
             throw new InvalidArgumentException('qualityFloor must not be negative.');
+        }
+
+        if ($relaxedMaxPerStaypoint !== null && $relaxedMaxPerStaypoint < 0) {
+            throw new InvalidArgumentException('relaxedMaxPerStaypoint must not be negative.');
         }
     }
 
@@ -111,6 +117,11 @@ final class SelectionPolicy
     public function getMaxPerStaypoint(): ?int
     {
         return $this->maxPerStaypoint;
+    }
+
+    public function getRelaxedMaxPerStaypoint(): ?int
+    {
+        return $this->relaxedMaxPerStaypoint;
     }
 
     public function getQualityFloor(): float
@@ -159,6 +170,7 @@ final class SelectionPolicy
             $spacing,
             $this->phashMinHamming,
             $this->maxPerStaypoint,
+            $this->relaxedMaxPerStaypoint,
             $this->qualityFloor,
             $this->videoBonus,
             $this->faceBonus,
@@ -180,6 +192,29 @@ final class SelectionPolicy
             $this->minSpacingSeconds,
             $hamming,
             $this->maxPerStaypoint,
+            $this->relaxedMaxPerStaypoint,
+            $this->qualityFloor,
+            $this->videoBonus,
+            $this->faceBonus,
+            $this->selfiePenalty,
+            $this->maxPerYear,
+            $this->maxPerBucket,
+            $this->videoHeavyBonus,
+        );
+    }
+
+    public function withMaxPerStaypoint(?int $staypointCap): self
+    {
+        return new self(
+            $this->profileKey,
+            $this->targetTotal,
+            $this->minimumTotal,
+            $this->maxPerDay,
+            $this->timeSlotHours,
+            $this->minSpacingSeconds,
+            $this->phashMinHamming,
+            $staypointCap,
+            $this->relaxedMaxPerStaypoint,
             $this->qualityFloor,
             $this->videoBonus,
             $this->faceBonus,
@@ -200,6 +235,7 @@ final class SelectionPolicy
             $this->timeSlotHours,
             $this->minSpacingSeconds,
             $this->phashMinHamming,
+            null,
             null,
             $this->qualityFloor,
             $this->videoBonus,
