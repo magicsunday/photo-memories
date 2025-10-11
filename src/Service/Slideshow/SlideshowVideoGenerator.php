@@ -16,8 +16,10 @@ use Random\Randomizer;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
+use Throwable;
 
 use function array_filter;
+use function array_fill_keys;
 use function array_key_exists;
 use function array_keys;
 use function array_map;
@@ -34,9 +36,12 @@ use function is_file;
 use function is_readable;
 use function intdiv;
 use function is_string;
+use function ltrim;
 use function max;
 use function min;
 use function mkdir;
+use function preg_match;
+use function preg_split;
 use function round;
 use function rtrim;
 use function sprintf;
@@ -83,6 +88,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private const array DEFAULT_TRANSITIONS = self::TRANSITION_WHITELIST;
 
     private const int ZOOMPAN_FPS = 30;
+
+    /**
+     * @var list<string>|null
+     */
+    private static ?array $cachedTransitionWhitelist = null;
+
+    /**
+     * @var array<string, bool>|null
+     */
+    private static ?array $cachedTransitionLookup = null;
 
     /**
      * @param list<string> $transitions
@@ -238,7 +253,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
 
-        $availableTransitions = $this->filterAllowedTransitions($this->transitions);
+        $transitionWhitelist   = $this->getTransitionWhitelist();
+        $transitionCandidates  = $this->transitions;
+        if ($transitionCandidates === self::DEFAULT_TRANSITIONS) {
+            $transitionCandidates = $transitionWhitelist;
+        }
+
+        $availableTransitions = $this->filterAllowedTransitions($transitionCandidates);
         $requiredTransitions  = max(0, count($slides) - 1);
         $fallbackTransitions  = $this->buildDeterministicTransitionSequence(
             $availableTransitions,
@@ -553,6 +574,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function filterAllowedTransitions(array $transitions): array
     {
         $filtered = [];
+        $lookup   = $this->getTransitionLookup();
+
         foreach ($transitions as $transition) {
             if (!is_string($transition)) {
                 continue;
@@ -563,11 +586,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 continue;
             }
 
+            if (!array_key_exists($normalised, $lookup)) {
+                continue;
+            }
+
             $filtered[$normalised] = true;
         }
 
         if ($filtered === []) {
-            $filtered['fade'] = true;
+            $whitelist = $this->getTransitionWhitelist();
+            $fallback  = $whitelist[0] ?? 'fade';
+            $filtered[$fallback] = true;
         }
 
         return array_keys($filtered);
@@ -586,7 +615,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $normalised = strtolower($trimmed);
 
-        if (!in_array($normalised, self::TRANSITION_WHITELIST, true)) {
+        if (!array_key_exists($normalised, $this->getTransitionLookup())) {
             return null;
         }
 
@@ -658,6 +687,200 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             . '|' . implode('|', $transitions);
 
         return hash('sha256', $payload, true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getTransitionWhitelist(): array
+    {
+        if (self::$cachedTransitionWhitelist !== null) {
+            return self::$cachedTransitionWhitelist;
+        }
+
+        $discovered = $this->discoverAvailableTransitions();
+        if ($discovered === []) {
+            $discovered = self::TRANSITION_WHITELIST;
+        }
+
+        self::$cachedTransitionLookup    = null;
+        self::$cachedTransitionWhitelist = $discovered;
+
+        return self::$cachedTransitionWhitelist;
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function getTransitionLookup(): array
+    {
+        if (self::$cachedTransitionLookup !== null) {
+            return self::$cachedTransitionLookup;
+        }
+
+        self::$cachedTransitionLookup = array_fill_keys($this->getTransitionWhitelist(), true);
+
+        return self::$cachedTransitionLookup;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function discoverAvailableTransitions(): array
+    {
+        try {
+            $process = new Process([
+                $this->ffmpegBinary,
+                '-hide_banner',
+                '-h',
+                'filter=xfade',
+            ]);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                return [];
+            }
+
+            $output   = $process->getOutput();
+            $error    = $process->getErrorOutput();
+            $combined = trim($output . "\n" . $error);
+            if ($combined === '') {
+                return [];
+            }
+
+            return $this->parseXfadeHelpOutput($combined);
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseXfadeHelpOutput(string $output): array
+    {
+        $lines      = preg_split('/\r\n|\r|\n/', $output) ?: [];
+        $collecting = false;
+        $names      = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+
+            if ($collecting) {
+                if ($trimmed === '' || preg_match('/^[a-z0-9_]+\s+<[^>]+>/', $trimmed) === 1) {
+                    $collecting = false;
+                } else {
+                    $names = array_merge(
+                        $names,
+                        $this->extractTransitionNamesFromLine($trimmed, false),
+                    );
+
+                    continue;
+                }
+            }
+
+            if (preg_match('/\b(?:possible|available)\s+(?:values|transitions)\b/i', $trimmed) !== 1) {
+                continue;
+            }
+
+            $collecting = true;
+
+            if (preg_match('/:\s*(.*)$/', $trimmed, $matches) === 1) {
+                $content = trim($matches[1]);
+                if ($content !== '') {
+                    $names = array_merge(
+                        $names,
+                        $this->extractTransitionNamesFromLine($content, true),
+                    );
+                }
+            }
+        }
+
+        $unique = [];
+        $result = [];
+        foreach ($names as $name) {
+            if ($name === '') {
+                continue;
+            }
+
+            if (array_key_exists($name, $unique)) {
+                continue;
+            }
+
+            $unique[$name] = true;
+            $result[]      = $name;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractTransitionNamesFromLine(string $line, bool $allowMultipleTokens): array
+    {
+        $clean = trim($line);
+        if ($clean === '') {
+            return [];
+        }
+
+        $clean = ltrim($clean, "-•*");
+        $clean = trim($clean);
+        if ($clean === '') {
+            return [];
+        }
+
+        if (preg_match('/[,|]/', $clean) === 1) {
+            $parts = preg_split('/[,|]/', $clean) ?: [];
+            $names = [];
+            foreach ($parts as $part) {
+                $name = $this->sanitizeTransitionToken($part);
+                if ($name !== null) {
+                    $names[] = $name;
+                }
+            }
+
+            return $names;
+        }
+
+        $tokens = preg_split('/\s+/', $clean) ?: [];
+        if ($tokens === []) {
+            return [];
+        }
+
+        if ($allowMultipleTokens) {
+            $names = [];
+            foreach ($tokens as $token) {
+                $name = $this->sanitizeTransitionToken($token);
+                if ($name !== null) {
+                    $names[] = $name;
+                }
+            }
+
+            return $names;
+        }
+
+        $name = $this->sanitizeTransitionToken($tokens[0]);
+        if ($name === null) {
+            return [];
+        }
+
+        return [$name];
+    }
+
+    private function sanitizeTransitionToken(string $token): ?string
+    {
+        $normalised = strtolower(trim($token));
+        $normalised = trim($normalised, '.,;:()[]{}"\'');
+        if ($normalised === '') {
+            return null;
+        }
+
+        if (preg_match('/^[a-z0-9_]+$/', $normalised) !== 1) {
+            return null;
+        }
+
+        return $normalised;
     }
 
     /**

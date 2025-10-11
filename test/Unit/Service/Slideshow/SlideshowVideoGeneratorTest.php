@@ -874,6 +874,64 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertSame($preEscapedExpression, $alreadyEscaped);
     }
 
+    public function testParseXfadeHelpOutputExtractsTransitionNames(): void
+    {
+        $this->resetTransitionCache();
+
+        $generator = new SlideshowVideoGenerator();
+
+        $helpOutput = <<<'HELP'
+Filter xfade
+  cross fade between two inputs
+
+    transition           <string>     set transition name (default "fade")
+        possible transitions:
+            fade             simple cross fade
+            fadeblack        fade via black
+            fadewhite        fade via white
+        possible transitions: smoothleft, smoothright
+        available transitions:
+            slideleft        slide to the left
+            circleopen       circle opening wipe
+HELP;
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('parseXfadeHelpOutput');
+        $method->setAccessible(true);
+
+        /** @var list<string> $transitions */
+        $transitions = $method->invoke($generator, $helpOutput);
+
+        self::assertSame(
+            ['fade', 'fadeblack', 'fadewhite', 'smoothleft', 'smoothright', 'slideleft', 'circleopen'],
+            $transitions,
+        );
+    }
+
+    public function testTransitionDiscoveryFallsBackToWhitelistWhenCommandFails(): void
+    {
+        $this->resetTransitionCache();
+
+        $generator = new SlideshowVideoGenerator(ffmpegBinary: '/path/to/missing/ffmpeg');
+
+        $reflector = new ReflectionClass($generator);
+
+        $method = $reflector->getMethod('getTransitionWhitelist');
+        $method->setAccessible(true);
+
+        /** @var list<string> $transitions */
+        $transitions = $method->invoke($generator);
+
+        $constant = $reflector->getReflectionConstant('TRANSITION_WHITELIST');
+        self::assertNotFalse($constant);
+
+        self::assertSame($constant->getValue(), $transitions);
+
+        /** @var list<string> $cached */
+        $cached = $method->invoke($generator);
+        self::assertSame($transitions, $cached, 'Transitions should be cached across invocations.');
+    }
+
     /**
      * @param list<string> $command
      *
@@ -904,5 +962,16 @@ final class SlideshowVideoGeneratorTest extends TestCase
             'durations'   => $durations,
             'offsets'     => $offsets,
         ];
+    }
+
+    private function resetTransitionCache(): void
+    {
+        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+
+        foreach (['cachedTransitionWhitelist', 'cachedTransitionLookup'] as $propertyName) {
+            $property = $reflector->getProperty($propertyName);
+            $property->setAccessible(true);
+            $property->setValue(null, null);
+        }
     }
 }
