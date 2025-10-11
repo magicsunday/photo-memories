@@ -304,7 +304,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $current        = '[s0]';
-        $offset         = max(2.5, $this->resolveSlideDuration($slides[0]['duration']));
+        $timeline       = max(2.5, $this->resolveSlideDuration($slides[0]['duration']));
         $fallbackIndex  = 0;
         $previousChoice = null;
 
@@ -325,7 +325,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $transition = $preferred;
             }
 
-            $transitionDurationValue = $transitionDurations[$index - 1] ?? $transitionDuration;
+            $transitionDurationValue    = $transitionDurations[$index - 1] ?? $transitionDuration;
+            $effectiveTransitionDuration = max(self::MINIMUM_SLIDE_DURATION, $transitionDurationValue);
+            $transitionOffset             = max(0.0, $timeline - $effectiveTransitionDuration);
+            $slideDuration                = $this->resolveSlideDuration($slides[$index]['duration']);
+            $effectiveSlideDuration       = max(self::MINIMUM_SLIDE_DURATION, $slideDuration);
 
             $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
@@ -333,16 +337,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $current,
                 $index,
                 $transition,
-                max(self::MINIMUM_SLIDE_DURATION, $transitionDurationValue),
-                $offset,
+                $effectiveTransitionDuration,
+                $transitionOffset,
                 $targetLabel
             );
             $current        = $targetLabel;
-            $offset        += $this->resolveSlideDuration($slides[$index]['duration']);
+            $timeline      += $effectiveSlideDuration - $effectiveTransitionDuration;
             $previousChoice = $transition;
         }
 
-        $totalDuration = $offset;
+        $totalDuration = $timeline;
         $filterComplex = implode(';', $filters);
 
         $command[] = '-filter_complex';
