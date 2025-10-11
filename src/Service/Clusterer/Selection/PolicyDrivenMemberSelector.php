@@ -411,17 +411,22 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 if ($distance !== null && $distance < $phashThreshold) {
                     $nearDuplicate = true;
                     if ($candidate['score'] > $existing['score']) {
+                        $existingDay = $existing['day'];
+                        $this->decrementGreedyCounters($existing, $countByDay, $countByStaypoint, $countBySlot);
+
                         $selected[$index] = $candidate;
+                        $this->incrementGreedyCounters($candidate, $countByDay, $countByStaypoint, $countBySlot);
+
+                        $lastTimestampGlobal = $timestamp;
                         $lastTimestampPerDay[$day] = $timestamp;
-                        $lastTimestampGlobal      = $timestamp;
-                        $countByDay[$day]         = ($countByDay[$day] ?? 0) + 1;
-                        if ($staypoint !== null) {
-                            $countByStaypoint[$staypoint] = ($countByStaypoint[$staypoint] ?? 0) + 1;
+
+                        if (!isset($countByDay[$existingDay])) {
+                            unset($lastTimestampPerDay[$existingDay]);
+                        } elseif ($existingDay !== $day) {
+                            $this->recomputeLastTimestampForDay($selected, $existingDay, $lastTimestampPerDay);
                         }
-                        if ($slot !== null) {
-                            $slotKey = $day . '#' . $slot;
-                            $countBySlot[$slotKey] = ($countBySlot[$slotKey] ?? 0) + 1;
-                        }
+
+                        $lastPersons = $candidate['persons'];
                     }
 
                     ++$telemetry['drops']['near_duplicate'];
@@ -436,16 +441,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $selected[] = $candidate;
             $lastTimestampPerDay[$day] = $timestamp;
             $lastTimestampGlobal       = $timestamp;
-            $countByDay[$day]          = ($countByDay[$day] ?? 0) + 1;
-            if ($staypoint !== null) {
-                $countByStaypoint[$staypoint] = ($countByStaypoint[$staypoint] ?? 0) + 1;
-            }
-
-            if ($slot !== null) {
-                $slotKey = $day . '#' . $slot;
-                $countBySlot[$slotKey] = ($countBySlot[$slotKey] ?? 0) + 1;
-            }
-
+            $this->incrementGreedyCounters($candidate, $countByDay, $countByStaypoint, $countBySlot);
             $lastPersons = $candidate['persons'];
         }
 
@@ -554,6 +550,84 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         return ['score' => $bestScore, 'hamming' => $bestHamming];
+    }
+
+    private function incrementGreedyCounters(
+        array $candidate,
+        array &$countByDay,
+        array &$countByStaypoint,
+        array &$countBySlot,
+    ): void {
+        $day = $candidate['day'];
+        $countByDay[$day] = ($countByDay[$day] ?? 0) + 1;
+
+        $staypoint = $candidate['staypoint'];
+        if ($staypoint !== null) {
+            $countByStaypoint[$staypoint] = ($countByStaypoint[$staypoint] ?? 0) + 1;
+        }
+
+        $slot = $candidate['slot'];
+        if ($slot !== null) {
+            $slotKey = $day . '#' . $slot;
+            $countBySlot[$slotKey] = ($countBySlot[$slotKey] ?? 0) + 1;
+        }
+    }
+
+    private function decrementGreedyCounters(
+        array $candidate,
+        array &$countByDay,
+        array &$countByStaypoint,
+        array &$countBySlot,
+    ): void {
+        $day = $candidate['day'];
+        if (isset($countByDay[$day])) {
+            --$countByDay[$day];
+            if ($countByDay[$day] <= 0) {
+                unset($countByDay[$day]);
+            }
+        }
+
+        $staypoint = $candidate['staypoint'];
+        if ($staypoint !== null && isset($countByStaypoint[$staypoint])) {
+            --$countByStaypoint[$staypoint];
+            if ($countByStaypoint[$staypoint] <= 0) {
+                unset($countByStaypoint[$staypoint]);
+            }
+        }
+
+        $slot = $candidate['slot'];
+        if ($slot !== null) {
+            $slotKey = $day . '#' . $slot;
+            if (isset($countBySlot[$slotKey])) {
+                --$countBySlot[$slotKey];
+                if ($countBySlot[$slotKey] <= 0) {
+                    unset($countBySlot[$slotKey]);
+                }
+            }
+        }
+    }
+
+    private function recomputeLastTimestampForDay(array $selected, string $day, array &$lastTimestampPerDay): void
+    {
+        $latest = null;
+        foreach ($selected as $entry) {
+            if ($entry['day'] !== $day) {
+                continue;
+            }
+
+            $timestamp = $entry['timestamp'];
+            if ($latest === null || $timestamp > $latest) {
+                $latest = $timestamp;
+            }
+        }
+
+        if ($latest === null) {
+            unset($lastTimestampPerDay[$day]);
+
+            return;
+        }
+
+        $lastTimestampPerDay[$day] = $latest;
     }
 
     private function combinedDistance(array $a, array $b, ?int &$hamming = null): float
