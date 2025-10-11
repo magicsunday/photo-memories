@@ -351,7 +351,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
             $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
-                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f%s',
+                '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f %s',
                 $current,
                 $index,
                 $transition,
