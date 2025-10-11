@@ -225,10 +225,10 @@ parameters:
             minimum_total: 9
         device:
             target_total: 24
-            max_per_day: 8
+            max_per_day: 5
             time_slot_hours: 4
             min_spacing_seconds: 150
-            phash_min_hamming: 14
+            phash_min_hamming: 18
             max_per_staypoint: 2
             video_bonus: 0.18
             face_bonus: 0.1
