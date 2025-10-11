@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Service\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Entity\Media;
@@ -33,6 +34,7 @@ use function is_int;
 use function is_string;
 use function max;
 use function spl_object_id;
+use function usort;
 
 /**
  * Applies the curated member selection to raw cluster drafts.
@@ -55,6 +57,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         private readonly MemberSelectorInterface $memberSelector,
         private readonly MemberMediaLookupInterface $mediaLookup,
         private readonly ClusterMemberSelectionProfileProvider $profileProvider,
+        private readonly StaypointDetectorInterface $staypointDetector,
     ) {
     }
 
@@ -135,6 +138,20 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
             $this->dayIndex[spl_object_id($item)] = $date;
         }
+
+        foreach ($summaries as &$summary) {
+            if ($summary['gpsMembers'] === []) {
+                continue;
+            }
+
+            usort(
+                $summary['gpsMembers'],
+                fn (Media $left, Media $right): int => $this->resolveTimestamp($left) <=> $this->resolveTimestamp($right),
+            );
+
+            $summary['staypoints'] = $this->staypointDetector->detect($summary['gpsMembers']);
+        }
+        unset($summary);
 
         return $summaries;
     }
