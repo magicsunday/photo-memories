@@ -26,14 +26,13 @@ use function array_search;
 use function ceil;
 use function count;
 use function dirname;
-use function getimagesize;
 use function hash;
 use function implode;
 use function in_array;
 use function is_dir;
 use function is_file;
-use function is_int;
 use function is_readable;
+use function intdiv;
 use function is_string;
 use function max;
 use function min;
@@ -192,9 +191,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     ): array
     {
         $duration     = $this->resolveCoverDuration($slide);
-        $orientation  = $this->determineSlideOrientation($slide['image']);
         $clipDuration = max(0.1, $duration);
-        $filter       = $this->buildBlurredSlideFilter(0, $clipDuration, $duration, $orientation);
+        $filter       = $this->buildBlurredSlideFilter(0, $clipDuration, $duration);
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
         $filter       .= sprintf(
@@ -252,8 +250,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration);
 
-        $orientations = [];
-
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
         foreach ($slides as $index => $slide) {
@@ -271,8 +267,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($index === 0) {
                 $durationWithOverlap = max($coverDuration, $durationWithOverlap);
             }
-
-            $orientations[$index] = $this->determineSlideOrientation($slide['image']);
 
             $command = array_merge($command, [
                 '-loop',
@@ -305,12 +299,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $durationWithOverlap = max($coverDuration, $durationWithOverlap);
             }
 
-            $orientation = $orientations[$index] ?? null;
             $filter      = $this->buildBlurredSlideFilter(
                 $index,
                 $durationWithOverlap,
                 $duration,
-                $orientation,
             );
 
             if ($index === 0 && $introOverlayFilter !== '') {
@@ -380,32 +372,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
     }
 
-    private function determineSlideOrientation(string $imagePath): ?bool
-    {
-        $metadata = @getimagesize($imagePath);
-        if ($metadata === false) {
-            return null;
-        }
-
-        $width  = $metadata[0] ?? null;
-        $height = $metadata[1] ?? null;
-
-        if (!is_int($width) || !is_int($height) || $width <= 0 || $height <= 0) {
-            return null;
-        }
-
-        if ($width === $height) {
-            return null;
-        }
-
-        return $width < $height;
-    }
-
     private function buildBlurredSlideFilter(
         int $index,
         float $clipDuration,
         float $visibleDuration,
-        ?bool $isPortrait,
     ): string
     {
         $backgroundStages = [
@@ -417,15 +387,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ),
         ];
 
-        if ($this->backgroundBlurSigma > 0.0 && ($isPortrait ?? true)) {
-            $blurEnableExpr = $this->escapeFilterExpression(
-                sprintf('lt(iw/ih,%s)', $this->formatFloat($this->width / $this->height)),
-            );
+        if ($this->backgroundBlurSigma > 0.0) {
+            $aspectRatioExpression = $this->buildAspectRatioExpression($this->width, $this->height);
+            $blurEnableExpr        = $this->escapeFilterExpression(sprintf('lt(w/h,%s)', $aspectRatioExpression));
 
             $backgroundStages[] = sprintf(
                 'gblur=sigma=%1$s:enable=%2$s',
                 $this->formatFloat($this->backgroundBlurSigma),
-                $blurEnableExpr,
+                $this->quoteFilterExpression($blurEnableExpr),
             );
         }
 
@@ -908,6 +877,27 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
+    }
+
+    private function buildAspectRatioExpression(int $width, int $height): string
+    {
+        $divisor = $this->greatestCommonDivisor($width, $height);
+
+        return sprintf('%d/%d', intdiv($width, $divisor), intdiv($height, $divisor));
+    }
+
+    private function greatestCommonDivisor(int $width, int $height): int
+    {
+        $a = $width > 0 ? $width : 1;
+        $b = $height > 0 ? $height : 1;
+
+        while ($b !== 0) {
+            $remainder = $a % $b;
+            $a         = $b;
+            $b         = $remainder;
+        }
+
+        return max(1, $a);
     }
 
     private function escapeFilterExpression(string $expression): string

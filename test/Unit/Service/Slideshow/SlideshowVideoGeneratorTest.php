@@ -238,10 +238,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertSame('4.000', $command[$durationValueIndex]);
     }
 
-    public function testBackgroundBlurIsSkippedForLandscapeSlides(): void
+    public function testBackgroundBlurEnableExpressionCoversNarrowLandscapeSlides(): void
     {
-        $portraitImage   = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
-        $landscapeImage  = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGNgYPgPRAAFAgH/wSuWnwAAAABJRU5ErkJggg==');
+        $portraitImage       = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
+        $narrowLandscapeImage = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAADElEQVQImWNgIAoAAAAnAAGfWjwcAAAAAElFTkSuQmCC');
+        $wideLandscapeImage   = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGNgYPgPRAAFAgH/wSuWnwAAAABJRU5ErkJggg==');
 
         try {
             $slides = [
@@ -252,8 +253,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
                     'transition' => null,
                 ],
                 [
-                    'image'      => $landscapeImage,
+                    'image'      => $narrowLandscapeImage,
                     'mediaId'    => 2,
+                    'duration'   => 3.0,
+                    'transition' => null,
+                ],
+                [
+                    'image'      => $wideLandscapeImage,
+                    'mediaId'    => 3,
                     'duration'   => 3.0,
                     'transition' => null,
                 ],
@@ -265,7 +272,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 '/tmp/out.mp4',
                 '/tmp/out.lock',
                 '/tmp/out.error',
-                [$portraitImage, $landscapeImage],
+                [$portraitImage, $narrowLandscapeImage, $wideLandscapeImage],
                 $slides,
                 null,
                 null,
@@ -291,22 +298,34 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $filterComplex = $command[$filterComplexIndex];
 
             self::assertSame(1, preg_match('/\\[bg0\]([^;\[]+)\\[bg0out\]/', $filterComplex, $portraitMatch));
-            self::assertStringContainsString('gblur=', $portraitMatch[1]);
-            self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,gblur=sigma=', $portraitMatch[1]);
-            $scalePosition   = strpos($portraitMatch[1], 'scale=1920:1080:force_original_aspect_ratio=increase');
-            $gblurPosition   = strpos($portraitMatch[1], 'gblur=sigma=');
-            $cropPosition    = strpos($portraitMatch[1], ',crop=1920:1080');
-            self::assertNotFalse($scalePosition);
-            self::assertNotFalse($gblurPosition);
-            self::assertNotFalse($cropPosition);
-            self::assertGreaterThan($scalePosition, $gblurPosition);
-            self::assertLessThan($cropPosition, $gblurPosition);
-            self::assertStringContainsString('gblur=sigma=20:enable=lt(iw/ih\\,1.778)', $portraitMatch[1]);
-            self::assertSame(1, preg_match('/\\[bg1\]([^;\[]+)\\[bg1out\]/', $filterComplex, $landscapeMatch));
-            self::assertStringNotContainsString('gblur=', $landscapeMatch[1]);
+            self::assertSame(1, preg_match('/\\[bg1\]([^;\[]+)\\[bg1out\]/', $filterComplex, $narrowLandscapeMatch));
+            self::assertSame(1, preg_match('/\\[bg2\]([^;\[]+)\\[bg2out\]/', $filterComplex, $wideLandscapeMatch));
+
+            $expectedScale = 'scale=1920:1080:force_original_aspect_ratio=increase';
+            $expectedBlur  = "gblur=sigma=20:enable='lt(w/h\\,16/9)'";
+            $expectedCrop  = ',crop=1920:1080';
+
+            foreach ([$portraitMatch[1], $narrowLandscapeMatch[1], $wideLandscapeMatch[1]] as $backgroundFilter) {
+                self::assertStringContainsString($expectedScale, $backgroundFilter);
+                self::assertStringContainsString($expectedBlur, $backgroundFilter);
+                self::assertStringContainsString($expectedCrop, $backgroundFilter);
+
+                $scalePosition = strpos($backgroundFilter, $expectedScale);
+                $blurPosition  = strpos($backgroundFilter, $expectedBlur);
+                $cropPosition  = strpos($backgroundFilter, $expectedCrop);
+
+                self::assertNotFalse($scalePosition);
+                self::assertNotFalse($blurPosition);
+                self::assertNotFalse($cropPosition);
+                self::assertGreaterThan($scalePosition, $blurPosition);
+                self::assertLessThan($cropPosition, $blurPosition);
+            }
+
+            self::assertStringContainsString($expectedBlur, $narrowLandscapeMatch[1]);
         } finally {
             @unlink($portraitImage);
-            @unlink($landscapeImage);
+            @unlink($narrowLandscapeImage);
+            @unlink($wideLandscapeImage);
         }
     }
 
