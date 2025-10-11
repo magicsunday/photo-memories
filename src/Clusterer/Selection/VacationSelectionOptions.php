@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Selection;
 
 use InvalidArgumentException;
+use function is_finite;
 
 /**
  * Configuration options steering the greedy vacation member selector.
@@ -31,6 +32,9 @@ final readonly class VacationSelectionOptions
         public float $faceBonus = 0.10,
         public float $selfiePenalty = 0.15,
         public float $qualityFloor = 0.35,
+        public bool $enablePeopleBalance = false,
+        public float $peopleBalanceWeight = 0.65,
+        public float $repeatPenalty = 0.0,
         ?int $minimumTotal = null,
     ) {
         if ($this->targetTotal < 1) {
@@ -71,6 +75,14 @@ final readonly class VacationSelectionOptions
 
         if ($this->qualityFloor < 0.0 || $this->qualityFloor > 1.0) {
             throw new InvalidArgumentException('qualityFloor must be within [0,1].');
+        }
+
+        if ($this->peopleBalanceWeight < 0.0 || $this->peopleBalanceWeight > 1.0) {
+            throw new InvalidArgumentException('peopleBalanceWeight must be within [0,1].');
+        }
+
+        if (!is_finite($this->repeatPenalty)) {
+            throw new InvalidArgumentException('repeatPenalty must be a finite number.');
         }
 
         $this->minimumTotal = $minimumTotal ?? $this->targetTotal;
