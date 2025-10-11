@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer\Fixtures;
 
+use Closure;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
@@ -30,11 +31,11 @@ use const SORT_STRING;
 final class VacationTestMemberSelector implements MemberSelectorInterface
 {
     /**
-     * @param callable|null $curationFilter optional callback mutating the curated members and telemetry
+     * @param Closure|null $curationFilter optional callback mutating the curated members and telemetry
      * @param array<string, mixed> $defaultTelemetry telemetry overrides applied after selection
      */
     public function __construct(
-        private readonly ?callable $curationFilter = null,
+        private readonly ?Closure $curationFilter = null,
         private readonly array $defaultTelemetry = [],
     ) {
     }
