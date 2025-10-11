@@ -417,7 +417,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ),
         ];
 
-        if ($this->backgroundBlurSigma > 0.0 && ($isPortrait === null || $isPortrait)) {
+        if ($this->backgroundBlurSigma > 0.0 && ($isPortrait ?? true)) {
             $blurEnableExpr = $this->escapeFilterExpression(
                 sprintf('lt(iw/ih,%s)', $this->formatFloat($this->width / $this->height)),
             );
@@ -425,7 +425,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $backgroundStages[] = sprintf(
                 'gblur=sigma=%1$s:enable=%2$s',
                 $this->formatFloat($this->backgroundBlurSigma),
-                $this->quoteFilterExpression($blurEnableExpr),
             );
         }
 
