@@ -985,6 +985,12 @@ services:
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 400 }
 
+    MagicSunday\Memories\Service\Clusterer\Pipeline\NestingResolverStage:
+        arguments:
+            $keepOrder: '%memories.cluster.consolidate.keep_order%'
+        tags:
+            - { name: 'memories.cluster_consolidation.stage', priority: 350 }
+
     MagicSunday\Memories\Service\Clusterer\Pipeline\DominanceSelectionStage:
         arguments:
             $overlapMergeThreshold: '%memories.cluster.consolidate.overlap_merge_threshold%'
@@ -993,6 +999,14 @@ services:
             $classificationPriority: '%memories.cluster.consolidate.classification_priority%'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 325 }
+
+    MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage:
+        arguments:
+            $mergeThreshold: '%memories.cluster.consolidate.overlap_merge_threshold%'
+            $dropThreshold: '%memories.cluster.consolidate.overlap_drop_threshold%'
+            $keepOrder: '%memories.cluster.consolidate.keep_order%'
+        tags:
+            - { name: 'memories.cluster_consolidation.stage', priority: 300 }
 
     MagicSunday\Memories\Service\Clusterer\Pipeline\AnnotationPruningStage:
         arguments:
@@ -1009,6 +1023,10 @@ services:
             $defaultAlgorithmGroup: '%memories.cluster.consolidate.default_group%'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 100 }
+
+    MagicSunday\Memories\Service\Clusterer\Pipeline\CanonicalTitleStage:
+        tags:
+            - { name: 'memories.cluster_consolidation.stage', priority: 50 }
 
     MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator:
         arguments:
