@@ -689,7 +689,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if (is_string($subtitle) && $subtitle !== '') {
             $command[] = '-metadata';
-            $command[] = sprintf('subtitle=%s', $subtitle);
+            $command[] = sprintf('comment=%s', $subtitle);
         }
 
         if ($hasAudio) {

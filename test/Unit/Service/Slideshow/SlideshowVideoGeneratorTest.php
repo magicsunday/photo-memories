@@ -34,7 +34,7 @@ use function unlink;
  */
 final class SlideshowVideoGeneratorTest extends TestCase
 {
-    public function testSubtitleMetadataUsesProvidedSubtitle(): void
+    public function testCommentMetadataUsesProvidedSubtitle(): void
     {
         $generator = new SlideshowVideoGenerator();
 
@@ -66,7 +66,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             }
         }
 
-        self::assertContains('subtitle=01.02.2024 – 14.02.2024', $metadataEntries);
+        self::assertContains('comment=01.02.2024 – 14.02.2024', $metadataEntries);
     }
 
     public function testTitleOverlayIsAppliedOnlyToFirstSlide(): void
