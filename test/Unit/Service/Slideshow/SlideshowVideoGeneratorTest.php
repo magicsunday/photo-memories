@@ -19,12 +19,15 @@ use RuntimeException;
 
 use function array_map;
 use function array_search;
+use function base64_decode;
 use function count;
+use function file_put_contents;
 use function preg_match;
 use function preg_match_all;
 use function sprintf;
 use function sys_get_temp_dir;
 use function uniqid;
+use function unlink;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -131,6 +134,82 @@ final class SlideshowVideoGeneratorTest extends TestCase
             preg_match('/\\[1:v][^;\\[]*drawtext/', $filterComplex),
             'Overlay should only appear on the cover slide.'
         );
+    }
+
+    public function testBackgroundBlurIsSkippedForLandscapeSlides(): void
+    {
+        $portraitImage   = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
+        $landscapeImage  = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGNgYPgPRAAFAgH/wSuWnwAAAABJRU5ErkJggg==');
+
+        try {
+            $slides = [
+                [
+                    'image'      => $portraitImage,
+                    'mediaId'    => 1,
+                    'duration'   => 3.0,
+                    'transition' => null,
+                ],
+                [
+                    'image'      => $landscapeImage,
+                    'mediaId'    => 2,
+                    'duration'   => 3.0,
+                    'transition' => null,
+                ],
+            ];
+
+            $job = new SlideshowJob(
+                'orientation',
+                '/tmp/example.json',
+                '/tmp/out.mp4',
+                '/tmp/out.lock',
+                '/tmp/out.error',
+                [$portraitImage, $landscapeImage],
+                $slides,
+                null,
+                null,
+                null,
+                null,
+            );
+
+            $generator = new SlideshowVideoGenerator();
+
+            $reflector = new ReflectionClass($generator);
+            $method    = $reflector->getMethod('buildCommand');
+            $method->setAccessible(true);
+
+            /** @var list<string> $command */
+            $command = $method->invoke($generator, $job, $job->slides());
+
+            $filterIndex = array_search('-filter_complex', $command, true);
+            self::assertNotFalse($filterIndex);
+
+            $filterComplexIndex = $filterIndex + 1;
+            self::assertArrayHasKey($filterComplexIndex, $command);
+
+            $filterComplex = $command[$filterComplexIndex];
+
+            self::assertSame(1, preg_match('/\\[bg0\\]([^;]+)\\[bg0out\\]/', $filterComplex, $portraitMatch));
+            self::assertStringContainsString('gblur=', $portraitMatch[1]);
+            self::assertStringContainsString("enable='lt(iw/ih,", $portraitMatch[1]);
+
+            self::assertSame(1, preg_match('/\\[bg1\\]([^;]+)\\[bg1out\\]/', $filterComplex, $landscapeMatch));
+            self::assertStringNotContainsString('gblur=', $landscapeMatch[1]);
+        } finally {
+            @unlink($portraitImage);
+            @unlink($landscapeImage);
+        }
+    }
+
+    private function createTemporaryImage(string $base64): string
+    {
+        $path = sprintf('%s/slideshow-%s.png', sys_get_temp_dir(), uniqid('', true));
+        $data = base64_decode($base64, true);
+        self::assertNotFalse($data);
+
+        $bytesWritten = file_put_contents($path, $data);
+        self::assertNotFalse($bytesWritten);
+
+        return $path;
     }
 
     public function testAudioFadeIsConfiguredWhenAudioTrackExceedsThreshold(): void
