@@ -25,6 +25,7 @@ use function file_put_contents;
 use function preg_match;
 use function preg_match_all;
 use function sprintf;
+use function strpos;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
@@ -119,7 +120,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080', $filterComplex);
+        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,gblur=sigma=', $filterComplex);
+        self::assertStringContainsString(',crop=1920:1080[bg0out]', $filterComplex);
         self::assertStringContainsString("zoompan=z='if(lt(iw/ih\\,1.778)\\,1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString('s=1920x1080', $filterComplex);
@@ -231,12 +233,21 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $filterComplex = $command[$filterComplexIndex];
 
-            self::assertSame(1, preg_match('/\\[bg0\\]([^;]+)\\[bg0out\\]/', $filterComplex, $portraitMatch));
+            self::assertSame(1, preg_match('/\\[bg0\]([^;\[]+)\\[bg0out\]/', $filterComplex, $portraitMatch));
             self::assertStringContainsString('gblur=', $portraitMatch[1]);
-            self::assertStringContainsString("enable='lt(iw/ih\\,", $portraitMatch[1]);
+            self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,gblur=sigma=', $portraitMatch[1]);
+            $scalePosition   = strpos($portraitMatch[1], 'scale=1920:1080:force_original_aspect_ratio=increase');
+            $gblurPosition   = strpos($portraitMatch[1], 'gblur=sigma=');
+            $cropPosition    = strpos($portraitMatch[1], ',crop=1920:1080');
+            self::assertNotFalse($scalePosition);
+            self::assertNotFalse($gblurPosition);
+            self::assertNotFalse($cropPosition);
+            self::assertGreaterThan($scalePosition, $gblurPosition);
+            self::assertLessThan($cropPosition, $gblurPosition);
+            self::assertStringContainsString("enable='lt(iw/ih\,", $portraitMatch[1]);
             self::assertStringNotContainsString("enable='lt(iw/ih,", $portraitMatch[1]);
 
-            self::assertSame(1, preg_match('/\\[bg1\\]([^;]+)\\[bg1out\\]/', $filterComplex, $landscapeMatch));
+            self::assertSame(1, preg_match('/\\[bg1\]([^;\[]+)\\[bg1out\]/', $filterComplex, $landscapeMatch));
             self::assertStringNotContainsString('gblur=', $landscapeMatch[1]);
         } finally {
             @unlink($portraitImage);

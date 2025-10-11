@@ -408,25 +408,35 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?bool $isPortrait,
     ): string
     {
-        $background = sprintf(
-            '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase,crop=%2$d:%3$d',
-            $index,
-            $this->width,
-            $this->height,
-        );
+        $backgroundStages = [
+            sprintf(
+                '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase',
+                $index,
+                $this->width,
+                $this->height,
+            ),
+        ];
 
         if ($this->backgroundBlurSigma > 0.0 && ($isPortrait === null || $isPortrait)) {
             $blurEnableExpr = $this->escapeFilterExpression(
                 sprintf('lt(iw/ih,%s)', $this->formatFloat($this->width / $this->height)),
             );
 
-            $background .= sprintf(
-                ',gblur=sigma=%1$s:enable=%2$s',
+            $backgroundStages[] = sprintf(
+                'gblur=sigma=%1$s:enable=%2$s',
                 $this->formatFloat($this->backgroundBlurSigma),
                 $this->quoteFilterExpression($blurEnableExpr),
             );
         }
 
+        $backgroundStages[] = sprintf(
+            'crop=%2$d:%3$d',
+            $index,
+            $this->width,
+            $this->height,
+        );
+
+        $background = implode(',', $backgroundStages);
         $background .= sprintf('[bg%1$dout];', $index);
 
         $clipSecondsValue     = max(0.1, $clipDuration);
