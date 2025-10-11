@@ -244,8 +244,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             self::assertNotFalse($cropPosition);
             self::assertGreaterThan($scalePosition, $gblurPosition);
             self::assertLessThan($cropPosition, $gblurPosition);
-            self::assertStringContainsString("enable='lt(iw/ih\,", $portraitMatch[1]);
-            self::assertStringNotContainsString('enable=', $portraitMatch[1]);
+            self::assertStringContainsString('gblur=sigma=20:enable=lt(iw/ih\\,1.778)', $portraitMatch[1]);
             self::assertSame(1, preg_match('/\\[bg1\]([^;\[]+)\\[bg1out\]/', $filterComplex, $landscapeMatch));
             self::assertStringNotContainsString('gblur=', $landscapeMatch[1]);
         } finally {
