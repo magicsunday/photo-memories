@@ -52,6 +52,7 @@ final class SelectionPolicyProvider
             minSpacingSeconds: $this->intValue($config, 'min_spacing_seconds'),
             phashMinHamming: $this->intValue($config, 'phash_min_hamming'),
             maxPerStaypoint: $this->intOrNull($config, 'max_per_staypoint'),
+            relaxedMaxPerStaypoint: $this->intOrNull($config, 'max_per_staypoint_relaxed'),
             qualityFloor: $this->floatValue($config, 'quality_floor'),
             videoBonus: $this->floatValue($config, 'video_bonus'),
             faceBonus: $this->floatValue($config, 'face_bonus'),

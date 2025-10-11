@@ -146,8 +146,24 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             static fn (SelectionPolicy $p): SelectionPolicy => $p->withRelaxedHamming(
                 max(8, (int) floor($p->getPhashMinHamming() * 0.75))
             ),
-            static fn (SelectionPolicy $p): SelectionPolicy => $p->withoutCaps(),
         ];
+
+        if (
+            $policy->getRelaxedMaxPerStaypoint() !== null
+            && $policy->getMaxPerStaypoint() !== null
+            && $policy->getRelaxedMaxPerStaypoint() > $policy->getMaxPerStaypoint()
+        ) {
+            $attempts[] = static function (SelectionPolicy $p): SelectionPolicy {
+                $relaxed = $p->getRelaxedMaxPerStaypoint();
+                if ($relaxed === null) {
+                    return $p;
+                }
+
+                return $p->withMaxPerStaypoint($relaxed);
+            };
+        }
+
+        $attempts[] = static fn (SelectionPolicy $p): SelectionPolicy => $p->withoutCaps();
 
         $selected       = [];
         $appliedPolicy  = $policy;
@@ -507,6 +523,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'min_spacing_seconds' => $policy->getMinSpacingSeconds(),
             'phash_min_hamming'   => $policy->getPhashMinHamming(),
             'max_per_staypoint'   => $policy->getMaxPerStaypoint(),
+            'relaxed_max_per_staypoint' => $policy->getRelaxedMaxPerStaypoint(),
             'quality_floor'       => $policy->getQualityFloor(),
             'video_bonus'         => $policy->getVideoBonus(),
             'face_bonus'          => $policy->getFaceBonus(),
