@@ -458,12 +458,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->kenBurnsEnabled) {
             $foreground .= sprintf(
-                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:s=%4$dx%5$d:fps=%6$s,scale=ceil(iw/2)*2:ceil(ih/2)*2',
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:fps=%4$s,scale=ceil(iw/2)*2:ceil(ih/2)*2',
                 $this->quoteFilterExpression($zoomExpr),
                 $this->quoteFilterExpression($panXExpr),
                 $this->quoteFilterExpression($panYExpr),
-                $this->width,
-                $this->height,
                 $zoompanFps,
             );
         }
