@@ -147,41 +147,49 @@ parameters:
     # Description: Runtime total number of curated media items selected for a vacation cluster.
     memories.cluster.selection.target_total: '%env(default:memories.cluster.selection.target_total_default:int:MEMORIES_CLUSTER_SELECTION_TARGET_TOTAL)%'
     # Description: Default maximum number of curated items per vacation day.
-    memories.cluster.selection.max_per_day_default: 8
+    memories.cluster.selection.max_per_day_default: 5
     # Description: Runtime maximum number of curated items per vacation day.
     memories.cluster.selection.max_per_day: '%env(default:memories.cluster.selection.max_per_day_default:int:MEMORIES_CLUSTER_SELECTION_MAX_PER_DAY)%'
     # Description: Default time slot width in hours for distributing curated selections across the day.
-    memories.cluster.selection.time_slot_hours_default: 3
+    memories.cluster.selection.time_slot_hours_default: 4
     # Description: Runtime time slot width in hours for distributing curated selections across the day.
     memories.cluster.selection.time_slot_hours: '%env(default:memories.cluster.selection.time_slot_hours_default:int:MEMORIES_CLUSTER_SELECTION_TIME_SLOT_HOURS)%'
     # Description: Default minimum spacing in seconds enforced between curated media items.
-    memories.cluster.selection.min_spacing_seconds_default: 900
+    memories.cluster.selection.min_spacing_seconds_default: 2400
     # Description: Runtime minimum spacing in seconds enforced between curated media items.
     memories.cluster.selection.min_spacing_seconds: '%env(default:memories.cluster.selection.min_spacing_seconds_default:int:MEMORIES_CLUSTER_SELECTION_MIN_SPACING_SECONDS)%'
     # Description: Default minimum Hamming distance for perceptual hash comparisons between curated items.
-    memories.cluster.selection.phash_min_hamming_default: 6
+    memories.cluster.selection.phash_min_hamming_default: 9
     # Description: Runtime minimum Hamming distance for perceptual hash comparisons between curated items.
     memories.cluster.selection.phash_min_hamming: '%env(default:memories.cluster.selection.phash_min_hamming_default:int:MEMORIES_CLUSTER_SELECTION_PHASH_MIN_HAMMING)%'
     # Description: Default maximum number of curated items sourced from a single staypoint.
-    memories.cluster.selection.max_per_staypoint_default: 4
+    memories.cluster.selection.max_per_staypoint_default: 2
     # Description: Runtime maximum number of curated items sourced from a single staypoint.
     memories.cluster.selection.max_per_staypoint: '%env(default:memories.cluster.selection.max_per_staypoint_default:int:MEMORIES_CLUSTER_SELECTION_MAX_PER_STAYPOINT)%'
     # Description: Default bonus applied to the quality score of video media during curation.
-    memories.cluster.selection.video_bonus_default: 0.2
+    memories.cluster.selection.video_bonus_default: 0.15
     # Description: Runtime bonus applied to the quality score of video media during curation.
     memories.cluster.selection.video_bonus: '%env(default:memories.cluster.selection.video_bonus_default:float:MEMORIES_CLUSTER_SELECTION_VIDEO_BONUS)%'
     # Description: Default bonus applied when curated media contain faces.
-    memories.cluster.selection.face_bonus_default: 0.1
+    memories.cluster.selection.face_bonus_default: 0.2
     # Description: Runtime bonus applied when curated media contain faces.
     memories.cluster.selection.face_bonus: '%env(default:memories.cluster.selection.face_bonus_default:float:MEMORIES_CLUSTER_SELECTION_FACE_BONUS)%'
     # Description: Default penalty applied when curated media are classified as selfies.
-    memories.cluster.selection.selfie_penalty_default: 0.15
+    memories.cluster.selection.selfie_penalty_default: 0.25
     # Description: Runtime penalty applied when curated media are classified as selfies.
     memories.cluster.selection.selfie_penalty: '%env(default:memories.cluster.selection.selfie_penalty_default:float:MEMORIES_CLUSTER_SELECTION_SELFIE_PENALTY)%'
     # Description: Default minimum media quality score required to enter the curated selection.
-    memories.cluster.selection.quality_floor_default: 0.35
+    memories.cluster.selection.quality_floor_default: 0.48
     # Description: Runtime minimum media quality score required to enter the curated selection.
     memories.cluster.selection.quality_floor: '%env(default:memories.cluster.selection.quality_floor_default:float:MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR)%'
+    # Description: Default flag controlling the people balance heuristic for curated selections.
+    memories.cluster.selection.enable_people_balance_default: true
+    # Description: Runtime flag controlling the people balance heuristic for curated selections.
+    memories.cluster.selection.enable_people_balance: '%env(default:memories.cluster.selection.enable_people_balance_default:bool:MEMORIES_CLUSTER_SELECTION_ENABLE_PEOPLE_BALANCE)%'
+    # Description: Default weighting applied when people balance is enabled.
+    memories.cluster.selection.people_balance_weight_default: 0.35
+    # Description: Runtime weighting applied when people balance is enabled.
+    memories.cluster.selection.people_balance_weight: '%env(default:memories.cluster.selection.people_balance_weight_default:float:MEMORIES_CLUSTER_SELECTION_PEOPLE_BALANCE_WEIGHT)%'
     # Description: Default profile identifier used for member selection when none is provided by the draft.
     memories.cluster.selection.default_profile: 'default'
     # Description: Named selection profiles overriding default curator options per algorithm family.
@@ -189,91 +197,103 @@ parameters:
         default: []
         vacation_weekend_transit:
             target_total: 48
-            max_per_day: 10
-            time_slot_hours: 3
-            min_spacing_seconds: 105
-            phash_min_hamming: 18
-            max_per_staypoint: 3
-            video_bonus: 0.6
-            face_bonus: 0.4
-            selfie_penalty: 0.2
-            quality_floor: 0.28
-            minimum_total: 10
-        location:
-            target_total: 36
-            max_per_day: 8
-            time_slot_hours: 4
-            min_spacing_seconds: 75
-            phash_min_hamming: 16
-            max_per_staypoint: 2
-            video_bonus: 0.28
-            face_bonus: 0.22
-            selfie_penalty: 0.18
-            quality_floor: 0.3
-            minimum_total: 9
-        scene:
-            target_total: 28
             max_per_day: 5
             time_slot_hours: 4
-            min_spacing_seconds: 150
-            phash_min_hamming: 14
+            min_spacing_seconds: 2400
+            phash_min_hamming: 9
             max_per_staypoint: 2
             video_bonus: 0.22
-            face_bonus: 0.15
-            selfie_penalty: 0.12
-            quality_floor: 0.27
-            minimum_total: 9
-        device:
-            target_total: 24
-            max_per_day: 5
+            face_bonus: 0.28
+            selfie_penalty: 0.27
+            quality_floor: 0.52
+            minimum_total: 29
+            enable_people_balance: true
+            people_balance_weight: 0.35
+        location:
+            target_total: 36
+            max_per_day: 4
             time_slot_hours: 4
-            min_spacing_seconds: 150
-            phash_min_hamming: 18
+            min_spacing_seconds: 2400
+            phash_min_hamming: 10
             max_per_staypoint: 2
             video_bonus: 0.18
-            face_bonus: 0.1
-            selfie_penalty: 0.12
-            quality_floor: 0.25
-            minimum_total: 8
-        this_day_month:
-            target_total: 30
-            max_per_day: 2
-            time_slot_hours: 24
-            min_spacing_seconds: 1800
-            phash_min_hamming: 20
-            max_per_staypoint: 1
-            video_bonus: 0.32
-            face_bonus: 0.28
-            selfie_penalty: 0.16
-            quality_floor: 0.32
-            minimum_total: 7
-        people_friends:
-            target_total: 32
-            max_per_day: 8
-            time_slot_hours: 3
-            min_spacing_seconds: 120
-            phash_min_hamming: 18
-            max_per_staypoint: 3
-            video_bonus: 0.5
-            face_bonus: 0.6
-            selfie_penalty: 0.08
-            quality_floor: 0.38
-            minimum_total: 10
+            face_bonus: 0.24
+            selfie_penalty: 0.28
+            quality_floor: 0.5
+            minimum_total: 24
             enable_people_balance: true
-            people_balance_weight: 0.65
+            people_balance_weight: 0.35
+        scene:
+            target_total: 32
+            max_per_day: 4
+            time_slot_hours: 4
+            min_spacing_seconds: 2400
+            phash_min_hamming: 10
+            max_per_staypoint: 2
+            video_bonus: 0.17
+            face_bonus: 0.22
+            selfie_penalty: 0.26
+            quality_floor: 0.5
+            minimum_total: 24
+            enable_people_balance: true
+            people_balance_weight: 0.35
+        device:
+            target_total: 28
+            max_per_day: 4
+            time_slot_hours: 4
+            min_spacing_seconds: 2400
+            phash_min_hamming: 10
+            max_per_staypoint: 2
+            video_bonus: 0.16
+            face_bonus: 0.2
+            selfie_penalty: 0.25
+            quality_floor: 0.5
+            minimum_total: 24
+            enable_people_balance: true
+            people_balance_weight: 0.35
+        this_day_month:
+            target_total: 34
+            max_per_day: 4
+            time_slot_hours: 3
+            min_spacing_seconds: 2400
+            phash_min_hamming: 10
+            max_per_staypoint: 1
+            video_bonus: 0.2
+            face_bonus: 0.3
+            selfie_penalty: 0.25
+            quality_floor: 0.55
+            minimum_total: 24
+            enable_people_balance: true
+            people_balance_weight: 0.35
+        people_friends:
+            target_total: 40
+            max_per_day: 5
+            time_slot_hours: 4
+            min_spacing_seconds: 2400
+            phash_min_hamming: 9
+            max_per_staypoint: 2
+            video_bonus: 0.3
+            face_bonus: 0.35
+            selfie_penalty: 0.22
+            quality_floor: 0.52
+            minimum_total: 24
+            enable_people_balance: true
+            people_balance_weight: 0.35
             repeat_penalty: 0.35
         highlights:
-            target_total: 30
-            max_per_day: 10
+            target_total: 38
+            max_per_day: 4
             time_slot_hours: 4
-            min_spacing_seconds: 150
-            phash_min_hamming: 20
+            min_spacing_seconds: 2400
+            phash_min_hamming: 10
             max_per_staypoint: 2
-            video_bonus: 0.55
-            face_bonus: 0.45
-            selfie_penalty: 0.18
-            quality_floor: 0.4
-            minimum_total: 10
+            video_bonus: 0.3
+            face_bonus: 0.3
+            selfie_penalty: 0.25
+            quality_floor: 0.55
+            minimum_total: 24
+            enable_people_balance: true
+            people_balance_weight: 0.35
     # Description: Mapping between cluster algorithms and selection profile keys.
     memories.cluster.selection.algorithm_profiles:
         vacation: 'vacation_weekend_transit'

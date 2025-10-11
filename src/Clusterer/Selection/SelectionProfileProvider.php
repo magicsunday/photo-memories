@@ -18,6 +18,8 @@ use function is_array;
 use function is_bool;
 use function is_numeric;
 use function is_string;
+use function max;
+use function round;
 use const FILTER_NULL_ON_FAILURE;
 use const FILTER_VALIDATE_BOOLEAN;
 
@@ -83,7 +85,8 @@ final class SelectionProfileProvider
         /** @var array<string, int|float> $merged */
         $merged = array_merge($baseOverrides, $this->runtimeOverrides, $this->sanitizeOverrides($overrides));
 
-        $targetTotal = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
+        $targetTotal   = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
+        $minimumTotal = $this->resolveMinimumTotal($merged, $targetTotal);
 
         return new VacationSelectionOptions(
             targetTotal: $targetTotal,
@@ -99,7 +102,7 @@ final class SelectionProfileProvider
             enablePeopleBalance: $this->boolValue($merged, 'enable_people_balance', $this->defaultOptions->enablePeopleBalance),
             peopleBalanceWeight: $this->floatValue($merged, 'people_balance_weight', $this->defaultOptions->peopleBalanceWeight),
             repeatPenalty: $this->floatValue($merged, 'repeat_penalty', $this->defaultOptions->repeatPenalty),
-            minimumTotal: $this->intValue($merged, 'minimum_total', $targetTotal),
+            minimumTotal: $minimumTotal,
         );
     }
 
@@ -265,5 +268,24 @@ final class SelectionProfileProvider
         }
 
         return $default;
+    }
+
+    /**
+     * @param array<string, int|float|bool> $values
+     */
+    private function resolveMinimumTotal(array $values, int $targetTotal): int
+    {
+        if (array_key_exists('minimum_total', $values)) {
+            return (int) $values['minimum_total'];
+        }
+
+        $computed = (int) round($targetTotal * 0.6);
+        $computed = max(24, $computed);
+
+        if ($computed > $targetTotal) {
+            return $targetTotal;
+        }
+
+        return $computed;
     }
 }
