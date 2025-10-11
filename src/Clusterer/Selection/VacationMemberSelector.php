@@ -312,7 +312,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
             $unique[$date]   = [];
             $fallback[$date] = [];
 
-            $groups = [];
+            /** @var list<array{media: Media, timestamp: int, burstId: string|null, order: int}> $accepted */
+            $accepted = [];
+            $order    = 0;
+
             foreach ($summary['members'] as $media) {
                 ++$this->telemetry['prefilter_total'];
 
@@ -339,24 +342,164 @@ final class VacationMemberSelector implements MemberSelectorInterface
                     continue;
                 }
 
-                $burstId = $media->getBurstUuid();
-                if ($burstId === null || $burstId === '') {
-                    $unique[$date][] = $this->createCandidate($media, $date, $summary, $options, 'slot');
+                $burstUuid = $media->getBurstUuid();
+                $accepted[] = [
+                    'media'     => $media,
+                    'timestamp' => $this->resolveTimestamp($media),
+                    'burstId'   => $burstUuid !== null && $burstUuid !== '' ? $burstUuid : null,
+                    'order'     => $order,
+                ];
+
+                ++$order;
+            }
+
+            if ($accepted === []) {
+                continue;
+            }
+
+            usort(
+                $accepted,
+                static function (array $left, array $right): int {
+                    if ($left['timestamp'] === $right['timestamp']) {
+                        return $left['order'] <=> $right['order'];
+                    }
+
+                    return $left['timestamp'] <=> $right['timestamp'];
+                },
+            );
+
+            /** @var array<string, array{members: list<Media>, timestamp: int, sequence: int}> $burstGroups */
+            $burstGroups = [];
+            /**
+             * @var list<array{members: list<Media>, timestamp: int, sequence: int, index: int}> $syntheticGroups
+             */
+            $syntheticGroups = [];
+            /** @var array{members: list<Media>, firstTimestamp: int, lastTimestamp: int}|null $currentSynthetic */
+            $currentSynthetic = null;
+            $nextSequence     = 0;
+            $syntheticIndex   = 0;
+
+            $finalizeSynthetic = static function () use (&$syntheticGroups, &$currentSynthetic, &$nextSequence, &$syntheticIndex): void {
+                if ($currentSynthetic === null) {
+                    return;
+                }
+
+                $syntheticGroups[] = [
+                    'members'   => $currentSynthetic['members'],
+                    'timestamp' => $currentSynthetic['firstTimestamp'],
+                    'sequence'  => $nextSequence,
+                    'index'     => $syntheticIndex,
+                ];
+
+                ++$nextSequence;
+                ++$syntheticIndex;
+                $currentSynthetic = null;
+            };
+
+            foreach ($accepted as $entry) {
+                $burstId = $entry['burstId'];
+                if ($burstId !== null) {
+                    $finalizeSynthetic();
+
+                    if (!array_key_exists($burstId, $burstGroups)) {
+                        $burstGroups[$burstId] = [
+                            'members'   => [],
+                            'timestamp' => $entry['timestamp'],
+                            'sequence'  => $nextSequence,
+                        ];
+
+                        ++$nextSequence;
+                    }
+
+                    $burstGroups[$burstId]['members'][] = $entry['media'];
+                    if ($entry['timestamp'] < $burstGroups[$burstId]['timestamp']) {
+                        $burstGroups[$burstId]['timestamp'] = $entry['timestamp'];
+                    }
 
                     continue;
                 }
 
-                $groups[$burstId] ??= [];
-                $groups[$burstId][] = $media;
+                if ($currentSynthetic === null) {
+                    $currentSynthetic = [
+                        'members'        => [$entry['media']],
+                        'firstTimestamp' => $entry['timestamp'],
+                        'lastTimestamp'  => $entry['timestamp'],
+                    ];
+
+                    continue;
+                }
+
+                $delta = $entry['timestamp'] - $currentSynthetic['lastTimestamp'];
+                if ($delta <= 30) {
+                    $currentSynthetic['members'][] = $entry['media'];
+                    $currentSynthetic['lastTimestamp'] = $entry['timestamp'];
+
+                    continue;
+                }
+
+                $finalizeSynthetic();
+                $currentSynthetic = [
+                    'members'        => [$entry['media']],
+                    'firstTimestamp' => $entry['timestamp'],
+                    'lastTimestamp'  => $entry['timestamp'],
+                ];
             }
 
-            foreach ($groups as $burstId => $members) {
+            $finalizeSynthetic();
+
+            /**
+             * @var list<array{
+             *     id: string|null,
+             *     members: list<Media>,
+             *     timestamp: int,
+             *     sequence: int,
+             * }> $groups
+             */
+            $groups = [];
+
+            foreach ($burstGroups as $burstId => $group) {
+                $groups[] = [
+                    'id'        => $burstId,
+                    'members'   => $group['members'],
+                    'timestamp' => $group['timestamp'],
+                    'sequence'  => $group['sequence'],
+                ];
+            }
+
+            foreach ($syntheticGroups as $group) {
+                $members = $group['members'];
+                $groups[] = [
+                    'id'        => count($members) > 1 ? sprintf('synthetic:%s:%d', $date, $group['index']) : null,
+                    'members'   => $members,
+                    'timestamp' => $group['timestamp'],
+                    'sequence'  => $group['sequence'],
+                ];
+            }
+
+            usort(
+                $groups,
+                static function (array $left, array $right): int {
+                    if ($left['timestamp'] === $right['timestamp']) {
+                        return $left['sequence'] <=> $right['sequence'];
+                    }
+
+                    return $left['timestamp'] <=> $right['timestamp'];
+                },
+            );
+
+            foreach ($groups as $group) {
+                $members = $group['members'];
+                if ($members === []) {
+                    continue;
+                }
+
                 if (count($members) === 1) {
                     $unique[$date][] = $this->createCandidate($members[0], $date, $summary, $options, 'slot');
 
                     continue;
                 }
 
+                $burstId        = $group['id'];
                 $representative = $this->selectBurstRepresentative($members);
                 $unique[$date][] = $this->createCandidate($representative, $date, $summary, $options, 'slot', $burstId);
 

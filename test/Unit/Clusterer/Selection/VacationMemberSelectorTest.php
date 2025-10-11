@@ -72,6 +72,35 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertNotContains($morningOther, $members);
     }
 
+    public function testSyntheticBurstSequencesCollapseToSingleCandidate(): void
+    {
+        $first  = $this->createMedia('synthetic-one.jpg', '2024-06-01T10:00:00+00:00', 0.6);
+        $second = $this->createMedia('synthetic-two.jpg', '2024-06-01T10:00:20+00:00', 0.7);
+        $third  = $this->createMedia('synthetic-three.jpg', '2024-06-01T10:00:35+00:00', 0.9);
+        $other  = $this->createMedia('synthetic-late.jpg', '2024-06-01T11:15:00+00:00', 0.5);
+
+        $summary = $this->createDaySummary('2024-06-01', [$first, $second, $third, $other]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 4,
+            maxPerDay: 4,
+            timeSlotHours: 1,
+            minSpacingSeconds: 0,
+            qualityFloor: 0.1,
+            minimumTotal: 1,
+        );
+
+        $result = $this->selector->select(['2024-06-01' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(2, $members);
+        self::assertContains($third, $members);
+        self::assertContains($other, $members);
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(2, $telemetry['burst_collapsed']);
+    }
+
     public function testMinimumSpacingIsEnforced(): void
     {
         $first  = $this->createMedia('spacing-first.jpg', '2024-05-03T10:00:00+00:00', 0.75);
