@@ -19,7 +19,9 @@ use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
+use function array_unique;
 use function array_values;
+use function ceil;
 use function count;
 use function intdiv;
 use function max;
@@ -194,6 +196,18 @@ final class VacationMemberSelector implements MemberSelectorInterface
             'near_duplicate_blocked'      => 0,
             'near_duplicate_replacements' => 0,
             'fallback_used'               => 0,
+            'people_balance_enabled'        => $options->enablePeopleBalance,
+            'people_balance_weight'         => $options->peopleBalanceWeight,
+            'people_balance_repeat_penalty' => $options->repeatPenalty,
+            'people_balance_considered'     => 0,
+            'people_balance_penalized'      => 0,
+            'people_balance_bonuses'        => 0,
+            'people_balance_rejected'       => 0,
+            'people_balance_accepted'       => 0,
+            'people_balance_counts'         => [],
+            'people_balance_target_cap'     => $options->enablePeopleBalance
+                ? max(1, (int) ceil($options->targetTotal * $options->peopleBalanceWeight))
+                : null,
             'relaxations'                 => [],
         ];
 
@@ -226,9 +240,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $selected        = [];
         $dayCounts       = [];
         $staypointCounts = [];
+        $personCounts    = [];
 
         foreach ($primaryOrder as $candidate) {
-            if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $options)) {
+            if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options)) {
                 if (count($selected) >= $options->targetTotal) {
                     break;
                 }
@@ -237,7 +252,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         if (count($selected) < $options->targetTotal) {
             foreach ($fallbackOrder as $candidate) {
-                if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $options, true)) {
+                if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options, true)) {
                     if (count($selected) >= $options->targetTotal) {
                         break;
                     }
@@ -252,13 +267,14 @@ final class VacationMemberSelector implements MemberSelectorInterface
             $members[] = $item['media'];
         }
 
-        $this->telemetry['selected_total'] = count($members);
+        $this->telemetry['selected_total']        = count($members);
+        $this->telemetry['people_balance_counts'] = $personCounts;
 
         return [$members, $this->telemetry];
     }
 
     /**
-     * @param array<string, int|float> $overrides
+     * @param array<string, int|float|bool> $overrides
      */
     private function cloneOptions(VacationSelectionOptions $source, array $overrides): VacationSelectionOptions
     {
@@ -273,6 +289,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
             faceBonus: $overrides['faceBonus'] ?? $source->faceBonus,
             selfiePenalty: $overrides['selfiePenalty'] ?? $source->selfiePenalty,
             qualityFloor: $overrides['qualityFloor'] ?? $source->qualityFloor,
+            enablePeopleBalance: $overrides['enablePeopleBalance'] ?? $source->enablePeopleBalance,
+            peopleBalanceWeight: $overrides['peopleBalanceWeight'] ?? $source->peopleBalanceWeight,
+            repeatPenalty: $overrides['repeatPenalty'] ?? $source->repeatPenalty,
             minimumTotal: $overrides['minimumTotal'] ?? $source->minimumTotal,
         );
     }
@@ -473,12 +492,14 @@ final class VacationMemberSelector implements MemberSelectorInterface
      * @param list<Candidate>            $selected
      * @param array<string, int>         $dayCounts
      * @param array<string, int>         $staypointCounts
+     * @param array<string, int>         $personCounts
      */
     private function considerCandidate(
         array $candidate,
         array &$selected,
         array &$dayCounts,
         array &$staypointCounts,
+        array &$personCounts,
         VacationSelectionOptions $options,
         bool $fromFallback = false,
     ): bool {
@@ -494,7 +515,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         if ($duplicateIndex !== null) {
             $existing = $selected[$duplicateIndex];
             if ($candidate['quality'] > $existing['quality']) {
-                $this->replaceSelection($duplicateIndex, $candidate, $selected, $dayCounts, $staypointCounts);
+                $this->replaceSelection($duplicateIndex, $candidate, $selected, $dayCounts, $staypointCounts, $personCounts);
                 ++$this->telemetry['near_duplicate_replacements'];
                 if ($fromFallback) {
                     ++$this->telemetry['fallback_used'];
@@ -527,11 +548,20 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         }
 
+        $balanced = $this->applyPeopleBalancing($candidate, $selected, $personCounts, $options);
+        if ($balanced === null) {
+            return false;
+        }
+
+        $candidate = $balanced;
+
         $selected[] = $candidate;
         $dayCounts[$day] = $dayCount + 1;
         if ($staypointKey !== null) {
             $staypointCounts[$staypointKey] = ($staypointCounts[$staypointKey] ?? 0) + 1;
         }
+
+        $this->incrementPersonCounts($candidate, $personCounts);
 
         if ($fromFallback) {
             ++$this->telemetry['fallback_used'];
@@ -549,6 +579,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         array &$selected,
         array &$dayCounts,
         array &$staypointCounts,
+        array &$personCounts,
     ): void {
         $removed = $selected[$index];
         $removedDay = $removed['day'];
@@ -558,11 +589,151 @@ final class VacationMemberSelector implements MemberSelectorInterface
             $staypointCounts[$key] = max(0, ($staypointCounts[$key] ?? 1) - 1);
         }
 
+        $this->decrementPersonCounts($removed, $personCounts);
+
         $selected[$index] = $candidate;
         $dayCounts[$candidate['day']] = ($dayCounts[$candidate['day']] ?? 0) + 1;
         if ($candidate['staypointKey'] !== null) {
             $key = $candidate['staypointKey'];
             $staypointCounts[$key] = ($staypointCounts[$key] ?? 0) + 1;
+        }
+
+        $this->incrementPersonCounts($candidate, $personCounts);
+    }
+
+    /**
+     * @param list<Candidate>          $selected
+     * @param array<string, int>       $personCounts
+     */
+    private function applyPeopleBalancing(
+        array $candidate,
+        array $selected,
+        array $personCounts,
+        VacationSelectionOptions $options,
+    ): ?array {
+        if ($options->enablePeopleBalance === false) {
+            return $candidate;
+        }
+
+        /** @var list<string> $persons */
+        $persons = $candidate['persons'] ?? [];
+        if ($persons === []) {
+            return $candidate;
+        }
+
+        ++$this->telemetry['people_balance_considered'];
+
+        $weight = $options->peopleBalanceWeight;
+        if ($weight < 0.0) {
+            $weight = 0.0;
+        } elseif ($weight > 1.0) {
+            $weight = 1.0;
+        }
+
+        $nextIndex = count($selected) + 1;
+        $limit     = $weight <= 0.0 ? 1 : (int) ceil($nextIndex * $weight);
+        if ($limit < 1) {
+            $limit = 1;
+        }
+
+        $dominantCount = 0;
+        foreach ($persons as $person) {
+            $current = $personCounts[$person] ?? 0;
+            if ($current > $dominantCount) {
+                $dominantCount = $current;
+            }
+        }
+
+        $projectedCount = $dominantCount + 1;
+        if ($projectedCount > $limit) {
+            ++$this->telemetry['people_balance_rejected'];
+
+            return null;
+        }
+
+        $maxOverlap = 0.0;
+        foreach ($selected as $existing) {
+            $overlap = $this->metrics->personOverlap($candidate['media'], $existing['media']);
+            if ($overlap > $maxOverlap) {
+                $maxOverlap = $overlap;
+            }
+        }
+
+        $shareRatio = 0.0;
+        if ($limit > 0) {
+            $shareRatio = $dominantCount / (float) $limit;
+            if ($shareRatio > 1.0) {
+                $shareRatio = 1.0;
+            }
+        }
+
+        $overlapFactor = max($maxOverlap, $shareRatio);
+
+        if ($options->repeatPenalty !== 0.0 && $overlapFactor > 0.0) {
+            $adjustment = -$options->repeatPenalty * $overlapFactor;
+            if ($adjustment < 0.0) {
+                ++$this->telemetry['people_balance_penalized'];
+            } elseif ($adjustment > 0.0) {
+                ++$this->telemetry['people_balance_bonuses'];
+            }
+
+            $candidate['score'] = $this->scoreMedia(
+                $candidate['media'],
+                $options,
+                $candidate['quality'],
+                $adjustment,
+            );
+
+            if ($candidate['score'] <= 0.0) {
+                ++$this->telemetry['people_balance_rejected'];
+
+                return null;
+            }
+        }
+
+        ++$this->telemetry['people_balance_accepted'];
+
+        return $candidate;
+    }
+
+    /**
+     * @param array<string, mixed> $candidate
+     * @param array<string, int>   $personCounts
+     */
+    private function incrementPersonCounts(array $candidate, array &$personCounts): void
+    {
+        /** @var list<string> $persons */
+        $persons = $candidate['persons'] ?? [];
+        if ($persons === []) {
+            return;
+        }
+
+        foreach ($persons as $person) {
+            $personCounts[$person] = ($personCounts[$person] ?? 0) + 1;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $candidate
+     * @param array<string, int>   $personCounts
+     */
+    private function decrementPersonCounts(array $candidate, array &$personCounts): void
+    {
+        /** @var list<string> $persons */
+        $persons = $candidate['persons'] ?? [];
+        if ($persons === []) {
+            return;
+        }
+
+        foreach ($persons as $person) {
+            $current = $personCounts[$person] ?? 0;
+            if ($current <= 1) {
+                unset($personCounts[$person]);
+
+                continue;
+            }
+
+            $personCounts[$person] = $current - 1;
         }
     }
 
@@ -645,6 +816,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $quality   = $media->getQualityScore() ?? 0.5;
         $score     = $this->scoreMedia($media, $options, $quality);
         $staypoint = $this->staypointKey($timestamp, $summary, $date);
+        $persons   = $media->getPersons();
+        $normalizedPersons = $persons !== null ? array_values(array_unique($persons)) : [];
 
         return [
             'media'       => $media,
@@ -657,6 +830,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             'staypointKey'=> $staypoint,
             'burstId'     => $burstId,
             'origin'      => $origin,
+            'persons'     => $normalizedPersons,
         ];
     }
 
@@ -677,7 +851,12 @@ final class VacationMemberSelector implements MemberSelectorInterface
         return intdiv($hour, $slotSize);
     }
 
-    private function scoreMedia(Media $media, VacationSelectionOptions $options, float $quality): float
+    private function scoreMedia(
+        Media $media,
+        VacationSelectionOptions $options,
+        float $quality,
+        float $peopleAdjustment = 0.0,
+    ): float
     {
         $score = $quality;
 
@@ -691,6 +870,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         if ($media->getFacesCount() === 1) {
             $score -= $options->selfiePenalty;
+        }
+
+        if ($peopleAdjustment !== 0.0) {
+            $score += $peopleAdjustment;
         }
 
         if ($score < 0.0) {

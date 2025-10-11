@@ -170,6 +170,90 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertNotContains($plain, $members);
     }
 
+    public function testPeopleBalanceEncouragesDiverseFaces(): void
+    {
+        $aliceFirst  = $this->createPersonMedia('alice-first.jpg', '2024-05-12T09:00:00+00:00', 0.95, 'person-a');
+        $aliceSecond = $this->createPersonMedia('alice-second.jpg', '2024-05-12T10:00:00+00:00', 0.9, 'person-a');
+        $aliceThird  = $this->createPersonMedia('alice-third.jpg', '2024-05-12T11:00:00+00:00', 0.85, 'person-a');
+        $bob         = $this->createPersonMedia('bob.jpg', '2024-05-12T12:00:00+00:00', 0.8, 'person-b');
+        $carol       = $this->createPersonMedia('carol.jpg', '2024-05-12T13:00:00+00:00', 0.75, 'person-c');
+
+        $summary = $this->createDaySummary('2024-05-12', [$aliceFirst, $aliceSecond, $aliceThird, $bob, $carol]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 4,
+            maxPerDay: 5,
+            minSpacingSeconds: 0,
+            timeSlotHours: 1,
+            qualityFloor: 0.1,
+            enablePeopleBalance: true,
+            peopleBalanceWeight: 0.65,
+            repeatPenalty: 0.4,
+            minimumTotal: 4,
+        );
+
+        $result = $this->selector->select(['2024-05-12' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(4, $members);
+        self::assertContains($bob, $members);
+        self::assertContains($carol, $members);
+        self::assertNotContains($aliceThird, $members);
+
+        $counts = $this->countPersons($members);
+        self::assertSame(2, $counts['person-a'] ?? 0);
+        self::assertSame(1, $counts['person-b'] ?? 0);
+        self::assertSame(1, $counts['person-c'] ?? 0);
+
+        $telemetry = $result->getTelemetry();
+        self::assertTrue($telemetry['people_balance_enabled']);
+        self::assertGreaterThan(0, $telemetry['people_balance_penalized']);
+        self::assertSame(1, $telemetry['people_balance_rejected']);
+        self::assertCount(3, $telemetry['people_balance_counts']);
+        self::assertSame(2, $telemetry['people_balance_counts']['person-a'] ?? 0);
+        self::assertSame(1, $telemetry['people_balance_counts']['person-b'] ?? 0);
+        self::assertSame(1, $telemetry['people_balance_counts']['person-c'] ?? 0);
+    }
+
+    public function testPeopleBalanceDisabledKeepsTopScoringFaces(): void
+    {
+        $aliceFirst  = $this->createPersonMedia('alice-first-disabled.jpg', '2024-05-13T09:00:00+00:00', 0.95, 'person-a');
+        $aliceSecond = $this->createPersonMedia('alice-second-disabled.jpg', '2024-05-13T10:00:00+00:00', 0.9, 'person-a');
+        $aliceThird  = $this->createPersonMedia('alice-third-disabled.jpg', '2024-05-13T11:00:00+00:00', 0.88, 'person-a');
+        $bob         = $this->createPersonMedia('bob-disabled.jpg', '2024-05-13T12:00:00+00:00', 0.82, 'person-b');
+        $carol       = $this->createPersonMedia('carol-disabled.jpg', '2024-05-13T13:00:00+00:00', 0.78, 'person-c');
+
+        $summary = $this->createDaySummary('2024-05-13', [$aliceFirst, $aliceSecond, $aliceThird, $bob, $carol]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 4,
+            maxPerDay: 5,
+            minSpacingSeconds: 0,
+            timeSlotHours: 1,
+            qualityFloor: 0.1,
+            enablePeopleBalance: false,
+            peopleBalanceWeight: 0.65,
+            repeatPenalty: 0.4,
+            minimumTotal: 4,
+        );
+
+        $result = $this->selector->select(['2024-05-13' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(4, $members);
+        self::assertContains($aliceThird, $members);
+        self::assertNotContains($carol, $members);
+
+        $counts = $this->countPersons($members);
+        self::assertSame(3, $counts['person-a'] ?? 0);
+        self::assertSame(1, $counts['person-b'] ?? 0);
+        self::assertArrayNotHasKey('person-c', $counts);
+
+        $telemetry = $result->getTelemetry();
+        self::assertFalse($telemetry['people_balance_enabled']);
+        self::assertSame(0, $telemetry['people_balance_rejected']);
+    }
+
     public function testDiversifierCreatesBalancedOrderAcrossDays(): void
     {
         $dayOneFirst  = $this->createMedia('day1-first.jpg', '2024-05-07T08:00:00+00:00', 0.9);
@@ -324,6 +408,36 @@ final class VacationMemberSelectorTest extends TestCase
         ];
 
         return array_replace($base, $overrides);
+    }
+
+    private function createPersonMedia(string $filename, string $time, float $quality, string $person): Media
+    {
+        $media = $this->createMedia($filename, $time, $quality);
+        $media->setPersons([$person]);
+
+        return $media;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return array<string, int>
+     */
+    private function countPersons(array $members): array
+    {
+        $counts = [];
+        foreach ($members as $media) {
+            $persons = $media->getPersons();
+            if ($persons === null) {
+                continue;
+            }
+
+            foreach ($persons as $person) {
+                $counts[$person] = ($counts[$person] ?? 0) + 1;
+            }
+        }
+
+        return $counts;
     }
 
     private function createHome(): array

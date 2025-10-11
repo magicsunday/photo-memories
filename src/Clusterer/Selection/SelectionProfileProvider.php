@@ -13,22 +13,26 @@ namespace MagicSunday\Memories\Clusterer\Selection;
 
 use function array_key_exists;
 use function array_merge;
+use function filter_var;
 use function is_array;
+use function is_bool;
 use function is_numeric;
 use function is_string;
+use const FILTER_NULL_ON_FAILURE;
+use const FILTER_VALIDATE_BOOLEAN;
 
 /**
  * Provides curated selection option profiles per cluster algorithm.
  */
 final class SelectionProfileProvider
 {
-    /** @var array<string, array<string, int|float>> */
+    /** @var array<string, array<string, int|float|bool>> */
     private array $profiles = [];
 
     /** @var array<string, string> */
     private array $algorithmProfiles = [];
 
-    /** @var array<string, int|float> */
+    /** @var array<string, int|float|bool> */
     private array $runtimeOverrides = [];
 
     /**
@@ -48,7 +52,7 @@ final class SelectionProfileProvider
     /**
      * Applies runtime overrides that affect every generated option set.
      *
-     * @param array<string, int|float|string|null> $overrides
+     * @param array<string, int|float|string|bool|null> $overrides
      */
     public function setRuntimeOverrides(array $overrides): void
     {
@@ -70,7 +74,7 @@ final class SelectionProfileProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $overrides
+     * @param array<string, int|float|string|bool|null> $overrides
      */
     public function createOptions(string $profileKey, array $overrides = []): VacationSelectionOptions
     {
@@ -92,6 +96,9 @@ final class SelectionProfileProvider
             faceBonus: $this->floatValue($merged, 'face_bonus', $this->defaultOptions->faceBonus),
             selfiePenalty: $this->floatValue($merged, 'selfie_penalty', $this->defaultOptions->selfiePenalty),
             qualityFloor: $this->floatValue($merged, 'quality_floor', $this->defaultOptions->qualityFloor),
+            enablePeopleBalance: $this->boolValue($merged, 'enable_people_balance', $this->defaultOptions->enablePeopleBalance),
+            peopleBalanceWeight: $this->floatValue($merged, 'people_balance_weight', $this->defaultOptions->peopleBalanceWeight),
+            repeatPenalty: $this->floatValue($merged, 'repeat_penalty', $this->defaultOptions->repeatPenalty),
             minimumTotal: $this->intValue($merged, 'minimum_total', $targetTotal),
         );
     }
@@ -99,7 +106,7 @@ final class SelectionProfileProvider
     /**
      * @param array<string, array<string, mixed>> $profiles
      *
-     * @return array<string, array<string, int|float>>
+     * @return array<string, array<string, int|float|bool>>
      */
     private function sanitizeProfiles(array $profiles): array
     {
@@ -141,9 +148,9 @@ final class SelectionProfileProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $values
+     * @param array<string, int|float|string|bool|null> $values
      *
-     * @return array<string, int|float>
+     * @return array<string, int|float|bool>
      */
     private function sanitizeOverrides(array $values): array
     {
@@ -166,7 +173,7 @@ final class SelectionProfileProvider
             }
         }
 
-        foreach (['video_bonus', 'face_bonus', 'selfie_penalty', 'quality_floor'] as $key) {
+        foreach (['video_bonus', 'face_bonus', 'selfie_penalty', 'quality_floor', 'people_balance_weight', 'repeat_penalty'] as $key) {
             $value = $values[$key] ?? null;
             if ($value === null) {
                 continue;
@@ -174,6 +181,32 @@ final class SelectionProfileProvider
 
             if (is_numeric($value)) {
                 $result[$key] = (float) $value;
+            }
+        }
+
+        foreach (['enable_people_balance'] as $key) {
+            $value = $values[$key] ?? null;
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_bool($value)) {
+                $result[$key] = $value;
+
+                continue;
+            }
+
+            if (is_int($value)) {
+                $result[$key] = $value !== 0;
+
+                continue;
+            }
+
+            if (is_string($value)) {
+                $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($filtered !== null) {
+                    $result[$key] = $filtered;
+                }
             }
         }
 
@@ -204,5 +237,33 @@ final class SelectionProfileProvider
         }
 
         return (float) $value;
+    }
+
+    /**
+     * @param array<string, int|float|bool> $values
+     */
+    private function boolValue(array $values, string $key, bool $default): bool
+    {
+        $value = $values[$key] ?? null;
+        if ($value === null) {
+            return $default;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value !== 0;
+        }
+
+        if (is_string($value)) {
+            $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($filtered !== null) {
+                return $filtered;
+            }
+        }
+
+        return $default;
     }
 }
