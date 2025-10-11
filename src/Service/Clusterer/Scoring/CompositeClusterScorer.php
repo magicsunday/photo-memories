@@ -19,7 +19,11 @@ use MagicSunday\Memories\Entity\Media;
 use function array_keys;
 use function array_map;
 use function array_slice;
+use function ceil;
 use function count;
+use function max;
+use function min;
+use function sort;
 use function is_array;
 use function is_numeric;
 use function is_string;
@@ -120,6 +124,7 @@ final class CompositeClusterScorer
             $heuristic->prepare($clusters, $mediaMap);
         }
 
+        $rawScores = [];
         foreach ($clusters as $cluster) {
             $weightedValues = [];
             foreach ($this->heuristics as $heuristic) {
@@ -133,15 +138,38 @@ final class CompositeClusterScorer
 
             $score = $this->computeWeightedScore($cluster, $weightedValues);
 
-            $algorithm = $cluster->getAlgorithm();
+            $rawScores[] = [
+                'cluster'   => $cluster,
+                'algorithm' => $cluster->getAlgorithm(),
+                'score'     => $score,
+            ];
+        }
+
+        $distributions = $this->buildDistributions($rawScores);
+
+        foreach ($rawScores as $entry) {
+            $cluster   = $entry['cluster'];
+            $algorithm = $entry['algorithm'];
+            $rawScore  = $entry['score'];
+
             $cluster->setParam('group', $this->resolveGroup($algorithm));
+            $cluster->setParam('pre_norm_score', $rawScore);
+
+            $distribution = $distributions[$algorithm] ?? null;
+            $normalised   = $distribution === null
+                ? 0.5
+                : $this->normaliseScore($rawScore, $distribution);
+
+            $cluster->setParam('post_norm_score', $normalised);
+
             $boost = $this->algorithmBoosts[$algorithm] ?? 1.0;
             if ($boost !== 1.0) {
-                $score *= $boost;
                 $cluster->setParam('score_algorithm_boost', $boost);
             }
 
-            $cluster->setParam('score', $score);
+            $boosted = $normalised * $boost;
+            $cluster->setParam('boosted_score', $boosted);
+            $cluster->setParam('score', $boosted);
         }
 
         usort($clusters, static fn (ClusterDraft $a, ClusterDraft $b): int => ($b->getParams()['score'] ?? 0.0) <=> ($a->getParams()['score'] ?? 0.0));
@@ -301,5 +329,111 @@ final class CompositeClusterScorer
         }
 
         return $this->defaultAlgorithmGroup;
+    }
+
+    /**
+     * @param list<array{cluster: ClusterDraft, algorithm: string, score: float}> $rawScores
+     *
+     * @return array<string,array{min: float, q1: float, median: float, q3: float, max: float}>
+     */
+    private function buildDistributions(array $rawScores): array
+    {
+        if ($rawScores === []) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($rawScores as $entry) {
+            $grouped[$entry['algorithm']][] = $entry['score'];
+        }
+
+        $distributions = [];
+        foreach ($grouped as $algorithm => $scores) {
+            sort($scores);
+
+            $distributions[$algorithm] = [
+                'min'    => $scores[0],
+                'q1'     => $this->quantile($scores, 0.25),
+                'median' => $this->quantile($scores, 0.5),
+                'q3'     => $this->quantile($scores, 0.75),
+                'max'    => $scores[count($scores) - 1],
+            ];
+        }
+
+        return $distributions;
+    }
+
+    /**
+     * @param list<float> $sorted
+     */
+    private function quantile(array $sorted, float $q): float
+    {
+        $count = count($sorted);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $position   = ($count - 1) * $q;
+        $lowerIndex = (int) $position;
+        $upperIndex = (int) ceil($position);
+
+        if ($lowerIndex === $upperIndex) {
+            return $sorted[$lowerIndex];
+        }
+
+        $lowerWeight = $upperIndex - $position;
+        $upperWeight = 1.0 - $lowerWeight;
+
+        return ($sorted[$lowerIndex] * $lowerWeight) + ($sorted[$upperIndex] * $upperWeight);
+    }
+
+    /**
+     * @param array{min: float, q1: float, median: float, q3: float, max: float} $distribution
+     */
+    private function normaliseScore(float $rawScore, array $distribution): float
+    {
+        $minValue = $distribution['min'];
+        $maxValue = $distribution['max'];
+
+        if ($maxValue - $minValue <= 1e-9) {
+            return 0.5;
+        }
+
+        $clamped = max($minValue, min($rawScore, $maxValue));
+
+        $q1  = $distribution['q1'];
+        $q3  = $distribution['q3'];
+        $iqr = $q3 - $q1;
+
+        if ($iqr <= 1e-9) {
+            $percent = ($clamped - $minValue) / ($maxValue - $minValue);
+
+            return 0.1 + 0.8 * $this->clamp01($percent);
+        }
+
+        if ($clamped <= $q1) {
+            $lowerSpan = max($q1 - $minValue, 1e-9);
+            $percent   = (($clamped - $minValue) / $lowerSpan) * 0.25;
+        } elseif ($clamped < $q3) {
+            $percent = 0.25 + (($clamped - $q1) / $iqr) * 0.5;
+        } else {
+            $upperSpan = max($maxValue - $q3, 1e-9);
+            $percent   = 0.75 + (($clamped - $q3) / $upperSpan) * 0.25;
+        }
+
+        return 0.1 + 0.8 * $this->clamp01($percent);
+    }
+
+    private function clamp01(float $value): float
+    {
+        if ($value < 0.0) {
+            return 0.0;
+        }
+
+        if ($value > 1.0) {
+            return 1.0;
+        }
+
+        return $value;
     }
 }

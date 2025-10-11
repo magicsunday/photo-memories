@@ -19,6 +19,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
+use MagicSunday\Memories\Service\Clusterer\Scoring\ClusterScoreHeuristicInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\DensityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic;
@@ -32,6 +33,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use function sprintf;
 
 final class CompositeClusterScorerTest extends TestCase
 {
@@ -115,7 +117,7 @@ final class CompositeClusterScorerTest extends TestCase
             $values[$heuristic->weightKey()] = $heuristic->score($scoredCluster);
         }
 
-        $expected = 0.22 * $values['quality'] +
+        $expectedRaw = 0.22 * $values['quality'] +
             0.08 * ($params['aesthetics_score'] ?? $values['quality']) +
             0.16 * $values['people'] +
             0.09 * $values['content'] +
@@ -127,9 +129,12 @@ final class CompositeClusterScorerTest extends TestCase
             0.02 * $values['poi'] +
             0.10 * $values['time_coverage'];
 
-        $boosted = $expected * 1.45;
+        $boosted = 0.5 * 1.45;
 
-        self::assertEqualsWithDelta($boosted, $params['score'], 1e-6);
+        self::assertEqualsWithDelta($expectedRaw, $params['pre_norm_score'], 1e-6);
+        self::assertEqualsWithDelta(0.5, $params['post_norm_score'], 1e-9);
+        self::assertEqualsWithDelta($boosted, $params['boosted_score'], 1e-9);
+        self::assertEqualsWithDelta($boosted, $params['score'], 1e-9);
         self::assertEqualsWithDelta(1.45, $params['score_algorithm_boost'], 1e-9);
         self::assertSame('travel_and_places', $params['group']);
     }
@@ -244,7 +249,85 @@ final class CompositeClusterScorerTest extends TestCase
         $params = $scored[0]->getParams();
         // Expect algorithm override 0.7 for quality and cluster override 0.25 for people.
         $expected = (0.7 * 0.4) + (0.25 * 0.5);
-        self::assertEqualsWithDelta($expected, $params['score'], 1e-9);
+        self::assertEqualsWithDelta($expected, $params['pre_norm_score'], 1e-9);
+        self::assertEqualsWithDelta(0.5, $params['post_norm_score'], 1e-9);
+        self::assertEqualsWithDelta(0.5, $params['boosted_score'], 1e-9);
+        self::assertEqualsWithDelta(0.5, $params['score'], 1e-9);
+    }
+
+    #[Test]
+    public function normalisesScoresPerAlgorithm(): void
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $heuristics = [
+            new class implements ClusterScoreHeuristicInterface {
+                public function prepare(array $clusters, array $mediaMap): void
+                {
+                }
+
+                public function supports(ClusterDraft $cluster): bool
+                {
+                    return true;
+                }
+
+                public function enrich(ClusterDraft $cluster, array $mediaMap): void
+                {
+                }
+
+                public function score(ClusterDraft $cluster): float
+                {
+                    return $cluster->getParams()['seed_score'] ?? 0.0;
+                }
+
+                public function weightKey(): string
+                {
+                    return 'quality';
+                }
+            },
+        ];
+
+        $scorer = new CompositeClusterScorer(
+            em: $entityManager,
+            heuristics: $heuristics,
+            weights: ['quality' => 1.0],
+            algorithmBoosts: ['vacation' => 1.2, 'day_album' => 0.8],
+        );
+
+        $clusters = [
+            new ClusterDraft('vacation', ['seed_score' => 0.1], ['lat' => 0.0, 'lon' => 0.0], []),
+            new ClusterDraft('vacation', ['seed_score' => 0.5], ['lat' => 0.0, 'lon' => 0.0], []),
+            new ClusterDraft('vacation', ['seed_score' => 0.9], ['lat' => 0.0, 'lon' => 0.0], []),
+            new ClusterDraft('day_album', ['seed_score' => 0.2], ['lat' => 0.0, 'lon' => 0.0], []),
+            new ClusterDraft('day_album', ['seed_score' => 0.7], ['lat' => 0.0, 'lon' => 0.0], []),
+        ];
+
+        $scored = $scorer->score($clusters);
+
+        self::assertCount(5, $scored);
+
+        $expected = [
+            'vacation'  => ['0.1' => 0.1, '0.5' => 0.5, '0.9' => 0.9],
+            'day_album' => ['0.2' => 0.1, '0.7' => 0.9],
+        ];
+
+        foreach ($scored as $cluster) {
+            $algorithm = $cluster->getAlgorithm();
+            $seed      = $cluster->getParams()['seed_score'];
+            $postNorm  = $cluster->getParams()['post_norm_score'];
+
+            self::assertEqualsWithDelta($seed, $cluster->getParams()['pre_norm_score'], 1e-9);
+            $seedKey = sprintf('%.1f', $seed);
+            self::assertEqualsWithDelta($expected[$algorithm][$seedKey], $postNorm, 1e-9);
+
+            $boost = $cluster->getParams()['boosted_score'];
+            $factor = $algorithm === 'vacation' ? 1.2 : 0.8;
+
+            self::assertEqualsWithDelta($postNorm * $factor, $boost, 1e-9);
+            self::assertEqualsWithDelta($boost, $cluster->getParams()['score'], 1e-9);
+
+            self::assertEqualsWithDelta($factor, $cluster->getParams()['score_algorithm_boost'], 1e-9);
+        }
     }
 
     /**
