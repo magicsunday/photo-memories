@@ -116,13 +116,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString("scale=1920:1080:force_original_aspect_ratio=increase,zoompan=z='if(gte(iw/ih\\,1.778)\\,1.05+(1.15-1.05)*min(on/112\\,1)\\,1)'", $filterComplex);
+        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080', $filterComplex);
+        self::assertStringContainsString("zoompan=z='1.05+(1.15-1.05)*min(on/112\\,1)'", $filterComplex);
         self::assertStringContainsString('s=1920x1080', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString("crop='if(gte(iw/ih\\,1.778)\\,1920\\,iw)':'if(gte(iw/ih\\,1.778)\\,1080\\,ih)'", $filterComplex);
+        self::assertStringContainsString('pad=1920:1080:(ow-iw)/2:(oh-ih)/2,crop=1920:1080:(in_w-out_w)/2:(in_h-out_h)/2', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
-        self::assertStringNotContainsString('pad=', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
         self::assertStringNotContainsString('[vtmp]', $filterComplex);
@@ -180,7 +180,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertArrayHasKey($filterComplexIndex, $command);
 
         $filterComplex = $command[$filterComplexIndex];
-        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=6.5:d=1.5[aout]', $filterComplex);
+        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=5.75:d=1.5[aout]', $filterComplex);
 
         $audioMapIndex = array_search('-map', $command, true);
         self::assertNotFalse($audioMapIndex);
@@ -200,6 +200,90 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
 
         self::assertNotNull($audioLabelIndex);
+    }
+
+    public function testTimelineOffsetsAndAudioFadeAreAlignedForTransitions(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 5.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/third.jpg',
+                'mediaId'    => 3,
+                'duration'   => 6.0,
+                'transition' => null,
+            ],
+        ];
+
+        $transitionDuration = 1.0;
+
+        $job = new SlideshowJob(
+            'timeline-audio-fade',
+            '/tmp/example.json',
+            '/tmp/out.mp4',
+            '/tmp/out.lock',
+            '/tmp/out.error',
+            ['/tmp/cover.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
+            $slides,
+            $transitionDuration,
+            '/tmp/music.mp3',
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+
+        $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
+        self::assertSame(2, $matchCount);
+        $offsets = array_map('floatval', $matches[2]);
+        self::assertCount(2, $offsets);
+
+        $expectedTimeline = max(2.5, $slides[0]['duration']);
+        $expectedOffsets  = [];
+        $slideCount       = count($slides);
+
+        for ($index = 1; $index < $slideCount; ++$index) {
+            $expectedOffsets[] = $expectedTimeline - $transitionDuration;
+            $expectedTimeline += $slides[$index]['duration'] - $transitionDuration;
+        }
+
+        foreach ($offsets as $index => $offset) {
+            self::assertEqualsWithDelta($expectedOffsets[$index], $offset, 0.001);
+        }
+
+        $fadeMatchPattern = '/afade=t=out:st=([0-9.]+):d=1\\.5/';
+        self::assertSame(1, preg_match($fadeMatchPattern, $filterComplex, $fadeMatches));
+
+        $fadeStart            = (float) $fadeMatches[1];
+        $expectedFadeDuration = 1.5;
+        $expectedFadeStart    = max(0.0, $expectedTimeline - $expectedFadeDuration);
+
+        self::assertEqualsWithDelta($expectedFadeStart, $fadeStart, 0.001);
     }
 
     public function testGenerateThrowsExceptionWhenImageFileIsNotReadable(): void
@@ -285,9 +369,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString("zoompan=z='if(gte(iw/ih\\,1.778)\\,1.2+(1.3-1.2)*min(on/119\\,1)\\,1)'", $filterComplex);
-        self::assertStringContainsString("x='if(gte(iw/ih\\,1.778)\\,clip((iw-(w/zoom))/2 + 0.4*(iw-(w/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(w/zoom)\\,0))\\,(iw-w)/2)'", $filterComplex);
-        self::assertStringContainsString("y='if(gte(iw/ih\\,1.778)\\,clip((ih-(h/zoom))/2 + -0.25*(ih-(h/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(h/zoom)\\,0))\\,(ih-h)/2)'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='1.2+(1.3-1.2)*min(on/119\\,1)'", $filterComplex);
+        self::assertStringContainsString("x='clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(iw/zoom)\\,0))'", $filterComplex);
+        self::assertStringContainsString("y='clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(ih/zoom)\\,0))'", $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString('s=1920x1080', $filterComplex);
     }
@@ -461,9 +545,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertEqualsWithDelta(0.25, $parsed['durations'][2], 0.0001);
 
         self::assertSame(3, count($parsed['offsets']));
-        self::assertEqualsWithDelta(3.0, $parsed['offsets'][0], 0.0001);
-        self::assertEqualsWithDelta(6.0, $parsed['offsets'][1], 0.0001);
-        self::assertEqualsWithDelta(6.25, $parsed['offsets'][2], 0.0001);
+        self::assertEqualsWithDelta(1.8, $parsed['offsets'][0], 0.0001);
+        self::assertEqualsWithDelta(4.55, $parsed['offsets'][1], 0.0001);
+        self::assertEqualsWithDelta(4.55, $parsed['offsets'][2], 0.0001);
     }
 
     public function testEscapeFilterExpressionMasksEveryCommaExactlyOnce(): void
