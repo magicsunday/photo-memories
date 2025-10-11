@@ -226,7 +226,7 @@ parameters:
             video_bonus: 0.22
             face_bonus: 0.28
             selfie_penalty: 0.27
-            quality_floor: 0.52
+            quality_floor: 0.56
             minimum_total: 29
             enable_people_balance: true
             people_balance_weight: 0.35
@@ -311,7 +311,7 @@ parameters:
             video_bonus: 0.3
             face_bonus: 0.3
             selfie_penalty: 0.25
-            quality_floor: 0.55
+            quality_floor: 0.58
             minimum_total: 24
             enable_people_balance: true
             people_balance_weight: 0.35

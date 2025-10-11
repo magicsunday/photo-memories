@@ -525,9 +525,22 @@ services:
         arguments:
             $fallbackTimezone: '%memories.cluster.timezone.default%'
 
+    MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator: ~
+
     MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator:
         arguments:
             $qualityBaselineMegapixels: '%memories.score.quality_baseline_megapixels%'
+            $estimator: '@MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator'
+            $qualityWeights:
+                resolution: 0.18
+                sharpness: 0.24
+                exposure: 0.18
+                contrast: 0.16
+                noise: 0.12
+                blockiness: 0.07
+                keyframe: 0.05
+            $videoBonusWeight: 0.08
+            $videoPenaltyWeight: 0.12
 
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
