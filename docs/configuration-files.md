@@ -22,9 +22,9 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 
   Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl des `xfade`-Filters wider und enthalten
   standardmäßig `fade`, `dissolve`, `fadeblack`, `fadewhite`, `wipeleft`, `wiperight`, `wipeup`, `wipedown`, `slideleft`,
-  `slideright`, `smoothleft`, `smoothright`, `circleopen`, `circleclose`, `vertopen`, `vertclose`, `horzopen`, `horzclose`,
-  `radial` und `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und
-  reicht sie unverändert an FFmpeg weiter.
+  `slideright`, `smoothleft`, `smoothright`, `circleopen`, `circleclose`, `radial`, `hlslice`, `vuslice`, `distance` und
+  `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und reicht sie
+  unverändert an FFmpeg weiter.
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 

@@ -68,11 +68,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'smoothright',
         'circleopen',
         'circleclose',
-        'vertopen',
-        'vertclose',
-        'horzopen',
-        'horzclose',
         'radial',
+        'hlslice',
+        'vuslice',
+        'distance',
         'pixelize',
     ];
 
