@@ -21,9 +21,11 @@ use function array_map;
 use function array_search;
 use function base64_decode;
 use function count;
+use function explode;
 use function file_put_contents;
 use function preg_match;
 use function preg_match_all;
+use function round;
 use function sprintf;
 use function strpos;
 use function sys_get_temp_dir;
@@ -137,6 +139,61 @@ final class SlideshowVideoGeneratorTest extends TestCase
             preg_match('/\\[1:v][^;\\[]*drawtext/', $filterComplex),
             'Overlay should only appear on the cover slide.'
         );
+    }
+
+    public function testBuildIntroTextOverlayFilterChainStacksTitleAboveSubtitle(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
+        $method->setAccessible(true);
+
+        /** @var string $filters */
+        $filters = $method->invoke($generator, 'Rückblick', '01.01.2024 – 31.01.2024');
+
+        $parts = explode(',', $filters);
+
+        self::assertCount(2, $parts);
+
+        $expectedTitleSize    = max(1, (int) round(1080 * 0.060));
+        $expectedSubtitleSize = max(1, (int) round(1080 * 0.038));
+        $expectedLineGap      = max(0, (int) round(1080 * 0.012));
+
+        $subtitleFilter = $parts[0];
+        $titleFilter    = $parts[1];
+
+        self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $subtitleFilter);
+        self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
+        self::assertStringContainsString('x=safeX', $subtitleFilter);
+        self::assertStringContainsString('y=h-th-safeY', $subtitleFilter);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $subtitleFilter);
+
+        self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
+        self::assertStringContainsString(sprintf('fontsize=%d', $expectedTitleSize), $titleFilter);
+        self::assertStringContainsString('x=safeX', $titleFilter);
+        self::assertStringContainsString(
+            sprintf('y=h-th-safeY-%d-%d', $expectedSubtitleSize, $expectedLineGap),
+            $titleFilter
+        );
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $titleFilter);
+    }
+
+    public function testBuildIntroTextOverlayFilterChainPlacesSingleTitleAtSafeArea(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
+        $method->setAccessible(true);
+
+        /** @var string $filters */
+        $filters = $method->invoke($generator, 'Rückblick', null);
+
+        self::assertStringContainsString("drawtext=text='Rückblick'", $filters);
+        self::assertStringContainsString('x=safeX', $filters);
+        self::assertStringContainsString('y=h-th-safeY', $filters);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $filters);
     }
 
     public function testBuildCommandUsesFourSecondCoverClipWhenDurationMissing(): void
