@@ -191,12 +191,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $duration    = $this->resolveCoverDuration($slide);
-        $orientation = $this->determineSlideOrientation($slide['image']);
-        $filter      = $this->buildBlurredSlideFilter(0, $duration, $orientation);
+        $duration     = $this->resolveCoverDuration($slide);
+        $orientation  = $this->determineSlideOrientation($slide['image']);
+        $clipDuration = max(0.1, $duration);
+        $filter       = $this->buildBlurredSlideFilter(0, $clipDuration, $duration, $orientation);
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
-        $clipDuration = max(0.1, $duration);
         $filter       .= sprintf(
             ',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]',
             $clipDuration
@@ -306,7 +306,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             }
 
             $orientation = $orientations[$index] ?? null;
-            $filter      = $this->buildBlurredSlideFilter($index, $durationWithOverlap, $orientation);
+            $filter      = $this->buildBlurredSlideFilter(
+                $index,
+                $durationWithOverlap,
+                $duration,
+                $orientation,
+            );
 
             if ($index === 0 && $introOverlayFilter !== '') {
                 $filter = sprintf('%s,%s', $filter, $introOverlayFilter);
@@ -396,7 +401,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return $width < $height;
     }
 
-    private function buildBlurredSlideFilter(int $index, float $duration, ?bool $isPortrait): string
+    private function buildBlurredSlideFilter(
+        int $index,
+        float $clipDuration,
+        float $visibleDuration,
+        ?bool $isPortrait,
+    ): string
     {
         $background = sprintf(
             '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase,crop=%2$d:%3$d',
@@ -415,8 +425,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
-        $durationSecondsValue = max(0.1, $duration);
-        $frameCount           = max(2, (int) ceil($durationSecondsValue * self::ZOOMPAN_FPS));
+        $clipSecondsValue     = max(0.1, $clipDuration);
+        $visibleSecondsValue  = max(0.1, min($visibleDuration, $clipSecondsValue));
+        $frameCount           = max(2, (int) ceil($visibleSecondsValue * self::ZOOMPAN_FPS));
         $maxFrameIndex        = $frameCount - 1;
         $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
