@@ -127,7 +127,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=', $filterComplex);
-        self::assertStringContainsString(',crop=1920:1080[bg0out]', $filterComplex);
+        self::assertStringContainsString(',gblur=sigma=20[bg0out]', $filterComplex);
         self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
@@ -231,16 +231,16 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $subtitleFilter);
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
         self::assertStringContainsString('x=w*0.07', $subtitleFilter);
-        self::assertStringContainsString('y=h-th-h*0.07', $subtitleFilter);
+        self::assertStringContainsString(
+            sprintf('y=h-th-h*0.07-%d-%d', $expectedLineGap, $expectedSubtitleSize),
+            $subtitleFilter
+        );
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $subtitleFilter);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedTitleSize), $titleFilter);
         self::assertStringContainsString('x=w*0.07', $titleFilter);
-        self::assertStringContainsString(
-            sprintf('y=h-th-h*0.07-%d-%d', $expectedSubtitleSize, $expectedLineGap),
-            $titleFilter
-        );
+        self::assertStringContainsString('y=h-th-h*0.07', $titleFilter);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $titleFilter);
 
         self::assertStringNotContainsString('safeX', $filters);
@@ -406,7 +406,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 self::assertNotFalse($blurPosition);
                 self::assertNotFalse($cropPosition);
                 self::assertGreaterThan($scalePosition, $blurPosition);
-                self::assertLessThan($cropPosition, $blurPosition);
+                self::assertGreaterThan($cropPosition, $blurPosition);
             }
 
             self::assertStringContainsString($expectedBlur, $narrowLandscapeMatch[1]);
@@ -472,6 +472,27 @@ final class SlideshowVideoGeneratorTest extends TestCase
         } finally {
             @unlink($portraitImage);
         }
+    }
+
+    public function testKenBurnsAlternatesZoomDirectionForSubsequentSlides(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('resolveKenBurnsParameters');
+        $method->setAccessible(true);
+
+        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $first */
+        $first = $method->invoke($generator, 0);
+        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $second */
+        $second = $method->invoke($generator, 1);
+
+        self::assertLessThan($first['zoomEnd'], $first['zoomStart']);
+        self::assertGreaterThan($second['zoomEnd'], $second['zoomStart']);
+        self::assertSame($first['zoomEnd'], $second['zoomStart']);
+        self::assertSame($first['zoomStart'], $second['zoomEnd']);
+        self::assertSame($first['panX'] * -1, $second['panX']);
+        self::assertSame($first['panY'] * -1, $second['panY']);
     }
 
     private function createTemporaryImage(string $base64): string
@@ -752,7 +773,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("x='if(eq(max(1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((iw-(iw/zoom))/2 + 0.4*(iw-(iw/zoom))/2*min(on/119\\,1)\\,0\\,max(iw-(iw/zoom)\\,0)))'", $filterComplex);
         self::assertStringContainsString("y='if(eq(max(1\\,1.2+(1.3-1.2)*min(on/119\\,1))\\,1)\\,0\\,clip((ih-(ih/zoom))/2 + -0.25*(ih-(ih/zoom))/2*min(on/119\\,1)\\,0\\,max(ih-(ih/zoom)\\,0)))'", $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
     }
