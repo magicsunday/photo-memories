@@ -3,6 +3,7 @@ imports:
     - { resource: 'parameters.yaml' }
     - { resource: 'parameters/feed.yaml' }
     - { resource: 'parameters/monitoring.yaml' }
+    - { resource: 'parameters/selection.yaml' }
 
 services:
     _defaults:
@@ -942,6 +943,12 @@ services:
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 450 }
 
+    MagicSunday\Memories\Service\Clusterer\Pipeline\MemberCurationStage:
+        arguments:
+            $mediaLookup: '@MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface'
+        tags:
+            - { name: 'memories.cluster_consolidation.stage', priority: 425 }
+
     MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface:
         alias: MagicSunday\Memories\Repository\MediaRepository
 
@@ -979,6 +986,15 @@ services:
     MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator:
         arguments:
             $stages: !tagged_iterator 'memories.cluster_consolidation.stage'
+
+    MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider:
+        arguments:
+            $profiles: '%memories.selection.profiles%'
+            $algorithmProfiles: '%memories.selection.algorithm_profiles%'
+            $defaultProfile: '%memories.selection.default_profile%'
+
+    MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface:
+        alias: MagicSunday\Memories\Service\Clusterer\Selection\PolicyDrivenMemberSelector
 
     MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface:
         alias: MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator
