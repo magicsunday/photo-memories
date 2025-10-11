@@ -131,9 +131,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
+        self::assertStringNotContainsString('s=1920x1080', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
@@ -199,9 +200,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterComplexIndex];
 
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString('s=1920x1080:fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
+        self::assertStringNotContainsString('s=1920x1080', $filterComplex);
     }
 
     public function testBuildIntroTextOverlayFilterChainStacksTitleAboveSubtitle(): void
