@@ -25,13 +25,15 @@ use function array_search;
 use function ceil;
 use function count;
 use function dirname;
+use function getimagesize;
+use function hash;
 use function implode;
 use function in_array;
 use function is_dir;
 use function is_file;
+use function is_int;
 use function is_readable;
 use function is_string;
-use function hash;
 use function max;
 use function min;
 use function mkdir;
@@ -188,8 +190,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $duration = max(2.5, $this->resolveSlideDuration($slide['duration']));
-        $filter   = $this->buildBlurredSlideFilter(0, $duration);
+        $duration    = max(2.5, $this->resolveSlideDuration($slide['duration']));
+        $orientation = $this->determineSlideOrientation($slide['image']);
+        $filter      = $this->buildBlurredSlideFilter(0, $duration, $orientation);
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
         $clipDuration = max(0.1, $duration);
@@ -248,6 +251,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration);
 
+        $orientations = [];
+
         foreach ($slides as $index => $slide) {
             $duration = $this->resolveSlideDuration($slide['duration']);
             if ($index === 0) {
@@ -262,6 +267,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($index === 0) {
                 $durationWithOverlap = max(2.5, $durationWithOverlap);
             }
+
+            $orientations[$index] = $this->determineSlideOrientation($slide['image']);
 
             $command = array_merge($command, [
                 '-loop',
@@ -293,7 +300,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $durationWithOverlap = max(2.5, $durationWithOverlap);
             }
 
-            $filter = $this->buildBlurredSlideFilter($index, $durationWithOverlap);
+            $orientation = $orientations[$index] ?? null;
+            $filter      = $this->buildBlurredSlideFilter($index, $durationWithOverlap, $orientation);
 
             if ($index === 0 && $introOverlayFilter !== '') {
                 $filter = sprintf('%s,%s', $filter, $introOverlayFilter);
@@ -362,7 +370,28 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
     }
 
-    private function buildBlurredSlideFilter(int $index, float $duration): string
+    private function determineSlideOrientation(string $imagePath): ?bool
+    {
+        $metadata = @getimagesize($imagePath);
+        if ($metadata === false) {
+            return null;
+        }
+
+        $width  = $metadata[0] ?? null;
+        $height = $metadata[1] ?? null;
+
+        if (!is_int($width) || !is_int($height) || $width <= 0 || $height <= 0) {
+            return null;
+        }
+
+        if ($width === $height) {
+            return null;
+        }
+
+        return $width < $height;
+    }
+
+    private function buildBlurredSlideFilter(int $index, float $duration, ?bool $isPortrait): string
     {
         $background = sprintf(
             '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase,crop=%2$d:%3$d',
@@ -371,8 +400,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $this->height,
         );
 
-        if ($this->backgroundBlurSigma > 0.0) {
-            $background .= sprintf(',gblur=sigma=%s', $this->formatFloat($this->backgroundBlurSigma));
+        if ($this->backgroundBlurSigma > 0.0 && ($isPortrait === null || $isPortrait)) {
+            $background .= sprintf(
+                ',gblur=sigma=%1$s:enable=\'lt(iw/ih,%2$s)\'',
+                $this->formatFloat($this->backgroundBlurSigma),
+                $this->formatFloat($this->width / $this->height),
+            );
         }
 
         $background .= sprintf('[bg%1$dout];', $index);
