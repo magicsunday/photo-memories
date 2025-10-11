@@ -656,6 +656,16 @@ parameters:
     memories.score.time_range.min_samples: 3
     # Description: Minimum coverage ratio required when evaluating the time range.
     memories.score.time_range.min_coverage: 0.6
+    # Description: Grid step in degrees used when falling back to centroid-based rarity.
+    memories.score.novelty.grid_step_deg: 0.3
+    # Description: Number of nibbles used when deriving perceptual hash prefixes for novelty scoring.
+    memories.score.novelty.phash_prefix_nibbles: 5
+    # Description: Maximum corpus count that still qualifies as a rare staypoint.
+    memories.score.novelty.rare_staypoint_threshold: 6
+    # Description: Width of the hour window when grouping feed history comparisons.
+    memories.score.novelty.history_window_hours: 6
+    # Description: Enables blending of feed history into the novelty score.
+    memories.score.novelty.apply_history_penalty: true
     # Description: Boost factors applied to specific points-of-interest categories during scoring.
     memories.score.poi_category_boosts:
         'tourism/*': 0.20

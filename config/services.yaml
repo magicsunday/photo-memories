@@ -1087,13 +1087,18 @@ services:
 
     MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic:
         arguments:
-            $gridStepDeg: 0.5
-            $phashPrefixNibbles: 4
+            $gridStepDeg: '%memories.score.novelty.grid_step_deg%'
+            $phashPrefixNibbles: '%memories.score.novelty.phash_prefix_nibbles%'
+            $applyHistoryPenalty: '%memories.score.novelty.apply_history_penalty%'
+            $rareStaypointThreshold: '%memories.score.novelty.rare_staypoint_threshold%'
+            $historyWindowHours: '%memories.score.novelty.history_window_hours%'
             $weights:
-                place: 0.35
-                time: 0.25
+                staypoint: 0.30
+                rare_staypoint: 0.10
+                time: 0.20
                 device: 0.20
-                content: 0.20
+                content: 0.10
+                history: 0.10
 
     MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic:
         arguments:
