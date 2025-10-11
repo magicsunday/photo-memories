@@ -18,6 +18,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 use function array_filter;
+use function array_key_exists;
 use function array_keys;
 use function array_map;
 use function array_merge;
@@ -190,7 +191,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $duration    = max(2.5, $this->resolveSlideDuration($slide['duration']));
+        $duration    = $this->resolveCoverDuration($slide);
         $orientation = $this->determineSlideOrientation($slide['image']);
         $filter      = $this->buildBlurredSlideFilter(0, $duration, $orientation);
 
@@ -253,10 +254,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $orientations = [];
 
+        $coverDuration = $this->resolveCoverDuration($slides[0]);
+
         foreach ($slides as $index => $slide) {
-            $duration = $this->resolveSlideDuration($slide['duration']);
             if ($index === 0) {
-                $duration = max(2.5, $duration);
+                $duration = $coverDuration;
+            } else {
+                $duration = $this->resolveSlideDuration($slide['duration']);
             }
 
             $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
@@ -265,7 +269,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
 
             if ($index === 0) {
-                $durationWithOverlap = max(2.5, $durationWithOverlap);
+                $durationWithOverlap = max($coverDuration, $durationWithOverlap);
             }
 
             $orientations[$index] = $this->determineSlideOrientation($slide['image']);
@@ -286,9 +290,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $introOverlayFilter  = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
-            $duration = $this->resolveSlideDuration($slide['duration']);
             if ($index === 0) {
-                $duration = max(2.5, $duration);
+                $duration = $coverDuration;
+            } else {
+                $duration = $this->resolveSlideDuration($slide['duration']);
             }
 
             $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
@@ -297,7 +302,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
 
             if ($index === 0) {
-                $durationWithOverlap = max(2.5, $durationWithOverlap);
+                $durationWithOverlap = max($coverDuration, $durationWithOverlap);
             }
 
             $orientation = $orientations[$index] ?? null;
@@ -312,7 +317,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $current        = '[s0]';
-        $timeline       = max(2.5, $this->resolveSlideDuration($slides[0]['duration']));
+        $timeline       = $coverDuration;
         $fallbackIndex  = 0;
         $previousChoice = null;
 
@@ -481,6 +486,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $value = $duration > 0.0 ? $duration : $this->slideDuration;
 
         return max(0.1, $value);
+    }
+
+    /**
+     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     */
+    private function resolveCoverDuration(array $slide): float
+    {
+        if (!array_key_exists('duration', $slide) || $slide['duration'] <= 0.0) {
+            return max(2.5, 4.0);
+        }
+
+        return max(2.5, $this->resolveSlideDuration($slide['duration']));
     }
 
     private function resolveTransitionDuration(?float $duration): float

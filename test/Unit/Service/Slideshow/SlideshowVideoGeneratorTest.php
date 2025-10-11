@@ -136,6 +136,48 @@ final class SlideshowVideoGeneratorTest extends TestCase
         );
     }
 
+    public function testBuildCommandUsesFourSecondCoverClipWhenDurationMissing(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => null,
+                'duration'   => 0.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'missing-duration-cover',
+            '/tmp/example.json',
+            '/tmp/out.mp4',
+            '/tmp/out.lock',
+            '/tmp/out.error',
+            ['/tmp/cover.jpg'],
+            $slides,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $durationIndex = array_search('-t', $command, true);
+        self::assertNotFalse($durationIndex);
+
+        $durationValueIndex = $durationIndex + 1;
+        self::assertArrayHasKey($durationValueIndex, $command);
+        self::assertSame('4.000', $command[$durationValueIndex]);
+    }
+
     public function testBackgroundBlurIsSkippedForLandscapeSlides(): void
     {
         $portraitImage   = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
