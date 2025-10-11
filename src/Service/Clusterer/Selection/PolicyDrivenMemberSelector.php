@@ -14,52 +14,66 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Utility\MediaMath;
 
-use function abs;
 use function array_key_exists;
 use function array_map;
-use function array_sum;
-use function array_unique;
 use function array_values;
 use function count;
 use function floor;
 use function hexdec;
 use function in_array;
 use function is_string;
-use function ksort;
 use function max;
 use function min;
-use function sort;
 use function strtolower;
 use function substr;
 use function strlen;
 use function usort;
 
-use const SORT_NUMERIC;
-
 /**
- * Policy driven implementation combining greedy pre-filtering and max-min diversification.
+ * Policy driven implementation coordinating individual selection stages.
  */
 final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 {
     private const STAYPOINT_MERGE_METERS = 120.0;
 
-    private const SLOT_CAP = 2;
-
-    private const PERSON_REPEAT_PENALTY = 0.12;
-
-    private const MIN_RELAXED_SPACING = 25;
-
-    /** @var array<string, list<int>> */
+    /**
+     * @var array<string, list<int>>
+     */
     private array $phashCache = [];
 
-    /** @var array<string, float> */
-    private array $hammingCache = [];
+    /**
+     * @var list<SelectionStageInterface>
+     */
+    private readonly array $hardStages;
 
-    /** @var array<string, float|null> */
-    private array $distanceCache = [];
+    /**
+     * @var list<SelectionStageInterface>
+     */
+    private readonly array $softStages;
+
+    private readonly PersonSignatureHelper $personHelper;
+
+    /**
+     * @param iterable<SelectionStageInterface> $hardStages
+     * @param iterable<SelectionStageInterface> $softStages
+     */
+    public function __construct(
+        iterable $hardStages,
+        iterable $softStages,
+    ) {
+        $this->hardStages   = array_values(is_iterable($hardStages) ? [...$hardStages] : []);
+        $this->softStages   = array_values(is_iterable($softStages) ? [...$softStages] : []);
+        $this->personHelper = new PersonSignatureHelper();
+
+        if ($this->hardStages === []) {
+            throw new InvalidArgumentException('At least one hard selection stage must be configured.');
+        }
+    }
 
     public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
     {
@@ -67,73 +81,67 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             throw new InvalidArgumentException('MemberSelectionContext is required for policy driven selection.');
         }
 
-        $this->phashCache   = [];
-        $this->hammingCache = [];
-        $this->distanceCache = [];
+        if ($memberIds === []) {
+            return new MemberSelectionResult([], [
+                'counts' => [
+                    'considered' => 0,
+                    'eligible'   => 0,
+                    'selected'   => 0,
+                ],
+                'rejections' => [],
+                'policy'     => $this->policySnapshot($context->getPolicy()),
+                'stages'     => [
+                    'hard' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->hardStages),
+                    'soft' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->softStages),
+                ],
+            ]);
+        }
 
         $policy   = $context->getPolicy();
         $draft    = $context->getDraft();
         $mediaMap = $context->getMediaMap();
 
-        if ($memberIds === []) {
-            return new MemberSelectionResult([], [
-                'counts' => [
-                    'considered' => 0,
-                    'greedy'     => 0,
-                    'diversified'=> 0,
-                ],
-                'policy' => $this->policySnapshot($policy),
-            ]);
-        }
-
-        $qualityScores = $context->getQualityScores();
-
-        $candidates = $this->buildCandidates($memberIds, $mediaMap, $qualityScores, $policy, $draft);
+        $candidates = $this->buildCandidates(
+            $memberIds,
+            $mediaMap,
+            $context->getQualityScores(),
+            $policy,
+            $draft,
+        );
 
         $telemetry = [
             'counts' => [
                 'considered' => count($candidates['all']),
-                'eligible'   => 0,
-                'greedy'     => 0,
-                'diversified'=> 0,
+                'eligible'   => count($candidates['eligible']),
+                'selected'   => 0,
             ],
-            'drops' => [
-                'no_show'        => $candidates['drops']['no_show'],
-                'quality'        => $candidates['drops']['quality'],
-                'burst'          => 0,
-                'slot'           => 0,
-                'spacing'        => 0,
-                'near_duplicate' => 0,
-                'staypoint'      => 0,
-            ],
-            'relaxations' => [],
-            'distribution' => [
-                'per_day'   => [],
-                'per_year'  => [],
-                'per_bucket'=> [],
-            ],
-            'distance_samples' => [
-                'phash' => [],
-                'time'  => [],
+            'rejections' => [
+                'no_show'             => $candidates['drops']['no_show'],
+                'quality'             => $candidates['drops']['quality'],
+                'burst'               => $candidates['drops']['burst'] ?? 0,
+                SelectionTelemetry::REASON_TIME_GAP       => 0,
+                SelectionTelemetry::REASON_STAYPOINT      => 0,
+                SelectionTelemetry::REASON_PHASH          => 0,
+                SelectionTelemetry::REASON_SCENE          => 0,
+                SelectionTelemetry::REASON_ORIENTATION    => 0,
+                SelectionTelemetry::REASON_PEOPLE         => 0,
             ],
             'policy' => $this->policySnapshot($policy),
+            'stages' => [
+                'hard' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->hardStages),
+                'soft' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->softStages),
+            ],
         ];
 
         $eligibleCandidates = $candidates['eligible'];
-        $telemetry['counts']['eligible'] = count($eligibleCandidates);
-
         if ($eligibleCandidates === []) {
             return new MemberSelectionResult([], $telemetry);
         }
 
-        $relaxations = [];
-        $greedy      = [];
-        $appliedPolicy = $policy;
-
         $attempts = [
             static fn (SelectionPolicy $p): SelectionPolicy => $p,
             static fn (SelectionPolicy $p): SelectionPolicy => $p->withRelaxedSpacing(
-                max(self::MIN_RELAXED_SPACING, (int) floor($p->getMinSpacingSeconds() * 0.6))
+                max(25, (int) floor($p->getMinSpacingSeconds() * 0.6))
             ),
             static fn (SelectionPolicy $p): SelectionPolicy => $p->withRelaxedHamming(
                 max(8, (int) floor($p->getPhashMinHamming() * 0.75))
@@ -141,71 +149,44 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             static fn (SelectionPolicy $p): SelectionPolicy => $p->withoutCaps(),
         ];
 
-        foreach ($attempts as $idx => $mutator) {
-            $candidatePolicy = $mutator($policy);
-            $greedy          = $this->runGreedy($eligibleCandidates, $candidatePolicy, $telemetry);
+        $selected       = [];
+        $appliedPolicy  = $policy;
+        $relaxations    = [];
+        $finalCollector = new SelectionTelemetry();
 
-            if (count($greedy) >= $policy->getMinimumTotal() || $idx === (count($attempts) - 1)) {
-                $appliedPolicy = $candidatePolicy;
+        foreach ($attempts as $index => $mutator) {
+            $candidatePolicy = $mutator($policy);
+            $collector       = new SelectionTelemetry();
+            $attemptResult   = $this->runPipeline($eligibleCandidates, $candidatePolicy, $collector);
+
+            $shouldAccept = count($attemptResult) >= $policy->getMinimumTotal() || $index === (count($attempts) - 1);
+            if ($shouldAccept) {
+                $selected       = $attemptResult;
+                $appliedPolicy  = $candidatePolicy;
+                $finalCollector = $collector;
+
                 break;
             }
 
             $relaxations[] = [
-                'step'    => $idx,
-                'members' => count($greedy),
+                'step'    => $index,
+                'members' => count($attemptResult),
                 'policy'  => $this->policySnapshot($candidatePolicy),
             ];
         }
 
-        $telemetry['counts']['greedy'] = count($greedy);
         if ($relaxations !== []) {
             $telemetry['relaxations'] = $relaxations;
             $telemetry['policy']      = $this->policySnapshot($appliedPolicy);
         }
 
-        if ($greedy === []) {
-            return new MemberSelectionResult([], $telemetry);
+        foreach ($finalCollector->reasonCounts() as $reason => $count) {
+            $telemetry['rejections'][$reason] = $count;
         }
 
-        $diversified = $this->runDiversifier($greedy, $appliedPolicy, $telemetry);
-        $telemetry['counts']['diversified'] = count($diversified);
+        $telemetry['counts']['selected'] = count($selected);
 
-        $perDay    = [];
-        $perYear   = [];
-        $perBucket = [];
-        $timeSamples = [];
-        $hashSamples = [];
-        $lastTimestamp = null;
-
-        foreach ($diversified as $candidate) {
-            $perDay[$candidate['day']] = ($perDay[$candidate['day']] ?? 0) + 1;
-            $perYear[$candidate['year']] = ($perYear[$candidate['year']] ?? 0) + 1;
-            $perBucket[$candidate['bucket']] = ($perBucket[$candidate['bucket']] ?? 0) + 1;
-
-            if ($lastTimestamp !== null) {
-                $timeSamples[] = abs($candidate['timestamp'] - $lastTimestamp);
-            }
-
-            $lastTimestamp = $candidate['timestamp'];
-        }
-
-        ksort($perDay);
-        ksort($perYear, SORT_NUMERIC);
-        ksort($perBucket);
-
-        $telemetry['distribution']['per_day']    = $perDay;
-        $telemetry['distribution']['per_year']   = $perYear;
-        $telemetry['distribution']['per_bucket'] = $perBucket;
-
-        if ($timeSamples !== []) {
-            $telemetry['distance_samples']['time'] = $timeSamples;
-        }
-
-        if ($telemetry['distance_samples']['phash'] !== []) {
-            sort($telemetry['distance_samples']['phash'], SORT_NUMERIC);
-        }
-
-        $memberIds = array_map(static fn (array $candidate): int => $candidate['id'], $diversified);
+        $memberIds = array_map(static fn (array $candidate): int => $candidate['id'], $selected);
 
         return new MemberSelectionResult($memberIds, $telemetry);
     }
@@ -243,6 +224,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
             if ($media->isNoShow() || $media->isLowQuality()) {
                 ++$drops['no_show'];
+
                 continue;
             }
 
@@ -250,17 +232,19 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $quality   = $qualityScores[$id] ?? $media->getQualityScore() ?? 0.0;
             if ($quality < $policy->getQualityFloor()) {
                 ++$drops['quality'];
+
                 continue;
             }
 
-            $dayKey   = $this->formatDay($media, $timestamp);
-            $slotKey  = $this->resolveSlot($media, $timestamp, $policy);
-            $stayId   = $this->assignStaypoint($media, $staypointCenters);
-            $isVideo  = $media->isVideo();
-            $persons  = $media->getPersons();
-            $hasFaces = $media->hasFaces();
-            $year     = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
-            $bucket   = $this->resolveBucket($draft, $media, $dayKey);
+            $day       = $this->formatDay($media, $timestamp);
+            $slot      = $this->resolveSlot($media, $timestamp, $policy);
+            $stayId    = $this->assignStaypoint($media, $staypointCenters);
+            $persons   = $this->personHelper->personIds($media);
+            $hasFaces  = $media->hasFaces();
+            $isVideo   = $media->isVideo();
+            $bucket    = $this->resolveBucket($draft, $media, $day);
+            $year      = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
+            $orientation= $this->resolveOrientationType($media);
 
             $score = $quality;
             if ($isVideo) {
@@ -281,17 +265,18 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 'id'         => $id,
                 'media'      => $media,
                 'timestamp'  => $timestamp,
-                'day'        => $dayKey,
-                'slot'       => $slotKey,
+                'day'        => $day,
+                'slot'       => $slot,
                 'staypoint'  => $stayId,
                 'score'      => max(0.0, $score),
-                'quality'    => $quality,
                 'is_video'   => $isVideo,
-                'persons'    => $persons ?? [],
+                'persons'    => $media->getPersons() ?? [],
+                'person_ids' => $persons,
                 'has_faces'  => $hasFaces,
                 'hash_bits'  => $hashBits,
                 'year'       => $year,
                 'bucket'     => $bucket,
+                'orientation'=> $orientation,
                 'burst'      => $media->getBurstUuid(),
             ];
         }
@@ -307,8 +292,41 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     /**
      * @param list<array<string, mixed>> $candidates
-     *
-     * @return list<array<string, mixed>>
+     */
+    private function runPipeline(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+    {
+        if ($candidates === []) {
+            return [];
+        }
+
+        $current = $candidates;
+        foreach ($this->hardStages as $stage) {
+            $current = $stage->apply($current, $policy, $telemetry);
+            if ($current === []) {
+                return [];
+            }
+        }
+
+        foreach ($this->softStages as $stage) {
+            $current = $stage->apply($current, $policy, $telemetry);
+            if ($current === []) {
+                return [];
+            }
+        }
+
+        usort($current, static function (array $a, array $b): int {
+            if ($a['timestamp'] === $b['timestamp']) {
+                return $a['id'] <=> $b['id'];
+            }
+
+            return $a['timestamp'] <=> $b['timestamp'];
+        });
+
+        return $current;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $candidates
      */
     private function collapseBursts(array $candidates, array &$drops): array
     {
@@ -319,6 +337,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $burst = $candidate['burst'];
             if ($burst === null || $burst === '') {
                 $singles[] = $candidate;
+
                 continue;
             }
 
@@ -341,430 +360,6 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         });
 
         return $singles;
-    }
-
-    /**
-     * @param list<array<string, mixed>> $candidates
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function runGreedy(array $candidates, SelectionPolicy $policy, array &$telemetry): array
-    {
-        $selected             = [];
-        $countByDay           = [];
-        $countByStaypoint     = [];
-        $countBySlot          = [];
-        $lastTimestampGlobal  = null;
-        $lastTimestampPerDay  = [];
-        $lastPersons          = [];
-        $phashThreshold       = $policy->getPhashMinHamming();
-        $minSpacing           = $policy->getMinSpacingSeconds();
-        $maxPerDay            = $policy->getMaxPerDay();
-        $maxPerStaypoint      = $policy->getMaxPerStaypoint();
-        $videoHeavyBonus      = $policy->getVideoHeavyBonus();
-        $videoShare           = $this->calculateVideoShare($candidates);
-        $extraVideoBonus      = ($videoHeavyBonus !== null && $videoShare >= 0.5) ? $videoHeavyBonus : 0.0;
-
-        foreach ($candidates as $candidate) {
-            $score = $candidate['score'] + ($candidate['is_video'] ? $extraVideoBonus : 0.0);
-            if ($lastPersons !== [] && $candidate['persons'] !== [] && $candidate['persons'] === $lastPersons) {
-                $score -= self::PERSON_REPEAT_PENALTY;
-            }
-
-            $candidate['score'] = $score;
-            $day                = $candidate['day'];
-            $timestamp          = $candidate['timestamp'];
-            $slot               = $candidate['slot'];
-            $staypoint          = $candidate['staypoint'];
-
-            if ($maxPerDay !== null && ($countByDay[$day] ?? 0) >= $maxPerDay) {
-                ++$telemetry['drops']['slot'];
-                continue;
-            }
-
-            if ($slot !== null) {
-                $slotKey = $day . '#' . $slot;
-                if (($countBySlot[$slotKey] ?? 0) >= self::SLOT_CAP) {
-                    ++$telemetry['drops']['slot'];
-                    continue;
-                }
-            }
-
-            if ($lastTimestampGlobal !== null && abs($timestamp - $lastTimestampGlobal) < $minSpacing) {
-                ++$telemetry['drops']['spacing'];
-                continue;
-            }
-
-            if (array_key_exists($day, $lastTimestampPerDay) && abs($timestamp - $lastTimestampPerDay[$day]) < $minSpacing) {
-                ++$telemetry['drops']['spacing'];
-                continue;
-            }
-
-            if ($maxPerStaypoint !== null && $staypoint !== null && ($countByStaypoint[$staypoint] ?? 0) >= $maxPerStaypoint) {
-                ++$telemetry['drops']['staypoint'];
-                continue;
-            }
-
-            $nearDuplicate = false;
-            foreach ($selected as $index => $existing) {
-                $distance = $this->computeHamming($candidate, $existing);
-                if ($distance !== null && $distance < $phashThreshold) {
-                    $nearDuplicate = true;
-                    if ($candidate['score'] > $existing['score']) {
-                        $existingDay = $existing['day'];
-                        $this->decrementGreedyCounters($existing, $countByDay, $countByStaypoint, $countBySlot);
-
-                        $selected[$index] = $candidate;
-                        $this->incrementGreedyCounters($candidate, $countByDay, $countByStaypoint, $countBySlot);
-
-                        $lastTimestampGlobal = $timestamp;
-                        $lastTimestampPerDay[$day] = $timestamp;
-
-                        if (!isset($countByDay[$existingDay])) {
-                            unset($lastTimestampPerDay[$existingDay]);
-                        } elseif ($existingDay !== $day) {
-                            $this->recomputeLastTimestampForDay($selected, $existingDay, $lastTimestampPerDay);
-                        }
-
-                        $lastPersons = $candidate['persons'];
-                    }
-
-                    ++$telemetry['drops']['near_duplicate'];
-                    break;
-                }
-            }
-
-            if ($nearDuplicate) {
-                continue;
-            }
-
-            $selected[] = $candidate;
-            $lastTimestampPerDay[$day] = $timestamp;
-            $lastTimestampGlobal       = $timestamp;
-            $this->incrementGreedyCounters($candidate, $countByDay, $countByStaypoint, $countBySlot);
-            $lastPersons = $candidate['persons'];
-        }
-
-        usort($selected, static function (array $a, array $b): int {
-            if ($a['timestamp'] === $b['timestamp']) {
-                return $a['id'] <=> $b['id'];
-            }
-
-            return $a['timestamp'] <=> $b['timestamp'];
-        });
-
-        return $selected;
-    }
-
-    /**
-     * @param list<array<string, mixed>> $candidates
-     *
-     * @return list<array<string, mixed>>
-     */
-    private function runDiversifier(array $candidates, SelectionPolicy $policy, array &$telemetry): array
-    {
-        $target       = min($policy->getTargetTotal(), count($candidates));
-        $selected     = [];
-        $remaining    = $candidates;
-        $countByDay   = [];
-        $countByStay  = [];
-        $countByYear  = [];
-        $countByBucket= [];
-
-        usort($remaining, static function (array $a, array $b): int {
-            if ($a['score'] === $b['score']) {
-                return $a['timestamp'] <=> $b['timestamp'];
-            }
-
-            return $a['score'] < $b['score'] ? 1 : -1;
-        });
-
-        if ($remaining === []) {
-            return [];
-        }
-
-        $selected[] = array_shift($remaining);
-        $this->incrementCounters($selected[0], $countByDay, $countByStay, $countByYear, $countByBucket);
-
-        while (count($selected) < $target && $remaining !== []) {
-            $bestCandidate = null;
-            $bestScore     = -1.0;
-            $bestHamming   = null;
-            $bestIndex     = null;
-
-            foreach ($remaining as $idx => $candidate) {
-                if (!$this->respectsCaps($candidate, $policy, $countByDay, $countByStay, $countByYear, $countByBucket)) {
-                    continue;
-                }
-
-                $detail = $this->minDistanceDetail($candidate, $selected);
-                if ($detail['score'] > $bestScore) {
-                    $bestScore   = $detail['score'];
-                    $bestCandidate = $candidate;
-                    $bestIndex = $idx;
-                    $bestHamming = $detail['hamming'];
-                }
-            }
-
-            if ($bestCandidate === null) {
-                break;
-            }
-
-            if ($bestHamming !== null) {
-                $telemetry['distance_samples']['phash'][] = $bestHamming;
-            }
-            $selected[] = $bestCandidate;
-            $this->incrementCounters($bestCandidate, $countByDay, $countByStay, $countByYear, $countByBucket);
-            unset($remaining[$bestIndex]);
-            $remaining = array_values($remaining);
-        }
-
-        usort($selected, static function (array $a, array $b): int {
-            if ($a['timestamp'] === $b['timestamp']) {
-                return $a['id'] <=> $b['id'];
-            }
-
-            return $a['timestamp'] <=> $b['timestamp'];
-        });
-
-        return $selected;
-    }
-
-    /**
-     * @param list<array<string, mixed>> $selected
-     *
-     * @return array{score: float, hamming: int|null}
-     */
-    private function minDistanceDetail(array $candidate, array $selected): array
-    {
-        $bestScore   = -1.0;
-        $bestHamming = null;
-
-        foreach ($selected as $existing) {
-            $hamming = null;
-            $score   = $this->combinedDistance($candidate, $existing, $hamming);
-            if ($score > $bestScore) {
-                $bestScore   = $score;
-                $bestHamming = $hamming;
-            }
-        }
-
-        return ['score' => $bestScore, 'hamming' => $bestHamming];
-    }
-
-    private function incrementGreedyCounters(
-        array $candidate,
-        array &$countByDay,
-        array &$countByStaypoint,
-        array &$countBySlot,
-    ): void {
-        $day = $candidate['day'];
-        $countByDay[$day] = ($countByDay[$day] ?? 0) + 1;
-
-        $staypoint = $candidate['staypoint'];
-        if ($staypoint !== null) {
-            $countByStaypoint[$staypoint] = ($countByStaypoint[$staypoint] ?? 0) + 1;
-        }
-
-        $slot = $candidate['slot'];
-        if ($slot !== null) {
-            $slotKey = $day . '#' . $slot;
-            $countBySlot[$slotKey] = ($countBySlot[$slotKey] ?? 0) + 1;
-        }
-    }
-
-    private function decrementGreedyCounters(
-        array $candidate,
-        array &$countByDay,
-        array &$countByStaypoint,
-        array &$countBySlot,
-    ): void {
-        $day = $candidate['day'];
-        if (isset($countByDay[$day])) {
-            --$countByDay[$day];
-            if ($countByDay[$day] <= 0) {
-                unset($countByDay[$day]);
-            }
-        }
-
-        $staypoint = $candidate['staypoint'];
-        if ($staypoint !== null && isset($countByStaypoint[$staypoint])) {
-            --$countByStaypoint[$staypoint];
-            if ($countByStaypoint[$staypoint] <= 0) {
-                unset($countByStaypoint[$staypoint]);
-            }
-        }
-
-        $slot = $candidate['slot'];
-        if ($slot !== null) {
-            $slotKey = $day . '#' . $slot;
-            if (isset($countBySlot[$slotKey])) {
-                --$countBySlot[$slotKey];
-                if ($countBySlot[$slotKey] <= 0) {
-                    unset($countBySlot[$slotKey]);
-                }
-            }
-        }
-    }
-
-    private function recomputeLastTimestampForDay(array $selected, string $day, array &$lastTimestampPerDay): void
-    {
-        $latest = null;
-        foreach ($selected as $entry) {
-            if ($entry['day'] !== $day) {
-                continue;
-            }
-
-            $timestamp = $entry['timestamp'];
-            if ($latest === null || $timestamp > $latest) {
-                $latest = $timestamp;
-            }
-        }
-
-        if ($latest === null) {
-            unset($lastTimestampPerDay[$day]);
-
-            return;
-        }
-
-        $lastTimestampPerDay[$day] = $latest;
-    }
-
-    private function combinedDistance(array $a, array $b, ?int &$hamming = null): float
-    {
-        $timeDiff = abs($a['timestamp'] - $b['timestamp']);
-        $timeScore = min(1.0, $timeDiff / 600.0);
-
-        $hashDistance = $this->computeHamming($a, $b);
-        $hamming      = $hashDistance;
-        $hashScore    = $hashDistance === null ? 0.5 : min(1.0, $hashDistance / 64.0);
-
-        $geoScore = $this->geoDistanceScore($a, $b);
-        $personScore = $this->personDistanceScore($a['persons'], $b['persons']);
-
-        return ($timeScore + $hashScore + $geoScore + $personScore) / 4.0;
-    }
-
-    private function geoDistanceScore(array $a, array $b): float
-    {
-        $mediaA = $a['media'];
-        $mediaB = $b['media'];
-        $cacheKey = $mediaA->getId() . ':' . $mediaB->getId();
-        if (array_key_exists($cacheKey, $this->distanceCache)) {
-            $distance = $this->distanceCache[$cacheKey];
-            return $distance === null ? 0.5 : min(1.0, $distance / 1000.0);
-        }
-
-        $latA = $mediaA->getGpsLat();
-        $lonA = $mediaA->getGpsLon();
-        $latB = $mediaB->getGpsLat();
-        $lonB = $mediaB->getGpsLon();
-
-        if ($latA === null || $lonA === null || $latB === null || $lonB === null) {
-            $this->distanceCache[$cacheKey] = null;
-
-            return 0.5;
-        }
-
-        $distance = MediaMath::haversineDistanceInMeters($latA, $lonA, $latB, $lonB);
-        $this->distanceCache[$cacheKey] = $distance;
-
-        return min(1.0, $distance / 1000.0);
-    }
-
-    /**
-     * @param list<string> $a
-     * @param list<string> $b
-     */
-    private function personDistanceScore(array $a, array $b): float
-    {
-        if ($a === [] && $b === []) {
-            return 0.5;
-        }
-
-        $overlap = 0;
-        foreach ($a as $person) {
-            if (in_array($person, $b, true)) {
-                ++$overlap;
-            }
-        }
-
-        $union = count(array_values(array_unique([...$a, ...$b])));
-        if ($union === 0) {
-            return 0.5;
-        }
-
-        return 1.0 - ($overlap / $union);
-    }
-
-    private function respectsCaps(
-        array $candidate,
-        SelectionPolicy $policy,
-        array $countByDay,
-        array $countByStay,
-        array $countByYear,
-        array $countByBucket,
-    ): bool {
-        $day = $candidate['day'];
-        if ($policy->getMaxPerDay() !== null && ($countByDay[$day] ?? 0) >= $policy->getMaxPerDay()) {
-            return false;
-        }
-
-        $stay = $candidate['staypoint'];
-        if ($policy->getMaxPerStaypoint() !== null && $stay !== null && ($countByStay[$stay] ?? 0) >= $policy->getMaxPerStaypoint()) {
-            return false;
-        }
-
-        $year = $candidate['year'];
-        if ($policy->getMaxPerYear() !== null && ($countByYear[$year] ?? 0) >= $policy->getMaxPerYear()) {
-            return false;
-        }
-
-        $bucket = $candidate['bucket'];
-        if ($policy->getMaxPerBucket() !== null && ($countByBucket[$bucket] ?? 0) >= $policy->getMaxPerBucket()) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private function incrementCounters(
-        array $candidate,
-        array &$countByDay,
-        array &$countByStay,
-        array &$countByYear,
-        array &$countByBucket,
-    ): void {
-        $day = $candidate['day'];
-        $countByDay[$day] = ($countByDay[$day] ?? 0) + 1;
-
-        $stay = $candidate['staypoint'];
-        if ($stay !== null) {
-            $countByStay[$stay] = ($countByStay[$stay] ?? 0) + 1;
-        }
-
-        $year = $candidate['year'];
-        $countByYear[$year] = ($countByYear[$year] ?? 0) + 1;
-
-        $bucket = $candidate['bucket'];
-        $countByBucket[$bucket] = ($countByBucket[$bucket] ?? 0) + 1;
-    }
-
-    private function calculateVideoShare(array $candidates): float
-    {
-        $total = count($candidates);
-        if ($total === 0) {
-            return 0.0;
-        }
-
-        $videos = 0;
-        foreach ($candidates as $candidate) {
-            if ($candidate['is_video']) {
-                ++$videos;
-            }
-        }
-
-        return $videos / $total;
     }
 
     private function resolveTimestamp(Media $media): int
@@ -855,36 +450,6 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return $bits;
     }
 
-    private function computeHamming(array $a, array $b): ?int
-    {
-        $hashA = $a['hash_bits'];
-        $hashB = $b['hash_bits'];
-        if ($hashA === null || $hashB === null) {
-            return null;
-        }
-
-        $cacheKey = $a['id'] < $b['id']
-            ? $a['id'] . ':' . $b['id']
-            : $b['id'] . ':' . $a['id'];
-
-        if (array_key_exists($cacheKey, $this->hammingCache)) {
-            return (int) $this->hammingCache[$cacheKey];
-        }
-
-        $len = min(count($hashA), count($hashB));
-        $distance = 0;
-        for ($i = 0; $i < $len; ++$i) {
-            if ($hashA[$i] !== $hashB[$i]) {
-                ++$distance;
-            }
-        }
-
-        $distance += abs(count($hashA) - count($hashB));
-        $this->hammingCache[$cacheKey] = (float) $distance;
-
-        return $distance;
-    }
-
     private function isLikelySelfie(Media $media): bool
     {
         $persons = $media->getPersons();
@@ -909,6 +474,26 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         return substr($day, 5);
+    }
+
+    private function resolveOrientationType(Media $media): ?string
+    {
+        $width  = $media->getWidth();
+        $height = $media->getHeight();
+        if ($width !== null && $height !== null) {
+            if ($width === $height) {
+                return 'square';
+            }
+
+            return $width > $height ? 'landscape' : 'portrait';
+        }
+
+        $orientation = $media->getOrientation();
+        if ($orientation === null) {
+            return null;
+        }
+
+        return in_array($orientation, [5, 6, 7, 8], true) ? 'portrait' : 'landscape';
     }
 
     private function policySnapshot(SelectionPolicy $policy): array

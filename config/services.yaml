@@ -979,7 +979,7 @@ services:
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
             $classificationPriority: '%memories.cluster.consolidate.classification_priority%'
         tags:
-            - { name: 'memories.cluster_consolidation.stage', priority: 300 }
+            - { name: 'memories.cluster_consolidation.stage', priority: 325 }
 
     MagicSunday\Memories\Service\Clusterer\Pipeline\AnnotationPruningStage:
         arguments:
@@ -1006,6 +1006,38 @@ services:
             $profiles: '%memories.selection.profiles%'
             $algorithmProfiles: '%memories.selection.algorithm_profiles%'
             $defaultProfile: '%memories.selection.default_profile%'
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage:
+        tags:
+            - { name: 'memories.selection.stage.hard', priority: 300 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\StaypointQuotaStage:
+        tags:
+            - { name: 'memories.selection.stage.hard', priority: 200 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\PhashDiversityStage:
+        tags:
+            - { name: 'memories.selection.stage.hard', priority: 100 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\SceneDiversityStage:
+        tags:
+            - { name: 'memories.selection.stage.soft', priority: 300 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\OrientationBalanceStage:
+        tags:
+            - { name: 'memories.selection.stage.soft', priority: 200 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\PeopleBalanceStage:
+        arguments:
+            $importantPersonIds: '%memories.cluster.cohort.important_person_ids%'
+            $fallbackPersonIds: '%memories.cluster.cohort.fallback_person_ids%'
+        tags:
+            - { name: 'memories.selection.stage.soft', priority: 100 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\PolicyDrivenMemberSelector:
+        arguments:
+            $hardStages: !tagged_iterator 'memories.selection.stage.hard'
+            $softStages: !tagged_iterator 'memories.selection.stage.soft'
 
     MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface:
         alias: MagicSunday\Memories\Service\Clusterer\Selection\PolicyDrivenMemberSelector
