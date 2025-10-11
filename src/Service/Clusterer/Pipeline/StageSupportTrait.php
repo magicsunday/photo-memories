@@ -14,15 +14,20 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 
+use function array_is_list;
 use function array_unique;
 use function array_values;
 use function count;
 use function implode;
 use function is_array;
+use function is_bool;
+use function is_numeric;
 use function is_string;
+use function ksort;
 use function sha1;
 use function sort;
 use function sprintf;
+use function strtolower;
 
 use const SORT_NUMERIC;
 
@@ -50,6 +55,70 @@ trait StageSupportTrait
     protected function fingerprint(array $members): string
     {
         return sha1(implode(',', $members));
+    }
+
+    /**
+     * @param array<string, mixed> $components
+     */
+    protected function fingerprintFromComponents(array $components): string
+    {
+        if ($components === []) {
+            return sha1('');
+        }
+
+        ksort($components);
+
+        $parts = [];
+        foreach ($components as $key => $value) {
+            $normalized = $this->normalizeComponentValue($value);
+            $parts[]    = strtolower((string) $key) . '=' . $normalized;
+        }
+
+        return sha1(implode('|', $parts));
+    }
+
+    private function normalizeComponentValue(mixed $value): string
+    {
+        if ($value === null) {
+            return 'null';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_string($value)) {
+            return strtolower($value);
+        }
+
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            if ($value === []) {
+                return '[]';
+            }
+
+            if (array_is_list($value)) {
+                $normalized = [];
+                foreach ($value as $item) {
+                    $normalized[] = $this->normalizeComponentValue($item);
+                }
+
+                return '[' . implode(',', $normalized) . ']';
+            }
+
+            ksort($value);
+            $normalized = [];
+            foreach ($value as $k => $v) {
+                $normalized[] = strtolower((string) $k) . ':' . $this->normalizeComponentValue($v);
+            }
+
+            return '{' . implode(',', $normalized) . '}';
+        }
+
+        return strtolower((string) $value);
     }
 
     /**
