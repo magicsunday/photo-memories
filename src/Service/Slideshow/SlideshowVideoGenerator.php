@@ -34,7 +34,6 @@ use function in_array;
 use function is_dir;
 use function is_file;
 use function is_readable;
-use function intdiv;
 use function is_string;
 use function ltrim;
 use function max;
@@ -399,34 +398,19 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         float $visibleDuration,
     ): string
     {
-        $backgroundStages = [
-            sprintf(
-                '[%1$d:v]split=2[bg%1$d][fg%1$d];[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase',
-                $index,
-                $this->width,
-                $this->height,
-            ),
-        ];
-
-        if ($this->backgroundBlurSigma > 0.0) {
-            $aspectRatioExpression = $this->buildAspectRatioExpression($this->width, $this->height);
-            $blurEnableExpr        = $this->escapeFilterExpression(sprintf('lt(w/h,%s)', $aspectRatioExpression));
-
-            $backgroundStages[] = sprintf(
-                'gblur=sigma=%1$s:enable=%2$s',
-                $this->formatFloat($this->backgroundBlurSigma),
-                $this->quoteFilterExpression($blurEnableExpr),
-            );
-        }
-
-        $backgroundStages[] = sprintf(
-            'crop=%2$d:%3$d',
+        $background = sprintf('[%1$d:v]split=2[bg%1$d][fg%1$d];', $index);
+        $background .= sprintf(
+            '[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase',
             $index,
             $this->width,
             $this->height,
         );
+        $background .= sprintf(',crop=%1$d:%2$d', $this->width, $this->height);
 
-        $background = implode(',', $backgroundStages);
+        if ($this->backgroundBlurSigma > 0.0) {
+            $background .= sprintf(',gblur=sigma=%s', $this->formatFloat($this->backgroundBlurSigma));
+        }
+
         $background .= sprintf('[bg%1$dout];', $index);
 
         $clipSecondsValue     = max(0.1, $clipDuration);
@@ -1105,27 +1089,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ['\\\\', '\\n', '\\r', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
-    }
-
-    private function buildAspectRatioExpression(int $width, int $height): string
-    {
-        $divisor = $this->greatestCommonDivisor($width, $height);
-
-        return sprintf('%d/%d', intdiv($width, $divisor), intdiv($height, $divisor));
-    }
-
-    private function greatestCommonDivisor(int $width, int $height): int
-    {
-        $a = $width > 0 ? $width : 1;
-        $b = $height > 0 ? $height : 1;
-
-        while ($b !== 0) {
-            $remainder = $a % $b;
-            $a         = $b;
-            $b         = $remainder;
-        }
-
-        return max(1, $a);
     }
 
     private function escapeFilterExpression(string $expression): string
