@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer\Service;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 
 use function array_unshift;
@@ -27,11 +28,29 @@ final class TransportDayExtender
 {
     use ConsecutiveDaysTrait;
 
+    public function __construct(
+        private float $transitRatioThreshold = 0.6,
+        private float $transitSpeedThreshold = 90.0,
+        private int $leanPhotoThreshold = 2,
+    ) {
+        if ($this->transitRatioThreshold < 0.0 || $this->transitRatioThreshold > 1.0) {
+            throw new InvalidArgumentException('transitRatioThreshold must be between 0.0 and 1.0.');
+        }
+
+        if ($this->transitSpeedThreshold <= 0.0) {
+            throw new InvalidArgumentException('transitSpeedThreshold must be greater than 0.');
+        }
+
+        if ($this->leanPhotoThreshold < 0) {
+            throw new InvalidArgumentException('leanPhotoThreshold must be zero or positive.');
+        }
+    }
+
     /**
      * @param list<string>                                              $run
      * @param list<string>                                                      $orderedKeys
      * @param array<string, int>                                                $indexByKey
-     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool}> $days
+     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int}> $days
      *
      * @return list<string>
      */
@@ -49,8 +68,7 @@ final class TransportDayExtender
             $candidateKey = $orderedKeys[$firstIndex - 1];
             if (
                 !in_array($candidateKey, $extended, true)
-                && (($days[$candidateKey]['hasAirportPoi'] ?? false)
-                    || ($days[$candidateKey]['hasHighSpeedTransit'] ?? false))
+                && $this->shouldExtendWithDay($candidateKey, $firstKey, $days)
                 && $this->areSequentialDays($candidateKey, $firstKey, $days)
             ) {
                 array_unshift($extended, $candidateKey);
@@ -64,8 +82,7 @@ final class TransportDayExtender
             $candidateKey = $orderedKeys[$lastIndex + 1];
             if (
                 !in_array($candidateKey, $extended, true)
-                && (($days[$candidateKey]['hasAirportPoi'] ?? false)
-                    || ($days[$candidateKey]['hasHighSpeedTransit'] ?? false))
+                && $this->shouldExtendWithDay($candidateKey, $lastKey, $days)
                 && $this->areSequentialDays($lastKey, $candidateKey, $days)
             ) {
                 $extended[] = $candidateKey;
@@ -73,6 +90,74 @@ final class TransportDayExtender
         }
 
         return $extended;
+    }
+
+    /**
+     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int}> $days
+     */
+    private function shouldExtendWithDay(string $candidateKey, string $anchorKey, array $days): bool
+    {
+        $candidate = $days[$candidateKey] ?? null;
+        if ($candidate === null) {
+            return false;
+        }
+
+        if (($candidate['hasAirportPoi'] ?? false) || ($candidate['hasHighSpeedTransit'] ?? false)) {
+            return true;
+        }
+
+        if ($this->isTransitHeavy($candidate)) {
+            return true;
+        }
+
+        if ($this->isLeanDay($candidate)) {
+            $anchor = $days[$anchorKey] ?? null;
+            if ($anchor !== null && $this->isTransitHeavy($anchor)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int} $summary
+     */
+    private function isTransitHeavy(array $summary): bool
+    {
+        if (($summary['hasHighSpeedTransit'] ?? false) === true) {
+            return true;
+        }
+
+        $ratio = (float) ($summary['transitRatio'] ?? 0.0);
+        if ($ratio >= $this->transitRatioThreshold) {
+            return true;
+        }
+
+        $avgSpeed = (float) ($summary['avgSpeedKmh'] ?? 0.0);
+        if ($avgSpeed >= $this->transitSpeedThreshold) {
+            return true;
+        }
+
+        $maxSpeed = (float) ($summary['maxSpeedKmh'] ?? 0.0);
+        if ($maxSpeed >= $this->transitSpeedThreshold) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,photoCount?:int} $summary
+     */
+    private function isLeanDay(array $summary): bool
+    {
+        $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+        if ($dominantStaypoints !== []) {
+            return false;
+        }
+
+        return (int) ($summary['photoCount'] ?? 0) <= $this->leanPhotoThreshold;
     }
 
     /**
