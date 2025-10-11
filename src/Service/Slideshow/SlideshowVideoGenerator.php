@@ -1041,19 +1041,19 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $titleText    = $this->normaliseDrawText($title);
         $subtitleText = $this->normaliseDrawText($subtitle);
 
+        $titleY = sprintf('h-th-%s', $safeYExpr);
+
         if ($subtitleText !== null) {
+            $subtitleY = sprintf('%s-%d-%d', $titleY, $lineGap, $subtitleFontSize);
             $filters[] = $this->buildDrawTextFilter(
                 $subtitleText,
                 $subtitleFontSize,
                 $safeXExpr,
-                sprintf('h-th-%s', $safeYExpr)
+                $subtitleY
             );
         }
 
         if ($titleText !== null) {
-            $titleY = $subtitleText !== null
-                ? sprintf('h-th-%s-%d-%d', $safeYExpr, $subtitleFontSize, $lineGap)
-                : sprintf('h-th-%s', $safeYExpr);
             $filters[] = $this->buildDrawTextFilter($titleText, $titleFontSize, $safeXExpr, $titleY);
         }
 
