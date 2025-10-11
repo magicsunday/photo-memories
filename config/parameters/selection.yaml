@@ -9,7 +9,7 @@ parameters:
             min_spacing_seconds: 2400
             phash_min_hamming: 9
             max_per_staypoint: 2
-            quality_floor: 0.54
+            quality_floor: 0.56
             video_bonus: 0.22
             face_bonus: 0.32
             selfie_penalty: 0.25
@@ -84,7 +84,7 @@ parameters:
             min_spacing_seconds: 2400
             phash_min_hamming: 10
             max_per_staypoint: 2
-            quality_floor: 0.56
+            quality_floor: 0.58
             video_bonus: 0.35
             face_bonus: 0.35
             selfie_penalty: 0.25
