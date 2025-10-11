@@ -190,31 +190,87 @@ parameters:
         vacation_weekend_transit:
             target_total: 48
             max_per_day: 10
-            min_spacing_seconds: 600
+            time_slot_hours: 3
+            min_spacing_seconds: 105
+            phash_min_hamming: 18
+            max_per_staypoint: 3
+            video_bonus: 0.6
+            face_bonus: 0.4
+            selfie_penalty: 0.2
+            quality_floor: 0.28
+            minimum_total: 10
         location:
             target_total: 36
-            max_per_day: 9
-            min_spacing_seconds: 540
+            max_per_day: 8
+            time_slot_hours: 4
+            min_spacing_seconds: 120
+            phash_min_hamming: 16
+            max_per_staypoint: 2
+            video_bonus: 0.35
+            face_bonus: 0.25
+            selfie_penalty: 0.18
+            quality_floor: 0.3
+            minimum_total: 9
         scene:
             target_total: 28
-            max_per_day: 8
-            min_spacing_seconds: 480
+            max_per_day: 5
+            time_slot_hours: 4
+            min_spacing_seconds: 150
+            phash_min_hamming: 17
+            max_per_staypoint: 2
+            video_bonus: 0.22
+            face_bonus: 0.15
+            selfie_penalty: 0.12
+            quality_floor: 0.27
+            minimum_total: 9
         device:
             target_total: 24
-            max_per_day: 12
-            min_spacing_seconds: 300
-        this_day_month:
-            target_total: 24
             max_per_day: 8
-            min_spacing_seconds: 600
+            time_slot_hours: 4
+            min_spacing_seconds: 150
+            phash_min_hamming: 14
+            max_per_staypoint: 2
+            video_bonus: 0.18
+            face_bonus: 0.1
+            selfie_penalty: 0.12
+            quality_floor: 0.25
+            minimum_total: 8
+        this_day_month:
+            target_total: 30
+            max_per_day: 2
+            time_slot_hours: 24
+            min_spacing_seconds: 1800
+            phash_min_hamming: 20
+            max_per_staypoint: 1
+            video_bonus: 0.32
+            face_bonus: 0.28
+            selfie_penalty: 0.16
+            quality_floor: 0.32
+            minimum_total: 7
         people_friends:
             target_total: 32
-            max_per_day: 9
-            min_spacing_seconds: 480
+            max_per_day: 8
+            time_slot_hours: 3
+            min_spacing_seconds: 120
+            phash_min_hamming: 18
+            max_per_staypoint: 3
+            video_bonus: 0.5
+            face_bonus: 0.6
+            selfie_penalty: 0.08
+            quality_floor: 0.38
+            minimum_total: 10
         highlights:
             target_total: 36
-            max_per_day: 12
-            min_spacing_seconds: 360
+            max_per_day: 10
+            time_slot_hours: 4
+            min_spacing_seconds: 150
+            phash_min_hamming: 17
+            max_per_staypoint: 2
+            video_bonus: 0.55
+            face_bonus: 0.45
+            selfie_penalty: 0.18
+            quality_floor: 0.4
+            minimum_total: 10
     # Description: Mapping between cluster algorithms and selection profile keys.
     memories.cluster.selection.algorithm_profiles:
         vacation: 'vacation_weekend_transit'
