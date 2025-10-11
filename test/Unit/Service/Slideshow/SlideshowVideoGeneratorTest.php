@@ -133,6 +133,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
+        self::assertStringContainsString('x=w*0.07', $filterComplex);
+        self::assertStringContainsString('h*0.07', $filterComplex);
+        self::assertStringNotContainsString('safeX', $filterComplex);
+        self::assertStringNotContainsString('safeY', $filterComplex);
         self::assertStringNotContainsString('[vtmp]', $filterComplex);
         self::assertSame(
             0,
@@ -165,18 +169,21 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $subtitleFilter);
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
-        self::assertStringContainsString('x=safeX', $subtitleFilter);
-        self::assertStringContainsString('y=h-th-safeY', $subtitleFilter);
+        self::assertStringContainsString('x=w*0.07', $subtitleFilter);
+        self::assertStringContainsString('y=h-th-h*0.07', $subtitleFilter);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $subtitleFilter);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedTitleSize), $titleFilter);
-        self::assertStringContainsString('x=safeX', $titleFilter);
+        self::assertStringContainsString('x=w*0.07', $titleFilter);
         self::assertStringContainsString(
-            sprintf('y=h-th-safeY-%d-%d', $expectedSubtitleSize, $expectedLineGap),
+            sprintf('y=h-th-h*0.07-%d-%d', $expectedSubtitleSize, $expectedLineGap),
             $titleFilter
         );
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $titleFilter);
+
+        self::assertStringNotContainsString('safeX', $filters);
+        self::assertStringNotContainsString('safeY', $filters);
     }
 
     public function testBuildIntroTextOverlayFilterChainPlacesSingleTitleAtSafeArea(): void
@@ -191,9 +198,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filters = $method->invoke($generator, 'Rückblick', null);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $filters);
-        self::assertStringContainsString('x=safeX', $filters);
-        self::assertStringContainsString('y=h-th-safeY', $filters);
+        self::assertStringContainsString('x=w*0.07', $filters);
+        self::assertStringContainsString('y=h-th-h*0.07', $filters);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $filters);
+        self::assertStringNotContainsString('safeX', $filters);
+        self::assertStringNotContainsString('safeY', $filters);
     }
 
     public function testBuildCommandUsesFourSecondCoverClipWhenDurationMissing(): void

@@ -805,8 +805,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $filters          = [];
-        $safeXExpr        = 'safeX';
-        $safeYExpr        = 'safeY';
+        $safeXExpr        = 'w*0.07';
+        $safeYExpr        = 'h*0.07';
         $titleFontSize    = max(1, (int) round($this->height * 0.060));
         $subtitleFontSize = max(1, (int) round($this->height * 0.038));
         $lineGap          = max(0, (int) round($this->height * 0.012));
@@ -815,7 +815,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $subtitleText = $this->normaliseDrawText($subtitle);
 
         if ($subtitleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($subtitleText, $subtitleFontSize, $safeXExpr, sprintf('h-th-%s', $safeYExpr));
+            $filters[] = $this->buildDrawTextFilter(
+                $subtitleText,
+                $subtitleFontSize,
+                $safeXExpr,
+                sprintf('h-th-%s', $safeYExpr)
+            );
         }
 
         if ($titleText !== null) {
