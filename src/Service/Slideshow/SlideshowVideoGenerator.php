@@ -420,15 +420,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
         if ($this->kenBurnsEnabled) {
-            $targetAspectRatio  = $this->formatFloat($this->width / $this->height);
-            $animatedZoomExpr   = sprintf(
-                '%1$s+(%2$s-%1$s)*%3$s',
+            $animatedZoomExpr = sprintf(
+                'max(1,%1$s+(%2$s-%1$s)*%3$s)',
                 $this->formatFloat($this->zoomStart),
                 $this->formatFloat($this->zoomEnd),
                 $progressExpr,
             );
-            $conditionalZoomExpr = sprintf('if(lt(iw/ih,%1$s),1,%2$s)', $targetAspectRatio, $animatedZoomExpr);
-            $zoomExpr            = $this->escapeFilterExpression($conditionalZoomExpr);
+            $zoomExpr         = $this->escapeFilterExpression($animatedZoomExpr);
 
             $panXAnimatedExpr = sprintf(
                 'clip((iw-(iw/zoom))/2 + %1$s*(iw-(iw/zoom))/2*%2$s,0,max(iw-(iw/zoom),0))',
@@ -441,8 +439,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $progressExpr,
             );
 
-            $panXExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $conditionalZoomExpr, $panXAnimatedExpr));
-            $panYExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $conditionalZoomExpr, $panYAnimatedExpr));
+            $panXExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $animatedZoomExpr, $panXAnimatedExpr));
+            $panYExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $animatedZoomExpr, $panYAnimatedExpr));
         } else {
             $zoomExpr = '1';
             $panXExpr = '0';
@@ -460,22 +458,15 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->kenBurnsEnabled) {
             $foreground .= sprintf(
-                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:s=%4$dx%5$d:fps=%6$s',
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:s=ceil(iw/2)*2xceil(ih/2)*2:fps=%4$s',
                 $this->quoteFilterExpression($zoomExpr),
                 $this->quoteFilterExpression($panXExpr),
                 $this->quoteFilterExpression($panYExpr),
-                $this->width,
-                $this->height,
                 $zoompanFps,
             );
         }
 
-        $foreground .= sprintf(
-            ',pad=%2$d:%3$d:(ow-iw)/2:(oh-ih)/2,crop=%2$d:%3$d:(in_w-out_w)/2:(in_h-out_h)/2[fg%1$dout];',
-            $index,
-            $this->width,
-            $this->height,
-        );
+        $foreground .= sprintf('[fg%1$dout];', $index);
 
         return sprintf(
             '%1$s%2$s[bg%3$dout][fg%3$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,format=yuv420p,setsar=1',
