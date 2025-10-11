@@ -554,6 +554,29 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
+        $loopDurations = [];
+        for ($index = 0; $index < $filterIndex; ++$index) {
+            if ($command[$index] !== '-t') {
+                continue;
+            }
+
+            $valueIndex = $index + 1;
+            if ($valueIndex < $filterIndex) {
+                $loopDurations[] = (float) $command[$valueIndex];
+            }
+        }
+
+        $expectedLoopCount = count($slides);
+        self::assertCount($expectedLoopCount, $loopDurations);
+        $lastSlideIndex    = $expectedLoopCount - 1;
+        $lastSlideDuration = $slides[$lastSlideIndex]['duration'];
+        self::assertEqualsWithDelta($lastSlideDuration, $loopDurations[$lastSlideIndex], 0.001);
+
+        $trimMatchCount = preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $trimMatches);
+        self::assertSame($expectedLoopCount, $trimMatchCount);
+        $trimDurations = array_map('floatval', $trimMatches[1]);
+        self::assertEqualsWithDelta($lastSlideDuration, $trimDurations[$lastSlideIndex], 0.001);
+
         $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
         self::assertSame(2, $matchCount);
         $offsets = array_map('floatval', $matches[2]);
@@ -571,6 +594,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
         foreach ($offsets as $index => $offset) {
             self::assertEqualsWithDelta($expectedOffsets[$index], $offset, 0.001);
         }
+
+        $lastOffset = $offsets[count($offsets) - 1];
+        self::assertEqualsWithDelta($expectedTimeline, $lastOffset + $lastSlideDuration, 0.001);
 
         $fadeMatchPattern = '/afade=t=out:st=([0-9.]+):d=1\\.5/';
         self::assertSame(1, preg_match($fadeMatchPattern, $filterComplex, $fadeMatches));

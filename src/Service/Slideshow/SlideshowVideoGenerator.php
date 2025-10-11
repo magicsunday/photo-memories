@@ -272,6 +272,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
+        $clipDurations    = [];
+        $visibleDurations = [];
+
         foreach ($slides as $index => $slide) {
             if ($index === 0) {
                 $duration = $coverDuration;
@@ -279,14 +282,15 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $duration = $this->resolveSlideDuration($slide['duration']);
             }
 
-            $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
             $nextTransition      = $transitionDurations[$index] ?? 0.0;
-            $overlap             = max($previousTransition, $nextTransition);
-            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
+            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $nextTransition);
 
             if ($index === 0) {
                 $durationWithOverlap = max($coverDuration, $durationWithOverlap);
             }
+
+            $clipDurations[$index]    = $durationWithOverlap;
+            $visibleDurations[$index] = $duration;
 
             $command = array_merge($command, [
                 '-loop',
@@ -304,25 +308,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $introOverlayFilter  = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
-            if ($index === 0) {
-                $duration = $coverDuration;
-            } else {
-                $duration = $this->resolveSlideDuration($slide['duration']);
-            }
+            $durationWithOverlap = $clipDurations[$index];
+            $visibleDuration     = $visibleDurations[$index];
 
-            $previousTransition  = $transitionDurations[$index - 1] ?? 0.0;
-            $nextTransition      = $transitionDurations[$index] ?? 0.0;
-            $overlap             = max($previousTransition, $nextTransition);
-            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $overlap);
-
-            if ($index === 0) {
-                $durationWithOverlap = max($coverDuration, $durationWithOverlap);
-            }
-
-            $filter      = $this->buildBlurredSlideFilter(
+            $filter = $this->buildBlurredSlideFilter(
                 $index,
                 $durationWithOverlap,
-                $duration,
+                $visibleDuration,
             );
 
             if ($index === 0 && $introOverlayFilter !== '') {
