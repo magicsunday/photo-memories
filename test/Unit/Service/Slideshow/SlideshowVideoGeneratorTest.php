@@ -171,7 +171,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
         self::assertStringContainsString('x=w*0.07', $subtitleFilter);
         self::assertStringContainsString('y=h-th-h*0.07', $subtitleFilter);
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $subtitleFilter);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $subtitleFilter);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedTitleSize), $titleFilter);
@@ -180,7 +180,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             sprintf('y=h-th-h*0.07-%d-%d', $expectedSubtitleSize, $expectedLineGap),
             $titleFilter
         );
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $titleFilter);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $titleFilter);
 
         self::assertStringNotContainsString('safeX', $filters);
         self::assertStringNotContainsString('safeY', $filters);
@@ -200,9 +200,27 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("drawtext=text='Rückblick'", $filters);
         self::assertStringContainsString('x=w*0.07', $filters);
         self::assertStringContainsString('y=h-th-h*0.07', $filters);
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=2:shadowy=2:borderw=2:bordercolor=black@0.20', $filters);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $filters);
         self::assertStringNotContainsString('safeX', $filters);
         self::assertStringNotContainsString('safeY', $filters);
+    }
+
+    public function testEscapeDrawTextValueEscapesLineBreaks(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('escapeDrawTextValue');
+        $method->setAccessible(true);
+
+        $value   = "Rückblick\n2024\r\nAbspann";
+        $escaped = $method->invoke($generator, $value);
+
+        self::assertSame('Rückblick\\n2024\\r\\nAbspann', $escaped);
+        self::assertStringContainsString('\\n', $escaped);
+        self::assertStringContainsString('\\r', $escaped);
+        self::assertStringNotContainsString("\n", $escaped);
+        self::assertStringNotContainsString("\r", $escaped);
     }
 
     public function testBuildCommandUsesFourSecondCoverClipWhenDurationMissing(): void

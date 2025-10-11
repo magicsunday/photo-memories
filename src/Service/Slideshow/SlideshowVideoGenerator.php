@@ -848,7 +848,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
         return sprintf(
-            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=2:shadowy=2:" .
+            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
             'borderw=2:bordercolor=black@0.20:x=%s:y=%s',
             $text,
             $fontSegment,
@@ -878,8 +878,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function escapeDrawTextValue(string $value): string
     {
         return str_replace(
-            ['\\', ':', '%', "'", ',', '[', ']'],
-            ['\\\\', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
+            ['\\', "\n", "\r", ':', '%', "'", ',', '[', ']'],
+            ['\\\\', '\\n', '\\r', '\\:', '\\%', "\\'", '\\,', '\\[', '\\]'],
             $value
         );
     }
