@@ -27,6 +27,7 @@ use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
+use ReflectionMethod;
 
 final class PolicyDrivenMemberSelectorTest extends TestCase
 {
@@ -78,6 +79,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         self::assertSame($policy->getProfileKey(), $telemetry['policy']['profile']);
         self::assertSame(10, $telemetry['counts']['considered']);
+        self::assertArrayHasKey('faces', $telemetry['metrics']);
 
         $rejections = $telemetry['rejections'];
         foreach ([
@@ -116,6 +118,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         self::assertSame($policy->getProfileKey(), $telemetry['policy']['profile']);
         self::assertSame(10, $telemetry['counts']['considered']);
+        self::assertArrayHasKey('faces', $telemetry['metrics']);
 
         $rejections = $telemetry['rejections'];
         foreach ([
@@ -132,6 +135,72 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         self::assertGreaterThan(0, $rejections['time_gap']);
         self::assertGreaterThan(0, $rejections['phash_similarity']);
+    }
+
+    #[Test]
+    public function groupFaceBonusSurvivesBurstCollapse(): void
+    {
+        $selector = $this->createSelector();
+        $policy   = $this->createVacationPolicy();
+
+        $groupShot = $this->createMedia(101, '2024-05-20T10:00:00+02:00', 'aaaaaaaaaaaaaaa0', [], [52.5, 13.4], [4000, 3000]);
+        $groupShot->setFacesCount(4);
+        $groupShot->setHasFaces(true);
+        $groupShot->setFeatures([
+            'faces' => ['largest_coverage' => 0.32],
+        ]);
+        $groupShot->setBurstUuid('burst-group');
+
+        $single = $this->createMedia(102, '2024-05-20T10:00:01+02:00', 'bbbbbbbbbbbbbbb0', [], [52.5, 13.4], [4000, 3000]);
+        $single->setFacesCount(1);
+        $single->setHasFaces(true);
+        $single->setFeatures([
+            'faces' => ['largest_coverage' => 0.58],
+        ]);
+        $single->setBurstUuid('burst-group');
+
+        $memberIds   = [101, 102];
+        $mediaMap    = [101 => $groupShot, 102 => $single];
+        $quality     = [101 => 0.7, 102 => 0.7];
+        $draft       = $this->createDraft('vacation', $memberIds);
+        $candidates  = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
+
+        self::assertSame(1, $candidates['drops']['burst']);
+        self::assertCount(1, $candidates['eligible']);
+        self::assertSame(101, $candidates['eligible'][0]['id']);
+    }
+
+    #[Test]
+    public function dominantCloseUpLosesBurstCompetition(): void
+    {
+        $selector = $this->createSelector();
+        $policy   = $this->createVacationPolicy();
+
+        $balanced = $this->createMedia(201, '2024-05-20T12:00:00+02:00', 'ccccccccccccccc0', [], [52.6, 13.5], [4000, 3000]);
+        $balanced->setFacesCount(2);
+        $balanced->setHasFaces(true);
+        $balanced->setFeatures([
+            'faces' => ['largest_coverage' => 0.36],
+        ]);
+        $balanced->setBurstUuid('burst-close');
+
+        $closeUp = $this->createMedia(202, '2024-05-20T12:00:01+02:00', 'ddddddddddddddd0', [], [52.6, 13.5], [4000, 3000]);
+        $closeUp->setFacesCount(1);
+        $closeUp->setHasFaces(true);
+        $closeUp->setFeatures([
+            'faces' => ['largest_coverage' => 0.82],
+        ]);
+        $closeUp->setBurstUuid('burst-close');
+
+        $memberIds   = [201, 202];
+        $mediaMap    = [201 => $balanced, 202 => $closeUp];
+        $quality     = [201 => 0.7, 202 => 0.7];
+        $draft       = $this->createDraft('vacation', $memberIds);
+        $candidates  = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
+
+        self::assertSame(1, $candidates['drops']['burst']);
+        self::assertCount(1, $candidates['eligible']);
+        self::assertSame(201, $candidates['eligible'][0]['id']);
     }
 
     /**
@@ -243,6 +312,30 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             centroid: ['lat' => 52.5, 'lon' => 13.4],
             members: $memberIds,
         );
+    }
+
+    /**
+     * @param list<int> $memberIds
+     * @param array<int, Media> $mediaMap
+     * @param array<int, float|null> $qualityScores
+     *
+     * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
+     */
+    private function invokeBuildCandidates(
+        PolicyDrivenMemberSelector $selector,
+        array $memberIds,
+        array $mediaMap,
+        array $qualityScores,
+        SelectionPolicy $policy,
+        ClusterDraft $draft,
+    ): array {
+        $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'buildCandidates');
+        $method->setAccessible(true);
+
+        /** @var array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>} $result */
+        $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft);
+
+        return $result;
     }
 
     private function createMedia(

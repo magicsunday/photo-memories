@@ -13,12 +13,15 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection\Stage;
 
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
+use MagicSunday\Memories\Service\Clusterer\Selection\Support\FaceMetricHelper;
 
 use function array_intersect;
 use function array_unique;
 use function array_values;
-use function ceil;
 use function count;
+use function floor;
+use function is_array;
+use function is_numeric;
 use function max;
 
 /**
@@ -47,8 +50,9 @@ final class PeopleBalanceStage implements SelectionStageInterface
             return [];
         }
 
-        $selected    = [];
-        $personCount = [];
+        $selected              = [];
+        $personCount           = [];
+        $hasImportantCandidates = $this->hasImportantCandidates($candidates);
 
         foreach ($candidates as $candidate) {
             /** @var list<int> $persons */
@@ -68,7 +72,8 @@ final class PeopleBalanceStage implements SelectionStageInterface
             }
 
             $nextTotal = count($selected) + 1;
-            $limit     = max(1, (int) ceil($nextTotal * 0.5));
+            $shareCap  = $hasImportantCandidates ? 0.5 : 0.4;
+            $limit     = $this->personLimit($nextTotal, $shareCap);
 
             $allowed = false;
             foreach ($persons as $person) {
@@ -83,6 +88,10 @@ final class PeopleBalanceStage implements SelectionStageInterface
                 $allowed = true;
             }
 
+            if (!$allowed && $this->isGroupFrame($candidate)) {
+                $allowed = true;
+            }
+
             if (!$allowed) {
                 $telemetry->increment(SelectionTelemetry::REASON_PEOPLE);
 
@@ -94,6 +103,33 @@ final class PeopleBalanceStage implements SelectionStageInterface
         }
 
         return $selected;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $candidates
+     */
+    private function hasImportantCandidates(array $candidates): bool
+    {
+        if ($this->importantPersonIds === []) {
+            return false;
+        }
+
+        foreach ($candidates as $candidate) {
+            /** @var list<int> $persons */
+            $persons = $candidate['person_ids'];
+            if ($this->contains($persons, $this->importantPersonIds)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function personLimit(int $nextTotal, float $shareCap): int
+    {
+        $limit = (int) floor($nextTotal * $shareCap);
+
+        return max(1, $limit);
     }
 
     /**
@@ -118,5 +154,26 @@ final class PeopleBalanceStage implements SelectionStageInterface
         }
 
         return array_intersect($haystack, $needles) !== [];
+    }
+
+    /**
+     * @param array<string, mixed> $candidate
+     */
+    private function isGroupFrame(array $candidate): bool
+    {
+        $metrics = $candidate['face_metrics'] ?? null;
+        if (!is_array($metrics)) {
+            return false;
+        }
+
+        $count    = (int) ($metrics['count'] ?? 0);
+        $coverage = $metrics['largest_coverage'] ?? null;
+        if (is_numeric($coverage)) {
+            $coverage = (float) $coverage;
+        } else {
+            $coverage = null;
+        }
+
+        return FaceMetricHelper::isGroupShot($count, $coverage);
     }
 }
