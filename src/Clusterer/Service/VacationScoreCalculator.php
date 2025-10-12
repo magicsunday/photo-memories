@@ -36,6 +36,7 @@ use function array_keys;
 use function array_merge;
 use function array_map;
 use function array_sum;
+use function ceil;
 use function count;
 use function explode;
 use function implode;
@@ -46,6 +47,7 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 use function exp;
+use function floor;
 use function max;
 use function min;
 use function ksort;
@@ -233,6 +235,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $baseAwayMap             = [];
         $photoCountMap           = [];
         $syntheticMap            = [];
+        $poiPresence             = [];
 
         $weekendHolidayFlags = [];
 
@@ -241,6 +244,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $baseAwayMap[$key]   = (bool) $summary['baseAway'];
             $photoCountMap[$key] = (int) $summary['photoCount'];
             $syntheticMap[$key]  = (bool) ($summary['isSynthetic'] ?? false);
+            $poiPresence[$key]   = ($summary['tourismHits'] > 0) || ($summary['poiSamples'] > 0);
 
             foreach ($summary['members'] as $media) {
                 $rawMembers[] = $media;
@@ -578,19 +582,45 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $multiSpotDays,
         );
 
-            if ($this->monitoringEmitter !== null) {
-                $startPayload = [
-                    'pre_count'                 => $preSelectionCount,
-                    'day_count'                 => $dayCount,
-                    'away_days'                 => $effectiveAwayDays,
-                    'raw_away_days'             => $awayDays,
-                    'bridged_days'              => $bridgedAwayDays,
-                    'staypoint_detected'        => $primaryStaypoint !== null,
-                    'storyline'                 => $storyline,
-                    'weekend_getaway'           => $isWeekendGetaway,
-                    'weekend_exception'         => $weekendExceptionApplied,
-                    'selection_profile'         => $selectionProfileKey,
-                ];
+        $selectionProfileKey = $this->defaultSelectionProfileKey;
+        if ($isWeekendGetaway && $this->weekendSelectionProfile !== null) {
+            $selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation', $this->weekendSelectionProfile);
+        }
+
+        $selectionOptions = $this->selectionProfiles->createOptions($selectionProfileKey);
+
+        if ($this->monitoringEmitter !== null) {
+            $startPayload = [
+                'pre_count'                        => $preSelectionCount,
+                'day_count'                        => $dayCount,
+                'away_days'                        => $effectiveAwayDays,
+                'raw_away_days'                    => $awayDays,
+                'bridged_days'                     => $bridgedAwayDays,
+                'staypoint_detected'               => $primaryStaypoint !== null,
+                'storyline'                        => $storyline,
+                'weekend_getaway'                  => $isWeekendGetaway,
+                'weekend_exception'                => $weekendExceptionApplied,
+                'selection_profile'                => $selectionProfileKey,
+                'selection_target_total'           => $selectionOptions->targetTotal,
+                'selection_minimum_total'          => $selectionOptions->minimumTotal,
+                'selection_max_per_day'            => $selectionOptions->maxPerDay,
+                'selection_max_per_staypoint'      => $selectionOptions->maxPerStaypoint,
+                'selection_min_spacing_seconds'    => $selectionOptions->minSpacingSeconds,
+                'selection_time_slot_hours'        => $selectionOptions->timeSlotHours,
+                'selection_phash_min_hamming'      => $selectionOptions->phashMinHamming,
+                'selection_phash_percentile'       => $selectionOptions->phashPercentile,
+                'selection_core_day_bonus'         => $selectionOptions->coreDayBonus,
+                'selection_peripheral_day_penalty' => $selectionOptions->peripheralDayPenalty,
+                'selection_people_balance_weight'  => $selectionOptions->peopleBalanceWeight,
+                'selection_people_balance_enabled' => $selectionOptions->enablePeopleBalance,
+                'selection_spacing_progress_factor'=> $selectionOptions->spacingProgressFactor,
+                'selection_cohort_repeat_penalty'  => $selectionOptions->cohortRepeatPenalty,
+                'selection_video_bonus'            => $selectionOptions->videoBonus,
+                'selection_face_bonus'             => $selectionOptions->faceBonus,
+                'selection_selfie_penalty'         => $selectionOptions->selfiePenalty,
+                'selection_quality_floor'          => $selectionOptions->qualityFloor,
+                'selection_repeat_penalty'         => $selectionOptions->repeatPenalty,
+            ];
 
             if ($primaryStaypoint !== null) {
                 $startPayload['primary_staypoint_dwell_s'] = (int) $primaryStaypoint['dwell'];
@@ -599,12 +629,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $this->monitoringEmitter->emit('vacation_curation', 'selection_start', $startPayload);
         }
 
-        $selectionProfileKey = $this->defaultSelectionProfileKey;
-        if ($isWeekendGetaway && $this->weekendSelectionProfile !== null) {
-            $selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation', $this->weekendSelectionProfile);
-        }
-
-        $selectionOptions   = $this->selectionProfiles->createOptions($selectionProfileKey);
         $selectionResult    = $this->memberSelector->select($acceptedSummaries, $home, $selectionOptions);
         $curatedMembers     = $selectionResult->getMembers();
         $selectionTelemetry = $selectionResult->getTelemetry();
@@ -642,6 +666,44 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $nearDupBlocked    = (int) ($selectionTelemetry['near_duplicate_blocked'] ?? 0);
         $nearDupReplaced   = (int) ($selectionTelemetry['near_duplicate_replacements'] ?? 0);
         $spacingRejections = (int) ($selectionTelemetry['spacing_rejections'] ?? 0);
+
+        $selectionTelemetry['storyline'] = $storyline;
+
+        $dayCategorySummary = $this->summariseDayCategories($dayKeys, $dayContext);
+        $phashSummary       = $this->summarisePhashDistribution($selectionTelemetry);
+        $peopleSummary      = $this->summarisePeopleBalance($selectionTelemetry, $cohortMemberAggregate);
+        $poiSummary         = $this->summarisePoiCoverage(
+            $dayKeys,
+            $baseAwayMap,
+            $poiPresence,
+            $dayContext,
+            $poiTypeSamples,
+            $tourismHits,
+            $poiSamples,
+            $tourismRatio,
+        );
+        $profileSummary = $this->summariseSelectionProfile($selectionProfileKey, $selectionOptions);
+
+        $runMetrics = [
+            'storyline'                   => $storyline,
+            'run_length_days'             => $dayCount,
+            'run_length_effective_days'   => $effectiveAwayDays,
+            'run_length_nights'           => $nights,
+            'core_day_count'              => $dayCategorySummary['core'],
+            'peripheral_day_count'        => $dayCategorySummary['peripheral'],
+            'core_day_ratio'              => $dayCount > 0 ? $dayCategorySummary['core'] / $dayCount : 0.0,
+            'peripheral_day_ratio'        => $dayCount > 0 ? $dayCategorySummary['peripheral'] / $dayCount : 0.0,
+            'phash_distribution'          => $phashSummary,
+            'people_balance'              => $peopleSummary,
+            'poi_coverage'                => $poiSummary,
+            'selection_profile'           => $profileSummary,
+            'selection_pre_count'         => $preSelectionCount,
+            'selection_post_count'        => $selectedCount,
+        ];
+
+        $selectionTelemetry['run_metrics'] = $runMetrics;
+
+        $this->emitRunMetrics($runMetrics);
 
         if ($this->monitoringEmitter !== null) {
             $this->monitoringEmitter->emit(
@@ -764,6 +826,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $params['storyline'] = $storyline;
 
         $params['member_selection'] = [
+            'storyline' => $storyline,
             'counts' => [
                 'pre'     => $preSelectionCount,
                 'post'    => $selectedCount,
@@ -797,6 +860,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
                 'cohort_repeat_penalty'    => $selectionOptions->cohortRepeatPenalty,
             ],
+            'run_metrics' => $runMetrics,
             'telemetry' => $selectionTelemetry,
         ];
 
@@ -924,6 +988,391 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             storyline: $storyline,
         );
         return $draft;
+    }
+
+    /**
+     * @param list<string>                                               $dayKeys
+     * @param array<string, array{category:string}>                      $dayContext
+     *
+     * @return array{core:int,peripheral:int}
+     */
+    private function summariseDayCategories(array $dayKeys, array $dayContext): array
+    {
+        $core       = 0;
+        $peripheral = 0;
+
+        foreach ($dayKeys as $key) {
+            $context  = $dayContext[$key] ?? null;
+            $category = 'peripheral';
+
+            if (is_array($context)) {
+                $candidate = $context['category'] ?? 'peripheral';
+                if (is_string($candidate) && $candidate !== '') {
+                    $category = $candidate;
+                }
+            }
+
+            if ($category === 'core') {
+                ++$core;
+            } else {
+                ++$peripheral;
+            }
+        }
+
+        return [
+            'core'       => $core,
+            'peripheral' => $peripheral,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $selectionTelemetry
+     *
+     * @return array{count:int,average:float,median:float,p90:float,p99:float,min:float,max:float}
+     */
+    private function summarisePhashDistribution(array $selectionTelemetry): array
+    {
+        $metrics = $selectionTelemetry['metrics'] ?? null;
+        if (!is_array($metrics)) {
+            return [
+                'count'   => 0,
+                'average' => 0.0,
+                'median'  => 0.0,
+                'p90'     => 0.0,
+                'p99'     => 0.0,
+                'min'     => 0.0,
+                'max'     => 0.0,
+            ];
+        }
+
+        $distances = $metrics['phash_distances'] ?? null;
+        if (!is_array($distances)) {
+            return [
+                'count'   => 0,
+                'average' => 0.0,
+                'median'  => 0.0,
+                'p90'     => 0.0,
+                'p99'     => 0.0,
+                'min'     => 0.0,
+                'max'     => 0.0,
+            ];
+        }
+
+        $samples = [];
+        foreach ($distances as $value) {
+            if (is_int($value) || is_float($value)) {
+                $samples[] = (float) $value;
+            } elseif (is_string($value) && is_numeric($value)) {
+                $samples[] = (float) $value;
+            }
+        }
+
+        if ($samples === []) {
+            return [
+                'count'   => 0,
+                'average' => 0.0,
+                'median'  => 0.0,
+                'p90'     => 0.0,
+                'p99'     => 0.0,
+                'min'     => 0.0,
+                'max'     => 0.0,
+            ];
+        }
+
+        sort($samples, SORT_NUMERIC);
+
+        $count   = count($samples);
+        $average = array_sum($samples) / $count;
+
+        return [
+            'count'   => $count,
+            'average' => $average,
+            'median'  => $this->percentile($samples, 0.5),
+            'p90'     => $this->percentile($samples, 0.9),
+            'p99'     => $this->percentile($samples, 0.99),
+            'min'     => $samples[0],
+            'max'     => $samples[$count - 1],
+        ];
+    }
+
+    /**
+     * @param list<float> $sortedSamples
+     */
+    private function percentile(array $sortedSamples, float $ratio): float
+    {
+        if ($sortedSamples === []) {
+            return 0.0;
+        }
+
+        if ($ratio <= 0.0) {
+            return $sortedSamples[0];
+        }
+
+        $maxIndex = count($sortedSamples) - 1;
+        if ($ratio >= 1.0) {
+            return $sortedSamples[$maxIndex];
+        }
+
+        $position   = $ratio * $maxIndex;
+        $lowerIndex = (int) floor($position);
+        $upperIndex = (int) ceil($position);
+
+        if ($lowerIndex === $upperIndex) {
+            return $sortedSamples[$lowerIndex];
+        }
+
+        $lowerValue = $sortedSamples[$lowerIndex];
+        $upperValue = $sortedSamples[$upperIndex];
+        $fraction   = $position - $lowerIndex;
+
+        return $lowerValue + (($upperValue - $lowerValue) * $fraction);
+    }
+
+    /**
+     * @param array<string, mixed> $selectionTelemetry
+     * @param array<int, int>      $cohortMemberAggregate
+     *
+     * @return array<string, mixed>
+     */
+    private function summarisePeopleBalance(array $selectionTelemetry, array $cohortMemberAggregate): array
+    {
+        $countsRaw = $selectionTelemetry['people_balance_counts'] ?? null;
+        $counts    = [];
+
+        if (is_array($countsRaw)) {
+            foreach ($countsRaw as $person => $value) {
+                if (!is_string($person) || $person === '') {
+                    continue;
+                }
+
+                if (is_int($value) || is_float($value)) {
+                    $counts[$person] = (int) $value;
+                } elseif (is_string($value) && is_numeric($value)) {
+                    $counts[$person] = (int) $value;
+                }
+            }
+        }
+
+        $total    = 0;
+        $maxCount = 0;
+
+        foreach ($counts as $value) {
+            $total += $value;
+            if ($value > $maxCount) {
+                $maxCount = $value;
+            }
+        }
+
+        $dominantShare = $total > 0 ? $maxCount / $total : 0.0;
+
+        $enabled = (bool) ($selectionTelemetry['people_balance_enabled'] ?? false);
+        $weight  = isset($selectionTelemetry['people_balance_weight'])
+            ? (float) $selectionTelemetry['people_balance_weight']
+            : 0.0;
+        $repeatPenalty = isset($selectionTelemetry['people_balance_repeat_penalty'])
+            ? (float) $selectionTelemetry['people_balance_repeat_penalty']
+            : 0.0;
+
+        $targetCapRaw = $selectionTelemetry['people_balance_target_cap'] ?? null;
+        $targetCap    = null;
+        if (is_int($targetCapRaw)) {
+            $targetCap = $targetCapRaw;
+        } elseif (is_float($targetCapRaw)) {
+            $targetCap = (int) $targetCapRaw;
+        } elseif (is_string($targetCapRaw) && is_numeric($targetCapRaw)) {
+            $targetCap = (int) $targetCapRaw;
+        }
+
+        return [
+            'enabled'        => $enabled,
+            'weight'         => $weight,
+            'repeat_penalty' => $repeatPenalty,
+            'target_cap'     => $targetCap,
+            'considered'     => (int) ($selectionTelemetry['people_balance_considered'] ?? 0),
+            'penalized'      => (int) ($selectionTelemetry['people_balance_penalized'] ?? 0),
+            'bonuses'        => (int) ($selectionTelemetry['people_balance_bonuses'] ?? 0),
+            'rejected'       => (int) ($selectionTelemetry['people_balance_rejected'] ?? 0),
+            'accepted'       => (int) ($selectionTelemetry['people_balance_accepted'] ?? 0),
+            'unique_people'  => count($counts),
+            'total_samples'  => $total,
+            'dominant_share' => $dominantShare,
+            'cohort_tracked' => count($cohortMemberAggregate),
+        ];
+    }
+
+    /**
+     * @param list<string>                      $dayKeys
+     * @param array<string, bool>               $baseAwayMap
+     * @param array<string, bool>               $poiPresence
+     * @param array<string, array{category:string}> $dayContext
+     * @param array<string, bool>               $poiTypeSamples
+     *
+     * @return array<string, float|int>
+     */
+    private function summarisePoiCoverage(
+        array $dayKeys,
+        array $baseAwayMap,
+        array $poiPresence,
+        array $dayContext,
+        array $poiTypeSamples,
+        int $tourismHits,
+        int $poiSamples,
+        float $tourismRatio,
+    ): array {
+        $awayDayCount      = 0;
+        $poiDayCount       = 0;
+        $corePoiDays       = 0;
+        $peripheralPoiDays = 0;
+
+        foreach ($dayKeys as $key) {
+            $isAway = $baseAwayMap[$key] ?? false;
+            if ($isAway) {
+                ++$awayDayCount;
+            } else {
+                continue;
+            }
+
+            $hasPoi = $poiPresence[$key] ?? false;
+            if ($hasPoi) {
+                ++$poiDayCount;
+
+                $category = 'peripheral';
+                $context  = $dayContext[$key] ?? null;
+                if (is_array($context)) {
+                    $candidate = $context['category'] ?? 'peripheral';
+                    if (is_string($candidate) && $candidate !== '') {
+                        $category = $candidate;
+                    }
+                }
+
+                if ($category === 'core') {
+                    ++$corePoiDays;
+                } else {
+                    ++$peripheralPoiDays;
+                }
+            }
+        }
+
+        $poiDayRatio = $awayDayCount > 0 ? $poiDayCount / $awayDayCount : 0.0;
+
+        return [
+            'away_day_count'      => $awayDayCount,
+            'poi_day_count'       => $poiDayCount,
+            'poi_day_ratio'       => $poiDayRatio,
+            'poi_core_days'       => $corePoiDays,
+            'poi_peripheral_days' => $peripheralPoiDays,
+            'poi_type_count'      => count($poiTypeSamples),
+            'tourism_hits'        => $tourismHits,
+            'poi_samples'         => $poiSamples,
+            'tourism_ratio'       => $tourismRatio,
+        ];
+    }
+
+    private function summariseSelectionProfile(string $profileKey, VacationSelectionOptions $options): array
+    {
+        return [
+            'profile_key'                => $profileKey,
+            'target_total'               => $options->targetTotal,
+            'minimum_total'              => $options->minimumTotal,
+            'max_per_day'                => $options->maxPerDay,
+            'max_per_staypoint'          => $options->maxPerStaypoint,
+            'min_spacing_seconds'        => $options->minSpacingSeconds,
+            'time_slot_hours'            => $options->timeSlotHours,
+            'phash_min_hamming'          => $options->phashMinHamming,
+            'phash_percentile'           => $options->phashPercentile,
+            'core_day_bonus'             => $options->coreDayBonus,
+            'peripheral_day_penalty'     => $options->peripheralDayPenalty,
+            'people_balance_weight'      => $options->peopleBalanceWeight,
+            'people_balance_enabled'     => $options->enablePeopleBalance,
+            'spacing_progress_factor'    => $options->spacingProgressFactor,
+            'cohort_repeat_penalty'      => $options->cohortRepeatPenalty,
+            'video_bonus'                => $options->videoBonus,
+            'face_bonus'                 => $options->faceBonus,
+            'selfie_penalty'             => $options->selfiePenalty,
+            'quality_floor'              => $options->qualityFloor,
+            'repeat_penalty'             => $options->repeatPenalty,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $runMetrics
+     */
+    private function emitRunMetrics(array $runMetrics): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $phash   = $runMetrics['phash_distribution'];
+        $people  = $runMetrics['people_balance'];
+        $poi     = $runMetrics['poi_coverage'];
+        $profile = $runMetrics['selection_profile'];
+
+        $context = [
+            'storyline'                        => $runMetrics['storyline'],
+            'run_length_days'                  => $runMetrics['run_length_days'],
+            'run_length_effective_days'        => $runMetrics['run_length_effective_days'],
+            'run_length_nights'                => $runMetrics['run_length_nights'],
+            'core_day_count'                   => $runMetrics['core_day_count'],
+            'peripheral_day_count'             => $runMetrics['peripheral_day_count'],
+            'core_day_ratio'                   => round((float) $runMetrics['core_day_ratio'], 3),
+            'peripheral_day_ratio'             => round((float) $runMetrics['peripheral_day_ratio'], 3),
+            'phash_sample_count'               => $phash['count'],
+            'phash_avg_distance'               => round((float) $phash['average'], 3),
+            'phash_median_distance'            => round((float) $phash['median'], 3),
+            'phash_p90_distance'               => round((float) $phash['p90'], 3),
+            'phash_p99_distance'               => round((float) $phash['p99'], 3),
+            'phash_min_distance'               => round((float) $phash['min'], 3),
+            'phash_max_distance'               => round((float) $phash['max'], 3),
+            'people_unique_count'              => $people['unique_people'],
+            'people_total_samples'             => $people['total_samples'],
+            'people_dominant_share'            => round((float) $people['dominant_share'], 3),
+            'people_penalized'                 => $people['penalized'],
+            'people_bonuses'                   => $people['bonuses'],
+            'people_rejected'                  => $people['rejected'],
+            'people_accepted'                  => $people['accepted'],
+            'people_considered'                => $people['considered'],
+            'people_enabled'                   => $people['enabled'],
+            'people_weight'                    => round((float) $people['weight'], 3),
+            'people_repeat_penalty'            => round((float) $people['repeat_penalty'], 3),
+            'people_cohort_tracked'            => $people['cohort_tracked'],
+            'poi_day_count'                    => $poi['poi_day_count'],
+            'poi_day_ratio'                    => round((float) $poi['poi_day_ratio'], 3),
+            'poi_core_days'                    => $poi['poi_core_days'],
+            'poi_peripheral_days'              => $poi['poi_peripheral_days'],
+            'poi_type_count'                   => $poi['poi_type_count'],
+            'poi_tourism_hits'                 => $poi['tourism_hits'],
+            'poi_samples'                      => $poi['poi_samples'],
+            'poi_tourism_ratio'                => round((float) $poi['tourism_ratio'], 3),
+            'selection_profile'                => $profile['profile_key'],
+            'selection_target_total'           => $profile['target_total'],
+            'selection_minimum_total'          => $profile['minimum_total'],
+            'selection_max_per_day'            => $profile['max_per_day'],
+            'selection_max_per_staypoint'      => $profile['max_per_staypoint'],
+            'selection_min_spacing_seconds'    => $profile['min_spacing_seconds'],
+            'selection_time_slot_hours'        => $profile['time_slot_hours'],
+            'selection_phash_min_hamming'      => $profile['phash_min_hamming'],
+            'selection_phash_percentile'       => $profile['phash_percentile'],
+            'selection_core_day_bonus'         => $profile['core_day_bonus'],
+            'selection_peripheral_day_penalty' => $profile['peripheral_day_penalty'],
+            'selection_people_balance_weight'  => $profile['people_balance_weight'],
+            'selection_people_balance_enabled' => $profile['people_balance_enabled'],
+            'selection_spacing_progress_factor'=> $profile['spacing_progress_factor'],
+            'selection_cohort_repeat_penalty'  => $profile['cohort_repeat_penalty'],
+            'selection_video_bonus'            => round((float) $profile['video_bonus'], 3),
+            'selection_face_bonus'             => round((float) $profile['face_bonus'], 3),
+            'selection_selfie_penalty'         => round((float) $profile['selfie_penalty'], 3),
+            'selection_quality_floor'          => round((float) $profile['quality_floor'], 3),
+            'selection_repeat_penalty'         => round((float) $profile['repeat_penalty'], 3),
+            'selection_pre_count'              => $runMetrics['selection_pre_count'],
+            'selection_post_count'             => $runMetrics['selection_post_count'],
+        ];
+
+        if ($people['target_cap'] !== null) {
+            $context['people_target_cap'] = (int) $people['target_cap'];
+        }
+
+        $this->monitoringEmitter->emit('cluster.vacation', 'run_metrics', $context);
     }
 
     /**

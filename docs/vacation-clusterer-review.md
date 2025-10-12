@@ -21,6 +21,7 @@ Die aktuelle `VacationClusterStrategy` ist gut modularisiert und delegiert jede 
 - Ein gezielter Unit-Test stellt sicher, dass die Reihenfolge in allen nachgelagerten Komponenten ankommt.
 - Konfigurationsparameter `memories.cluster.vacation.*` befüllen `RunDetector` und `VacationScoreCalculator` mit Grenzwerten für Entfernung, Tages- und Medienanzahl; neue Tests decken die Mindestanforderungen ab.【F:config/parameters.yaml†L73-L80】【F:config/services.yaml†L739-L752】【F:src/Clusterer/Service/VacationScoreCalculator.php†L65-L305】【F:test/Unit/Clusterer/VacationScoreCalculatorTest.php†L165-L277】
 - Monitoring-Events für die Urlaubsstrategie werden über einen optionalen Log-Emitter ausgegeben, und ein dedizierter Test stellt sicher, dass Kontextdaten für Telemetrie erfasst werden.【F:src/Clusterer/VacationClusterStrategy.php†L43-L190】【F:test/Unit/Clusterer/VacationClusterStrategyTest.php†L88-L210】
+- Der Score-Calculator sammelt nun Run-Metriken (Laufzeit, Core-/Rand-Anteil, pHash-, People- und POI-Profile) im Draft und emittiert sie zusätzlich als `cluster.vacation/run_metrics`-Event inklusive Profilparametern für YAML/ENV-Feintuning.【F:src/Clusterer/Service/VacationScoreCalculator.php†L570-L842】【F:test/Unit/Clusterer/VacationScoreCalculatorTest.php†L1128-L1198】
 - Diese Anpassungen reduzieren flüchtige Clusterergebnisse und unterstützen reproduzierbare Score-Berechnungen.
 
 Weitere Optimierungen (z. B. Logging, konfigurierbare Grenzwerte, Performance-Metriken) können schrittweise ergänzt werden, ohne die aktuelle Architektur aufzubrechen.
