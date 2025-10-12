@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer\DaySummaryStage;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
+use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
@@ -165,5 +167,120 @@ final class AwayFlagStageTest extends TestCase
         self::assertArrayHasKey('2024-07-10', $result);
         self::assertFalse($result['2024-07-10']['baseAway']);
         self::assertFalse($result['2024-07-10']['awayByDistance']);
+    }
+
+    #[Test]
+    public function flagsDayWhenNextDominantFarAndNightMissingHomeStaypoint(): void
+    {
+        $timezone = new DateTimeZone('Europe/Berlin');
+
+        $timezoneResolver = new class($timezone) implements TimezoneResolverInterface
+        {
+            public function __construct(private DateTimeZone $timezone)
+            {
+            }
+
+            public function resolveMediaTimezone(Media $media, DateTimeImmutable $takenAt, array $home): DateTimeZone
+            {
+                return $this->timezone;
+            }
+
+            public function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
+            {
+                return $this->timezone;
+            }
+
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            {
+                return (int) ($home['timezone_offset'] ?? 0);
+            }
+
+            public function determineLocalTimezoneIdentifier(array $identifierVotes, array $home, ?int $offset): string
+            {
+                return 'Europe/Berlin';
+            }
+        };
+
+        $baseLocationResolver = new class() implements BaseLocationResolverInterface
+        {
+            public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): ?array
+            {
+                return null;
+            }
+        };
+
+        $awayStage = new AwayFlagStage(
+            $timezoneResolver,
+            $baseLocationResolver,
+            nextDayDominantDistanceFactor: 1.5,
+            nightWindowStartHour: 22,
+            nightWindowEndHour: 6,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5200,
+                'lon'           => 13.4050,
+                'radius_km'     => 12.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $dayStayStart = new DateTimeImmutable('2024-08-01 08:00:00', $timezone);
+        $dayStayEnd   = new DateTimeImmutable('2024-08-01 21:30:00', $timezone);
+        $nextStayStart = new DateTimeImmutable('2024-08-02 07:00:00', $timezone);
+        $nextStayEnd   = new DateTimeImmutable('2024-08-02 18:00:00', $timezone);
+
+        $days = [
+            '2024-08-01' => [
+                'date'            => '2024-08-01',
+                'staypoints'      => [[
+                    'lat'   => 48.2082,
+                    'lon'   => 16.3738,
+                    'start' => $dayStayStart->getTimestamp(),
+                    'end'   => $dayStayEnd->getTimestamp(),
+                ]],
+                'dominantStaypoints' => [],
+                'gpsMembers'         => [],
+                'avgDistanceKm'      => 5.0,
+                'baseAway'           => false,
+                'awayByDistance'     => false,
+                'isSynthetic'        => false,
+            ],
+            '2024-08-02' => [
+                'date'            => '2024-08-02',
+                'staypoints'      => [[
+                    'lat'   => 41.3851,
+                    'lon'   => 2.1734,
+                    'start' => $nextStayStart->getTimestamp(),
+                    'end'   => $nextStayEnd->getTimestamp(),
+                ]],
+                'dominantStaypoints' => [[
+                    'key'          => 'stay-2024-08-02',
+                    'lat'          => 41.3851,
+                    'lon'          => 2.1734,
+                    'start'        => $nextStayStart->getTimestamp(),
+                    'end'          => $nextStayStart->modify('+3 hours')->getTimestamp(),
+                    'dwellSeconds' => 10800,
+                    'memberCount'  => 3,
+                ]],
+                'gpsMembers'         => [],
+                'avgDistanceKm'      => 10.0,
+                'baseAway'           => false,
+                'awayByDistance'     => false,
+                'isSynthetic'        => false,
+            ],
+        ];
+
+        $result = $awayStage->process($days, $home);
+
+        self::assertTrue($result['2024-08-01']['baseAway']);
+        self::assertFalse($result['2024-08-02']['baseAway']);
     }
 }
