@@ -106,6 +106,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private const int ZOOMPAN_FPS = 30;
 
+    private const float PAN_OFFSET_LIMIT = 0.05;
+
     /**
      * @param list<string> $transitions
      */
@@ -214,7 +216,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $duration     = $this->resolveCoverDuration($slide);
         $clipDuration = max(0.1, $duration);
-        $filter       = $this->buildBlurredSlideFilter(0, $clipDuration, $duration);
+        $filter       = $this->buildBlurredSlideFilter(
+            0,
+            $clipDuration,
+            $duration,
+            $slide,
+            $title,
+            $subtitle,
+        );
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
         $filter       .= sprintf(
@@ -323,6 +332,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $index,
                 $durationWithOverlap,
                 $visibleDuration,
+                $slide,
+                $title,
+                $subtitle,
             );
 
             if ($index === 0 && $introOverlayFilter !== '') {
@@ -396,6 +408,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         int $index,
         float $clipDuration,
         float $visibleDuration,
+        array $slide,
+        ?string $title,
+        ?string $subtitle,
     ): string
     {
         $background = sprintf('[%1$d:v]split=2[bg%1$d][fg%1$d];', $index);
@@ -419,7 +434,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $maxFrameIndex        = $frameCount - 1;
         $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
 
-        $kenBurns = $this->resolveKenBurnsParameters($index);
+        $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
         if ($this->kenBurnsEnabled) {
             $animatedZoomExpr = sprintf(
@@ -479,28 +494,65 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
+     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     *
      * @return array{zoomStart: float, zoomEnd: float, panX: float, panY: float}
      */
-    private function resolveKenBurnsParameters(int $index): array
-    {
+    private function resolveKenBurnsParameters(
+        int $index,
+        array $slide,
+        ?string $title,
+        ?string $subtitle,
+    ): array {
         $minimumZoom = max(1.0, min($this->zoomStart, $this->zoomEnd));
         $maximumZoom = max(1.0, max($this->zoomStart, $this->zoomEnd));
+
+        $seedPayload = implode('|', [
+            (string) $index,
+            $title ?? '',
+            $subtitle ?? '',
+            $slide['image'],
+        ]);
+
+        $randomizer = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedPayload, true)));
+
+        $panXValue = $this->applyPanOffset($randomizer, $this->panX);
+        $panYValue = $this->applyPanOffset($randomizer, $this->panY);
 
         if (($index % 2) === 0) {
             return [
                 'zoomStart' => $minimumZoom,
                 'zoomEnd'   => $maximumZoom,
-                'panX'      => $this->panX,
-                'panY'      => $this->panY,
+                'panX'      => $panXValue,
+                'panY'      => $panYValue,
             ];
         }
 
         return [
             'zoomStart' => $maximumZoom,
             'zoomEnd'   => $minimumZoom,
-            'panX'      => $this->panX !== 0.0 ? -$this->panX : 0.0,
-            'panY'      => $this->panY !== 0.0 ? -$this->panY : 0.0,
+            'panX'      => $panXValue !== 0.0 ? -$panXValue : 0.0,
+            'panY'      => $panYValue !== 0.0 ? -$panYValue : 0.0,
         ];
+    }
+
+    private function applyPanOffset(Randomizer $randomizer, float $baseValue): float
+    {
+        $offset = $randomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
+
+        $value = $baseValue + $offset;
+        $minimum = min($baseValue - self::PAN_OFFSET_LIMIT, $baseValue + self::PAN_OFFSET_LIMIT);
+        $maximum = max($baseValue - self::PAN_OFFSET_LIMIT, $baseValue + self::PAN_OFFSET_LIMIT);
+
+        if ($value < $minimum) {
+            return $minimum;
+        }
+
+        if ($value > $maximum) {
+            return $maximum;
+        }
+
+        return $value;
     }
 
     private function resolveSlideDuration(float $duration): float
