@@ -26,6 +26,7 @@ use function imagesx;
 use function imagesy;
 use function is_file;
 use function is_readable;
+use function is_string;
 use function max;
 use function min;
 use function sqrt;
@@ -37,14 +38,30 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
 {
     private const int MAX_SAMPLE_DIMENSION = 512;
 
+    private readonly VideoFrameSamplerInterface $videoSampler;
+
+    public function __construct(?VideoFrameSamplerInterface $videoSampler = null)
+    {
+        $this->videoSampler = $videoSampler ?? new VideoFrameSampler();
+    }
+
     public function scoreStill(Media $media): ImageQualityScore
     {
-        return $this->buildBaseScore($media);
+        $matrixData = $this->loadLumaMatrixFromPath($media->getPath());
+        if ($matrixData === null) {
+            return $this->neutralScore();
+        }
+
+        return $this->buildBaseScore($matrixData);
     }
 
     public function scoreVideo(Media $media): ImageQualityScore
     {
-        $base   = $this->buildBaseScore($media);
+        $matrixData = $this->sampleVideoMatrix($media);
+        $base       = $matrixData !== null
+            ? $this->buildBaseScore($matrixData)
+            : $this->neutralScore();
+
         $bonus  = 0.0;
         $penalty = 0.0;
 
@@ -95,13 +112,11 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
         );
     }
 
-    private function buildBaseScore(Media $media): ImageQualityScore
+    /**
+     * @param array{0: array<int,array<int,float>>, 1: int, 2: int} $matrixData
+     */
+    private function buildBaseScore(array $matrixData): ImageQualityScore
     {
-        $matrixData = $this->loadLumaMatrix($media);
-        if ($matrixData === null) {
-            return $this->neutralScore();
-        }
-
         [$luma, $width, $height] = $matrixData;
         if ($width < 3 || $height < 3) {
             return $this->neutralScore();
@@ -134,10 +149,9 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
     /**
      * @return array{0: array<int,array<int,float>>, 1: int, 2: int}|null
      */
-    private function loadLumaMatrix(Media $media): ?array
+    private function loadLumaMatrixFromPath(?string $path): ?array
     {
-        $path = $media->getPath();
-        if ($path === '' || !is_file($path) || !is_readable($path)) {
+        if (!is_string($path) || $path === '' || !is_file($path) || !is_readable($path)) {
             return null;
         }
 
@@ -206,6 +220,17 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
         imagedestroy($resource);
 
         return [$matrix, $width, $height];
+    }
+
+    /**
+     * @return array{0: array<int,array<int,float>>, 1: int, 2: int}|null
+     */
+    private function sampleVideoMatrix(Media $media): ?array
+    {
+        return $this->videoSampler->sampleLumaMatrix(
+            $media,
+            fn (string $posterPath): ?array => $this->loadLumaMatrixFromPath($posterPath)
+        );
     }
 
     /**

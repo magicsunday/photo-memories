@@ -526,7 +526,14 @@ services:
         arguments:
             $fallbackTimezone: '%memories.cluster.timezone.default%'
 
-    MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator: ~
+    MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSampler:
+        arguments:
+            $ffmpegBinary: '%memories.video.ffmpeg_path%'
+            $ffprobeBinary: '%memories.video.ffprobe_path%'
+
+    MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator:
+        arguments:
+            $videoSampler: '@MagicSunday\Memories\Service\Clusterer\Quality\VideoFrameSampler'
 
     MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator:
         arguments:
