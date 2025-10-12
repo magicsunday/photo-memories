@@ -537,10 +537,20 @@ parameters:
             min_fast_segments: 2
             max_heading_change_deg: 120.0
             min_consistent_heading_segments: 1
+    # Description: Maximum number of lean transport bridge days permitted at either end of a vacation run.
+    memories.cluster.transit.max_lean_bridge_days: 1
+    # Description: Minimum distance in kilometres required to bridge a lean day without explicit transit markers.
+    memories.cluster.transit.min_lean_bridge_distance_km: 60.0
     # Description: Name of the default transit threshold profile applied when none is specified.
     memories.cluster.transit.default_profile: 'default'
     # Description: Active transit threshold profile selected via the environment.
     memories.cluster.transit.active_profile: '%env(default:memories.cluster.transit.default_profile:MEMORIES_CLUSTER_TRANSIT_PROFILE)%'
+    # Description: Factor applied to the primary home radius when evaluating the next day's dominant staypoint for away detection.
+    memories.cluster.away_flag.next_day_dominant_distance_factor: 1.8
+    # Description: Inclusive start hour (local time) used for the overnight home staypoint window.
+    memories.cluster.away_flag.night_window_start_hour: 22
+    # Description: Exclusive end hour (local time) used for the overnight home staypoint window.
+    memories.cluster.away_flag.night_window_end_hour: 6
     # Description: Weights overriding default cluster scoring contributions per cluster type.
     memories.cluster.scoring.weight_overrides:
         time_similarity:

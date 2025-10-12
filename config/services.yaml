@@ -763,6 +763,10 @@ services:
             - { name: 'memories.day_summary_stage', priority: 200 }
 
     MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage:
+        arguments:
+            $nextDayDominantDistanceFactor: '%memories.cluster.away_flag.next_day_dominant_distance_factor%'
+            $nightWindowStartHour: '%memories.cluster.away_flag.night_window_start_hour%'
+            $nightWindowEndHour: '%memories.cluster.away_flag.night_window_end_hour%'
         tags:
             - { name: 'memories.day_summary_stage', priority: 100 }
 
@@ -773,7 +777,10 @@ services:
     MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface:
         alias: MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder
 
-    MagicSunday\Memories\Clusterer\Service\TransportDayExtender: ~
+    MagicSunday\Memories\Clusterer\Service\TransportDayExtender:
+        arguments:
+            $maxLeanBridgeDays: '%memories.cluster.transit.max_lean_bridge_days%'
+            $minLeanBridgeDistanceKm: '%memories.cluster.transit.min_lean_bridge_distance_km%'
 
     MagicSunday\Memories\Clusterer\Service\RunDetector:
         arguments:

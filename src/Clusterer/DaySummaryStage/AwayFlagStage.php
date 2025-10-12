@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\DaySummaryStage;
 
+use DateInterval;
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
@@ -25,10 +27,37 @@ use function count;
  */
 final readonly class AwayFlagStage implements DaySummaryStageInterface
 {
+    private int $nightWindowDurationHours;
+
     public function __construct(
         private TimezoneResolverInterface $timezoneResolver,
         private BaseLocationResolverInterface $baseLocationResolver,
+        private float $nextDayDominantDistanceFactor = 1.5,
+        private int $nightWindowStartHour = 22,
+        private int $nightWindowEndHour = 6,
     ) {
+        if ($this->nextDayDominantDistanceFactor <= 1.0) {
+            throw new \InvalidArgumentException('nextDayDominantDistanceFactor must be greater than 1.0.');
+        }
+
+        if ($this->nightWindowStartHour < 0 || $this->nightWindowStartHour > 23) {
+            throw new \InvalidArgumentException('nightWindowStartHour must be between 0 and 23.');
+        }
+
+        if ($this->nightWindowEndHour < 0 || $this->nightWindowEndHour > 23) {
+            throw new \InvalidArgumentException('nightWindowEndHour must be between 0 and 23.');
+        }
+
+        $duration = $this->nightWindowEndHour - $this->nightWindowStartHour;
+        if ($duration <= 0) {
+            $duration += 24;
+        }
+
+        if ($duration <= 0) {
+            throw new \InvalidArgumentException('night window duration must be positive.');
+        }
+
+        $this->nightWindowDurationHours = $duration;
     }
 
     public function process(array $days, array $home): array
@@ -38,6 +67,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         $keys = array_keys($days);
+        $nightAwayFlags = [];
         foreach ($keys as $index => $key) {
             $nextKey     = $keys[$index + 1] ?? null;
             $summary     = $days[$key];
@@ -60,6 +90,10 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
                 }
             } elseif ($summary['avgDistanceKm'] > HomeBoundaryHelper::primaryRadius($home)) {
                 $days[$key]['awayByDistance'] = true;
+            }
+
+            if ($this->shouldFlagByNextDominantStaypoint($summary, $nextSummary, $home, $timezone)) {
+                $nightAwayFlags[$key] = true;
             }
         }
 
@@ -86,11 +120,102 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $combinedFlags = $this->applyMorphologicalClosing($combinedFlags);
         $combinedFlags = $this->inheritSyntheticAwayFlags($combinedFlags, $keys, $days);
 
+        foreach ($nightAwayFlags as $key => $flag) {
+            if ($flag === true) {
+                $combinedFlags[$key] = true;
+            }
+        }
+
         foreach ($keys as $key) {
             $days[$key]['baseAway'] = $combinedFlags[$key];
         }
 
         return $days;
+    }
+
+    private function shouldFlagByNextDominantStaypoint(array $summary, ?array $nextSummary, array $home, \DateTimeZone $timezone): bool
+    {
+        if ($nextSummary === null) {
+            return false;
+        }
+
+        $dominantStaypoints = $nextSummary['dominantStaypoints'] ?? [];
+        if ($dominantStaypoints === []) {
+            return false;
+        }
+
+        $dominant = $dominantStaypoints[0];
+        if (!isset($dominant['lat'], $dominant['lon'])) {
+            return false;
+        }
+
+        $nearest = HomeBoundaryHelper::nearestCenter($home, (float) $dominant['lat'], (float) $dominant['lon']);
+        if ($nearest['distance_km'] <= $nearest['radius_km'] * $this->nextDayDominantDistanceFactor) {
+            return false;
+        }
+
+        $window = $this->createNightWindow($summary['date'], $timezone);
+        if ($window === null) {
+            return false;
+        }
+
+        if ($this->hasHomeStaypointInWindow($summary['staypoints'] ?? [], $window['start'], $window['end'], $home)) {
+            return false;
+        }
+
+        if ($this->hasHomeStaypointInWindow($nextSummary['staypoints'] ?? [], $window['start'], $window['end'], $home)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function createNightWindow(string $date, \DateTimeZone $timezone): ?array
+    {
+        $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', sprintf('%s %02d:00:00', $date, $this->nightWindowStartHour), $timezone);
+        if ($start === false) {
+            return null;
+        }
+
+        $end = $start->add(new DateInterval('PT' . $this->nightWindowDurationHours . 'H'));
+
+        return [
+            'start' => $start,
+            'end'   => $end,
+        ];
+    }
+
+    /**
+     * @param list<array{lat:float,lon:float,start:int,end:int}> $staypoints
+     */
+    private function hasHomeStaypointInWindow(array $staypoints, DateTimeImmutable $windowStart, DateTimeImmutable $windowEnd, array $home): bool
+    {
+        if ($staypoints === []) {
+            return false;
+        }
+
+        $startTs = $windowStart->getTimestamp();
+        $endTs   = $windowEnd->getTimestamp();
+
+        foreach ($staypoints as $staypoint) {
+            $stayStart = (int) ($staypoint['start'] ?? 0);
+            $stayEnd   = (int) ($staypoint['end'] ?? 0);
+
+            if ($stayEnd < $startTs || $stayStart > $endTs) {
+                continue;
+            }
+
+            if (!isset($staypoint['lat'], $staypoint['lon'])) {
+                continue;
+            }
+
+            $nearest = HomeBoundaryHelper::nearestCenter($home, (float) $staypoint['lat'], (float) $staypoint['lon']);
+            if ($nearest['distance_km'] <= $nearest['radius_km']) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
