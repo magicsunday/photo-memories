@@ -19,6 +19,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function abs;
 use function array_key_exists;
 use function array_map;
 use function array_values;
@@ -26,6 +27,8 @@ use function count;
 use function floor;
 use function hexdec;
 use function in_array;
+use function is_array;
+use function is_int;
 use function is_string;
 use function max;
 use function min;
@@ -202,9 +205,136 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $telemetry['counts']['selected'] = count($selected);
 
+        $this->enrichSelectionTelemetry($telemetry, $selected);
+
         $memberIds = array_map(static fn (array $candidate): int => $candidate['id'], $selected);
 
         return new MemberSelectionResult($memberIds, $telemetry);
+    }
+
+    /**
+     * @param array<string, mixed>            $telemetry
+     * @param list<array<string, mixed>>      $selected
+     */
+    private function enrichSelectionTelemetry(array &$telemetry, array $selected): void
+    {
+        $timeGaps       = $this->collectTimeGaps($selected);
+        $phashDistances = $this->collectPhashDistances($selected);
+
+        $telemetry['metrics'] = [
+            'time_gaps'       => $timeGaps,
+            'phash_distances' => $phashDistances,
+        ];
+
+        $telemetry['distribution'] = [
+            'per_day'    => $this->countByKey($selected, 'day'),
+            'per_year'   => $this->countByKey($selected, 'year'),
+            'per_bucket' => $this->countByKey($selected, 'bucket'),
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $selected
+     *
+     * @return list<int>
+     */
+    private function collectTimeGaps(array $selected): array
+    {
+        $samples   = [];
+        $previous  = null;
+
+        foreach ($selected as $candidate) {
+            $timestamp = $candidate['timestamp'] ?? null;
+            if (!is_int($timestamp)) {
+                continue;
+            }
+
+            if ($previous !== null) {
+                $samples[] = abs($timestamp - $previous);
+            }
+
+            $previous = $timestamp;
+        }
+
+        return $samples;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $selected
+     *
+     * @return list<int>
+     */
+    private function collectPhashDistances(array $selected): array
+    {
+        $samples  = [];
+        $previous = null;
+
+        foreach ($selected as $candidate) {
+            $bits = $candidate['hash_bits'] ?? null;
+            if (!is_array($bits)) {
+                $previous = null;
+
+                continue;
+            }
+
+            if ($previous !== null) {
+                $distance = $this->calculateHammingDistance($previous, $bits);
+                if ($distance !== null) {
+                    $samples[] = $distance;
+                }
+            }
+
+            $previous = $bits;
+        }
+
+        return $samples;
+    }
+
+    /**
+     * @param array<int, int> $a
+     * @param array<int, int> $b
+     */
+    private function calculateHammingDistance(array $a, array $b): ?int
+    {
+        if ($a === [] || $b === []) {
+            return null;
+        }
+
+        $length   = min(count($a), count($b));
+        $distance = abs(count($a) - count($b));
+
+        for ($idx = 0; $idx < $length; ++$idx) {
+            if (($a[$idx] ?? null) !== ($b[$idx] ?? null)) {
+                ++$distance;
+            }
+        }
+
+        return $distance;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $selected
+     *
+     * @return array<int|string, int>
+     */
+    private function countByKey(array $selected, string $key): array
+    {
+        $counts = [];
+
+        foreach ($selected as $candidate) {
+            if (!array_key_exists($key, $candidate)) {
+                continue;
+            }
+
+            $value = $candidate[$key];
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $counts[$value] = ($counts[$value] ?? 0) + 1;
+        }
+
+        return $counts;
     }
 
     /**

@@ -16,9 +16,9 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInt
 use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
-use function array_sum;
 use function count;
 use function is_array;
 use function is_float;
@@ -101,12 +101,17 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $result[] = $draft->withMembers($curated, $params);
 
+            $rejections = [];
+            if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
+                $rejections = $telemetry['rejections'];
+            }
+
             $this->emitMonitoring('selection_completed', [
                 'algorithm'              => $draft->getAlgorithm(),
                 'pre_count'              => $preCount,
                 'post_count'             => $postCount,
-                'dropped_near_duplicates'=> (int) ($telemetry['drops']['near_duplicate'] ?? 0),
-                'dropped_spacing'        => (int) ($telemetry['drops']['spacing'] ?? 0),
+                'dropped_near_duplicates'=> (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? 0),
+                'dropped_spacing'        => (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? 0),
                 'avg_time_gap_s'         => $telemetry['avg_time_gap_s'],
                 'avg_phash_distance'     => $telemetry['avg_phash_distance'],
             ]);
@@ -173,11 +178,24 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
         $telemetry['policy']['profile'] = $profile;
 
-        $timeSamples = $telemetry['distance_samples']['time'] ?? [];
-        $hashSamples = $telemetry['distance_samples']['phash'] ?? [];
+        $metrics = $telemetry['metrics'] ?? [];
+        $timeSamples = [];
+        $hashSamples = [];
 
-        $telemetry['avg_time_gap_s']     = $timeSamples !== [] ? array_sum($timeSamples) / count($timeSamples) : 0.0;
-        $telemetry['avg_phash_distance'] = $hashSamples !== [] ? array_sum($hashSamples) / count($hashSamples) : 0.0;
+        if (is_array($metrics)) {
+            $timeSamplesRaw = $metrics['time_gaps'] ?? [];
+            if (is_array($timeSamplesRaw)) {
+                $timeSamples = $timeSamplesRaw;
+            }
+
+            $hashSamplesRaw = $metrics['phash_distances'] ?? [];
+            if (is_array($hashSamplesRaw)) {
+                $hashSamples = $hashSamplesRaw;
+            }
+        }
+
+        $telemetry['avg_time_gap_s']     = $this->calculateAverage($timeSamples);
+        $telemetry['avg_phash_distance'] = $this->calculateAverage($hashSamples);
 
         $telemetry['per_day_distribution'] = $telemetry['distribution']['per_day'] ?? [];
         $telemetry['per_year_distribution'] = $telemetry['distribution']['per_year'] ?? [];
@@ -186,13 +204,37 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
         if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
             $telemetry['exclusion_reasons'] = $telemetry['rejections'];
+            $telemetry['rejection_counts']  = $telemetry['rejections'];
         } else {
             $telemetry['exclusion_reasons'] = [];
+            $telemetry['rejection_counts']  = [];
         }
 
-        unset($telemetry['distance_samples'], $telemetry['distribution']);
+        unset($telemetry['distribution'], $telemetry['metrics']);
 
         return $telemetry;
+    }
+
+    /**
+     * @param array<int|float> $samples
+     */
+    private function calculateAverage(array $samples): float
+    {
+        $total = 0.0;
+        $count = 0;
+
+        foreach ($samples as $sample) {
+            if (is_int($sample) || is_float($sample)) {
+                $total += (float) $sample;
+                ++$count;
+            }
+        }
+
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        return $total / $count;
     }
 
     /**
