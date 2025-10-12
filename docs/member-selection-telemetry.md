@@ -31,11 +31,11 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
   "per_bucket_distribution": {"2024-06-10#slot_3": 2},
   "options": {
     "selector": "…\\PolicyDrivenMemberSelector",
-    "target_total": 72,
-    "max_per_day": 6,
-    "min_spacing_seconds": 900,
-    "phash_min_hamming": 10,
-    "max_per_staypoint": 3,
+    "target_total": 60,
+    "max_per_day": 4,
+    "min_spacing_seconds": 3600,
+    "phash_min_hamming": 11,
+    "max_per_staypoint": 1,
     "enable_people_balance": true,
     "people_balance_weight": 0.4,
     "repeat_penalty": 0.2
