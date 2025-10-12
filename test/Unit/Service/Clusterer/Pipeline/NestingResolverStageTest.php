@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 final class NestingResolverStageTest extends TestCase
 {
     #[Test]
-    public function dropsNestedClustersBasedOnPriority(): void
+    public function retainsNestedClustersAndAttachesMetadata(): void
     {
         $stage = new NestingResolverStage(['vacation', 'significant_place']);
 
@@ -34,8 +34,35 @@ final class NestingResolverStageTest extends TestCase
         ]);
 
         self::assertSame([
+            $placeEvent,
+            $dayTrip,
             $vacation,
         ], $result);
+
+        $vacationParams = $vacation->getParams();
+        self::assertTrue($vacationParams['has_sub_stories'] ?? false);
+
+        $expectedChapters = [
+            [
+                'algorithm'    => 'vacation',
+                'priority'     => 2,
+                'score'        => 0.65,
+                'member_count' => 2,
+                'fingerprint'  => sha1('2,3'),
+                'classification' => 'day_trip',
+            ],
+            [
+                'algorithm'    => 'significant_place',
+                'priority'     => 1,
+                'score'        => 0.55,
+                'member_count' => 3,
+                'fingerprint'  => sha1('2,3,4'),
+            ],
+        ];
+
+        self::assertSame($expectedChapters, $vacationParams['sub_stories']);
+        self::assertTrue($dayTrip->getParams()['is_sub_story']);
+        self::assertTrue($placeEvent->getParams()['is_sub_story']);
     }
 
     #[Test]

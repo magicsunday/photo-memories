@@ -68,9 +68,17 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             $progress(0, $total);
         }
 
-        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string}> $items */
+        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int}> $items */
         $items = [];
-        foreach ($drafts as $draft) {
+        /** @var list<array{index: int, draft: ClusterDraft}> $subStories */
+        $subStories = [];
+
+        foreach ($drafts as $index => $draft) {
+            if ($this->isSubStory($draft)) {
+                $subStories[] = ['index' => $index, 'draft' => $draft];
+                continue;
+            }
+
             $members = $this->normalizeMembers($draft->getMembers());
             $items[] = [
                 'draft'    => $draft,
@@ -79,6 +87,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                 'priority' => (int) ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
                 'size'     => count($members),
                 'group'    => $this->resolveGroup($draft->getAlgorithm(), $this->algorithmGroups, $this->defaultAlgorithmGroup),
+                'index'    => $index,
             ];
         }
 
@@ -130,6 +139,16 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             }
 
             $result[] = $item['draft'];
+        }
+
+        if ($subStories !== []) {
+            usort($subStories, static function (array $a, array $b): int {
+                return $a['index'] <=> $b['index'];
+            });
+
+            foreach ($subStories as $subStory) {
+                $result[] = $subStory['draft'];
+            }
         }
 
         if ($progress !== null) {

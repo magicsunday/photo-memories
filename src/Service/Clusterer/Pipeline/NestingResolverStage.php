@@ -14,16 +14,15 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
-use function array_filter;
-use function array_fill;
 use function array_map;
-use function array_values;
 use function count;
-
-use const ARRAY_FILTER_USE_BOTH;
+use function is_array;
+use function is_string;
+use function strcmp;
+use function usort;
 
 /**
- * Removes lower priority clusters that are nested inside higher priority results.
+ * Tags nested clusters on their preferred parent while retaining all drafts.
  */
 final class NestingResolverStage implements ClusterConsolidationStageInterface
 {
@@ -75,19 +74,11 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
             $drafts,
         );
 
-        /** @var list<bool> $keep */
-        $keep = array_fill(0, $total, true);
+        /** @var array<int,int> $parentByChild */
+        $parentByChild = [];
 
         for ($i = 0; $i < $total; ++$i) {
-            if (!$keep[$i]) {
-                continue;
-            }
-
             for ($j = $i + 1; $j < $total; ++$j) {
-                if (!$keep[$j]) {
-                    continue;
-                }
-
                 $normalizedLeft  = $normalized[$i];
                 $normalizedRight = $normalized[$j];
 
@@ -106,11 +97,29 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
                     $this->priorityMap,
                 );
 
-                if ($preferLeft) {
-                    $keep[$j] = false;
-                } else {
-                    $keep[$i] = false;
-                    break;
+                $parentIndex = $preferLeft ? $i : $j;
+                $childIndex  = $preferLeft ? $j : $i;
+
+                $currentParent = $parentByChild[$childIndex] ?? null;
+                if ($currentParent === null) {
+                    $parentByChild[$childIndex] = $parentIndex;
+                    continue;
+                }
+
+                if ($currentParent === $parentIndex) {
+                    continue;
+                }
+
+                $shouldReplace = $this->preferLeft(
+                    $drafts[$parentIndex],
+                    $normalized[$parentIndex],
+                    $drafts[$currentParent],
+                    $normalized[$currentParent],
+                    $this->priorityMap,
+                );
+
+                if ($shouldReplace) {
+                    $parentByChild[$childIndex] = $parentIndex;
                 }
             }
         }
@@ -119,14 +128,80 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
             $progress($total, $total);
         }
 
-        /** @var list<ClusterDraft> $result */
-        $result = array_values(array_filter(
-            $drafts,
-            static fn (ClusterDraft $draft, int $index) => $keep[$index] ?? false,
-            ARRAY_FILTER_USE_BOTH,
-        ));
+        /** @var array<int,list<array{algorithm: string, priority: int, score: float, member_count: int, fingerprint: string, classification?: string}>> $subStoriesByParent */
+        $subStoriesByParent = [];
 
-        return $result;
+        foreach ($parentByChild as $childIndex => $parentIndex) {
+            $child       = $drafts[$childIndex];
+            $parent      = $drafts[$parentIndex];
+            $childMember = $normalized[$childIndex];
+            $parentMembers = $normalized[$parentIndex];
+
+            $metadata = [
+                'algorithm'    => $child->getAlgorithm(),
+                'priority'     => (int) ($this->priorityMap[$child->getAlgorithm()] ?? 0),
+                'score'        => $this->computeScore($child, $childMember),
+                'member_count' => count($childMember),
+                'fingerprint'  => $this->fingerprint($childMember),
+            ];
+
+            $classification = $child->getParams()['classification'] ?? null;
+            if (is_string($classification) && $classification !== '') {
+                $metadata['classification'] = $classification;
+            }
+
+            $subStoriesByParent[$parentIndex] ??= [];
+            $subStoriesByParent[$parentIndex][] = $metadata;
+
+            $child->setParam('is_sub_story', true);
+            $child->setParam('sub_story_priority', $metadata['priority']);
+            $child->setParam('sub_story_of', [
+                'algorithm'   => $parent->getAlgorithm(),
+                'fingerprint' => $this->fingerprint($parentMembers),
+                'priority'    => (int) ($this->priorityMap[$parent->getAlgorithm()] ?? 0),
+            ]);
+        }
+
+        foreach ($subStoriesByParent as $parentIndex => $chapters) {
+            usort($chapters, static function (array $a, array $b): int {
+                if ($a['priority'] !== $b['priority']) {
+                    return $a['priority'] < $b['priority'] ? 1 : -1;
+                }
+
+                if ($a['score'] !== $b['score']) {
+                    return $a['score'] < $b['score'] ? 1 : -1;
+                }
+
+                if ($a['member_count'] !== $b['member_count']) {
+                    return $a['member_count'] < $b['member_count'] ? 1 : -1;
+                }
+
+                return strcmp($a['fingerprint'], $b['fingerprint']);
+            });
+
+            $parentDraft = $drafts[$parentIndex];
+            $existing    = $parentDraft->getParams()['sub_stories'] ?? null;
+            $merged      = [];
+
+            if (is_array($existing)) {
+                foreach ($existing as $entry) {
+                    if (!is_array($entry)) {
+                        continue;
+                    }
+
+                    $merged[] = $entry;
+                }
+            }
+
+            foreach ($chapters as $chapter) {
+                $merged[] = $chapter;
+            }
+
+            $parentDraft->setParam('has_sub_stories', true);
+            $parentDraft->setParam('sub_stories', $merged);
+        }
+
+        return $drafts;
     }
 
     /**
