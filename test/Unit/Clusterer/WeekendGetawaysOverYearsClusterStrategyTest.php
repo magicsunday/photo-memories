@@ -27,7 +27,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 1,
+            minNights: 2,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 3,
@@ -63,7 +63,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 1,
+            minNights: 2,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 3,
@@ -92,7 +92,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 1,
+            minNights: 2,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 2,
@@ -124,9 +124,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             }
 
             $isWeekend = ((int) $takenAt->format('N')) >= 6;
-            $media->setFeatures([
-                'calendar' => ['isWeekend' => $isWeekend],
-            ]);
+            $this->applyRunMetadata($media, $isWeekend);
         }
 
         $featureClusters = $this->normaliseClusters($strategy->cluster($items));
@@ -136,7 +134,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
     {
-        return $this->makeMediaFixture(
+        $media = $this->makeMediaFixture(
             id: $id,
             filename: sprintf('weekend-getaway-%d.jpg', $id),
             takenAt: $takenAt,
@@ -144,6 +142,10 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             lon: 11.0,
             size: 2048,
         );
+
+        $this->applyRunMetadata($media, null);
+
+        return $media;
     }
 
     /**
@@ -162,5 +164,29 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             ],
             $clusters,
         );
+    }
+
+    private function applyRunMetadata(Media $media, ?bool $isWeekend): void
+    {
+        $features = [
+            'day_summary' => [
+                'base_away'              => true,
+                'distance_from_home_km'  => 150.0,
+                'max_speed_kmh'          => 110.0,
+                'avg_speed_kmh'          => 80.0,
+                'category'               => $isWeekend === true ? 'weekend' : null,
+            ],
+            'vacation' => [
+                'core_tag'   => 'core',
+                'core_score' => 0.72,
+            ],
+        ];
+
+        if ($isWeekend !== null) {
+            $features['calendar'] = ['isWeekend' => $isWeekend];
+        }
+
+        $media->setFeatures($features);
+        $media->setDistanceKmFromHome(150.0);
     }
 }
