@@ -5,15 +5,15 @@ parameters:
             target_total: 60
             minimum_total: 36
             max_per_day: 4
-            time_slot_hours: 3
+            time_slot_hours: 4
             min_spacing_seconds: 3600
             phash_min_hamming: 11
             max_per_staypoint: 1
             max_per_staypoint_relaxed: 2
             quality_floor: 0.56
-            video_bonus: 0.28
-            face_bonus: 0.36
-            selfie_penalty: 0.22
+            video_bonus: 0.22
+            face_bonus: 0.34
+            selfie_penalty: 0.26
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.34
