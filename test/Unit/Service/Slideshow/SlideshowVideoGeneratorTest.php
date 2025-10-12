@@ -102,6 +102,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.error',
             ['/tmp/cover.jpg', '/tmp/second.jpg'],
             $slides,
+            [],
             null,
             null,
             'Rückblick',
@@ -177,6 +178,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/filter-chain.error',
             ['/tmp/cover.jpg', '/tmp/second.jpg'],
             $slides,
+            [],
             null,
             null,
             null,
@@ -304,6 +306,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.error',
             ['/tmp/cover.jpg'],
             $slides,
+            [],
             null,
             null,
             null,
@@ -363,6 +366,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 '/tmp/out.error',
                 [$portraitImage, $narrowLandscapeImage, $wideLandscapeImage],
                 $slides,
+                [],
                 null,
                 null,
                 null,
@@ -440,6 +444,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 '/tmp/out.error',
                 [$portraitImage],
                 $slides,
+                [],
                 null,
                 null,
                 null,
@@ -641,6 +646,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.error',
             ['/tmp/cover.jpg', '/tmp/second.jpg'],
             $slides,
+            [],
             null,
             '/tmp/music.mp3',
             null,
@@ -709,6 +715,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         ];
 
         $transitionDuration = 1.0;
+        $customTransitions  = [0.5, 2.0];
 
         $job = new SlideshowJob(
             'timeline-audio-fade',
@@ -718,6 +725,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.error',
             ['/tmp/cover.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
             $slides,
+            $customTransitions,
             $transitionDuration,
             '/tmp/music.mp3',
             null,
@@ -740,6 +748,16 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertArrayHasKey($filterComplexIndex, $command);
 
         $filterComplex = $command[$filterComplexIndex];
+
+        $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
+        $resolvedTransitionsMethod->setAccessible(true);
+        /** @var list<float> $resolvedTransitions */
+        $resolvedTransitions = $resolvedTransitionsMethod->invoke(
+            $generator,
+            $job->slides(),
+            $transitionDuration,
+            $job->transitionDurations()
+        );
 
         $loopDurations = [];
         for ($index = 0; $index < $filterIndex; ++$index) {
@@ -765,17 +783,23 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertEqualsWithDelta($lastSlideDuration, $trimDurations[$lastSlideIndex], 0.001);
 
         $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
-        self::assertSame(2, $matchCount);
+        self::assertSame(count($resolvedTransitions), $matchCount);
+        $transitionDurations = array_map('floatval', $matches[1]);
+        foreach ($transitionDurations as $index => $duration) {
+            self::assertEqualsWithDelta($resolvedTransitions[$index], $duration, 0.001);
+        }
+
         $offsets = array_map('floatval', $matches[2]);
-        self::assertCount(2, $offsets);
+        self::assertCount(count($resolvedTransitions), $offsets);
 
         $expectedTimeline = max(2.5, $slides[0]['duration']);
         $expectedOffsets  = [];
         $slideCount       = count($slides);
 
         for ($index = 1; $index < $slideCount; ++$index) {
-            $expectedOffsets[] = $expectedTimeline - $transitionDuration;
-            $expectedTimeline += $slides[$index]['duration'] - $transitionDuration;
+            $overlap          = $resolvedTransitions[$index - 1] ?? $transitionDuration;
+            $expectedOffsets[] = $expectedTimeline - $overlap;
+            $expectedTimeline += $slides[$index]['duration'] - $overlap;
         }
 
         foreach ($offsets as $index => $offset) {
@@ -816,6 +840,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             sys_get_temp_dir() . '/slideshow.error',
             [$missingImage],
             $slides,
+            [],
             null,
             null,
             null,
@@ -849,6 +874,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.error',
             ['/tmp/cover.jpg'],
             $slides,
+            [],
             null,
             null,
             null,
@@ -942,6 +968,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/transitions.error',
             ['/tmp/first.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
             $slides,
+            [0.75, 0.75],
             0.75,
             null,
             null,
@@ -1111,6 +1138,8 @@ BASH;
             ],
         ];
 
+        $customDurations = [2.0, 0.5, 1.0];
+
         $job = new SlideshowJob(
             'durations',
             '/tmp/durations.job.json',
@@ -1119,6 +1148,7 @@ BASH;
             '/tmp/durations.error',
             ['/tmp/slide-1.jpg', '/tmp/slide-2.jpg', '/tmp/slide-3.jpg', '/tmp/slide-4.jpg'],
             $slides,
+            $customDurations,
             5.0,
             null,
             'Test',
@@ -1136,7 +1166,22 @@ BASH;
 
         $parsed = $this->parseTransitionsFromCommand($command);
 
+        $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
+        $resolvedTransitionsMethod->setAccessible(true);
+        /** @var list<float> $resolvedTransitions */
+        $resolvedTransitions = $resolvedTransitionsMethod->invoke(
+            $generator,
+            $job->slides(),
+            5.0,
+            $job->transitionDurations()
+        );
+
         self::assertSame(3, count($parsed['durations']));
+
+        self::assertCount(3, $resolvedTransitions);
+        foreach ($resolvedTransitions as $index => $duration) {
+            self::assertEqualsWithDelta($duration, $parsed['durations'][$index], 0.0001);
+        }
 
         self::assertEqualsWithDelta(1.2, $parsed['durations'][0], 0.0001);
         self::assertEqualsWithDelta(0.25, $parsed['durations'][1], 0.0001);

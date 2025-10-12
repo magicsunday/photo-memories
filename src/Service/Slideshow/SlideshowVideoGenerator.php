@@ -35,6 +35,7 @@ use function implode;
 use function in_array;
 use function is_dir;
 use function is_file;
+use function is_float;
 use function is_readable;
 use function is_string;
 use function ltrim;
@@ -196,6 +197,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $slides,
             $job->images(),
             $transitionDuration,
+            $job->transitionDurations(),
             $job->outputPath(),
             $audioTrack,
             $job->title(),
@@ -256,6 +258,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     /**
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
      * @param list<string>                                                                      $imagePaths
+     * @param list<float>                                                                       $transitionDurations
      *
      * @return list<string>
      */
@@ -263,6 +266,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         array $slides,
         array $imagePaths,
         float $transitionDuration,
+        array $transitionDurations,
         string $output,
         ?string $audioTrack,
         ?string $title,
@@ -287,7 +291,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $requiredTransitions,
         );
 
-        $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration);
+        $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration, $transitionDurations);
 
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
@@ -593,10 +597,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<float>                                                                       $requestedDurations
      *
      * @return list<float>
      */
-    private function resolveTransitionDurationsForSlides(array $slides, float $baseDuration): array
+    private function resolveTransitionDurationsForSlides(array $slides, float $baseDuration, array $requestedDurations): array
     {
         $count = count($slides);
         if ($count <= 1) {
@@ -610,7 +615,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $currentDuration  = $this->resolveSlideDuration($slides[$index]['duration']);
             $nextDuration     = $this->resolveSlideDuration($slides[$index + 1]['duration']);
             $maxOverlap       = min($currentDuration, $nextDuration);
-            $transitionLength = $clampedBase;
+            $candidate        = $requestedDurations[$index] ?? $clampedBase;
+
+            if (!is_float($candidate)) {
+                $candidate = (float) $candidate;
+            }
+
+            if ($candidate <= 0.0) {
+                $candidate = $clampedBase;
+            }
+
+            $transitionLength = max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $candidate));
 
             if ($maxOverlap < $transitionLength) {
                 $transitionLength = max(self::MINIMUM_SLIDE_DURATION, $maxOverlap);

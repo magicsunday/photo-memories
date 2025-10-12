@@ -13,11 +13,15 @@ namespace MagicSunday\Memories\Service\Slideshow;
 
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
+use Random\Engine\Xoshiro256StarStar;
+use Random\Randomizer;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 use Throwable;
 
 use function array_map;
 use function count;
+use function hash;
+use function implode;
 use function file_get_contents;
 use function file_put_contents;
 use function filemtime;
@@ -179,7 +183,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
-        $storyboard = $this->buildStoryboard($slides);
+        $storyboard = $this->buildStoryboard($itemId, $slides);
 
         $title    = $this->normaliseMetadata($title);
         $subtitle = $this->normaliseMetadata($subtitle);
@@ -194,6 +198,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $errorPath,
             $images,
             $storyboard['slides'],
+            $storyboard['transitionDurations'],
             $storyboard['transitionDuration'],
             $storyboard['music'],
             $title,
@@ -239,6 +244,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             'videoPath'           => $videoPath,
             'music'               => $storyboard['music'],
             'transitionDuration'  => $storyboard['transitionDuration'],
+            'transitionDurations' => $storyboard['transitionDurations'],
             'mode'                => 'inline',
         ]);
 
@@ -342,23 +348,29 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     /**
      * @param list<array{mediaId:int,path:string}> $slides
      */
-    private function buildStoryboard(array $slides): array
+    private function buildStoryboard(string $itemId, array $slides): array
     {
         $storySlides = [];
 
-        $mediaIds          = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
+        $mediaIds = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
+        $seed      = hash('sha256', $itemId . '|' . implode(',', $mediaIds), true);
+
+        $randomizer = new Randomizer(new Xoshiro256StarStar($seed));
+
+        $slideCount        = count($slides);
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->transitions,
             $mediaIds,
-            count($slides)
+            $slideCount
         );
         $sequenceIndex = 0;
+        $transitionDurations = [];
 
-        foreach ($slides as $slide) {
+        foreach ($slides as $index => $slide) {
             $storySlide = [
                 'mediaId'    => $slide['mediaId'],
                 'image'      => $slide['path'],
-                'duration'   => $this->slideDuration,
+                'duration'   => $randomizer->getInt(3000, 4000) / 1000,
                 'transition' => null,
             ];
 
@@ -370,11 +382,16 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             ++$sequenceIndex;
 
             $storySlides[] = $storySlide;
+
+            if ($index < $slideCount - 1) {
+                $transitionDurations[$index] = $randomizer->getInt(300, 1200) / 1000;
+            }
         }
 
         $payload = [
             'slides'             => $storySlides,
             'transitionDuration' => $this->transitionDuration,
+            'transitionDurations' => $transitionDurations,
             'music'              => $this->musicTrack,
         ];
 

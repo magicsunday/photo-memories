@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Slideshow;
 
 use RuntimeException;
 
+use function array_values;
 use function file_get_contents;
 use function is_array;
 use function is_int;
@@ -21,6 +22,7 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function json_last_error_msg;
+use function ksort;
 use function sprintf;
 use function trim;
 
@@ -35,6 +37,7 @@ final readonly class SlideshowJob
     /**
      * @param list<string>                                                                     $images
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<float>                                                                      $transitionDurations
      */
     public function __construct(
         private string $id,
@@ -44,6 +47,7 @@ final readonly class SlideshowJob
         private string $errorPath,
         private array $images,
         private array $slides,
+        private array $transitionDurations,
         private ?float $transitionDuration,
         private ?string $audioTrack,
         private ?string $title = null,
@@ -90,6 +94,14 @@ final readonly class SlideshowJob
     public function slides(): array
     {
         return $this->slides;
+    }
+
+    /**
+     * @return list<float>
+     */
+    public function transitionDurations(): array
+    {
+        return $this->transitionDurations;
     }
 
     public function transitionDuration(): ?float
@@ -141,6 +153,10 @@ final readonly class SlideshowJob
 
         if ($this->transitionDuration !== null) {
             $storyboard['transitionDuration'] = $this->transitionDuration;
+        }
+
+        if ($this->transitionDurations !== []) {
+            $storyboard['transitionDurations'] = $this->transitionDurations;
         }
 
         if ($this->audioTrack !== null) {
@@ -230,6 +246,7 @@ final readonly class SlideshowJob
             $error,
             $images,
             $storyboard['slides'],
+            $storyboard['transitionDurations'],
             $storyboard['transitionDuration'],
             $storyboard['music'],
             $title,
@@ -241,7 +258,7 @@ final readonly class SlideshowJob
      * @param array<string,mixed> $storyboard
      * @param list<string>        $images
      *
-     * @return array{slides:list<array{image:string,mediaId:int|null,duration:float,transition:string|null}>,transitionDuration:float|null,music:string|null}
+     * @return array{slides:list<array{image:string,mediaId:int|null,duration:float,transition:string|null}>,transitionDurations:list<float>,transitionDuration:float|null,music:string|null}
      */
     private static function normaliseStoryboard(array $storyboard, array $images): array
     {
@@ -302,6 +319,26 @@ final readonly class SlideshowJob
             }
         }
 
+        $transitionDurationsRaw = $storyboard['transitionDurations'] ?? [];
+        $transitionDurations    = [];
+        if (is_array($transitionDurationsRaw)) {
+            foreach ($transitionDurationsRaw as $index => $durationRaw) {
+                if (!is_numeric($durationRaw)) {
+                    continue;
+                }
+
+                $duration = (float) $durationRaw;
+                if ($duration <= 0.0) {
+                    continue;
+                }
+
+                $transitionDurations[(int) $index] = $duration;
+            }
+
+            ksort($transitionDurations);
+            $transitionDurations = array_values($transitionDurations);
+        }
+
         $transitionRaw      = $storyboard['transitionDuration'] ?? null;
         $transitionDuration = null;
         if (is_numeric($transitionRaw)) {
@@ -326,6 +363,7 @@ final readonly class SlideshowJob
 
         return [
             'slides'             => $slides,
+            'transitionDurations' => $transitionDurations,
             'transitionDuration' => $transitionDuration,
             'music'              => $music,
         ];

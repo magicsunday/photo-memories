@@ -54,6 +54,7 @@ final class SlideshowJobTest extends TestCase
                     'transition' => null,
                 ],
             ],
+            [0.5],
             0.75,
             '/audio/theme.mp3',
             'Ein Tag am Meer',
@@ -66,6 +67,7 @@ final class SlideshowJobTest extends TestCase
         self::assertSame('/tmp/demo.mp4', $payload['output']);
         self::assertArrayHasKey('storyboard', $payload);
         self::assertSame(0.75, $payload['storyboard']['transitionDuration']);
+        self::assertSame([0.5], $payload['storyboard']['transitionDurations']);
         self::assertSame('/audio/theme.mp3', $payload['storyboard']['music']);
         self::assertCount(2, $payload['storyboard']['slides']);
         self::assertSame(10, $payload['storyboard']['slides'][0]['mediaId']);
@@ -99,6 +101,7 @@ final class SlideshowJobTest extends TestCase
                     ],
                 ],
                 'transitionDuration' => 0,
+                'transitionDurations' => [0, '0.6', -1],
                 'music'              => ' ',
             ],
             'title'     => '  ',
@@ -115,6 +118,7 @@ final class SlideshowJobTest extends TestCase
         $slides = $job->slides();
         self::assertCount(2, $slides);
         self::assertSame(15, $slides[0]['mediaId']);
+        self::assertSame([0.6], $job->transitionDurations());
         self::assertNull($job->transitionDuration());
         self::assertNull($job->audioTrack());
         self::assertNull($job->title());
@@ -149,6 +153,7 @@ final class SlideshowJobTest extends TestCase
             '/tmp/transitions.error',
             array_map(static fn (array $slide): string => $slide['image'], $slides),
             $slides,
+            [0.4, 0.6, 0.8],
             0.75,
             null,
             null,

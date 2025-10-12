@@ -17,7 +17,9 @@ use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
 use MagicSunday\Memories\Test\TestCase;
+use ReflectionClass;
 
+use function array_map;
 use function file_get_contents;
 use function file_put_contents;
 use function is_dir;
@@ -107,6 +109,18 @@ final class SlideshowVideoManagerTest extends TestCase
             $slides = $generator->capturedJob->slides();
             self::assertCount(3, $slides);
 
+            foreach ($slides as $slide) {
+                self::assertGreaterThanOrEqual(3.0, $slide['duration']);
+                self::assertLessThanOrEqual(4.0, $slide['duration']);
+            }
+
+            $transitionDurations = $generator->capturedJob->transitionDurations();
+            self::assertCount(2, $transitionDurations);
+            foreach ($transitionDurations as $duration) {
+                self::assertGreaterThanOrEqual(0.3, $duration);
+                self::assertLessThanOrEqual(1.2, $duration);
+            }
+
             $expectedTransitions = TransitionSequenceGenerator::generate($transitions, [1, 2, 3], 3);
 
             foreach ($expectedTransitions as $index => $expected) {
@@ -115,6 +129,44 @@ final class SlideshowVideoManagerTest extends TestCase
         } finally {
             $this->cleanupDirectory($baseDir);
         }
+    }
+
+    public function testStoryboardDurationsAreDeterministic(): void
+    {
+        $generator = new class implements SlideshowVideoGeneratorInterface {
+            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            {
+            }
+        };
+
+        $manager = new SlideshowVideoManager(
+            sys_get_temp_dir(),
+            3.5,
+            0.75,
+            $generator,
+        );
+
+        $reflection = new ReflectionClass($manager);
+        $method     = $reflection->getMethod('buildStoryboard');
+        $method->setAccessible(true);
+
+        $slides = [
+            ['mediaId' => 10, 'path' => '/tmp/a.jpg'],
+            ['mediaId' => 11, 'path' => '/tmp/b.jpg'],
+            ['mediaId' => 12, 'path' => '/tmp/c.jpg'],
+        ];
+
+        /** @var array{slides:list<array{duration:float}>,transitionDurations:list<float>} $first */
+        $first = $method->invoke($manager, 'deterministic-item', $slides);
+        /** @var array{slides:list<array{duration:float}>,transitionDurations:list<float>} $second */
+        $second = $method->invoke($manager, 'deterministic-item', $slides);
+
+        self::assertSame(
+            array_map(static fn (array $slide): float => $slide['duration'], $first['slides']),
+            array_map(static fn (array $slide): float => $slide['duration'], $second['slides'])
+        );
+
+        self::assertSame($first['transitionDurations'], $second['transitionDurations']);
     }
 
     public function testEnsureForItemReturnsErrorWhenGenerationFails(): void
