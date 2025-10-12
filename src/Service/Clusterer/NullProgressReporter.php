@@ -30,6 +30,10 @@ final class NullProgressReporter implements ProgressReporterInterface
             {
             }
 
+            public function setDetail(?string $message): void
+            {
+            }
+
             public function setRate(?string $message): void
             {
             }

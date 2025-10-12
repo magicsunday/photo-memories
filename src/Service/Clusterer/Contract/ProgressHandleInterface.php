@@ -20,6 +20,8 @@ interface ProgressHandleInterface
 
     public function setPhase(?string $message): void;
 
+    public function setDetail(?string $message): void;
+
     public function setRate(?string $message): void;
 
     public function setProgress(int $current): void;

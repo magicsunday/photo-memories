@@ -112,6 +112,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $strategyCount = $this->clusterer->countStrategies();
         $clusterHandle = $progressReporter->create('Clustere', '🧩 Strategien', $strategyCount);
+        $clusterHandle->setDetail('Vorbereitung');
         $clusterStart  = microtime(true);
 
         /** @var list<ClusterDraft> $drafts */
@@ -119,17 +120,20 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $items,
             function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle): void {
                 $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
+                $clusterHandle->setDetail('Vorbereitung');
                 $clusterHandle->setRate('–');
                 $clusterHandle->setProgress(max(0, $index - 1));
             },
             function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle, $clusterStart, $loadedCount): void {
                 $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
+                $clusterHandle->setDetail('Abgeschlossen');
                 $clusterHandle->setRate($this->formatRate($loadedCount, $clusterStart, 'Medien'));
                 $clusterHandle->advance();
             },
             function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle): ?callable {
                 return static function (int $done, int $maxSteps, string $stage) use ($clusterHandle, $strategyName, $index, $strategyTotal): void {
-                    $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d) – %s', $strategyName, $index, $strategyTotal, $stage));
+                    $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
+                    $clusterHandle->setDetail($stage);
 
                     if ($maxSteps > 0) {
                         $clusterHandle->setRate(sprintf('Fortschritt: %d/%d Schritte', $done, $maxSteps));
