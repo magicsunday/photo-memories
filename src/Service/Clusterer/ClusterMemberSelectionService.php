@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
@@ -374,6 +375,15 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $phaseMetrics->addSamples('consolidating', 'phash_hamming', $consecutive);
         }
 
+        $rejections = [];
+        if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
+            $rejections = $this->normaliseCounts($telemetry['rejections']);
+        }
+
+        $spacingRejections        = (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? ($telemetry['drops']['selection']['spacing_rejections'] ?? 0));
+        $nearDuplicateBlocked     = (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? ($telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0));
+        $nearDuplicateReplacements = (int) ($telemetry['drops']['selection']['near_duplicate_replacements'] ?? 0);
+
         return [
             'profile'                => $profile->getKey(),
             'storyline'              => $storyline,
@@ -381,11 +391,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             'spacing'                => [
                 'average_seconds' => $spacing['average'],
                 'samples'         => $spacing['samples'],
-                'rejections'      => $telemetry['drops']['selection']['spacing_rejections'] ?? 0,
+                'rejections'      => $spacingRejections,
             ],
             'near_duplicates'        => [
-                'blocked'      => $telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0,
-                'replacements' => $telemetry['drops']['selection']['near_duplicate_replacements'] ?? 0,
+                'blocked'      => $nearDuplicateBlocked,
+                'replacements' => $nearDuplicateReplacements,
             ],
             'per_day_distribution'   => $perDayDistribution,
             'per_bucket_distribution'=> $telemetry['distribution']['per_bucket'],
@@ -623,6 +633,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     ): array {
         $rawTelemetry = $result->getTelemetry();
 
+        $rejections = [];
+        if (isset($rawTelemetry['rejections']) && is_array($rawTelemetry['rejections'])) {
+            $rejections = $this->normaliseCounts($rawTelemetry['rejections']);
+        }
+
         $drops = [
             'prefilter' => [
                 'total'             => (int) ($rawTelemetry['prefilter_total'] ?? 0),
@@ -640,6 +655,24 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 'fallback_used'            => (int) ($rawTelemetry['fallback_used'] ?? 0),
             ],
         ];
+
+        $fallbacks = [
+            SelectionTelemetry::REASON_TIME_GAP    => $drops['selection']['spacing_rejections'] ?? 0,
+            SelectionTelemetry::REASON_PHASH       => $drops['selection']['near_duplicate_blocked'] ?? 0,
+            SelectionTelemetry::REASON_STAYPOINT   => $drops['selection']['staypoint_rejections'] ?? 0,
+            SelectionTelemetry::REASON_SCENE       => 0,
+            SelectionTelemetry::REASON_ORIENTATION => 0,
+            SelectionTelemetry::REASON_PEOPLE      => 0,
+        ];
+
+        foreach ($fallbacks as $reason => $fallback) {
+            $value = $rejections[$reason] ?? $fallback;
+            $rejections[$reason] = (int) $value;
+        }
+
+        $drops['selection']['spacing_rejections']      = $rejections[SelectionTelemetry::REASON_TIME_GAP];
+        $drops['selection']['near_duplicate_blocked']  = $rejections[SelectionTelemetry::REASON_PHASH];
+        $drops['selection']['staypoint_rejections']    = $rejections[SelectionTelemetry::REASON_STAYPOINT];
 
         $perBucket = $this->countPerBucket($members, $profile);
         $phash     = $this->buildPhashTelemetry($members);
@@ -673,6 +706,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $telemetry['averages'] = $averages;
         $telemetry['relaxation_hints'] = $hints;
         $telemetry['storyline'] = $storyline;
+        $telemetry['rejections'] = $rejections;
 
         return $telemetry;
     }
