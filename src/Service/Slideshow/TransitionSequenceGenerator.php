@@ -16,6 +16,7 @@ use Random\Randomizer;
 
 use function array_filter;
 use function array_map;
+use function array_unique;
 use function array_values;
 use function count;
 use function hash;
@@ -62,11 +63,35 @@ final class TransitionSequenceGenerator
         $seedSource = self::buildSeedSource($mediaIds, $slideCount);
         $randomizer = new Randomizer(new Xoshiro256StarStar($seedSource));
 
+        $uniqueTransitions = array_values(array_unique($pool));
+        $hasMultipleUniqueTransitions = count($uniqueTransitions) > 1;
+
         $sequence = [];
+        $previousTransition = null;
         while (count($sequence) < $slideCount) {
             $shuffled = $randomizer->shuffleArray($pool);
+            if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled !== []) {
+                if ($shuffled[0] === $previousTransition) {
+                    $swapIndex = null;
+                    $shuffledCount = count($shuffled);
+                    for ($index = 1; $index < $shuffledCount; $index++) {
+                        if ($shuffled[$index] !== $previousTransition) {
+                            $swapIndex = $index;
+                            break;
+                        }
+                    }
+
+                    if ($swapIndex !== null) {
+                        $current = $shuffled[$swapIndex];
+                        $shuffled[$swapIndex] = $shuffled[0];
+                        $shuffled[0] = $current;
+                    }
+                }
+            }
+
             foreach ($shuffled as $transition) {
                 $sequence[] = $transition;
+                $previousTransition = $transition;
                 if (count($sequence) === $slideCount) {
                     break 2;
                 }
