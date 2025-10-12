@@ -60,11 +60,13 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
             public function setPhase(?string $message): void
             {
                 $this->bar->setMessage($message ?? '', 'phase');
+                $this->bar->display();
             }
 
             public function setRate(?string $message): void
             {
                 $this->bar->setMessage($message ?? '–', 'rate');
+                $this->bar->display();
             }
 
             public function setProgress(int $current): void
