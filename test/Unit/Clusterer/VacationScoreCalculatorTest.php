@@ -488,6 +488,103 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function weekendExceptionAllowsTripsBelowMinimumAwayDays(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $referenceDate  = new DateTimeImmutable('2024-07-01 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            minAwayDays: 3,
+            referenceDate: $referenceDate,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 120,
+        ];
+
+        $getawayLocation = (new Location(
+            provider: 'test',
+            providerPlaceId: 'warnemuende',
+            displayName: 'Warnemünde, Germany',
+            lat: 54.1760,
+            lon: 12.0837,
+            cell: 'cell-warnemuende',
+        ))
+            ->setCity('Warnemünde')
+            ->setState('Mecklenburg-Vorpommern')
+            ->setCountry('Germany')
+            ->setCountryCode('DE')
+            ->setCategory('tourism')
+            ->setType('beach');
+
+        $start   = new DateTimeImmutable('2024-07-06 09:00:00');
+        $dayKeys = [];
+        $days    = [];
+
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
+            $members = $this->makeMembersForDay($i, $dayDate, 4, $getawayLocation);
+            $dayKey  = $dayDate->format('Y-m-d');
+
+            $stayDuration = 10800 + ($i * 1800);
+            $firstMember  = $members[0];
+            $startStamp   = $firstMember->getTakenAt()?->getTimestamp() ?? $dayDate->getTimestamp();
+            $staypoints   = [[
+                'lat'   => (float) ($firstMember->getGpsLat() ?? $getawayLocation->getLat()),
+                'lon'   => (float) ($firstMember->getGpsLon() ?? $getawayLocation->getLon()),
+                'start' => $startStamp,
+                'end'   => $startStamp + $stayDuration,
+                'dwell' => $stayDuration,
+            ]];
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 9,
+                poiSamples: 12,
+                travelKm: 160.0,
+                timezoneOffset: 120,
+                hasAirport: false,
+                spotCount: 2,
+                spotDwellSeconds: 5400,
+                maxSpeedKmh: 95.0,
+                avgSpeedKmh: 68.0,
+                hasHighSpeedTransit: false,
+                cohortPresenceRatio: 0.4,
+                cohortMembers: [101 => 2],
+                staypoints: $staypoints,
+                countryCodes: ['de' => true],
+            );
+
+            $dayKeys[] = $dayKey;
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params = $draft->getParams();
+
+        self::assertSame('weekend_getaway', $params['classification']);
+        self::assertTrue($params['weekend_getaway']);
+        self::assertTrue($params['weekend_exception_applied']);
+        self::assertSame('vacation.weekend', $params['storyline']);
+        self::assertSame('vacation_weekend_getaway', $params['selection_profile']);
+        self::assertSame(2, $params['away_days']);
+        self::assertSame(1, $params['nights']);
+        self::assertGreaterThan(0.0, $params['score']);
+    }
+
+    #[Test]
     public function buildDraftRequiresConfiguredMinimumMembers(): void
     {
         $locationHelper = LocationHelper::createDefault();
@@ -1249,7 +1346,7 @@ final class VacationScoreCalculatorTest extends TestCase
         ?HolidayResolverInterface $holidayResolver = null,
         string $timezone = 'Europe/Berlin',
         float $movementThresholdKm = 35.0,
-        int $minAwayDays = 1,
+        int $minAwayDays = 2,
         int $minMembers = 0,
         ?DateTimeImmutable $referenceDate = null,
     ): VacationScoreCalculator {
