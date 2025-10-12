@@ -24,6 +24,8 @@ final class SelectionTelemetry
     public const REASON_ORIENTATION = 'orientation_balance';
     public const REASON_SCENE = 'scene_balance';
     public const REASON_PEOPLE = 'people_balance';
+    public const REASON_DAY_QUOTA = 'day_quota';
+    public const REASON_TIME_SLOT = 'time_slot';
 
     /**
      * Ordered rejection reasons tracked by the telemetry collector.
@@ -32,6 +34,8 @@ final class SelectionTelemetry
      */
     private const REASONS = [
         self::REASON_TIME_GAP,
+        self::REASON_DAY_QUOTA,
+        self::REASON_TIME_SLOT,
         self::REASON_STAYPOINT,
         self::REASON_PHASH,
         self::REASON_SCENE,

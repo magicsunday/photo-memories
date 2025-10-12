@@ -102,6 +102,11 @@ final class SelectionProfileProvider
             enablePeopleBalance: $this->boolValue($merged, 'enable_people_balance', $this->defaultOptions->enablePeopleBalance),
             peopleBalanceWeight: $this->floatValue($merged, 'people_balance_weight', $this->defaultOptions->peopleBalanceWeight),
             repeatPenalty: $this->floatValue($merged, 'repeat_penalty', $this->defaultOptions->repeatPenalty),
+            coreDayBonus: $this->intValue($merged, 'core_day_bonus', $this->defaultOptions->coreDayBonus),
+            peripheralDayPenalty: $this->intValue($merged, 'peripheral_day_penalty', $this->defaultOptions->peripheralDayPenalty),
+            phashPercentile: $this->floatValue($merged, 'phash_percentile', $this->defaultOptions->phashPercentile),
+            spacingProgressFactor: $this->floatValue($merged, 'spacing_progress_factor', $this->defaultOptions->spacingProgressFactor),
+            cohortRepeatPenalty: $this->floatValue($merged, 'cohort_repeat_penalty', $this->defaultOptions->cohortRepeatPenalty),
             minimumTotal: $minimumTotal,
         );
     }
@@ -159,7 +164,7 @@ final class SelectionProfileProvider
     {
         $result = [];
 
-        foreach (['target_total', 'max_per_day', 'time_slot_hours', 'min_spacing_seconds', 'phash_min_hamming', 'max_per_staypoint', 'minimum_total'] as $key) {
+        foreach (['target_total', 'max_per_day', 'time_slot_hours', 'min_spacing_seconds', 'phash_min_hamming', 'max_per_staypoint', 'minimum_total', 'core_day_bonus', 'peripheral_day_penalty'] as $key) {
             $value = $values[$key] ?? null;
             if ($value === null) {
                 continue;
@@ -176,7 +181,7 @@ final class SelectionProfileProvider
             }
         }
 
-        foreach (['video_bonus', 'face_bonus', 'selfie_penalty', 'quality_floor', 'people_balance_weight', 'repeat_penalty'] as $key) {
+        foreach (['video_bonus', 'face_bonus', 'selfie_penalty', 'quality_floor', 'people_balance_weight', 'repeat_penalty', 'phash_percentile', 'spacing_progress_factor', 'cohort_repeat_penalty'] as $key) {
             $value = $values[$key] ?? null;
             if ($value === null) {
                 continue;

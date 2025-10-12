@@ -41,6 +41,9 @@ use function explode;
 use function implode;
 use function in_array;
 use function is_array;
+use function is_float;
+use function is_int;
+use function is_numeric;
 use function is_string;
 use function exp;
 use function max;
@@ -191,7 +194,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     /**
      * {@inheritDoc}
      */
-    public function buildDraft(array $dayKeys, array $days, array $home): ?ClusterDraft
+    public function buildDraft(array $dayKeys, array $days, array $home, array $dayContext = []): ?ClusterDraft
     {
         if ($dayKeys === []) {
             return null;
@@ -754,6 +757,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'countries'                => $countries,
         ];
 
+        if ($dayContext !== []) {
+            $params['day_segments'] = $this->normaliseDayContext($dayKeys, $dayContext);
+        }
+
         $params['storyline'] = $storyline;
 
         $params['member_selection'] = [
@@ -784,6 +791,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'face_bonus'          => $selectionOptions->faceBonus,
                 'selfie_penalty'      => $selectionOptions->selfiePenalty,
                 'quality_floor'       => $selectionOptions->qualityFloor,
+                'core_day_bonus'      => $selectionOptions->coreDayBonus,
+                'peripheral_day_penalty' => $selectionOptions->peripheralDayPenalty,
+                'phash_percentile'    => $selectionOptions->phashPercentile,
+                'spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
+                'cohort_repeat_penalty'    => $selectionOptions->cohortRepeatPenalty,
             ],
             'telemetry' => $selectionTelemetry,
         ];
@@ -1547,5 +1559,104 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         return null;
+    }
+
+    /**
+     * @param list<string> $dayKeys
+     * @param array<string, array{score:float|int|string,category:string,duration:int|string|null,metrics:array<string,float|int|string>|null}> $dayContext
+     *
+     * @return array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
+     */
+    private function normaliseDayContext(array $dayKeys, array $dayContext): array
+    {
+        $ordered = [];
+
+        foreach ($dayKeys as $key) {
+            $context = $dayContext[$key] ?? null;
+            if (!is_array($context)) {
+                continue;
+            }
+
+            $score    = $context['score'] ?? 0.0;
+            $category = $context['category'] ?? 'peripheral';
+            $duration = $context['duration'] ?? null;
+            $metrics  = $context['metrics'] ?? [];
+
+            if (!is_string($category) || $category === '') {
+                $category = 'peripheral';
+            }
+
+            $ordered[$key] = [
+                'score'    => $this->normaliseFloat($score),
+                'category' => $category,
+                'duration' => $this->normaliseDuration($duration),
+                'metrics'  => $this->normaliseDayMetrics($metrics),
+            ];
+        }
+
+        return $ordered;
+    }
+
+    private function normaliseFloat(float|int|string $value): float
+    {
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
+    }
+
+    private function normaliseDuration(int|string|null $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value >= 0 ? $value : null;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $duration = (int) $value;
+
+            return $duration >= 0 ? $duration : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, float|int|string>|null $metrics
+     *
+     * @return array<string, float>
+     */
+    private function normaliseDayMetrics(?array $metrics): array
+    {
+        if ($metrics === null) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($metrics as $key => $value) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            if (is_float($value) || is_int($value)) {
+                $result[$key] = (float) $value;
+
+                continue;
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                $result[$key] = (float) $value;
+            }
+        }
+
+        return $result;
     }
 }

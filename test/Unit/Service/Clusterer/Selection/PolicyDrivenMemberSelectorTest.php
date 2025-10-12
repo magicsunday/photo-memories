@@ -73,6 +73,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             $policy,
             $mediaMap,
             $this->qualityScores(),
+            [],
         );
 
         $result = $selector->select('vacation', $memberIds, $context);
@@ -87,6 +88,8 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $rejections = $telemetry['rejections'];
         foreach ([
             'time_gap',
+            'day_quota',
+            'time_slot',
             'staypoint_quota',
             'phash_similarity',
             'scene_balance',
@@ -114,6 +117,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             $policy,
             $mediaMap,
             $this->qualityScores(),
+            [],
         );
 
         $result    = $selector->select('highlights', $memberIds, $context);

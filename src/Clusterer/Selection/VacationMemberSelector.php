@@ -293,6 +293,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
             enablePeopleBalance: $overrides['enablePeopleBalance'] ?? $source->enablePeopleBalance,
             peopleBalanceWeight: $overrides['peopleBalanceWeight'] ?? $source->peopleBalanceWeight,
             repeatPenalty: $overrides['repeatPenalty'] ?? $source->repeatPenalty,
+            coreDayBonus: $overrides['coreDayBonus'] ?? $source->coreDayBonus,
+            peripheralDayPenalty: $overrides['peripheralDayPenalty'] ?? $source->peripheralDayPenalty,
+            phashPercentile: $overrides['phashPercentile'] ?? $source->phashPercentile,
+            spacingProgressFactor: $overrides['spacingProgressFactor'] ?? $source->spacingProgressFactor,
+            cohortRepeatPenalty: $overrides['cohortRepeatPenalty'] ?? $source->cohortRepeatPenalty,
             minimumTotal: $overrides['minimumTotal'] ?? $source->minimumTotal,
         );
     }

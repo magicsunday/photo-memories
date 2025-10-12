@@ -13,6 +13,12 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection;
 
 use InvalidArgumentException;
 
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_numeric;
+use function is_string;
+
 /**
  * Immutable value object describing the tunable knobs of the selector.
  */
@@ -36,6 +42,13 @@ final class SelectionPolicy
      * @param int|null      $maxPerBucket       optional generic bucket cap
      * @param float|null    $videoHeavyBonus    optional bonus applied when cluster is video heavy
      * @param array<string, float>|null $sceneBucketWeights optional target share weights per motif bucket
+     * @param int           $coreDayBonus       additional quota points assigned to core days
+     * @param int           $peripheralDayPenalty quota reduction applied to peripheral days
+     * @param float         $phashPercentile    percentile used for adaptive perceptual hash thresholding
+     * @param float         $spacingProgressFactor scaling factor for progressive spacing relaxations
+     * @param float         $cohortPenalty      penalty applied for repeating person signatures
+     * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
      */
     public function __construct(
         private readonly string $profileKey,
@@ -55,6 +68,13 @@ final class SelectionPolicy
         private readonly ?int $maxPerBucket = null,
         private readonly ?float $videoHeavyBonus = null,
         private readonly ?array $sceneBucketWeights = null,
+        private readonly int $coreDayBonus = 1,
+        private readonly int $peripheralDayPenalty = 1,
+        private readonly float $phashPercentile = 0.35,
+        private readonly float $spacingProgressFactor = 0.5,
+        private readonly float $cohortPenalty = 0.05,
+        private readonly array $dayQuotas = [],
+        private readonly array $dayContext = [],
     ) {
         if ($targetTotal <= 0) {
             throw new InvalidArgumentException('targetTotal must be positive.');
@@ -94,6 +114,26 @@ final class SelectionPolicy
                     throw new InvalidArgumentException('Scene bucket weights must not be negative.');
                 }
             }
+        }
+
+        if ($coreDayBonus < 0) {
+            throw new InvalidArgumentException('coreDayBonus must not be negative.');
+        }
+
+        if ($peripheralDayPenalty < 0) {
+            throw new InvalidArgumentException('peripheralDayPenalty must not be negative.');
+        }
+
+        if ($phashPercentile < 0.0 || $phashPercentile > 1.0) {
+            throw new InvalidArgumentException('phashPercentile must be within [0,1].');
+        }
+
+        if ($spacingProgressFactor < 0.0 || $spacingProgressFactor > 1.0) {
+            throw new InvalidArgumentException('spacingProgressFactor must be within [0,1].');
+        }
+
+        if ($cohortPenalty < 0.0) {
+            throw new InvalidArgumentException('cohortPenalty must not be negative.');
         }
     }
 
@@ -194,6 +234,47 @@ final class SelectionPolicy
         return $weights;
     }
 
+    public function getCoreDayBonus(): int
+    {
+        return $this->coreDayBonus;
+    }
+
+    public function getPeripheralDayPenalty(): int
+    {
+        return $this->peripheralDayPenalty;
+    }
+
+    public function getPhashPercentile(): float
+    {
+        return $this->phashPercentile;
+    }
+
+    public function getSpacingProgressFactor(): float
+    {
+        return $this->spacingProgressFactor;
+    }
+
+    public function getCohortPenalty(): float
+    {
+        return $this->cohortPenalty;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getDayQuotas(): array
+    {
+        return $this->dayQuotas;
+    }
+
+    /**
+     * @return array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
+     */
+    public function getDayContext(): array
+    {
+        return $this->dayContext;
+    }
+
     public function withRelaxedSpacing(int $spacing): self
     {
         return new self(
@@ -214,6 +295,13 @@ final class SelectionPolicy
             $this->maxPerBucket,
             $this->videoHeavyBonus,
             $this->sceneBucketWeights,
+            $this->coreDayBonus,
+            $this->peripheralDayPenalty,
+            $this->phashPercentile,
+            $this->spacingProgressFactor,
+            $this->cohortPenalty,
+            $this->dayQuotas,
+            $this->dayContext,
         );
     }
 
@@ -237,6 +325,13 @@ final class SelectionPolicy
             $this->maxPerBucket,
             $this->videoHeavyBonus,
             $this->sceneBucketWeights,
+            $this->coreDayBonus,
+            $this->peripheralDayPenalty,
+            $this->phashPercentile,
+            $this->spacingProgressFactor,
+            $this->cohortPenalty,
+            $this->dayQuotas,
+            $this->dayContext,
         );
     }
 
@@ -260,6 +355,13 @@ final class SelectionPolicy
             $this->maxPerBucket,
             $this->videoHeavyBonus,
             $this->sceneBucketWeights,
+            $this->coreDayBonus,
+            $this->peripheralDayPenalty,
+            $this->phashPercentile,
+            $this->spacingProgressFactor,
+            $this->cohortPenalty,
+            $this->dayQuotas,
+            $this->dayContext,
         );
     }
 
@@ -283,6 +385,47 @@ final class SelectionPolicy
             null,
             $this->videoHeavyBonus,
             $this->sceneBucketWeights,
+            $this->coreDayBonus,
+            $this->peripheralDayPenalty,
+            $this->phashPercentile,
+            $this->spacingProgressFactor,
+            $this->cohortPenalty,
+            $this->dayQuotas,
+            $this->dayContext,
+        );
+    }
+
+    /**
+     * @param array<string, int> $dayQuotas
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext
+     */
+    public function withDayContext(array $dayQuotas, array $dayContext): self
+    {
+        return new self(
+            $this->profileKey,
+            $this->targetTotal,
+            $this->minimumTotal,
+            $this->maxPerDay,
+            $this->timeSlotHours,
+            $this->minSpacingSeconds,
+            $this->phashMinHamming,
+            $this->maxPerStaypoint,
+            $this->relaxedMaxPerStaypoint,
+            $this->qualityFloor,
+            $this->videoBonus,
+            $this->faceBonus,
+            $this->selfiePenalty,
+            $this->maxPerYear,
+            $this->maxPerBucket,
+            $this->videoHeavyBonus,
+            $this->sceneBucketWeights,
+            $this->coreDayBonus,
+            $this->peripheralDayPenalty,
+            $this->phashPercentile,
+            $this->spacingProgressFactor,
+            $this->cohortPenalty,
+            $dayQuotas,
+            $dayContext,
         );
     }
 }

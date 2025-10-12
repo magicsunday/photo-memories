@@ -66,6 +66,8 @@ final class MemberCurationStageTest extends TestCase
                     ],
                     'rejections' => [
                         'time_gap' => 2,
+                        'day_quota' => 0,
+                        'time_slot' => 0,
                         'phash_similarity' => 1,
                         'staypoint_quota' => 0,
                         'orientation_balance' => 0,

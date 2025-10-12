@@ -14,17 +14,17 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection\Stage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 
-use function abs;
 use function is_int;
+use function is_string;
 
 /**
- * Ensures temporal spacing constraints are honoured across the full selection.
+ * Enforces per-day quotas derived from the policy runtime context.
  */
-final class TimeGapStage implements SelectionStageInterface
+final class DayQuotaSelectionStage implements SelectionStageInterface
 {
     public function getName(): string
     {
-        return SelectionTelemetry::REASON_TIME_GAP;
+        return SelectionTelemetry::REASON_DAY_QUOTA;
     }
 
     public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
@@ -33,26 +33,31 @@ final class TimeGapStage implements SelectionStageInterface
             return [];
         }
 
-        $selected           = [];
-        $lastTimestampGlobal = null;
-        $minSpacing         = max(0, $policy->getMinSpacingSeconds());
+        $quotas = $policy->getDayQuotas();
+        if ($quotas === []) {
+            return $candidates;
+        }
+
+        $selected = [];
+        $counts   = [];
 
         foreach ($candidates as $candidate) {
-            $timestamp = $candidate['timestamp'] ?? null;
-            if (!is_int($timestamp)) {
+            $day = $candidate['day'] ?? null;
+            if (!is_string($day) || $day === '') {
                 $selected[] = $candidate;
 
                 continue;
             }
 
-            if ($lastTimestampGlobal !== null && abs($timestamp - $lastTimestampGlobal) < $minSpacing) {
-                $telemetry->increment(SelectionTelemetry::REASON_TIME_GAP);
+            $limit = $quotas[$day] ?? null;
+            if (is_int($limit) && $limit >= 0 && ($counts[$day] ?? 0) >= $limit) {
+                $telemetry->increment(SelectionTelemetry::REASON_DAY_QUOTA);
 
                 continue;
             }
 
-            $selected[]         = $candidate;
-            $lastTimestampGlobal = $timestamp;
+            $selected[]       = $candidate;
+            $counts[$day] = ($counts[$day] ?? 0) + 1;
         }
 
         return $selected;

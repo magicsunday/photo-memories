@@ -29,20 +29,49 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
   },
   "per_day_distribution": {"2024-06-10": 5},
   "per_bucket_distribution": {"2024-06-10#slot_3": 2},
+  "day_segments": {
+    "2024-06-10": {
+      "score": 0.78,
+      "category": "core",
+      "duration": 32400,
+      "metrics": {
+        "tourism_ratio": 0.6,
+        "poi_density": 0.3
+      }
+    },
+    "2024-06-11": {
+      "score": 0.41,
+      "category": "peripheral",
+      "duration": 28800,
+      "metrics": {
+        "tourism_ratio": 0.2,
+        "poi_density": 0.1
+      }
+    }
+  },
   "options": {
     "selector": "…\\PolicyDrivenMemberSelector",
     "target_total": 60,
     "max_per_day": 4,
+    "time_slot_hours": 3,
     "min_spacing_seconds": 3600,
     "phash_min_hamming": 11,
-    "max_per_staypoint": 1,
-    "enable_people_balance": true,
-    "people_balance_weight": 0.4,
-    "repeat_penalty": 0.2
+    "phash_percentile": 0.8,
+    "spacing_progress_factor": 0.5,
+    "max_per_staypoint": 2,
+    "core_day_bonus": 1,
+    "peripheral_day_penalty": 1,
+    "cohort_repeat_penalty": 0.1,
+    "video_bonus": 0.3,
+    "face_bonus": 0.2,
+    "selfie_penalty": 0.1,
+    "quality_floor": 0.4
   },
   "hash_samples": {"123": "ffeedd"},
   "exclusion_reasons": {
     "time_gap": 9,
+    "day_quota": 4,
+    "time_slot": 2,
     "phash_similarity": 3,
     "staypoint_quota": 2,
     "orientation_balance": 1,
@@ -53,6 +82,8 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
     "counts": {"pre": 96, "post": 64, "dropped": 32},
     "rejections": {
       "time_gap": 9,
+      "day_quota": 4,
+      "time_slot": 2,
       "phash_similarity": 3,
       "staypoint_quota": 2,
       "orientation_balance": 1,
@@ -65,9 +96,17 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
 ```
 
 Die Map `exclusion_reasons` entspricht der Selektor-Telemetrie und führt immer
-alle sechs bekannten Gründe (`time_gap`, `phash_similarity`, `staypoint_quota`,
-`orientation_balance`, `scene_balance`, `people_balance`). Wenn kein Ausschluss
-stattfand, ist der Zähler `0`.
+alle bekannten Gründe (`time_gap`, `day_quota`, `time_slot`,
+`phash_similarity`, `staypoint_quota`, `orientation_balance`,
+`scene_balance`, `people_balance`). Wenn kein Ausschluss stattfand, ist der
+Zähler `0`.
+
+Der Abschnitt `day_segments` beschreibt den Tageskontext, den der
+`DefaultVacationSegmentAssembler` vor der Draft-Erstellung berechnet. Jeder Tag
+erhält einen Core-Score (`score`), die Einordnung als `core` oder `peripheral`,
+eine optional normalisierte Tagesdauer (`duration`) und weitere Kennzahlen
+unter `metrics`. Die Informationen werden sowohl in der Score-Berechnung als
+auch von Tagesquoten-Policies ausgewertet.
 
 ## Monitoring-Log-Payload
 
