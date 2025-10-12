@@ -120,6 +120,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle): void {
                 $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
                 $clusterHandle->setRate('–');
+                $clusterHandle->setProgress(max(0, $index - 1));
             },
             function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle, $clusterStart, $loadedCount): void {
                 $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
