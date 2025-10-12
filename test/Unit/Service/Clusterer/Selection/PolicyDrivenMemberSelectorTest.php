@@ -69,7 +69,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $memberIds = array_keys($mediaMap);
 
         $context = new MemberSelectionContext(
-            $this->createDraft('vacation', $memberIds),
+            $this->createDraft('vacation', $memberIds, 'vacation.transit'),
             $policy,
             $mediaMap,
             $this->qualityScores(),
@@ -79,6 +79,8 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $telemetry = $result->getTelemetry();
 
         self::assertSame($policy->getProfileKey(), $telemetry['policy']['profile']);
+        self::assertSame('vacation.transit', $telemetry['storyline']);
+        self::assertSame('vacation.transit', $telemetry['policy']['storyline']);
         self::assertSame(10, $telemetry['counts']['considered']);
         self::assertArrayHasKey('faces', $telemetry['metrics']);
 
@@ -108,7 +110,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $memberIds = array_keys($mediaMap);
 
         $context = new MemberSelectionContext(
-            $this->createDraft('highlights', $memberIds),
+            $this->createDraft('highlights', $memberIds, 'highlights.sprint'),
             $policy,
             $mediaMap,
             $this->qualityScores(),
@@ -118,6 +120,8 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $telemetry = $result->getTelemetry();
 
         self::assertSame($policy->getProfileKey(), $telemetry['policy']['profile']);
+        self::assertSame('highlights.sprint', $telemetry['storyline']);
+        self::assertSame('highlights.sprint', $telemetry['policy']['storyline']);
         self::assertSame(10, $telemetry['counts']['considered']);
         self::assertArrayHasKey('faces', $telemetry['metrics']);
 
@@ -402,13 +406,16 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     /**
      * @param list<int> $memberIds
      */
-    private function createDraft(string $algorithm, array $memberIds): ClusterDraft
+    private function createDraft(string $algorithm, array $memberIds, ?string $storyline = null): ClusterDraft
     {
+        $storyline ??= $algorithm . '.default';
+
         return new ClusterDraft(
             algorithm: $algorithm,
             params: [],
             centroid: ['lat' => 52.5, 'lon' => 13.4],
             members: $memberIds,
+            storyline: $storyline,
         );
     }
 

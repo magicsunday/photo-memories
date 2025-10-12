@@ -289,6 +289,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $postCount,
             $result,
             $curatedMembers,
+            $draft->getStoryline(),
             $phaseMetrics,
         );
 
@@ -338,6 +339,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         int $postCount,
         SelectionResult $result,
         array $members,
+        string $storyline,
         ?PhaseMetricsCollector $phaseMetrics = null,
     ): array {
         $droppedCount       = $preCount > $postCount ? $preCount - $postCount : 0;
@@ -354,6 +356,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $perDayDistribution,
             $hashSamples,
             $members,
+            $storyline,
         );
 
         if ($phaseMetrics !== null) {
@@ -373,6 +376,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         return [
             'profile'                => $profile->getKey(),
+            'storyline'              => $storyline,
             'counts'                 => $telemetry['counts'],
             'spacing'                => [
                 'average_seconds' => $spacing['average'],
@@ -486,7 +490,10 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return;
         }
 
-        $payload = $phaseMetrics->summarise(['algorithm' => $draft->getAlgorithm()] + $context);
+        $payload = $phaseMetrics->summarise([
+            'algorithm' => $draft->getAlgorithm(),
+            'storyline' => $draft->getStoryline(),
+        ] + $context);
 
         $this->monitoringEmitter->emit('cluster_member_selection', $status, $payload);
     }
@@ -606,6 +613,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         array $perDayDistribution,
         array $hashSamples,
         array $members,
+        string $storyline,
     ): array {
         $rawTelemetry = $result->getTelemetry();
 
@@ -658,6 +666,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $telemetry['hash_samples'] = $hashSamples;
         $telemetry['averages'] = $averages;
         $telemetry['relaxation_hints'] = $hints;
+        $telemetry['storyline'] = $storyline;
 
         return $telemetry;
     }

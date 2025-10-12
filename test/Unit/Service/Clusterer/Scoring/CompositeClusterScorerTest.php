@@ -256,6 +256,53 @@ final class CompositeClusterScorerTest extends TestCase
     }
 
     #[Test]
+    public function appliesStorylineWeightOverrides(): void
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+
+        $heuristics = [
+            new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
+            new PeopleClusterScoreHeuristic(),
+        ];
+
+        $scorer = new CompositeClusterScorer(
+            em: $entityManager,
+            heuristics: $heuristics,
+            weights: [
+                'quality' => 0.5,
+                'people'  => 0.5,
+            ],
+            algorithmBoosts: [],
+            algorithmGroups: [],
+            defaultAlgorithmGroup: 'default',
+            algorithmWeightOverrides: [
+                'vacation' => [
+                    'default' => ['quality' => 0.6],
+                    'vacation.transit' => ['quality' => 0.2, 'people' => 0.8],
+                ],
+            ],
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'vacation',
+            params: [
+                'quality_avg' => 0.4,
+                'people'      => 0.5,
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [],
+            storyline: 'vacation.transit',
+        );
+
+        $scored  = $scorer->score([$cluster]);
+        $params  = $scored[0]->getParams();
+        $expected = (0.2 * 0.4) + (0.8 * 0.5);
+
+        self::assertEqualsWithDelta($expected, $params['pre_norm_score'], 1e-9);
+        self::assertEqualsWithDelta(0.5, $params['post_norm_score'], 1e-9);
+    }
+
+    #[Test]
     public function normalisesScoresPerAlgorithm(): void
     {
         $entityManager = $this->createStub(EntityManagerInterface::class);

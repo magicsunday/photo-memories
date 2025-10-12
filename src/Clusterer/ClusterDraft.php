@@ -15,6 +15,8 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Location;
 
 use function count;
+use function is_string;
+use function trim;
 
 /**
  * Immutable data transfer object that captures the calculated cluster state
@@ -26,6 +28,11 @@ final class ClusterDraft
      * Name of the algorithm that produced the cluster.
      */
     private readonly string $algorithm;
+
+    /**
+     * Semantic storyline identifier describing the narrative of the cluster.
+     */
+    private string $storyline;
 
     /**
      * Raw configuration parameters provided by the clustering strategy.
@@ -58,11 +65,13 @@ final class ClusterDraft
         array $params,
         array $centroid,
         array $members,
+        ?string $storyline = null,
     ) {
         $this->algorithm = $algorithm;
         $this->params    = $params;
         $this->centroid  = $centroid;
         $this->members   = $members;
+        $this->storyline = $this->normaliseStoryline($storyline);
 
         // Calculate basic cluster statistics that are derived from the constructor arguments.
         $this->membersCount = count($members);
@@ -141,6 +150,22 @@ final class ClusterDraft
     }
 
     /**
+     * Returns the semantic storyline identifier assigned to the cluster.
+     */
+    public function getStoryline(): string
+    {
+        return $this->storyline;
+    }
+
+    /**
+     * Updates the storyline identifier.
+     */
+    public function setStoryline(string $storyline): void
+    {
+        $this->storyline = $this->normaliseStoryline($storyline);
+    }
+
+    /**
      * @return array<string, int|float|string|bool|array|null>
      */
     public function getParams(): array
@@ -157,6 +182,10 @@ final class ClusterDraft
     public function setParam(string $key, int|float|string|bool|array|null $value): void
     {
         $this->params[$key] = $value;
+
+        if ($key === 'storyline' && is_string($value)) {
+            $this->storyline = $this->normaliseStoryline($value);
+        }
     }
 
     /**
@@ -427,11 +456,19 @@ final class ClusterDraft
      */
     public function withMembers(array $members, ?array $params = null): self
     {
+        $nextParams = $params ?? $this->params;
+        $storyline  = $this->storyline;
+        $candidate  = $nextParams['storyline'] ?? null;
+        if (is_string($candidate) && $candidate !== '') {
+            $storyline = $candidate;
+        }
+
         $copy = new self(
             $this->algorithm,
-            $params ?? $this->params,
+            $nextParams,
             $this->centroid,
             $members,
+            $storyline,
         );
 
         $copy->setStartAt($this->startAt);
@@ -458,5 +495,16 @@ final class ClusterDraft
     public function withParams(array $params): self
     {
         return $this->withMembers($this->members, $params);
+    }
+
+    private function normaliseStoryline(?string $storyline): string
+    {
+        if ($storyline === null) {
+            return 'default';
+        }
+
+        $trimmed = trim($storyline);
+
+        return $trimmed === '' ? 'default' : $trimmed;
     }
 }

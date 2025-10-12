@@ -53,8 +53,8 @@ final class SelectionPolicyProviderConfigTest extends TestCase
 
         $provider = new SelectionPolicyProvider(
             profiles: $configuration['profiles'],
-            algorithmProfiles: $configuration['algorithm_profiles'],
             defaultProfile: $configuration['default_profile'],
+            algorithmProfiles: $configuration['algorithm_profiles'],
         );
 
         $policy = $provider->forAlgorithm('highlights');
@@ -68,6 +68,28 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         self::assertSame(10, $policy->getPhashMinHamming());
         self::assertSame(2, $policy->getMaxPerStaypoint());
         self::assertSame(0.6, $policy->getQualityFloor());
+    }
+
+    #[Test]
+    public function storylineSpecificProfileOverridesDefault(): void
+    {
+        $configuration = $this->selectionConfiguration();
+        $configuration['algorithm_profiles']['vacation'] = [
+            'default' => 'vacation',
+            'vacation.transit' => 'location',
+            'transit' => 'location',
+        ];
+
+        $provider = new SelectionPolicyProvider(
+            profiles: $configuration['profiles'],
+            defaultProfile: $configuration['default_profile'],
+            algorithmProfiles: $configuration['algorithm_profiles'],
+        );
+
+        $policy = $provider->forAlgorithm('vacation', 'vacation.transit');
+
+        self::assertSame('location', $policy->getProfileKey());
+        self::assertSame(48, $policy->getTargetTotal());
     }
 
     /**

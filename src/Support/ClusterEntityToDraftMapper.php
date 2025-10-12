@@ -89,7 +89,8 @@ final class ClusterEntityToDraftMapper
                 algorithm: $algorithm,
                 params: $params,
                 centroid: $entity->getCentroid(),
-                members: $members
+                members: $members,
+                storyline: is_string($params['storyline'] ?? null) ? $params['storyline'] : null,
             );
 
             $draft->setStartAt($entity->getStartAt());

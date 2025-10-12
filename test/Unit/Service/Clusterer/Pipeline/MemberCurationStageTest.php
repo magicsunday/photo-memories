@@ -58,6 +58,7 @@ final class MemberCurationStageTest extends TestCase
             new MemberSelectionResult(
                 [5, 6],
                 [
+                    'storyline' => 'policy-algo.weekend',
                     'counts' => [
                         'considered' => 3,
                         'eligible' => 3,
@@ -83,7 +84,7 @@ final class MemberCurationStageTest extends TestCase
                         'per_year' => [2024 => 2],
                         'per_bucket' => ['06-01' => 2],
                     ],
-                    'policy' => ['profile' => 'default'],
+                    'policy' => ['profile' => 'default', 'storyline' => 'policy-algo.weekend'],
                 ],
             ),
         );
@@ -110,7 +111,7 @@ final class MemberCurationStageTest extends TestCase
 
         $stage = new MemberCurationStage($mediaLookup, $policyProvider, $selector, $emitter);
 
-        $draft = new ClusterDraft('policy-algo', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2, 3]);
+        $draft = new ClusterDraft('policy-algo', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2, 3], 'policy-algo.weekend');
         $result = $stage->process([$draft]);
 
         self::assertCount(1, $result);
@@ -126,6 +127,7 @@ final class MemberCurationStageTest extends TestCase
         ], $selection['per_day_distribution']);
         self::assertSame(2, $selection['rejection_counts']['time_gap']);
         self::assertSame(1, $selection['rejection_counts']['phash_similarity']);
+        self::assertSame('policy-algo.weekend', $selection['storyline']);
 
         $completedEvents = array_values(array_filter(
             $emitter->events,
@@ -140,5 +142,6 @@ final class MemberCurationStageTest extends TestCase
         self::assertSame(2, $payload['dropped_spacing']);
         self::assertSame(45.0, $payload['avg_time_gap_s']);
         self::assertSame(8.0, $payload['avg_phash_distance']);
+        self::assertSame('policy-algo.weekend', $payload['storyline']);
     }
 }
