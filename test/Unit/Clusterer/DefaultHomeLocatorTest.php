@@ -43,6 +43,10 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertIsInt($home['timezone_offset']);
         self::assertSame(1, count($home['centers']));
         self::assertEqualsWithDelta(8.0, $home['centers'][0]['radius_km'], 0.0001);
+        self::assertArrayHasKey('valid_from', $home['centers'][0]);
+        self::assertArrayHasKey('valid_until', $home['centers'][0]);
+        self::assertNull($home['centers'][0]['valid_from']);
+        self::assertNull($home['centers'][0]['valid_until']);
     }
 
     #[Test]
@@ -98,6 +102,8 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertEqualsWithDelta($home['centers'][0]['lat'], $home['lat'], 0.0001);
         self::assertEqualsWithDelta($home['centers'][0]['lon'], $home['lon'], 0.0001);
         self::assertGreaterThanOrEqual(12.0, $home['centers'][0]['radius_km']);
+        self::assertIsInt($home['centers'][0]['valid_from']);
+        self::assertIsInt($home['centers'][0]['valid_until']);
     }
 
     #[Test]
@@ -142,6 +148,10 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertCount(2, $home['centers']);
         self::assertEqualsWithDelta(52.5200, $home['centers'][0]['lat'], 0.001);
         self::assertEqualsWithDelta(48.1371, $home['centers'][1]['lat'], 0.001);
+        self::assertIsInt($home['centers'][0]['valid_from']);
+        self::assertIsInt($home['centers'][0]['valid_until']);
+        self::assertIsInt($home['centers'][1]['valid_from']);
+        self::assertIsInt($home['centers'][1]['valid_until']);
     }
 
     #[Test]
@@ -174,5 +184,132 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertNotNull($home);
         self::assertGreaterThanOrEqual(8.0, $home['radius_km']);
         self::assertGreaterThanOrEqual(8.0, $home['centers'][0]['radius_km']);
+    }
+
+    #[Test]
+    public function computesNightPercentileRadiusAndValidityWindows(): void
+    {
+        $locator = new DefaultHomeLocator(
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 6.0,
+        );
+
+        $berlin = $this->makeLocation('berlin-home', 'Berlin, Deutschland', 52.5200, 13.4050, country: 'Germany');
+        $munich = $this->makeLocation('munich-home', 'München, Deutschland', 48.1371, 11.5754, country: 'Germany');
+        $tz     = new DateTimeZone('Europe/Berlin');
+
+        $items = [];
+
+        $berlinDays = [
+            new DateTimeImmutable('2024-01-01 10:00:00', $tz),
+            new DateTimeImmutable('2024-01-05 11:30:00', $tz),
+            new DateTimeImmutable('2024-01-11 12:45:00', $tz),
+        ];
+
+        foreach ($berlinDays as $index => $day) {
+            $items[] = $this->makeMediaFixture(
+                4000 + $index,
+                sprintf('berlin-day-%d.jpg', $index),
+                $day,
+                $berlin->getLat() + ($index * 0.0002),
+                $berlin->getLon() + ($index * 0.0002),
+                $berlin,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+        }
+
+        $berlinNightStart = new DateTimeImmutable('2024-01-02 23:15:00', $tz);
+        for ($i = 0; $i < 5; ++$i) {
+            $night = $berlinNightStart->add(new DateInterval('P' . ($i * 2) . 'D'));
+            $items[] = $this->makeMediaFixture(
+                4100 + $i,
+                sprintf('berlin-night-%d.jpg', $i),
+                $night,
+                $berlin->getLat() + 0.02 + ($i * 0.0005),
+                $berlin->getLon() + 0.02 + ($i * 0.0005),
+                $berlin,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+        }
+
+        $munichDays = [
+            new DateTimeImmutable('2024-06-01 11:00:00', $tz),
+            new DateTimeImmutable('2024-06-04 12:30:00', $tz),
+            new DateTimeImmutable('2024-06-07 13:15:00', $tz),
+        ];
+
+        foreach ($munichDays as $index => $day) {
+            $items[] = $this->makeMediaFixture(
+                5000 + $index,
+                sprintf('munich-day-%d.jpg', $index),
+                $day,
+                $munich->getLat() + ($index * 0.0003),
+                $munich->getLon() + ($index * 0.0003),
+                $munich,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $munichNightStart = new DateTimeImmutable('2024-06-02 22:45:00', $tz);
+        for ($i = 0; $i < 20; ++$i) {
+            $night   = $munichNightStart->add(new DateInterval('P' . $i . 'D'));
+            $offset  = $i < 18 ? 0.18 + ($i * 0.001) : 0.28 + (($i - 18) * 0.02);
+            $items[] = $this->makeMediaFixture(
+                5100 + $i,
+                sprintf('munich-night-%d.jpg', $i),
+                $night,
+                $munich->getLat() + $offset,
+                $munich->getLon() + $offset,
+                $munich,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+        }
+
+        $home = $locator->determineHome($items);
+
+        self::assertNotNull($home);
+        self::assertCount(2, $home['centers']);
+
+        $berlinCenter = null;
+        $munichCenter = null;
+
+        foreach ($home['centers'] as $center) {
+            if ($berlinCenter === null && abs($center['lat'] - $berlin->getLat()) < 0.01) {
+                $berlinCenter = $center;
+            }
+
+            if ($munichCenter === null && abs($center['lat'] - $munich->getLat()) < 0.01) {
+                $munichCenter = $center;
+            }
+        }
+
+        self::assertNotNull($berlinCenter);
+        self::assertNotNull($munichCenter);
+
+        $berlinValidFrom  = $berlinDays[0]->getTimestamp();
+        $berlinLastDay    = $berlinDays[count($berlinDays) - 1];
+        $berlinLastNight  = $berlinNightStart->add(new DateInterval('P8D'));
+        $berlinValidUntil = max($berlinLastDay->getTimestamp(), $berlinLastNight->getTimestamp());
+
+        $munichValidFrom  = $munichDays[0]->getTimestamp();
+        $munichLastDay    = $munichDays[count($munichDays) - 1];
+        $munichLastNight  = $munichNightStart->add(new DateInterval('P19D'));
+        $munichValidUntil = max($munichLastDay->getTimestamp(), $munichLastNight->getTimestamp());
+
+        self::assertEqualsWithDelta(10.0, $berlinCenter['radius_km'], 0.5);
+        self::assertSame($berlinValidFrom, $berlinCenter['valid_from']);
+        self::assertSame($berlinValidUntil, $berlinCenter['valid_until']);
+
+        self::assertEqualsWithDelta(25.0, $munichCenter['radius_km'], 0.5);
+        self::assertSame($munichValidFrom, $munichCenter['valid_from']);
+        self::assertSame($munichValidUntil, $munichCenter['valid_until']);
     }
 }

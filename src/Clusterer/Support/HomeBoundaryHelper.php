@@ -14,7 +14,10 @@ namespace MagicSunday\Memories\Clusterer\Support;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_filter;
+use function array_values;
 use function is_array;
+use function is_int;
 
 /**
  * Utility helpers for evaluating proximity to configured home centers.
@@ -22,15 +25,41 @@ use function is_array;
 final class HomeBoundaryHelper
 {
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      *
-     * @return list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>
+     * @return list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>
      */
-    public static function centers(array $home): array
+    public static function centers(array $home, ?int $timestamp = null): array
     {
         $centers = $home['centers'] ?? null;
 
         if (is_array($centers) && $centers !== []) {
+            if ($timestamp === null) {
+                return $centers;
+            }
+
+            $filtered = array_values(array_filter(
+                $centers,
+                static function (array $center) use ($timestamp): bool {
+                    $from  = $center['valid_from'] ?? null;
+                    $until = $center['valid_until'] ?? null;
+
+                    if ($from !== null && is_int($from) && $timestamp < $from) {
+                        return false;
+                    }
+
+                    if ($until !== null && is_int($until) && $timestamp > $until) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+
+            if ($filtered !== []) {
+                return $filtered;
+            }
+
             return $centers;
         }
 
@@ -40,17 +69,19 @@ final class HomeBoundaryHelper
             'radius_km'       => $home['radius_km'],
             'country'         => $home['country'] ?? null,
             'timezone_offset' => $home['timezone_offset'] ?? null,
+            'valid_from'      => null,
+            'valid_until'     => null,
         ]];
     }
 
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      *
-     * @return array{distance_km:float,radius_km:float,center:array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int},index:int}
+     * @return array{distance_km:float,radius_km:float,center:array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null},index:int}
      */
-    public static function nearestCenter(array $home, float $lat, float $lon): array
+    public static function nearestCenter(array $home, float $lat, float $lon, ?int $timestamp = null): array
     {
-        $centers    = self::centers($home);
+        $centers    = self::centers($home, $timestamp);
         $bestIndex  = 0;
         $bestCenter = $centers[0];
         $bestDist   = PHP_FLOAT_MAX;
@@ -79,11 +110,16 @@ final class HomeBoundaryHelper
     }
 
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,valid_from?:int|null,valid_until?:int|null}>} $home
      */
-    public static function isBeyondHome(array $home, float $lat, float $lon, bool $treatSecondaryCentersAsHome = false): bool
-    {
-        $nearest = self::nearestCenter($home, $lat, $lon);
+    public static function isBeyondHome(
+        array $home,
+        float $lat,
+        float $lon,
+        bool $treatSecondaryCentersAsHome = false,
+        ?int $timestamp = null,
+    ): bool {
+        $nearest = self::nearestCenter($home, $lat, $lon, $timestamp);
 
         if ($nearest['index'] > 0) {
             if ($treatSecondaryCentersAsHome === false) {
@@ -103,11 +139,11 @@ final class HomeBoundaryHelper
     }
 
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,valid_from?:int|null,valid_until?:int|null}>} $home
      */
-    public static function primaryRadius(array $home): float
+    public static function primaryRadius(array $home, ?int $timestamp = null): float
     {
-        $centers = self::centers($home);
+        $centers = self::centers($home, $timestamp);
 
         return (float) $centers[0]['radius_km'];
     }

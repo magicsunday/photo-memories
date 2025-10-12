@@ -11,9 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Service;
 
+use DateTimeImmutable;
+use DateTimeZone;
+use Exception;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
@@ -94,6 +98,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 'maxDistanceKm'        => (float) ($summary['maxDistanceKm'] ?? 0.0),
                 'baseAway'             => (bool) ($summary['baseAway'] ?? false),
                 'gpsMembers'           => $summary['gpsMembers'] ?? [],
+                'timestamp'            => $this->summaryTimestamp($summary),
             ];
         }
 
@@ -112,8 +117,13 @@ final class RunDetector implements VacationRunDetectorInterface
                 $hasUsefulSamples = $features['sufficientSamples'] || $features['photoCount'] >= 2;
 
                 if ($hasUsefulSamples) {
-                    $centroid = MediaMath::centroid($features['gpsMembers']);
-                    $nearest  = HomeBoundaryHelper::nearestCenter($home, $centroid['lat'], $centroid['lon']);
+                    $centroid   = MediaMath::centroid($features['gpsMembers']);
+                    $nearest    = HomeBoundaryHelper::nearestCenter(
+                        $home,
+                        $centroid['lat'],
+                        $centroid['lon'],
+                        $features['timestamp'],
+                    );
 
                     if ($nearest['distance_km'] > $nearest['radius_km']) {
                         $candidate = true;
@@ -246,7 +256,7 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      */
     private function determineEffectiveMinAwayDistance(array $home): float
     {
@@ -327,6 +337,49 @@ final class RunDetector implements VacationRunDetectorInterface
         return true;
     }
 
+    private function summaryTimestamp(array $summary): ?int
+    {
+        $members = $summary['gpsMembers'] ?? null;
+        if (is_array($members)) {
+            foreach ($members as $member) {
+                if (!$member instanceof Media) {
+                    continue;
+                }
+
+                $takenAt = $member->getTakenAt();
+                if ($takenAt instanceof DateTimeImmutable) {
+                    return $takenAt->getTimestamp();
+                }
+            }
+        }
+
+        $date = $summary['date'] ?? null;
+        if (!is_string($date) || $date === '') {
+            return null;
+        }
+
+        $tzId = $summary['localTimezoneIdentifier'] ?? null;
+        $tz   = null;
+
+        if (is_string($tzId) && $tzId !== '') {
+            try {
+                $tz = new DateTimeZone($tzId);
+            } catch (Exception) {
+                $tz = null;
+            }
+        }
+
+        try {
+            $reference = $tz instanceof DateTimeZone
+                ? new DateTimeImmutable($date . ' 12:00:00', $tz)
+                : new DateTimeImmutable($date . ' 12:00:00', new DateTimeZone('UTC'));
+        } catch (Exception) {
+            return null;
+        }
+
+        return $reference->getTimestamp();
+    }
+
     /**
      * @param list<array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>}> $profiles
      *
@@ -398,7 +451,7 @@ final class RunDetector implements VacationRunDetectorInterface
 
     /**
      * @param array<string, mixed>                                         $summary
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      */
     private function isDominantStaypointOutsideHome(array $summary, array $home): bool
     {
@@ -409,17 +462,20 @@ final class RunDetector implements VacationRunDetectorInterface
 
         $primary = $dominant[0];
 
+        $timestamp = $this->summaryTimestamp($summary);
+
         return HomeBoundaryHelper::isBeyondHome(
             $home,
             (float) $primary['lat'],
             (float) $primary['lon'],
             true,
+            $timestamp,
         );
     }
 
     /**
      * @param array<string, mixed>                                         $summary
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      */
     private function isDominantStaypointInsideHome(array $summary, array $home): bool
     {
