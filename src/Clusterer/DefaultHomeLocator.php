@@ -24,13 +24,18 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function array_slice;
 use function assert;
 use function count;
+use function ceil;
 use function intdiv;
 use function is_array;
 use function is_string;
 use function max;
+use function min;
 use function round;
 use function strtolower;
+use function sort;
 use function usort;
+
+use const SORT_NUMERIC;
 
 /**
  * Default implementation that derives the home location from timestamped media.
@@ -41,13 +46,19 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
     private const int NIGHT_END_HOUR = 6;
 
+    private const float NIGHT_RADIUS_PERCENTILE = 0.95;
+
+    private const float MIN_NIGHT_RADIUS_KM = 10.0;
+
+    private const float MAX_NIGHT_RADIUS_KM = 25.0;
+
     public function __construct(
         private readonly string $timezone = 'Europe/Berlin',
         private readonly float $defaultHomeRadiusKm = 15.0,
         private readonly ?float $homeLat = null,
         private readonly ?float $homeLon = null,
         private readonly ?float $homeRadiusKm = null,
-        private readonly int $maxHomeCenters = 2,
+        private readonly int $maxHomeCenters = 3,
         private readonly float $fallbackRadiusScale = 1.5,
     ) {
         if ($this->timezone === '') {
@@ -82,7 +93,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     /**
      * @param list<Media> $items
      *
-     * @return array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int,country:?string,timezone_offset:?int}>}|null
+     * @return array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int,centers:list<array{lat:float,lon:float,radius_km:float,member_count:int,dwell_seconds:int,country:?string,timezone_offset:?int,valid_from:?int,valid_until:?int}>}|null
      *
      * @throws DateInvalidTimeZoneException
      * @throws DateMalformedStringException
@@ -120,6 +131,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                     'dwell_seconds'   => 0,
                     'country'         => $country,
                     'timezone_offset' => $timezoneOffset,
+                    'valid_from'      => null,
+                    'valid_until'     => null,
                 ]],
             ];
         }
@@ -127,6 +140,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         /**
          * @var array<string, array{
          *     members:list<Media>,
+         *     nightSamples:list<array{lat:float,lon:float}>,
          *     countryCounts:array<string,int>,
          *     offsets:array<int,int>,
          *     firstTimestamp:int|null,
@@ -144,10 +158,6 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             $local = $takenAt->setTimezone($tz);
             $hour  = (int) $local->format('G');
 
-            if ($hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR) {
-                continue;
-            }
-
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
             if ($lat === null || $lon === null) {
@@ -158,14 +168,13 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             if (!isset($clusters[$key])) {
                 $clusters[$key] = [
                     'members'       => [],
+                    'nightSamples'  => [],
                     'countryCounts' => [],
                     'offsets'       => [],
                     'firstTimestamp' => null,
                     'lastTimestamp'  => null,
                 ];
             }
-
-            $clusters[$key]['members'][] = $media;
 
             $timestamp = $local->getTimestamp();
             $first     = $clusters[$key]['firstTimestamp'];
@@ -177,6 +186,17 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
             if ($last === null || $timestamp > $last) {
                 $clusters[$key]['lastTimestamp'] = $timestamp;
+            }
+
+            $isNight = $hour >= self::NIGHT_START_HOUR || $hour < self::NIGHT_END_HOUR;
+
+            if ($isNight) {
+                $clusters[$key]['nightSamples'][] = [
+                    'lat' => $lat,
+                    'lon' => $lon,
+                ];
+            } else {
+                $clusters[$key]['members'][] = $media;
             }
 
             $location = $media->getLocation();
@@ -264,7 +284,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     }
 
     /**
-     * @param array<string, array{members:list<Media>,countryCounts:array<string,int>,offsets:array<int,int>,firstTimestamp:int|null,lastTimestamp:int|null}> $clusters
+     * @param array<string, array{members:list<Media>,nightSamples:list<array{lat:float,lon:float}>,countryCounts:array<string,int>,offsets:array<int,int>,firstTimestamp:int|null,lastTimestamp:int|null}> $clusters
      *
      * @return list<array{
      *     lat:float,
@@ -274,6 +294,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
      *     dwell_seconds:int,
      *     country:?string,
      *     timezone_offset:?int,
+     *     valid_from:?int,
+     *     valid_until:?int,
      * }>
      */
     private function summariseClusters(array $clusters): array
@@ -282,11 +304,17 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
         foreach ($clusters as $data) {
             $members = $data['members'];
-            if ($members === []) {
+            $nightSamples = $data['nightSamples'];
+
+            if ($members === [] && $nightSamples === []) {
                 continue;
             }
 
-            $centroid = MediaMath::centroid($members);
+            if ($members !== []) {
+                $centroid = MediaMath::centroid($members);
+            } else {
+                $centroid = $this->centroidFromNightSamples($nightSamples);
+            }
 
             $maxDistanceKm = 0.0;
             foreach ($members as $media) {
@@ -310,16 +338,24 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             $timezoneOffset  = $this->majorityOffset($data['offsets']);
             $memberCount     = count($members);
             $dwellSeconds    = $this->dwellSeconds($data['firstTimestamp'], $data['lastTimestamp']);
-            $adaptiveRadius  = $this->adaptiveRadius($memberCount, $maxDistanceKm, $dwellSeconds);
+            $radius          = $this->radiusForCluster(
+                $centroid,
+                $nightSamples,
+                $memberCount,
+                $maxDistanceKm,
+                $dwellSeconds,
+            );
 
             $summaries[] = [
                 'lat'             => $centroid['lat'],
                 'lon'             => $centroid['lon'],
-                'radius_km'       => $adaptiveRadius,
+                'radius_km'       => $radius,
                 'member_count'    => $memberCount,
                 'dwell_seconds'   => $dwellSeconds,
                 'country'         => $country,
                 'timezone_offset' => $timezoneOffset,
+                'valid_from'      => $data['firstTimestamp'],
+                'valid_until'     => $data['lastTimestamp'],
             ];
         }
 
@@ -387,5 +423,74 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         }
 
         return $radius;
+    }
+
+    /**
+     * @param list<array{lat:float,lon:float}> $nightSamples
+     *
+     * @return array{lat:float,lon:float}
+     */
+    private function centroidFromNightSamples(array $nightSamples): array
+    {
+        $sumLat = 0.0;
+        $sumLon = 0.0;
+        $count  = count($nightSamples);
+
+        foreach ($nightSamples as $sample) {
+            $sumLat += $sample['lat'];
+            $sumLon += $sample['lon'];
+        }
+
+        if ($count === 0) {
+            return ['lat' => 0.0, 'lon' => 0.0];
+        }
+
+        return [
+            'lat' => $sumLat / $count,
+            'lon' => $sumLon / $count,
+        ];
+    }
+
+    /**
+     * @param list<array{lat:float,lon:float}> $nightSamples
+     */
+    private function radiusForCluster(
+        array $centroid,
+        array $nightSamples,
+        int $memberCount,
+        float $maxDistanceKm,
+        int $dwellSeconds,
+    ): float {
+        if ($nightSamples === []) {
+            return $this->adaptiveRadius($memberCount, $maxDistanceKm, $dwellSeconds);
+        }
+
+        $distances = [];
+        foreach ($nightSamples as $sample) {
+            $distances[] = MediaMath::haversineDistanceInMeters(
+                $sample['lat'],
+                $sample['lon'],
+                $centroid['lat'],
+                $centroid['lon'],
+            ) / 1000.0;
+        }
+
+        if ($distances === []) {
+            return $this->adaptiveRadius($memberCount, $maxDistanceKm, $dwellSeconds);
+        }
+
+        sort($distances, SORT_NUMERIC);
+
+        $count = count($distances);
+        $index = (int) ceil($count * self::NIGHT_RADIUS_PERCENTILE) - 1;
+        if ($index < 0) {
+            $index = 0;
+        } elseif ($index >= $count) {
+            $index = $count - 1;
+        }
+
+        $radius = $distances[$index];
+
+        return max(self::MIN_NIGHT_RADIUS_KM, min(self::MAX_NIGHT_RADIUS_KM, $radius));
     }
 }
