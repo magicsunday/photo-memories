@@ -23,10 +23,13 @@ use function array_values;
 use function count;
 use function explode;
 use function implode;
+use function in_array;
 use function is_array;
 use function is_numeric;
 use function is_scalar;
 use function is_string;
+use function number_format;
+use function round;
 use function trim;
 
 use const SORT_STRING;
@@ -88,12 +91,12 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
     {
         $routeParts = $this->resolveRouteParts($params);
         if ($routeParts !== []) {
-            return 'Route: ' . implode(' – ', $routeParts);
+            return implode(' → ', $routeParts);
         }
 
         $countries = $this->resolveCountries($params);
         if ($countries !== []) {
-            return 'Route: ' . implode(' → ', $countries);
+            return implode(' → ', $countries);
         }
 
         return '';
@@ -121,6 +124,11 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $parts[] = $range;
         }
 
+        $travelMetrics = $this->resolveTravelMetrics($params);
+        if ($travelMetrics !== '') {
+            $parts[] = $travelMetrics;
+        }
+
         return $parts !== [] ? implode(' • ', $parts) : '';
     }
 
@@ -136,11 +144,13 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
         $staypointParts = $params['primaryStaypointLocationParts'] ?? null;
         if (is_array($staypointParts)) {
             foreach ($staypointParts as $part) {
-                if (is_string($part)) {
-                    $trimmed = trim($part);
-                    if ($trimmed !== '') {
-                        $parts[] = $trimmed;
-                    }
+                if (!is_string($part)) {
+                    continue;
+                }
+
+                $trimmed = trim($part);
+                if ($trimmed !== '') {
+                    $parts[] = $trimmed;
                 }
             }
         }
@@ -255,5 +265,182 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
         }
 
         return $fromDate->format('d.m.Y') . ' – ' . $toDate->format('d.m.Y');
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function resolveTravelMetrics(array $params): string
+    {
+        $distanceLabel = $this->resolveDistanceLabel($params);
+        $legLabel      = $this->resolveLegLabel($params);
+
+        if ($distanceLabel !== '' && $legLabel !== '') {
+            return $distanceLabel . ' über ' . $legLabel;
+        }
+
+        if ($distanceLabel !== '') {
+            return $distanceLabel;
+        }
+
+        if ($legLabel !== '') {
+            return $legLabel;
+        }
+
+        return '';
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function resolveDistanceLabel(array $params): string
+    {
+        $distance = $params['total_travel_km'] ?? null;
+        if (!is_numeric($distance)) {
+            $distance = $this->extractDistanceFromSegments($params['travel_segments'] ?? null);
+        }
+
+        if (!is_numeric($distance)) {
+            return '';
+        }
+
+        $value = (float) $distance;
+        if ($value <= 0.0) {
+            return '';
+        }
+
+        $rounded = round($value);
+        if ($rounded <= 0.0) {
+            return '';
+        }
+
+        $formatted = number_format($rounded, 0, ',', '.');
+
+        return '~' . $formatted . "\u{202F}km";
+    }
+
+    private function resolveLegLabel(array $params): string
+    {
+        $legCount = $this->determineLegCount($params);
+        if ($legCount === null || $legCount <= 0) {
+            return '';
+        }
+
+        return $legCount === 1 ? '1 Etappe' : $legCount . ' Etappen';
+    }
+
+    private function determineLegCount(array $params): ?int
+    {
+        $segmentCount = $this->countSegments($params['travel_segments'] ?? null);
+        if ($segmentCount !== null) {
+            return $segmentCount;
+        }
+
+        $waypointLabels = $this->collectWaypointLabels($params['travel_waypoints'] ?? null);
+        if ($waypointLabels !== []) {
+            $count = count($waypointLabels);
+            if ($count >= 2) {
+                return $count - 1;
+            }
+        }
+
+        $routeParts = $this->resolveRouteParts($params);
+        $routeCount = count($routeParts);
+        if ($routeCount >= 2) {
+            return $routeCount - 1;
+        }
+
+        return null;
+    }
+
+    private function extractDistanceFromSegments(mixed $segments): float|int|null
+    {
+        if (!is_array($segments)) {
+            return null;
+        }
+
+        $total = 0.0;
+        $hasDistance = false;
+
+        foreach ($segments as $segment) {
+            if (!is_array($segment)) {
+                continue;
+            }
+
+            $distance = $segment['distance_km'] ?? ($segment['distanceKm'] ?? null);
+            if (!is_numeric($distance)) {
+                continue;
+            }
+
+            $total += (float) $distance;
+            $hasDistance = true;
+        }
+
+        if ($hasDistance === false) {
+            return null;
+        }
+
+        return $total;
+    }
+
+    private function countSegments(mixed $segments): ?int
+    {
+        if (!is_array($segments)) {
+            return null;
+        }
+
+        $count = 0;
+
+        foreach ($segments as $segment) {
+            if (!is_array($segment)) {
+                continue;
+            }
+
+            if (array_filter($segment, static fn ($value): bool => $value !== null) === []) {
+                continue;
+            }
+
+            ++$count;
+        }
+
+        if ($count <= 0) {
+            return null;
+        }
+
+        return $count;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function collectWaypointLabels(mixed $waypoints): array
+    {
+        if (!is_array($waypoints)) {
+            return [];
+        }
+
+        $labels = [];
+
+        foreach ($waypoints as $waypoint) {
+            if (!is_array($waypoint)) {
+                continue;
+            }
+
+            $label = $waypoint['label'] ?? ($waypoint['city'] ?? null);
+            if (!is_string($label)) {
+                continue;
+            }
+
+            $trimmed = trim($label);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (!in_array($trimmed, $labels, true)) {
+                $labels[] = $trimmed;
+            }
+        }
+
+        return $labels;
     }
 }
