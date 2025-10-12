@@ -23,6 +23,7 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_any;
+use function array_filter;
 use function array_key_first;
 use function array_keys;
 use function array_map;
@@ -31,8 +32,16 @@ use function array_values;
 use function arsort;
 use function assert;
 use function count;
+use function is_array;
+use function is_bool;
+use function is_float;
+use function is_int;
+use function is_numeric;
+use function is_string;
+use function floor;
 use function sort;
 use function strcmp;
+use function strtolower;
 use function usort;
 
 use const SORT_NUMERIC;
@@ -48,16 +57,24 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
     private LocationHelper $locHelper;
 
+    private float $minAwayDistanceKm;
+
+    private float $maxAwayDistanceKm;
+
     public function __construct(
         ?LocationHelper $locHelper = null,
         private string $timezone = 'Europe/Berlin',
-        private int $minNights = 1,
+        private int $minNights = 2,
         private int $maxNights = 3,
         private int $minItemsPerDay = 4,
         private int $minYears = 3,
         private int $minItemsTotal = 24,
+        float $minAwayDistanceKm = 80.0,
+        float $maxAwayDistanceKm = 400.0,
     ) {
         $this->locHelper = $locHelper ?? LocationHelper::createDefault();
+        $this->minAwayDistanceKm = $minAwayDistanceKm;
+        $this->maxAwayDistanceKm = $maxAwayDistanceKm;
         if ($this->minNights < 1) {
             throw new InvalidArgumentException('minNights must be >= 1.');
         }
@@ -80,6 +97,18 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         if ($this->minItemsTotal < 1) {
             throw new InvalidArgumentException('minItemsTotal must be >= 1.');
+        }
+
+        if ($this->minAwayDistanceKm <= 0.0) {
+            throw new InvalidArgumentException('minAwayDistanceKm must be greater than 0.');
+        }
+
+        if ($this->maxAwayDistanceKm <= 0.0) {
+            throw new InvalidArgumentException('maxAwayDistanceKm must be greater than 0.');
+        }
+
+        if ($this->maxAwayDistanceKm <= $this->minAwayDistanceKm) {
+            throw new InvalidArgumentException('maxAwayDistanceKm must be greater than minAwayDistanceKm.');
         }
     }
 
@@ -194,6 +223,18 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                         return false;
                     }
 
+                    if (!$this->runHasWeekendAnchor($run)) {
+                        return false;
+                    }
+
+                    if (!$this->runHasValidAwayDistance($run)) {
+                        return false;
+                    }
+
+                    if (!$this->runHasVacationCoreTag($run)) {
+                        return false;
+                    }
+
                     if (!$this->isRunBracketedByDifferentLocality($run, $allDays, $dayLocality)) {
                         return false;
                     }
@@ -288,6 +329,231 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         return $this->containsWeekendDay($run['days']);
+    }
+
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     */
+    private function runHasWeekendAnchor(array $run): bool
+    {
+        $days = $run['days'];
+        if ($days === []) {
+            return false;
+        }
+
+        $hasWeekend = false;
+        foreach ($days as $day) {
+            if ($this->isWeekendIsoDate($day)) {
+                $hasWeekend = true;
+                break;
+            }
+        }
+
+        if ($hasWeekend) {
+            return true;
+        }
+
+        foreach ($run['items'] as $media) {
+            $summary = $this->extractDaySummary($media);
+            if ($summary === []) {
+                continue;
+            }
+
+            $dayCategory = $summary['category'] ?? null;
+            if (is_string($dayCategory) && strtolower($dayCategory) === 'weekend') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isWeekendIsoDate(string $day): bool
+    {
+        $tz = new DateTimeZone('UTC');
+
+        $date = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $day . ' 12:00:00', $tz);
+        if (!$date instanceof DateTimeImmutable) {
+            return false;
+        }
+
+        $dow = (int) $date->format('N');
+
+        return $dow >= 6;
+    }
+
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     */
+    private function runHasValidAwayDistance(array $run): bool
+    {
+        $samples = [];
+
+        foreach ($run['items'] as $media) {
+            $distance = $this->resolveDistanceFromHome($media);
+            if ($distance === null) {
+                continue;
+            }
+
+            $samples[] = $distance;
+        }
+
+        if ($samples === []) {
+            return false;
+        }
+
+        sort($samples, SORT_NUMERIC);
+
+        $median = $this->median($samples);
+
+        if ($median === null) {
+            return false;
+        }
+
+        if ($median < $this->minAwayDistanceKm) {
+            return false;
+        }
+
+        if ($median > $this->maxAwayDistanceKm) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     */
+    private function runHasVacationCoreTag(array $run): bool
+    {
+        $hasCore = false;
+        $scoreSamples = [];
+
+        foreach ($run['items'] as $media) {
+            $metadata = $this->extractVacationMetadata($media);
+            if ($metadata['has_core_tag']) {
+                $hasCore = true;
+            }
+
+            if ($metadata['core_score'] !== null) {
+                $scoreSamples[] = $metadata['core_score'];
+            }
+        }
+
+        if ($hasCore === false) {
+            return false;
+        }
+
+        if ($scoreSamples === []) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array{distance_from_home_km: float|null, max_speed_kmh: float|null, category: string|null}
+     */
+    private function extractDaySummary(Media $media): array
+    {
+        $bag       = $media->getFeatureBag();
+        $payload   = $bag->toArray();
+        $summary   = $payload['day_summary'] ?? null;
+        $result    = [
+            'distance_from_home_km' => null,
+            'max_speed_kmh'         => null,
+            'category'              => null,
+        ];
+
+        if (!is_array($summary)) {
+            return $result;
+        }
+
+        $distance = $summary['distance_from_home_km'] ?? ($summary['distance_km'] ?? null);
+        if (is_float($distance) || is_int($distance) || (is_string($distance) && is_numeric($distance))) {
+            $result['distance_from_home_km'] = (float) $distance;
+        }
+
+        $maxSpeed = $summary['max_speed_kmh'] ?? null;
+        if (is_float($maxSpeed) || is_int($maxSpeed) || (is_string($maxSpeed) && is_numeric($maxSpeed))) {
+            $result['max_speed_kmh'] = (float) $maxSpeed;
+        }
+
+        $category = $summary['category'] ?? ($summary['segment'] ?? null);
+        if (is_string($category) && $category !== '') {
+            $result['category'] = $category;
+        }
+
+        return $result;
+    }
+
+    private function resolveDistanceFromHome(Media $media): ?float
+    {
+        $summary = $this->extractDaySummary($media);
+        if ($summary['distance_from_home_km'] !== null) {
+            return $summary['distance_from_home_km'];
+        }
+
+        $distance = $media->getDistanceKmFromHome();
+        if ($distance !== null) {
+            return $distance;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{has_core_tag: bool, core_score: float|null}
+     */
+    private function extractVacationMetadata(Media $media): array
+    {
+        $bag      = $media->getFeatureBag();
+        $payload  = $bag->toArray();
+        $vacation = $payload['vacation'] ?? null;
+
+        $hasCore = false;
+        $score   = null;
+
+        if (is_array($vacation)) {
+            $tag = $vacation['core_tag'] ?? ($vacation['category'] ?? null);
+            if (is_string($tag) && strtolower($tag) === 'core') {
+                $hasCore = true;
+            } elseif (is_bool($tag) && $tag) {
+                $hasCore = true;
+            }
+
+            $scoreValue = $vacation['core_score'] ?? ($vacation['score'] ?? null);
+            if (is_float($scoreValue) || is_int($scoreValue) || (is_string($scoreValue) && is_numeric($scoreValue))) {
+                $score = (float) $scoreValue;
+            }
+        }
+
+        return [
+            'has_core_tag' => $hasCore,
+            'core_score'   => $score,
+        ];
+    }
+
+    /**
+     * @param list<float> $values
+     */
+    private function median(array $values): ?float
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return null;
+        }
+
+        $middle = (int) floor($count / 2);
+
+        if ($count % 2 !== 0) {
+            return $values[$middle];
+        }
+
+        $left  = $values[$middle - 1];
+        $right = $values[$middle];
+
+        return ($left + $right) / 2.0;
     }
 
     /**
