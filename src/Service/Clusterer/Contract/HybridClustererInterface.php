@@ -22,11 +22,17 @@ interface HybridClustererInterface
     public function countStrategies(): int;
 
     /**
-     * @param list<Media>                   $items
-     * @param callable(string,int,int):void $onStart
-     * @param callable(string,int,int):void $onDone
+     * @param list<Media>                                             $items
+     * @param callable(string $strategy, int $index, int $total):void|null $onStart
+     * @param callable(string $strategy, int $index, int $total):void|null $onDone
+     * @param callable(string $strategy, int $index, int $total): ?callable(int $done, int $max, string $stage)|null $makeProgress
      *
      * @return list<ClusterDraft>
      */
-    public function build(array $items, callable $onStart, callable $onDone): array;
+    public function build(
+        array $items,
+        ?callable $onStart,
+        ?callable $onDone,
+        ?callable $makeProgress = null,
+    ): array;
 }
