@@ -20,11 +20,13 @@ use Throwable;
 
 use function array_filter;
 use function array_fill_keys;
+use function array_intersect;
 use function array_key_exists;
 use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_search;
+use function array_values;
 use function ceil;
 use function count;
 use function dirname;
@@ -755,13 +757,19 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         $discovered = $this->discoverAvailableTransitions();
-        if ($discovered === []) {
-            $discovered = self::TRANSITION_WHITELIST;
+        $filtered   = [];
+
+        if ($discovered !== []) {
+            $filtered = array_values(array_intersect(self::TRANSITION_WHITELIST, $discovered));
+        }
+
+        if ($filtered === []) {
+            $filtered = self::TRANSITION_WHITELIST;
         }
 
         $cache->lookup    = null;
         $cache->lookupKey = null;
-        $cache->whitelist = $discovered;
+        $cache->whitelist = $filtered;
 
         return $cache->whitelist;
     }
