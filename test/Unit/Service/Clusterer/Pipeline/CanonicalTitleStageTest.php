@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\CanonicalTitleStage;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -23,7 +24,7 @@ final class CanonicalTitleStageTest extends TestCase
     #[Test]
     public function annotatesVacationDraftWithCanonicalRoute(): void
     {
-        $stage = new CanonicalTitleStage();
+        $stage = new CanonicalTitleStage(new RouteSummarizer());
 
         $from = strtotime('2024-05-10T00:00:00+00:00');
         $to   = strtotime('2024-05-15T00:00:00+00:00');
@@ -54,6 +55,13 @@ final class CanonicalTitleStageTest extends TestCase
                         'lat'           => 39.4699,
                         'lon'           => -0.3763,
                     ],
+                    [
+                        'label'         => 'Alicante',
+                        'count'         => 2,
+                        'first_seen_at' => $from + (2 * 86400),
+                        'lat'           => 38.3460,
+                        'lon'           => -0.4907,
+                    ],
                 ],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
@@ -73,8 +81,8 @@ final class CanonicalTitleStageTest extends TestCase
         ]);
 
         $vacationParams = $result[0]->getParams();
-        self::assertSame('Barcelona → Spanien', $vacationParams['canonical_title']);
-        self::assertSame("Urlaub • 5 Tage • 10.05. – 15.05.2024 • ~846\u{202F}km über 1 Etappe", $vacationParams['canonical_subtitle']);
+        self::assertSame('Barcelona → Valencia → Alicante', $vacationParams['canonical_title']);
+        self::assertSame('Urlaub • 5 Tage • 10.05. – 15.05.2024 • ca. 430 km • 2 Etappen • 3 Stopps', $vacationParams['canonical_subtitle']);
 
         self::assertArrayNotHasKey('canonical_title', $result[1]->getParams());
         self::assertArrayNotHasKey('canonical_subtitle', $result[1]->getParams());
@@ -83,7 +91,7 @@ final class CanonicalTitleStageTest extends TestCase
     #[Test]
     public function omitsTravelMetricsWhenNotAvailable(): void
     {
-        $stage = new CanonicalTitleStage();
+        $stage = new CanonicalTitleStage(new RouteSummarizer());
 
         $from = strtotime('2024-06-01T00:00:00+00:00');
         $to   = strtotime('2024-06-10T00:00:00+00:00');

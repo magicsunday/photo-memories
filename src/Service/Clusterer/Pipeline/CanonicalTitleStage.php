@@ -15,6 +15,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummary;
 
 use function array_filter;
 use function array_map;
@@ -39,6 +41,11 @@ use const SORT_STRING;
  */
 final class CanonicalTitleStage implements ClusterConsolidationStageInterface
 {
+    public function __construct(
+        private readonly RouteSummarizer $routeSummarizer,
+    ) {
+    }
+
     public function getLabel(): string
     {
         return 'Kanontitel';
@@ -61,13 +68,15 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
+            $summary = $this->routeSummarizer->summarize($draft);
+
             $params = $draft->getParams();
-            $title = $this->buildTitle($params);
+            $title = $this->buildTitle($params, $summary);
             if ($title !== '') {
                 $draft->setParam('canonical_title', $title);
             }
 
-            $subtitle = $this->buildSubtitle($params);
+            $subtitle = $this->buildSubtitle($params, $summary);
             if ($subtitle !== '') {
                 $draft->setParam('canonical_subtitle', $subtitle);
             }
@@ -87,8 +96,15 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
     /**
      * @param array<string, mixed> $params
      */
-    private function buildTitle(array $params): string
+    private function buildTitle(array $params, ?RouteSummary $summary): string
     {
+        if ($summary !== null) {
+            $label = trim($summary->routeLabel);
+            if ($label !== '') {
+                return $label;
+            }
+        }
+
         $routeParts = $this->resolveRouteParts($params);
         if ($routeParts !== []) {
             return implode(' → ', $routeParts);
@@ -105,7 +121,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
     /**
      * @param array<string, mixed> $params
      */
-    private function buildSubtitle(array $params): string
+    private function buildSubtitle(array $params, ?RouteSummary $summary): string
     {
         $parts = [];
 
@@ -124,12 +140,55 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $parts[] = $range;
         }
 
-        $travelMetrics = $this->resolveTravelMetrics($params);
-        if ($travelMetrics !== '') {
-            $parts[] = $travelMetrics;
+        if ($summary !== null) {
+            $summaryMetrics = $this->resolveSummaryMetrics($summary);
+            if ($summaryMetrics === []) {
+                $travelMetrics = $this->resolveTravelMetrics($params);
+                if ($travelMetrics !== '') {
+                    $parts[] = $travelMetrics;
+                }
+            } else {
+                foreach ($summaryMetrics as $metric) {
+                    $parts[] = $metric;
+                }
+            }
+        } else {
+            $travelMetrics = $this->resolveTravelMetrics($params);
+            if ($travelMetrics !== '') {
+                $parts[] = $travelMetrics;
+            }
         }
 
         return $parts !== [] ? implode(' • ', $parts) : '';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveSummaryMetrics(RouteSummary $summary): array
+    {
+        $metrics = [];
+
+        $distanceLabel = trim($summary->distanceLabel);
+        if ($distanceLabel !== '') {
+            $metrics[] = $distanceLabel;
+        }
+
+        $legLabel = trim($summary->legLabel);
+        if ($legLabel !== '') {
+            $metrics[] = $legLabel;
+        }
+
+        $stopLabel = trim($summary->stopLabel);
+        if ($stopLabel !== '') {
+            $metrics[] = $stopLabel;
+        }
+
+        if ($metrics === []) {
+            return [];
+        }
+
+        return $metrics;
     }
 
     /**
