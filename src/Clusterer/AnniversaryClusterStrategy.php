@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -23,6 +24,8 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function array_slice;
 use function assert;
 use function count;
+use function max;
+use function sprintf;
 
 /**
  * Groups media into anniversary clusters.
@@ -37,7 +40,7 @@ use function count;
  * metadata such as a majority place label, a time range, and the geographical
  * centroid of all members using helper methods from {@see ClusterBuildHelperTrait}.
  */
-final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterface
+final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
@@ -102,23 +105,66 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
      */
     public function cluster(array $items): array
     {
+        return $this->buildClusters($items, null);
+    }
+
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->buildClusters($items, $update);
+    }
+
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     *
+     * @return list<ClusterDraft>
+     */
+    private function buildClusters(array $items, ?callable $update): array
+    {
+        $totalStages = 4;
+
+        $this->updateStage(
+            $update,
+            0,
+            $totalStages,
+            sprintf('Analysiere %d Medien mit Zeitstempel', count($items))
+        );
+
         /** @var list<Media> $timestamped */
         $timestamped = $this->filterTimestampedItems($items);
 
         /** @var array<string, list<Media>> $byMonthDay */
         $byMonthDay = [];
-        foreach ($timestamped as $m) {
-            $t = $m->getTakenAt();
-            assert($t instanceof DateTimeImmutable);
+        foreach ($timestamped as $media) {
+            $takenAt = $media->getTakenAt();
+            assert($takenAt instanceof DateTimeImmutable);
             // Index media by month and day so anniversaries match regardless of year.
-            $byMonthDay[$t->format('m-d')][] = $m;
+            $byMonthDay[$takenAt->format('m-d')][] = $media;
         }
 
+        $this->updateStage(
+            $update,
+            1,
+            $totalStages,
+            sprintf('Filtere Jubiläumskandidaten aus %d Tagesgruppen', count($byMonthDay))
+        );
+
         $eligibleGroups = $this->filterGroupsByMinItems($byMonthDay, $this->minItemsPerAnniversary);
+        $candidateTotal = count($eligibleGroups);
+
+        $this->updateStage(
+            $update,
+            2,
+            $totalStages,
+            sprintf('Bewerte Jubiläen (%d Kandidaten)', $candidateTotal)
+        );
 
         $scoredGroups = [];
+        $processed    = 0;
 
         foreach ($eligibleGroups as $group) {
+            ++$processed;
+
             $years = [];
             foreach ($group as $media) {
                 $takenAt = $media->getTakenAt();
@@ -130,6 +176,13 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
             $distinctYears = count($years);
             if ($distinctYears < $this->minDistinctYears) {
+                $this->updateStage(
+                    $update,
+                    2,
+                    $totalStages,
+                    sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, max(1, $candidateTotal))
+                );
+
                 continue;
             }
 
@@ -156,6 +209,26 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 'group' => $group,
                 'score' => $score,
             ];
+
+            if ($update !== null && (($processed % 10) === 0 || $processed === $candidateTotal)) {
+                $this->updateStage(
+                    $update,
+                    2,
+                    $totalStages,
+                    sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, max(1, $candidateTotal))
+                );
+            }
+        }
+
+        if ($candidateTotal === 0) {
+            $this->updateStage(
+                $update,
+                $totalStages,
+                $totalStages,
+                'Keine Jahrestage gefunden'
+            );
+
+            return [];
         }
 
         usort(
@@ -167,7 +240,16 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             $scoredGroups = array_slice($scoredGroups, 0, $this->maxClusters);
         }
 
-        $drafts = [];
+        $summaryTotal = count($scoredGroups);
+        $this->updateStage(
+            $update,
+            3,
+            $totalStages,
+            sprintf('Berechne Metadaten für Jubiläen (%d Kandidaten)', $summaryTotal)
+        );
+
+        $drafts   = [];
+        $enriched = 0;
         foreach ($scoredGroups as $entry) {
             /** @var list<Media> $group */
             $group = $entry['group'];
@@ -199,8 +281,34 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 centroid: $this->computeCentroid($group),
                 members: $this->toMemberIds($group)
             );
+
+            ++$enriched;
+            if ($update !== null && (($enriched % 10) === 0 || $enriched === $summaryTotal)) {
+                $this->updateStage(
+                    $update,
+                    3,
+                    $totalStages,
+                    sprintf('Berechne Metadaten für Jubiläen (%d/%d)', $enriched, max(1, $summaryTotal))
+                );
+            }
         }
 
+        $this->updateStage(
+            $update,
+            $totalStages,
+            $totalStages,
+            sprintf('Erzeuge finale Cluster (%d Entwürfe)', count($drafts))
+        );
+
         return $drafts;
+    }
+
+    private function updateStage(?callable $update, int $done, int $max, string $stage): void
+    {
+        if ($update === null) {
+            return;
+        }
+
+        $update($done, max(1, $max), $stage);
     }
 }
