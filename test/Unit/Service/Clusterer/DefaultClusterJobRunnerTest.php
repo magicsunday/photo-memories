@@ -114,9 +114,13 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $clusterer->expects(self::once())->method('countStrategies')->willReturn(1);
         $clusterer->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone) use ($drafts): array {
+            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts): array {
                 self::assertCount(2, $items);
                 $onStart('Strategy', 1, 1);
+                self::assertNotNull($progressFactory);
+                $progressCallback = $progressFactory('Strategy', 1, 1);
+                self::assertIsCallable($progressCallback);
+                $progressCallback(1, 3, 'Zwischenschritt');
                 $onDone('Strategy', 1, 1);
 
                 return $drafts;
@@ -200,8 +204,12 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $clusterer->expects(self::once())->method('countStrategies')->willReturn(2);
         $clusterer->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone) use ($drafts): array {
+            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts): array {
                 $onStart('Strategy A', 1, 2);
+                self::assertNotNull($progressFactory);
+                $progressCallback = $progressFactory('Strategy A', 1, 2);
+                self::assertIsCallable($progressCallback);
+                $progressCallback(2, 5, 'Fortschritt');
                 $onDone('Strategy A', 1, 2);
 
                 return $drafts;
