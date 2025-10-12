@@ -49,6 +49,44 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
       }
     }
   },
+  "run_metrics": {
+    "storyline": "vacation.extended",
+    "run_length_days": 7,
+    "run_length_effective_days": 6,
+    "run_length_nights": 5,
+    "core_day_count": 4,
+    "peripheral_day_count": 3,
+    "core_day_ratio": 0.57,
+    "peripheral_day_ratio": 0.43,
+    "phash_distribution": {"count": 42, "average": 11.2, "median": 10.0, "p90": 16.0, "p99": 21.0, "max": 24.0},
+    "people_balance": {
+      "enabled": true,
+      "weight": 0.35,
+      "unique_people": 5,
+      "dominant_share": 0.28,
+      "penalized": 3,
+      "rejected": 1
+    },
+    "poi_coverage": {
+      "poi_day_count": 5,
+      "poi_day_ratio": 0.71,
+      "poi_type_count": 8,
+      "tourism_hits": 42,
+      "poi_samples": 58,
+      "tourism_ratio": 0.64
+    },
+    "selection_profile": {
+      "profile_key": "vacation_default",
+      "target_total": 60,
+      "minimum_total": 36,
+      "max_per_day": 6,
+      "min_spacing_seconds": 2400,
+      "phash_min_hamming": 9,
+      "people_balance_weight": 0.35
+    },
+    "selection_pre_count": 96,
+    "selection_post_count": 60
+  },
   "options": {
     "selector": "…\\PolicyDrivenMemberSelector",
     "target_total": 60,
@@ -108,6 +146,15 @@ eine optional normalisierte Tagesdauer (`duration`) und weitere Kennzahlen
 unter `metrics`. Die Informationen werden sowohl in der Score-Berechnung als
 auch von Tagesquoten-Policies ausgewertet.
 
+`run_metrics` sammelt Laufzeitkennzahlen für den gesamten Urlaubs-Run. Neben
+Run-Länge (`run_length_*`) werden der Anteil von Kern- und Randtagen, die
+pHash-Verteilung der kuratierten Auswahl, People-Balance-Indikatoren sowie die
+POI-Abdeckung ausgewiesen. Unter `selection_profile` landen die zum Lauf
+gehörenden Profil-/Quotenwerte (Targets, Abstände, Personensteuerung), damit
+Anpassungen per YAML/ENV rückwirkend nachvollzogen werden können. Alle Werte
+werden zusätzlich als Monitoring-Event `cluster.vacation/run_metrics`
+ausgegeben.
+
 ## Monitoring-Log-Payload
 
 Der `FileJobMonitoringEmitter` schreibt JSON-Zeilen nach
@@ -163,6 +210,13 @@ Beispiel für einen Log-Eintrag:
   "timestamp": "2024-08-20T17:12:45+00:00"
 }
 ```
+
+Zusätzlich emittiert der `VacationScoreCalculator` pro Run das Event
+`{"job": "cluster.vacation", "status": "run_metrics"}`. Es führt die oben
+beschriebenen `run_metrics`-Felder in flacher Form (`run_length_days`,
+`phash_sample_count`, `people_unique_count`, `poi_day_ratio`,
+`selection_target_total`, …) auf und erlaubt Downstream-Dashboards, Cluster- und
+Profilparameter gezielt zu überwachen.
 
 Downstream-Auswerter sollten `schema_version` nutzen, um Schemaänderungen zu
 erken­nen, und die Phaseninformationen aus den `phase_*`-Feldern extrahieren.

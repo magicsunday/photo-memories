@@ -1192,6 +1192,25 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('vacation.day_trip', $memberSelection['storyline']);
         self::assertSame('vacation.day_trip', $memberSelection['telemetry']['storyline']);
 
+        self::assertArrayHasKey('run_metrics', $memberSelection);
+        $runMetrics = $memberSelection['run_metrics'];
+        self::assertSame($runMetrics, $memberSelection['telemetry']['run_metrics']);
+        self::assertSame('vacation.day_trip', $runMetrics['storyline']);
+        self::assertSame(1, $runMetrics['run_length_days']);
+        self::assertSame(1, $runMetrics['run_length_effective_days']);
+        self::assertSame(0, $runMetrics['run_length_nights']);
+        self::assertSame(0, $runMetrics['core_day_count']);
+        self::assertSame(1, $runMetrics['peripheral_day_count']);
+        self::assertSame(
+            $selectionOptions->targetTotal,
+            $runMetrics['selection_profile']['target_total'],
+        );
+        self::assertSame(
+            $selectionOptions->maxPerDay,
+            $runMetrics['selection_profile']['max_per_day'],
+        );
+        self::assertSame(1, $runMetrics['poi_coverage']['poi_day_count']);
+
         self::assertSame(3, $memberSelection['counts']['pre']);
         self::assertSame(2, $memberSelection['counts']['post']);
         self::assertSame(1, $memberSelection['counts']['dropped']);
@@ -1206,15 +1225,34 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertCount(2, $draft->getMembers());
 
-        self::assertCount(2, $emitter->events);
+        self::assertCount(3, $emitter->events);
         $startEvent = $emitter->events[0];
         self::assertSame('vacation_curation', $startEvent['job']);
         self::assertSame('selection_start', $startEvent['status']);
         self::assertSame(3, $startEvent['context']['pre_count']);
         self::assertSame(1, $startEvent['context']['day_count']);
         self::assertSame('vacation.day_trip', $startEvent['context']['storyline']);
+        self::assertSame(
+            $selectionOptions->targetTotal,
+            $startEvent['context']['selection_target_total'],
+        );
+        self::assertSame(
+            $selectionOptions->peopleBalanceWeight,
+            $startEvent['context']['selection_people_balance_weight'],
+        );
 
-        $completeEvent = $emitter->events[1];
+        $metricsEvent = $emitter->events[1];
+        self::assertSame('cluster.vacation', $metricsEvent['job']);
+        self::assertSame('run_metrics', $metricsEvent['status']);
+        self::assertSame(1, $metricsEvent['context']['run_length_days']);
+        self::assertSame(
+            $selectionOptions->targetTotal,
+            $metricsEvent['context']['selection_target_total'],
+        );
+        self::assertArrayHasKey('poi_day_ratio', $metricsEvent['context']);
+        self::assertArrayHasKey('people_unique_count', $metricsEvent['context']);
+
+        $completeEvent = $emitter->events[2];
         self::assertSame('vacation_curation', $completeEvent['job']);
         self::assertSame('selection_completed', $completeEvent['status']);
         self::assertSame(2, $completeEvent['context']['post_count']);
