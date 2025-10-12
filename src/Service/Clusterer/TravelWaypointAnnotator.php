@@ -133,7 +133,7 @@ final class TravelWaypointAnnotator
                     return $countComparison;
                 }
 
-                $firstSeenComparison = $left['firstSeen'] <=> $right['firstSeen'];
+                $firstSeenComparison = $left['first_seen_at'] <=> $right['first_seen_at'];
                 if ($firstSeenComparison !== 0) {
                     return $firstSeenComparison;
                 }
