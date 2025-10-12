@@ -35,6 +35,7 @@ final class SelectionPolicy
      * @param int|null      $maxPerYear         per-year cap for over-years memories
      * @param int|null      $maxPerBucket       optional generic bucket cap
      * @param float|null    $videoHeavyBonus    optional bonus applied when cluster is video heavy
+     * @param array<string, float>|null $sceneBucketWeights optional target share weights per motif bucket
      */
     public function __construct(
         private readonly string $profileKey,
@@ -53,6 +54,7 @@ final class SelectionPolicy
         private readonly ?int $maxPerYear = null,
         private readonly ?int $maxPerBucket = null,
         private readonly ?float $videoHeavyBonus = null,
+        private readonly ?array $sceneBucketWeights = null,
     ) {
         if ($targetTotal <= 0) {
             throw new InvalidArgumentException('targetTotal must be positive.');
@@ -76,6 +78,22 @@ final class SelectionPolicy
 
         if ($relaxedMaxPerStaypoint !== null && $relaxedMaxPerStaypoint < 0) {
             throw new InvalidArgumentException('relaxedMaxPerStaypoint must not be negative.');
+        }
+
+        if ($sceneBucketWeights !== null) {
+            foreach ($sceneBucketWeights as $bucket => $weight) {
+                if (!is_string($bucket) || $bucket === '') {
+                    throw new InvalidArgumentException('Scene bucket weights must use non-empty string keys.');
+                }
+
+                if (!is_float($weight) && !is_int($weight)) {
+                    throw new InvalidArgumentException('Scene bucket weights must be numeric.');
+                }
+
+                if ((float) $weight < 0.0) {
+                    throw new InvalidArgumentException('Scene bucket weights must not be negative.');
+                }
+            }
         }
     }
 
@@ -159,6 +177,23 @@ final class SelectionPolicy
         return $this->videoHeavyBonus;
     }
 
+    /**
+     * @return array<string, float>
+     */
+    public function getSceneBucketWeights(): array
+    {
+        if ($this->sceneBucketWeights === null) {
+            return [];
+        }
+
+        $weights = [];
+        foreach ($this->sceneBucketWeights as $bucket => $weight) {
+            $weights[$bucket] = (float) $weight;
+        }
+
+        return $weights;
+    }
+
     public function withRelaxedSpacing(int $spacing): self
     {
         return new self(
@@ -178,6 +213,7 @@ final class SelectionPolicy
             $this->maxPerYear,
             $this->maxPerBucket,
             $this->videoHeavyBonus,
+            $this->sceneBucketWeights,
         );
     }
 
@@ -200,6 +236,7 @@ final class SelectionPolicy
             $this->maxPerYear,
             $this->maxPerBucket,
             $this->videoHeavyBonus,
+            $this->sceneBucketWeights,
         );
     }
 
@@ -222,6 +259,7 @@ final class SelectionPolicy
             $this->maxPerYear,
             $this->maxPerBucket,
             $this->videoHeavyBonus,
+            $this->sceneBucketWeights,
         );
     }
 
@@ -241,9 +279,10 @@ final class SelectionPolicy
             $this->videoBonus,
             $this->faceBonus,
             $this->selfiePenalty,
-            $this->maxPerYear,
+            null,
             null,
             $this->videoHeavyBonus,
+            $this->sceneBucketWeights,
         );
     }
 }

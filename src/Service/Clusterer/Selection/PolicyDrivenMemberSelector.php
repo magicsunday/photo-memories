@@ -35,9 +35,11 @@ use function is_numeric;
 use function is_string;
 use function max;
 use function min;
+use function str_contains;
 use function strtolower;
 use function substr;
 use function strlen;
+use function trim;
 use function usort;
 
 /**
@@ -46,6 +48,19 @@ use function usort;
 final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 {
     private const STAYPOINT_MERGE_METERS = 120.0;
+
+    /**
+     * @var list<string>
+     */
+    private const MOTIF_BUCKETS = [
+        'person_group',
+        'landmark',
+        'food',
+        'indoor',
+        'outdoor',
+        'night',
+        'panorama',
+    ];
 
     /**
      * @var array<string, list<int>>
@@ -520,7 +535,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $facesCount = $faceMetrics['count'];
             $hasFaces  = $media->hasFaces() || $facesCount > 0;
             $isVideo   = $media->isVideo();
-            $bucket    = $this->resolveBucket($draft, $media, $day);
+            $bucket    = $this->deriveSceneBucket($draft, $media, $faceMetrics);
             $year      = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
             $orientation= $this->resolveOrientationType($media);
 
@@ -760,20 +775,354 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return count($persons) === 1 && $media->hasFaces();
     }
 
-    private function resolveBucket(ClusterDraft $draft, Media $media, string $day): string
+    private function deriveSceneBucket(ClusterDraft $draft, Media $media, array $faceMetrics): string
     {
-        $params = $draft->getParams();
-        $bucketKey = $params['bucket_key'] ?? null;
-        if (is_string($bucketKey) && $bucketKey !== '') {
-            return $bucketKey;
+        $params    = $draft->getParams();
+        $faceCount = (int) ($faceMetrics['count'] ?? 0);
+        $coverage  = $faceMetrics['largest_coverage'] ?? null;
+        if (is_numeric($coverage)) {
+            $coverage = (float) $coverage;
+        } else {
+            $coverage = null;
+        }
+
+        if ($this->isPanoramaScene($media)) {
+            return 'panorama';
+        }
+
+        if ($this->isGroupScene($faceCount, $coverage)) {
+            return 'person_group';
+        }
+
+        $poiBucket     = $this->bucketFromPoi($params);
+        $foodScene     = $this->looksLikeFood($media);
+        $nightScene    = $this->isNightScene($media);
+        $landmarkScene = $this->looksLikeLandmark($media, $params);
+
+        if ($poiBucket === 'food') {
+            return 'food';
+        }
+
+        if ($foodScene) {
+            return 'food';
+        }
+
+        if ($poiBucket === 'landmark' && !$nightScene) {
+            return 'landmark';
+        }
+
+        if ($nightScene) {
+            return 'night';
+        }
+
+        if ($landmarkScene) {
+            return 'landmark';
+        }
+
+        if ($this->isIndoorScene($media, $poiBucket)) {
+            return 'indoor';
+        }
+
+        return 'outdoor';
+    }
+
+    private function bucketFromPoi(array $params): ?string
+    {
+        $categoryKey   = $this->stringOrNull($params['poi_category_key'] ?? null);
+        $categoryValue = $this->stringOrNull($params['poi_category_value'] ?? null);
+        $label         = $this->stringOrNull($params['poi_label'] ?? null);
+        $tags          = $this->stringMap($params['poi_tags'] ?? null);
+
+        if ($this->poiMatchesFood($categoryKey, $categoryValue, $tags, $label)) {
+            return 'food';
+        }
+
+        if ($this->poiMatchesLandmark($categoryKey, $categoryValue, $tags, $label)) {
+            return 'landmark';
+        }
+
+        return null;
+    }
+
+    private function isPanoramaScene(Media $media): bool
+    {
+        $panorama = $media->isPanorama();
+        if ($panorama === true) {
+            return true;
+        }
+
+        if ($panorama === false) {
+            return false;
+        }
+
+        $width  = $media->getWidth();
+        $height = $media->getHeight();
+        if ($width === null || $height === null || $height === 0) {
+            return false;
+        }
+
+        $ratio = (float) $width / (float) $height;
+
+        return $ratio >= 2.2;
+    }
+
+    private function isGroupScene(int $faceCount, ?float $coverage): bool
+    {
+        return FaceMetricHelper::isGroupShot($faceCount, $coverage);
+    }
+
+    private function looksLikeFood(Media $media): bool
+    {
+        if ($this->hasSceneTag($media, [
+            'food',
+            'meal',
+            'cuisine',
+            'dish',
+            'dining',
+            'restaurant',
+            'kitchen',
+            'coffee',
+            'drink',
+            'dessert',
+            'breakfast',
+            'lunch',
+            'dinner',
+            'brunch',
+        ])) {
+            return true;
+        }
+
+        $bag = $media->getFeatureBag();
+        $kind = $bag->classificationKind();
+        if ($kind !== null && $kind->value === 'food') {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function looksLikeLandmark(Media $media, array $params): bool
+    {
+        if ($this->hasSceneTag($media, [
+            'landmark',
+            'monument',
+            'castle',
+            'temple',
+            'bridge',
+            'tower',
+            'cathedral',
+            'church',
+            'palace',
+            'statue',
+            'architecture',
+            'skyline',
+            'historic',
+            'museum',
+        ])) {
+            return true;
+        }
+
+        $label = $this->stringOrNull($params['poi_label'] ?? null);
+        if ($label !== null) {
+            $needle = strtolower($label);
+            foreach ([
+                'museum',
+                'park',
+                'castle',
+                'cathedral',
+                'temple',
+                'monument',
+                'bridge',
+                'square',
+                'tower',
+                'palace',
+            ] as $keyword) {
+                if (str_contains($needle, $keyword)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function isNightScene(Media $media): bool
+    {
+        $bag = $media->getFeatureBag();
+        $daypart = $bag->calendarDaypart();
+        if ($daypart === 'night') {
+            return true;
+        }
+
+        if ($bag->solarIsPolarNight() === true) {
+            return true;
+        }
+
+        if ($this->hasSceneTag($media, ['night', 'evening', 'dusk', 'aurora', 'milky way', 'city lights'])) {
+            return true;
         }
 
         $takenAt = $media->getTakenAt();
         if ($takenAt instanceof DateTimeImmutable) {
-            return $takenAt->format('m-d');
+            $hour = (int) $takenAt->format('H');
+
+            return $hour >= 21 || $hour <= 5;
         }
 
-        return substr($day, 5);
+        return false;
+    }
+
+    private function isIndoorScene(Media $media, ?string $poiBucket): bool
+    {
+        if ($poiBucket === 'food') {
+            return true;
+        }
+
+        if ($this->hasSceneTag($media, [
+            'indoor',
+            'interior',
+            'room',
+            'kitchen',
+            'living room',
+            'office',
+            'restaurant',
+            'cafe',
+            'bar',
+            'museum',
+            'library',
+            'store',
+            'shop',
+            'gallery',
+            'hall',
+        ])) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function hasSceneTag(Media $media, array $keywords): bool
+    {
+        $tags = $media->getSceneTags();
+        if (!is_array($tags)) {
+            return false;
+        }
+
+        foreach ($tags as $tag) {
+            $label = $tag['label'] ?? null;
+            if (!is_string($label) || $label === '') {
+                continue;
+            }
+
+            $normalised = strtolower($label);
+            foreach ($keywords as $keyword) {
+                if ($keyword === '') {
+                    continue;
+                }
+
+                if (str_contains($normalised, strtolower($keyword))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function poiMatchesFood(?string $categoryKey, ?string $categoryValue, array $tags, ?string $label): bool
+    {
+        $key   = $categoryKey !== null ? strtolower($categoryKey) : null;
+        $value = $categoryValue !== null ? strtolower($categoryValue) : null;
+
+        if ($key === 'amenity' && in_array($value, ['restaurant', 'cafe', 'bar', 'food_court', 'fast_food'], true)) {
+            return true;
+        }
+
+        if ($key === 'shop' && in_array($value, ['bakery', 'confectionery'], true)) {
+            return true;
+        }
+
+        if (array_key_exists('cuisine', $tags)) {
+            return true;
+        }
+
+        if ($label !== null) {
+            $needle = strtolower($label);
+            foreach (['restaurant', 'café', 'cafe', 'diner', 'kitchen', 'bistro', 'bar', 'coffee'] as $keyword) {
+                if (str_contains($needle, $keyword)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function poiMatchesLandmark(?string $categoryKey, ?string $categoryValue, array $tags, ?string $label): bool
+    {
+        $key   = $categoryKey !== null ? strtolower($categoryKey) : null;
+        $value = $categoryValue !== null ? strtolower($categoryValue) : null;
+
+        if ($key === 'tourism' && in_array($value, ['attraction', 'viewpoint', 'museum', 'gallery', 'theme_park'], true)) {
+            return true;
+        }
+
+        if ($key === 'historic' && in_array($value, ['castle', 'monument', 'ruins', 'memorial', 'church'], true)) {
+            return true;
+        }
+
+        if (array_key_exists('historic', $tags) || array_key_exists('wikidata', $tags)) {
+            return true;
+        }
+
+        if ($label !== null) {
+            $needle = strtolower($label);
+            foreach (['museum', 'monument', 'castle', 'cathedral', 'temple', 'bridge', 'tower', 'palace', 'square'] as $keyword) {
+                if (str_contains($needle, $keyword)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function stringOrNull(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return array<string, string>
+     */
+    private function stringMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $key => $entry) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            if (!is_string($entry)) {
+                continue;
+            }
+
+            $result[$key] = $entry;
+        }
+
+        return $result;
     }
 
     private function resolveOrientationType(Media $media): ?string
@@ -815,6 +1164,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'max_per_year'        => $policy->getMaxPerYear(),
             'max_per_bucket'      => $policy->getMaxPerBucket(),
             'video_heavy_bonus'   => $policy->getVideoHeavyBonus(),
+            'scene_bucket_weights'=> $policy->getSceneBucketWeights(),
         ];
     }
 }
