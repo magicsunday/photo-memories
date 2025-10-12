@@ -13,9 +13,9 @@ namespace MagicSunday\Memories\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -53,7 +53,7 @@ final class FeedPreviewCommand extends Command
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterConsolidatorInterface $consolidation,
         private readonly ClusterEntityToDraftMapper $mapper,
-        private readonly SelectionProfileProvider $selectionProfiles,
+        private readonly SelectionPolicyProvider $selectionPolicies,
         private readonly int $defaultClusterLimit = 5000,
     ) {
         parent::__construct();
@@ -104,7 +104,7 @@ final class FeedPreviewCommand extends Command
             return Command::INVALID;
         }
 
-        $this->selectionProfiles->setRuntimeOverrides($selectionOverrides);
+        $this->selectionPolicies->setRuntimeOverrides($selectionOverrides);
 
         $limit = max(1, (int) $input->getOption('limit-clusters'));
 
