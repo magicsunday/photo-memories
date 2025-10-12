@@ -243,19 +243,19 @@ parameters:
     memories.cluster.selection.profile_values:
         default: []
         vacation_weekend_transit:
-            target_total: 48
-            max_per_day: 5
+            target_total: 36
+            max_per_day: 4
             time_slot_hours: 4
-            min_spacing_seconds: 2400
+            min_spacing_seconds: 4200
             phash_min_hamming: 9
             max_per_staypoint: 2
             video_bonus: 0.22
-            face_bonus: 0.28
-            selfie_penalty: 0.27
-            quality_floor: 0.56
-            minimum_total: 29
+            face_bonus: 0.32
+            selfie_penalty: 0.26
+            quality_floor: 0.62
+            minimum_total: 24
             enable_people_balance: true
-            people_balance_weight: 0.35
+            people_balance_weight: 0.4
         vacation_weekend_getaway:
             target_total: 30
             max_per_day: 6
@@ -342,19 +342,37 @@ parameters:
             people_balance_weight: 0.35
             repeat_penalty: 0.35
         highlights:
-            target_total: 38
+            target_total: 36
             max_per_day: 4
             time_slot_hours: 4
-            min_spacing_seconds: 2400
+            min_spacing_seconds: 4200
             phash_min_hamming: 10
             max_per_staypoint: 2
             video_bonus: 0.3
-            face_bonus: 0.3
-            selfie_penalty: 0.25
-            quality_floor: 0.58
+            face_bonus: 0.31
+            selfie_penalty: 0.26
+            quality_floor: 0.62
             minimum_total: 24
             enable_people_balance: true
-            people_balance_weight: 0.35
+            people_balance_weight: 0.4
+    # Description: Additional selection profile constraints applied by run-length.
+    memories.cluster.selection.profile_constraints:
+        vacation_weekend_transit:
+            target_total_by_run_length:
+                short_run_max_days: 2
+                short_run_target_total: 24
+                medium_run_max_days: 4
+                medium_run_target_total: 30
+                long_run_target_total: 36
+            enable_people_balance: true
+        highlights:
+            target_total_by_run_length:
+                short_run_max_days: 2
+                short_run_target_total: 24
+                medium_run_max_days: 4
+                medium_run_target_total: 30
+                long_run_target_total: 36
+            enable_people_balance: true
     # Description: Mapping between cluster algorithms and selection profile keys.
     memories.cluster.selection.algorithm_profiles:
         vacation: 'vacation_weekend_transit'
@@ -462,8 +480,51 @@ parameters:
     memories.cluster.consolidate.classification_priority:
         vacation:
             - 'vacation'
+            - 'weekend_over_years'
+            - 'weekend_getaway'
             - 'short_trip'
             - 'day_trip'
+            - 'transit'
+            - 'location'
+            - 'device'
+        weekend_getaways_over_years:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'weekend_getaway'
+            - 'short_trip'
+            - 'day_trip'
+            - 'device'
+        transit_travel_day:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'transit'
+            - 'short_trip'
+            - 'day_trip'
+            - 'device'
+        significant_place:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'location'
+            - 'device'
+        first_visit_place:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'location'
+            - 'device'
+        location_similarity:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'location'
+            - 'device'
+        device_similarity:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'device'
+            - 'phash_similarity'
+        phash_similarity:
+            - 'vacation'
+            - 'weekend_over_years'
+            - 'device'
     # Description: Default group name assigned when no specific grouping is matched.
     memories.cluster.consolidate.default_group: 'default'
     # Description: Mapping of cluster types to consolidated group identifiers.
@@ -507,11 +568,12 @@ parameters:
     # Description: Cluster types that should be annotated but not promoted during consolidation.
     memories.cluster.consolidate.annotate_only:
         - 'phash_similarity'
+        - 'device_similarity'
         - 'burst'
     # Description: Minimum share of unique media items required to keep certain cluster types.
     memories.cluster.consolidate.min_unique_share:
         photo_motif: 0.25
-        device_similarity: 0.40
+        device_similarity: 0.35
         panorama: 0.25
         portrait_orientation: 0.25
         video_stories: 0.25
@@ -526,8 +588,8 @@ parameters:
         default:
             min_travel_km: 70.0
             min_items_per_day: 6
-            min_segment_speed_mps: 5.0
-            min_fast_segments: 3
+            min_segment_speed_mps: 5.5
+            min_fast_segments: 4
             max_heading_change_deg: 90.0
             min_consistent_heading_segments: 2
         adventurer:
