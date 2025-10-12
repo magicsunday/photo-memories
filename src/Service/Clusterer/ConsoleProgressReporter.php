@@ -63,6 +63,12 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
                 $this->bar->display();
             }
 
+            public function setDetail(?string $message): void
+            {
+                $this->bar->setMessage($message ?? '–', 'detail');
+                $this->bar->display();
+            }
+
             public function setRate(?string $message): void
             {
                 $this->bar->setMessage($message ?? '–', 'rate');
@@ -97,7 +103,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
         });
 
         $bar->setFormat(sprintf(
-            "%s\n%%current%%/%%max%% [%%bar%%] %%percent%%%% | Dauer: %%duration_hms%% | ETA: %%remaining%% | %%phase%% | %%rate%%",
+            "%s\n%%current%%/%%max%% [%%bar%%] %%percent%%%% | Dauer: %%duration_hms%% | ETA: %%remaining%% | %%phase%% | Phase: %%detail%% | %%rate%%",
             $headline,
         ));
         $bar->setBarCharacter('=');
@@ -105,6 +111,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
         $bar->setProgressCharacter('>');
         $bar->setRedrawFrequency(1);
         $bar->setMessage('', 'phase');
+        $bar->setMessage('–', 'detail');
         $bar->setMessage('–', 'rate');
 
         return $bar;
