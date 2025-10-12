@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -32,6 +33,8 @@ use function is_array;
 use function is_string;
 use function ksort;
 use function mb_strtolower;
+use function max;
+use function sprintf;
 use function sort;
 use function strcasecmp;
 use function trim;
@@ -40,7 +43,7 @@ use function usort;
 /**
  * Clusters items by stable co-occurrence of persons within a time window.
  */
-final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface
+final readonly class PersonCohortClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
@@ -88,18 +91,66 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
      */
     public function cluster(array $items): array
     {
+        return $this->clusterInternal($items, null);
+    }
+
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     *
+     * @throws DateMalformedStringException
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->clusterInternal($items, $update);
+    }
+
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     *
+     * @return list<ClusterDraft>
+     *
+     * @throws DateMalformedStringException
+     */
+    private function clusterInternal(array $items, ?callable $update): array
+    {
+        $step  = 0;
+        $steps = 4;
+
+        $this->notifyProgress($update, $step, $steps, sprintf('Schritt %d/%d: Kandidaten prüfen …', $step + 1, $steps));
+
         /** @var array<string, array<string, list<Media>>> $buckets sig => day => items */
         $buckets    = [];
         $candidates = $this->filterTimestampedItems($items);
+        $candidateCount = count($candidates);
+
+        ++$step;
+        $this->notifyProgress(
+            $update,
+            $step,
+            $steps,
+            sprintf('Schritt %d/%d abgeschlossen – %d Kandidaten', $step, $steps, $candidateCount)
+        );
 
         if ($candidates === []) {
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Kandidaten gefunden');
+
             return [];
         }
 
+        $totalCandidates      = $candidateCount;
+        $processedCandidates  = 0;
+        $notifyThreshold      = max(1, (int) ($totalCandidates / 10));
+
         // Phase 1: bucket by persons signature per day
+        $this->notifyProgress($update, $step, $steps, sprintf('Schritt %d/%d: Signaturen gruppieren …', $step + 1, $steps));
         foreach ($candidates as $m) {
             $persons = $this->personSignatureHelper->personIds($m);
             if (count($persons) < $this->minPersons) {
+                ++$processedCandidates;
                 continue;
             }
 
@@ -110,9 +161,34 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             $buckets[$sig] ??= [];
             $buckets[$sig][$day] ??= [];
             $buckets[$sig][$day][] = $m;
+
+            ++$processedCandidates;
+
+            if ($update !== null && $processedCandidates % $notifyThreshold === 0) {
+                $update(
+                    $step,
+                    $steps,
+                    sprintf(
+                        'Schritt %d/%d: Signaturen gruppieren (%d/%d)',
+                        $step + 1,
+                        $steps,
+                        $processedCandidates,
+                        $totalCandidates
+                    )
+                );
+            }
         }
 
+        ++$step;
+        $this->notifyProgress(
+            $update,
+            $step,
+            $steps,
+            sprintf('Schritt %d/%d abgeschlossen – %d Signaturen', $step, $steps, count($buckets))
+        );
+
         /** @var array<string, array<string, list<Media>>> $eligibleBuckets */
+        $this->notifyProgress($update, $step, $steps, sprintf('Schritt %d/%d: Gruppen filtern …', $step + 1, $steps));
         $eligibleBuckets = $this->filterGroups(
             $buckets,
             function (array $byDay): bool {
@@ -128,14 +204,42 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
         );
 
+        $eligibleCount = count($eligibleBuckets);
+        ++$step;
+        $this->notifyProgress(
+            $update,
+            $step,
+            $steps,
+            sprintf('Schritt %d/%d abgeschlossen – %d Gruppen gültig', $step, $steps, $eligibleCount)
+        );
+
         if ($eligibleBuckets === []) {
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine stabilen Gruppen');
+
             return [];
         }
 
         $clusters = [];
 
         // Phase 2: merge consecutive days within window for each signature
+        $this->notifyProgress($update, $step, $steps, sprintf('Schritt %d/%d: Cluster zusammenstellen …', $step + 1, $steps));
+        $processedGroups = 0;
         foreach ($eligibleBuckets as $byDay) {
+            ++$processedGroups;
+            if ($update !== null) {
+                $update(
+                    $step,
+                    $steps,
+                    sprintf(
+                        'Schritt %d/%d: Cluster zusammenstellen (%d/%d)',
+                        $step + 1,
+                        $steps,
+                        $processedGroups,
+                        $eligibleCount
+                    )
+                );
+            }
+
             ksort($byDay);
 
             $current = [];
@@ -171,7 +275,27 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
         }
 
+        ++$step;
+        $this->notifyProgress(
+            $update,
+            $step,
+            $steps,
+            sprintf('Schritt %d/%d abgeschlossen – %d Cluster erstellt', $step, $steps, count($clusters))
+        );
+
         return $clusters;
+    }
+
+    /**
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     */
+    private function notifyProgress(?callable $update, int $done, int $max, string $stage): void
+    {
+        if ($update === null) {
+            return;
+        }
+
+        $update($done, $max, $stage);
     }
 
     /**
