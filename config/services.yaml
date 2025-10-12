@@ -779,6 +779,7 @@ services:
         arguments:
             $minAwayDistanceKm: '%memories.cluster.vacation.min_away_distance_km%'
             $minItemsPerDay: '%memories.cluster.vacation.min_items_per_day%'
+            $minAwayDistanceProfiles: '%memories.cluster.vacation.min_away_distance_profiles%'
 
     MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\RunDetector
@@ -824,6 +825,8 @@ services:
             $movementThresholdKm: 35.0
             $minAwayDays: '%memories.cluster.vacation.min_away_days%'
             $minMembers: '%memories.cluster.vacation.min_members%'
+            $weekendExceptionConfig: '%memories.cluster.vacation.weekend_exception%'
+            $weekendSelectionProfile: '%memories.cluster.vacation.weekend_selection_profile%'
             $memberSelector: '@MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface'
             $selectionProfiles: '@MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'

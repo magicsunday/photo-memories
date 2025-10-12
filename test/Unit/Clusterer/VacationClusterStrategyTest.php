@@ -973,14 +973,19 @@ final class VacationClusterStrategyTest extends TestCase
         $params  = $cluster->getParams();
 
         self::assertSame('vacation', $cluster->getAlgorithm());
-        self::assertSame('vacation', $params['classification']);
-        self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame('weekend_getaway', $params['classification']);
+        self::assertSame('Wochenendtrip', $params['classification_label']);
+        self::assertGreaterThanOrEqual(6.0, $params['score']);
         self::assertArrayHasKey('spot_count', $params);
         self::assertArrayHasKey('spot_cluster_days', $params);
         self::assertArrayHasKey('spot_dwell_hours', $params);
         self::assertArrayHasKey('spot_exploration_bonus', $params);
         self::assertGreaterThanOrEqual(2, $params['weekend_holiday_days']);
         self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
+        self::assertTrue($params['weekend_getaway']);
+        self::assertArrayHasKey('weekend_exception_applied', $params);
+        self::assertSame('vacation_weekend_getaway', $params['selection_profile']);
+        self::assertSame('vacation.weekend', $params['storyline']);
         self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
         self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
         self::assertArrayHasKey('countries', $params);

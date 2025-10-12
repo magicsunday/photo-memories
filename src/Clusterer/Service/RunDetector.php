@@ -18,6 +18,13 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
 use function count;
+use function in_array;
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_string;
+use function pi;
+use function strtolower;
 
 /**
  * Detects vacation runs based on daily summaries.
@@ -28,13 +35,22 @@ final class RunDetector implements VacationRunDetectorInterface
     private const TRANSIT_SPEED_THRESHOLD = 90.0;
 
     /**
-     * @param float $minAwayDistanceKm minimum distance from home to count as away day
-     * @param int   $minItemsPerDay    minimum number of items required to bridge runs
+     * @param float                                     $minAwayDistanceKm       minimum distance from home to count as away day
+     * @param int                                       $minItemsPerDay          minimum number of items required to bridge runs
+     * @param list<array{
+     *     distance_km:float,
+     *     min_center_count?:int,
+     *     min_total_member_count?:int,
+     *     max_primary_radius_km?:float,
+     *     min_primary_density?:float,
+     *     countries?:list<string>
+     * }> $minAwayDistanceProfiles
      */
     public function __construct(
         private TransportDayExtender $transportDayExtender,
         private float $minAwayDistanceKm = 120.0,
         private int $minItemsPerDay = 3,
+        private array $minAwayDistanceProfiles = [],
     ) {
         if ($this->minAwayDistanceKm <= 0.0) {
             throw new InvalidArgumentException('minAwayDistanceKm must be > 0.');
@@ -43,6 +59,8 @@ final class RunDetector implements VacationRunDetectorInterface
         if ($this->minItemsPerDay < 1) {
             throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
         }
+
+        $this->minAwayDistanceProfiles = $this->sanitizeDistanceProfiles($this->minAwayDistanceProfiles);
     }
 
     /**
@@ -59,6 +77,8 @@ final class RunDetector implements VacationRunDetectorInterface
         foreach ($keys as $index => $key) {
             $indexByKey[$key] = $index;
         }
+
+        $effectiveMinAwayDistanceKm = $this->determineEffectiveMinAwayDistance($home);
 
         $metadata = [];
         foreach ($keys as $key) {
@@ -100,7 +120,7 @@ final class RunDetector implements VacationRunDetectorInterface
                     }
                 }
 
-                if ($candidate === false && $hasUsefulSamples && $features['maxDistanceKm'] > $this->minAwayDistanceKm) {
+                if ($candidate === false && $hasUsefulSamples && $features['maxDistanceKm'] > $effectiveMinAwayDistanceKm) {
                     $candidate = true;
                 }
             }
@@ -223,6 +243,157 @@ final class RunDetector implements VacationRunDetectorInterface
         $flush();
 
         return $runs;
+    }
+
+    /**
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int}>} $home
+     */
+    private function determineEffectiveMinAwayDistance(array $home): float
+    {
+        if ($this->minAwayDistanceProfiles === []) {
+            return $this->minAwayDistanceKm;
+        }
+
+        $centers       = HomeBoundaryHelper::centers($home);
+        $centerCount   = count($centers);
+        $totalMembers  = 0;
+        $primary       = $centers[0];
+        $primaryRadius = (float) ($primary['radius_km'] ?? 0.0);
+        $primaryMembers = (int) ($primary['member_count'] ?? 0);
+        $primaryCountry = null;
+
+        if (isset($primary['country']) && is_string($primary['country']) && $primary['country'] !== '') {
+            $primaryCountry = strtolower($primary['country']);
+        }
+
+        foreach ($centers as $center) {
+            $totalMembers += (int) ($center['member_count'] ?? 0);
+        }
+
+        $primaryDensity = 0.0;
+        if ($primaryRadius > 0.0 && $primaryMembers > 0) {
+            $areaKm2       = pi() * $primaryRadius * $primaryRadius;
+            $primaryDensity = $areaKm2 > 0.0 ? $primaryMembers / $areaKm2 : 0.0;
+        }
+
+        $effective = $this->minAwayDistanceKm;
+
+        foreach ($this->minAwayDistanceProfiles as $profile) {
+            if ($this->matchesDistanceProfile($profile, $centerCount, $totalMembers, $primaryRadius, $primaryDensity, $primaryCountry)) {
+                $effective = min($effective, $profile['distance_km']);
+            }
+        }
+
+        return $effective;
+    }
+
+    /**
+     * @param array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>} $profile
+     */
+    private function matchesDistanceProfile(
+        array $profile,
+        int $centerCount,
+        int $totalMembers,
+        float $primaryRadius,
+        float $primaryDensity,
+        ?string $primaryCountry,
+    ): bool {
+        $minCenterCount = $profile['min_center_count'] ?? null;
+        if (is_int($minCenterCount) && $minCenterCount > 0 && $centerCount < $minCenterCount) {
+            return false;
+        }
+
+        $minTotalMembers = $profile['min_total_member_count'] ?? null;
+        if (is_int($minTotalMembers) && $minTotalMembers > 0 && $totalMembers < $minTotalMembers) {
+            return false;
+        }
+
+        $maxPrimaryRadius = $profile['max_primary_radius_km'] ?? null;
+        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && (float) $maxPrimaryRadius > 0.0 && $primaryRadius > (float) $maxPrimaryRadius) {
+            return false;
+        }
+
+        $minPrimaryDensity = $profile['min_primary_density'] ?? null;
+        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && (float) $minPrimaryDensity > 0.0 && $primaryDensity < (float) $minPrimaryDensity) {
+            return false;
+        }
+
+        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== []) {
+            if ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>}> $profiles
+     *
+     * @return list<array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>}>
+     */
+    private function sanitizeDistanceProfiles(array $profiles): array
+    {
+        $result = [];
+
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+
+            $distance = $profile['distance_km'] ?? null;
+            if (!is_float($distance) && !is_int($distance)) {
+                continue;
+            }
+
+            $distanceValue = (float) $distance;
+            if ($distanceValue <= 0.0) {
+                continue;
+            }
+
+            $entry = ['distance_km' => $distanceValue];
+
+            if (isset($profile['min_center_count']) && is_int($profile['min_center_count']) && $profile['min_center_count'] > 0) {
+                $entry['min_center_count'] = $profile['min_center_count'];
+            }
+
+            if (isset($profile['min_total_member_count']) && is_int($profile['min_total_member_count']) && $profile['min_total_member_count'] > 0) {
+                $entry['min_total_member_count'] = $profile['min_total_member_count'];
+            }
+
+            if (isset($profile['max_primary_radius_km']) && (is_float($profile['max_primary_radius_km']) || is_int($profile['max_primary_radius_km']))) {
+                $radius = (float) $profile['max_primary_radius_km'];
+                if ($radius > 0.0) {
+                    $entry['max_primary_radius_km'] = $radius;
+                }
+            }
+
+            if (isset($profile['min_primary_density']) && (is_float($profile['min_primary_density']) || is_int($profile['min_primary_density']))) {
+                $density = (float) $profile['min_primary_density'];
+                if ($density > 0.0) {
+                    $entry['min_primary_density'] = $density;
+                }
+            }
+
+            if (isset($profile['countries']) && is_array($profile['countries'])) {
+                $countries = [];
+                foreach ($profile['countries'] as $country) {
+                    if (!is_string($country) || $country === '') {
+                        continue;
+                    }
+
+                    $countries[] = strtolower($country);
+                }
+
+                if ($countries !== []) {
+                    $entry['countries'] = $countries;
+                }
+            }
+
+            $result[] = $entry;
+        }
+
+        return $result;
     }
 
     /**

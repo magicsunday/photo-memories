@@ -70,9 +70,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     private SelectionProfileProvider $selectionProfiles;
 
-    private string $selectionProfileKey;
+    private string $defaultSelectionProfileKey;
 
     private DateTimeImmutable $referenceNow;
+
+    /**
+     * @var array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool}
+     */
+    private array $weekendExceptionConfig;
+
+    private ?string $weekendSelectionProfile;
 
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
@@ -86,13 +93,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
-        private int $minAwayDays = 1,
+        private int $minAwayDays = 2,
         private int $minMembers = 0,
+        array $weekendExceptionConfig = [],
+        ?string $weekendSelectionProfile = null,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
         ?DateTimeImmutable $referenceDate = null,
     ) {
-        $this->selectionProfiles   = $selectionProfiles;
-        $this->selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation');
+        $this->selectionProfiles          = $selectionProfiles;
+        $this->defaultSelectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation');
+        $this->weekendExceptionConfig     = $this->sanitizeWeekendExceptionConfig($weekendExceptionConfig);
+
+        $profileOverride = $weekendSelectionProfile !== null ? trim($weekendSelectionProfile) : '';
+        $this->weekendSelectionProfile = $profileOverride !== '' ? $profileOverride : null;
 
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -361,8 +374,22 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $bridgedAwayDays   = $this->countBridgedAwayDays($dayKeys, $baseAwayMap, $photoCountMap, $syntheticMap);
         $effectiveAwayDays = $awayDays + $bridgedAwayDays;
+        $nights            = max(0, $effectiveAwayDays - 1);
 
-        if ($effectiveAwayDays < $this->minAwayDays) {
+        $weekendAssessment = $this->evaluateWeekendGetaway(
+            $dayKeys,
+            $days,
+            $baseAwayMap,
+            $weekendHolidayFlags,
+            $effectiveAwayDays,
+            $nights,
+        );
+
+        $isWeekendGetaway        = $weekendAssessment['isWeekend'];
+        $weekendExceptionApplied = $weekendAssessment['exceptionApplies'];
+        $weekendFlaggedDays      = $weekendAssessment['flaggedDays'];
+
+        if ($effectiveAwayDays < $this->minAwayDays && $weekendExceptionApplied === false) {
             return null;
         }
 
@@ -519,9 +546,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $weightedScore  = $this->clamp01($weightedScore);
         $score          = $weightedScore * 10.0;
 
-        $nights = max(0, $effectiveAwayDays - 1);
-
-        $classification = $this->classifyTrip($effectiveAwayDays, $awayDays, $nights, $maxDistanceValue);
+        $classification = $this->classifyTrip($effectiveAwayDays, $awayDays, $nights, $maxDistanceValue, $isWeekendGetaway);
         if ($classification === 'none') {
             return null;
         }
@@ -550,16 +575,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $multiSpotDays,
         );
 
-        if ($this->monitoringEmitter !== null) {
-            $startPayload = [
-                'pre_count'                 => $preSelectionCount,
-                'day_count'                 => $dayCount,
-                'away_days'                 => $effectiveAwayDays,
-                'raw_away_days'             => $awayDays,
-                'bridged_days'              => $bridgedAwayDays,
-                'staypoint_detected'        => $primaryStaypoint !== null,
-                'storyline'                 => $storyline,
-            ];
+            if ($this->monitoringEmitter !== null) {
+                $startPayload = [
+                    'pre_count'                 => $preSelectionCount,
+                    'day_count'                 => $dayCount,
+                    'away_days'                 => $effectiveAwayDays,
+                    'raw_away_days'             => $awayDays,
+                    'bridged_days'              => $bridgedAwayDays,
+                    'staypoint_detected'        => $primaryStaypoint !== null,
+                    'storyline'                 => $storyline,
+                    'weekend_getaway'           => $isWeekendGetaway,
+                    'weekend_exception'         => $weekendExceptionApplied,
+                    'selection_profile'         => $selectionProfileKey,
+                ];
 
             if ($primaryStaypoint !== null) {
                 $startPayload['primary_staypoint_dwell_s'] = (int) $primaryStaypoint['dwell'];
@@ -568,7 +596,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $this->monitoringEmitter->emit('vacation_curation', 'selection_start', $startPayload);
         }
 
-        $selectionOptions   = $this->selectionProfiles->createOptions($this->selectionProfileKey);
+        $selectionProfileKey = $this->defaultSelectionProfileKey;
+        if ($isWeekendGetaway && $this->weekendSelectionProfile !== null) {
+            $selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation', $this->weekendSelectionProfile);
+        }
+
+        $selectionOptions   = $this->selectionProfiles->createOptions($selectionProfileKey);
         $selectionResult    = $this->memberSelector->select($acceptedSummaries, $home, $selectionOptions);
         $curatedMembers     = $selectionResult->getMembers();
         $selectionTelemetry = $selectionResult->getTelemetry();
@@ -664,9 +697,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $placeComponents = $this->locationHelper->majorityLocationComponents($curatedMembers);
 
         $classificationLabels = [
-            'vacation'   => 'Urlaub',
-            'short_trip' => 'Kurztrip',
-            'day_trip'   => 'Tagesausflug',
+            'vacation'        => 'Urlaub',
+            'short_trip'      => 'Kurztrip',
+            'weekend_getaway' => 'Wochenendtrip',
+            'day_trip'        => 'Tagesausflug',
         ];
 
         $params = [
@@ -698,6 +732,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'transit_ratio'            => round($transitRatio, 3),
             'transit_penalty'          => round($transitPenalty, 3),
             'transit_penalty_score'    => round($transitPenalty * 10.0, 2),
+            'weekend_getaway'          => $isWeekendGetaway,
+            'weekend_exception_applied' => $weekendExceptionApplied,
+            'weekend_flagged_days'     => $weekendFlaggedDays,
+            'selection_profile'        => $selectionProfileKey,
             'spot_count'               => $spotClusterCount,
             'spot_cluster_days'        => $multiSpotDays,
             'spot_dwell_hours'         => round($spotDwellHours, 2),
@@ -989,6 +1027,120 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         return [
             'keys'   => $filtered,
             'counts' => $counts,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @return array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool}
+     */
+    private function sanitizeWeekendExceptionConfig(array $config): array
+    {
+        $enabled = isset($config['enabled']) ? (bool) $config['enabled'] : true;
+        $minNights = isset($config['min_nights']) ? (int) $config['min_nights'] : 1;
+        if ($minNights < 1) {
+            $minNights = 1;
+        }
+
+        $maxNights = isset($config['max_nights']) ? (int) $config['max_nights'] : 3;
+        if ($maxNights < $minNights) {
+            $maxNights = $minNights;
+        }
+
+        $minFlaggedDays = isset($config['min_flagged_days']) ? (int) $config['min_flagged_days'] : 2;
+        if ($minFlaggedDays < 0) {
+            $minFlaggedDays = 0;
+        }
+
+        $requireSaturday    = isset($config['require_saturday']) ? (bool) $config['require_saturday'] : true;
+        $requireSunday      = isset($config['require_sunday']) ? (bool) $config['require_sunday'] : true;
+        $requireWeekendFlag = isset($config['require_weekend_flag']) ? (bool) $config['require_weekend_flag'] : true;
+
+        return [
+            'enabled'             => $enabled,
+            'min_nights'          => $minNights,
+            'max_nights'          => $maxNights,
+            'min_flagged_days'    => $minFlaggedDays,
+            'require_saturday'    => $requireSaturday,
+            'require_sunday'      => $requireSunday,
+            'require_weekend_flag' => $requireWeekendFlag,
+        ];
+    }
+
+    /**
+     * @param list<string>                 $dayKeys
+     * @param array<string, array<string,mixed>> $days
+     * @param array<string, bool>          $baseAwayMap
+     * @param array<string, bool>          $weekendHolidayFlags
+     *
+     * @return array{isWeekend:bool,exceptionApplies:bool,flaggedDays:int}
+     */
+    private function evaluateWeekendGetaway(
+        array $dayKeys,
+        array $days,
+        array $baseAwayMap,
+        array $weekendHolidayFlags,
+        int $effectiveAwayDays,
+        int $nights,
+    ): array {
+        $config = $this->weekendExceptionConfig;
+
+        if ($config['enabled'] === false) {
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0];
+        }
+
+        if ($nights < $config['min_nights'] || $nights > $config['max_nights']) {
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0];
+        }
+
+        $hasSaturday = false;
+        $hasSunday   = false;
+        $flaggedDays = 0;
+
+        foreach ($dayKeys as $key) {
+            $summary = $days[$key] ?? null;
+            if ($summary === null) {
+                continue;
+            }
+
+            $isAway = $baseAwayMap[$key] ?? false;
+            if ($isAway === false) {
+                continue;
+            }
+
+            $weekday = (int) ($summary['weekday'] ?? 0);
+            if ($weekday === 6) {
+                $hasSaturday = true;
+            } elseif ($weekday === 7) {
+                $hasSunday = true;
+            }
+
+            if (($weekendHolidayFlags[$key] ?? false) === true) {
+                ++$flaggedDays;
+            }
+        }
+
+        if ($config['require_saturday'] && $hasSaturday === false) {
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+        }
+
+        if ($config['require_sunday'] && $hasSunday === false) {
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+        }
+
+        if ($flaggedDays < $config['min_flagged_days']) {
+            if ($config['require_weekend_flag'] || $config['min_flagged_days'] > 0) {
+                return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+            }
+        }
+
+        $exceptionApplies = $effectiveAwayDays < $this->minAwayDays;
+
+        return [
+            'isWeekend'        => true,
+            'exceptionApplies' => $exceptionApplies,
+            'flaggedDays'      => $flaggedDays,
         ];
     }
 
@@ -1290,10 +1442,23 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         return $sum / $count;
     }
 
-    private function classifyTrip(int $effectiveAwayDays, int $rawAwayDays, int $nights, float $distanceKm): string
-    {
+    private function classifyTrip(
+        int $effectiveAwayDays,
+        int $rawAwayDays,
+        int $nights,
+        float $distanceKm,
+        bool $weekendGetaway,
+    ): string {
         if ($effectiveAwayDays <= 0) {
             return 'none';
+        }
+
+        if ($weekendGetaway) {
+            if ($nights === 0) {
+                return 'day_trip';
+            }
+
+            return 'weekend_getaway';
         }
 
         if ($effectiveAwayDays <= 1 || $nights === 0) {
@@ -1335,6 +1500,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return $prefix . '.short_trip';
         }
 
+        if ($classification === 'weekend_getaway') {
+            return $prefix . '.weekend';
+        }
+
         if ($transitRatio >= 0.45 && $moveDays >= 2) {
             return $prefix . '.transit';
         }
@@ -1349,27 +1518,32 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function applyScoreThresholds(string $classification, float $score): ?string
     {
         $thresholds = [
-            'day_trip'   => 4.0,
-            'short_trip' => 5.5,
-            'vacation'   => 7.0,
+            'vacation'        => 7.0,
+            'short_trip'      => 5.5,
+            'weekend_getaway' => 5.0,
+            'day_trip'        => 4.0,
         ];
 
-        $order = ['vacation', 'short_trip', 'day_trip'];
+        $fallbacks = [
+            'vacation'        => ['vacation', 'short_trip', 'weekend_getaway', 'day_trip'],
+            'short_trip'      => ['short_trip', 'day_trip'],
+            'weekend_getaway' => ['weekend_getaway', 'day_trip'],
+            'day_trip'        => ['day_trip'],
+        ];
 
-        for ($index = 0; $index < count($order); ++$index) {
-            if ($order[$index] !== $classification) {
+        if (!isset($fallbacks[$classification])) {
+            return null;
+        }
+
+        foreach ($fallbacks[$classification] as $candidate) {
+            $threshold = $thresholds[$candidate] ?? null;
+            if ($threshold === null) {
                 continue;
             }
 
-            for ($candidateIndex = $index; $candidateIndex < count($order); ++$candidateIndex) {
-                $candidate = $order[$candidateIndex];
-                $threshold = $thresholds[$candidate];
-                if ($score >= $threshold) {
-                    return $candidate;
-                }
+            if ($score >= $threshold) {
+                return $candidate;
             }
-
-            return null;
         }
 
         return null;
