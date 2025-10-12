@@ -42,10 +42,24 @@ trait SelectionOverrideInputTrait
             InputOption::VALUE_REQUIRED,
             'Mindestabstand in Sekunden zwischen kuratierten Medien'
         );
+
+        $this->addOption(
+            'sel-phash-hamming',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Minimaler pHash-Hamming-Abstand für kuratierte Medien'
+        );
+
+        $this->addOption(
+            'sel-max-staypoint',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Maximale Anzahl kuratierter Medien pro Aufenthaltsort (0 = ohne Limit)'
+        );
     }
 
     /**
-     * @return array<string, int>
+     * @return array<string, int|null>
      */
     private function resolveSelectionOverrides(InputInterface $input): array
     {
@@ -64,6 +78,23 @@ trait SelectionOverrideInputTrait
         $minSpacing = $this->parseIntOption($input->getOption('sel-min-spacing'), 0, 'sel-min-spacing');
         if ($minSpacing !== null) {
             $overrides['min_spacing_seconds'] = $minSpacing;
+        }
+
+        $phash = $this->parseIntOption($input->getOption('sel-phash-hamming'), 0, 'sel-phash-hamming');
+        if ($phash !== null) {
+            $overrides['phash_min_hamming'] = $phash;
+        }
+
+        $maxStaypointRaw = $input->getOption('sel-max-staypoint');
+        if ($maxStaypointRaw !== null && $maxStaypointRaw !== '') {
+            $maxStaypoint = $this->parseIntOption($maxStaypointRaw, 0, 'sel-max-staypoint');
+            if ($maxStaypoint === 0) {
+                $overrides['max_per_staypoint']         = null;
+                $overrides['max_per_staypoint_relaxed'] = null;
+            } elseif ($maxStaypoint !== null) {
+                $overrides['max_per_staypoint']         = $maxStaypoint;
+                $overrides['max_per_staypoint_relaxed'] = $maxStaypoint;
+            }
         }
 
         return $overrides;

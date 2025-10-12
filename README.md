@@ -45,7 +45,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
 
 ### 4. Feed-Aufbau & Ausspielung
 
-- Persistierte Cluster werden über `FeedBuilder` in `MemoryFeedItem`-Objekte transformiert. `memories:feed:preview` zeigt die daraus resultierende Konsolidierung im Terminal; `memories:feed:export-html` erzeugt statische HTML-Previews inklusive Thumbnails.
+- Persistierte Cluster werden über `FeedBuilder` in `MemoryFeedItem`-Objekte transformiert. `memories:feed:preview` zeigt die daraus resultierende Konsolidierung im Terminal, nutzt dabei den staypoint-basierten Selektionspfad (`SelectionPolicyProvider` + Day-Summary-Pipeline) und respektiert alle zur Laufzeit gesetzten Policy-Overrides; `memories:feed:export-html` erzeugt statische HTML-Previews inklusive Thumbnails.
 - Die HTTP-Schicht bietet `/api/feed` (JSON-Feed mit Filterparametern für Score, Strategie oder Datum), `/api/feed/{id}` (Detaildatensatz mit vollständiger Galerie und Metadaten), `/api/media/{id}/thumbnail` (Thumbnail-Auslieferung mit dynamischer Breite) und `/api/feed/{id}/video` für generierte Rückblick-Videos.
 - Slideshow-Jobs werden asynchron über `slideshow:generate` abgearbeitet; Parameter wie Bilddauer, Übergänge, Zielverzeichnis, Schriftfamilie/-datei oder Pfade zu `ffmpeg`/`php` sind konfigurierbar. Übergangslisten werden pro Rückblick deterministisch gemischt, damit API-Storyboard und Videorendering dieselbe Abfolge nutzen.
 
@@ -114,7 +114,7 @@ make web-dev
 
 - Die Story-Profile unter `memories.cluster.selection.profile_values` definieren vollständige Optionssätze (`min_spacing_seconds`, `phash_min_hamming`, `max_per_staypoint`, `video_bonus`, `face_bonus`, `selfie_penalty`, `quality_floor`, `minimum_total` usw.). Die Default-Werte folgen den Curation-Briefs für Urlaub, Orte, Szenen, Geräte, „An diesem Tag/Monat“, Freund:innen und Highlights.
 - Individuelle Installationen können diese Werte über `config/parameters.local.yaml` oder deploymentspezifische Overrides anpassen. Für globale Defaults stehen weiterhin die Umgebungsvariablen `MEMORIES_CLUSTER_SELECTION_TARGET_TOTAL`, `MEMORIES_CLUSTER_SELECTION_MAX_PER_DAY`, `MEMORIES_CLUSTER_SELECTION_TIME_SLOT_HOURS`, `MEMORIES_CLUSTER_SELECTION_MIN_SPACING_SECONDS`, `MEMORIES_CLUSTER_SELECTION_PHASH_MIN_HAMMING`, `MEMORIES_CLUSTER_SELECTION_MAX_PER_STAYPOINT`, `MEMORIES_CLUSTER_SELECTION_VIDEO_BONUS`, `MEMORIES_CLUSTER_SELECTION_FACE_BONUS`, `MEMORIES_CLUSTER_SELECTION_SELFIE_PENALTY` und `MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR` zur Verfügung.
-- Temporäre Laufzeit-Overrides lassen sich über `memories:cluster --sel-target-total=… --sel-max-per-day=… --sel-min-spacing=…` setzen; die Optionen wirken auf sämtliche Profile während dieses Jobs.
+- Temporäre Laufzeit-Overrides lassen sich über `memories:cluster --sel-target-total=… --sel-max-per-day=… --sel-min-spacing=… --sel-phash-hamming=… --sel-max-staypoint=…` setzen; die Optionen wirken auf sämtliche Profile während dieses Jobs.
 
 ## Tests & Qualitätssicherung
 
