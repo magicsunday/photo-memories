@@ -1033,6 +1033,8 @@ services:
             - { name: 'memories.cluster_consolidation.stage', priority: 100 }
 
     MagicSunday\Memories\Service\Clusterer\Pipeline\CanonicalTitleStage:
+        arguments:
+            $routeSummarizer: '@MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 50 }
 
