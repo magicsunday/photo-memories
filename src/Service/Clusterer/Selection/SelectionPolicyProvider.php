@@ -15,6 +15,7 @@ use InvalidArgumentException;
 
 use function array_key_exists;
 use function array_merge;
+use function is_array;
 use function is_float;
 use function is_int;
 use function is_numeric;
@@ -76,6 +77,7 @@ final class SelectionPolicyProvider
             maxPerYear: $this->intOrNull($config, 'max_per_year'),
             maxPerBucket: $this->intOrNull($config, 'max_per_bucket'),
             videoHeavyBonus: $this->floatOrNull($config, 'video_heavy_bonus'),
+            sceneBucketWeights: $this->floatMapOrNull($config, 'scene_bucket_weights'),
         );
     }
 
@@ -105,6 +107,40 @@ final class SelectionPolicyProvider
         $this->assignFloatOrNullOverride($sanitised, $overrides, 'video_heavy_bonus');
 
         return $sanitised;
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $config
+     *
+     * @return array<string, float>|null
+     */
+    private function floatMapOrNull(array $config, string $key): ?array
+    {
+        if (!array_key_exists($key, $config)) {
+            return null;
+        }
+
+        $value = $config[$key];
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $weights = [];
+        foreach ($value as $bucket => $weight) {
+            if (!is_string($bucket) || $bucket === '') {
+                continue;
+            }
+
+            if (is_float($weight) || is_int($weight) || (is_string($weight) && is_numeric($weight))) {
+                $weights[$bucket] = (float) $weight;
+            }
+        }
+
+        return $weights;
     }
 
     /**

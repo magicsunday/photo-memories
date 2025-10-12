@@ -17,6 +17,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
 use MagicSunday\Memories\Service\Clusterer\Selection\PolicyDrivenMemberSelector;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\OrientationBalanceStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PeopleBalanceStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PhashDiversityStage;
@@ -201,6 +202,103 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertSame(1, $candidates['drops']['burst']);
         self::assertCount(1, $candidates['eligible']);
         self::assertSame(201, $candidates['eligible'][0]['id']);
+    }
+
+    #[Test]
+    public function buildCandidatesAnnotatesSceneBuckets(): void
+    {
+        $selector = $this->createSelector();
+        $policy   = $this->createVacationPolicy();
+
+        $group = $this->createMedia(301, '2024-05-18T18:00:00+02:00', 'aaaaaaaaaaaaaaa1', [], [52.4, 13.4], [4000, 3000]);
+        $group->setFacesCount(4);
+        $group->setHasFaces(true);
+        $group->setFeatures([
+            'faces' => ['largest_coverage' => 0.30],
+        ]);
+
+        $panorama = $this->createMedia(302, '2024-05-18T11:00:00+02:00', 'bbbbbbbbbbbbbbb1', [], [52.5, 13.5], [8000, 2000]);
+        $panorama->setIsPanorama(true);
+
+        $night = $this->createMedia(303, '2024-05-18T22:30:00+02:00', 'ccccccccccccccc1', [], [52.6, 13.6], [4000, 3000]);
+        $night->setFeatures([
+            'calendar' => ['daypart' => 'night'],
+        ]);
+        $night->setSceneTags([
+            ['label' => 'Night city lights', 'score' => 0.92],
+        ]);
+
+        $food = $this->createMedia(304, '2024-05-18T12:30:00+02:00', 'ddddddddddddddd1', [], [52.7, 13.7], [4000, 3000]);
+        $food->setSceneTags([
+            ['label' => 'Delicious food spread', 'score' => 0.95],
+        ]);
+
+        $memberIds = [301, 302, 303, 304];
+        $mediaMap  = [301 => $group, 302 => $panorama, 303 => $night, 304 => $food];
+        $quality   = [301 => 0.8, 302 => 0.8, 303 => 0.8, 304 => 0.8];
+        $draft     = $this->createDraft('vacation', $memberIds);
+
+        $candidates = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
+
+        $eligible = $candidates['eligible'];
+        self::assertCount(4, $eligible);
+
+        $buckets = array_map(static fn (array $candidate): string => $candidate['bucket'], $eligible);
+
+        self::assertContains('person_group', $buckets);
+        self::assertContains('panorama', $buckets);
+        self::assertContains('night', $buckets);
+        self::assertContains('food', $buckets);
+        self::assertGreaterThanOrEqual(4, count(array_values(array_unique($buckets))));
+    }
+
+    #[Test]
+    public function sceneDiversityStageHonoursTargetShare(): void
+    {
+        $stage = new SceneDiversityStage();
+        $policy = new SelectionPolicy(
+            profileKey: 'test',
+            targetTotal: 8,
+            minimumTotal: 4,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: [
+                'person_group' => 0.25,
+                'outdoor'      => 0.75,
+            ],
+        );
+
+        $candidates = [
+            ['id' => 1, 'timestamp' => 1, 'score' => 1.0, 'bucket' => 'person_group'],
+            ['id' => 2, 'timestamp' => 2, 'score' => 1.0, 'bucket' => 'person_group'],
+            ['id' => 3, 'timestamp' => 3, 'score' => 1.0, 'bucket' => 'outdoor'],
+            ['id' => 4, 'timestamp' => 4, 'score' => 1.0, 'bucket' => 'outdoor'],
+            ['id' => 5, 'timestamp' => 5, 'score' => 1.0, 'bucket' => 'outdoor'],
+        ];
+
+        $telemetry = new SelectionTelemetry();
+        $result    = $stage->apply($candidates, $policy, $telemetry);
+
+        $personGroupSelected = array_filter(
+            $result,
+            static fn (array $candidate): bool => $candidate['bucket'] === 'person_group'
+        );
+
+        self::assertCount(1, $personGroupSelected);
+
+        $reasons = $telemetry->reasonCounts();
+        self::assertGreaterThan(0, $reasons[SelectionTelemetry::REASON_SCENE]);
     }
 
     /**
