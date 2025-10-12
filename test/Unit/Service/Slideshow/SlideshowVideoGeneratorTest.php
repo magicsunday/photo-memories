@@ -21,6 +21,7 @@ use RuntimeException;
 use function array_fill_keys;
 use function array_map;
 use function array_search;
+use function chmod;
 use function base64_decode;
 use function count;
 use function explode;
@@ -962,6 +963,69 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterIndex + 1];
         self::assertStringContainsString('xfade=transition=pixelize:duration=', $filterComplex);
         self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
+    }
+
+    public function testDiscoveredTransitionsAreFilteredAgainstWhitelist(): void
+    {
+        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
+        $resetCacheMethod->setAccessible(true);
+        $resetCacheMethod->invoke(null);
+
+        $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
+
+        $helpOutput = <<<'OUTPUT'
+XFades transitions help
+  Possible transitions:
+    fade            Fade transition
+    sparkle         Experimental sparkle effect
+    circleopen      Circle opening wipe
+    wipeleft        Wipe from the left
+    zoom            Zoom effect
+OUTPUT;
+
+        $scriptContent = <<<BASH
+#!/usr/bin/env bash
+cat <<'EOF'
+$helpOutput
+EOF
+BASH;
+
+        file_put_contents($script, $scriptContent);
+        chmod($script, 0755);
+
+        $generator = new SlideshowVideoGenerator(ffmpegBinary: $script);
+
+        $whitelistMethod = $reflector->getMethod('getTransitionWhitelist');
+        $whitelistMethod->setAccessible(true);
+
+        $lookupMethod = $reflector->getMethod('getTransitionLookup');
+        $lookupMethod->setAccessible(true);
+
+        try {
+            /** @var list<string> $whitelist */
+            $whitelist = $whitelistMethod->invoke($generator);
+
+            self::assertSame(
+                ['fade', 'wipeleft', 'circleopen'],
+                $whitelist,
+            );
+
+            /** @var array<string, bool> $lookup */
+            $lookup = $lookupMethod->invoke($generator);
+
+            self::assertSame(
+                [
+                    'fade' => true,
+                    'wipeleft' => true,
+                    'circleopen' => true,
+                ],
+                $lookup,
+            );
+        } finally {
+            $resetCacheMethod->invoke(null);
+            unlink($script);
+        }
     }
 
     public function testDeterministicFallbackTransitionsUseWhitelist(): void
