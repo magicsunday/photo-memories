@@ -17,7 +17,14 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use function abs;
 use function array_key_exists;
 use function count;
+use function floor;
+use function is_array;
+use function is_float;
+use function is_int;
+use function is_numeric;
 use function min;
+use function sort;
+use const SORT_NUMERIC;
 
 /**
  * Removes members that fall below the perceptual hash distance threshold.
@@ -39,6 +46,11 @@ final class PhashDiversityStage implements SelectionStageInterface
         $threshold = $policy->getPhashMinHamming();
         if ($threshold <= 0) {
             return $candidates;
+        }
+
+        $adaptiveThreshold = $this->determineAdaptiveThreshold($candidates, $policy);
+        if ($adaptiveThreshold !== null) {
+            $threshold = max(1, min($threshold, $adaptiveThreshold));
         }
 
         $this->distanceCache = [];
@@ -80,6 +92,66 @@ final class PhashDiversityStage implements SelectionStageInterface
             return $this->distanceCache[$cacheKey];
         }
 
+        $distance = $this->distanceFromBits($hashA, $hashB);
+
+        $this->distanceCache[$cacheKey] = $distance;
+
+        return $distance;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $candidates
+     */
+    private function determineAdaptiveThreshold(array $candidates, SelectionPolicy $policy): ?int
+    {
+        $percentile = $policy->getPhashPercentile();
+        if ($percentile <= 0.0) {
+            return null;
+        }
+
+        $distances = [];
+        $total     = count($candidates);
+
+        for ($i = 0; $i < $total; ++$i) {
+            $hashA = $candidates[$i]['hash_bits'] ?? null;
+            if (!is_array($hashA)) {
+                continue;
+            }
+
+            for ($j = $i + 1; $j < $total; ++$j) {
+                $hashB = $candidates[$j]['hash_bits'] ?? null;
+                if (!is_array($hashB)) {
+                    continue;
+                }
+
+                $distance = $this->distanceFromBits($hashA, $hashB);
+                $distances[] = $distance;
+            }
+        }
+
+        if ($distances === []) {
+            return null;
+        }
+
+        sort($distances, SORT_NUMERIC);
+        $index = (int) floor($percentile * (count($distances) - 1));
+        if ($index < 0) {
+            $index = 0;
+        }
+
+        if ($index >= count($distances)) {
+            $index = count($distances) - 1;
+        }
+
+        return $distances[$index];
+    }
+
+    /**
+     * @param list<int> $hashA
+     * @param list<int> $hashB
+     */
+    private function distanceFromBits(array $hashA, array $hashB): int
+    {
         $length   = min(count($hashA), count($hashB));
         $distance = abs(count($hashA) - count($hashB));
         for ($idx = 0; $idx < $length; ++$idx) {
@@ -87,8 +159,6 @@ final class PhashDiversityStage implements SelectionStageInterface
                 ++$distance;
             }
         }
-
-        $this->distanceCache[$cacheKey] = $distance;
 
         return $distance;
     }

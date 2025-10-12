@@ -125,5 +125,10 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertArrayHasKey('countries', $params);
         self::assertSame(['pt'], $params['countries']);
         self::assertArrayHasKey('member_selection', $params);
+        self::assertArrayHasKey('day_segments', $params);
+        self::assertNotSame([], $params['day_segments']);
+        $segmentSample = reset($params['day_segments']);
+        self::assertIsArray($segmentSample);
+        self::assertArrayHasKey('category', $segmentSample);
     }
 }

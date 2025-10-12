@@ -37,6 +37,11 @@ final readonly class VacationSelectionOptions
         public bool $enablePeopleBalance = true,
         public float $peopleBalanceWeight = 0.35,
         public float $repeatPenalty = 0.0,
+        public int $coreDayBonus = 1,
+        public int $peripheralDayPenalty = 1,
+        public float $phashPercentile = 0.35,
+        public float $spacingProgressFactor = 0.5,
+        public float $cohortRepeatPenalty = 0.05,
         ?int $minimumTotal = null,
     ) {
         if ($this->targetTotal < 1) {
@@ -85,6 +90,26 @@ final readonly class VacationSelectionOptions
 
         if (!is_finite($this->repeatPenalty)) {
             throw new InvalidArgumentException('repeatPenalty must be a finite number.');
+        }
+
+        if ($this->coreDayBonus < 0) {
+            throw new InvalidArgumentException('coreDayBonus must not be negative.');
+        }
+
+        if ($this->peripheralDayPenalty < 0) {
+            throw new InvalidArgumentException('peripheralDayPenalty must not be negative.');
+        }
+
+        if ($this->phashPercentile < 0.0 || $this->phashPercentile > 1.0) {
+            throw new InvalidArgumentException('phashPercentile must be within [0,1].');
+        }
+
+        if ($this->spacingProgressFactor < 0.0 || $this->spacingProgressFactor > 1.0) {
+            throw new InvalidArgumentException('spacingProgressFactor must be within [0,1].');
+        }
+
+        if ($this->cohortRepeatPenalty < 0.0) {
+            throw new InvalidArgumentException('cohortRepeatPenalty must not be negative.');
         }
 
         $computedMinimum = (int) round($this->targetTotal * 0.6);

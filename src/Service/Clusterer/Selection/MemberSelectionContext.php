@@ -24,12 +24,14 @@ final class MemberSelectionContext
      * @param SelectionPolicy         $policy        resolved selection policy for the algorithm
      * @param array<int, Media>       $mediaMap      keyed map of media entities used during curation
      * @param array<int, float|null>  $qualityScores per-member quality scores supplied by the ranking stage
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments per-day classification context
      */
     public function __construct(
         private readonly ClusterDraft $draft,
         private readonly SelectionPolicy $policy,
         private readonly array $mediaMap,
         private readonly array $qualityScores,
+        private readonly array $daySegments = [],
     ) {
     }
 
@@ -57,5 +59,13 @@ final class MemberSelectionContext
     public function getQualityScores(): array
     {
         return $this->qualityScores;
+    }
+
+    /**
+     * @return array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
+     */
+    public function getDaySegments(): array
+    {
+        return $this->daySegments;
     }
 }

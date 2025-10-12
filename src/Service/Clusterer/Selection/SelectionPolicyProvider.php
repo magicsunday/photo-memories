@@ -86,6 +86,11 @@ final class SelectionPolicyProvider
             maxPerBucket: $this->intOrNull($config, 'max_per_bucket'),
             videoHeavyBonus: $this->floatOrNull($config, 'video_heavy_bonus'),
             sceneBucketWeights: $this->floatMapOrNull($config, 'scene_bucket_weights'),
+            coreDayBonus: $this->intOptional($config, 'core_day_bonus', 1),
+            peripheralDayPenalty: $this->intOptional($config, 'peripheral_day_penalty', 1),
+            phashPercentile: $this->floatOptional($config, 'phash_percentile', 0.35),
+            spacingProgressFactor: $this->floatOptional($config, 'spacing_progress_factor', 0.5),
+            cohortPenalty: $this->floatOptional($config, 'cohort_repeat_penalty', 0.05),
         );
     }
 
@@ -240,6 +245,11 @@ final class SelectionPolicyProvider
         $this->assignIntOrNullOverride($sanitised, $overrides, 'max_per_year');
         $this->assignIntOrNullOverride($sanitised, $overrides, 'max_per_bucket');
         $this->assignFloatOrNullOverride($sanitised, $overrides, 'video_heavy_bonus');
+        $this->assignIntOverride($sanitised, $overrides, 'core_day_bonus');
+        $this->assignIntOverride($sanitised, $overrides, 'peripheral_day_penalty');
+        $this->assignFloatOverride($sanitised, $overrides, 'phash_percentile');
+        $this->assignFloatOverride($sanitised, $overrides, 'spacing_progress_factor');
+        $this->assignFloatOverride($sanitised, $overrides, 'cohort_repeat_penalty');
 
         return $sanitised;
     }
@@ -384,6 +394,42 @@ final class SelectionPolicyProvider
         if (is_string($value) && is_numeric($value)) {
             $target[$key] = (float) $value;
         }
+    }
+
+    private function intOptional(array $config, string $key, int $default): int
+    {
+        if (!array_key_exists($key, $config)) {
+            return $default;
+        }
+
+        $value = $config[$key];
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value) || (is_string($value) && is_numeric($value))) {
+            return (int) $value;
+        }
+
+        return $default;
+    }
+
+    private function floatOptional(array $config, string $key, float $default): float
+    {
+        if (!array_key_exists($key, $config)) {
+            return $default;
+        }
+
+        $value = $config[$key];
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return $default;
     }
 
     /**

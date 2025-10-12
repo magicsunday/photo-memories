@@ -17,6 +17,11 @@ parameters:
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.34
+            core_day_bonus: 1
+            peripheral_day_penalty: 1
+            phash_percentile: 0.35
+            spacing_progress_factor: 0.45
+            cohort_repeat_penalty: 0.05
         location:
             target_total: 48
             minimum_total: 30

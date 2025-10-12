@@ -1058,9 +1058,17 @@ services:
             $defaultProfile: '%memories.selection.default_profile%'
             $algorithmProfiles: '%memories.selection.algorithm_profiles%'
 
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\DayQuotaSelectionStage:
+        tags:
+            - { name: 'memories.selection.stage.hard', priority: 320 }
+
     MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage:
         tags:
             - { name: 'memories.selection.stage.hard', priority: 300 }
+
+    MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeSlotDiversificationStage:
+        tags:
+            - { name: 'memories.selection.stage.hard', priority: 280 }
 
     MagicSunday\Memories\Service\Clusterer\Selection\Stage\StaypointQuotaStage:
         tags:

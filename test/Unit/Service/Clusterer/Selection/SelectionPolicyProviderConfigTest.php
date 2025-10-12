@@ -44,6 +44,11 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         self::assertSame(0.22, $policy->getVideoBonus());
         self::assertSame(0.34, $policy->getFaceBonus());
         self::assertSame(0.26, $policy->getSelfiePenalty());
+        self::assertSame(1, $policy->getCoreDayBonus());
+        self::assertSame(1, $policy->getPeripheralDayPenalty());
+        self::assertSame(0.35, $policy->getPhashPercentile());
+        self::assertSame(0.45, $policy->getSpacingProgressFactor());
+        self::assertSame(0.05, $policy->getCohortPenalty());
     }
 
     #[Test]
@@ -68,6 +73,11 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         self::assertSame(10, $policy->getPhashMinHamming());
         self::assertSame(2, $policy->getMaxPerStaypoint());
         self::assertSame(0.6, $policy->getQualityFloor());
+        self::assertSame(1, $policy->getCoreDayBonus());
+        self::assertSame(1, $policy->getPeripheralDayPenalty());
+        self::assertSame(0.35, $policy->getPhashPercentile());
+        self::assertSame(0.5, $policy->getSpacingProgressFactor());
+        self::assertSame(0.05, $policy->getCohortPenalty());
     }
 
     #[Test]

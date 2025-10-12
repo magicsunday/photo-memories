@@ -15,14 +15,20 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
+use function ceil;
 use function count;
+use function floor;
 use function is_array;
 use function is_float;
 use function is_int;
+use function is_numeric;
+use function is_string;
+use function max;
 
 /**
  * Stage that curates cluster member lists using the policy driven selector.
@@ -72,7 +78,11 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $policy = $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline());
+            $policy      = $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline());
+            $daySegments = $this->extractDaySegments($draft);
+            if ($daySegments !== []) {
+                $policy = $this->applyDayContext($policy, $daySegments);
+            }
             $media  = $this->mediaLookup->findByIds($members);
 
             $mediaMap = [];
@@ -81,7 +91,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             }
 
             $qualityScores = $this->extractQualityScores($draft);
-            $context       = new MemberSelectionContext($draft, $policy, $mediaMap, $qualityScores);
+            $context       = new MemberSelectionContext($draft, $policy, $mediaMap, $qualityScores, $policy->getDayContext());
 
             $preCount = count($members);
             $this->emitMonitoring('selection_start', [
@@ -124,6 +134,135 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @return array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
+     */
+    private function extractDaySegments(ClusterDraft $draft): array
+    {
+        $params   = $draft->getParams();
+        $segments = $params['day_segments'] ?? null;
+        if (!is_array($segments)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($segments as $day => $info) {
+            if (!is_string($day) || $day === '' || !is_array($info)) {
+                continue;
+            }
+
+            $scoreRaw = $info['score'] ?? 0.0;
+            if (is_float($scoreRaw) || is_int($scoreRaw)) {
+                $score = (float) $scoreRaw;
+            } elseif (is_string($scoreRaw) && is_numeric($scoreRaw)) {
+                $score = (float) $scoreRaw;
+            } else {
+                $score = 0.0;
+            }
+
+            $category = $info['category'] ?? 'peripheral';
+            if (!is_string($category) || $category === '') {
+                $category = 'peripheral';
+            }
+
+            $durationRaw = $info['duration'] ?? null;
+            $duration    = null;
+            if (is_int($durationRaw) && $durationRaw >= 0) {
+                $duration = $durationRaw;
+            } elseif (is_string($durationRaw) && is_numeric($durationRaw)) {
+                $candidate = (int) $durationRaw;
+                if ($candidate >= 0) {
+                    $duration = $candidate;
+                }
+            }
+
+            $metricsRaw = $info['metrics'] ?? [];
+            $metrics    = [];
+            if (is_array($metricsRaw)) {
+                foreach ($metricsRaw as $key => $value) {
+                    if (!is_string($key) || $key === '') {
+                        continue;
+                    }
+
+                    if (is_float($value) || is_int($value)) {
+                        $metrics[$key] = (float) $value;
+
+                        continue;
+                    }
+
+                    if (is_string($value) && is_numeric($value)) {
+                        $metrics[$key] = (float) $value;
+                    }
+                }
+            }
+
+            $result[$day] = [
+                'score'    => $score,
+                'category' => $category,
+                'duration' => $duration,
+                'metrics'  => $metrics,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments
+     */
+    private function applyDayContext(SelectionPolicy $policy, array $daySegments): SelectionPolicy
+    {
+        if ($daySegments === []) {
+            return $policy;
+        }
+
+        $dayCount = count($daySegments);
+        $baseCap  = $policy->getMaxPerDay();
+        if ($baseCap === null) {
+            $baseCap = max(1, (int) ceil($policy->getTargetTotal() / max(1, $dayCount)));
+        }
+
+        $dayQuotas = [];
+        foreach ($daySegments as $day => $info) {
+            $quota = $baseCap ?? $policy->getTargetTotal();
+            if ($quota < 1) {
+                $quota = 1;
+            }
+
+            if ($info['category'] === 'core') {
+                $quota += $policy->getCoreDayBonus();
+            } elseif ($info['category'] === 'peripheral') {
+                $quota -= $policy->getPeripheralDayPenalty();
+            }
+
+            if ($quota < 1) {
+                $quota = 1;
+            }
+
+            $dayQuotas[$day] = $quota;
+        }
+
+        $policyWithContext = $policy->withDayContext($dayQuotas, $daySegments);
+
+        $staypointCap = $policyWithContext->getMaxPerStaypoint();
+        if ($staypointCap !== null) {
+            $staypointBase = $policy->getMaxPerDay();
+            if ($staypointBase === null && $dayQuotas !== []) {
+                $staypointBase = max($dayQuotas);
+            }
+
+            if ($staypointBase !== null && $staypointBase > 0) {
+                $dynamicCap = max(1, (int) floor($staypointBase / 2));
+                $targetCap  = $staypointCap <= $dynamicCap ? $staypointCap : $dynamicCap;
+                if ($targetCap !== $staypointCap) {
+                    $policyWithContext = $policyWithContext->withMaxPerStaypoint($targetCap);
+                }
+            }
+        }
+
+        return $policyWithContext;
     }
 
     /**

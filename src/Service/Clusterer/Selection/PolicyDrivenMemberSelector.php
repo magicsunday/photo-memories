@@ -129,6 +129,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $context->getQualityScores(),
             $policy,
             $draft,
+            $context->getDaySegments(),
         );
 
         $telemetry = [
@@ -143,6 +144,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 'quality'             => $candidates['drops']['quality'],
                 'burst'               => $candidates['drops']['burst'] ?? 0,
                 SelectionTelemetry::REASON_TIME_GAP       => 0,
+                SelectionTelemetry::REASON_DAY_QUOTA     => 0,
+                SelectionTelemetry::REASON_TIME_SLOT     => 0,
                 SelectionTelemetry::REASON_STAYPOINT      => 0,
                 SelectionTelemetry::REASON_PHASH          => 0,
                 SelectionTelemetry::REASON_SCENE          => 0,
@@ -497,6 +500,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         array $qualityScores,
         SelectionPolicy $policy,
         ClusterDraft $draft,
+        array $daySegments,
     ): array {
         $eligible = [];
         $drops    = [
@@ -506,6 +510,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $staypointCenters = [];
         $all              = [];
+        $personFrequency  = [];
 
         foreach ($memberIds as $id) {
             $media = $mediaMap[$id] ?? null;
@@ -572,6 +577,38 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
             $hashBits = $this->decodeHash($media);
 
+            $cohortPenalty = 0.0;
+            if ($policy->getCohortPenalty() > 0.0 && $persons !== []) {
+                $repeatCount = 0;
+                foreach ($persons as $personId) {
+                    $repeatCount += $personFrequency[$personId] ?? 0;
+                }
+
+                if ($repeatCount > 0) {
+                    $cohortPenalty = $policy->getCohortPenalty() * $repeatCount;
+                    $score -= $cohortPenalty;
+                }
+            }
+
+            $dayInfo    = $daySegments[$day] ?? ['category' => 'peripheral', 'score' => 0.0, 'duration' => null];
+            $dayCategory = is_string($dayInfo['category'] ?? null) && $dayInfo['category'] !== ''
+                ? $dayInfo['category']
+                : 'peripheral';
+            $dayScore = $dayInfo['score'] ?? 0.0;
+            if (!is_float($dayScore) && !is_int($dayScore)) {
+                $dayScore = is_numeric($dayScore) ? (float) $dayScore : 0.0;
+            }
+
+            $dayDuration = $dayInfo['duration'] ?? null;
+            if (!is_int($dayDuration)) {
+                if (is_numeric($dayDuration)) {
+                    $candidateDuration = (int) $dayDuration;
+                    $dayDuration       = $candidateDuration >= 0 ? $candidateDuration : null;
+                } else {
+                    $dayDuration = null;
+                }
+            }
+
             $eligible[] = [
                 'id'         => $id,
                 'media'      => $media,
@@ -589,6 +626,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 'bucket'     => $bucket,
                 'orientation'=> $orientation,
                 'burst'      => $media->getBurstUuid(),
+                'day_category' => $dayCategory,
+                'day_score'    => (float) $dayScore,
+                'day_duration' => $dayDuration,
+                'cohort_penalty' => $cohortPenalty,
                 'face_metrics' => [
                     'count'            => $facesCount,
                     'largest_coverage' => $coverage,
@@ -596,6 +637,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                     'closeup_penalty'  => $closeUpPenalty,
                 ],
             ];
+
+            if ($persons !== []) {
+                foreach ($persons as $personId) {
+                    $personFrequency[$personId] = ($personFrequency[$personId] ?? 0) + 1;
+                }
+            }
         }
 
         $eligible = $this->collapseBursts($eligible, $drops);
@@ -1168,6 +1215,13 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'max_per_bucket'      => $policy->getMaxPerBucket(),
             'video_heavy_bonus'   => $policy->getVideoHeavyBonus(),
             'scene_bucket_weights'=> $policy->getSceneBucketWeights(),
+            'core_day_bonus'      => $policy->getCoreDayBonus(),
+            'peripheral_day_penalty' => $policy->getPeripheralDayPenalty(),
+            'phash_percentile'    => $policy->getPhashPercentile(),
+            'spacing_progress_factor' => $policy->getSpacingProgressFactor(),
+            'cohort_penalty'      => $policy->getCohortPenalty(),
+            'day_quotas'          => $policy->getDayQuotas(),
+            'day_context'         => $policy->getDayContext(),
         ];
     }
 }
