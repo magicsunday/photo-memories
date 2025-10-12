@@ -896,7 +896,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             $index = $summary['staypointIndex'] ?? null;
             if ($index instanceof StaypointIndex) {
-                foreach ($index->getCounts() as $key => $count) {
+                $dayIndexCounts = $index->getCounts();
+                foreach ($dayIndexCounts as $key => $count) {
                     $counts[$key] = ($counts[$key] ?? 0) + (int) $count;
                 }
 
@@ -935,6 +936,25 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
                     $indexMap[(int) $id] = $key;
                 }
+
+                $staypointCounts = $summary['staypointCounts'] ?? [];
+                if (is_array($staypointCounts)) {
+                    foreach ($staypointCounts as $key => $count) {
+                        if (!is_string($key)) {
+                            continue;
+                        }
+
+                        $normalizedCount = (int) $count;
+                        $baseCount       = (int) ($dayIndexCounts[$key] ?? 0);
+                        if ($normalizedCount <= $baseCount) {
+                            continue;
+                        }
+
+                        $counts[$key] = ($counts[$key] ?? 0) + ($normalizedCount - $baseCount);
+                    }
+                }
+
+                continue;
             }
 
             $staypointCounts = $summary['staypointCounts'] ?? [];
