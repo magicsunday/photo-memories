@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
@@ -44,8 +45,9 @@ final class HybridClusterer implements HybridClustererInterface
      * New API: lifecycle + per-strategy progress.
      *
      * @param list<Media>                                                                  $items
+     * @param callable(string $strategy, int $index, int $total)|null                      $onStart
      * @param callable(string $strategy, int $index, int $total)|null                      $onDone
-     * @param callable(string $strategy): callable(int $cur, int $max, string $stage)|null $makeProgress
+     * @param callable(string $strategy, int $index, int $total): ?callable(int $cur, int $max, string $stage)|null $makeProgress
      *
      * @return list<ClusterDraft>
      */
@@ -53,6 +55,7 @@ final class HybridClusterer implements HybridClustererInterface
         array $items,
         ?callable $onStart,
         ?callable $onDone,
+        ?callable $makeProgress = null,
     ): array {
         $strategies = $this->getStrategies();
         $total      = count($strategies);
@@ -67,7 +70,16 @@ final class HybridClusterer implements HybridClustererInterface
                 $onStart($s->name(), $idx, $total);
             }
 
-            $res = $s->cluster($items);
+            $progressCallback = null;
+            if ($makeProgress !== null) {
+                $progressCallback = $makeProgress($s->name(), $idx, $total);
+            }
+
+            if ($progressCallback !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
+                $res = $s->clusterWithProgress($items, $progressCallback);
+            } else {
+                $res = $s->cluster($items);
+            }
 
             if ($res !== []) {
                 $drafts[] = $res;

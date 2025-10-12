@@ -13,11 +13,13 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
+use function sprintf;
 use function strcmp;
 use function usort;
 
@@ -30,7 +32,7 @@ use function usort;
  * stage is delegated to dedicated services to keep responsibilities focused
  * and composable.
  */
-final readonly class VacationClusterStrategy implements ClusterStrategyInterface
+final readonly class VacationClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
 
@@ -64,21 +66,49 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        $totalCount = count($items);
+        return $this->clusterInternal($items, null);
+    }
 
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->clusterInternal($items, $update);
+    }
+
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     *
+     * @return list<ClusterDraft>
+     */
+    private function clusterInternal(array $items, ?callable $update): array
+    {
+        $totalCount = count($items);
         $this->emitMonitoring('start', [
             'total_count' => $totalCount,
         ]);
 
+        $step  = 0;
+        $steps = 6;
+
         // Cluster processing requires reliable timestamps to establish the chronology of the trip.
         $timestamped = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
+
+        $this->notifyProgress($update, ++$step, $steps, sprintf('Zeitstempel prüfen (%d Medien)', $timestampedCount));
 
         if ($timestampedCount === 0) {
             $this->emitMonitoring('skipped', [
                 'reason' => 'no_timestamped_media',
                 'total_count' => $totalCount,
             ]);
+
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Medien mit Zeitstempel');
 
             return [];
         }
@@ -91,6 +121,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         // Ensure chronological ordering so day summaries receive a consistent sequence.
         $ordered = $this->sortChronologically($timestamped);
+        $this->notifyProgress($update, ++$step, $steps, 'Chronologie herstellen');
 
         // Determine the traveller's base location, which anchors day grouping and trip detection.
         $home = $this->homeLocator->determineHome($ordered);
@@ -100,8 +131,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'timestamped_count' => $timestampedCount,
             ]);
 
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Zuhause konnte nicht bestimmt werden');
+
             return [];
         }
+
+        $this->notifyProgress($update, ++$step, $steps, 'Zuhause bestimmen');
 
         $this->emitMonitoring('home_determined', [
             'timestamped_count' => $timestampedCount,
@@ -116,16 +151,27 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $days = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
         $dayCount = count($days);
 
+        $this->notifyProgress($update, ++$step, $steps, sprintf('Tagesübersichten erstellen (%d Tage)', $dayCount));
+
         if ($dayCount === 0) {
             $this->emitMonitoring('skipped', [
                 'reason' => 'no_day_summaries',
                 'timestamped_count' => $timestampedCount,
             ]);
 
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Tageszusammenfassungen');
+
             return [];
         }
 
         $metrics = $this->summariseDays($days);
+
+        $this->notifyProgress(
+            $update,
+            ++$step,
+            $steps,
+            sprintf('Kennzahlen berechnen (%.1f km)', $metrics['total_travel_km'])
+        );
 
         $this->emitMonitoring('days_aggregated', [
             'day_count' => $dayCount,
@@ -147,8 +193,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'timestamped_count' => $timestampedCount,
             ]);
 
+            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Urlaubssegmente gefunden');
+
             return [];
         }
+
+        $this->notifyProgress($update, $steps, $steps, sprintf('Segmente erkennen (%d)', $segmentCount));
 
         $this->emitMonitoring('completed', [
             'segment_count' => $segmentCount,
@@ -158,6 +208,18 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         ]);
 
         return $segments;
+    }
+
+    /**
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     */
+    private function notifyProgress(?callable $update, int $done, int $max, string $stage): void
+    {
+        if ($update === null) {
+            return;
+        }
+
+        $update($done, $max, $stage);
     }
 
     /**

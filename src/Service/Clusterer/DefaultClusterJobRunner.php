@@ -127,6 +127,19 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $clusterHandle->setRate($this->formatRate($loadedCount, $clusterStart, 'Medien'));
                 $clusterHandle->advance();
             },
+            function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle): ?callable {
+                return static function (int $done, int $maxSteps, string $stage) use ($clusterHandle, $strategyName, $index, $strategyTotal): void {
+                    $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d) – %s', $strategyName, $index, $strategyTotal, $stage));
+
+                    if ($maxSteps > 0) {
+                        $clusterHandle->setRate(sprintf('Fortschritt: %d/%d Schritte', $done, $maxSteps));
+                    } else {
+                        $clusterHandle->setRate('Fortschritt: –');
+                    }
+
+                    $clusterHandle->setProgress(max(0, $index - 1));
+                };
+            },
         );
         $clusterHandle->finish();
 
