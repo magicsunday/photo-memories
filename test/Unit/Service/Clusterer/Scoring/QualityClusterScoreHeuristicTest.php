@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
+use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityRawMetrics;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
@@ -25,29 +26,67 @@ final class QualityClusterScoreHeuristicTest extends TestCase
     #[Test]
     public function enrichCalculatesQualityAndAesthetics(): void
     {
-        $score = new ImageQualityScore(
-            sharpness: 1.0,
-            exposure: 1.0,
-            contrast: 1.0,
-            noise: 1.0,
-            blockiness: 1.0,
-            keyframeQuality: 1.0,
-            clipping: 0.05,
-        );
+        $scores = [
+            1 => new ImageQualityScore(
+                sharpness: 0.2,
+                exposure: 0.2,
+                contrast: 0.2,
+                noise: 0.2,
+                blockiness: 0.2,
+                keyframeQuality: 0.3,
+                clipping: 0.15,
+                rawMetrics: new ImageQualityRawMetrics(
+                    laplacianVariance: 0.0004,
+                    clippingShare: 0.15,
+                    contrastStandardDeviation: 0.05,
+                    noiseEstimate: 0.06,
+                    blockinessEstimate: 0.1,
+                ),
+            ),
+            2 => new ImageQualityScore(
+                sharpness: 0.6,
+                exposure: 0.6,
+                contrast: 0.6,
+                noise: 0.6,
+                blockiness: 0.6,
+                keyframeQuality: 0.6,
+                clipping: 0.08,
+                rawMetrics: new ImageQualityRawMetrics(
+                    laplacianVariance: 0.001,
+                    clippingShare: 0.08,
+                    contrastStandardDeviation: 0.12,
+                    noiseEstimate: 0.03,
+                    blockinessEstimate: 0.05,
+                ),
+            ),
+            3 => new ImageQualityScore(
+                sharpness: 0.95,
+                exposure: 0.95,
+                contrast: 0.95,
+                noise: 0.95,
+                blockiness: 0.95,
+                keyframeQuality: 0.9,
+                clipping: 0.02,
+                rawMetrics: new ImageQualityRawMetrics(
+                    laplacianVariance: 0.003,
+                    clippingShare: 0.02,
+                    contrastStandardDeviation: 0.22,
+                    noiseEstimate: 0.01,
+                    blockinessEstimate: 0.02,
+                ),
+            ),
+        ];
 
         $heuristic = new QualityClusterScoreHeuristic(new ClusterQualityAggregator(
             qualityBaselineMegapixels: 12.0,
-            estimator: $this->createEstimator([
-                1 => $score,
-                2 => $score,
-            ]),
+            estimator: $this->createEstimator($scores),
         ));
 
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
-            members: [1, 2],
+            members: [1, 2, 3],
         );
 
         $mediaMap = [
@@ -55,9 +94,8 @@ final class QualityClusterScoreHeuristicTest extends TestCase
                 id: 1,
                 path: __DIR__ . '/quality-1.jpg',
                 configure: static function (Media $media): void {
-                    $media->setWidth(4000);
-                    $media->setHeight(3000);
-                    $media->setSharpness(1.0);
+                    $media->setWidth(3000);
+                    $media->setHeight(2000);
                 },
             ),
             2 => $this->makeMedia(
@@ -66,7 +104,14 @@ final class QualityClusterScoreHeuristicTest extends TestCase
                 configure: static function (Media $media): void {
                     $media->setWidth(4000);
                     $media->setHeight(3000);
-                    $media->setSharpness(1.0);
+                },
+            ),
+            3 => $this->makeMedia(
+                id: 3,
+                path: __DIR__ . '/quality-3.jpg',
+                configure: static function (Media $media): void {
+                    $media->setWidth(6000);
+                    $media->setHeight(4000);
                 },
             ),
         ];
@@ -75,15 +120,18 @@ final class QualityClusterScoreHeuristicTest extends TestCase
         $heuristic->enrich($cluster, $mediaMap);
 
         $params = $cluster->getParams();
-        self::assertEqualsWithDelta(1.0, $params['quality_avg'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['aesthetics_score'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $heuristic->score($cluster), 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['quality_exposure'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['quality_contrast'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['quality_noise'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['quality_blockiness'], 1e-9);
-        self::assertEqualsWithDelta(1.0, $params['quality_video_keyframe'], 1e-9);
-        self::assertEqualsWithDelta(0.05, $params['quality_clipping'], 1e-9);
+        self::assertEqualsWithDelta(0.4729800150829563, $params['quality_avg'], 1e-9);
+        self::assertEqualsWithDelta(0.477526395173454, $params['aesthetics_score'], 1e-9);
+        self::assertEqualsWithDelta(0.4729800150829563, $heuristic->score($cluster), 1e-9);
+        self::assertEqualsWithDelta(0.5128205128205128, $params['quality_exposure'], 1e-9);
+        self::assertEqualsWithDelta(0.47058823529411764, $params['quality_contrast'], 1e-9);
+        self::assertEqualsWithDelta(0.5333333333333333, $params['quality_noise'], 1e-9);
+        self::assertEqualsWithDelta(0.5416666666666666, $params['quality_blockiness'], 1e-9);
+        self::assertEqualsWithDelta(0.5, $params['quality_video_keyframe'], 1e-9);
+        self::assertEqualsWithDelta(0.08333333333333333, $params['quality_clipping'], 1e-9);
+        self::assertEqualsWithDelta(0.4444444444444444, $params['quality_resolution'], 1e-9);
+        self::assertEqualsWithDelta(0.41025641025641024, $params['quality_sharpness'], 1e-9);
+        self::assertEqualsWithDelta(0.5333333333333333, $params['quality_iso'], 1e-9);
         self::assertArrayNotHasKey('quality_video_bonus', $params);
         self::assertArrayNotHasKey('quality_video_penalty', $params);
         self::assertSame('quality', $heuristic->weightKey());
@@ -149,6 +197,13 @@ final class QualityClusterScoreHeuristicTest extends TestCase
             clipping: 0.1,
             videoBonus: 0.4,
             videoPenalty: 0.2,
+            rawMetrics: new ImageQualityRawMetrics(
+                laplacianVariance: 0.0015,
+                clippingShare: 0.1,
+                contrastStandardDeviation: 0.18,
+                noiseEstimate: 0.025,
+                blockinessEstimate: 0.04,
+            ),
         );
 
         $aggregator = new ClusterQualityAggregator(

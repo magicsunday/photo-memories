@@ -26,6 +26,7 @@ final class ImageQualityScore
         public readonly float $clipping,
         public readonly float $videoBonus = 0.0,
         public readonly float $videoPenalty = 0.0,
+        public readonly ?ImageQualityRawMetrics $rawMetrics = null,
     ) {
     }
 }
