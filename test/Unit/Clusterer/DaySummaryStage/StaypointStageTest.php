@@ -83,6 +83,17 @@ final class StaypointStageTest extends TestCase
         self::assertNotSame([], $summary['dominantStaypoints']);
         self::assertSame($key, $summary['dominantStaypoints'][0]['key']);
         self::assertSame(3, $summary['dominantStaypoints'][0]['memberCount']);
+        self::assertSame($summary['dominantStaypoints'][0]['key'], $summary['primaryStaypointKey']);
+
+        self::assertArrayHasKey('staypointCount', $summary);
+        self::assertSame(count($summary['staypoints']), $summary['staypointCount']);
+
+        $expectedDwell = 0;
+        foreach ($summary['staypoints'] as $staypoint) {
+            $expectedDwell += (int) $staypoint['dwell'];
+        }
+
+        self::assertSame($expectedDwell, $summary['staypointDwellSeconds']);
 
         self::assertGreaterThanOrEqual(0.0, $summary['transitRatio']);
         self::assertLessThanOrEqual(1.0, $summary['transitRatio']);

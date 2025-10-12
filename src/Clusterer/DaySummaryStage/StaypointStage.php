@@ -47,16 +47,23 @@ final readonly class StaypointStage implements DaySummaryStageInterface
 
             $summary['staypointIndex']     = $index;
             $summary['staypointCounts']    = $index->getCounts();
-            $summary['dominantStaypoints'] = $this->determineDominantStaypoints(
+            $summary['staypointCount']     = count($staypoints);
+            $summary['staypointDwellSeconds'] = $this->calculateStaypointDwellSeconds($staypoints);
+            $dominantStaypoints            = $this->determineDominantStaypoints(
                 $summary['date'],
                 $staypoints,
                 $summary['staypointCounts'],
             );
-            $summary['transitRatio'] = $this->calculateTransitRatio($summary, $staypoints);
+            $summary['dominantStaypoints']  = $dominantStaypoints;
+            $summary['primaryStaypointKey'] = $dominantStaypoints[0]['key'] ?? null;
+            $summary['transitRatio']        = $this->calculateTransitRatio(
+                $summary,
+                $summary['staypointDwellSeconds'],
+            );
             $summary['poiDensity']   = $this->calculatePoiDensity(
                 (int) $summary['poiSamples'],
                 (int) $summary['photoCount'],
-                count($staypoints),
+                $summary['staypointCount'],
             );
         }
 
@@ -114,10 +121,9 @@ final readonly class StaypointStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, mixed>                                         $summary
-     * @param list<array{lat:float,lon:float,start:int,end:int,dwell:int}> $staypoints
+     * @param array<string, mixed> $summary
      */
-    private function calculateTransitRatio(array $summary, array $staypoints): float
+    private function calculateTransitRatio(array $summary, int $staypointSeconds): float
     {
         $firstMedia = $summary['firstGpsMedia'] ?? null;
         $lastMedia  = $summary['lastGpsMedia'] ?? null;
@@ -136,11 +142,6 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         $span = $end->getTimestamp() - $start->getTimestamp();
         if ($span <= 0) {
             return 0.0;
-        }
-
-        $staypointSeconds = 0;
-        foreach ($staypoints as $staypoint) {
-            $staypointSeconds += (int) $staypoint['dwell'];
         }
 
         if ($staypointSeconds <= 0) {
@@ -192,5 +193,19 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         }
 
         return $density;
+    }
+
+    /**
+     * @param list<array{lat:float,lon:float,start:int,end:int,dwell:int}> $staypoints
+     */
+    private function calculateStaypointDwellSeconds(array $staypoints): int
+    {
+        $total = 0;
+
+        foreach ($staypoints as $staypoint) {
+            $total += (int) $staypoint['dwell'];
+        }
+
+        return $total;
     }
 }
