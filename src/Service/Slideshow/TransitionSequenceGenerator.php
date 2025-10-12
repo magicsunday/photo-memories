@@ -33,10 +33,18 @@ final class TransitionSequenceGenerator
     /**
      * @param list<string> $transitions
      * @param list<int>    $mediaIds
+     * @param list<string> $imagePaths
      *
      * @return list<string>
      */
-    public static function generate(array $transitions, array $mediaIds, int $slideCount): array
+    public static function generate(
+        array $transitions,
+        array $mediaIds,
+        array $imagePaths,
+        int $slideCount,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         if ($slideCount === 0 || $transitions === []) {
             return [];
@@ -60,7 +68,7 @@ final class TransitionSequenceGenerator
             return [];
         }
 
-        $seedSource = self::buildSeedSource($mediaIds, $slideCount);
+        $seedSource = self::buildSeedSource($mediaIds, $imagePaths, $slideCount, $title, $subtitle);
         $randomizer = new Randomizer(new Xoshiro256StarStar($seedSource));
 
         $uniqueTransitions = array_values(array_unique($pool));
@@ -102,9 +110,16 @@ final class TransitionSequenceGenerator
     }
 
     /**
-     * @param list<int> $mediaIds
+     * @param list<int>    $mediaIds
+     * @param list<string> $imagePaths
      */
-    private static function buildSeedSource(array $mediaIds, int $slideCount): string
+    private static function buildSeedSource(
+        array $mediaIds,
+        array $imagePaths,
+        int $slideCount,
+        ?string $title,
+        ?string $subtitle,
+    ): string
     {
         $filteredIds = array_values(array_filter(
             $mediaIds,
@@ -116,7 +131,28 @@ final class TransitionSequenceGenerator
             $filteredIds
         );
 
-        $payload = implode('|', $normalisedIds) . '|' . $slideCount;
+        $filteredPaths = array_values(array_filter(
+            $imagePaths,
+            static fn (mixed $path): bool => is_string($path) && trim($path) !== ''
+        ));
+
+        $normalisedPaths = array_map(
+            static fn (string $path): string => trim($path),
+            $filteredPaths
+        );
+
+        $titlePart = $title !== null ? trim($title) : '';
+        $subtitlePart = $subtitle !== null ? trim($subtitle) : '';
+
+        $payloadParts = [
+            implode('|', $normalisedIds),
+            implode('|', $normalisedPaths),
+            (string) $slideCount,
+            $titlePart,
+            $subtitlePart,
+        ];
+
+        $payload = implode('||', $payloadParts);
 
         return hash('sha256', $payload, true);
     }

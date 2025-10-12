@@ -182,11 +182,11 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             return $status;
         }
 
-        $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
-        $storyboard = $this->buildStoryboard($itemId, $slides);
-
         $title    = $this->normaliseMetadata($title);
         $subtitle = $this->normaliseMetadata($subtitle);
+
+        $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
+        $storyboard = $this->buildStoryboard($itemId, $slides, $images, $title, $subtitle);
 
         $this->ensureVideoDirectory();
 
@@ -347,8 +347,15 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     /**
      * @param list<array{mediaId:int,path:string}> $slides
+     * @param list<string>                         $imagePaths
      */
-    private function buildStoryboard(string $itemId, array $slides): array
+    private function buildStoryboard(
+        string $itemId,
+        array $slides,
+        array $imagePaths,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         $storySlides = [];
 
@@ -361,7 +368,10 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->transitions,
             $mediaIds,
-            $slideCount
+            $imagePaths,
+            $slideCount,
+            $title,
+            $subtitle
         );
         $sequenceIndex = 0;
         $transitionDurations = [];

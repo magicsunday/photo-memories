@@ -121,7 +121,18 @@ final class SlideshowVideoManagerTest extends TestCase
                 self::assertLessThanOrEqual(1.2, $duration);
             }
 
-            $expectedTransitions = TransitionSequenceGenerator::generate($transitions, [1, 2, 3], 3);
+            $expectedTransitions = TransitionSequenceGenerator::generate(
+                $transitions,
+                [1, 2, 3],
+                [
+                    $imageOnePath,
+                    $imageTwoPath,
+                    $imageThreePath,
+                ],
+                3,
+                null,
+                null,
+            );
 
             foreach ($expectedTransitions as $index => $expected) {
                 self::assertSame($expected, $slides[$index]['transition']);
@@ -156,10 +167,12 @@ final class SlideshowVideoManagerTest extends TestCase
             ['mediaId' => 12, 'path' => '/tmp/c.jpg'],
         ];
 
+        $paths = array_map(static fn (array $slide): string => $slide['path'], $slides);
+
         /** @var array{slides:list<array{duration:float}>,transitionDurations:list<float>} $first */
-        $first = $method->invoke($manager, 'deterministic-item', $slides);
+        $first = $method->invoke($manager, 'deterministic-item', $slides, $paths, 'Titel', 'Untertitel');
         /** @var array{slides:list<array{duration:float}>,transitionDurations:list<float>} $second */
-        $second = $method->invoke($manager, 'deterministic-item', $slides);
+        $second = $method->invoke($manager, 'deterministic-item', $slides, $paths, 'Titel', 'Untertitel');
 
         self::assertSame(
             array_map(static fn (array $slide): float => $slide['duration'], $first['slides']),

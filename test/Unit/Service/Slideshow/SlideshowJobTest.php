@@ -19,7 +19,6 @@ use function array_map;
 use function file_put_contents;
 use function json_decode;
 use function json_encode;
-use function sprintf;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
@@ -129,16 +128,26 @@ final class SlideshowJobTest extends TestCase
 
     public function testToJsonPersistsTransitionOrder(): void
     {
+        $imagePaths = [
+            '/images/1.jpg',
+            '/images/2.jpg',
+            '/images/3.jpg',
+            '/images/4.jpg',
+        ];
+
         $transitions = TransitionSequenceGenerator::generate(
             ['fade', 'dissolve', 'fadeblack', 'radial'],
             [10, 11, 12, 13],
-            4
+            $imagePaths,
+            4,
+            'Archiv',
+            null,
         );
 
         $slides = [];
         foreach ($transitions as $index => $transition) {
             $slides[] = [
-                'image'      => sprintf('/images/%d.jpg', $index + 1),
+                'image'      => $imagePaths[$index],
                 'mediaId'    => 10 + $index,
                 'duration'   => 3.5,
                 'transition' => $transition,
