@@ -79,6 +79,33 @@ final class DominanceSelectionStageTest extends TestCase
         ], $result);
     }
 
+    #[Test]
+    public function keepsSubStoriesEvenWithHighOverlap(): void
+    {
+        $stage = new DominanceSelectionStage(
+            overlapMergeThreshold: 0.5,
+            overlapDropThreshold: 0.8,
+            keepOrder: ['primary', 'secondary'],
+            classificationPriority: [],
+        );
+
+        $primary  = $this->createDraft('primary', 0.85, [1, 2, 3]);
+        $subStory = $this->createDraft('secondary', 0.7, [1, 2, 3]);
+        $subStory->setParam('is_sub_story', true);
+        $subStory->setParam('sub_story_priority', 1);
+        $subStory->setParam('sub_story_of', ['algorithm' => 'primary', 'fingerprint' => sha1('1,2,3'), 'priority' => 2]);
+
+        $result = $stage->process([
+            $primary,
+            $subStory,
+        ]);
+
+        self::assertSame([
+            $primary,
+            $subStory,
+        ], $result);
+    }
+
     /**
      * @param list<int> $members
      */

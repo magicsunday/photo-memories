@@ -48,6 +48,36 @@ final class PerMediaCapStageTest extends TestCase
         ], $result);
     }
 
+    #[Test]
+    public function keepsSubStoriesEvenWhenMembersExceedCap(): void
+    {
+        $stage = new PerMediaCapStage(
+            perMediaCap: 1,
+            keepOrder: ['primary', 'secondary'],
+            algorithmGroups: [
+                'primary'   => 'stories',
+                'secondary' => 'stories',
+            ],
+            defaultAlgorithmGroup: 'default',
+        );
+
+        $primary  = $this->createDraft('primary', 0.9, [1, 2]);
+        $subStory = $this->createDraft('secondary', 0.8, [1, 2]);
+        $subStory->setParam('is_sub_story', true);
+        $subStory->setParam('sub_story_priority', 1);
+        $subStory->setParam('sub_story_of', ['algorithm' => 'primary', 'fingerprint' => sha1('1,2'), 'priority' => 2]);
+
+        $result = $stage->process([
+            $primary,
+            $subStory,
+        ]);
+
+        self::assertSame([
+            $primary,
+            $subStory,
+        ], $result);
+    }
+
     /**
      * @param list<int> $members
      */

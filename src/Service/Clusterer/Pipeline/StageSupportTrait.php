@@ -201,4 +201,14 @@ trait StageSupportTrait
 
         return $defaultGroup;
     }
+
+    protected function isSubStory(ClusterDraft $draft): bool
+    {
+        $flag = $draft->getParams()['is_sub_story'] ?? false;
+        if (!is_bool($flag)) {
+            return false;
+        }
+
+        return $flag;
+    }
 }

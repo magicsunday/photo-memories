@@ -95,8 +95,16 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
+            if ($this->isSubStory($drafts[$i])) {
+                continue;
+            }
+
             for ($j = $i + 1; $j < $total; ++$j) {
                 if (!$keep[$j]) {
+                    continue;
+                }
+
+                if ($this->isSubStory($drafts[$j])) {
                     continue;
                 }
 

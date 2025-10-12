@@ -176,8 +176,19 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                     $progress($processed, $total);
                 }
 
+                $candidateDraft = $drafts[$candidate];
+                if ($this->isSubStory($candidateDraft)) {
+                    $selected[] = $candidate;
+                    continue;
+                }
+
                 $reject = false;
                 foreach ($selected as $winner) {
+                    $winnerDraft = $drafts[$winner];
+                    if ($this->isSubStory($winnerDraft)) {
+                        continue;
+                    }
+
                     $overlap = $this->jaccard($normalized[$candidate], $normalized[$winner]);
                     if ($overlap >= $this->overlapDropThreshold) {
                         $reject = true;

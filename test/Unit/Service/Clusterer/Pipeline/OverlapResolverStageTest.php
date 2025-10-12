@@ -60,6 +60,28 @@ final class OverlapResolverStageTest extends TestCase
         ], $result);
     }
 
+    #[Test]
+    public function ignoresSubStoriesDuringOverlapResolution(): void
+    {
+        $stage = new OverlapResolverStage(0.5, 0.8, ['vacation', 'significant_place']);
+
+        $vacation = $this->createDraft('vacation', [1, 2, 3, 4], 0.92, 'vacation');
+        $chapter  = $this->createDraft('significant_place', [1, 2, 3], 0.6, null);
+        $chapter->setParam('is_sub_story', true);
+        $chapter->setParam('sub_story_priority', 1);
+        $chapter->setParam('sub_story_of', ['algorithm' => 'vacation', 'fingerprint' => sha1('1,2,3,4'), 'priority' => 2]);
+
+        $result = $stage->process([
+            $vacation,
+            $chapter,
+        ]);
+
+        self::assertSame([
+            $vacation,
+            $chapter,
+        ], $result);
+    }
+
     /**
      * @param list<int> $members
      */
