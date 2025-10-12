@@ -72,7 +72,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $policy = $this->policyProvider->forAlgorithm($draft->getAlgorithm());
+            $policy = $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline());
             $media  = $this->mediaLookup->findByIds($members);
 
             $mediaMap = [];
@@ -86,6 +86,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $preCount = count($members);
             $this->emitMonitoring('selection_start', [
                 'algorithm'   => $draft->getAlgorithm(),
+                'storyline'   => $draft->getStoryline(),
                 'pre_count'   => $preCount,
                 'policy'      => $policy->getProfileKey(),
                 'target_total'=> $policy->getTargetTotal(),
@@ -108,6 +109,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $this->emitMonitoring('selection_completed', [
                 'algorithm'              => $draft->getAlgorithm(),
+                'storyline'              => $draft->getStoryline(),
                 'pre_count'              => $preCount,
                 'post_count'             => $postCount,
                 'dropped_near_duplicates'=> (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? 0),
@@ -177,6 +179,8 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         }
 
         $telemetry['policy']['profile'] = $profile;
+        $telemetry['policy']['storyline'] = $draft->getStoryline();
+        $telemetry['storyline'] = $draft->getStoryline();
 
         $metrics = $telemetry['metrics'] ?? [];
         $timeSamples = [];
@@ -201,6 +205,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         $telemetry['per_year_distribution'] = $telemetry['distribution']['per_year'] ?? [];
         $telemetry['per_bucket_distribution'] = $telemetry['distribution']['per_bucket'] ?? [];
         $telemetry['algorithm'] = $draft->getAlgorithm();
+        $telemetry['storyline'] = $draft->getStoryline();
 
         if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
             $telemetry['exclusion_reasons'] = $telemetry['rejections'];

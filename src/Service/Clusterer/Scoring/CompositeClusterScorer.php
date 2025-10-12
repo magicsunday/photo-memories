@@ -21,6 +21,7 @@ use function array_map;
 use function array_slice;
 use function ceil;
 use function count;
+use function explode;
 use function max;
 use function min;
 use function sort;
@@ -28,6 +29,8 @@ use function is_array;
 use function is_numeric;
 use function is_string;
 use function sprintf;
+use function str_contains;
+use function trim;
 use function usort;
 
 /**
@@ -35,13 +38,15 @@ use function usort;
  */
 final class CompositeClusterScorer
 {
+    private const DEFAULT_STORYLINE = 'default';
+
     /** @var list<ClusterScoreHeuristicInterface> */
     private array $heuristics;
 
     /** @var array<string,string> */
     private array $algorithmGroups = [];
 
-    /** @var array<string,array<string,float>> */
+    /** @var array<string,array<string,array<string,float>>> */
     private array $algorithmWeightOverrides = [];
 
     /**
@@ -94,18 +99,7 @@ final class CompositeClusterScorer
         }
 
         $this->algorithmWeightOverrides = [];
-        foreach ($algorithmWeightOverrides as $algorithm => $overrides) {
-            if (!is_string($algorithm) || $algorithm === '') {
-                continue;
-            }
-
-            $sanitized = $this->sanitizeWeightOverrides($overrides);
-            if ($sanitized === []) {
-                continue;
-            }
-
-            $this->algorithmWeightOverrides[$algorithm] = $sanitized;
-        }
+        $this->algorithmWeightOverrides = $this->sanitizeAlgorithmWeightOverrides($algorithmWeightOverrides);
     }
 
     /**
@@ -253,7 +247,10 @@ final class CompositeClusterScorer
 
         $algorithm = $cluster->getAlgorithm();
         if (isset($this->algorithmWeightOverrides[$algorithm])) {
-            $weights = $this->mergeWeights($weights, $this->algorithmWeightOverrides[$algorithm]);
+            $overrides = $this->resolveStorylineOverrides($cluster->getStoryline(), $this->algorithmWeightOverrides[$algorithm]);
+            if ($overrides !== []) {
+                $weights = $this->mergeWeights($weights, $overrides);
+            }
         }
 
         $clusterOverrides = $cluster->getParams()['score_weight_overrides'] ?? null;
@@ -318,6 +315,123 @@ final class CompositeClusterScorer
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string,array<string,float|int>> $overrides
+     *
+     * @return array<string,array<string,float>>
+     */
+    private function sanitizeAlgorithmWeightOverrides(array $overrides): array
+    {
+        $result = [];
+
+        foreach ($overrides as $algorithm => $mapping) {
+            if (!is_string($algorithm) || $algorithm === '') {
+                continue;
+            }
+
+            if (!is_array($mapping)) {
+                continue;
+            }
+
+            if ($this->isFlatWeightMap($mapping)) {
+                $sanitised = $this->sanitizeWeightOverrides($mapping);
+                if ($sanitised === []) {
+                    continue;
+                }
+
+                $result[$algorithm] = [self::DEFAULT_STORYLINE => $sanitised];
+
+                continue;
+            }
+
+            $storylines = [];
+            foreach ($mapping as $storyline => $storylineOverrides) {
+                if (!is_string($storyline) || $storyline === '') {
+                    continue;
+                }
+
+                $sanitised = $this->sanitizeWeightOverrides($storylineOverrides);
+                if ($sanitised === []) {
+                    continue;
+                }
+
+                $storylines[$storyline] = $sanitised;
+            }
+
+            if ($storylines === []) {
+                continue;
+            }
+
+            if (!isset($storylines[self::DEFAULT_STORYLINE])) {
+                $first = reset($storylines);
+                if (is_array($first) && $first !== []) {
+                    $storylines[self::DEFAULT_STORYLINE] = $first;
+                }
+            }
+
+            $result[$algorithm] = $storylines;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string,mixed> $mapping
+     */
+    private function isFlatWeightMap(array $mapping): bool
+    {
+        foreach ($mapping as $value) {
+            if (!is_numeric($value)) {
+                return false;
+            }
+        }
+
+        return $mapping !== [];
+    }
+
+    /**
+     * @param array<string,array<string,float>> $overrides
+     *
+     * @return array<string,float>
+     */
+    private function resolveStorylineOverrides(string $storyline, array $overrides): array
+    {
+        $candidates = $this->storylineCandidates($storyline);
+        $candidates[] = self::DEFAULT_STORYLINE;
+
+        foreach ($candidates as $candidate) {
+            if (isset($overrides[$candidate])) {
+                return $overrides[$candidate];
+            }
+        }
+
+        $fallback = reset($overrides);
+
+        return is_array($fallback) ? $fallback : [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function storylineCandidates(string $storyline): array
+    {
+        $trimmed = trim($storyline);
+        if ($trimmed === '' || $trimmed === self::DEFAULT_STORYLINE) {
+            return [];
+        }
+
+        $candidates = [$trimmed];
+        if (str_contains($trimmed, '.')) {
+            $parts = explode('.', $trimmed);
+            $suffix = end($parts);
+            if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
+                $candidates[] = $suffix;
+            }
+        }
+
+        return $candidates;
     }
 
     private function resolveGroup(string $algorithm): string

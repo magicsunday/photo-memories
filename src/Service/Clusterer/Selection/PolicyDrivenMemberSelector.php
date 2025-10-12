@@ -104,13 +104,14 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         if ($memberIds === []) {
             return new MemberSelectionResult([], [
+                'storyline' => $context->getDraft()->getStoryline(),
                 'counts' => [
                     'considered' => 0,
                     'eligible'   => 0,
                     'selected'   => 0,
                 ],
                 'rejections' => [],
-                'policy'     => $this->policySnapshot($context->getPolicy()),
+                'policy'     => $this->policySnapshot($context->getPolicy(), $context->getDraft()->getStoryline()),
                 'stages'     => [
                     'hard' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->hardStages),
                     'soft' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->softStages),
@@ -131,6 +132,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         );
 
         $telemetry = [
+            'storyline' => $draft->getStoryline(),
             'counts' => [
                 'considered' => count($candidates['all']),
                 'eligible'   => count($candidates['eligible']),
@@ -147,7 +149,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 SelectionTelemetry::REASON_ORIENTATION    => 0,
                 SelectionTelemetry::REASON_PEOPLE         => 0,
             ],
-            'policy' => $this->policySnapshot($policy),
+            'policy' => $this->policySnapshot($policy, $draft->getStoryline()),
             'stages' => [
                 'hard' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->hardStages),
                 'soft' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->softStages),
@@ -208,13 +210,13 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $relaxations[] = [
                 'step'    => $index,
                 'members' => count($attemptResult),
-                'policy'  => $this->policySnapshot($candidatePolicy),
+                'policy'  => $this->policySnapshot($candidatePolicy, $draft->getStoryline()),
             ];
         }
 
         if ($relaxations !== []) {
             $telemetry['relaxations'] = $relaxations;
-            $telemetry['policy']      = $this->policySnapshot($appliedPolicy);
+            $telemetry['policy']      = $this->policySnapshot($appliedPolicy, $draft->getStoryline());
         }
 
         foreach ($finalCollector->reasonCounts() as $reason => $count) {
@@ -1145,10 +1147,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return in_array($orientation, [5, 6, 7, 8], true) ? 'portrait' : 'landscape';
     }
 
-    private function policySnapshot(SelectionPolicy $policy): array
+    private function policySnapshot(SelectionPolicy $policy, string $storyline): array
     {
         return [
             'profile'             => $policy->getProfileKey(),
+            'storyline'           => $storyline,
             'target_total'        => $policy->getTargetTotal(),
             'minimum_total'       => $policy->getMinimumTotal(),
             'max_per_day'         => $policy->getMaxPerDay(),

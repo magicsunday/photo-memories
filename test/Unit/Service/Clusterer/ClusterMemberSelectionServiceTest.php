@@ -67,7 +67,13 @@ final class ClusterMemberSelectionServiceTest extends TestCase
                 self::assertArrayHasKey('2024-05-20', $daySummaries);
                 self::assertArrayHasKey('2024-05-21', $daySummaries);
 
-                return new SelectionResult([$media1, $media3], ['near_duplicate_blocked' => 1]);
+                return new SelectionResult([
+                    $media1,
+                    $media3,
+                ], [
+                    'near_duplicate_blocked' => 1,
+                    'storyline' => 'demo.getaway',
+                ]);
             });
 
         $detector = $this->createMock(StaypointDetectorInterface::class);
@@ -79,7 +85,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
 
         $service = new ClusterMemberSelectionService($selector, $lookup, $provider, $detector);
 
-        $draft = new ClusterDraft('demo', ['foo' => 'bar'], ['lat' => 48.1, 'lon' => 11.5], [1, 2, 3]);
+        $draft = new ClusterDraft('demo', ['foo' => 'bar'], ['lat' => 48.1, 'lon' => 11.5], [1, 2, 3], 'demo.getaway');
 
         $curated = $service->curate($draft);
 
@@ -111,6 +117,8 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         self::assertCount(2, $selection['hash_samples']);
         self::assertArrayHasKey('exclusion_reasons', $selection);
         self::assertIsArray($selection['exclusion_reasons']);
+        self::assertSame('demo.getaway', $selection['storyline']);
+        self::assertSame('demo.getaway', $selection['telemetry']['storyline']);
         self::assertSame(
             $selection['per_day_distribution'],
             $selection['telemetry']['distribution']['per_day'],

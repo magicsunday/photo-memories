@@ -135,6 +135,7 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params = $draft->getParams();
+        self::assertSame('vacation.extended', $params['storyline']);
         self::assertSame('vacation', $params['classification']);
         self::assertSame(3, $params['away_days']);
         self::assertSame(3, $params['raw_away_days']);
@@ -286,6 +287,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $baselineDraft  = $calculator->buildDraft($dayKeys, $days, $home);
         self::assertInstanceOf(ClusterDraft::class, $baselineDraft);
         $baselineParams = $baselineDraft->getParams();
+        self::assertSame('vacation.extended', $baselineParams['storyline']);
 
         $transitDays = $days;
         foreach ($transitDays as $index => &$summary) {
@@ -300,6 +302,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $transitDraft  = $calculator->buildDraft($dayKeys, $transitDays, $home);
         self::assertInstanceOf(ClusterDraft::class, $transitDraft);
         $transitParams = $transitDraft->getParams();
+        self::assertSame('vacation.short_trip', $transitParams['storyline']);
 
         self::assertSame(0.0, $baselineParams['transit_penalty']);
         self::assertSame(0.0, $baselineParams['transit_penalty_score']);
@@ -414,6 +417,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $draft = $calculator->buildDraft($dayKeys, $days, $home);
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params = $draft->getParams();
+        self::assertSame('vacation.short_trip', $params['storyline']);
 
         self::assertSame('short_trip', $params['classification']);
         self::assertSame(2, $params['raw_away_days']);
@@ -678,6 +682,9 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params = $draft->getParams();
+        self::assertSame('vacation.extended', $params['storyline']);
+        self::assertSame('vacation.extended', $params['storyline']);
+        self::assertSame('vacation.extended', $params['storyline']);
         self::assertSame('Staypoint City', $params['primaryStaypointCity']);
         self::assertSame('Staypoint City', $params['place_city']);
         self::assertSame('Staypoint City, Spain', $params['place_location']);
@@ -807,6 +814,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
 
         $params = $draft->getParams();
+        self::assertSame('vacation.short_trip', $params['storyline']);
         self::assertSame('NEW YORK', $params['place_city']);
         self::assertSame('NY', $params['place_region']);
         self::assertSame('USA', $params['place_country']);
@@ -1083,6 +1091,9 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params          = $draft->getParams();
         $memberSelection = $params['member_selection'];
+        self::assertSame('vacation.day_trip', $params['storyline']);
+        self::assertSame('vacation.day_trip', $memberSelection['storyline']);
+        self::assertSame('vacation.day_trip', $memberSelection['telemetry']['storyline']);
 
         self::assertSame(3, $memberSelection['counts']['pre']);
         self::assertSame(2, $memberSelection['counts']['post']);
@@ -1104,6 +1115,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('selection_start', $startEvent['status']);
         self::assertSame(3, $startEvent['context']['pre_count']);
         self::assertSame(1, $startEvent['context']['day_count']);
+        self::assertSame('vacation.day_trip', $startEvent['context']['storyline']);
 
         $completeEvent = $emitter->events[1];
         self::assertSame('vacation_curation', $completeEvent['job']);
@@ -1114,6 +1126,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(1, $completeEvent['context']['near_duplicates_replaced']);
         self::assertSame(2, $completeEvent['context']['spacing_rejections']);
         self::assertGreaterThanOrEqual(0.0, $completeEvent['context']['average_spacing_seconds']);
+        self::assertSame('vacation.day_trip', $completeEvent['context']['storyline']);
     }
 
     #[Test]
@@ -1176,6 +1189,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params    = $draft->getParams();
         $memberIds = $draft->getMembers();
+        self::assertSame('vacation.extended', $params['storyline']);
 
         self::assertCount($selectionOptions->targetTotal, $memberIds);
 
@@ -1198,6 +1212,8 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame($expectedOrder, array_slice($memberIds, 0, count($expectedOrder)));
 
         $selection = $params['member_selection'];
+        self::assertSame('vacation.extended', $selection['storyline']);
+        self::assertSame('vacation.extended', $selection['telemetry']['storyline']);
         self::assertSame(28, $selection['counts']['pre']);
         self::assertSame($selectionOptions->targetTotal, $selection['counts']['post']);
         self::assertSame(4, $selection['counts']['dropped']);

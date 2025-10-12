@@ -15,31 +15,42 @@ use InvalidArgumentException;
 
 use function array_key_exists;
 use function array_merge;
+use function explode;
 use function is_array;
 use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
+use function str_contains;
+use function trim;
 
 /**
  * Resolves selection policies based on algorithm/profile mappings.
  */
 final class SelectionPolicyProvider
 {
+    private const DEFAULT_STORYLINE = 'default';
+
     /**
      * @var array<string, int|float|null>
      */
     private array $runtimeOverrides = [];
 
     /**
+     * @var array<string, array<string, string>>
+     */
+    private array $algorithmProfiles = [];
+
+    /**
      * @param array<string, array<string, int|float|string|null>> $profiles
-     * @param array<string, string>                               $algorithmProfiles
+     * @param array<string, string|array<string, string>>         $algorithmProfiles
      */
     public function __construct(
         private readonly array $profiles,
-        private readonly array $algorithmProfiles,
         private readonly string $defaultProfile,
+        array $algorithmProfiles = [],
     ) {
+        $this->algorithmProfiles = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
     }
 
     /**
@@ -50,12 +61,9 @@ final class SelectionPolicyProvider
         $this->runtimeOverrides = $this->sanitizeOverrides($overrides);
     }
 
-    public function forAlgorithm(string $algorithm): SelectionPolicy
+    public function forAlgorithm(string $algorithm, ?string $storyline = null): SelectionPolicy
     {
-        $profileKey = $this->algorithmProfiles[$algorithm] ?? $this->defaultProfile;
-        if ($profileKey === '' || !array_key_exists($profileKey, $this->profiles)) {
-            throw new InvalidArgumentException('No selection policy configured for algorithm ' . $algorithm);
-        }
+        $profileKey = $this->resolveProfileKey($algorithm, $storyline);
 
         /** @var array<string, int|float|string|null> $config */
         $config = array_merge($this->profiles[$profileKey], $this->runtimeOverrides);
@@ -79,6 +87,133 @@ final class SelectionPolicyProvider
             videoHeavyBonus: $this->floatOrNull($config, 'video_heavy_bonus'),
             sceneBucketWeights: $this->floatMapOrNull($config, 'scene_bucket_weights'),
         );
+    }
+
+    /**
+     * @param array<string, string|array<string, string>> $algorithmProfiles
+     *
+     * @return array<string, array<string, string>>
+     */
+    private function sanitizeAlgorithmProfiles(array $algorithmProfiles): array
+    {
+        $result = [];
+
+        foreach ($algorithmProfiles as $algorithm => $mapping) {
+            if (!is_string($algorithm) || $algorithm === '') {
+                continue;
+            }
+
+            if (is_string($mapping)) {
+                if ($mapping === '') {
+                    continue;
+                }
+
+                $result[$algorithm] = [self::DEFAULT_STORYLINE => $mapping];
+
+                continue;
+            }
+
+            if (!is_array($mapping)) {
+                continue;
+            }
+
+            $sanitised = [];
+            foreach ($mapping as $storyline => $profileKey) {
+                if (!is_string($storyline) || $storyline === '' || !is_string($profileKey) || $profileKey === '') {
+                    continue;
+                }
+
+                $sanitised[$storyline] = $profileKey;
+            }
+
+            if (isset($mapping[self::DEFAULT_STORYLINE]) && is_string($mapping[self::DEFAULT_STORYLINE])) {
+                $defaultProfile = $mapping[self::DEFAULT_STORYLINE];
+                if ($defaultProfile !== '') {
+                    $sanitised[self::DEFAULT_STORYLINE] = $defaultProfile;
+                }
+            }
+
+            if ($sanitised === []) {
+                continue;
+            }
+
+            if (!isset($sanitised[self::DEFAULT_STORYLINE])) {
+                $first = reset($sanitised);
+                if (is_string($first) && $first !== '') {
+                    $sanitised[self::DEFAULT_STORYLINE] = $first;
+                }
+            }
+
+            $result[$algorithm] = $sanitised;
+        }
+
+        return $result;
+    }
+
+    private function resolveProfileKey(string $algorithm, ?string $storyline): string
+    {
+        if (!array_key_exists($algorithm, $this->algorithmProfiles)) {
+            $this->guardProfileExists($this->defaultProfile, $algorithm);
+
+            return $this->defaultProfile;
+        }
+
+        $mapping     = $this->algorithmProfiles[$algorithm];
+        $candidates  = $this->storylineCandidates($storyline);
+        $candidates[] = self::DEFAULT_STORYLINE;
+
+        foreach ($candidates as $candidate) {
+            if (isset($mapping[$candidate])) {
+                $profileKey = $mapping[$candidate];
+                $this->guardProfileExists($profileKey, $algorithm);
+
+                return $profileKey;
+            }
+        }
+
+        $fallback = reset($mapping);
+        if (is_string($fallback) && $fallback !== '') {
+            $this->guardProfileExists($fallback, $algorithm);
+
+            return $fallback;
+        }
+
+        $this->guardProfileExists($this->defaultProfile, $algorithm);
+
+        return $this->defaultProfile;
+    }
+
+    private function guardProfileExists(string $profileKey, string $algorithm): void
+    {
+        if ($profileKey === '' || !array_key_exists($profileKey, $this->profiles)) {
+            throw new InvalidArgumentException('No selection policy configured for algorithm ' . $algorithm);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function storylineCandidates(?string $storyline): array
+    {
+        if (!is_string($storyline)) {
+            return [];
+        }
+
+        $trimmed = trim($storyline);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        $candidates = [$trimmed];
+        if (str_contains($trimmed, '.')) {
+            $parts = explode('.', $trimmed);
+            $suffix = end($parts);
+            if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
+                $candidates[] = $suffix;
+            }
+        }
+
+        return $candidates;
     }
 
     /**

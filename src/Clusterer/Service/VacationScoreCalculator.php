@@ -543,6 +543,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $acceptedSummaries = array_intersect_key($days, array_flip($dayKeys));
         $preSelectionCount = count($rawMembers);
+        $storyline         = $this->resolveStoryline(
+            $classification,
+            $moveDays,
+            $transitRatio,
+            $multiSpotDays,
+        );
 
         if ($this->monitoringEmitter !== null) {
             $startPayload = [
@@ -552,6 +558,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'raw_away_days'             => $awayDays,
                 'bridged_days'              => $bridgedAwayDays,
                 'staypoint_detected'        => $primaryStaypoint !== null,
+                'storyline'                 => $storyline,
             ];
 
             if ($primaryStaypoint !== null) {
@@ -612,6 +619,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                     'near_duplicates_replaced' => $nearDupReplaced,
                     'spacing_rejections'       => $spacingRejections,
                     'average_spacing_seconds'  => $averageSpacingSeconds,
+                    'storyline'                => $storyline,
                 ]
             );
         }
@@ -707,6 +715,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'timezones'                => $timezones,
             'countries'                => $countries,
         ];
+
+        $params['storyline'] = $storyline;
 
         $params['member_selection'] = [
             'counts' => [
@@ -861,6 +871,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             params: $params,
             centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
             members: $memberIds,
+            storyline: $storyline,
         );
         return $draft;
     }
@@ -1286,6 +1297,33 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         return 'vacation';
+    }
+
+    private function resolveStoryline(
+        string $classification,
+        int $moveDays,
+        float $transitRatio,
+        int $multiSpotDays,
+    ): string {
+        $prefix = 'vacation';
+
+        if ($classification === 'day_trip') {
+            return $prefix . '.day_trip';
+        }
+
+        if ($classification === 'short_trip') {
+            return $prefix . '.short_trip';
+        }
+
+        if ($transitRatio >= 0.45 && $moveDays >= 2) {
+            return $prefix . '.transit';
+        }
+
+        if ($multiSpotDays >= 3) {
+            return $prefix . '.explorer';
+        }
+
+        return $prefix . '.extended';
     }
 
     private function applyScoreThresholds(string $classification, float $score): ?string
