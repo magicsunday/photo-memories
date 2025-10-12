@@ -422,6 +422,12 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 ++$gpsDays;
             }
 
+            $staypointCountValue = $summary['staypointCount'] ?? null;
+            if (is_int($staypointCountValue)) {
+                $staypointCount += $staypointCountValue;
+                continue;
+            }
+
             $staypoints = $summary['staypoints'] ?? null;
             if (is_array($staypoints)) {
                 $staypointCount += count($staypoints);
