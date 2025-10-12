@@ -15,8 +15,11 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
 
+use function ceil;
+use function count;
+use function floor;
 use function max;
-use function min;
+use function sort;
 
 /**
  * Aggregates per-media quality metrics for cluster level annotations.
@@ -86,29 +89,18 @@ final class ClusterQualityAggregator
      */
     public function buildParams(array $mediaItems): array
     {
-        $resolutionSum   = 0.0;
-        $resolutionCount = 0;
+        /**
+         * @var list<array<string,float|null>> $measurements
+         */
+        $measurements = [];
 
-        $sharpnessSum   = 0.0;
-        $sharpnessCount = 0;
-
-        $exposureSum   = 0.0;
-        $exposureCount = 0;
-
-        $contrastSum   = 0.0;
-        $contrastCount = 0;
-
-        $noiseSum   = 0.0;
-        $noiseCount = 0;
-
-        $blockinessSum   = 0.0;
-        $blockinessCount = 0;
-
-        $keyframeSum   = 0.0;
-        $keyframeCount = 0;
-
-        $clippingSum   = 0.0;
-        $clippingCount = 0;
+        $resolutionSamples = [];
+        $sharpnessSamples  = [];
+        $contrastSamples   = [];
+        $noiseSamples      = [];
+        $blockinessSamples = [];
+        $clippingSamples   = [];
+        $keyframeSamples   = [];
 
         $videoBonusSum   = 0.0;
         $videoBonusCount = 0;
@@ -119,36 +111,63 @@ final class ClusterQualityAggregator
         foreach ($mediaItems as $media) {
             $width  = $media->getWidth();
             $height = $media->getHeight();
+
+            $resolutionRaw  = null;
+            $resolutionNorm = null;
+
             if ($width !== null && $height !== null && $width > 0 && $height > 0) {
-                $megapixels = ((float) $width * (float) $height) / 1_000_000.0;
-                $resolutionSum += $this->clamp01($megapixels / max(1e-6, $this->qualityBaselineMegapixels));
-                ++$resolutionCount;
+                $resolutionRaw  = ((float) $width * (float) $height) / 1_000_000.0;
+                $resolutionNorm = $this->clamp01($resolutionRaw / max(1e-6, $this->qualityBaselineMegapixels));
+                $resolutionSamples[] = $resolutionRaw;
             }
 
-            $score = $media->isVideo()
+            $score      = $media->isVideo()
                 ? $this->estimator->scoreVideo($media)
                 : $this->estimator->scoreStill($media);
+            $rawMetrics = $score->rawMetrics;
 
-            $sharpnessSum += $this->clamp01($score->sharpness);
-            ++$sharpnessCount;
+            $sharpnessRaw = $rawMetrics?->laplacianVariance;
+            if ($sharpnessRaw !== null) {
+                $sharpnessSamples[] = $sharpnessRaw;
+            }
 
-            $exposureSum += $this->clamp01($score->exposure);
-            ++$exposureCount;
+            $contrastRaw = $rawMetrics?->contrastStandardDeviation;
+            if ($contrastRaw !== null) {
+                $contrastSamples[] = $contrastRaw;
+            }
 
-            $contrastSum += $this->clamp01($score->contrast);
-            ++$contrastCount;
+            $noiseRaw = $rawMetrics?->noiseEstimate;
+            if ($noiseRaw !== null) {
+                $noiseSamples[] = $noiseRaw;
+            }
 
-            $noiseSum += $this->clamp01($score->noise);
-            ++$noiseCount;
+            $blockinessRaw = $rawMetrics?->blockinessEstimate;
+            if ($blockinessRaw !== null) {
+                $blockinessSamples[] = $blockinessRaw;
+            }
 
-            $blockinessSum += $this->clamp01($score->blockiness);
-            ++$blockinessCount;
+            $clippingRaw = $rawMetrics?->clippingShare ?? (float) $score->clipping;
+            $clippingSamples[] = $clippingRaw;
 
-            $keyframeSum += $this->clamp01($score->keyframeQuality);
-            ++$keyframeCount;
+            $keyframeRaw = (float) $score->keyframeQuality;
+            $keyframeSamples[] = $keyframeRaw;
 
-            $clippingSum += $this->clamp01($score->clipping);
-            ++$clippingCount;
+            $measurements[] = [
+                'resolution_raw'   => $resolutionRaw,
+                'resolution_norm'  => $resolutionNorm,
+                'sharpness_raw'    => $sharpnessRaw,
+                'sharpness_norm'   => $this->clamp01($score->sharpness),
+                'contrast_raw'     => $contrastRaw,
+                'contrast_norm'    => $this->clamp01($score->contrast),
+                'noise_raw'        => $noiseRaw,
+                'noise_norm'       => $this->clamp01($score->noise),
+                'blockiness_raw'   => $blockinessRaw,
+                'blockiness_norm'  => $this->clamp01($score->blockiness),
+                'clipping_raw'     => $clippingRaw,
+                'exposure_norm'    => $this->clamp01($score->exposure),
+                'keyframe_raw'     => $keyframeRaw,
+                'keyframe_norm'    => $this->clamp01($score->keyframeQuality),
+            ];
 
             if ($media->isVideo()) {
                 $videoBonusSum += $this->clamp01($score->videoBonus);
@@ -159,14 +178,29 @@ final class ClusterQualityAggregator
             }
         }
 
-        $resolution = $resolutionCount > 0 ? $resolutionSum / $resolutionCount : null;
-        $sharpness  = $sharpnessCount > 0 ? $sharpnessSum / $sharpnessCount : null;
-        $exposure   = $exposureCount > 0 ? $exposureSum / $exposureCount : null;
-        $contrast   = $contrastCount > 0 ? $contrastSum / $contrastCount : null;
-        $noise      = $noiseCount > 0 ? $noiseSum / $noiseCount : null;
-        $blockiness = $blockinessCount > 0 ? $blockinessSum / $blockinessCount : null;
-        $keyframe   = $keyframeCount > 0 ? $keyframeSum / $keyframeCount : null;
-        $clipping   = $clippingCount > 0 ? $clippingSum / $clippingCount : null;
+        $resolutionPercentiles = $this->percentileRange($resolutionSamples);
+        $sharpnessPercentiles  = $this->percentileRange($sharpnessSamples);
+        $contrastPercentiles   = $this->percentileRange($contrastSamples);
+        $noisePercentiles      = $this->percentileRange($noiseSamples);
+        $blockinessPercentiles = $this->percentileRange($blockinessSamples);
+        $clippingPercentiles   = $this->percentileRange($clippingSamples);
+        $keyframePercentiles   = $this->percentileRange($keyframeSamples);
+
+        $resolution = $this->averageScaled($measurements, 'resolution_raw', 'resolution_norm', $resolutionPercentiles, true);
+        $sharpness  = $this->averageScaled($measurements, 'sharpness_raw', 'sharpness_norm', $sharpnessPercentiles, true);
+        $exposure   = $this->averageScaled($measurements, 'clipping_raw', 'exposure_norm', $clippingPercentiles, false);
+        $contrast   = $this->averageScaled($measurements, 'contrast_raw', 'contrast_norm', $contrastPercentiles, true);
+        $noise      = $this->averageScaled($measurements, 'noise_raw', 'noise_norm', $noisePercentiles, false);
+        $blockiness = $this->averageScaled($measurements, 'blockiness_raw', 'blockiness_norm', $blockinessPercentiles, false);
+        $keyframe   = $this->averageScaled($measurements, 'keyframe_raw', 'keyframe_norm', $keyframePercentiles, true);
+
+        $clipping = $this->averageRaw($measurements, 'clipping_raw');
+        if ($clipping !== null) {
+            $clipping = $this->clamp01($clipping);
+        }
+
+        $videoBonus  = $videoBonusCount > 0 ? $videoBonusSum / $videoBonusCount : null;
+        $videoPenalty = $videoPenaltyCount > 0 ? $videoPenaltySum / $videoPenaltyCount : null;
 
         $quality = $this->combineScores($this->buildQualityComponents([
             'resolution' => $resolution,
@@ -179,12 +213,12 @@ final class ClusterQualityAggregator
         ]), null);
 
         if ($quality !== null) {
-            if ($videoBonusCount > 0 && $this->videoBonusWeight > 0.0) {
-                $quality += $this->videoBonusWeight * ($videoBonusSum / $videoBonusCount);
+            if ($videoBonus !== null && $this->videoBonusWeight > 0.0) {
+                $quality += $this->videoBonusWeight * $videoBonus;
             }
 
-            if ($videoPenaltyCount > 0 && $this->videoPenaltyWeight > 0.0) {
-                $quality -= $this->videoPenaltyWeight * ($videoPenaltySum / $videoPenaltyCount);
+            if ($videoPenalty !== null && $this->videoPenaltyWeight > 0.0) {
+                $quality -= $this->videoPenaltyWeight * $videoPenalty;
             }
 
             $quality = $this->clamp01($quality);
@@ -206,8 +240,8 @@ final class ClusterQualityAggregator
             'quality_noise'      => $noise,
             'quality_blockiness' => $blockiness,
             'quality_video_keyframe' => $keyframe,
-            'quality_video_bonus'    => $videoBonusCount > 0 ? $videoBonusSum / $videoBonusCount : null,
-            'quality_video_penalty'  => $videoPenaltyCount > 0 ? $videoPenaltySum / $videoPenaltyCount : null,
+            'quality_video_bonus'    => $videoBonus,
+            'quality_video_penalty'  => $videoPenalty,
             'quality_clipping'       => $clipping,
             'quality_iso'            => $noise,
         ];
@@ -274,4 +308,136 @@ final class ClusterQualityAggregator
         return $sum / $weightSum;
     }
 
+    /**
+     * @param list<array<string,float|null>> $measurements
+     * @param array{p10: float, p90: float}|null $percentiles
+     */
+    private function averageScaled(
+        array $measurements,
+        string $rawKey,
+        string $fallbackKey,
+        ?array $percentiles,
+        bool $higherIsBetter,
+    ): ?float {
+        $sum   = 0.0;
+        $count = 0;
+
+        foreach ($measurements as $measurement) {
+            $rawValue = $measurement[$rawKey] ?? null;
+            $fallback = $measurement[$fallbackKey] ?? null;
+
+            $scaled = $this->scaleWithFallback($rawValue, $percentiles, $higherIsBetter, $fallback);
+            if ($scaled === null) {
+                continue;
+            }
+
+            $sum += $scaled;
+            ++$count;
+        }
+
+        if ($count === 0) {
+            return null;
+        }
+
+        return $sum / $count;
+    }
+
+    /**
+     * @param array{p10: float, p90: float}|null $percentiles
+     */
+    private function scaleWithFallback(
+        ?float $value,
+        ?array $percentiles,
+        bool $higherIsBetter,
+        ?float $fallback,
+    ): ?float {
+        if ($value === null || $percentiles === null || $percentiles['p90'] <= $percentiles['p10']) {
+            return $fallback === null ? null : $this->clamp01($fallback);
+        }
+
+        $range = $percentiles['p90'] - $percentiles['p10'];
+        if ($range <= 0.0) {
+            return $fallback === null ? null : $this->clamp01($fallback);
+        }
+
+        $scaled = $higherIsBetter
+            ? ($value - $percentiles['p10']) / $range
+            : ($percentiles['p90'] - $value) / $range;
+
+        return $this->clamp01($scaled);
+    }
+
+    /**
+     * @param list<float> $samples
+     *
+     * @return array{p10: float, p90: float}|null
+     */
+    private function percentileRange(array $samples): ?array
+    {
+        if (count($samples) === 0) {
+            return null;
+        }
+
+        sort($samples);
+
+        $p10 = $this->percentile($samples, 0.10);
+        $p90 = $this->percentile($samples, 0.90);
+
+        if ($p10 === null || $p90 === null) {
+            return null;
+        }
+
+        return ['p10' => $p10, 'p90' => $p90];
+    }
+
+    /**
+     * @param list<float> $sorted
+     */
+    private function percentile(array $sorted, float $fraction): ?float
+    {
+        $count = count($sorted);
+        if ($count === 0) {
+            return null;
+        }
+
+        if ($count === 1) {
+            return $sorted[0];
+        }
+
+        $index = ($count - 1) * $fraction;
+        $lower = (int) floor($index);
+        $upper = (int) ceil($index);
+        $weight = $index - $lower;
+
+        if ($lower === $upper) {
+            return $sorted[$lower];
+        }
+
+        return ($sorted[$lower] * (1.0 - $weight)) + ($sorted[$upper] * $weight);
+    }
+
+    /**
+     * @param list<array<string,float|null>> $measurements
+     */
+    private function averageRaw(array $measurements, string $key): ?float
+    {
+        $sum   = 0.0;
+        $count = 0;
+
+        foreach ($measurements as $measurement) {
+            $value = $measurement[$key] ?? null;
+            if ($value === null) {
+                continue;
+            }
+
+            $sum += $value;
+            ++$count;
+        }
+
+        if ($count === 0) {
+            return null;
+        }
+
+        return $sum / $count;
+    }
 }

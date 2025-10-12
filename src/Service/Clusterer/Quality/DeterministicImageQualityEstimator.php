@@ -109,6 +109,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
             clipping: $base->clipping,
             videoBonus: $bonus,
             videoPenalty: $penalty,
+            rawMetrics: $base->rawMetrics,
         );
     }
 
@@ -143,6 +144,13 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
             blockiness: $this->clamp01($blockN),
             keyframeQuality: $keyframe,
             clipping: $this->clamp01($clipping),
+            rawMetrics: new ImageQualityRawMetrics(
+                laplacianVariance: $laplacianVar,
+                clippingShare: $clipping,
+                contrastStandardDeviation: $contrast,
+                noiseEstimate: $noiseLevel,
+                blockinessEstimate: $blockiness,
+            ),
         );
     }
 
@@ -387,6 +395,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
             blockiness: 0.5,
             keyframeQuality: 0.5,
             clipping: 0.0,
+            rawMetrics: null,
         );
     }
 
