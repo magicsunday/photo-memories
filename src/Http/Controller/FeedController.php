@@ -1018,6 +1018,7 @@ final class FeedController
         $slides = [];
 
         $mediaIds = [];
+        $imagePaths = [];
         foreach ($memberPayload as $entry) {
             $mediaId = $entry['mediaId'] ?? null;
             if (!is_int($mediaId)) {
@@ -1025,12 +1026,26 @@ final class FeedController
             }
 
             $mediaIds[] = $mediaId;
+
+            $thumbnail = $entry['thumbnail'] ?? null;
+            $imagePaths[] = is_string($thumbnail) ? trim($thumbnail) : '';
         }
+
+        if ($mediaIds === []) {
+            return null;
+        }
+
+        $texts = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
+        $title = trim($texts['title']);
+        $description = trim($texts['description']);
 
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->slideshowTransitions,
             $mediaIds,
-            count($mediaIds)
+            $imagePaths,
+            count($mediaIds),
+            $title !== '' ? $title : null,
+            $description !== '' ? $description : null
         );
         $transitionIndex = 0;
 
@@ -1101,13 +1116,10 @@ final class FeedController
             $payload['musik'] = $this->slideshowMusic;
         }
 
-        $texts = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
-        $title = trim($texts['title']);
         if ($title !== '') {
             $payload['titel'] = $title;
         }
 
-        $description = trim($texts['description']);
         if ($description !== '') {
             $payload['beschreibung'] = $description;
         }
