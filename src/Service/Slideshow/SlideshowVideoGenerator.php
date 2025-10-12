@@ -1135,7 +1135,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $titleY = sprintf('h-th-%s', $safeYExpr);
 
         if ($subtitleText !== null) {
-            $subtitleY = sprintf('%s-%d-%d', $titleY, $lineGap, $subtitleFontSize);
+            $subtitleY = sprintf('%s-%d-%d', $titleY, $lineGap, $titleFontSize);
             $filters[] = $this->buildDrawTextFilter(
                 $subtitleText,
                 $subtitleFontSize,

@@ -232,7 +232,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
         self::assertStringContainsString('x=w*0.07', $subtitleFilter);
         self::assertStringContainsString(
-            sprintf('y=h-th-h*0.07-%d-%d', $expectedLineGap, $expectedSubtitleSize),
+            sprintf('y=h-th-h*0.07-%d-%d', $expectedLineGap, $expectedTitleSize),
             $subtitleFilter
         );
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $subtitleFilter);
