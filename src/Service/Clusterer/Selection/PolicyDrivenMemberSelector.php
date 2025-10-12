@@ -17,6 +17,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\Support\FaceMetricHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
@@ -28,7 +29,9 @@ use function floor;
 use function hexdec;
 use function in_array;
 use function is_array;
+use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_string;
 use function max;
 use function min;
@@ -220,10 +223,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     {
         $timeGaps       = $this->collectTimeGaps($selected);
         $phashDistances = $this->collectPhashDistances($selected);
+        $faceMetrics    = $this->collectFaceMetrics($selected);
 
         $telemetry['metrics'] = [
             'time_gaps'       => $timeGaps,
             'phash_distances' => $phashDistances,
+            'faces'           => $faceMetrics,
         ];
 
         $telemetry['distribution'] = [
@@ -291,6 +296,71 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     }
 
     /**
+     * @param list<array<string, mixed>> $selected
+     *
+     * @return array<string, mixed>
+     */
+    private function collectFaceMetrics(array $selected): array
+    {
+        $withFaces       = 0;
+        $sumFaces        = 0;
+        $groupShots      = 0;
+        $closeUps        = 0;
+        $coverageSum     = 0.0;
+        $coverageSamples = 0;
+
+        foreach ($selected as $candidate) {
+            $metrics = $candidate['face_metrics'] ?? null;
+            $hasFaces = ($candidate['has_faces'] ?? false) === true;
+
+            if (!is_array($metrics)) {
+                if ($hasFaces) {
+                    ++$withFaces;
+                }
+
+                continue;
+            }
+
+            $count    = (int) ($metrics['count'] ?? 0);
+            $coverage = $metrics['largest_coverage'] ?? null;
+
+            if ($count > 0) {
+                ++$withFaces;
+                $sumFaces += $count;
+            } elseif ($hasFaces) {
+                ++$withFaces;
+            }
+
+            if (is_numeric($coverage)) {
+                $normalised = FaceMetricHelper::normaliseCoverage((float) $coverage);
+                if ($normalised !== null) {
+                    $coverageSum += $normalised;
+                    ++$coverageSamples;
+                    $coverage = $normalised;
+                }
+            } else {
+                $coverage = null;
+            }
+
+            if (FaceMetricHelper::isGroupShot($count, $coverage)) {
+                ++$groupShots;
+            }
+
+            if (FaceMetricHelper::isDominantCloseUp($coverage)) {
+                ++$closeUps;
+            }
+        }
+
+        return [
+            'with_faces'          => $withFaces,
+            'group_shots'         => $groupShots,
+            'closeups'            => $closeUps,
+            'average_count'       => $withFaces > 0 ? $sumFaces / $withFaces : 0.0,
+            'average_max_coverage' => $coverageSamples > 0 ? $coverageSum / $coverageSamples : null,
+        ];
+    }
+
+    /**
      * @param array<int, int> $a
      * @param array<int, int> $b
      */
@@ -310,6 +380,66 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         return $distance;
+    }
+
+    /**
+     * @return array{count: int, largest_coverage: ?float}
+     */
+    private function resolveFaceMetrics(Media $media): array
+    {
+        $count    = max(0, $media->getFacesCount());
+        $coverage = $this->resolveLargestFaceCoverage($media);
+
+        return [
+            'count'            => $count,
+            'largest_coverage' => $coverage,
+        ];
+    }
+
+    private function resolveLargestFaceCoverage(Media $media): ?float
+    {
+        $features = $media->getFeatures();
+        if (!is_array($features) || $features === []) {
+            return null;
+        }
+
+        $candidates = [
+            ['faces', 'largest_coverage'],
+            ['faces', 'largestCoverage'],
+            ['faces', 'max_coverage'],
+            ['faces', 'maxCoverage'],
+            ['faces', 'dominant_coverage'],
+            ['vision', 'largest_face_coverage'],
+            ['vision', 'largestFaceCoverage'],
+            ['vision', 'face_coverage_largest'],
+            ['people', 'face_coverage_largest'],
+            ['people', 'largest_face_coverage'],
+        ];
+
+        foreach ($candidates as [$namespace, $key]) {
+            $value = $features[$namespace][$key] ?? null;
+            if (is_numeric($value)) {
+                return FaceMetricHelper::normaliseCoverage((float) $value);
+            }
+        }
+
+        foreach (['faces', 'vision', 'people'] as $namespace) {
+            $payload = $features[$namespace] ?? null;
+            if (!is_array($payload)) {
+                continue;
+            }
+
+            foreach ($payload as $value) {
+                if (is_numeric($value)) {
+                    $normalised = FaceMetricHelper::normaliseCoverage((float) $value);
+                    if ($normalised !== null) {
+                        return $normalised;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -386,7 +516,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $slot      = $this->resolveSlot($media, $timestamp, $policy);
             $stayId    = $this->assignStaypoint($media, $staypointCenters);
             $persons   = $this->personHelper->personIds($media);
-            $hasFaces  = $media->hasFaces();
+            $faceMetrics = $this->resolveFaceMetrics($media);
+            $facesCount = $faceMetrics['count'];
+            $hasFaces  = $media->hasFaces() || $facesCount > 0;
             $isVideo   = $media->isVideo();
             $bucket    = $this->resolveBucket($draft, $media, $day);
             $year      = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
@@ -399,6 +531,22 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
             if ($hasFaces) {
                 $score += $policy->getFaceBonus();
+            }
+
+            $groupBonus = 0.0;
+            if ($facesCount >= FaceMetricHelper::GROUP_FACE_COUNT_THRESHOLD) {
+                $groupBonus = $policy->getFaceBonus() * FaceMetricHelper::groupBonusScale($facesCount);
+                $score += $groupBonus;
+            }
+
+            $coverage        = $faceMetrics['largest_coverage'];
+            $closeUpPenalty  = 0.0;
+            if ($policy->getSelfiePenalty() > 0.0) {
+                $penaltyFactor = FaceMetricHelper::closeUpPenaltyFactor($coverage);
+                if ($penaltyFactor > 0.0) {
+                    $closeUpPenalty = $policy->getSelfiePenalty() * $penaltyFactor;
+                    $score -= $closeUpPenalty;
+                }
             }
 
             if ($this->isLikelySelfie($media) && $policy->getSelfiePenalty() > 0.0) {
@@ -424,6 +572,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 'bucket'     => $bucket,
                 'orientation'=> $orientation,
                 'burst'      => $media->getBurstUuid(),
+                'face_metrics' => [
+                    'count'            => $facesCount,
+                    'largest_coverage' => $coverage,
+                    'group_bonus'      => $groupBonus,
+                    'closeup_penalty'  => $closeUpPenalty,
+                ],
             ];
         }
 
