@@ -1070,6 +1070,44 @@ BASH;
         /** @var list<string> $whitelist */
         $whitelist = $reflector->getConstant('TRANSITION_WHITELIST');
 
+        self::assertSame(
+            [
+                'fade',
+                'dissolve',
+                'fadeblack',
+                'fadewhite',
+                'fadegrays',
+                'fadefast',
+                'wipeleft',
+                'wiperight',
+                'wipeup',
+                'wipedown',
+                'slideleft',
+                'slideright',
+                'slideup',
+                'slidedown',
+                'smoothleft',
+                'smoothright',
+                'smoothup',
+                'smoothdown',
+                'circleopen',
+                'circleclose',
+                'radial',
+                'hlslice',
+                'vuslice',
+                'distance',
+                'pixelize',
+                'rectcrop',
+                'directionleft',
+                'directionright',
+                'diagtl',
+                'diagtr',
+                'diagbl',
+                'diagbr',
+            ],
+            $whitelist,
+        );
+
         self::assertSame($whitelist, $defaults);
 
         $filterMethod = $reflector->getMethod('filterAllowedTransitions');
