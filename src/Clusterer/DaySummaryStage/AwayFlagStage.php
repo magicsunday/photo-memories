@@ -21,6 +21,8 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
 use function count;
+use function max;
+use function min;
 
 /**
  * Post-processes away flags for day summaries.
@@ -149,7 +151,22 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             return false;
         }
 
-        $nearest = HomeBoundaryHelper::nearestCenter($home, (float) $dominant['lat'], (float) $dominant['lon']);
+        $dominantTimestamp = null;
+        $dominantStart     = isset($dominant['start']) ? (int) $dominant['start'] : null;
+        $dominantEnd       = isset($dominant['end']) ? (int) $dominant['end'] : null;
+
+        if ($dominantStart !== null && $dominantStart > 0) {
+            $dominantTimestamp = $dominantStart;
+        } elseif ($dominantEnd !== null && $dominantEnd > 0) {
+            $dominantTimestamp = $dominantEnd;
+        }
+
+        $nearest = HomeBoundaryHelper::nearestCenter(
+            $home,
+            (float) $dominant['lat'],
+            (float) $dominant['lon'],
+            $dominantTimestamp,
+        );
         if ($nearest['distance_km'] <= $nearest['radius_km'] * $this->nextDayDominantDistanceFactor) {
             return false;
         }
@@ -209,7 +226,24 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
                 continue;
             }
 
-            $nearest = HomeBoundaryHelper::nearestCenter($home, (float) $staypoint['lat'], (float) $staypoint['lon']);
+            $overlapStart = max($stayStart > 0 ? $stayStart : $startTs, $startTs);
+            $overlapEnd   = min($stayEnd > 0 ? $stayEnd : $endTs, $endTs);
+
+            $timestamp = null;
+            if ($overlapStart <= $overlapEnd) {
+                $timestamp = $overlapStart;
+            } elseif ($stayStart > 0) {
+                $timestamp = $stayStart;
+            } elseif ($stayEnd > 0) {
+                $timestamp = $stayEnd;
+            }
+
+            $nearest = HomeBoundaryHelper::nearestCenter(
+                $home,
+                (float) $staypoint['lat'],
+                (float) $staypoint['lon'],
+                $timestamp,
+            );
             if ($nearest['distance_km'] <= $nearest['radius_km']) {
                 return true;
             }
