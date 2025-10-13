@@ -243,7 +243,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         );
     }
 
-    public function testBuildIntroTextOverlayFilterChainStacksTitleAboveSubtitle(): void
+    public function testBuildIntroTextOverlayFilterChainPlacesSubtitleAboveTitle(): void
     {
         $generator = new SlideshowVideoGenerator();
 
@@ -258,26 +258,19 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         self::assertCount(2, $parts);
 
-        $expectedTitleSize    = max(1, (int) round(1080 * 0.060));
-        $expectedSubtitleSize = max(1, (int) round(1080 * 0.038));
-        $expectedLineGap      = max(0, (int) round(1080 * 0.012));
-
         $subtitleFilter = $parts[0];
         $titleFilter    = $parts[1];
 
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $subtitleFilter);
-        self::assertStringContainsString(sprintf('fontsize=%d', $expectedSubtitleSize), $subtitleFilter);
+        self::assertStringContainsString('fontsize=h*0.038', $subtitleFilter);
         self::assertStringContainsString('x=w*0.07', $subtitleFilter);
-        self::assertStringContainsString(
-            sprintf('y=h-th-h*0.07-%d-%d', $expectedLineGap, $expectedTitleSize),
-            $subtitleFilter
-        );
+        self::assertStringContainsString('y=h*0.86', $subtitleFilter);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $subtitleFilter);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
-        self::assertStringContainsString(sprintf('fontsize=%d', $expectedTitleSize), $titleFilter);
+        self::assertStringContainsString('fontsize=h*0.060', $titleFilter);
         self::assertStringContainsString('x=w*0.07', $titleFilter);
-        self::assertStringContainsString('y=h-th-h*0.07', $titleFilter);
+        self::assertStringContainsString('y=h*0.92', $titleFilter);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $titleFilter);
 
         self::assertStringNotContainsString('safeX', $filters);
@@ -297,10 +290,44 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $filters);
         self::assertStringContainsString('x=w*0.07', $filters);
-        self::assertStringContainsString('y=h-th-h*0.07', $filters);
+        self::assertStringContainsString('fontsize=h*0.060', $filters);
+        self::assertStringContainsString('y=h*0.92', $filters);
         self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $filters);
         self::assertStringNotContainsString('safeX', $filters);
         self::assertStringNotContainsString('safeY', $filters);
+    }
+
+    public function testBuildIntroTextOverlayFilterChainMatchesExpectedStructure(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+
+        $method = $reflector->getMethod('buildIntroTextOverlayFilterChain');
+        $method->setAccessible(true);
+
+        $escapeMethod = $reflector->getMethod('escapeDrawTextValue');
+        $escapeMethod->setAccessible(true);
+
+        $title    = "Sommer's Rückblick";
+        $subtitle = 'Intro: 01%';
+
+        /** @var string $filters */
+        $filters = $method->invoke($generator, $title, $subtitle);
+
+        /** @var string $escapedSubtitle */
+        $escapedSubtitle = trim($escapeMethod->invoke($generator, $subtitle));
+
+        /** @var string $escapedTitle */
+        $escapedTitle = trim($escapeMethod->invoke($generator, $title));
+
+        $expected = sprintf(
+            "drawtext=text='%s':fontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86,drawtext=text='%s':fontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92",
+            $escapedSubtitle,
+            $escapedTitle
+        );
+
+        self::assertSame($expected, $filters);
     }
 
     public function testEscapeDrawTextValueEscapesLineBreaks(): void
