@@ -18,14 +18,20 @@ use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
 use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 use function file_put_contents;
+use function hash;
+use function intval;
 use function is_file;
+use function mb_strtolower;
 use function sys_get_temp_dir;
 use function tempnam;
+use function substr;
+use function trim;
 use function unlink;
 
 #[CoversClass(SmartTitleGenerator::class)]
@@ -101,7 +107,7 @@ YAML
         );
 
         self::assertSame('Reise nach Hamburg', $generator->makeTitle($cluster, 'en'));
-        self::assertSame('5.–7. Jul. 2024', $generator->makeSubtitle($cluster, 'en'));
+        self::assertSame('5. Jul 2024 – 7. Jul 2024', $generator->makeSubtitle($cluster, 'en'));
     }
 
     #[Test]
@@ -221,6 +227,7 @@ YAML
             params: [
                 'classification_label' => 'Urlaub',
                 'place_country'       => 'Deutschland',
+                'people_ratio'        => 0.67,
                 'time_range'          => [
                     'from' => (new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-06-03 20:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -264,7 +271,71 @@ YAML
         );
 
         self::assertSame('Alpha → Beta → Gamma', $generator->makeTitle($cluster));
-        self::assertSame('ca. 220 km • 3 Stopps • 1.–3. Jun. 2024', $generator->makeSubtitle($cluster));
+        self::assertSame('ca. 220 km • 3 Stopps • 1.–3. Jun. 2024 • Personenanteil: 67 %', $generator->makeSubtitle($cluster));
+    }
+
+    #[Test]
+    public function rendersVacationTitleWithCohortNames(): void
+    {
+        $generator = $this->createGenerator(<<<'YAML'
+de:
+  vacation:
+    title: "{{ vacation_title }}"
+    subtitle: "{{ vacation_subtitle }}"
+YAML
+        );
+
+        $cluster = $this->createCluster(
+            algorithm: 'vacation',
+            params: [
+                'classification_label' => 'Urlaub',
+                'place_city'          => 'Barcelona',
+                'people_ratio'        => 0.8,
+                'time_range'          => [
+                    'from' => (new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                    'to'   => (new DateTimeImmutable('2024-05-13 21:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+                ],
+                'travel_waypoints'    => [
+                    [
+                        'label'         => 'Alpha',
+                        'lat'           => 0.0,
+                        'lon'           => 0.0,
+                        'count'         => 5,
+                        'first_seen_at' => 100,
+                    ],
+                    [
+                        'label'         => 'Beta',
+                        'lat'           => 0.1,
+                        'lon'           => 0.1,
+                        'count'         => 4,
+                        'first_seen_at' => 200,
+                    ],
+                    [
+                        'label'         => 'Gamma',
+                        'lat'           => 0.2,
+                        'lon'           => 0.2,
+                        'count'         => 3,
+                        'first_seen_at' => 300,
+                    ],
+                ],
+                'member_selection'    => [
+                    'telemetry' => [
+                        'people_balance_counts' => [
+                            'Anna' => 5,
+                            'Ben'  => 3,
+                            'Chris'=> 2,
+                        ],
+                    ],
+                ],
+                'cohort_members' => [
+                    $this->hashPersonName('Anna') => 5,
+                    $this->hashPersonName('Ben')  => 3,
+                ],
+            ],
+        );
+
+        self::assertSame('Alpha → Beta → Gamma mit Anna & Ben', $generator->makeTitle($cluster));
+        self::assertStringContainsString('Personenanteil: 80 %', $generator->makeSubtitle($cluster));
     }
 
     #[Test]
@@ -322,11 +393,25 @@ YAML
 
         $this->tempFiles[] = $path;
 
-        $provider       = new TitleTemplateProvider($path, $defaultLocale);
+        $provider        = new TitleTemplateProvider($path, $defaultLocale);
         $routeSummarizer = new RouteSummarizer();
         $dateFormatter   = new LocalizedDateFormatter();
+        $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter, $defaultLocale);
 
-        return new SmartTitleGenerator($provider, $routeSummarizer, $dateFormatter);
+        return new SmartTitleGenerator($provider, $routeSummarizer, $dateFormatter, $storyTitleBuilder);
+    }
+
+    private function hashPersonName(string $name): int
+    {
+        $normalized = trim(mb_strtolower($name, 'UTF-8'));
+        if ($normalized === '') {
+            return 1;
+        }
+
+        $hash = substr(hash('sha256', $normalized), 0, 15);
+        $value = intval($hash, 16);
+
+        return $value < 1 ? 1 : $value;
     }
 
     /**

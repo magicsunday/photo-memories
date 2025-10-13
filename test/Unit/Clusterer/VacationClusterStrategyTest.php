@@ -51,6 +51,10 @@ use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 
 final class VacationClusterStrategyTest extends TestCase
 {
@@ -1822,16 +1826,23 @@ final class VacationClusterStrategyTest extends TestCase
             minItemsPerDay: $minItemsPerDay,
         );
 
+        $selectionOptions  = new VacationSelectionOptions(targetTotal: 32, maxPerDay: 8);
+        $selectionProfiles = new SelectionProfileProvider($selectionOptions, 'vacation');
+        $routeSummarizer   = new RouteSummarizer();
+        $dateFormatter     = new LocalizedDateFormatter();
+        $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
+
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             memberSelector: new VacationTestMemberSelector(),
-            selectionOptions: new VacationSelectionOptions(targetTotal: 32, maxPerDay: 8),
+            selectionProfiles: $selectionProfiles,
+            storyTitleBuilder: $storyTitleBuilder,
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
         );
 
-        $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
+        $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
 
         return new VacationClusterStrategy($homeLocator, $dayBuilder, $segmentAssembler);
     }

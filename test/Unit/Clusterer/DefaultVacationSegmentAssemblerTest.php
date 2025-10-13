@@ -38,6 +38,10 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 
 final class DefaultVacationSegmentAssemblerTest extends TestCase
 {
@@ -68,16 +72,23 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             minAwayDistanceKm: 80.0,
             minItemsPerDay: 2,
         );
+        $selectionOptions   = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
+        $selectionProfiles  = new SelectionProfileProvider($selectionOptions, 'vacation');
+        $routeSummarizer    = new RouteSummarizer();
+        $dateFormatter      = new LocalizedDateFormatter();
+        $storyTitleBuilder  = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
+
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
             memberSelector: new VacationTestMemberSelector(),
-            selectionOptions: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
+            selectionProfiles: $selectionProfiles,
+            storyTitleBuilder: $storyTitleBuilder,
             holidayResolver: new NullHolidayResolver(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
         );
 
-        $assembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator);
+        $assembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
 
         $tripLocation = $this->makeLocation('trip-lisbon', 'Lisboa, Portugal', 38.7223, -9.1393, country: 'Portugal', configure: static function (Location $loc): void {
             $loc->setCategory('tourism');
@@ -130,5 +141,8 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         $segmentSample = reset($params['day_segments']);
         self::assertIsArray($segmentSample);
         self::assertArrayHasKey('category', $segmentSample);
+        self::assertArrayHasKey('vacation_title', $params);
+        self::assertArrayHasKey('vacation_subtitle', $params);
+        self::assertStringContainsString('Personenanteil:', (string) $params['vacation_subtitle']);
     }
 }

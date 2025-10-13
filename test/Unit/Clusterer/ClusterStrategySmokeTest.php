@@ -49,6 +49,7 @@ use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
@@ -61,6 +62,9 @@ use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Clusterer\YearInReviewClusterStrategy;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -176,24 +180,33 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'VacationClusterStrategy' => [
             VacationClusterStrategy::class,
             'vacation',
-            static fn (): ClusterStrategyInterface => new VacationClusterStrategy(
-                new DefaultHomeLocator(),
-                new DefaultDaySummaryBuilder([
-                    new InitializationStage(new TimezoneResolver(), new PoiClassifier()),
-                    new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector()),
-                    new DensityStage(),
-                    new AwayFlagStage(new TimezoneResolver(), new BaseLocationResolver()),
-                ]),
-                new DefaultVacationSegmentAssembler(
-                    new RunDetector(new TransportDayExtender()),
-                    new VacationScoreCalculator(
-                        locationHelper: self::locationHelper(),
-                        memberSelector: new VacationTestMemberSelector(),
-                        selectionOptions: new VacationSelectionOptions(),
-                        holidayResolver: new NullHolidayResolver(),
+            static fn (): ClusterStrategyInterface => (function (): ClusterStrategyInterface {
+                $storyTitleBuilder = new StoryTitleBuilder(
+                    new RouteSummarizer(),
+                    new LocalizedDateFormatter(),
+                );
+
+                return new VacationClusterStrategy(
+                    new DefaultHomeLocator(),
+                    new DefaultDaySummaryBuilder([
+                        new InitializationStage(new TimezoneResolver(), new PoiClassifier()),
+                        new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector()),
+                        new DensityStage(),
+                        new AwayFlagStage(new TimezoneResolver(), new BaseLocationResolver()),
+                    ]),
+                    new DefaultVacationSegmentAssembler(
+                        new RunDetector(new TransportDayExtender()),
+                        new VacationScoreCalculator(
+                            locationHelper: self::locationHelper(),
+                            memberSelector: new VacationTestMemberSelector(),
+                            selectionProfiles: new SelectionProfileProvider(new VacationSelectionOptions(), 'vacation'),
+                            storyTitleBuilder: $storyTitleBuilder,
+                            holidayResolver: new NullHolidayResolver(),
+                        ),
+                        $storyTitleBuilder,
                     ),
-                ),
-            ),
+                );
+            })(),
         ];
         yield 'MonthlyHighlightsClusterStrategy' => [
             MonthlyHighlightsClusterStrategy::class,
