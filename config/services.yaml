@@ -348,7 +348,7 @@ services:
             $hash: '@MagicSunday\Memories\Service\Metadata\PerceptualHashExtractor'
     MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage:
         arguments:
-            $entityManager: '@Doctrine\\ORM\\EntityManagerInterface'
+            $entityManager: '@Doctrine\ORM\EntityManagerInterface'
             $mediaRepository: '@MagicSunday\Memories\Repository\MediaRepository'
             $duplicateRepository: '@MagicSunday\Memories\Repository\MediaDuplicateRepository'
             $maxHammingDistance: 6
