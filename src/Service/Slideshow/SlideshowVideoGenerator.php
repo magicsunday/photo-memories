@@ -302,7 +302,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $requiredTransitions,
         );
 
-        $transitionDurations = $this->resolveTransitionDurationsForSlides($slides, $transitionDuration, $transitionDurations);
+        $transitionDurations = $this->resolveTransitionDurationsForSlides(
+            $slides,
+            $transitionDurations,
+            $title,
+            $subtitle,
+        );
 
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
@@ -592,33 +597,40 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
+     * Builds deterministic transition durations for every slide overlap.
+     *
      * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
      * @param list<float>                                                                       $requestedDurations
      *
      * @return list<float>
      */
-    private function resolveTransitionDurationsForSlides(array $slides, float $baseDuration, array $requestedDurations): array
+    private function resolveTransitionDurationsForSlides(
+        array $slides,
+        array $requestedDurations,
+        ?string $title,
+        ?string $subtitle,
+    ): array
     {
         $count = count($slides);
         if ($count <= 1) {
             return [];
         }
 
-        $clampedBase = max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $baseDuration));
-
         $durations = [];
         for ($index = 0; $index < $count - 1; ++$index) {
             $currentDuration  = $this->resolveSlideDuration($slides[$index]['duration']);
             $nextDuration     = $this->resolveSlideDuration($slides[$index + 1]['duration']);
             $maxOverlap       = min($currentDuration, $nextDuration);
-            $candidate        = $requestedDurations[$index] ?? $clampedBase;
+            $randomDuration   = $this->resolveDeterministicTransitionDuration($slides, $index, $title, $subtitle);
+            $hasRequested     = array_key_exists($index, $requestedDurations);
+            $candidate        = $hasRequested ? $requestedDurations[$index] : $randomDuration;
 
             if (!is_float($candidate)) {
                 $candidate = (float) $candidate;
             }
 
             if ($candidate <= 0.0) {
-                $candidate = $clampedBase;
+                $candidate = $randomDuration;
             }
 
             $transitionLength = max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $candidate));
@@ -631,6 +643,29 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return $durations;
+    }
+
+    /**
+     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     */
+    private function resolveDeterministicTransitionDuration(
+        array $slides,
+        int $index,
+        ?string $title,
+        ?string $subtitle,
+    ): float {
+        $seedPayload = implode('|', [
+            (string) $index,
+            trim((string) $slides[$index]['image']),
+            trim((string) $slides[$index + 1]['image']),
+            trim((string) ($title ?? '')),
+            trim((string) ($subtitle ?? '')),
+        ]);
+
+        $seed      = hash('sha256', $seedPayload, true);
+        $randomizer = new Randomizer(new Xoshiro256StarStar($seed));
+
+        return $randomizer->getFloat(0.6, 1.0);
     }
 
     /**
