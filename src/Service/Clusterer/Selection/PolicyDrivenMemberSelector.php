@@ -192,13 +192,14 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $attempts[] = static fn (SelectionPolicy $p): SelectionPolicy => $p->withoutCaps();
 
-        $selected       = [];
-        $appliedPolicy  = $policy;
-        $relaxations    = [];
-        $finalCollector = new SelectionTelemetry();
+        $selected        = [];
+        $appliedPolicy   = $policy;
+        $relaxations     = [];
+        $finalCollector  = new SelectionTelemetry();
+        $candidatePolicy = $policy;
 
         foreach ($attempts as $index => $mutator) {
-            $candidatePolicy = $mutator($policy);
+            $candidatePolicy = $mutator($candidatePolicy);
             $collector       = new SelectionTelemetry();
             $attemptResult   = $this->runPipeline($eligibleCandidates, $candidatePolicy, $collector);
 
