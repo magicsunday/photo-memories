@@ -22,7 +22,6 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 
-use function array_keys;
 use function count;
 use function max;
 use function microtime;
@@ -110,6 +109,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             }
         }
 
+        $deleted = 0;
+        if ($options->shouldReplace() && !$options->isDryRun()) {
+            $deleted = $this->persistence->deleteAll();
+        }
+
         $strategyCount = $this->clusterer->countStrategies();
         $clusterHandle = $progressReporter->create('Clustere', '🧩 Strategien', $strategyCount);
         $clusterHandle->setDetail('Vorbereitung');
@@ -149,7 +153,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $draftCount = count($drafts);
         if ($draftCount === 0) {
-            return new ClusterJobResult($total, $loadedCount, 0, 0, 0, 0, $options->isDryRun());
+            return new ClusterJobResult($total, $loadedCount, 0, 0, 0, $deleted, $options->isDryRun());
         }
 
         $consolidateHandle = $progressReporter->create('Konsolidieren', '🧹 Konsolidieren', $draftCount);
@@ -167,12 +171,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $consolidatedCount = count($drafts);
         if ($consolidatedCount === 0) {
-            return new ClusterJobResult($total, $loadedCount, $draftCount, 0, 0, 0, $options->isDryRun());
-        }
-
-        $deleted = 0;
-        if ($options->shouldReplace() && !$options->isDryRun()) {
-            $deleted = $this->persistence->deleteByAlgorithms($this->collectAlgorithms($drafts));
+            return new ClusterJobResult($total, $loadedCount, $draftCount, 0, 0, $deleted, $options->isDryRun());
         }
 
         $persistHandle = $progressReporter->create(
@@ -211,22 +210,6 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $deleted,
             $options->isDryRun(),
         );
-    }
-
-    /**
-     * @param list<ClusterDraft> $drafts
-     *
-     * @return list<string>
-     */
-    private function collectAlgorithms(array $drafts): array
-    {
-        $algorithms = [];
-
-        foreach ($drafts as $draft) {
-            $algorithms[$draft->getAlgorithm()] = true;
-        }
-
-        return array_keys($algorithms);
     }
 
     private function formatRate(int $processed, float $startedAt, string $unit): string

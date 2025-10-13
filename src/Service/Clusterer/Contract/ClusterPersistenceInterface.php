@@ -28,4 +28,6 @@ interface ClusterPersistenceInterface
      * @param list<string> $algorithms
      */
     public function deleteByAlgorithms(array $algorithms): int;
+
+    public function deleteAll(): int;
 }
