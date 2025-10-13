@@ -14,16 +14,19 @@ namespace MagicSunday\Memories\Clusterer;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Entity\Media;
 
 use function arsort;
 use function ceil;
 use function count;
 use function floor;
+use function is_string;
 use function max;
 use function min;
 use function round;
 use function sort;
+use function trim;
 
 /**
  * Coordinates vacation segment detection and scoring.
@@ -33,6 +36,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
     public function __construct(
         private VacationRunDetectorInterface $runDetector,
         private VacationScoreCalculatorInterface $scoreCalculator,
+        private StoryTitleBuilder $storyTitleBuilder,
     ) {
     }
 
@@ -54,6 +58,23 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
             $dayContext = $this->classifyRunDays($run, $days);
             $draft      = $this->scoreCalculator->buildDraft($run, $days, $home, $dayContext);
             if ($draft instanceof ClusterDraft) {
+                $params = $draft->getParams();
+                $title = $params['vacation_title'] ?? null;
+                $subtitle = $params['vacation_subtitle'] ?? null;
+                $needsTitle = !is_string($title) || trim($title) === '';
+                $needsSubtitle = !is_string($subtitle) || trim($subtitle) === '';
+
+                if ($needsTitle || $needsSubtitle) {
+                    $storyTitle = $this->storyTitleBuilder->build($draft);
+                    if ($needsTitle) {
+                        $draft->setParam('vacation_title', $storyTitle['title']);
+                    }
+
+                    if ($needsSubtitle) {
+                        $draft->setParam('vacation_subtitle', $storyTitle['subtitle']);
+                    }
+                }
+
                 $clusters[] = $draft;
             }
         }

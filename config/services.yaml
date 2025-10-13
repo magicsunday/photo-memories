@@ -836,6 +836,7 @@ services:
             $weekendSelectionProfile: '%memories.cluster.vacation.weekend_selection_profile%'
             $memberSelector: '@MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface'
             $selectionProfiles: '@MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider'
+            $storyTitleBuilder: '@MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface:
@@ -1327,11 +1328,18 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
 
+    MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder:
+        arguments:
+            $routeSummarizer: '@MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer'
+            $dateFormatter: '@MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter'
+            $preferredLocale: '%memories.localization.preferred_locale%'
+
     MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator:
         arguments:
             $provider: '@MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider'
             $routeSummarizer: '@MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer'
             $dateFormatter: '@MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter'
+            $storyTitleBuilder: '@MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder'
 
     # Support
     MagicSunday\Memories\Support\ClusterEntityToDraftMapper:

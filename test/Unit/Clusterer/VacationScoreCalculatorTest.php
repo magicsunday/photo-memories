@@ -26,6 +26,9 @@ use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\Contract\LocationLabelResolverInterface;
@@ -171,6 +174,11 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertArrayHasKey('countries', $params);
         self::assertSame(['pt'], $params['countries']);
         self::assertGreaterThanOrEqual(7.0, $params['score']);
+
+        self::assertArrayHasKey('vacation_title', $params);
+        self::assertArrayHasKey('vacation_subtitle', $params);
+        self::assertStringContainsString('Lisbon', (string) $params['vacation_title']);
+        self::assertStringContainsString('Personenanteil:', (string) $params['vacation_subtitle']);
 
         self::assertArrayHasKey('member_selection', $params);
         $memberSelection = $params['member_selection'];
@@ -1389,12 +1397,16 @@ final class VacationScoreCalculatorTest extends TestCase
         ?DateTimeImmutable $referenceDate = null,
     ): VacationScoreCalculator {
         $defaultOptions    = $options ?? new VacationSelectionOptions();
-        $selectionProfiles = new SelectionProfileProvider($defaultOptions);
+        $selectionProfiles = new SelectionProfileProvider($defaultOptions, 'vacation');
+        $routeSummarizer   = new RouteSummarizer();
+        $dateFormatter     = new LocalizedDateFormatter();
+        $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
 
         return new VacationScoreCalculator(
             locationHelper: $locationHelper,
             memberSelector: new VacationTestMemberSelector($curationFilter, $telemetryOverrides),
             selectionProfiles: $selectionProfiles,
+            storyTitleBuilder: $storyTitleBuilder,
             holidayResolver: $holidayResolver ?? new NullHolidayResolver(),
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,

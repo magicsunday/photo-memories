@@ -16,6 +16,7 @@ use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummary;
 use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 
 use function array_filter;
 use function array_map;
@@ -40,6 +41,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         private TitleTemplateProvider $provider,
         private RouteSummarizer $routeSummarizer,
         private LocalizedDateFormatter $dateFormatter,
+        private StoryTitleBuilder $storyTitleBuilder,
     ) {
     }
 
@@ -215,8 +217,25 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
                 $summary = null;
             }
 
-            $params['vacation_title'] = $this->buildVacationTitle($params, $summary);
-            $params['vacation_subtitle'] = $this->buildVacationSubtitle($params, $summary);
+            $existingTitle = $params['vacation_title'] ?? null;
+            $existingSubtitle = $params['vacation_subtitle'] ?? null;
+
+            $needsTitle = !is_string($existingTitle) || trim($existingTitle) === '';
+            $needsSubtitle = !is_string($existingSubtitle) || trim($existingSubtitle) === '';
+
+            if ($needsTitle || $needsSubtitle) {
+                $storyTitle = $this->storyTitleBuilder->build($cluster, $locale, $summary);
+                if ($needsTitle) {
+                    $params['vacation_title'] = $storyTitle['title'];
+                }
+
+                if ($needsSubtitle) {
+                    $params['vacation_subtitle'] = $storyTitle['subtitle'];
+                }
+            } else {
+                $params['vacation_title'] = $existingTitle;
+                $params['vacation_subtitle'] = $existingSubtitle;
+            }
         }
 
         if ($algorithm === 'significant_place') {
@@ -236,70 +255,6 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         }
 
         return $params;
-    }
-
-    private function buildVacationTitle(array $params, ?RouteSummary $summary): string
-    {
-        if ($summary instanceof RouteSummary && $summary->routeLabel !== '') {
-            return $summary->routeLabel;
-        }
-
-        $classification = '';
-        $rawClassification = $params['classification_label'] ?? null;
-        if (is_string($rawClassification)) {
-            $classification = trim($rawClassification);
-        }
-
-        if ($classification === '') {
-            $classification = 'Reise';
-        }
-
-        $locationLabel = $this->resolvePrimaryLocationLabel($params);
-
-        return $this->joinParts([$classification, $locationLabel], ' – ');
-    }
-
-    private function buildVacationSubtitle(array $params, ?RouteSummary $summary): string
-    {
-        $parts = [];
-
-        if ($summary instanceof RouteSummary) {
-            if ($summary->metricsLabel !== '') {
-                $parts[] = $summary->metricsLabel;
-            } else {
-                if ($summary->distanceLabel !== '') {
-                    $parts[] = $summary->distanceLabel;
-                }
-
-                if ($summary->stopLabel !== '') {
-                    $parts[] = $summary->stopLabel;
-                }
-            }
-        }
-
-        $dateRange = $params['date_range'] ?? '';
-        if ($dateRange !== '') {
-            $parts[] = $dateRange;
-        } else {
-            $parts[] = $this->joinParts([
-                $params['start_date'] ?? '',
-                $params['end_date'] ?? '',
-            ], ' – ');
-        }
-
-        $subtitle = $this->joinParts($parts);
-        if ($subtitle !== '') {
-            return $subtitle;
-        }
-
-        if ($dateRange !== '') {
-            return $dateRange;
-        }
-
-        return $this->joinParts([
-            $params['start_date'] ?? '',
-            $params['end_date'] ?? '',
-        ], ' – ');
     }
 
     private function resolvePrimaryLocationLabel(array $params): string

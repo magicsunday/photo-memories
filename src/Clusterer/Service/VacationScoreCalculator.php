@@ -25,6 +25,7 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -95,6 +96,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private LocationHelper $locationHelper,
         private MemberSelectorInterface $memberSelector,
         SelectionProfileProvider $selectionProfiles,
+        private StoryTitleBuilder $storyTitleBuilder,
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
@@ -987,6 +989,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             members: $memberIds,
             storyline: $storyline,
         );
+
+        $storyTitle = $this->storyTitleBuilder->build($draft);
+        $draft->setParam('vacation_title', $storyTitle['title']);
+        $draft->setParam('vacation_subtitle', $storyTitle['subtitle']);
+
         return $draft;
     }
 
