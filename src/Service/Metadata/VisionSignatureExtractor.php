@@ -25,6 +25,7 @@ use function array_fill;
 use function array_map;
 use function count;
 use function imagecolorat;
+use function in_array;
 use function is_file;
 use function is_string;
 use function log;
@@ -138,14 +139,16 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             $height = $media->getHeight();
 
             if ($width !== null && $height !== null && $width > 0 && $height > 0) {
-                if ($media->isPortrait() === null) {
-                    $isPortrait = $height > $width && ((float) $height / (float) $width) >= 1.2;
-                    $media->setIsPortrait($isPortrait);
-                }
+                if ($media->isPortrait() === null || $media->isPanorama() === null) {
+                    [$isPortrait, $isPanorama] = $this->deriveAspectFlags($media, $width, $height);
 
-                if ($media->isPanorama() === null) {
-                    $isPanorama = $width > $height && ((float) $width / (float) $height) >= 2.4;
-                    $media->setIsPanorama($isPanorama);
+                    if ($media->isPortrait() === null) {
+                        $media->setIsPortrait($isPortrait);
+                    }
+
+                    if ($media->isPanorama() === null) {
+                        $media->setIsPanorama($isPanorama);
+                    }
                 }
             }
 
@@ -176,6 +179,26 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         } finally {
             $this->cleanupPosterFrame($posterPath);
         }
+    }
+
+    /**
+     * @return array{0: bool, 1: bool}
+     */
+    private function deriveAspectFlags(Media $media, int $width, int $height): array
+    {
+        if ($width <= 0 || $height <= 0) {
+            return [false, false];
+        }
+
+        $orientation = $media->getOrientation();
+        if ($orientation !== null && in_array($orientation, [5, 6, 7, 8], true)) {
+            [$width, $height] = [$height, $width];
+        }
+
+        $isPortrait = $height > $width && ((float) $height / (float) $width) >= 1.2;
+        $isPanorama = $width > $height && ((float) $width / (float) $height) >= 2.4;
+
+        return [$isPortrait, $isPanorama];
     }
 
     /**

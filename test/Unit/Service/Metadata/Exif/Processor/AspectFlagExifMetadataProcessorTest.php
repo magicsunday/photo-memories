@@ -78,4 +78,26 @@ final class AspectFlagExifMetadataProcessorTest extends TestCase
         self::assertFalse($media->isPortrait());
         self::assertFalse($media->isPanorama());
     }
+
+    #[Test]
+    public function honorsOrientationWhenDerivingPortraitFlag(): void
+    {
+        $media = $this->makeMedia(
+            id: 204,
+            path: '/fixtures/rotated-landscape.jpg',
+            configure: static function (Media $entity): void {
+                $entity->setWidth(2400);
+                $entity->setHeight(1600);
+                $entity->setOrientation(6);
+                $entity->setIsPortrait(false);
+                $entity->setIsPanorama(true);
+            },
+        );
+
+        $processor = new AspectFlagExifMetadataProcessor();
+        $processor->process([], $media);
+
+        self::assertTrue($media->isPortrait());
+        self::assertFalse($media->isPanorama());
+    }
 }
