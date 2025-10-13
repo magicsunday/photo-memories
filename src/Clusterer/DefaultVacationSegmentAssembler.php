@@ -33,6 +33,8 @@ use function trim;
  */
 final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerInterface
 {
+    private const TRAVEL_TARGET_KM = 250.0;
+
     public function __construct(
         private VacationRunDetectorInterface $runDetector,
         private VacationScoreCalculatorInterface $scoreCalculator,
@@ -163,7 +165,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
     }
 
     /**
-     * @param array{members:list<Media>,tourismRatio:float,poiDensity:float,staypointCount:int,spotCount:int,cohortPresenceRatio:float,isSynthetic:bool} $summary
+     * @param array{members:list<Media>,tourismRatio:float,poiDensity:float,staypointCount:int,spotCount:int,cohortPresenceRatio:float,isSynthetic:bool,travelKm:float|null} $summary
      */
     private function calculateCoreScore(array $summary): float
     {
@@ -203,6 +205,8 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
 
         $poiBoost = max(0.0, min(1.0, $poiBoost));
 
+        $travelScore = $this->normalizeTravel((float) ($summary['travelKm'] ?? 0.0));
+
         $weights = [
             $diversity * 0.3,
             $faceShare * 0.25,
@@ -214,6 +218,8 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
         foreach ($weights as $component) {
             $score += $component;
         }
+
+        $score += $travelScore * 0.15;
 
         if ($summary['isSynthetic']) {
             $score *= 0.6;
@@ -271,7 +277,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
     }
 
     /**
-     * @param array{tourismRatio:float,poiDensity:float,cohortPresenceRatio:float} $summary
+     * @param array{tourismRatio:float,poiDensity:float,cohortPresenceRatio:float,travelKm:float|null} $summary
      *
      * @return array<string, float>
      */
@@ -282,6 +288,16 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
             'tourism_ratio'         => (float) $summary['tourismRatio'],
             'poi_density'           => (float) $summary['poiDensity'],
             'cohort_presence_ratio' => (float) $summary['cohortPresenceRatio'],
+            'travel_score'          => round($this->normalizeTravel((float) ($summary['travelKm'] ?? 0.0)), 3),
         ];
+    }
+
+    private function normalizeTravel(float $travelKm): float
+    {
+        if ($travelKm <= 0.0) {
+            return 0.0;
+        }
+
+        return max(0.0, min(1.0, $travelKm / self::TRAVEL_TARGET_KM));
     }
 }
