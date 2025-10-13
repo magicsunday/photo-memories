@@ -228,21 +228,21 @@ final class ExifMetadataExtractorTest extends TestCase
             2000,
             3200,
             true,
-            null,
+            false,
         ];
 
         yield 'panorama' => [
             4800,
             1800,
-            null,
+            false,
             true,
         ];
 
         yield 'standard' => [
             4000,
             3000,
-            null,
-            null,
+            false,
+            false,
         ];
     }
 
