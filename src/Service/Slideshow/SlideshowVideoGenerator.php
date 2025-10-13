@@ -811,7 +811,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         if ($filtered === []) {
-            $filtered = self::TRANSITION_WHITELIST;
+            $filtered = ['fade'];
         }
 
         $cache->lookup    = null;
