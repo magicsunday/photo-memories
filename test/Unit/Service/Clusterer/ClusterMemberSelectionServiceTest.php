@@ -23,6 +23,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
@@ -123,6 +124,82 @@ final class ClusterMemberSelectionServiceTest extends TestCase
             $selection['per_day_distribution'],
             $selection['telemetry']['distribution']['per_day'],
         );
+    }
+
+    #[Test]
+    public function curateCapturesDayAndTimeSlotRejectionsFromTelemetry(): void
+    {
+        $base = new DateTimeImmutable('2024-08-01 09:00:00');
+
+        $media1 = $this->createMedia(1, $base, false, '1a1a');
+        $media2 = $this->createMedia(2, $base->add(new DateInterval('PT2H')), false, '2b2b');
+
+        $lookup = new class([$media1, $media2]) implements MemberMediaLookupInterface {
+            /**
+             * @param list<Media> $media
+             */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    $index = (int) $id - 1;
+                    if (isset($this->media[$index])) {
+                        $result[] = $this->media[$index];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $selector = $this->createMock(MemberSelectorInterface::class);
+        $selector->expects(self::once())
+            ->method('select')
+            ->willReturnCallback(static function (array $daySummaries) use ($media1): SelectionResult {
+                self::assertArrayHasKey('2024-08-01', $daySummaries);
+
+                return new SelectionResult([$media1], [
+                    'rejections' => [
+                        SelectionTelemetry::REASON_DAY_QUOTA => 2,
+                        SelectionTelemetry::REASON_TIME_SLOT => 3,
+                    ],
+                ]);
+            });
+
+        $detector = $this->createMock(StaypointDetectorInterface::class);
+        $detector->expects(self::never())
+            ->method('detect');
+
+        $profileProvider = new SelectionProfileProvider(new VacationSelectionOptions());
+        $provider        = new ClusterMemberSelectionProfileProvider($profileProvider);
+
+        $service = new ClusterMemberSelectionService($selector, $lookup, $provider, $detector);
+
+        $draft   = new ClusterDraft('day-time-slot', [], ['lat' => 48.15, 'lon' => 11.58], [1, 2]);
+        $curated = $service->curate($draft);
+
+        $selection = $curated->getParams()['member_selection'] ?? [];
+        self::assertIsArray($selection);
+
+        $telemetry = $selection['telemetry'] ?? [];
+        self::assertIsArray($telemetry);
+
+        $drops = $telemetry['drops']['selection'] ?? [];
+        self::assertIsArray($drops);
+        self::assertSame(2, $drops['day_limit_rejections']);
+        self::assertSame(3, $drops['time_slot_rejections']);
+
+        $rejections = $telemetry['rejections'] ?? [];
+        self::assertSame(2, $rejections[SelectionTelemetry::REASON_DAY_QUOTA]);
+        self::assertSame(3, $rejections[SelectionTelemetry::REASON_TIME_SLOT]);
+
+        $hints = $telemetry['relaxation_hints'] ?? [];
+        self::assertContains('max_per_day erhöhen, um Tagesbegrenzungen zu lockern.', $hints);
+        self::assertContains('time_slot_hours erhöhen, um mehr Medien pro Zeitfenster zu behalten.', $hints);
     }
 
     #[Test]
