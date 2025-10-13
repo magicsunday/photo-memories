@@ -117,8 +117,8 @@ final class SlideshowVideoManagerTest extends TestCase
             $transitionDurations = $generator->capturedJob->transitionDurations();
             self::assertCount(2, $transitionDurations);
             foreach ($transitionDurations as $duration) {
-                self::assertGreaterThanOrEqual(0.3, $duration);
-                self::assertLessThanOrEqual(1.2, $duration);
+                self::assertGreaterThanOrEqual(0.6, $duration);
+                self::assertLessThanOrEqual(1.0, $duration);
             }
 
             $expectedTransitions = TransitionSequenceGenerator::generate(

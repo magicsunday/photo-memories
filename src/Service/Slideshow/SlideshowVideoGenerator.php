@@ -74,9 +74,9 @@ final class SlideshowTransitionCache
  */
 final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorInterface
 {
-    private const float MIN_TRANSITION_DURATION = 0.3;
+    private const float MIN_TRANSITION_DURATION = 0.6;
 
-    private const float MAX_TRANSITION_DURATION = 1.2;
+    private const float MAX_TRANSITION_DURATION = 1.0;
 
     private const float MINIMUM_SLIDE_DURATION = 0.1;
 
@@ -586,7 +586,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $candidate = self::MIN_TRANSITION_DURATION;
         }
 
-        return max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $candidate));
+        return $this->clampTransitionDuration($candidate);
     }
 
     /**
@@ -626,16 +626,23 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $candidate = $randomDuration;
             }
 
-            $transitionLength = max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $candidate));
+            $transitionLength = $this->clampTransitionDuration($candidate);
 
-            if ($maxOverlap < $transitionLength) {
-                $transitionLength = max(self::MINIMUM_SLIDE_DURATION, $maxOverlap);
+            if ($maxOverlap < self::MIN_TRANSITION_DURATION) {
+                $transitionLength = $maxOverlap;
+            } else {
+                $transitionLength = min($transitionLength, $maxOverlap);
             }
 
             $durations[$index] = $transitionLength;
         }
 
         return $durations;
+    }
+
+    private function clampTransitionDuration(float $duration): float
+    {
+        return max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $duration));
     }
 
     /**
