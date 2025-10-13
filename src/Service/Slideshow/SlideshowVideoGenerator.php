@@ -1165,33 +1165,31 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             return '';
         }
 
-        $filters          = [];
-        $safeXExpr        = 'w*0.07';
-        $safeYExpr        = 'h*0.07';
-        $titleFontSize    = max(1, (int) round($this->height * 0.060));
-        $subtitleFontSize = max(1, (int) round($this->height * 0.038));
-        $lineGap          = max(0, (int) round($this->height * 0.012));
-
-        $titleText    = $this->normaliseDrawText($title);
-        $subtitleText = $this->normaliseDrawText($subtitle);
-
-        $titleY = sprintf('h-th-%s', $safeYExpr);
+        $filters       = [];
+        $titleText     = $this->normaliseDrawText($title);
+        $subtitleText  = $this->normaliseDrawText($subtitle);
+        $fontDirective = $this->resolveFontDirective();
+        $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
         if ($subtitleText !== null) {
-            $subtitleY = sprintf('%s-%d-%d', $titleY, $lineGap, $titleFontSize);
-            $filters[] = $this->buildDrawTextFilter(
+            $filters[] = sprintf(
+                "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
+                'borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86',
                 $subtitleText,
-                $subtitleFontSize,
-                $safeXExpr,
-                $subtitleY
+                $fontSegment
             );
         }
 
         if ($titleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($titleText, $titleFontSize, $safeXExpr, $titleY);
+            $filters[] = sprintf(
+                "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
+                'borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92',
+                $titleText,
+                $fontSegment
+            );
         }
 
-        return implode(',', array_filter($filters));
+        return implode(',', $filters);
     }
 
     private function normaliseDrawText(?string $value): ?string
