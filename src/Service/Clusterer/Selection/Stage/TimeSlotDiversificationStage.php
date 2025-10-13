@@ -15,6 +15,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 
 use function abs;
+use function ceil;
 use function count;
 use function floor;
 use function is_int;
@@ -47,6 +48,47 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         $baseSpacing    = max(0, $policy->getMinSpacingSeconds());
         $progressFactor = min(1.0, max(0.0, $policy->getSpacingProgressFactor()));
         $dayContext     = $policy->getDayContext();
+        $dayQuotas      = $policy->getDayQuotas();
+        $maxPerDay      = $policy->getMaxPerDay();
+
+        $uniqueDays = [];
+        foreach ($candidates as $candidate) {
+            $day = $candidate['day'] ?? null;
+            if (is_string($day) && $day !== '') {
+                $uniqueDays[$day] = true;
+            }
+        }
+
+        if ($uniqueDays === [] && $dayQuotas !== []) {
+            foreach ($dayQuotas as $day => $quota) {
+                if (is_string($day) && $day !== '') {
+                    $uniqueDays[$day] = true;
+                }
+            }
+        }
+
+        if ($uniqueDays === [] && $dayContext !== []) {
+            foreach ($dayContext as $day => $_) {
+                if (is_string($day) && $day !== '') {
+                    $uniqueDays[$day] = true;
+                }
+            }
+        }
+
+        $runDays = count($uniqueDays);
+        if ($runDays <= 0) {
+            $runDays = 1;
+        }
+
+        $defaultPerDayCap = null;
+        if (is_int($maxPerDay) && $maxPerDay > 0) {
+            $defaultPerDayCap = $maxPerDay;
+        } else {
+            $defaultPerDayCap = (int) ceil($targetTotal / $runDays);
+            if ($defaultPerDayCap <= 0) {
+                $defaultPerDayCap = 1;
+            }
+        }
 
         foreach ($candidates as $candidate) {
             $day  = $candidate['day'] ?? null;
@@ -74,23 +116,26 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
             }
 
             $currentProgress = count($selected) / $targetTotal;
-            $spacingScale    = 1.0;
-            if ($baseSpacing > 0) {
-                $spacingScale -= $progressFactor * $currentProgress;
-                $spacingScale  = max(0.25, $spacingScale);
+            $requiredSpacing = $baseSpacing;
 
-                $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
-                if (is_int($dayDuration) && $dayDuration > 0) {
-                    $durationScale = $dayDuration >= $baseSpacing
-                        ? 1.0
-                        : max(0.25, $dayDuration / max(1.0, $baseSpacing * 2.0));
-
-                    $spacingScale = min($spacingScale, $durationScale);
-                }
+            $perDayCap = $dayQuotas[$day] ?? null;
+            if (!is_int($perDayCap) || $perDayCap < 0) {
+                $perDayCap = $defaultPerDayCap;
             }
 
-            $effectiveSpacing = (int) floor($baseSpacing * $spacingScale);
-            if ($effectiveSpacing > 0 && isset($lastTimestamp[$day]) && abs($timestamp - $lastTimestamp[$day]) < $effectiveSpacing) {
+            $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
+            if (is_int($dayDuration) && $dayDuration > 0) {
+                $quotaSpacing = (int) ceil($dayDuration / max(3, $perDayCap + 1));
+                $requiredSpacing = max($requiredSpacing, $quotaSpacing);
+            }
+
+            if ($baseSpacing > 0 && $progressFactor > 0.0) {
+                $remainingProgress = max(0.0, 1.0 - min(1.0, $currentProgress));
+                $progressiveBonus  = (int) floor($baseSpacing * $progressFactor * $remainingProgress);
+                $requiredSpacing   = max($requiredSpacing, $baseSpacing + $progressiveBonus);
+            }
+
+            if ($requiredSpacing > 0 && isset($lastTimestamp[$day]) && abs($timestamp - $lastTimestamp[$day]) < $requiredSpacing) {
                 $telemetry->increment(SelectionTelemetry::REASON_TIME_SLOT);
 
                 continue;
