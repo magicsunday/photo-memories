@@ -84,6 +84,7 @@ use const SORT_STRING;
  *     lastGpsMedia: Media|null,
  *     timezoneIdentifierVotes?: array<string, int>,
  *     isSynthetic: bool,
+ *     selectionContext?: array{category:string,score:float,duration:int|null,metrics:array<string,float>}|null,
  * }
  */
 /**
@@ -181,6 +182,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
                     'lastGpsMedia'            => null,
                     'timezoneIdentifierVotes' => [],
                     'isSynthetic'             => false,
+                    'selectionContext'        => null,
                 ];
             }
 
@@ -351,6 +353,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             'lastGpsMedia'            => null,
             'isSynthetic'             => true,
             'timezoneIdentifierVotes' => [],
+            'selectionContext'        => null,
         ];
     }
 }
