@@ -57,7 +57,7 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
         $this->videoExtensions = $videoExtensions ?? self::DEFAULT_VIDEO_EXT;
     }
 
-    public function locate(string $baseDir, ?int $maxFiles = null): iterable
+    public function locate(string $baseDir, ?int $maxFiles = null, bool $includeVideos = true): iterable
     {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($baseDir, FilesystemIterator::SKIP_DOTS)
@@ -71,7 +71,7 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
             }
 
             $path = $fileInfo->getPathname();
-            if ($this->isSupported($path) === false) {
+            if ($this->isSupported($path, $includeVideos) === false) {
                 continue;
             }
 
@@ -87,13 +87,13 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
         }
     }
 
-    private function isSupported(string $path): bool
+    private function isSupported(string $path, bool $includeVideos): bool
     {
         if ($this->isImage($path)) {
             return true;
         }
 
-        return $this->isVideo($path);
+        return $includeVideos && $this->isVideo($path);
     }
 
     private function isImage(string $path): bool
