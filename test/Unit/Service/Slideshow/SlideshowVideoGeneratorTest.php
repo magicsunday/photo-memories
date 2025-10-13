@@ -825,6 +825,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $job->subtitle(),
         );
 
+        $resolveCoverDurationMethod = $reflector->getMethod('resolveCoverDuration');
+        $resolveCoverDurationMethod->setAccessible(true);
+
+        $resolveSlideDurationMethod = $reflector->getMethod('resolveSlideDuration');
+        $resolveSlideDurationMethod->setAccessible(true);
+
         $loopDurations = [];
         for ($index = 0; $index < $filterIndex; ++$index) {
             if ($command[$index] !== '-t') {
@@ -839,14 +845,33 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $expectedLoopCount = count($slides);
         self::assertCount($expectedLoopCount, $loopDurations);
-        $lastSlideIndex    = $expectedLoopCount - 1;
-        $lastSlideDuration = $slides[$lastSlideIndex]['duration'];
-        self::assertEqualsWithDelta($lastSlideDuration, $loopDurations[$lastSlideIndex], 0.001);
+
+        $expectedVisibleDurations = [];
+        foreach ($slides as $index => $slide) {
+            if ($index === 0) {
+                /** @var float $coverDuration */
+                $coverDuration = $resolveCoverDurationMethod->invoke($generator, $slide);
+                $expectedVisibleDurations[] = $coverDuration;
+                continue;
+            }
+
+            /** @var float $resolvedDuration */
+            $resolvedDuration = $resolveSlideDurationMethod->invoke($generator, $slide['duration']);
+            $expectedVisibleDurations[] = $resolvedDuration;
+        }
+
+        foreach ($expectedVisibleDurations as $index => $expectedDuration) {
+            self::assertArrayHasKey($index, $loopDurations);
+            self::assertEqualsWithDelta($expectedDuration, $loopDurations[$index], 0.001);
+        }
 
         $trimMatchCount = preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $trimMatches);
         self::assertSame($expectedLoopCount, $trimMatchCount);
         $trimDurations = array_map('floatval', $trimMatches[1]);
-        self::assertEqualsWithDelta($lastSlideDuration, $trimDurations[$lastSlideIndex], 0.001);
+        foreach ($expectedVisibleDurations as $index => $expectedDuration) {
+            self::assertArrayHasKey($index, $trimDurations);
+            self::assertEqualsWithDelta($expectedDuration, $trimDurations[$index], 0.001);
+        }
 
         $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
         self::assertSame(count($resolvedTransitions), $matchCount);
@@ -858,14 +883,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $offsets = array_map('floatval', $matches[2]);
         self::assertCount(count($resolvedTransitions), $offsets);
 
-        $expectedTimeline = max(2.5, $slides[0]['duration']);
+        $expectedTimeline = $expectedVisibleDurations[0];
         $expectedOffsets  = [];
         $slideCount       = count($slides);
 
         for ($index = 1; $index < $slideCount; ++$index) {
             $overlap          = $resolvedTransitions[$index - 1] ?? $transitionDuration;
             $expectedOffsets[] = $expectedTimeline - $overlap;
-            $expectedTimeline += $slides[$index]['duration'] - $overlap;
+            $expectedTimeline += $expectedVisibleDurations[$index] - $overlap;
         }
 
         foreach ($offsets as $index => $offset) {
@@ -873,7 +898,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
 
         $lastOffset = $offsets[count($offsets) - 1];
-        self::assertEqualsWithDelta($expectedTimeline, $lastOffset + $lastSlideDuration, 0.001);
+        $lastSlideIndex = $expectedLoopCount - 1;
+        self::assertEqualsWithDelta($expectedTimeline, $lastOffset + $expectedVisibleDurations[$lastSlideIndex], 0.001);
 
         $fadeMatchPattern = '/afade=t=out:st=([0-9.]+):d=1\\.5/';
         self::assertSame(1, preg_match($fadeMatchPattern, $filterComplex, $fadeMatches));

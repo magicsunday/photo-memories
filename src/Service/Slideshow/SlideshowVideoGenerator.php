@@ -304,8 +304,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
-        $clipDurations    = [];
-        $visibleDurations = [];
+        $visibleDurations  = [];
+        $overlapDurations  = [];
 
         foreach ($slides as $index => $slide) {
             if ($index === 0) {
@@ -314,15 +314,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $duration = $this->resolveSlideDuration($slide['duration']);
             }
 
-            $nextTransition      = $transitionDurations[$index] ?? 0.0;
-            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $duration + $nextTransition);
+            $nextTransition  = max(0.0, $transitionDurations[$index] ?? 0.0);
+            $visibleDuration = max(self::MINIMUM_SLIDE_DURATION, $duration);
 
             if ($index === 0) {
-                $durationWithOverlap = max($coverDuration, $durationWithOverlap);
+                $visibleDuration = max($coverDuration, $visibleDuration);
             }
 
-            $clipDurations[$index]    = $durationWithOverlap;
-            $visibleDurations[$index] = $duration;
+            $overlapDuration          = min($visibleDuration, $nextTransition);
+            $visibleDurations[$index] = $visibleDuration;
+            $overlapDurations[$index] = $overlapDuration;
 
             $command = array_merge($command, [
                 '-loop',
@@ -330,7 +331,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 '-framerate',
                 '30',
                 '-t',
-                sprintf('%0.3f', $durationWithOverlap),
+                sprintf('%0.3f', $visibleDuration),
                 '-i',
                 $slide['image'],
             ]);
@@ -340,8 +341,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $introOverlayFilter  = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
-            $durationWithOverlap = $clipDurations[$index];
             $visibleDuration     = $visibleDurations[$index];
+            $overlapDuration     = $overlapDurations[$index];
+            $durationWithOverlap = max(self::MINIMUM_SLIDE_DURATION, $visibleDuration + $overlapDuration);
 
             $filter = $this->buildBlurredSlideFilter(
                 $index,
@@ -356,12 +358,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $filter = sprintf('%s,%s', $filter, $introOverlayFilter);
             }
 
-            $filter .= sprintf(',trim=duration=%1$.3f,setpts=PTS-STARTPTS[s%2$d]', $durationWithOverlap, $index);
+            $filter .= sprintf(',trim=duration=%1$.3f,setpts=PTS-STARTPTS[s%2$d]', $visibleDuration, $index);
             $filters[] = $filter;
         }
 
         $current        = '[s0]';
-        $timeline       = $coverDuration;
+        $timeline       = $visibleDurations[0];
         $fallbackIndex  = 0;
         $previousChoice = null;
 
@@ -382,11 +384,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $transition = $preferred;
             }
 
-            $transitionDurationValue    = $transitionDurations[$index - 1] ?? $transitionDuration;
+            $transitionDurationValue     = $transitionDurations[$index - 1] ?? $transitionDuration;
             $effectiveTransitionDuration = max(self::MINIMUM_SLIDE_DURATION, $transitionDurationValue);
-            $transitionOffset             = max(0.0, $timeline - $effectiveTransitionDuration);
-            $slideDuration                = $this->resolveSlideDuration($slides[$index]['duration']);
-            $effectiveSlideDuration       = max(self::MINIMUM_SLIDE_DURATION, $slideDuration);
+            $transitionOffset            = max(0.0, $timeline - $effectiveTransitionDuration);
+            $effectiveSlideDuration      = $visibleDurations[$index] ?? $this->resolveSlideDuration($slides[$index]['duration']);
 
             $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
