@@ -49,14 +49,14 @@ final class ContentClassifierExtractorTest extends TestCase
     {
         $media = $this->buildMedia(11, 'image/jpeg', 2400, 3200);
         $media->setFeatures([
-            'file' => ['pathTokens' => ['Scan']],
+            'file' => ['pathTokens' => ['Users', 'foo', 'Scan']],
         ]);
         $media->setColorfulness(0.15);
         $media->setContrast(0.70);
         $media->setBrightness(0.85);
 
         $extractor = new ContentClassifierExtractor();
-        $extractor->extract('/library/Scan-2025-Receipt.jpg', $media);
+        $extractor->extract('/Users/foo/Scan/Scan-2025-Receipt.jpg', $media);
 
         self::assertSame(ContentKind::DOCUMENT, $media->getContentKind());
         self::assertTrue($media->isNoShow());
@@ -65,6 +65,26 @@ final class ContentClassifierExtractorTest extends TestCase
         self::assertSame(ContentKind::DOCUMENT, $bag->classificationKind());
         self::assertNotNull($bag->classificationConfidence());
         self::assertTrue($bag->classificationShouldHide());
+    }
+
+    #[Test]
+    public function classifiesDocumentsBasedOnInvoiceFilename(): void
+    {
+        $media = $this->buildMedia(215, 'image/jpeg', 2000, 2600);
+        $media->setFeatures([
+            'file' => ['pathTokens' => ['Archive', 'Tax']],
+        ]);
+        $media->setColorfulness(0.18);
+        $media->setContrast(0.66);
+        $media->setBrightness(0.86);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/archive/2024/invoice_2024.jpg', $media);
+
+        self::assertSame(ContentKind::DOCUMENT, $media->getContentKind());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::DOCUMENT, $bag->classificationKind());
     }
 
     #[Test]
@@ -86,6 +106,26 @@ final class ContentClassifierExtractorTest extends TestCase
         $confidence = $bag->classificationConfidence();
         self::assertNotNull($confidence);
         self::assertGreaterThanOrEqual(0.5, $confidence);
+    }
+
+    #[Test]
+    public function ignoresGenericDocumentDirectoryWithoutDocumentSignals(): void
+    {
+        $media = $this->buildMedia(224, 'image/jpeg', 4032, 3024);
+        $media->setFeatures([
+            'file' => ['pathTokens' => ['Users', 'foo', 'Documents']],
+        ]);
+        $media->setColorfulness(0.52);
+        $media->setContrast(0.48);
+        $media->setBrightness(0.50);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/Users/foo/Documents/IMG_0001.JPG', $media);
+
+        self::assertNull($media->getContentKind());
+
+        $bag = $media->getFeatureBag();
+        self::assertNull($bag->classificationKind());
     }
 
     #[Test]
