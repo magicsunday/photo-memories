@@ -707,6 +707,14 @@ services:
             $fallbackRadiusKm: '%memories.cluster.staypoint.fallback_radius_km%'
             $fallbackMinSamples: '%memories.cluster.staypoint.fallback_min_samples%'
             $fallbackMinDwellMinutes: '%memories.cluster.staypoint.fallback_min_dwell_minutes%'
+            $minAdaptiveRadiusKm: '%memories.cluster.staypoint.adaptive_radius_min_km%'
+            $maxAdaptiveRadiusKm: '%memories.cluster.staypoint.adaptive_radius_max_km%'
+            $minAdaptiveDwellMinutes: '%memories.cluster.staypoint.adaptive_dwell_min_minutes%'
+            $maxAdaptiveDwellMinutes: '%memories.cluster.staypoint.adaptive_dwell_max_minutes%'
+            $urbanTravelKm: '%memories.cluster.staypoint.adaptive_travel_urban_km%'
+            $ruralTravelKm: '%memories.cluster.staypoint.adaptive_travel_rural_km%'
+            $ruralSpotDensity: '%memories.cluster.staypoint.adaptive_density_rural%'
+            $urbanSpotDensity: '%memories.cluster.staypoint.adaptive_density_urban%'
 
     MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface:
         alias: MagicSunday\Memories\Clusterer\Service\StaypointDetector
@@ -745,7 +753,7 @@ services:
         arguments:
             $gpsOutlierRadiusKm: 1.0
             $gpsOutlierMinSamples: 3
-            $minItemsPerDay: 3
+            $minItemsPerDay: 4
         tags:
             - { name: 'memories.day_summary_stage', priority: 300 }
 

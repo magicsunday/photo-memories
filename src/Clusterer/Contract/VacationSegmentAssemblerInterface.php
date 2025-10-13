@@ -47,6 +47,7 @@ interface VacationSegmentAssemblerInterface
      *     spotNoise: list<Media>,
      *     spotCount: int,
      *     spotNoiseSamples: int,
+     *     spotDensity: float,
      *     spotDwellSeconds: int,
      *     staypoints: list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,
      *     staypointIndex: \MagicSunday\Memories\Clusterer\Support\StaypointIndex,
