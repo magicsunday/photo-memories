@@ -102,6 +102,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         private float $mapColorfulnessMin = 0.45,
         private float $mapEntropyMax = 0.55,
         private float $screenRecordingFpsThreshold = 45.0,
+        private float $classificationMinConfidence = 0.5,
         private float $minConfidenceToHide = 0.65,
         private float $visionTagConfidenceThreshold = 0.55,
         private float $visionBoostWeight = 0.25,
@@ -188,6 +189,10 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
             static fn (array $lhs, array $rhs): int => $rhs['confidence'] <=> $lhs['confidence']
         );
 
+        if ($scores[0]['confidence'] < $this->classificationMinConfidence) {
+            return null;
+        }
+
         return $scores[0];
     }
 
@@ -246,28 +251,43 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
      */
     private function scoreDocument(Media $media, array $tokens): ?float
     {
-        $score = 0.0;
-        if ($this->matchesAnyKeyword($tokens, self::DOCUMENT_KEYWORDS)) {
+        $score      = 0.0;
+        $hasKeyword = $this->matchesAnyKeyword($tokens, self::DOCUMENT_KEYWORDS);
+
+        if ($hasKeyword) {
             $score += 0.45;
         }
 
-        $colorfulness = $media->getColorfulness();
-        $contrast     = $media->getContrast();
-        $brightness   = $media->getBrightness();
+        $colorfulness     = $media->getColorfulness();
+        $contrast         = $media->getContrast();
+        $brightness       = $media->getBrightness();
+        $hasLowColor      = $colorfulness !== null && $colorfulness <= $this->documentColorfulnessMax;
+        $hasHighContrast  = $contrast !== null && $contrast >= $this->documentContrastMin;
+        $hasExtremeLights = $brightness !== null && ($brightness <= $this->documentBrightnessLow || $brightness >= $this->documentBrightnessHigh);
 
-        if ($colorfulness !== null && $colorfulness <= $this->documentColorfulnessMax) {
+        if ($hasLowColor) {
             $score += 0.30;
         }
 
-        if ($contrast !== null && $contrast >= $this->documentContrastMin) {
+        if ($hasHighContrast) {
             $score += 0.15;
         }
 
-        if ($brightness !== null && ($brightness <= $this->documentBrightnessLow || $brightness >= $this->documentBrightnessHigh)) {
+        if ($hasExtremeLights) {
             $score += 0.10;
         }
 
-        $score += $this->visionBoost($media, self::VISION_KEYWORDS['document']);
+        $visionScore = $this->visionBoost($media, self::VISION_KEYWORDS['document']);
+        $score += $visionScore;
+
+        $hasDecisiveEvidence = $hasKeyword
+            || $visionScore > 0.0
+            || ($hasLowColor && $hasHighContrast)
+            || ($hasLowColor && $hasExtremeLights);
+
+        if (!$hasDecisiveEvidence) {
+            return null;
+        }
 
         return $this->confidenceOrNull($score);
     }

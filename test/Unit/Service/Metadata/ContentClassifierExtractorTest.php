@@ -68,6 +68,67 @@ final class ContentClassifierExtractorTest extends TestCase
     }
 
     #[Test]
+    public function classifiesDocumentsBasedOnLowColorAndBrightnessExtremes(): void
+    {
+        $media = $this->buildMedia(21, 'image/jpeg', 2000, 2600);
+        $media->setColorfulness(0.12);
+        $media->setContrast(0.62);
+        $media->setBrightness(0.88);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/library/Document-21.jpg', $media);
+
+        self::assertSame(ContentKind::DOCUMENT, $media->getContentKind());
+        self::assertTrue($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertSame(ContentKind::DOCUMENT, $bag->classificationKind());
+        $confidence = $bag->classificationConfidence();
+        self::assertNotNull($confidence);
+        self::assertGreaterThanOrEqual(0.5, $confidence);
+    }
+
+    #[Test]
+    public function doesNotClassifyRegularPhotoWithBalancedMetrics(): void
+    {
+        $media = $this->buildMedia(22, 'image/jpeg', 4000, 3000);
+        $media->setColorfulness(0.48);
+        $media->setContrast(0.58);
+        $media->setBrightness(0.52);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/library/IMG_0022.jpg', $media);
+
+        self::assertNull($media->getContentKind());
+        self::assertFalse($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertNull($bag->classificationKind());
+        self::assertNull($bag->classificationConfidence());
+        self::assertNull($bag->classificationShouldHide());
+    }
+
+    #[Test]
+    public function ignoresHighContrastWithoutFurtherDocumentSignals(): void
+    {
+        $media = $this->buildMedia(23, 'image/jpeg', 4032, 3024);
+        $media->setColorfulness(0.35);
+        $media->setContrast(0.75);
+        $media->setBrightness(0.55);
+
+        $extractor = new ContentClassifierExtractor();
+        $extractor->extract('/library/DSC_1023.jpg', $media);
+
+        self::assertNull($media->getContentKind());
+        self::assertFalse($media->isNoShow());
+
+        $bag = $media->getFeatureBag();
+        self::assertNull($bag->classificationKind());
+        self::assertNull($bag->classificationConfidence());
+        self::assertNull($bag->classificationShouldHide());
+    }
+
+    #[Test]
     public function detectsScreenRecordingsViaVideoMetadata(): void
     {
         $media = $this->buildMedia(12, 'video/mp4', 1920, 1080);
