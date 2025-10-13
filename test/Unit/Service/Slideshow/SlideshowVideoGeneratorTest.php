@@ -1189,15 +1189,21 @@ BASH;
                 'wipedown',
                 'slideleft',
                 'slideright',
+                'slideup',
+                'slidedown',
                 'smoothleft',
                 'smoothright',
+                'smoothup',
+                'smoothdown',
                 'circleopen',
                 'circleclose',
                 'radial',
-                'hlslice',
-                'vuslice',
-                'distance',
+                'rectcrop',
                 'pixelize',
+                'diagtl',
+                'diagtr',
+                'diagbl',
+                'diagbr',
             ],
             $whitelist,
         );
@@ -1210,10 +1216,10 @@ BASH;
         /** @var list<string> $filtered */
         $filtered = $filterMethod->invoke(
             $generator,
-            [' fade ', 'invalid', '', 'pixelize', 'wipedown', 'hlslice', 'Distance', 'Vertopen']
+            [' fade ', 'invalid', '', 'pixelize', 'wipedown', 'slideup', 'RectCrop', 'DiagBR']
         );
 
-        self::assertSame(['fade', 'pixelize', 'wipedown', 'hlslice', 'distance'], $filtered);
+        self::assertSame(['fade', 'pixelize', 'wipedown', 'slideup', 'rectcrop', 'diagbr'], $filtered);
 
         $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
         $buildMethod->setAccessible(true);
