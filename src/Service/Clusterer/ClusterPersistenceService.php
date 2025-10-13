@@ -260,6 +260,19 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         return $deleted;
     }
 
+    public function deleteAll(): int
+    {
+        $q = $this->em->createQueryBuilder()
+            ->delete(Cluster::class, 'c')
+            ->getQuery();
+
+        $deleted = (int) $q->execute();
+
+        $this->em->clear();
+
+        return $deleted;
+    }
+
     /**
      * @param ClusterDraft $draft
      * @param list<int>    $memberIds

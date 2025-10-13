@@ -56,7 +56,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $consolidator->expects(self::never())->method('consolidate');
 
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
-        $persistence->expects(self::never())->method('deleteByAlgorithms');
+        $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
@@ -110,11 +110,14 @@ final class DefaultClusterJobRunnerTest extends TestCase
             new ClusterDraft('algo-a', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2]),
         ];
 
+        $deletedBeforeBuild = false;
+
         $clusterer = $this->createMock(HybridClustererInterface::class);
         $clusterer->expects(self::once())->method('countStrategies')->willReturn(1);
         $clusterer->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts): array {
+            ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts, &$deletedBeforeBuild): array {
+                self::assertTrue($deletedBeforeBuild);
                 self::assertCount(2, $items);
                 $onStart('Strategy', 1, 1);
                 self::assertNotNull($progressFactory);
@@ -138,9 +141,12 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
         $persistence->expects(self::once())
-            ->method('deleteByAlgorithms')
-            ->with(['algo-a'])
-            ->willReturn(5);
+            ->method('deleteAll')
+            ->willReturnCallback(function () use (&$deletedBeforeBuild): int {
+                $deletedBeforeBuild = true;
+
+                return 5;
+            });
         $persistence->expects(self::once())
             ->method('persistBatched')
             ->willReturnCallback(function (array $persistedDrafts, int $batchSize, ?callable $callback): int {
@@ -156,6 +162,8 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $options = new ClusterJobOptions(false, null, null, true);
 
         $result = $runner->run($options, new NullProgressReporter());
+
+        self::assertTrue($deletedBeforeBuild);
 
         self::assertSame(2, $result->getTotalMediaCount());
         self::assertSame(2, $result->getLoadedMediaCount());
@@ -225,7 +233,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
             });
 
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
-        $persistence->expects(self::never())->method('deleteByAlgorithms');
+        $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
@@ -276,7 +284,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $consolidator->expects(self::never())->method('consolidate');
 
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
-        $persistence->expects(self::never())->method('deleteByAlgorithms');
+        $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
