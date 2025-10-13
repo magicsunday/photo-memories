@@ -23,6 +23,9 @@ use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function assert;
+use function count;
+use function is_array;
+use function is_string;
 use function substr;
 
 /**
@@ -82,6 +85,19 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         $out = [];
 
         foreach ($eligibleDays as $key => $members) {
+            $peopleParams   = $this->buildPeopleParams($members);
+            $qualityParams  = $this->qualityAggregator->buildParams($members);
+            $locationParams = $this->appendLocationMetadata($members, []);
+
+            $hasPeople    = $this->hasPeoplePresence($peopleParams);
+            $hasPoi       = $this->hasPoiMetadata($locationParams);
+            $hasStaypoint = $this->hasStaypointDiversity($members);
+            $hasQuality   = $this->hasQualitySignal($qualityParams);
+
+            if ($hasPeople === false && $hasPoi === false && $hasStaypoint === false && $hasQuality === false) {
+                continue;
+            }
+
             $centroid = $this->computeCentroid($members);
             $time     = $this->computeTimeRange($members);
 
@@ -99,7 +115,6 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
                 $params['holidayId'] = $calendar['holidayId'];
             }
 
-            $qualityParams = $this->qualityAggregator->buildParams($members);
             foreach ($qualityParams as $qualityKey => $qualityValue) {
                 if ($qualityValue !== null) {
                     $params[$qualityKey] = $qualityValue;
@@ -111,10 +126,11 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
                 $params = [...$params, ...$tags];
             }
 
-            $peopleParams = $this->buildPeopleParams($members);
-            $params       = [...$params, ...$peopleParams];
+            $params = [...$params, ...$peopleParams];
 
-            $params = $this->appendLocationMetadata($members, $params);
+            if ($locationParams !== []) {
+                $params = [...$params, ...$locationParams];
+            }
 
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
@@ -125,5 +141,80 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         }
 
         return $out;
+    }
+
+    /**
+     * @param array{people: float, people_count: int, people_unique: int, people_coverage: float, people_face_coverage: float} $peopleParams
+     */
+    private function hasPeoplePresence(array $peopleParams): bool
+    {
+        return $peopleParams['people_count'] > 0
+            || $peopleParams['people'] > 0.0
+            || $peopleParams['people_face_coverage'] > 0.0;
+    }
+
+    /**
+     * @param array<string, mixed> $locationParams
+     */
+    private function hasPoiMetadata(array $locationParams): bool
+    {
+        if (isset($locationParams['poi_label']) && is_string($locationParams['poi_label']) && $locationParams['poi_label'] !== '') {
+            return true;
+        }
+
+        if (isset($locationParams['poi_category_key']) && is_string($locationParams['poi_category_key']) && $locationParams['poi_category_key'] !== '') {
+            return true;
+        }
+
+        if (isset($locationParams['poi_category_value']) && is_string($locationParams['poi_category_value']) && $locationParams['poi_category_value'] !== '') {
+            return true;
+        }
+
+        if (isset($locationParams['poi_tags']) && is_array($locationParams['poi_tags']) && $locationParams['poi_tags'] !== []) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<Media> $members
+     */
+    private function hasStaypointDiversity(array $members): bool
+    {
+        /** @var array<string, true> $keys */
+        $keys = [];
+
+        foreach ($members as $media) {
+            $key = $this->locationHelper->localityKeyForMedia($media);
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            $keys[$key] = true;
+
+            if (count($keys) >= 2) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array{quality_avg: float, aesthetics_score: float|null, quality_resolution: float|null, quality_sharpness: float|null, quality_exposure: float|null, quality_contrast: float|null, quality_noise: float|null, quality_blockiness: float|null, quality_video_keyframe: float|null, quality_video_bonus: float|null, quality_video_penalty: float|null, quality_clipping: float|null, quality_iso: float|null} $qualityParams
+     */
+    private function hasQualitySignal(array $qualityParams): bool
+    {
+        if ($qualityParams['quality_avg'] >= 0.6) {
+            return true;
+        }
+
+        $aesthetics = $qualityParams['aesthetics_score'];
+        if ($aesthetics !== null && $aesthetics >= 0.6) {
+            return true;
+        }
+
+        return false;
     }
 }
