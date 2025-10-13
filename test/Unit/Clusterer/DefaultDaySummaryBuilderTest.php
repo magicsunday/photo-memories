@@ -202,7 +202,7 @@ final class DefaultDaySummaryBuilderTest extends TestCase
         string $timezone = 'Europe/Berlin',
         float $gpsOutlierRadiusKm = 1.0,
         int $gpsOutlierMinSamples = 3,
-        int $minItemsPerDay = 3,
+        int $minItemsPerDay = 4,
     ): DefaultDaySummaryBuilder {
         $stages = [
             new InitializationStage($timezoneResolver, new PoiClassifier(), $timezone),
