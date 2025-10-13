@@ -45,13 +45,14 @@ final class SelectionPolicy
      * @param int           $coreDayBonus       additional quota points assigned to core days
      * @param int           $peripheralDayPenalty quota reduction applied to peripheral days
      * @param float         $phashPercentile    percentile used for adaptive perceptual hash thresholding
-     * @param float         $spacingProgressFactor scaling factor for progressive spacing relaxations
-     * @param float         $cohortPenalty      penalty applied for repeating person signatures
-     * @param int|null      $peripheralDayMaxTotal optional cap for the sum of periphery day quotas
-     * @param int|null      $peripheralDayHardCap  optional hard cap applied to individual periphery days
-     * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
-     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
-     */
+ * @param float         $spacingProgressFactor scaling factor for progressive spacing relaxations
+ * @param float         $cohortPenalty      penalty applied for repeating person signatures
+ * @param int|null      $peripheralDayMaxTotal optional cap for the sum of periphery day quotas
+ * @param int|null      $peripheralDayHardCap  optional hard cap applied to individual periphery days
+ * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
+ * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
+ * @param array<string, mixed> $metadata    supplementary metadata describing policy derivation
+ */
     public function __construct(
         private readonly string $profileKey,
         private readonly int $targetTotal,
@@ -79,6 +80,7 @@ final class SelectionPolicy
         private readonly ?int $peripheralDayHardCap = null,
         private readonly array $dayQuotas = [],
         private readonly array $dayContext = [],
+        private readonly array $metadata = [],
     ) {
         if ($targetTotal <= 0) {
             throw new InvalidArgumentException('targetTotal must be positive.');
@@ -289,6 +291,14 @@ final class SelectionPolicy
         return $this->dayContext;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getMetadata(): array
+    {
+        return $this->metadata;
+    }
+
     public function withRelaxedSpacing(int $spacing): self
     {
         return new self(
@@ -318,6 +328,7 @@ final class SelectionPolicy
             peripheralDayHardCap: $this->peripheralDayHardCap,
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
+            metadata: $this->metadata,
         );
     }
 
@@ -350,6 +361,7 @@ final class SelectionPolicy
             peripheralDayHardCap: $this->peripheralDayHardCap,
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
+            metadata: $this->metadata,
         );
     }
 
@@ -382,6 +394,7 @@ final class SelectionPolicy
             peripheralDayHardCap: $this->peripheralDayHardCap,
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
+            metadata: $this->metadata,
         );
     }
 
@@ -414,6 +427,7 @@ final class SelectionPolicy
             peripheralDayHardCap: $this->peripheralDayHardCap,
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
+            metadata: $this->metadata,
         );
     }
 
@@ -455,6 +469,7 @@ final class SelectionPolicy
             peripheralDayHardCap: $peripheralDayHardCap ?? $this->peripheralDayHardCap,
             dayQuotas: $dayQuotas,
             dayContext: $dayContext,
+            metadata: $this->metadata,
         );
     }
 }
