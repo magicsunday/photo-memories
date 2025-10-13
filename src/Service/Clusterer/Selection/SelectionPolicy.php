@@ -47,6 +47,8 @@ final class SelectionPolicy
      * @param float         $phashPercentile    percentile used for adaptive perceptual hash thresholding
      * @param float         $spacingProgressFactor scaling factor for progressive spacing relaxations
      * @param float         $cohortPenalty      penalty applied for repeating person signatures
+     * @param int|null      $peripheralDayMaxTotal optional cap for the sum of periphery day quotas
+     * @param int|null      $peripheralDayHardCap  optional hard cap applied to individual periphery days
      * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
      * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
      */
@@ -73,6 +75,8 @@ final class SelectionPolicy
         private readonly float $phashPercentile = 0.35,
         private readonly float $spacingProgressFactor = 0.5,
         private readonly float $cohortPenalty = 0.05,
+        private readonly ?int $peripheralDayMaxTotal = null,
+        private readonly ?int $peripheralDayHardCap = null,
         private readonly array $dayQuotas = [],
         private readonly array $dayContext = [],
     ) {
@@ -259,6 +263,16 @@ final class SelectionPolicy
         return $this->cohortPenalty;
     }
 
+    public function getPeripheralDayMaxTotal(): ?int
+    {
+        return $this->peripheralDayMaxTotal;
+    }
+
+    public function getPeripheralDayHardCap(): ?int
+    {
+        return $this->peripheralDayHardCap;
+    }
+
     /**
      * @return array<string, int>
      */
@@ -278,120 +292,128 @@ final class SelectionPolicy
     public function withRelaxedSpacing(int $spacing): self
     {
         return new self(
-            $this->profileKey,
-            $this->targetTotal,
-            $this->minimumTotal,
-            $this->maxPerDay,
-            $this->timeSlotHours,
-            $spacing,
-            $this->phashMinHamming,
-            $this->maxPerStaypoint,
-            $this->relaxedMaxPerStaypoint,
-            $this->qualityFloor,
-            $this->videoBonus,
-            $this->faceBonus,
-            $this->selfiePenalty,
-            $this->maxPerYear,
-            $this->maxPerBucket,
-            $this->videoHeavyBonus,
-            $this->sceneBucketWeights,
-            $this->coreDayBonus,
-            $this->peripheralDayPenalty,
-            $this->phashPercentile,
-            $this->spacingProgressFactor,
-            $this->cohortPenalty,
-            $this->dayQuotas,
-            $this->dayContext,
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: $this->maxPerDay,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $spacing,
+            phashMinHamming: $this->phashMinHamming,
+            maxPerStaypoint: $this->maxPerStaypoint,
+            relaxedMaxPerStaypoint: $this->relaxedMaxPerStaypoint,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            maxPerYear: $this->maxPerYear,
+            maxPerBucket: $this->maxPerBucket,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $this->peripheralDayHardCap,
+            dayQuotas: $this->dayQuotas,
+            dayContext: $this->dayContext,
         );
     }
 
     public function withRelaxedHamming(int $hamming): self
     {
         return new self(
-            $this->profileKey,
-            $this->targetTotal,
-            $this->minimumTotal,
-            $this->maxPerDay,
-            $this->timeSlotHours,
-            $this->minSpacingSeconds,
-            $hamming,
-            $this->maxPerStaypoint,
-            $this->relaxedMaxPerStaypoint,
-            $this->qualityFloor,
-            $this->videoBonus,
-            $this->faceBonus,
-            $this->selfiePenalty,
-            $this->maxPerYear,
-            $this->maxPerBucket,
-            $this->videoHeavyBonus,
-            $this->sceneBucketWeights,
-            $this->coreDayBonus,
-            $this->peripheralDayPenalty,
-            $this->phashPercentile,
-            $this->spacingProgressFactor,
-            $this->cohortPenalty,
-            $this->dayQuotas,
-            $this->dayContext,
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: $this->maxPerDay,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $this->minSpacingSeconds,
+            phashMinHamming: $hamming,
+            maxPerStaypoint: $this->maxPerStaypoint,
+            relaxedMaxPerStaypoint: $this->relaxedMaxPerStaypoint,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            maxPerYear: $this->maxPerYear,
+            maxPerBucket: $this->maxPerBucket,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $this->peripheralDayHardCap,
+            dayQuotas: $this->dayQuotas,
+            dayContext: $this->dayContext,
         );
     }
 
     public function withMaxPerStaypoint(?int $staypointCap): self
     {
         return new self(
-            $this->profileKey,
-            $this->targetTotal,
-            $this->minimumTotal,
-            $this->maxPerDay,
-            $this->timeSlotHours,
-            $this->minSpacingSeconds,
-            $this->phashMinHamming,
-            $staypointCap,
-            $this->relaxedMaxPerStaypoint,
-            $this->qualityFloor,
-            $this->videoBonus,
-            $this->faceBonus,
-            $this->selfiePenalty,
-            $this->maxPerYear,
-            $this->maxPerBucket,
-            $this->videoHeavyBonus,
-            $this->sceneBucketWeights,
-            $this->coreDayBonus,
-            $this->peripheralDayPenalty,
-            $this->phashPercentile,
-            $this->spacingProgressFactor,
-            $this->cohortPenalty,
-            $this->dayQuotas,
-            $this->dayContext,
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: $this->maxPerDay,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $this->minSpacingSeconds,
+            phashMinHamming: $this->phashMinHamming,
+            maxPerStaypoint: $staypointCap,
+            relaxedMaxPerStaypoint: $this->relaxedMaxPerStaypoint,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            maxPerYear: $this->maxPerYear,
+            maxPerBucket: $this->maxPerBucket,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $this->peripheralDayHardCap,
+            dayQuotas: $this->dayQuotas,
+            dayContext: $this->dayContext,
         );
     }
 
     public function withoutCaps(): self
     {
         return new self(
-            $this->profileKey,
-            $this->targetTotal,
-            $this->minimumTotal,
-            null,
-            $this->timeSlotHours,
-            $this->minSpacingSeconds,
-            $this->phashMinHamming,
-            null,
-            null,
-            $this->qualityFloor,
-            $this->videoBonus,
-            $this->faceBonus,
-            $this->selfiePenalty,
-            null,
-            null,
-            $this->videoHeavyBonus,
-            $this->sceneBucketWeights,
-            $this->coreDayBonus,
-            $this->peripheralDayPenalty,
-            $this->phashPercentile,
-            $this->spacingProgressFactor,
-            $this->cohortPenalty,
-            $this->dayQuotas,
-            $this->dayContext,
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: null,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $this->minSpacingSeconds,
+            phashMinHamming: $this->phashMinHamming,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $this->peripheralDayHardCap,
+            dayQuotas: $this->dayQuotas,
+            dayContext: $this->dayContext,
         );
     }
 
@@ -399,33 +421,40 @@ final class SelectionPolicy
      * @param array<string, int> $dayQuotas
      * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext
      */
-    public function withDayContext(array $dayQuotas, array $dayContext): self
+    public function withDayContext(
+        array $dayQuotas,
+        array $dayContext,
+        ?int $peripheralDayMaxTotal = null,
+        ?int $peripheralDayHardCap = null,
+    ): self
     {
         return new self(
-            $this->profileKey,
-            $this->targetTotal,
-            $this->minimumTotal,
-            $this->maxPerDay,
-            $this->timeSlotHours,
-            $this->minSpacingSeconds,
-            $this->phashMinHamming,
-            $this->maxPerStaypoint,
-            $this->relaxedMaxPerStaypoint,
-            $this->qualityFloor,
-            $this->videoBonus,
-            $this->faceBonus,
-            $this->selfiePenalty,
-            $this->maxPerYear,
-            $this->maxPerBucket,
-            $this->videoHeavyBonus,
-            $this->sceneBucketWeights,
-            $this->coreDayBonus,
-            $this->peripheralDayPenalty,
-            $this->phashPercentile,
-            $this->spacingProgressFactor,
-            $this->cohortPenalty,
-            $dayQuotas,
-            $dayContext,
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: $this->maxPerDay,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $this->minSpacingSeconds,
+            phashMinHamming: $this->phashMinHamming,
+            maxPerStaypoint: $this->maxPerStaypoint,
+            relaxedMaxPerStaypoint: $this->relaxedMaxPerStaypoint,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            maxPerYear: $this->maxPerYear,
+            maxPerBucket: $this->maxPerBucket,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $peripheralDayMaxTotal ?? $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $peripheralDayHardCap ?? $this->peripheralDayHardCap,
+            dayQuotas: $dayQuotas,
+            dayContext: $dayContext,
         );
     }
 }
