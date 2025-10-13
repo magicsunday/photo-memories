@@ -125,7 +125,7 @@ parameters:
     memories.cluster.transport_speed.high_speed_threshold_kmh: '%env(default:memories.cluster.transport_speed.high_speed_threshold_kmh_default:float:MEMORIES_CLUSTER_TRANSPORT_HIGH_SPEED_THRESHOLD_KMH)%'
 
     # Description: Default distance in kilometers from home that qualifies as a vacation trip.
-    memories.cluster.vacation.min_away_distance_km_default: 120.0
+    memories.cluster.vacation.min_away_distance_km_default: 140.0
     # Description: Runtime distance in kilometers defining vacation trips, allowing environment overrides.
     memories.cluster.vacation.min_away_distance_km: '%env(default:memories.cluster.vacation.min_away_distance_km_default:float:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DISTANCE_KM)%'
     # Description: Adaptive distance profiles that lower the away threshold for dense urban home regions.
@@ -142,7 +142,7 @@ parameters:
           min_primary_density: 10.0
           countries: ['de','at','ch']
     # Description: Default minimum number of media items per day to consider a vacation day.
-    memories.cluster.vacation.min_items_per_day_default: 3
+    memories.cluster.vacation.min_items_per_day_default: 4
     # Description: Runtime minimum number of media items per day for vacation detection, allowing environment overrides.
     memories.cluster.vacation.min_items_per_day: '%env(default:memories.cluster.vacation.min_items_per_day_default:int:MEMORIES_CLUSTER_VACATION_MIN_ITEMS_PER_DAY)%'
     # Description: Default minimum number of days away from home to identify a vacation.

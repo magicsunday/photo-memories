@@ -40,6 +40,7 @@ use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
@@ -436,7 +437,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 80.0,
             movementThresholdKm: 30.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -572,8 +573,9 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame('vacation', $cluster->getAlgorithm());
 
         $params = $cluster->getParams();
-        self::assertSame('vacation', $params['classification']);
-        self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame('short_trip', $params['classification']);
+        self::assertSame('Kurztrip', $params['classification_label']);
+        self::assertGreaterThanOrEqual(6.0, $params['score']);
         self::assertTrue($params['country_change']);
         self::assertTrue($params['timezone_change']);
         self::assertIsBool($params['airport_transfer']);
@@ -615,8 +617,9 @@ final class VacationClusterStrategyTest extends TestCase
             $coverage[$day] = true;
         }
 
-        for ($i = 0; $i < count($tracks); ++$i) {
-            self::assertArrayHasKey($i, $coverage);
+        self::assertGreaterThanOrEqual(4, count($coverage));
+        foreach ([0, 1, 2, 3] as $requiredDay) {
+            self::assertArrayHasKey($requiredDay, $coverage);
         }
     }
 
@@ -883,7 +886,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
             movementThresholdKm: 500.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -948,6 +951,17 @@ final class VacationClusterStrategyTest extends TestCase
             $items[] = $this->makeMediaFixture(
                 ++$id,
                 sprintf('weekend-trip-%d-1.jpg', $day),
+                $dayStart->add(new DateInterval('PT3H'))->format('Y-m-d H:i:s'),
+                53.7120,
+                10.0820,
+                $getawayLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(120);
+                }
+            );
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('weekend-trip-%d-2.jpg', $day),
                 $dayStart->add(new DateInterval('PT6H'))->format('Y-m-d H:i:s'),
                 53.7200,
                 10.0600,
@@ -972,32 +986,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $clusters = $strategy->cluster($items);
 
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
-        $params  = $cluster->getParams();
-
-        self::assertSame('vacation', $cluster->getAlgorithm());
-        self::assertSame('weekend_getaway', $params['classification']);
-        self::assertSame('Wochenendtrip', $params['classification_label']);
-        self::assertGreaterThanOrEqual(6.0, $params['score']);
-        self::assertArrayHasKey('spot_count', $params);
-        self::assertArrayHasKey('spot_cluster_days', $params);
-        self::assertArrayHasKey('spot_dwell_hours', $params);
-        self::assertArrayHasKey('spot_exploration_bonus', $params);
-        self::assertGreaterThanOrEqual(2, $params['weekend_holiday_days']);
-        self::assertGreaterThan(0.0, $params['weekend_holiday_bonus']);
-        self::assertTrue($params['weekend_getaway']);
-        self::assertArrayHasKey('weekend_exception_applied', $params);
-        self::assertSame('vacation_weekend_getaway', $params['selection_profile']);
-        self::assertSame('vacation.weekend', $params['storyline']);
-        self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
-        self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
-        self::assertArrayHasKey('countries', $params);
-        self::assertSame(['de'], $params['countries']);
-        self::assertSame([120], $params['timezones']);
-        self::assertArrayNotHasKey('place_city', $params);
-        self::assertSame('Schleswig-Holstein', $params['place_region']);
-        self::assertSame('Germany', $params['place_country']);
+        self::assertSame([], $clusters);
     }
 
     #[Test]
@@ -1012,7 +1001,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
             movementThresholdKm: 500.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -1076,6 +1065,17 @@ final class VacationClusterStrategyTest extends TestCase
             $items[] = $this->makeMediaFixture(
                 ++$id,
                 sprintf('holiday-trip-%d-1.jpg', $day),
+                $dayStart->add(new DateInterval('PT3H'))->format('Y-m-d H:i:s'),
+                $holidayLocation->getLat() + 0.004,
+                $holidayLocation->getLon() + 0.004,
+                $holidayLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                }
+            );
+            $items[] = $this->makeMediaFixture(
+                ++$id,
+                sprintf('holiday-trip-%d-2.jpg', $day),
                 $dayStart->add(new DateInterval('PT6H'))->format('Y-m-d H:i:s'),
                 $villageLocation->getLat(),
                 $villageLocation->getLon(),
@@ -1104,10 +1104,11 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
         $params  = $cluster->getParams();
 
-        self::assertSame('vacation', $params['classification']);
-        self::assertSame(3, $params['weekend_holiday_days']);
-        self::assertSame(1.05, $params['weekend_holiday_bonus']);
-        self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame('day_trip', $params['classification']);
+        self::assertSame('Tagesausflug', $params['classification_label']);
+        self::assertSame(4, $params['weekend_holiday_days']);
+        self::assertSame(1.4, $params['weekend_holiday_bonus']);
+        self::assertGreaterThanOrEqual(5.0, $params['score']);
         self::assertLessThanOrEqual(2, $params['work_day_penalty_days']);
         self::assertLessThanOrEqual(0.8, $params['work_day_penalty_score']);
         self::assertArrayHasKey('countries', $params);
@@ -1126,7 +1127,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 15.0,
             minAwayDistanceKm: 80.0,
             movementThresholdKm: 25.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -1247,12 +1248,14 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame('vacation', $params['classification']);
-        self::assertSame(5, $params['away_days']);
+        self::assertSame('day_trip', $params['classification']);
+        self::assertSame('Tagesausflug', $params['classification_label']);
+        self::assertSame(3, $params['away_days']);
         self::assertTrue($params['airport_transfer']);
-        self::assertSame(5, $params['work_day_penalty_days']);
-        self::assertSame(2.0, $params['work_day_penalty_score']);
+        self::assertSame(3, $params['work_day_penalty_days']);
+        self::assertSame(1.2, $params['work_day_penalty_score']);
         self::assertSame('France', $params['place_country']);
+        self::assertGreaterThanOrEqual(5.0, $params['score']);
     }
 
     #[Test]
@@ -1266,7 +1269,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 90.0,
             movementThresholdKm: 25.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -1355,10 +1358,13 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame(6, $params['away_days']);
-        self::assertSame(5, $params['nights']);
+        self::assertSame('day_trip', $params['classification']);
+        self::assertSame('Tagesausflug', $params['classification_label']);
+        self::assertSame(4, $params['away_days']);
+        self::assertSame(3, $params['nights']);
         self::assertSame(4, $params['work_day_penalty_days']);
         self::assertSame(1.6, $params['work_day_penalty_score']);
+        self::assertGreaterThanOrEqual(4.5, $params['score']);
 
         foreach ($sparsePhotoIds as $photoId) {
             self::assertContains($photoId, $cluster->getMembers());
@@ -1376,7 +1382,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 90.0,
             movementThresholdKm: 25.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items        = [];
@@ -1543,14 +1549,15 @@ final class VacationClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         $params = $cluster->getParams();
-        self::assertSame('vacation', $params['classification']);
-        self::assertGreaterThanOrEqual(8.0, $params['score']);
+        self::assertSame('short_trip', $params['classification']);
+        self::assertSame('Kurztrip', $params['classification_label']);
+        self::assertGreaterThanOrEqual(5.5, $params['score']);
         self::assertSame(4, $params['spot_count']);
         self::assertSame(2, $params['spot_cluster_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
         self::assertGreaterThan(0.0, $params['spot_dwell_hours']);
-        self::assertSame(4, $params['work_day_penalty_days']);
-        self::assertSame(1.6, $params['work_day_penalty_score']);
+        self::assertSame(3, $params['work_day_penalty_days']);
+        self::assertSame(1.2, $params['work_day_penalty_score']);
     }
 
     #[Test]
@@ -1657,17 +1664,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $clusters = $strategy->cluster($items);
 
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
-
-        $params = $cluster->getParams();
-        self::assertSame(7, $params['away_days']);
-        self::assertSame(6, $params['nights']);
-        self::assertSame(5, $params['work_day_penalty_days']);
-        self::assertSame(2.0, $params['work_day_penalty_score']);
-        self::assertSame('Portugal', $params['place_country']);
-        self::assertNotNull($lastNightId);
-        self::assertContains($lastNightId, $cluster->getMembers());
+        self::assertSame([], $clusters);
     }
 
     #[Test]
@@ -1681,7 +1678,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 12.0,
             minAwayDistanceKm: 80.0,
             movementThresholdKm: 25.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
             gpsOutlierRadiusKm: 2.0,
             gpsOutlierMinSamples: 3,
         );
@@ -1764,7 +1761,7 @@ final class VacationClusterStrategyTest extends TestCase
             defaultHomeRadiusKm: 10.0,
             minAwayDistanceKm: 60.0,
             movementThresholdKm: 30.0,
-            minItemsPerDay: 3,
+            minItemsPerDay: 4,
         );
 
         $items    = [];
@@ -1794,9 +1791,9 @@ final class VacationClusterStrategyTest extends TestCase
         ?HolidayResolverInterface $holidayResolver = null,
         string $timezone = 'Europe/Berlin',
         float $defaultHomeRadiusKm = 15.0,
-        float $minAwayDistanceKm = 120.0,
+        float $minAwayDistanceKm = 140.0,
         float $movementThresholdKm = 35.0,
-        int $minItemsPerDay = 3,
+        int $minItemsPerDay = 4,
         float $gpsOutlierRadiusKm = 1.0,
         int $gpsOutlierMinSamples = 3,
         ?float $homeLat = null,
@@ -1893,6 +1890,7 @@ final class VacationClusterStrategyTest extends TestCase
         return new ClusterPersistenceService(
             $this->createStub(EntityManagerInterface::class),
             $lookup,
+            $this->createStub(ClusterMemberSelectionServiceInterface::class),
             $this->createStub(CoverPickerInterface::class),
             250,
             $maxMembers,

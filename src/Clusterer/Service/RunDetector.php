@@ -52,8 +52,8 @@ final class RunDetector implements VacationRunDetectorInterface
      */
     public function __construct(
         private TransportDayExtender $transportDayExtender,
-        private float $minAwayDistanceKm = 120.0,
-        private int $minItemsPerDay = 3,
+        private float $minAwayDistanceKm = 140.0,
+        private int $minItemsPerDay = 4,
         private array $minAwayDistanceProfiles = [],
     ) {
         if ($this->minAwayDistanceKm <= 0.0) {
