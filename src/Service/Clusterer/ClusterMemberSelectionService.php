@@ -648,6 +648,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             'selection' => [
                 'burst_collapsed'          => (int) ($rawTelemetry['burst_collapsed'] ?? 0),
                 'day_limit_rejections'     => (int) ($rawTelemetry['day_limit_rejections'] ?? 0),
+                'time_slot_rejections'     => (int) ($rawTelemetry['time_slot_rejections'] ?? 0),
                 'staypoint_rejections'     => (int) ($rawTelemetry['staypoint_rejections'] ?? 0),
                 'spacing_rejections'       => (int) ($rawTelemetry['spacing_rejections'] ?? 0),
                 'near_duplicate_blocked'   => (int) ($rawTelemetry['near_duplicate_blocked'] ?? 0),
@@ -658,6 +659,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         $fallbacks = [
             SelectionTelemetry::REASON_TIME_GAP    => $drops['selection']['spacing_rejections'] ?? 0,
+            SelectionTelemetry::REASON_DAY_QUOTA   => $drops['selection']['day_limit_rejections'] ?? 0,
+            SelectionTelemetry::REASON_TIME_SLOT   => $drops['selection']['time_slot_rejections'] ?? 0,
             SelectionTelemetry::REASON_PHASH       => $drops['selection']['near_duplicate_blocked'] ?? 0,
             SelectionTelemetry::REASON_STAYPOINT   => $drops['selection']['staypoint_rejections'] ?? 0,
             SelectionTelemetry::REASON_SCENE       => 0,
@@ -673,6 +676,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $drops['selection']['spacing_rejections']      = $rejections[SelectionTelemetry::REASON_TIME_GAP];
         $drops['selection']['near_duplicate_blocked']  = $rejections[SelectionTelemetry::REASON_PHASH];
         $drops['selection']['staypoint_rejections']    = $rejections[SelectionTelemetry::REASON_STAYPOINT];
+        $drops['selection']['day_limit_rejections']    = $rejections[SelectionTelemetry::REASON_DAY_QUOTA];
+        $drops['selection']['time_slot_rejections']    = $rejections[SelectionTelemetry::REASON_TIME_SLOT];
 
         $perBucket = $this->countPerBucket($members, $profile);
         $phash     = $this->buildPhashTelemetry($members);
@@ -889,6 +894,10 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         if (($selection['day_limit_rejections'] ?? 0) > 0) {
             $hints[] = 'max_per_day erhöhen, um Tagesbegrenzungen zu lockern.';
+        }
+
+        if (($selection['time_slot_rejections'] ?? 0) > 0) {
+            $hints[] = 'time_slot_hours erhöhen, um mehr Medien pro Zeitfenster zu behalten.';
         }
 
         if (($selection['staypoint_rejections'] ?? 0) > 0) {
