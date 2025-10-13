@@ -20,13 +20,7 @@ final class TransportDayExtenderTest extends TestCase
     #[Test]
     public function doesNotBridgeMoreThanAllowedLeanDays(): void
     {
-        $extender = new TransportDayExtender(
-            transitRatioThreshold: 0.6,
-            transitSpeedThreshold: 90.0,
-            leanPhotoThreshold: 2,
-            maxLeanBridgeDays: 1,
-            minLeanBridgeDistanceKm: 60.0,
-        );
+        $extender = new TransportDayExtender();
 
         $run         = ['2024-07-02'];
         $orderedKeys = ['2024-07-01', '2024-07-02'];
@@ -44,13 +38,7 @@ final class TransportDayExtenderTest extends TestCase
     #[Test]
     public function bridgesLeanDayWhenInterDayDistanceIsHigh(): void
     {
-        $extender = new TransportDayExtender(
-            transitRatioThreshold: 0.6,
-            transitSpeedThreshold: 90.0,
-            leanPhotoThreshold: 2,
-            maxLeanBridgeDays: 1,
-            minLeanBridgeDistanceKm: 60.0,
-        );
+        $extender = new TransportDayExtender();
 
         $run         = ['2024-07-02'];
         $orderedKeys = ['2024-07-01', '2024-07-02'];
@@ -68,13 +56,7 @@ final class TransportDayExtenderTest extends TestCase
     #[Test]
     public function skipsLeanDayWithoutTransitSignalsOrDistance(): void
     {
-        $extender = new TransportDayExtender(
-            transitRatioThreshold: 0.6,
-            transitSpeedThreshold: 90.0,
-            leanPhotoThreshold: 2,
-            maxLeanBridgeDays: 1,
-            minLeanBridgeDistanceKm: 60.0,
-        );
+        $extender = new TransportDayExtender();
 
         $run         = ['2024-07-02'];
         $orderedKeys = ['2024-07-01', '2024-07-02'];
@@ -89,9 +71,52 @@ final class TransportDayExtenderTest extends TestCase
         self::assertSame($run, $extended);
     }
 
-    private function makeLeanSummary(float $lat, float $lon): array
+    #[Test]
+    public function bridgesLeanDayWhenCandidateIsTransitHeavy(): void
     {
-        return [
+        $extender = new TransportDayExtender();
+
+        $run         = ['2024-07-02'];
+        $orderedKeys = ['2024-07-01', '2024-07-02'];
+        $indexByKey  = ['2024-07-01' => 0, '2024-07-02' => 1];
+        $days        = [
+            '2024-07-01' => $this->makeLeanSummary(52.5208, 13.4095, [
+                'transitRatio' => 0.7,
+                'avgSpeedKmh'  => 110.0,
+                'maxSpeedKmh'  => 130.0,
+            ]),
+            '2024-07-02' => $this->makeAnchorSummary(52.521, 13.41),
+        ];
+
+        $extended = $extender->extend($run, $orderedKeys, $indexByKey, $days);
+
+        self::assertSame(['2024-07-01', '2024-07-02'], $extended);
+    }
+
+    #[Test]
+    public function doesNotBridgeLeanDayWhenOnlyAnchorIsTransitHeavy(): void
+    {
+        $extender = new TransportDayExtender();
+
+        $run         = ['2024-07-02'];
+        $orderedKeys = ['2024-07-01', '2024-07-02'];
+        $indexByKey  = ['2024-07-01' => 0, '2024-07-02' => 1];
+        $days        = [
+            '2024-07-01' => $this->makeLeanSummary(52.52, 13.405),
+            '2024-07-02' => $this->makeAnchorSummary(52.6, 13.5, [
+                'avgSpeedKmh' => 120.0,
+                'maxSpeedKmh' => 150.0,
+            ]),
+        ];
+
+        $extended = $extender->extend($run, $orderedKeys, $indexByKey, $days);
+
+        self::assertSame($run, $extended);
+    }
+
+    private function makeLeanSummary(float $lat, float $lon, array $overrides = []): array
+    {
+        $summary = [
             'dominantStaypoints' => [],
             'photoCount'         => 1,
             'hasAirportPoi'      => false,
@@ -106,11 +131,13 @@ final class TransportDayExtenderTest extends TestCase
             'gpsMembers'         => [],
             'isSynthetic'        => false,
         ];
+
+        return array_replace_recursive($summary, $overrides);
     }
 
-    private function makeAnchorSummary(float $lat, float $lon): array
+    private function makeAnchorSummary(float $lat, float $lon, array $overrides = []): array
     {
-        return [
+        $summary = [
             'dominantStaypoints' => [[
                 'lat'          => $lat,
                 'lon'          => $lon,
@@ -132,5 +159,7 @@ final class TransportDayExtenderTest extends TestCase
             'gpsMembers'         => [],
             'isSynthetic'        => false,
         ];
+
+        return array_replace_recursive($summary, $overrides);
     }
 }

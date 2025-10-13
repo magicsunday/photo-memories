@@ -781,6 +781,8 @@ services:
 
     MagicSunday\Memories\Clusterer\Service\TransportDayExtender:
         arguments:
+            $transitRatioThreshold: 0.65
+            $transitSpeedThreshold: 100.0
             $maxLeanBridgeDays: '%memories.cluster.transit.max_lean_bridge_days%'
             $minLeanBridgeDistanceKm: '%memories.cluster.transit.min_lean_bridge_distance_km%'
 

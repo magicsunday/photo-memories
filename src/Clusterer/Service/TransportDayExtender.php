@@ -32,8 +32,8 @@ final class TransportDayExtender
     use ConsecutiveDaysTrait;
 
     public function __construct(
-        private float $transitRatioThreshold = 0.6,
-        private float $transitSpeedThreshold = 90.0,
+        private float $transitRatioThreshold = 0.65,
+        private float $transitSpeedThreshold = 100.0,
         private int $leanPhotoThreshold = 2,
         private int $maxLeanBridgeDays = 1,
         private float $minLeanBridgeDistanceKm = 60.0,
@@ -123,7 +123,7 @@ final class TransportDayExtender
                 return false;
             }
 
-            if ($leanStreakAtBoundary >= $this->maxLeanBridgeDays) {
+            if ($leanStreakAtBoundary + 1 > $this->maxLeanBridgeDays) {
                 return false;
             }
 
@@ -136,17 +136,14 @@ final class TransportDayExtender
                 return false;
             }
 
-            $hasTransitSignal = ($candidate['hasAirportPoi'] ?? false)
-                || ($candidate['hasHighSpeedTransit'] ?? false)
-                || $this->isTransitHeavy($candidate)
-                || $this->isTransitHeavy($anchor);
+            if ($this->isTransitHeavy($candidate)) {
+                return true;
+            }
 
             $interDayDistance = $this->computeInterDayDistance($candidate, $anchor);
 
-            if ($hasTransitSignal === false) {
-                if ($interDayDistance === null || $interDayDistance < $this->minLeanBridgeDistanceKm) {
-                    return false;
-                }
+            if ($interDayDistance === null || $interDayDistance <= $this->minLeanBridgeDistanceKm) {
+                return false;
             }
 
             return true;
