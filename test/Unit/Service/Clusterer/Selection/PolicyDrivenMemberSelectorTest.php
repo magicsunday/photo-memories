@@ -101,8 +101,13 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             self::assertGreaterThanOrEqual(0, $rejections[$key]);
         }
 
-        self::assertGreaterThan(0, $rejections['time_gap']);
+        $expectedSpacing = max(25, (int) floor($policy->getMinSpacingSeconds() * 0.6));
+
         self::assertGreaterThan(0, $rejections['phash_similarity']);
+        self::assertArrayHasKey('relaxations', $telemetry);
+        self::assertGreaterThanOrEqual(2, count($telemetry['relaxations']));
+        self::assertSame($expectedSpacing, $telemetry['relaxations'][1]['policy']['min_spacing_seconds']);
+        self::assertSame($expectedSpacing, $telemetry['policy']['min_spacing_seconds']);
     }
 
     #[Test]
@@ -143,8 +148,94 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             self::assertGreaterThanOrEqual(0, $rejections[$key]);
         }
 
-        self::assertGreaterThan(0, $rejections['time_gap']);
+        $expectedSpacing = max(25, (int) floor($policy->getMinSpacingSeconds() * 0.6));
+
         self::assertGreaterThan(0, $rejections['phash_similarity']);
+        self::assertArrayHasKey('relaxations', $telemetry);
+        self::assertGreaterThanOrEqual(2, count($telemetry['relaxations']));
+        self::assertSame($expectedSpacing, $telemetry['relaxations'][1]['policy']['min_spacing_seconds']);
+        self::assertSame($expectedSpacing, $telemetry['policy']['min_spacing_seconds']);
+    }
+
+    #[Test]
+    public function sequentialRelaxationsAccumulatePolicyAdjustments(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new TimeGapStage(),
+                new PhashDiversityStage(),
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'stacked',
+            targetTotal: 2,
+            minimumTotal: 2,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 600,
+            phashMinHamming: 12,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.0,
+            peripheralDayMaxTotal: null,
+            peripheralDayHardCap: null,
+            dayQuotas: [],
+            dayContext: [],
+            metadata: [],
+        );
+
+        $first  = $this->createMedia(1, '2024-05-16T10:00:00+02:00', '0000000000000000', [], [52.500, 13.400], [4000, 3000]);
+        $second = $this->createMedia(2, '2024-05-16T10:06:40+02:00', '0000000000001ff0', [], [52.600, 13.500], [4000, 3000]);
+
+        $memberIds = [1, 2];
+        $mediaMap  = [1 => $first, 2 => $second];
+        $quality   = [1 => 0.9, 2 => 0.8];
+
+        $context = new MemberSelectionContext(
+            $this->createDraft('stacked', $memberIds, 'stacked.storyline'),
+            $policy,
+            $mediaMap,
+            $quality,
+            [],
+        );
+
+        $result    = $selector->select('stacked', $memberIds, $context);
+        $telemetry = $result->getTelemetry();
+
+        self::assertSame([1, 2], $result->getMemberIds());
+        self::assertSame(2, $telemetry['counts']['selected']);
+
+        self::assertArrayHasKey('relaxations', $telemetry);
+        self::assertCount(2, $telemetry['relaxations']);
+
+        $firstRelaxation = $telemetry['relaxations'][0];
+        self::assertSame(0, $firstRelaxation['step']);
+        self::assertSame(1, $firstRelaxation['members']);
+        self::assertSame(600, $firstRelaxation['policy']['min_spacing_seconds']);
+        self::assertSame(12, $firstRelaxation['policy']['phash_min_hamming']);
+
+        $secondRelaxation = $telemetry['relaxations'][1];
+        self::assertSame(1, $secondRelaxation['step']);
+        self::assertSame(1, $secondRelaxation['members']);
+        self::assertSame(360, $secondRelaxation['policy']['min_spacing_seconds']);
+        self::assertSame(12, $secondRelaxation['policy']['phash_min_hamming']);
+
+        self::assertSame(360, $telemetry['policy']['min_spacing_seconds']);
+        self::assertSame(9, $telemetry['policy']['phash_min_hamming']);
     }
 
     #[Test]
