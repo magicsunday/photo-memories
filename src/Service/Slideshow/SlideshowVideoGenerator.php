@@ -1104,6 +1104,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $command[] = '-an';
         }
 
+        $command[] = '-vsync';
+        $command[] = 'vfr';
         $command[] = $output;
 
         return $command;
