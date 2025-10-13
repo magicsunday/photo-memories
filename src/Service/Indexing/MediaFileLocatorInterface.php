@@ -19,7 +19,9 @@ interface MediaFileLocatorInterface
     /**
      * Locate supported files under the given base directory.
      *
+     * @param bool           $includeVideos whether video files should be included
+     *
      * @return iterable<array-key, string>
      */
-    public function locate(string $baseDir, ?int $maxFiles = null): iterable;
+    public function locate(string $baseDir, ?int $maxFiles = null, bool $includeVideos = true): iterable;
 }

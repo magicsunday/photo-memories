@@ -38,6 +38,7 @@ use function sprintf;
  * - MIME detection is centralized via the ingestion pipeline.
  * - Thumbnails are generated only if --thumbnails is provided.
  * - Existing entries are skipped unless --force is used (then they are updated).
+ * - Videos werden nur mit --videos berücksichtigt.
  * - Progress bar can be disabled with --no-progress.
  */
 #[AsCommand(
@@ -64,6 +65,7 @@ final class IndexCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur anzeigen, was getan würde, nichts persistieren.')
             ->addOption('max-files', null, InputOption::VALUE_REQUIRED, 'Maximale Anzahl Dateien (für Tests).')
             ->addOption('thumbnails', null, InputOption::VALUE_NONE, 'Erstellt Thumbnails (standardmäßig aus).')
+            ->addOption('videos', null, InputOption::VALUE_NONE, 'Videos ebenfalls indizieren (standardmäßig aus).')
             ->addOption('no-progress', null, InputOption::VALUE_NONE, 'Deaktiviert die Fortschrittsanzeige.')
             ->addOption('strict-mime', null, InputOption::VALUE_NONE, 'Validiert zusätzlich den MIME-Type (langsamer).');
     }
@@ -75,6 +77,7 @@ final class IndexCommand extends Command
         $dryRun     = (bool) $input->getOption('dry-run');
         $maxFiles   = $this->toIntOrNull($input->getOption('max-files'));
         $withThumbs = (bool) $input->getOption('thumbnails');
+        $withVideos = (bool) $input->getOption('videos');
         $noProgress = (bool) $input->getOption('no-progress');
         $strictMime = (bool) $input->getOption('strict-mime');
 
@@ -89,11 +92,12 @@ final class IndexCommand extends Command
         $output->writeln(sprintf('Starte Indexierung: <info>%s</info>', $path));
         $output->writeln(sprintf('Metadaten-Feature-Version: <info>%d</info>', MetadataFeatureVersion::CURRENT));
         $output->writeln($withThumbs ? '<comment>Thumbnails werden erzeugt.</comment>' : '<comment>Thumbnails werden nicht erzeugt (Option --thumbnails verwenden).</comment>');
+        $output->writeln($withVideos ? '<comment>Videos werden mit indiziert.</comment>' : '<comment>Videos werden übersprungen (Option --videos verwenden).</comment>');
         if ($strictMime) {
             $output->writeln('<comment>Strikter MIME-Check ist aktiv.</comment>');
         }
 
-        $files = iterator_to_array($this->locator->locate($path, $maxFiles));
+        $files = iterator_to_array($this->locator->locate($path, $maxFiles, $withVideos));
         $total = count($files);
 
         if ($total === 0) {
