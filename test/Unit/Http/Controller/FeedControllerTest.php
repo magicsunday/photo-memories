@@ -187,6 +187,91 @@ final class FeedControllerTest extends TestCase
         unlink($storagePath);
     }
 
+    public function testFeedSwapsDimensionsForRotatedMedia(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $mapper = new ClusterEntityToDraftMapper([]);
+
+        $items = [
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Rotierte Erinnerung',
+                subtitle: 'Testmotiv',
+                coverMediaId: 5,
+                memberIds: [5],
+                score: 0.9,
+                params: [
+                    'group'      => 'city_and_events',
+                    'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_600],
+                ],
+            ),
+        ];
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn($items);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $media = $this->createMedia(5, '/media/5.jpg', '2024-02-01T09:30:00+00:00');
+        $media->setWidth(4032);
+        $media->setHeight(3024);
+        $media->setOrientation(6);
+        $media->setNeedsRotation(false);
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([5], false)
+            ->willReturn([$media]);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/feed', 'GET', ['score' => '0.5']);
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertArrayHasKey('items', $payload);
+        self::assertCount(1, $payload['items']);
+
+        $coverDimensions = $payload['items'][0]['coverAbmessungen'];
+        self::assertSame(3024, $coverDimensions['breite']);
+        self::assertSame(4032, $coverDimensions['hoehe']);
+        self::assertSame(0.75, $coverDimensions['seitenverhaeltnis']);
+        self::assertSame('hochformat', $coverDimensions['ausrichtung']);
+
+        $galleryDimensions = $payload['items'][0]['galerie'][0]['abmessungen'];
+        self::assertSame(3024, $galleryDimensions['breite']);
+        self::assertSame(4032, $galleryDimensions['hoehe']);
+        self::assertSame(0.75, $galleryDimensions['seitenverhaeltnis']);
+        self::assertSame('hochformat', $galleryDimensions['ausrichtung']);
+
+        unlink($storagePath);
+    }
+
     public function testFeedAppliesCursorForLazyLoading(): void
     {
         $clusterRepo = $this->createMock(ClusterRepository::class);
