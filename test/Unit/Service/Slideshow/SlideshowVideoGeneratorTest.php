@@ -756,6 +756,54 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertNotNull($audioLabelIndex);
     }
 
+    public function testAudioFadeIsConfiguredForShortSlideshows(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 2.5,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'short-runtime-audio-fade',
+            '/tmp/example.json',
+            '/tmp/out.mp4',
+            '/tmp/out.lock',
+            '/tmp/out.error',
+            ['/tmp/cover.jpg'],
+            $slides,
+            [],
+            null,
+            '/tmp/music.mp3',
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplexIndex = $filterIndex + 1;
+        self::assertArrayHasKey($filterComplexIndex, $command);
+
+        $filterComplex = $command[$filterComplexIndex];
+
+        self::assertStringContainsString('[1:a:0]afade=t=in:st=0:d=1.25,afade=t=out:st=1.25:d=1.25[aout]', $filterComplex);
+        self::assertStringContainsString('afade=t=in', $filterComplex);
+        self::assertStringContainsString('afade=t=out', $filterComplex);
+    }
+
     public function testTimelineOffsetsAndAudioFadeAreAlignedForTransitions(): void
     {
         $slides = [

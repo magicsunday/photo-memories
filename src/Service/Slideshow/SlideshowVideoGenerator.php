@@ -1086,19 +1086,15 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($filterIndex !== false) {
                 $filterComplexIndex = $filterIndex + 1;
                 $audioInputLabel    = sprintf('[%d:a:0]', $videoInputs);
-                $audioFilter        = sprintf('%sanull[aout]', $audioInputLabel);
-
-                if ($totalDuration > 6.0) {
-                    $fadeDuration = 1.5;
-                    $fadeOutStart = max(0.0, $totalDuration - $fadeDuration);
-                    $audioFilter  = sprintf(
-                        '%safade=t=in:st=0:d=%s,afade=t=out:st=%s:d=%s[aout]',
-                        $audioInputLabel,
-                        $this->formatFloat($fadeDuration),
-                        $this->formatFloat($fadeOutStart),
-                        $this->formatFloat($fadeDuration),
-                    );
-                }
+                $fadeDuration       = max(0.0, min(1.5, $totalDuration / 2));
+                $fadeOutStart       = max(0.0, $totalDuration - $fadeDuration);
+                $audioFilter        = sprintf(
+                    '%safade=t=in:st=0:d=%s,afade=t=out:st=%s:d=%s[aout]',
+                    $audioInputLabel,
+                    $this->formatFloat($fadeDuration),
+                    $this->formatFloat($fadeOutStart),
+                    $this->formatFloat($fadeDuration),
+                );
 
                 $command[$filterComplexIndex] = sprintf(
                     '%s;%s',
