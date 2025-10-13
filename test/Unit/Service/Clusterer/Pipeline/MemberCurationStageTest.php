@@ -27,11 +27,7 @@ final class MemberCurationStageTest extends TestCase
     #[Test]
     public function peripheralDaysAreTrimmedToAggregateLimit(): void
     {
-        $stage = new MemberCurationStage(
-            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
-            policyProvider: $this->createStub(SelectionPolicyProvider::class),
-            selector: $this->createStub(ClusterMemberSelectorInterface::class),
-        );
+        $stage = $this->createStage();
 
         $policy = new SelectionPolicy(
             profileKey: 'test',
@@ -87,11 +83,7 @@ final class MemberCurationStageTest extends TestCase
     #[Test]
     public function peripheralDayHardCapFallsBackToOneForTightBudgets(): void
     {
-        $stage = new MemberCurationStage(
-            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
-            policyProvider: $this->createStub(SelectionPolicyProvider::class),
-            selector: $this->createStub(ClusterMemberSelectorInterface::class),
-        );
+        $stage = $this->createStage();
 
         $policy = new SelectionPolicy(
             profileKey: 'test',
@@ -132,7 +124,99 @@ final class MemberCurationStageTest extends TestCase
         self::assertSame(1, $resultPolicy->getPeripheralDayHardCap());
         self::assertSame(1, $quotas['2024-03-02']);
         self::assertSame(1, $quotas['2024-03-03']);
-        self::assertSame(1, $quotas['2024-03-04']);
+        self::assertSame(0, $quotas['2024-03-04']);
+    }
+
+    #[Test]
+    public function dayQuotasAreNormalizedToTargetTotal(): void
+    {
+        $stage = $this->createStage();
+
+        $policy = new SelectionPolicy(
+            profileKey: 'test',
+            targetTotal: 8,
+            minimumTotal: 4,
+            maxPerDay: 6,
+            timeSlotHours: null,
+            minSpacingSeconds: 30,
+            phashMinHamming: 12,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.1,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 2,
+            peripheralDayPenalty: 0,
+            phashPercentile: 0.35,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.05,
+        );
+
+        $daySegments = [
+            '2024-04-01' => ['score' => 0.9, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-04-02' => ['score' => 0.3, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-04-03' => ['score' => 0.5, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+        ];
+
+        $resultPolicy = $this->invokeApplyDayContext($stage, $policy, $daySegments);
+        $quotas       = $resultPolicy->getDayQuotas();
+
+        self::assertSame(5, $quotas['2024-04-01']);
+        self::assertSame(3, $quotas['2024-04-02']);
+        self::assertSame(0, $quotas['2024-04-03']);
+        self::assertSame(8, array_sum($quotas));
+        self::assertSame(2, $resultPolicy->getPeripheralDayHardCap());
+    }
+
+    #[Test]
+    public function normalizationRespectsMinimumFloorWhenTargetIsSmaller(): void
+    {
+        $stage = $this->createStage();
+
+        $policy = new SelectionPolicy(
+            profileKey: 'test',
+            targetTotal: 3,
+            minimumTotal: 3,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 30,
+            phashMinHamming: 12,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.1,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 0,
+            peripheralDayPenalty: 0,
+            phashPercentile: 0.35,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.05,
+        );
+
+        $daySegments = [
+            '2024-06-01' => ['score' => 0.9, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-06-02' => ['score' => 0.8, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-06-03' => ['score' => 0.7, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-06-04' => ['score' => 0.6, 'category' => 'core', 'duration' => null, 'metrics' => []],
+        ];
+
+        $resultPolicy = $this->invokeApplyDayContext($stage, $policy, $daySegments);
+        $quotas       = $resultPolicy->getDayQuotas();
+
+        self::assertSame(4, array_sum($quotas));
+        foreach ($daySegments as $day => $_) {
+            self::assertSame(1, $quotas[$day]);
+        }
     }
 
     private function invokeApplyDayContext(
@@ -148,5 +232,42 @@ final class MemberCurationStageTest extends TestCase
         $result = $method->invoke($stage, $policy, $daySegments);
 
         return $result;
+    }
+
+    private function createStage(): MemberCurationStage
+    {
+        $profiles = [
+            'default' => [
+                'target_total' => 1,
+                'minimum_total' => 1,
+                'max_per_day' => null,
+                'time_slot_hours' => null,
+                'min_spacing_seconds' => 1,
+                'phash_min_hamming' => 1,
+                'max_per_staypoint' => null,
+                'max_per_staypoint_relaxed' => null,
+                'quality_floor' => 0.0,
+                'video_bonus' => 0.0,
+                'face_bonus' => 0.0,
+                'selfie_penalty' => 0.0,
+                'max_per_year' => null,
+                'max_per_bucket' => null,
+                'video_heavy_bonus' => null,
+                'scene_bucket_weights' => null,
+                'core_day_bonus' => 1,
+                'peripheral_day_penalty' => 1,
+                'phash_percentile' => 0.35,
+                'spacing_progress_factor' => 0.5,
+                'cohort_repeat_penalty' => 0.05,
+            ],
+        ];
+
+        $policyProvider = new SelectionPolicyProvider($profiles, 'default');
+
+        return new MemberCurationStage(
+            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
+            policyProvider: $policyProvider,
+            selector: $this->createStub(ClusterMemberSelectorInterface::class),
+        );
     }
 }

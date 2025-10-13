@@ -21,6 +21,8 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function arsort;
+use function array_filter;
+use function array_keys;
 use function array_sum;
 use function ceil;
 use function count;
@@ -32,6 +34,8 @@ use function is_numeric;
 use function is_string;
 use function max;
 use function min;
+use function strcmp;
+use function usort;
 
 /**
  * Stage that curates cluster member lists using the policy driven selector.
@@ -221,13 +225,16 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             return $policy;
         }
 
-        $dayCount = count($daySegments);
-        $baseCap  = $policy->getMaxPerDay();
-        if ($baseCap === null) {
-            $baseCap = max(1, (int) ceil($policy->getTargetTotal() / max(1, $dayCount)));
+        $dayCount    = count($daySegments);
+        $targetTotal = $policy->getTargetTotal();
+        $dynamicCap  = (int) ceil($targetTotal / max(1, $dayCount));
+        $baseCap     = $policy->getMaxPerDay();
+        if ($baseCap !== null) {
+            $dynamicCap = min($baseCap, $dynamicCap);
         }
 
-        $targetTotal     = $policy->getTargetTotal();
+        $baseCap = max(1, $dynamicCap);
+
         $peripheralCount = 0;
         foreach ($daySegments as $day => $info) {
             if (!is_array($info)) {
@@ -266,11 +273,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
         $dayQuotas        = [];
         $peripheralQuotas = [];
+        $minimumPerDay    = [];
         foreach ($daySegments as $day => $info) {
-            $quota = $baseCap ?? $policy->getTargetTotal();
-            if ($quota < 1) {
-                $quota = 1;
-            }
+            $quota = $baseCap;
 
             if ($info['category'] === 'core') {
                 $quota += $policy->getCoreDayBonus();
@@ -288,10 +293,13 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 }
 
                 $peripheralQuotas[$day] = (int) $quota;
+                $minimumPerDay[$day]    = 0;
             } else {
                 if ($quota < 1) {
                     $quota = 1;
                 }
+
+                $minimumPerDay[$day] = 1;
             }
 
             $dayQuotas[$day] = (int) $quota;
@@ -337,14 +345,24 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             }
         }
 
+        $aggregateMinimum = array_sum($minimumPerDay);
+        $targetFloor      = max($aggregateMinimum, $policy->getMinimumTotal());
+
+        $currentTotal = array_sum($dayQuotas);
+        $targetGoal   = min($targetTotal, $currentTotal);
+        if ($targetGoal < $targetFloor) {
+            $targetGoal = min($currentTotal, $targetFloor);
+        }
+
+        if ($currentTotal > $targetGoal) {
+            $dayQuotas = $this->rebalanceDayQuotas($dayQuotas, $daySegments, $minimumPerDay, $targetGoal);
+        }
+
         $policyWithContext = $policy->withDayContext($dayQuotas, $daySegments, $peripheralQuotaLimit, $peripheralHardCap);
 
         $staypointCap = $policyWithContext->getMaxPerStaypoint();
         if ($staypointCap !== null) {
-            $staypointBase = $policy->getMaxPerDay();
-            if ($staypointBase === null && $dayQuotas !== []) {
-                $staypointBase = max($dayQuotas);
-            }
+            $staypointBase = $dayQuotas !== [] ? max($dayQuotas) : $policy->getMaxPerDay();
 
             if ($staypointBase !== null && $staypointBase > 0) {
                 $dynamicCap = max(1, (int) floor($staypointBase / 2));
@@ -356,6 +374,85 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         }
 
         return $policyWithContext;
+    }
+
+    /**
+     * @param array<string, int> $dayQuotas
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments
+     * @param array<string, int> $minimumPerDay
+     *
+     * @return array<string, int>
+     */
+    private function rebalanceDayQuotas(array $dayQuotas, array $daySegments, array $minimumPerDay, int $targetGoal): array
+    {
+        $excess = array_sum($dayQuotas) - $targetGoal;
+        if ($excess <= 0) {
+            return $dayQuotas;
+        }
+
+        $peripheralDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'peripheral'));
+        usort($peripheralDays, static function (string $a, string $b) use ($daySegments): int {
+            $scoreA = (float) ($daySegments[$a]['score'] ?? 0.0);
+            $scoreB = (float) ($daySegments[$b]['score'] ?? 0.0);
+
+            if ($scoreA === $scoreB) {
+                return strcmp($a, $b);
+            }
+
+            return $scoreA <=> $scoreB;
+        });
+
+        foreach ($peripheralDays as $day) {
+            if ($excess <= 0) {
+                break;
+            }
+
+            $current = $dayQuotas[$day] ?? 0;
+            $minimum = $minimumPerDay[$day] ?? 0;
+            $room    = $current - $minimum;
+            if ($room <= 0) {
+                continue;
+            }
+
+            $reduction        = min($room, $excess);
+            $dayQuotas[$day] -= $reduction;
+            $excess          -= $reduction;
+        }
+
+        if ($excess <= 0) {
+            return $dayQuotas;
+        }
+
+        $coreDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'core'));
+        usort($coreDays, static function (string $a, string $b) use ($daySegments): int {
+            $scoreA = (float) ($daySegments[$a]['score'] ?? 0.0);
+            $scoreB = (float) ($daySegments[$b]['score'] ?? 0.0);
+
+            if ($scoreA === $scoreB) {
+                return strcmp($a, $b);
+            }
+
+            return $scoreA <=> $scoreB;
+        });
+
+        foreach ($coreDays as $day) {
+            if ($excess <= 0) {
+                break;
+            }
+
+            $current = $dayQuotas[$day] ?? 0;
+            $minimum = $minimumPerDay[$day] ?? 0;
+            $room    = $current - $minimum;
+            if ($room <= 0) {
+                continue;
+            }
+
+            $reduction        = min($room, $excess);
+            $dayQuotas[$day] -= $reduction;
+            $excess          -= $reduction;
+        }
+
+        return $dayQuotas;
     }
 
     /**
