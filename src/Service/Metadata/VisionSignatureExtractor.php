@@ -126,6 +126,29 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
                 return $media;
             }
 
+            if ($media->getWidth() === null) {
+                $media->setWidth($adapter->getWidth());
+            }
+
+            if ($media->getHeight() === null) {
+                $media->setHeight($adapter->getHeight());
+            }
+
+            $width  = $media->getWidth();
+            $height = $media->getHeight();
+
+            if ($width !== null && $height !== null && $width > 0 && $height > 0) {
+                if ($media->isPortrait() === null) {
+                    $isPortrait = $height > $width && ((float) $height / (float) $width) >= 1.2;
+                    $media->setIsPortrait($isPortrait);
+                }
+
+                if ($media->isPanorama() === null) {
+                    $isPanorama = $width > $height && ((float) $width / (float) $height) >= 2.4;
+                    $media->setIsPanorama($isPanorama);
+                }
+            }
+
             $rgbMatrix     = $this->rgbMatrixFromAdapter($adapter, $this->sampleSize, $this->sampleSize);
             $lumaMatrix    = $this->lumaMatrixFromRgb($rgbMatrix);
             $clippingShare = $this->saturationClipping($rgbMatrix);

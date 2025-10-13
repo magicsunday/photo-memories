@@ -31,6 +31,33 @@ use function unlink;
 final class VisionSignatureExtractorTest extends TestCase
 {
     #[Test]
+    public function populatesMissingDimensionsAndAspectFlags(): void
+    {
+        $imagePath = $this->createImageWithDimensions(2400, 800);
+
+        try {
+            $media = $this->makeMedia(
+                id: 103,
+                path: $imagePath,
+                configure: static function (Media $media): void {
+                    $media->setMime('image/png');
+                },
+                size: (int) filesize($imagePath),
+            );
+
+            $extractor = new VisionSignatureExtractor(new MediaQualityAggregator(), 16);
+            $extractor->extract($imagePath, $media);
+
+            self::assertSame(2400, $media->getWidth());
+            self::assertSame(800, $media->getHeight());
+            self::assertFalse($media->isPortrait());
+            self::assertTrue($media->isPanorama());
+        } finally {
+            unlink($imagePath);
+        }
+    }
+
+    #[Test]
     public function computesClippingForSaturatedImage(): void
     {
         $imagePath = $this->createSaturatedImage();
@@ -113,6 +140,30 @@ final class VisionSignatureExtractorTest extends TestCase
         } finally {
             unlink($videoPath);
         }
+    }
+
+    private function createImageWithDimensions(int $width, int $height): string
+    {
+        $base = tempnam(sys_get_temp_dir(), 'img_');
+        if ($base === false) {
+            self::fail('Unable to create temporary image fixture.');
+        }
+
+        $path = $base . '.png';
+        unlink($base);
+
+        $image = imagecreatetruecolor($width, $height);
+        $color = imagecolorallocate($image, 64, 128, 192);
+        imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $color);
+
+        if (imagepng($image, $path) !== true) {
+            imagedestroy($image);
+            self::fail('Unable to write image fixture.');
+        }
+
+        imagedestroy($image);
+
+        return $path;
     }
 
     private function createSaturatedImage(): string
