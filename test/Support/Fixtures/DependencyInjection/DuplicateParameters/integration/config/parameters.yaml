@@ -1,0 +1,3 @@
+parameters:
+    memories.test.integration: 'first'
+    memories.test.integration: 'second'

@@ -1,0 +1,4 @@
+parameters:
+    memories.test.duplicate: 'first'
+    memories.test.duplicate: 'second'
+    memories.test.unique: 'value'

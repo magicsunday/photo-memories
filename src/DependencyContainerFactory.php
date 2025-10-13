@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories;
 
 use MagicSunday\Memories\Bootstrap\EnvironmentBootstrap;
+use MagicSunday\Memories\DependencyInjection\Compiler\DuplicateParameterGuardCompilerPass;
 use Phar;
 use RuntimeException;
 use Symfony\Component\Config\FileLocator;
@@ -102,6 +103,8 @@ final class DependencyContainerFactory
             ->register(SymfonyStyle::class)
             ->setPublic(true)
             ->setSynthetic(true);
+
+        $containerBuilder->addCompilerPass(new DuplicateParameterGuardCompilerPass());
 
         $containerBuilder->compile();
 
