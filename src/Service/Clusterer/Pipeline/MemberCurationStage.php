@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function arsort;
+use function array_key_exists;
 use function array_filter;
 use function array_keys;
 use function array_sum;
@@ -85,8 +86,16 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $policy      = $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline());
-            $daySegments = $this->extractDaySegments($draft);
+            $daySegments    = $this->extractDaySegments($draft);
+            $runLengthDays  = $daySegments === [] ? null : count($daySegments);
+            $policy         = $runLengthDays === null
+                ? $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline())
+                : $this->policyProvider->forAlgorithmWithRunLength(
+                    $draft->getAlgorithm(),
+                    $draft->getStoryline(),
+                    $runLengthDays,
+                );
+
             if ($daySegments !== []) {
                 $policy = $this->applyDayContext($policy, $daySegments);
             }
@@ -112,7 +121,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $resultSet = $this->selector->select($draft->getAlgorithm(), $members, $context);
             $curated   = $resultSet->getMemberIds();
             $postCount = count($curated);
-            $telemetry = $this->augmentTelemetry($draft, $policy->getProfileKey(), $resultSet->getTelemetry(), $preCount, $postCount);
+            $telemetry = $this->augmentTelemetry($draft, $policy, $resultSet->getTelemetry(), $preCount, $postCount);
 
             $params = $draft->getParams();
             $params['member_selection'] = $telemetry;
@@ -496,7 +505,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
      */
     private function augmentTelemetry(
         ClusterDraft $draft,
-        string $profile,
+        SelectionPolicy $policy,
         array $telemetry,
         int $preCount,
         int $postCount,
@@ -507,8 +516,29 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $telemetry['policy'] = [];
         }
 
-        $telemetry['policy']['profile'] = $profile;
-        $telemetry['policy']['storyline'] = $draft->getStoryline();
+        $telemetry['policy']['profile']      = $policy->getProfileKey();
+        $telemetry['policy']['storyline']    = $draft->getStoryline();
+        $telemetry['policy']['target_total'] = $policy->getTargetTotal();
+        $telemetry['policy']['minimum_total'] = $policy->getMinimumTotal();
+
+        $maxPerDay = $policy->getMaxPerDay();
+        if ($maxPerDay !== null) {
+            $telemetry['policy']['max_per_day'] = $maxPerDay;
+        }
+
+        $metadata = $policy->getMetadata();
+        if ($metadata !== []) {
+            $telemetry['policy']['metadata'] = $metadata;
+
+            if (array_key_exists('run_length_days', $metadata) && $metadata['run_length_days'] !== null) {
+                $telemetry['policy']['run_length_days'] = $metadata['run_length_days'];
+            }
+
+            if (array_key_exists('constraint_overrides', $metadata) && is_array($metadata['constraint_overrides'])) {
+                $telemetry['policy']['constraint_overrides'] = $metadata['constraint_overrides'];
+            }
+        }
+
         $telemetry['storyline'] = $draft->getStoryline();
 
         $metrics = $telemetry['metrics'] ?? [];

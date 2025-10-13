@@ -1058,6 +1058,7 @@ services:
             $profiles: '%memories.selection.profiles%'
             $defaultProfile: '%memories.selection.default_profile%'
             $algorithmProfiles: '%memories.selection.algorithm_profiles%'
+            $profileConstraints: '%memories.cluster.selection.profile_constraints%'
 
     MagicSunday\Memories\Service\Clusterer\Selection\Stage\DayQuotaSelectionStage:
         tags:

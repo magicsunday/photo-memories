@@ -17,11 +17,13 @@ use function array_key_exists;
 use function array_merge;
 use function explode;
 use function is_array;
+use function is_bool;
 use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
 use function str_contains;
+use function strtolower;
 use function trim;
 
 /**
@@ -42,15 +44,27 @@ final class SelectionPolicyProvider
     private array $algorithmProfiles = [];
 
     /**
+     * @var array<string, array{
+     *     target_by_run_length: array<string, int>|null,
+     *     minimum_by_run_length: array<string, int>|null,
+     *     scalar_overrides: array<string, int|float|bool>,
+     * }>
+     */
+    private array $profileConstraints = [];
+
+    /**
      * @param array<string, array<string, int|float|string|null>> $profiles
      * @param array<string, string|array<string, string>>         $algorithmProfiles
+     * @param array<string, array<string, mixed>>                 $profileConstraints
      */
     public function __construct(
         private readonly array $profiles,
         private readonly string $defaultProfile,
         array $algorithmProfiles = [],
+        array $profileConstraints = [],
     ) {
-        $this->algorithmProfiles = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
+        $this->algorithmProfiles   = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
+        $this->profileConstraints = $this->sanitizeProfileConstraints($profileConstraints);
     }
 
     /**
@@ -63,11 +77,40 @@ final class SelectionPolicyProvider
 
     public function forAlgorithm(string $algorithm, ?string $storyline = null): SelectionPolicy
     {
+        return $this->forAlgorithmWithRunLength($algorithm, $storyline, null);
+    }
+
+    public function forAlgorithmWithRunLength(
+        string $algorithm,
+        ?string $storyline = null,
+        ?int $runLengthDays = null,
+    ): SelectionPolicy {
         $profileKey = $this->resolveProfileKey($algorithm, $storyline);
 
         /** @var array<string, int|float|string|null> $config */
-        $config = array_merge($this->profiles[$profileKey], $this->runtimeOverrides);
+        $config = $this->profiles[$profileKey];
 
+        $constraintResolution = $this->resolveConstraintOverrides($profileKey, $runLengthDays);
+        if ($constraintResolution['values'] !== []) {
+            $config = array_merge($config, $constraintResolution['values']);
+        }
+
+        if ($this->runtimeOverrides !== []) {
+            $config = array_merge($config, $this->runtimeOverrides);
+        }
+
+        $config   = $this->finalizeConfig($config);
+        $metadata = $constraintResolution['metadata'];
+
+        return $this->createPolicy($profileKey, $config, $metadata);
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $config
+     * @param array<string, mixed>                 $metadata
+     */
+    private function createPolicy(string $profileKey, array $config, array $metadata): SelectionPolicy
+    {
         return new SelectionPolicy(
             profileKey: $profileKey,
             targetTotal: $this->intValue($config, 'target_total'),
@@ -91,7 +134,94 @@ final class SelectionPolicyProvider
             phashPercentile: $this->floatOptional($config, 'phash_percentile', 0.35),
             spacingProgressFactor: $this->floatOptional($config, 'spacing_progress_factor', 0.5),
             cohortPenalty: $this->floatOptional($config, 'cohort_repeat_penalty', 0.05),
+            metadata: $metadata,
         );
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $config
+     *
+     * @return array<string, int|float|string|null>
+     */
+    private function finalizeConfig(array $config): array
+    {
+        $targetTotal  = $config['target_total'] ?? null;
+        $minimumTotal = $config['minimum_total'] ?? null;
+
+        if (is_int($targetTotal) && is_int($minimumTotal) && $minimumTotal > $targetTotal) {
+            $config['minimum_total'] = $targetTotal;
+        }
+
+        return $config;
+    }
+
+    /**
+     * @return array{values: array<string, int|float|bool>, metadata: array<string, mixed>}
+     */
+    private function resolveConstraintOverrides(string $profileKey, ?int $runLengthDays): array
+    {
+        if (!isset($this->profileConstraints[$profileKey])) {
+            $metadata = $runLengthDays !== null ? ['run_length_days' => $runLengthDays] : [];
+
+            return ['values' => [], 'metadata' => $metadata];
+        }
+
+        $definition = $this->profileConstraints[$profileKey];
+
+        $overrides = $definition['scalar_overrides'];
+
+        $targetOverride  = null;
+        $minimumOverride = null;
+
+        if ($runLengthDays !== null) {
+            $targetOverride  = $this->resolveRunLengthValue($definition['target_by_run_length'], $runLengthDays);
+            $minimumOverride = $this->resolveRunLengthValue($definition['minimum_by_run_length'], $runLengthDays);
+
+            if ($targetOverride !== null) {
+                $overrides['target_total'] = $targetOverride;
+            }
+
+            if ($minimumOverride !== null) {
+                $overrides['minimum_total'] = $minimumOverride;
+            }
+        }
+
+        $metadata = [];
+        if ($runLengthDays !== null) {
+            $metadata['run_length_days'] = $runLengthDays;
+        }
+
+        if ($overrides !== []) {
+            $metadata['constraint_overrides'] = $overrides;
+        }
+
+        return ['values' => $overrides, 'metadata' => $metadata];
+    }
+
+    /**
+     * @param array<string, int>|null $runLengthConfig
+     */
+    private function resolveRunLengthValue(?array $runLengthConfig, int $runLengthDays): ?int
+    {
+        if ($runLengthConfig === null) {
+            return null;
+        }
+
+        $shortMaxDays   = $runLengthConfig['short_run_max_days'] ?? null;
+        $shortTarget    = $runLengthConfig['short_run_target_total'] ?? $runLengthConfig['short_run_minimum_total'] ?? null;
+        $mediumMaxDays  = $runLengthConfig['medium_run_max_days'] ?? null;
+        $mediumTarget   = $runLengthConfig['medium_run_target_total'] ?? $runLengthConfig['medium_run_minimum_total'] ?? null;
+        $longTarget     = $runLengthConfig['long_run_target_total'] ?? $runLengthConfig['long_run_minimum_total'] ?? null;
+
+        if (is_int($shortMaxDays) && $runLengthDays <= $shortMaxDays && is_int($shortTarget)) {
+            return $shortTarget;
+        }
+
+        if (is_int($mediumMaxDays) && $runLengthDays <= $mediumMaxDays && is_int($mediumTarget)) {
+            return $mediumTarget;
+        }
+
+        return is_int($longTarget) ? $longTarget : null;
     }
 
     /**
@@ -252,6 +382,156 @@ final class SelectionPolicyProvider
         $this->assignFloatOverride($sanitised, $overrides, 'cohort_repeat_penalty');
 
         return $sanitised;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $profileConstraints
+     *
+     * @return array<string, array{
+     *     target_by_run_length: array<string, int>|null,
+     *     minimum_by_run_length: array<string, int>|null,
+     *     scalar_overrides: array<string, int|float|bool>,
+     * }>
+     */
+    private function sanitizeProfileConstraints(array $profileConstraints): array
+    {
+        $result = [];
+
+        foreach ($profileConstraints as $profileKey => $definition) {
+            if (!is_string($profileKey) || $profileKey === '' || !is_array($definition)) {
+                continue;
+            }
+
+            $targetByRunLength  = $this->sanitizeRunLengthConfig($definition['target_total_by_run_length'] ?? null);
+            $minimumByRunLength = $this->sanitizeRunLengthConfig($definition['minimum_total_by_run_length'] ?? null);
+            $scalarOverrides    = $this->sanitizeConstraintScalarOverrides($definition);
+
+            if ($targetByRunLength === null && $minimumByRunLength === null && $scalarOverrides === []) {
+                continue;
+            }
+
+            $result[$profileKey] = [
+                'target_by_run_length' => $targetByRunLength,
+                'minimum_by_run_length' => $minimumByRunLength,
+                'scalar_overrides' => $scalarOverrides,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param mixed $config
+     *
+     * @return array<string, int>|null
+     */
+    private function sanitizeRunLengthConfig(mixed $config): ?array
+    {
+        if (!is_array($config)) {
+            return null;
+        }
+
+        $sanitised = [];
+
+        foreach ([
+            'short_run_max_days',
+            'short_run_target_total',
+            'short_run_minimum_total',
+            'medium_run_max_days',
+            'medium_run_target_total',
+            'medium_run_minimum_total',
+            'long_run_target_total',
+            'long_run_minimum_total',
+        ] as $key) {
+            if (!array_key_exists($key, $config)) {
+                continue;
+            }
+
+            $value = $config[$key];
+            if (is_int($value)) {
+                $sanitised[$key] = $value;
+
+                continue;
+            }
+
+            if (is_float($value) || (is_string($value) && is_numeric($value))) {
+                $sanitised[$key] = (int) $value;
+            }
+        }
+
+        return $sanitised === [] ? null : $sanitised;
+    }
+
+    /**
+     * @param array<string, mixed> $definition
+     *
+     * @return array<string, int|float|bool>
+     */
+    private function sanitizeConstraintScalarOverrides(array $definition): array
+    {
+        $overrides = [];
+
+        foreach (['enable_people_balance'] as $boolKey) {
+            if (!array_key_exists($boolKey, $definition)) {
+                continue;
+            }
+
+            $value = $definition[$boolKey];
+            if (is_bool($value)) {
+                $overrides[$boolKey] = $value;
+
+                continue;
+            }
+
+            if (is_string($value)) {
+                $normalised = strtolower(trim($value));
+                if ($normalised === 'true' || $normalised === '1') {
+                    $overrides[$boolKey] = true;
+
+                    continue;
+                }
+
+                if ($normalised === 'false' || $normalised === '0') {
+                    $overrides[$boolKey] = false;
+                }
+            }
+        }
+
+        foreach (['people_balance_weight', 'repeat_penalty'] as $floatKey) {
+            if (!array_key_exists($floatKey, $definition)) {
+                continue;
+            }
+
+            $value = $definition[$floatKey];
+            if (is_float($value) || is_int($value)) {
+                $overrides[$floatKey] = (float) $value;
+
+                continue;
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                $overrides[$floatKey] = (float) $value;
+            }
+        }
+
+        foreach (['target_total', 'minimum_total'] as $intKey) {
+            if (!array_key_exists($intKey, $definition)) {
+                continue;
+            }
+
+            $value = $definition[$intKey];
+            if (is_int($value)) {
+                $overrides[$intKey] = $value;
+
+                continue;
+            }
+
+            if (is_float($value) || (is_string($value) && is_numeric($value))) {
+                $overrides[$intKey] = (int) $value;
+            }
+        }
+
+        return $overrides;
     }
 
     /**
