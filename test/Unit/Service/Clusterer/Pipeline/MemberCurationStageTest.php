@@ -11,139 +11,142 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberCurationStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
-use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
-use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
+
+use function array_sum;
 
 final class MemberCurationStageTest extends TestCase
 {
     #[Test]
-    public function forwardsPolicyTelemetryToMonitoringEmitter(): void
+    public function peripheralDaysAreTrimmedToAggregateLimit(): void
     {
-        $mediaLookup = $this->createStub(MemberMediaLookupInterface::class);
-        $mediaLookup->method('findByIds')->willReturn([]);
-
-        $policyProvider = new SelectionPolicyProvider(
-            profiles: [
-                'default' => [
-                    'target_total' => 4,
-                    'minimum_total' => 2,
-                    'max_per_day' => null,
-                    'time_slot_hours' => null,
-                    'min_spacing_seconds' => 30,
-                    'phash_min_hamming' => 10,
-                    'max_per_staypoint' => null,
-                    'max_per_staypoint_relaxed' => null,
-                    'quality_floor' => 0.0,
-                    'video_bonus' => 0.0,
-                    'face_bonus' => 0.0,
-                    'selfie_penalty' => 0.0,
-                    'max_per_year' => null,
-                    'max_per_bucket' => null,
-                    'video_heavy_bonus' => null,
-                ],
-            ],
-            algorithmProfiles: ['policy-algo' => 'default'],
-            defaultProfile: 'default',
+        $stage = new MemberCurationStage(
+            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
+            policyProvider: $this->createStub(SelectionPolicyProvider::class),
+            selector: $this->createStub(ClusterMemberSelectorInterface::class),
         );
 
-        $selector = $this->createMock(ClusterMemberSelectorInterface::class);
-        $selector->method('select')->willReturn(
-            new MemberSelectionResult(
-                [5, 6],
-                [
-                    'storyline' => 'policy-algo.weekend',
-                    'counts' => [
-                        'considered' => 3,
-                        'eligible' => 3,
-                        'selected' => 2,
-                    ],
-                    'rejections' => [
-                        'time_gap' => 2,
-                        'day_quota' => 0,
-                        'time_slot' => 0,
-                        'phash_similarity' => 1,
-                        'staypoint_quota' => 0,
-                        'orientation_balance' => 0,
-                        'scene_balance' => 0,
-                        'people_balance' => 0,
-                        'no_show' => 1,
-                        'quality' => 0,
-                        'burst' => 1,
-                    ],
-                    'metrics' => [
-                        'time_gaps' => [30, 60],
-                        'phash_distances' => [8],
-                    ],
-                    'distribution' => [
-                        'per_day' => ['2024-06-01' => 2],
-                        'per_year' => [2024 => 2],
-                        'per_bucket' => ['06-01' => 2],
-                    ],
-                    'policy' => ['profile' => 'default', 'storyline' => 'policy-algo.weekend'],
-                ],
-            ),
+        $policy = new SelectionPolicy(
+            profileKey: 'test',
+            targetTotal: 12,
+            minimumTotal: 6,
+            maxPerDay: 5,
+            timeSlotHours: null,
+            minSpacingSeconds: 30,
+            phashMinHamming: 12,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.1,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 2,
+            peripheralDayPenalty: 0,
+            phashPercentile: 0.35,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.05,
         );
 
-        $emitter = new class() implements JobMonitoringEmitterInterface {
-            /**
-             * @var list<array{
-             *     job: string,
-             *     status: string,
-             *     context: array<string, mixed>
-             * }>
-             */
-            public array $events = [];
+        $daySegments = [
+            '2024-01-01' => ['score' => 0.9, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-01-02' => ['score' => 0.7, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+            '2024-01-03' => ['score' => 0.6, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+            '2024-01-04' => ['score' => 0.5, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+            '2024-01-05' => ['score' => 0.4, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+        ];
 
-            public function emit(string $job, string $status, array $context = []): void
-            {
-                $this->events[] = [
-                    'job' => $job,
-                    'status' => $status,
-                    'context' => $context,
-                ];
-            }
-        };
+        $resultPolicy = $this->invokeApplyDayContext($stage, $policy, $daySegments);
+        $quotas       = $resultPolicy->getDayQuotas();
 
-        $stage = new MemberCurationStage($mediaLookup, $policyProvider, $selector, $emitter);
+        self::assertSame(4, $resultPolicy->getPeripheralDayMaxTotal());
+        self::assertSame(2, $resultPolicy->getPeripheralDayHardCap());
+        self::assertSame(1, $quotas['2024-01-02']);
+        self::assertSame(1, $quotas['2024-01-03']);
+        self::assertSame(1, $quotas['2024-01-04']);
+        self::assertSame(1, $quotas['2024-01-05']);
+        self::assertSame(4, array_sum([
+            $quotas['2024-01-02'],
+            $quotas['2024-01-03'],
+            $quotas['2024-01-04'],
+            $quotas['2024-01-05'],
+        ]));
+        self::assertGreaterThan($quotas['2024-01-02'], $quotas['2024-01-01']);
+    }
 
-        $draft = new ClusterDraft('policy-algo', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2, 3], 'policy-algo.weekend');
-        $result = $stage->process([$draft]);
+    #[Test]
+    public function peripheralDayHardCapFallsBackToOneForTightBudgets(): void
+    {
+        $stage = new MemberCurationStage(
+            mediaLookup: $this->createStub(MemberMediaLookupInterface::class),
+            policyProvider: $this->createStub(SelectionPolicyProvider::class),
+            selector: $this->createStub(ClusterMemberSelectorInterface::class),
+        );
 
-        self::assertCount(1, $result);
-        $curated = $result[0];
-        $params = $curated->getParams();
-        self::assertArrayHasKey('member_selection', $params);
+        $policy = new SelectionPolicy(
+            profileKey: 'test',
+            targetTotal: 5,
+            minimumTotal: 3,
+            maxPerDay: 4,
+            timeSlotHours: null,
+            minSpacingSeconds: 30,
+            phashMinHamming: 12,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.1,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 0,
+            phashPercentile: 0.35,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.05,
+        );
 
-        $selection = $params['member_selection'];
-        self::assertSame(45.0, $selection['avg_time_gap_s']);
-        self::assertSame(8.0, $selection['avg_phash_distance']);
-        self::assertSame([
-            '2024-06-01' => 2,
-        ], $selection['per_day_distribution']);
-        self::assertSame(2, $selection['rejection_counts']['time_gap']);
-        self::assertSame(1, $selection['rejection_counts']['phash_similarity']);
-        self::assertSame('policy-algo.weekend', $selection['storyline']);
+        $daySegments = [
+            '2024-03-01' => ['score' => 0.8, 'category' => 'core', 'duration' => null, 'metrics' => []],
+            '2024-03-02' => ['score' => 0.7, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+            '2024-03-03' => ['score' => 0.6, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+            '2024-03-04' => ['score' => 0.5, 'category' => 'peripheral', 'duration' => null, 'metrics' => []],
+        ];
 
-        $completedEvents = array_values(array_filter(
-            $emitter->events,
-            static fn (array $event): bool => $event['status'] === 'selection_completed',
-        ));
+        $resultPolicy = $this->invokeApplyDayContext($stage, $policy, $daySegments);
+        $quotas       = $resultPolicy->getDayQuotas();
 
-        self::assertCount(1, $completedEvents);
-        $payload = $completedEvents[0]['context'];
-        self::assertSame(3, $payload['pre_count']);
-        self::assertSame(2, $payload['post_count']);
-        self::assertSame(1, $payload['dropped_near_duplicates']);
-        self::assertSame(2, $payload['dropped_spacing']);
-        self::assertSame(45.0, $payload['avg_time_gap_s']);
-        self::assertSame(8.0, $payload['avg_phash_distance']);
-        self::assertSame('policy-algo.weekend', $payload['storyline']);
+        self::assertSame(3, $resultPolicy->getPeripheralDayMaxTotal());
+        self::assertSame(1, $resultPolicy->getPeripheralDayHardCap());
+        self::assertSame(1, $quotas['2024-03-02']);
+        self::assertSame(1, $quotas['2024-03-03']);
+        self::assertSame(1, $quotas['2024-03-04']);
+    }
+
+    private function invokeApplyDayContext(
+        MemberCurationStage $stage,
+        SelectionPolicy $policy,
+        array $daySegments,
+    ): SelectionPolicy {
+        $reflection = new ReflectionClass(MemberCurationStage::class);
+        $method     = $reflection->getMethod('applyDayContext');
+        $method->setAccessible(true);
+
+        /** @var SelectionPolicy $result */
+        $result = $method->invoke($stage, $policy, $daySegments);
+
+        return $result;
     }
 }

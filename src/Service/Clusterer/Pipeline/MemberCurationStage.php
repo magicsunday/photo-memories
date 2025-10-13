@@ -20,6 +20,8 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
+use function arsort;
+use function array_sum;
 use function ceil;
 use function count;
 use function floor;
@@ -29,6 +31,7 @@ use function is_int;
 use function is_numeric;
 use function is_string;
 use function max;
+use function min;
 
 /**
  * Stage that curates cluster member lists using the policy driven selector.
@@ -224,7 +227,45 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $baseCap = max(1, (int) ceil($policy->getTargetTotal() / max(1, $dayCount)));
         }
 
-        $dayQuotas = [];
+        $targetTotal     = $policy->getTargetTotal();
+        $peripheralCount = 0;
+        foreach ($daySegments as $day => $info) {
+            if (!is_array($info)) {
+                continue;
+            }
+
+            if (($info['category'] ?? 'peripheral') === 'peripheral') {
+                ++$peripheralCount;
+            }
+        }
+
+        $peripheralQuotaLimit = null;
+        $peripheralHardCap    = null;
+        if ($peripheralCount > 0) {
+            $peripheralShare = $dayCount > 0 ? $peripheralCount / $dayCount : 0.0;
+            $peripheralRatio = 0.35;
+            if ($peripheralShare >= 0.6) {
+                $peripheralRatio = 0.4;
+            } elseif ($peripheralShare <= 0.25) {
+                $peripheralRatio = 0.3;
+            }
+
+            $peripheralQuotaLimit = (int) floor($targetTotal * $peripheralRatio);
+            if ($peripheralQuotaLimit < $peripheralCount) {
+                $peripheralQuotaLimit = $peripheralCount;
+            }
+
+            if ($peripheralQuotaLimit > $targetTotal) {
+                $peripheralQuotaLimit = $targetTotal;
+            }
+
+            if ($peripheralCount > 0) {
+                $peripheralHardCap = $targetTotal >= ($peripheralCount * 2) ? 2 : 1;
+            }
+        }
+
+        $dayQuotas        = [];
+        $peripheralQuotas = [];
         foreach ($daySegments as $day => $info) {
             $quota = $baseCap ?? $policy->getTargetTotal();
             if ($quota < 1) {
@@ -237,14 +278,66 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 $quota -= $policy->getPeripheralDayPenalty();
             }
 
-            if ($quota < 1) {
-                $quota = 1;
+            if ($info['category'] === 'peripheral') {
+                if ($quota < 0) {
+                    $quota = 0;
+                }
+
+                if ($peripheralHardCap !== null) {
+                    $quota = min($quota, $peripheralHardCap);
+                }
+
+                $peripheralQuotas[$day] = (int) $quota;
+            } else {
+                if ($quota < 1) {
+                    $quota = 1;
+                }
             }
 
-            $dayQuotas[$day] = $quota;
+            $dayQuotas[$day] = (int) $quota;
         }
 
-        $policyWithContext = $policy->withDayContext($dayQuotas, $daySegments);
+        if ($peripheralQuotaLimit !== null && $peripheralQuotas !== []) {
+            $peripheralTotal = array_sum($peripheralQuotas);
+            if ($peripheralTotal > $peripheralQuotaLimit) {
+                $overflow = $peripheralTotal - $peripheralQuotaLimit;
+                arsort($peripheralQuotas);
+
+                while ($overflow > 0) {
+                    $reduced = false;
+                    foreach ($peripheralQuotas as $day => $quota) {
+                        if ($overflow === 0) {
+                            break;
+                        }
+
+                        if ($quota <= 0) {
+                            continue;
+                        }
+
+                        $newQuota = max(0, $quota - 1);
+                        if ($newQuota === $quota) {
+                            continue;
+                        }
+
+                        $peripheralQuotas[$day] = $newQuota;
+                        $overflow               -= ($quota - $newQuota);
+                        $reduced                 = true;
+                    }
+
+                    if ($reduced === false) {
+                        break;
+                    }
+
+                    arsort($peripheralQuotas);
+                }
+            }
+
+            foreach ($peripheralQuotas as $day => $quota) {
+                $dayQuotas[$day] = (int) $quota;
+            }
+        }
+
+        $policyWithContext = $policy->withDayContext($dayQuotas, $daySegments, $peripheralQuotaLimit, $peripheralHardCap);
 
         $staypointCap = $policyWithContext->getMaxPerStaypoint();
         if ($staypointCap !== null) {

@@ -1217,6 +1217,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'scene_bucket_weights'=> $policy->getSceneBucketWeights(),
             'core_day_bonus'      => $policy->getCoreDayBonus(),
             'peripheral_day_penalty' => $policy->getPeripheralDayPenalty(),
+            'peripheral_day_max_total' => $policy->getPeripheralDayMaxTotal(),
+            'peripheral_day_hard_cap' => $policy->getPeripheralDayHardCap(),
             'phash_percentile'    => $policy->getPhashPercentile(),
             'spacing_progress_factor' => $policy->getSpacingProgressFactor(),
             'cohort_penalty'      => $policy->getCohortPenalty(),
