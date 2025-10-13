@@ -1502,6 +1502,17 @@ final class FeedController
             return null;
         }
 
+        $exifOrientation = $media->getOrientation();
+        $requiresRotation = $media->needsRotation();
+
+        if (is_int($exifOrientation) && $exifOrientation >= 5 && $exifOrientation <= 8) {
+            $requiresRotation = true;
+        }
+
+        if ($requiresRotation) {
+            [$width, $height] = [$height, $width];
+        }
+
         $ratio       = round($width / $height, 2);
         $orientation = $width >= $height ? 'querformat' : 'hochformat';
 
