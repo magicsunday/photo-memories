@@ -19,9 +19,11 @@ use PHPUnit\Framework\Attributes\Test;
 use function file_put_contents;
 use function imagecolorallocate;
 use function imagecreatetruecolor;
+use function imagecreatefromjpeg;
 use function imagedestroy;
 use function imagefilledrectangle;
 use function imagejpeg;
+use function imagerotate;
 use function is_file;
 use function strlen;
 use function substr;
@@ -109,6 +111,70 @@ final class PerceptualHashExtractorTest extends TestCase
         }
     }
 
+    #[Test]
+    public function producesIdenticalHashesAfterExifRotation(): void
+    {
+        $imagePath = $this->createGradientImage();
+        $extractor = new PerceptualHashExtractor(32, 16, 16);
+
+        try {
+            $media = $this->makeMedia(
+                id: 601,
+                path: $imagePath,
+                configure: static function (Media $entity): void {
+                    $entity->setMime('image/jpeg');
+                    $entity->setWidth(64);
+                    $entity->setHeight(64);
+                    $entity->setOrientation(1);
+                },
+            );
+
+            $extractor->extract($imagePath, $media);
+            $expectedPhash = $media->getPhash();
+            self::assertNotNull($expectedPhash);
+
+            $rotated90  = $this->createRotatedCopy($imagePath, -90);
+            $rotated180 = $this->createRotatedCopy($imagePath, 180);
+
+            try {
+                $media90 = $this->makeMedia(
+                    id: 602,
+                    path: $rotated90,
+                    configure: static function (Media $entity): void {
+                        $entity->setMime('image/jpeg');
+                        $entity->setWidth(64);
+                        $entity->setHeight(64);
+                        $entity->setOrientation(8);
+                        $entity->setNeedsRotation(true);
+                    },
+                );
+
+                $extractor->extract($rotated90, $media90);
+                self::assertSame($expectedPhash, $media90->getPhash());
+
+                $media180 = $this->makeMedia(
+                    id: 603,
+                    path: $rotated180,
+                    configure: static function (Media $entity): void {
+                        $entity->setMime('image/jpeg');
+                        $entity->setWidth(64);
+                        $entity->setHeight(64);
+                        $entity->setOrientation(3);
+                        $entity->setNeedsRotation(true);
+                    },
+                );
+
+                $extractor->extract($rotated180, $media180);
+                self::assertSame($expectedPhash, $media180->getPhash());
+            } finally {
+                unlink($rotated90);
+                unlink($rotated180);
+            }
+        } finally {
+            unlink($imagePath);
+        }
+    }
+
     private function createGradientImage(): string
     {
         $base = tempnam(sys_get_temp_dir(), 'hash_');
@@ -134,6 +200,39 @@ final class PerceptualHashExtractorTest extends TestCase
         }
 
         imagedestroy($image);
+
+        return $path;
+    }
+
+    private function createRotatedCopy(string $sourcePath, int $degrees): string
+    {
+        $image = @imagecreatefromjpeg($sourcePath);
+        if ($image === false) {
+            self::fail('Unable to read source image for rotation.');
+        }
+
+        $rotated = @imagerotate($image, $degrees, 0);
+        imagedestroy($image);
+
+        if ($rotated === false) {
+            self::fail('Unable to rotate image.');
+        }
+
+        $base = tempnam(sys_get_temp_dir(), 'rot_');
+        if ($base === false) {
+            imagedestroy($rotated);
+            self::fail('Unable to create temporary rotated image.');
+        }
+
+        $path = $base . '.jpg';
+        unlink($base);
+
+        if (imagejpeg($rotated, $path, 90) !== true) {
+            imagedestroy($rotated);
+            self::fail('Unable to write rotated image.');
+        }
+
+        imagedestroy($rotated);
 
         return $path;
     }

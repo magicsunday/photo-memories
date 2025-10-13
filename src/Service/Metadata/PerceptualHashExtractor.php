@@ -15,10 +15,12 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
+use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
 
 use function acos;
 use function array_fill;
+use function array_reverse;
 use function array_shift;
 use function ceil;
 use function cos;
@@ -143,6 +145,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             }
 
             $mat = $this->grayscaleMatrixFromAdapter($adapter, $this->dctSampleSize, $this->dctSampleSize);
+            $mat = $this->normalizeOrientation($mat, $media, $adapter instanceof ImagickImageAdapter);
             $adapter->destroy();
 
             [$phashHex, $phash64] = $this->computePhash128($mat, $this->lowFreqSize);
@@ -171,6 +174,195 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         } finally {
             $this->cleanupPosterFrame($posterPath);
         }
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function normalizeOrientation(array $matrix, Media $media, bool $adapterAutoOriented): array
+    {
+        if (!$this->isVideoMedia($media) && $media->needsRotation() && !$adapterAutoOriented) {
+            $matrix = $this->applyExifOrientationMatrix($matrix, $media->getOrientation());
+        }
+
+        if ($this->isVideoMedia($media)) {
+            $matrix = $this->applyVideoRotationMatrix($matrix, $media->getVideoRotationDeg());
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function applyExifOrientationMatrix(array $matrix, ?int $orientation): array
+    {
+        if ($orientation === null || $orientation === 1) {
+            return $matrix;
+        }
+
+        return match ($orientation) {
+            2 => $this->flipMatrixHorizontal($matrix),
+            3 => $this->rotateMatrix180($matrix),
+            4 => $this->flipMatrixVertical($matrix),
+            5 => $this->rotateMatrixCounterClockwise($this->flipMatrixHorizontal($matrix)),
+            6 => $this->rotateMatrixClockwise($matrix),
+            7 => $this->rotateMatrixClockwise($this->flipMatrixHorizontal($matrix)),
+            8 => $this->rotateMatrixCounterClockwise($matrix),
+            default => $matrix,
+        };
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function applyVideoRotationMatrix(array $matrix, ?float $rotationDeg): array
+    {
+        if ($rotationDeg === null || $rotationDeg === 0.0) {
+            return $matrix;
+        }
+
+        $steps = (int) round($rotationDeg / 90.0);
+        if ($steps === 0) {
+            return $matrix;
+        }
+
+        $steps %= 4;
+        if ($steps < 0) {
+            $steps += 4;
+        }
+
+        return match ($steps) {
+            1 => $this->rotateMatrixClockwise($matrix),
+            2 => $this->rotateMatrix180($matrix),
+            3 => $this->rotateMatrixCounterClockwise($matrix),
+            default => $matrix,
+        };
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function rotateMatrixClockwise(array $matrix): array
+    {
+        $height = count($matrix);
+        if ($height === 0) {
+            return $matrix;
+        }
+
+        $width = count($matrix[0]);
+        if ($width === 0) {
+            return $matrix;
+        }
+
+        $rotated = [];
+
+        for ($x = 0; $x < $width; ++$x) {
+            $row = [];
+            for ($y = $height - 1; $y >= 0; --$y) {
+                $row[] = $matrix[$y][$x];
+            }
+
+            $rotated[] = $row;
+        }
+
+        return $rotated;
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function rotateMatrixCounterClockwise(array $matrix): array
+    {
+        $height = count($matrix);
+        if ($height === 0) {
+            return $matrix;
+        }
+
+        $width = count($matrix[0]);
+        if ($width === 0) {
+            return $matrix;
+        }
+
+        $rotated = [];
+
+        for ($x = $width - 1; $x >= 0; --$x) {
+            $row = [];
+            for ($y = 0; $y < $height; ++$y) {
+                $row[] = $matrix[$y][$x];
+            }
+
+            $rotated[] = $row;
+        }
+
+        return $rotated;
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function rotateMatrix180(array $matrix): array
+    {
+        $height = count($matrix);
+        if ($height === 0) {
+            return $matrix;
+        }
+
+        $width = count($matrix[0]);
+        if ($width === 0) {
+            return $matrix;
+        }
+
+        $rotated = [];
+
+        for ($y = $height - 1; $y >= 0; --$y) {
+            $row = [];
+            for ($x = $width - 1; $x >= 0; --$x) {
+                $row[] = $matrix[$y][$x];
+            }
+
+            $rotated[] = $row;
+        }
+
+        return $rotated;
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function flipMatrixHorizontal(array $matrix): array
+    {
+        $flipped = [];
+
+        foreach ($matrix as $row) {
+            $flipped[] = array_reverse($row);
+        }
+
+        return $flipped;
+    }
+
+    /**
+     * @param array<int,array<int,float>> $matrix
+     *
+     * @return array<int,array<int,float>>
+     */
+    private function flipMatrixVertical(array $matrix): array
+    {
+        return array_reverse($matrix);
     }
 
     /**
