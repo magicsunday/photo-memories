@@ -703,79 +703,79 @@ parameters:
             recency: 0.12
 
     # Cluster Strategy Priorities
-    # Higher numbers run earlier; values normalized to an evenly spaced 40-100 range.
+    # Higher numbers run earlier; tiered ranges enforce the curated storyline hierarchy.
     # Description: Priority assigned to the "this month over years" cluster strategy.
-    memories.cluster.priority.this_month_over_years_cluster_strategy: 100
+    memories.cluster.priority.this_month_over_years_cluster_strategy: 82
     # Description: Priority assigned to the perceptual hash similarity cluster strategy.
-    memories.cluster.priority.phash_similarity_strategy: 99
+    memories.cluster.priority.phash_similarity_strategy: 45
     # Description: Priority assigned to the burst cluster strategy.
-    memories.cluster.priority.burst_cluster_strategy: 98
+    memories.cluster.priority.burst_cluster_strategy: 44
     # Description: Priority assigned to the vacation cluster strategy.
-    memories.cluster.priority.vacation_cluster_strategy: 96
+    memories.cluster.priority.vacation_cluster_strategy: 100
     # Description: Priority assigned to the transit travel day cluster strategy.
-    memories.cluster.priority.transit_travel_day_cluster_strategy: 94
+    memories.cluster.priority.transit_travel_day_cluster_strategy: 93
     # Description: Priority assigned to the first visit place cluster strategy.
-    memories.cluster.priority.first_visit_place_cluster_strategy: 91
+    memories.cluster.priority.first_visit_place_cluster_strategy: 92
     # Description: Priority assigned to the significant place cluster strategy.
-    memories.cluster.priority.significant_place_cluster_strategy: 89
+    memories.cluster.priority.significant_place_cluster_strategy: 91
     # Description: Priority assigned to the location similarity cluster strategy.
-    memories.cluster.priority.location_similarity_strategy: 88
+    memories.cluster.priority.location_similarity_strategy: 59
     # Description: Priority assigned to the person cohort cluster strategy.
-    memories.cluster.priority.person_cohort_cluster_strategy: 87
+    memories.cluster.priority.person_cohort_cluster_strategy: 77
     # Description: Priority assigned to the holiday event cluster strategy.
-    memories.cluster.priority.holiday_event_cluster_strategy: 86
+    memories.cluster.priority.holiday_event_cluster_strategy: 75
     # Description: Priority assigned to the New Year's Eve cluster strategy.
-    memories.cluster.priority.new_year_eve_cluster_strategy: 85
+    memories.cluster.priority.new_year_eve_cluster_strategy: 74
     # Description: Priority assigned to the cityscape night cluster strategy.
-    memories.cluster.priority.cityscape_night_cluster_strategy: 81
+    memories.cluster.priority.cityscape_night_cluster_strategy: 73
     # Description: Priority assigned to the nightlife event cluster strategy.
-    memories.cluster.priority.nightlife_event_cluster_strategy: 80
+    memories.cluster.priority.nightlife_event_cluster_strategy: 72
     # Description: Priority assigned to the hike adventure cluster strategy.
-    memories.cluster.priority.hike_adventure_cluster_strategy: 79
+    memories.cluster.priority.hike_adventure_cluster_strategy: 71
     # Description: Priority assigned to the cross dimension cluster strategy.
-    memories.cluster.priority.cross_dimension_cluster_strategy: 75
+    memories.cluster.priority.cross_dimension_cluster_strategy: 57
     # Description: Priority assigned to the on this day over years cluster strategy.
-    memories.cluster.priority.on_this_day_over_years_cluster_strategy: 74
+    memories.cluster.priority.on_this_day_over_years_cluster_strategy: 81
     # Description: Priority assigned to the one year ago cluster strategy.
-    memories.cluster.priority.one_year_ago_cluster_strategy: 73
+    memories.cluster.priority.one_year_ago_cluster_strategy: 80
     # Description: Priority assigned to the anniversary cluster strategy.
-    memories.cluster.priority.anniversary_cluster_strategy: 72
+    memories.cluster.priority.anniversary_cluster_strategy: 76
     # Description: Priority assigned to the snow vacation over years cluster strategy.
-    memories.cluster.priority.snow_vacation_over_years_cluster_strategy: 68
+    memories.cluster.priority.snow_vacation_over_years_cluster_strategy: 70
     # Description: Priority assigned to the season over years cluster strategy.
-    memories.cluster.priority.season_over_years_cluster_strategy: 66
+    memories.cluster.priority.season_over_years_cluster_strategy: 69
     # Description: Priority assigned to the weekend getaways over years cluster strategy.
-    memories.cluster.priority.weekend_getaways_over_years_cluster_strategy: 64
+    memories.cluster.priority.weekend_getaways_over_years_cluster_strategy: 95
     # Description: Priority assigned to the year in review cluster strategy.
-    memories.cluster.priority.year_in_review_cluster_strategy: 62
+    memories.cluster.priority.year_in_review_cluster_strategy: 84
     # Description: Priority assigned to the monthly highlights cluster strategy.
-    memories.cluster.priority.monthly_highlights_cluster_strategy: 61
+    memories.cluster.priority.monthly_highlights_cluster_strategy: 83
     # Description: Priority assigned to the season cluster strategy.
-    memories.cluster.priority.season_cluster_strategy: 60
+    memories.cluster.priority.season_cluster_strategy: 68
     # Description: Priority assigned to the golden hour cluster strategy.
-    memories.cluster.priority.golden_hour_cluster_strategy: 59
+    memories.cluster.priority.golden_hour_cluster_strategy: 67
     # Description: Priority assigned to the snow day cluster strategy.
-    memories.cluster.priority.snow_day_cluster_strategy: 56
+    memories.cluster.priority.snow_day_cluster_strategy: 66
     # Description: Priority assigned to the day album cluster strategy.
-    memories.cluster.priority.day_album_cluster_strategy: 54
+    memories.cluster.priority.day_album_cluster_strategy: 65
     # Description: Priority assigned to the time similarity cluster strategy.
-    memories.cluster.priority.time_similarity_strategy: 51
+    memories.cluster.priority.time_similarity_strategy: 55
     # Description: Priority assigned to the photo motif cluster strategy.
-    memories.cluster.priority.photo_motif_cluster_strategy: 48
+    memories.cluster.priority.photo_motif_cluster_strategy: 54
     # Description: Priority assigned to the panorama cluster strategy.
-    memories.cluster.priority.panorama_cluster_strategy: 47
+    memories.cluster.priority.panorama_cluster_strategy: 53
     # Description: Priority assigned to the panorama over years cluster strategy.
-    memories.cluster.priority.panorama_over_years_cluster_strategy: 46
+    memories.cluster.priority.panorama_over_years_cluster_strategy: 52
     # Description: Priority assigned to the portrait orientation cluster strategy.
-    memories.cluster.priority.portrait_orientation_cluster_strategy: 45
+    memories.cluster.priority.portrait_orientation_cluster_strategy: 51
     # Description: Priority assigned to the at home weekend cluster strategy.
-    memories.cluster.priority.at_home_weekend_cluster_strategy: 44
+    memories.cluster.priority.at_home_weekend_cluster_strategy: 64
     # Description: Priority assigned to the at home weekday cluster strategy.
-    memories.cluster.priority.at_home_weekday_cluster_strategy: 42
+    memories.cluster.priority.at_home_weekday_cluster_strategy: 63
     # Description: Priority assigned to the video stories cluster strategy.
-    memories.cluster.priority.video_stories_cluster_strategy: 41
+    memories.cluster.priority.video_stories_cluster_strategy: 50
     # Description: Priority assigned to the device similarity cluster strategy.
-    memories.cluster.priority.device_similarity_strategy: 40
+    memories.cluster.priority.device_similarity_strategy: 46
 
     # Scoring Defaults
     # Description: Megapixel baseline used to determine high quality imagery.
