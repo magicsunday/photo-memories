@@ -465,12 +465,82 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         self::assertCount(5, $result);
         self::assertSame(100, $result[0]['timestamp']);
-        self::assertSame([1, 2, 3, 4, 5], [
+        self::assertSame([1, 2, 3, 6, 7], [
             $result[0]['id'],
             $result[1]['id'],
             $result[2]['id'],
             $result[3]['id'],
             $result[4]['id'],
+        ]);
+    }
+
+    #[Test]
+    public function higherScoringCandidateSurvivesQuotaAfterTrimmingBeforeSorting(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class() implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'score-ordered';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        usort(
+                            $candidates,
+                            static fn (array $left, array $right): int => $right['score'] <=> $left['score']
+                        );
+
+                        return $candidates;
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'score-quota',
+            targetTotal: 2,
+            minimumTotal: 1,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+        );
+
+        $candidates = [
+            ['id' => 1, 'timestamp' => 100, 'score' => 0.4],
+            ['id' => 2, 'timestamp' => 150, 'score' => 0.6],
+            ['id' => 3, 'timestamp' => 200, 'score' => 0.9],
+            ['id' => 4, 'timestamp' => 250, 'score' => 0.2],
+        ];
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertSame(2, count($result));
+        self::assertSame([150, 200], [
+            $result[0]['timestamp'],
+            $result[1]['timestamp'],
+        ]);
+        self::assertSame([2, 3], [
+            $result[0]['id'],
+            $result[1]['id'],
         ]);
     }
 
