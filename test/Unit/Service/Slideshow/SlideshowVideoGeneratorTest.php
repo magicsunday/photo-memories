@@ -698,7 +698,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertArrayHasKey($filterComplexIndex, $command);
 
         $filterComplex = $command[$filterComplexIndex];
-        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=5.75:d=1.5[aout]', $filterComplex);
+        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=5.656:d=1.5[aout]', $filterComplex);
 
         $audioMapIndex = array_search('-map', $command, true);
         self::assertNotFalse($audioMapIndex);
@@ -784,8 +784,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
             $job->slides(),
-            $transitionDuration,
-            $job->transitionDurations()
+            $job->transitionDurations(),
+            $job->title(),
+            $job->subtitle(),
         );
 
         $loopDurations = [];
@@ -846,6 +847,58 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $expectedFadeStart    = max(0.0, $expectedTimeline - $expectedFadeDuration);
 
         self::assertEqualsWithDelta($expectedFadeStart, $fadeStart, 0.001);
+    }
+
+    public function testDeterministicTransitionDurationsAreWithinExpectedRange(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/slide-a.jpg',
+                'mediaId'    => 1,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-b.jpg',
+                'mediaId'    => 2,
+                'duration'   => 5.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-c.jpg',
+                'mediaId'    => 3,
+                'duration'   => 6.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/slide-d.jpg',
+                'mediaId'    => 4,
+                'duration'   => 5.5,
+                'transition' => null,
+            ],
+        ];
+
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('resolveTransitionDurationsForSlides');
+        $method->setAccessible(true);
+
+        /** @var list<float> $first */
+        $first = $method->invoke($generator, $slides, [], 'Gipfelmomente', 'Winter 2024');
+        /** @var list<float> $second */
+        $second = $method->invoke($generator, $slides, [], 'Gipfelmomente', 'Winter 2024');
+
+        self::assertSame($first, $second, 'Deterministic seeds should produce stable durations.');
+        self::assertCount(3, $first);
+
+        $unique = array_unique(array_map(static fn (float $value): string => sprintf('%.6F', $value), $first));
+        self::assertGreaterThan(1, count($unique), 'Expected at least two distinct transition durations.');
+
+        foreach ($first as $duration) {
+            self::assertGreaterThanOrEqual(0.6, $duration);
+            self::assertLessThanOrEqual(1.0, $duration);
+        }
     }
 
     public function testGenerateThrowsExceptionWhenImageFileIsNotReadable(): void
@@ -1237,8 +1290,9 @@ BASH;
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
             $job->slides(),
-            5.0,
-            $job->transitionDurations()
+            $job->transitionDurations(),
+            $job->title(),
+            $job->subtitle(),
         );
 
         self::assertSame(3, count($parsed['durations']));
