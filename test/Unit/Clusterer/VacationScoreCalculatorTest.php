@@ -1159,6 +1159,7 @@ final class VacationScoreCalculatorTest extends TestCase
             emitter: $emitter,
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
+            minAwayDays: 1,
             referenceDate: $referenceDate,
         );
 
@@ -1209,6 +1210,16 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(0, $runMetrics['run_length_nights']);
         self::assertSame(0, $runMetrics['core_day_count']);
         self::assertSame(1, $runMetrics['peripheral_day_count']);
+        self::assertArrayHasKey('selection_average_spacing_seconds', $runMetrics);
+        self::assertArrayHasKey('selection_dedupe_rate', $runMetrics);
+        self::assertArrayHasKey('selection_relaxations_applied', $runMetrics);
+        self::assertEqualsWithDelta(
+            $memberSelection['spacing']['average_seconds'],
+            $runMetrics['selection_average_spacing_seconds'],
+            0.0001,
+        );
+        self::assertEqualsWithDelta(1 / 3, $runMetrics['selection_dedupe_rate'], 0.001);
+        self::assertSame([], $runMetrics['selection_relaxations_applied']);
         self::assertSame(
             $selectionOptions->targetTotal,
             $runMetrics['selection_profile']['target_total'],
@@ -1259,6 +1270,20 @@ final class VacationScoreCalculatorTest extends TestCase
         );
         self::assertArrayHasKey('poi_day_ratio', $metricsEvent['context']);
         self::assertArrayHasKey('people_unique_count', $metricsEvent['context']);
+        self::assertArrayHasKey('selection_average_spacing_seconds', $metricsEvent['context']);
+        self::assertArrayHasKey('selection_dedupe_rate', $metricsEvent['context']);
+        self::assertArrayHasKey('selection_relaxations_applied', $metricsEvent['context']);
+        self::assertEqualsWithDelta(
+            $runMetrics['selection_average_spacing_seconds'],
+            $metricsEvent['context']['selection_average_spacing_seconds'],
+            0.0001,
+        );
+        self::assertEqualsWithDelta(
+            $runMetrics['selection_dedupe_rate'],
+            $metricsEvent['context']['selection_dedupe_rate'],
+            0.001,
+        );
+        self::assertSame([], $metricsEvent['context']['selection_relaxations_applied']);
 
         $completeEvent = $emitter->events[2];
         self::assertSame('vacation_curation', $completeEvent['job']);
@@ -1270,6 +1295,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(2, $completeEvent['context']['spacing_rejections']);
         self::assertGreaterThanOrEqual(0.0, $completeEvent['context']['average_spacing_seconds']);
         self::assertSame('vacation.day_trip', $completeEvent['context']['storyline']);
+        self::assertArrayNotHasKey('reason', $completeEvent['context']);
     }
 
     #[Test]

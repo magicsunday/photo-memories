@@ -35,6 +35,7 @@ use function array_flip;
 use function array_key_exists;
 use function array_keys;
 use function array_merge;
+use function array_unique;
 use function array_map;
 use function array_sum;
 use function ceil;
@@ -683,9 +684,32 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $selectionTelemetry['storyline'] = $storyline;
 
         $dayCategorySummary = $this->summariseDayCategories($dayKeys, $dayContext);
-        $phashSummary       = $this->summarisePhashDistribution($selectionTelemetry);
-        $peopleSummary      = $this->summarisePeopleBalance($selectionTelemetry, $cohortMemberAggregate);
-        $poiSummary         = $this->summarisePoiCoverage(
+
+        if ($dayContext !== [] && $dayCategorySummary['core'] === 0 && $weekendExceptionApplied === false) {
+            if ($this->monitoringEmitter !== null) {
+                $this->monitoringEmitter->emit(
+                    'vacation_curation',
+                    'selection_completed',
+                    [
+                        'pre_count'                => $preSelectionCount,
+                        'post_count'               => $selectedCount,
+                        'dropped_total'            => $droppedCount,
+                        'near_duplicates_removed'  => $nearDupBlocked,
+                        'near_duplicates_replaced' => $nearDupReplaced,
+                        'spacing_rejections'       => $spacingRejections,
+                        'average_spacing_seconds'  => $averageSpacingSeconds,
+                        'storyline'                => $storyline,
+                        'reason'                   => 'missing_core_days',
+                    ]
+                );
+            }
+
+            return null;
+        }
+
+        $phashSummary  = $this->summarisePhashDistribution($selectionTelemetry);
+        $peopleSummary = $this->summarisePeopleBalance($selectionTelemetry, $cohortMemberAggregate);
+        $poiSummary    = $this->summarisePoiCoverage(
             $dayKeys,
             $baseAwayMap,
             $poiPresence,
@@ -696,6 +720,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $tourismRatio,
         );
         $profileSummary = $this->summariseSelectionProfile($selectionProfileKey, $selectionOptions);
+
+        $relaxationsApplied = array_values(array_unique(array_filter(
+            $selectionTelemetry['relaxation_hints'],
+            static fn ($hint): bool => is_string($hint) && $hint !== '',
+        )));
+
+        $dedupeRate = $preSelectionCount > 0
+            ? $nearDupBlocked / $preSelectionCount
+            : 0.0;
 
         $runMetrics = [
             'storyline'                   => $storyline,
@@ -712,6 +745,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_profile'           => $profileSummary,
             'selection_pre_count'         => $preSelectionCount,
             'selection_post_count'        => $selectedCount,
+            'selection_average_spacing_seconds' => $averageSpacingSeconds,
+            'selection_dedupe_rate'             => $dedupeRate,
+            'selection_relaxations_applied'     => $relaxationsApplied,
         ];
 
         $selectionTelemetry['run_metrics'] = $runMetrics;
@@ -1384,6 +1420,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_repeat_penalty'         => round((float) $profile['repeat_penalty'], 3),
             'selection_pre_count'              => $runMetrics['selection_pre_count'],
             'selection_post_count'             => $runMetrics['selection_post_count'],
+            'selection_average_spacing_seconds'=> round((float) $runMetrics['selection_average_spacing_seconds'], 3),
+            'selection_dedupe_rate'            => round((float) $runMetrics['selection_dedupe_rate'], 3),
+            'selection_relaxations_applied'    => $runMetrics['selection_relaxations_applied'],
         ];
 
         if ($people['target_cap'] !== null) {
