@@ -22,6 +22,7 @@ use function is_array;
 use function is_float;
 use function is_int;
 use function is_numeric;
+use function max;
 use function min;
 use function sort;
 use const SORT_NUMERIC;
@@ -31,6 +32,8 @@ use const SORT_NUMERIC;
  */
 final class PhashDiversityStage implements SelectionStageInterface
 {
+    private const GLOBAL_MIN_DISTANCE = 9;
+
     /**
      * @var array<string, int>
      */
@@ -48,9 +51,13 @@ final class PhashDiversityStage implements SelectionStageInterface
             return $candidates;
         }
 
+        $policyThreshold = max(self::GLOBAL_MIN_DISTANCE, $threshold);
+        $threshold       = $policyThreshold;
+
         $adaptiveThreshold = $this->determineAdaptiveThreshold($candidates, $policy);
         if ($adaptiveThreshold !== null) {
-            $threshold = max(1, min($threshold, $adaptiveThreshold));
+            // Keep adaptive adjustments from undercutting the configured minimum or the global floor.
+            $threshold = max($policyThreshold, $adaptiveThreshold);
         }
 
         $this->distanceCache = [];
