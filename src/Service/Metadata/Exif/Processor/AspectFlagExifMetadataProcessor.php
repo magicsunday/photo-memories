@@ -29,12 +29,10 @@ final class AspectFlagExifMetadataProcessor implements ExifMetadataProcessorInte
             return;
         }
 
-        if ($height > $width && ((float) $height / (float) $width) >= 1.2) {
-            $media->setIsPortrait(true);
-        }
+        $isPortrait = $height > $width && ((float) $height / (float) $width) >= 1.2;
+        $isPanorama = $width > $height && ((float) $width / (float) $height) >= 2.4;
 
-        if ($width > $height && ((float) $width / (float) $height) >= 2.4) {
-            $media->setIsPanorama(true);
-        }
+        $media->setIsPortrait($isPortrait);
+        $media->setIsPanorama($isPanorama);
     }
 }
