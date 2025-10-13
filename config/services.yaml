@@ -28,6 +28,11 @@ services:
         arguments:
             $commands: !tagged command
 
+    Psr\Log\NullLogger: ~
+
+    Psr\Log\LoggerInterface:
+        alias: Psr\Log\NullLogger
+
     MagicSunday\Memories\Utility\DefaultPoiLabelResolver:
         arguments:
             $preferredLocale: '%memories.localization.preferred_locale%'
