@@ -7,6 +7,8 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 `parameters.yaml` bündelt globale Standardwerte für die Anwendung. Die Werte sind nach Funktionsbereichen gruppiert:
 
 - **Indexierung** – Dateiendungen und Batchgrößen für die Medienaufnahme (`memories.index.*`).
+  - Die Standardliste `memories.index.video_ext` umfasst jetzt `mp4`, `mov`, `m4v`, `3gp`, `hevc`, `mkv` und `avi`. Damit
+    erkennt die Indexierung gängige Video-Container bereits ohne lokale Overrides.
 - **Videoverarbeitung** – Pfade und Defaults für `ffmpeg`/`ffprobe` sowie das Posterframe (`memories.video.*`).
 - **Metadaten-Pipeline** – Aktivierung von Telemetrie sowie optionale Verarbeitungsschritte (`memories.metadata.pipeline.*`).
 - **Gesichtserkennung** – Binärpfade, Klassifizierer und Erkennungsparameter (`memories.face_detection.*`).
@@ -61,6 +63,7 @@ Steuert, ob das Monitoring aktiv ist und wohin Job-Logs geschrieben werden (`mem
 Diese Datei registriert Services im Symfony-DI-Container. Sie nutzt Autowiring/-konfiguration für den Namespace `MagicSunday\Memories\` und ergänzt gezielt Service-Definitionen. Wichtige Abschnitte:
 
 - **Metadaten-Extraktoren** – Reihenfolge und Parameter der Extraktionsschritte (Tag `memories.metadata_extractor`).
+  - Der `ExifMetadataExtractor` liest standardmäßig auch bei Videos EXIF-Daten (`$readExifForVideos = true`).
 - **Gesichtserkennung & Qualität** – Service-Bindungen für Backends und Aggregatoren.
 - **Clusterer & Ranking** – Strategien, Prioritäten und Konsolidierungsregeln (`MagicSunday\Memories\Service\Clusterer\*`).
 - **Feed-Services** – Builder, Personalisierungsprofile und HTTP-Controller (`MagicSunday\Memories\Service\Feed\*`, `FeedController`).

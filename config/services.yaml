@@ -133,7 +133,7 @@ services:
     ########################################
     MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor:
         arguments:
-            $readExifForVideos: false
+            $readExifForVideos: true
         tags:
             - { name: 'memories.metadata_extractor', priority: 190 }
 
