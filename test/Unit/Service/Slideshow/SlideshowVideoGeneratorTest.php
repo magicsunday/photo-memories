@@ -142,7 +142,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
         self::assertStringContainsString('x=w*0.07', $filterComplex);
-        self::assertStringContainsString('h*0.07', $filterComplex);
+        self::assertStringContainsString('y=h*0.86', $filterComplex);
+        self::assertStringContainsString('y=h*0.92', $filterComplex);
         self::assertStringNotContainsString('safeX', $filterComplex);
         self::assertStringNotContainsString('safeY', $filterComplex);
         self::assertStringNotContainsString('[vtmp]', $filterComplex);
@@ -308,6 +309,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $escapeMethod = $reflector->getMethod('escapeDrawTextValue');
         $escapeMethod->setAccessible(true);
+        $fontMethod = $reflector->getMethod('resolveFontDirective');
+        $fontMethod->setAccessible(true);
 
         $title    = "Sommer's Rückblick";
         $subtitle = 'Intro: 01%';
@@ -321,10 +324,16 @@ final class SlideshowVideoGeneratorTest extends TestCase
         /** @var string $escapedTitle */
         $escapedTitle = trim($escapeMethod->invoke($generator, $title));
 
+        /** @var string $fontDirective */
+        $fontDirective = $fontMethod->invoke($generator);
+        $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
+
         $expected = sprintf(
-            "drawtext=text='%s':fontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86,drawtext=text='%s':fontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92",
+            "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86,drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92",
             $escapedSubtitle,
-            $escapedTitle
+            $fontSegment,
+            $escapedTitle,
+            $fontSegment
         );
 
         self::assertSame($expected, $filters);
@@ -1265,7 +1274,7 @@ BASH;
             [
                 'image'      => '/tmp/slide-3.jpg',
                 'mediaId'    => 3,
-                'duration'   => 0.25,
+                'duration'   => 0.65,
                 'transition' => null,
             ],
             [
@@ -1322,14 +1331,14 @@ BASH;
             self::assertEqualsWithDelta($duration, $parsed['durations'][$index], 0.0001);
         }
 
-        self::assertEqualsWithDelta(1.2, $parsed['durations'][0], 0.0001);
-        self::assertEqualsWithDelta(0.25, $parsed['durations'][1], 0.0001);
-        self::assertEqualsWithDelta(0.25, $parsed['durations'][2], 0.0001);
+        self::assertEqualsWithDelta(1.0, $parsed['durations'][0], 0.0001);
+        self::assertEqualsWithDelta(0.6, $parsed['durations'][1], 0.0001);
+        self::assertEqualsWithDelta(0.65, $parsed['durations'][2], 0.0001);
 
         self::assertSame(3, count($parsed['offsets']));
-        self::assertEqualsWithDelta(1.8, $parsed['offsets'][0], 0.0001);
-        self::assertEqualsWithDelta(4.55, $parsed['offsets'][1], 0.0001);
-        self::assertEqualsWithDelta(4.55, $parsed['offsets'][2], 0.0001);
+        self::assertEqualsWithDelta(2.0, $parsed['offsets'][0], 0.0001);
+        self::assertEqualsWithDelta(4.4, $parsed['offsets'][1], 0.0001);
+        self::assertEqualsWithDelta(4.4, $parsed['offsets'][2], 0.0001);
     }
 
     public function testEscapeFilterExpressionMasksEveryCommaExactlyOnce(): void

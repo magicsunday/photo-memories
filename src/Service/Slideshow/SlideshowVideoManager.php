@@ -394,7 +394,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $storySlides[] = $storySlide;
 
             if ($index < $slideCount - 1) {
-                $transitionDurations[$index] = $randomizer->getInt(300, 1200) / 1000;
+                $transitionDurations[$index] = $randomizer->getInt(600, 1000) / 1000;
             }
         }
 
