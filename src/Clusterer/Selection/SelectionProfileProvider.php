@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Selection;
 
+use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability;
 use function array_key_exists;
 use function array_merge;
 use function filter_var;
@@ -46,6 +47,7 @@ final class SelectionProfileProvider
         private readonly string $defaultProfile = 'default',
         array $profiles = [],
         array $algorithmProfiles = [],
+        private readonly ?FaceDetectionAvailability $faceDetectionAvailability = null,
     ) {
         $this->profiles          = $this->sanitizeProfiles($profiles);
         $this->algorithmProfiles = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
@@ -88,6 +90,12 @@ final class SelectionProfileProvider
         $targetTotal   = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
         $minimumTotal = $this->resolveMinimumTotal($merged, $targetTotal);
 
+        $faceDetectionAvailable = $this->faceDetectionAvailability?->isAvailable() ?? true;
+        if ($profileKey === 'vacation_weekend_transit' && !$faceDetectionAvailable) {
+            $merged['face_bonus']  = 0.12;
+            $merged['video_bonus'] = 0.22;
+        }
+
         return new VacationSelectionOptions(
             targetTotal: $targetTotal,
             maxPerDay: $this->intValue($merged, 'max_per_day', $this->defaultOptions->maxPerDay),
@@ -101,6 +109,7 @@ final class SelectionProfileProvider
             qualityFloor: $this->floatValue($merged, 'quality_floor', $this->defaultOptions->qualityFloor),
             enablePeopleBalance: $this->boolValue($merged, 'enable_people_balance', $this->defaultOptions->enablePeopleBalance),
             peopleBalanceWeight: $this->floatValue($merged, 'people_balance_weight', $this->defaultOptions->peopleBalanceWeight),
+            faceDetectionAvailable: $faceDetectionAvailable,
             repeatPenalty: $this->floatValue($merged, 'repeat_penalty', $this->defaultOptions->repeatPenalty),
             coreDayBonus: $this->intValue($merged, 'core_day_bonus', $this->defaultOptions->coreDayBonus),
             peripheralDayPenalty: $this->intValue($merged, 'peripheral_day_penalty', $this->defaultOptions->peripheralDayPenalty),
