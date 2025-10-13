@@ -680,6 +680,21 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             }
         }
 
+        $limit = min(
+            $policy->getTargetTotal(),
+            max($policy->getMinimumTotal(), count($current))
+        );
+
+        if ($limit <= 0) {
+            return [];
+        }
+
+        $current = array_slice($current, 0, $limit);
+
+        if ($current === []) {
+            return [];
+        }
+
         usort($current, static function (array $a, array $b): int {
             if ($a['timestamp'] === $b['timestamp']) {
                 return $a['id'] <=> $b['id'];
@@ -688,12 +703,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return $a['timestamp'] <=> $b['timestamp'];
         });
 
-        $limit = min(
-            $policy->getTargetTotal(),
-            max($policy->getMinimumTotal(), count($current))
-        );
-
-        return array_slice($current, 0, $limit);
+        return $current;
     }
 
     /**
