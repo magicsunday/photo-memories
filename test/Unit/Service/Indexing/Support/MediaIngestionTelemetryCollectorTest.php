@@ -52,9 +52,10 @@ final class MediaIngestionTelemetryCollectorTest extends TestCase
 
         $metrics = $collector->metrics();
 
-        self::assertSame(1, $metrics['images']);
-        self::assertSame(1, $metrics['videos']);
+        self::assertSame(1, $metrics['images_total']);
+        self::assertSame(1, $metrics['videos_total']);
         self::assertSame(1, $metrics['faces_detected']);
+        self::assertSame(2, $metrics['exif_tz_hits']);
         self::assertSame(1, $metrics['quicktime_timezone_hits']);
         self::assertSame(1, $metrics['xmp_timezone_hits']);
         self::assertSame(1, $metrics['ffprobe_available']);
@@ -63,9 +64,10 @@ final class MediaIngestionTelemetryCollectorTest extends TestCase
         $collector->reset();
 
         $cleared = $collector->metrics();
-        self::assertSame(0, $cleared['images']);
-        self::assertSame(0, $cleared['videos']);
+        self::assertSame(0, $cleared['images_total']);
+        self::assertSame(0, $cleared['videos_total']);
         self::assertSame(0, $cleared['faces_detected']);
+        self::assertSame(0, $cleared['exif_tz_hits']);
         self::assertSame(0, $cleared['quicktime_timezone_hits']);
         self::assertSame(0, $cleared['xmp_timezone_hits']);
         self::assertSame(0, $cleared['ffprobe_available']);

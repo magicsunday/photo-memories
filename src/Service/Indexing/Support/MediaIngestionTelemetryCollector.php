@@ -104,20 +104,20 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
 
     public function metrics(): array
     {
-        $images       = 0;
-        $videos       = 0;
+        $imagesTotal  = 0;
+        $videosTotal  = 0;
         $faces        = 0;
         $ffprobeAvail = 0;
         $ffprobeMiss  = 0;
 
         foreach ($this->mediaRecords as $path => $record) {
             if ($record['isVideo']) {
-                ++$videos;
+                ++$videosTotal;
                 if (array_key_exists($path, $this->ffprobeAvailability) === false) {
                     $this->ffprobeAvailability[$path] = false;
                 }
             } elseif ($record['isImage']) {
-                ++$images;
+                ++$imagesTotal;
             }
 
             if ($record['facesDetected']) {
@@ -133,10 +133,13 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
             }
         }
 
+        $combinedExifHits = $this->quickTimeTimezone + $this->xmpTimezone;
+
         return [
-            'images'                  => $images,
-            'videos'                  => $videos,
+            'images_total'            => $imagesTotal,
+            'videos_total'            => $videosTotal,
             'faces_detected'          => $faces,
+            'exif_tz_hits'            => count($combinedExifHits),
             'quicktime_timezone_hits' => count($this->quickTimeTimezone),
             'xmp_timezone_hits'       => count($this->xmpTimezone),
             'ffprobe_available'       => $ffprobeAvail,

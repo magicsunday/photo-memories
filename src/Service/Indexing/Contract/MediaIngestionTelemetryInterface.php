@@ -28,11 +28,12 @@ interface MediaIngestionTelemetryInterface
 
     /**
      * @return array{
-     *     images:int,
-     *     videos:int,
+     *     images_total:int,
+     *     videos_total:int,
      *     faces_detected:int,
-     *     quicktime_timezone_hits:int,
-     *     xmp_timezone_hits:int,
+     *     exif_tz_hits:int,
+     *     quicktime_timezone_hits?:int,
+     *     xmp_timezone_hits?:int,
      *     ffprobe_available:int,
      *     ffprobe_missing:int
      * }

@@ -69,9 +69,10 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
         self::assertSame(false, $context['dryRun'] ?? null);
 
         $metrics = $context['metrics'] ?? [];
-        self::assertSame(1, $metrics['images'] ?? null);
-        self::assertSame(1, $metrics['videos'] ?? null);
+        self::assertSame(1, $metrics['images_total'] ?? null);
+        self::assertSame(1, $metrics['videos_total'] ?? null);
         self::assertSame(1, $metrics['faces_detected'] ?? null);
+        self::assertSame(2, $metrics['exif_tz_hits'] ?? null);
         self::assertSame(1, $metrics['quicktime_timezone_hits'] ?? null);
         self::assertSame(1, $metrics['xmp_timezone_hits'] ?? null);
         self::assertSame(1, $metrics['ffprobe_available'] ?? null);
