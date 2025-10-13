@@ -202,8 +202,11 @@ services:
         tags:
             - { name: 'memories.metadata_extractor', priority: 70 }
 
+    MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability: ~
+
     MagicSunday\Memories\Service\Metadata\Support\CommandLineFaceDetectionBackend:
         arguments:
+            $availability: '@MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability'
             $binary: '%memories.face_detection.binary%'
             $cascadePath: '%memories.face_detection.cascade%'
             $scaleFactor: '%memories.face_detection.scale_factor%'
@@ -815,6 +818,7 @@ services:
             $defaultProfile: '%memories.cluster.selection.default_profile%'
             $profiles: '%memories.cluster.selection.profile_values%'
             $algorithmProfiles: '%memories.cluster.selection.algorithm_profiles%'
+            $faceDetectionAvailability: '@MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability'
 
     MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider: ~
 

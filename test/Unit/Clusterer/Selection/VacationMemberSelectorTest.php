@@ -200,6 +200,31 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertNotContains($plain, $members);
     }
 
+    public function testTelemetryReportsFaceDetectionAvailability(): void
+    {
+        $media = $this->createMedia('availability.jpg', '2024-05-07T10:00:00+00:00', 0.7);
+
+        $summary = $this->createDaySummary('2024-05-07', [$media]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 1,
+            maxPerDay: 1,
+            faceBonus: 0.12,
+            videoBonus: 0.22,
+            faceDetectionAvailable: false,
+            qualityFloor: 0.1,
+        );
+
+        $result = $this->selector->select(['2024-05-07' => $summary], $this->createHome(), $options);
+
+        $telemetry = $result->getTelemetry();
+
+        self::assertFalse($telemetry['face_detection_available']);
+        self::assertTrue($telemetry['face_detection_people_weight_adjusted']);
+        self::assertSame(0.12, $telemetry['face_bonus']);
+        self::assertSame(0.22, $telemetry['video_bonus']);
+    }
+
     public function testPeopleBalanceEncouragesDiverseFaces(): void
     {
         $aliceFirst  = $this->createPersonMedia('alice-first.jpg', '2024-05-12T09:00:00+00:00', 0.95, 'person-a');

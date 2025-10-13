@@ -31,17 +31,8 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
 {
     private string $binary;
 
-    private ?string $cascadePath;
-
-    private float $scaleFactor;
-
-    private int $minNeighbors;
-
-    private int $minSize;
-
-    private float $timeout;
-
     public function __construct(
+        private readonly FaceDetectionAvailability $availability,
         string $binary,
         ?string $cascadePath = null,
         float $scaleFactor = 1.1,
@@ -57,9 +48,21 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
         $this->timeout      = $timeout;
     }
 
+    private ?string $cascadePath;
+
+    private float $scaleFactor;
+
+    private int $minNeighbors;
+
+    private int $minSize;
+
+    private float $timeout;
+
     public function detectFaces(string $imagePath, Media $media): FaceDetectionResult
     {
         if ($this->binary === '' || !is_file($imagePath)) {
+            $this->availability->markUnavailable();
+
             return FaceDetectionResult::unavailable();
         }
 
@@ -94,10 +97,14 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
         try {
             $process->run();
         } catch (Throwable) {
+            $this->availability->markUnavailable();
+
             return FaceDetectionResult::unavailable();
         }
 
         if (!$process->isSuccessful()) {
+            $this->availability->markUnavailable();
+
             return FaceDetectionResult::unavailable();
         }
 
@@ -107,6 +114,8 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
         }
 
         if ($output === '') {
+            $this->availability->markAvailable();
+
             return FaceDetectionResult::fromCount(0);
         }
 
@@ -117,15 +126,21 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
             JSON_THROW_ON_ERROR
         );
         if (!is_array($decoded)) {
+            $this->availability->markUnavailable();
+
             return FaceDetectionResult::unavailable();
         }
 
         if (array_key_exists('count', $decoded) && is_numeric($decoded['count'])) {
+            $this->availability->markAvailable();
+
             return FaceDetectionResult::fromCount(max(0, (int) $decoded['count']));
         }
 
         $faces = $decoded['faces'] ?? $decoded['detections'] ?? null;
         if (!is_array($faces)) {
+            $this->availability->markAvailable();
+
             return FaceDetectionResult::fromCount(0);
         }
 
@@ -141,6 +156,8 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
                 ++$count;
             }
         }
+
+        $this->availability->markAvailable();
 
         return FaceDetectionResult::fromCount(max(0, $count));
     }

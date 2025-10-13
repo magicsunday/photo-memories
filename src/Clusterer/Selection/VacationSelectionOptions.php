@@ -36,6 +36,7 @@ final readonly class VacationSelectionOptions
         public float $qualityFloor = 0.48,
         public bool $enablePeopleBalance = true,
         public float $peopleBalanceWeight = 0.35,
+        public bool $faceDetectionAvailable = true,
         public float $repeatPenalty = 0.0,
         public int $coreDayBonus = 1,
         public int $peripheralDayPenalty = 1,
