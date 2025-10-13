@@ -17,7 +17,8 @@ use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStag
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
-use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\BurstDetector;
+use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 
 /**
  * Replays duplicate, burst and live-photo detection for freshly persisted media.
@@ -28,8 +29,8 @@ final readonly class PostFlushReprocessingStage implements MediaIngestionStageIn
         private PersistedMediaTracker $persistedMediaTracker,
         private MediaRepository $mediaRepository,
         private NearDuplicateStage $nearDuplicateStage,
-        private SingleMetadataExtractorInterface $burstDetector,
-        private SingleMetadataExtractorInterface $livePairLinker,
+        private BurstDetector $burstDetector,
+        private LivePairLinker $livePairLinker,
         private EntityManagerInterface $entityManager,
     ) {
     }
