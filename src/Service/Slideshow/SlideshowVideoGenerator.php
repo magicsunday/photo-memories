@@ -447,11 +447,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
-        $clipSecondsValue     = max(0.1, $clipDuration);
-        $visibleSecondsValue  = max(0.1, min($visibleDuration, $clipSecondsValue));
-        $frameCount           = max(2, (int) ceil($visibleSecondsValue * self::ZOOMPAN_FPS));
-        $maxFrameIndex        = $frameCount - 1;
-        $progressExpr         = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $maxFrameIndex));
+        $clipSecondsValue = max(0.1, $clipDuration);
+        $visibleDuration  = max(0.1, min($visibleDuration, $clipSecondsValue));
+        $frameCount       = max(2, (int) round($visibleDuration * self::ZOOMPAN_FPS));
+        $progressExpr     = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $frameCount));
 
         $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
@@ -494,10 +493,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->kenBurnsEnabled) {
             $foreground .= sprintf(
-                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=1:fps=%4$s,scale=ceil(iw/2)*2:ceil(ih/2)*2',
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=%4$d:fps=%5$s,scale=ceil(iw/2)*2:ceil(ih/2)*2',
                 $this->quoteFilterExpression($zoomExpr),
                 $this->quoteFilterExpression($panXExpr),
                 $this->quoteFilterExpression($panYExpr),
+                $frameCount,
                 $zoompanFps,
             );
         }
