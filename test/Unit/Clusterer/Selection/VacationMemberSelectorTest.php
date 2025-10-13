@@ -63,7 +63,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary = $this->createDaySummary('2024-05-02', [$morningPreferred, $morningOther, $afternoon]);
 
-        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, timeSlotHours: 6, qualityFloor: 0.1);
+        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, timeSlotHours: 6, minSpacingSeconds: 0, qualityFloor: 0.1);
         $result  = $this->selector->select(['2024-05-02' => $summary], $this->createHome(), $options);
 
         $members = $result->getMembers();
@@ -179,6 +179,10 @@ final class VacationMemberSelectorTest extends TestCase
         $video = $this->createMedia('bonus-video.mp4', '2024-05-06T16:00:00+00:00', 0.55);
         $video->setIsVideo(true);
 
+        $plain->setCameraBodySerial('Device-A');
+        $faces->setCameraBodySerial('Device-B');
+        $video->setCameraBodySerial('Device-C');
+
         $summary = $this->createDaySummary('2024-05-06', [$plain, $faces, $video]);
 
         $options = new VacationSelectionOptions(
@@ -189,6 +193,7 @@ final class VacationMemberSelectorTest extends TestCase
             selfiePenalty: 0.0,
             qualityFloor: 0.1,
             timeSlotHours: 6,
+            minSpacingSeconds: 0,
         );
 
         $result  = $this->selector->select(['2024-05-06' => $summary], $this->createHome(), $options);
@@ -334,6 +339,58 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertSame(1, $dayTwoOccurrences);
     }
 
+    public function testDayContextAdjustsDailyCaps(): void
+    {
+        $coreMembers = [
+            $this->createMedia('core-1.jpg', '2024-07-01T08:00:00+00:00', 0.95),
+            $this->createMedia('core-2.jpg', '2024-07-01T09:00:00+00:00', 0.9),
+            $this->createMedia('core-3.jpg', '2024-07-01T10:00:00+00:00', 0.88),
+            $this->createMedia('core-4.jpg', '2024-07-01T11:00:00+00:00', 0.86),
+        ];
+        $peripheralMembers = [
+            $this->createMedia('peripheral-1.jpg', '2024-07-02T08:00:00+00:00', 0.82),
+            $this->createMedia('peripheral-2.jpg', '2024-07-02T09:00:00+00:00', 0.81),
+            $this->createMedia('peripheral-3.jpg', '2024-07-02T10:00:00+00:00', 0.8),
+            $this->createMedia('peripheral-4.jpg', '2024-07-02T11:00:00+00:00', 0.79),
+        ];
+
+        $coreSummary = $this->createDaySummary('2024-07-01', $coreMembers, [
+            'selectionContext' => ['category' => 'core', 'score' => 0.9, 'duration' => null, 'metrics' => []],
+        ]);
+        $peripheralSummary = $this->createDaySummary('2024-07-02', $peripheralMembers, [
+            'selectionContext' => ['category' => 'peripheral', 'score' => 0.5, 'duration' => null, 'metrics' => []],
+        ]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 6,
+            maxPerDay: 4,
+            maxPerStaypoint: 3,
+            minSpacingSeconds: 0,
+            qualityFloor: 0.1,
+            minimumTotal: 6,
+        );
+
+        $result = $this->selector->select([
+            '2024-07-01' => $coreSummary,
+            '2024-07-02' => $peripheralSummary,
+        ], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(6, $members);
+
+        $counts = $this->countMembersByDay($members);
+        self::assertSame(4, $counts['2024-07-01'] ?? 0);
+        self::assertSame(2, $counts['2024-07-02'] ?? 0);
+
+        $telemetry  = $result->getTelemetry();
+        $thresholds = $telemetry['thresholds'];
+        self::assertSame(3, $thresholds['raw_per_day_cap']);
+        self::assertSame(3, $thresholds['base_per_day_cap']);
+        self::assertSame(['2024-07-01' => 4, '2024-07-02' => 2], $thresholds['day_caps']);
+        self::assertSame(['2024-07-01' => 'core', '2024-07-02' => 'peripheral'], $thresholds['day_categories']);
+        self::assertSame(1, $thresholds['max_per_staypoint']);
+    }
+
     public function testRelaxationStopsAfterMinSpacingAdjustment(): void
     {
         $first  = $this->createMedia('relax-first.jpg', '2024-05-10T10:00:00+00:00', 0.85);
@@ -355,7 +412,7 @@ final class VacationMemberSelectorTest extends TestCase
         $members   = $result->getMembers();
         $telemetry = $result->getTelemetry();
 
-        self::assertCount(3, $members);
+        self::assertCount(2, $members);
         self::assertSame(2, $telemetry['minimum_total']);
         self::assertTrue($telemetry['minimum_total_met']);
         self::assertCount(1, $telemetry['relaxations']);
@@ -364,6 +421,9 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertSame('min_spacing_seconds', $relaxation['rule']);
         self::assertSame(1200, $relaxation['from']);
         self::assertSame(0, $relaxation['to']);
+        self::assertTrue($telemetry['thresholds']['spacing_relaxed_to_zero']);
+        self::assertFalse($telemetry['thresholds']['phash_relaxed_to_zero']);
+        self::assertSame(2, $telemetry['selected_total']);
     }
 
     public function testRelaxationEscalatesWhenMultipleConstraintsApply(): void
@@ -403,14 +463,56 @@ final class VacationMemberSelectorTest extends TestCase
         $members   = $result->getMembers();
         $telemetry = $result->getTelemetry();
 
-        self::assertCount(3, $members);
-        self::assertTrue($telemetry['minimum_total_met']);
+        self::assertCount(1, $members);
+        self::assertFalse($telemetry['minimum_total_met']);
+        self::assertSame(1, $telemetry['selected_total']);
+        self::assertSame(2, $telemetry['staypoint_rejections']);
 
         $rules = array_map(static fn (array $entry): string => $entry['rule'], $telemetry['relaxations']);
         self::assertContains('min_spacing_seconds', $rules);
         self::assertContains('phash_min_hamming', $rules);
         self::assertContains('max_per_day', $rules);
         self::assertContains('max_per_staypoint', $rules);
+        self::assertTrue($telemetry['thresholds']['spacing_relaxed_to_zero']);
+        self::assertTrue($telemetry['thresholds']['phash_relaxed_to_zero']);
+        self::assertSame(1, $telemetry['thresholds']['max_per_staypoint']);
+    }
+
+    public function testEffectivePhashThresholdElevatesDuplicateDetection(): void
+    {
+        $first = $this->createMedia('adaptive-phash-a.jpg', '2024-08-01T09:00:00+00:00', 0.92);
+        $first->setPhash64('0000000000000000');
+
+        $second = $this->createMedia('adaptive-phash-b.jpg', '2024-08-01T09:02:00+00:00', 0.85);
+        $second->setPhash64('000000000000000f');
+
+        $third = $this->createMedia('adaptive-phash-c.jpg', '2024-08-01T09:04:00+00:00', 0.88);
+        $third->setPhash64('ffffffffffffffff');
+
+        $summary = $this->createDaySummary('2024-08-01', [$first, $second, $third]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 3,
+            maxPerDay: 3,
+            minSpacingSeconds: 0,
+            phashMinHamming: 1,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+        );
+
+        $result = $this->selector->select(['2024-08-01' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(1, $members);
+        self::assertContains($first, $members);
+
+        $telemetry  = $result->getTelemetry();
+        $thresholds = $telemetry['thresholds'];
+
+        self::assertSame(2, $telemetry['near_duplicate_blocked']);
+        self::assertGreaterThanOrEqual($options->phashMinHamming, $thresholds['phash_min_effective']);
+        self::assertGreaterThanOrEqual($options->phashMinHamming, $thresholds['phash_percentile_25']);
+        self::assertGreaterThanOrEqual(1, $thresholds['phash_sample_count']);
     }
 
     /**
@@ -465,13 +567,30 @@ final class VacationMemberSelectorTest extends TestCase
             'lastGpsMedia'            => $members[count($members) - 1] ?? null,
             'timezoneIdentifierVotes' => [],
             'isSynthetic'             => false,
+            'selectionContext'        => ['category' => 'core', 'score' => 0.0, 'duration' => null, 'metrics' => []],
         ];
 
         $summary = array_replace($base, $overrides);
 
-        if (!isset($summary['staypointIndex']) || !$summary['staypointIndex'] instanceof StaypointIndex) {
-            $summary['staypointIndex'] = StaypointIndex::build($date, $summary['staypoints'], $summary['members']);
+        if (($summary['staypoints'] ?? []) === []) {
+            $staypoints = [];
+            foreach ($summary['members'] as $member) {
+                $takenAt = $member->getTakenAt();
+                if ($takenAt instanceof DateTimeImmutable) {
+                    $timestamp = $takenAt->getTimestamp();
+                    $staypoints[] = [
+                        'lat'   => 0.0,
+                        'lon'   => 0.0,
+                        'start' => $timestamp - 60,
+                        'end'   => $timestamp + 60,
+                        'dwell' => 120,
+                    ];
+                }
+            }
+            $summary['staypoints'] = $staypoints;
         }
+
+        $summary['staypointIndex'] = StaypointIndex::build($date, $summary['staypoints'], $summary['members']);
 
         $summary['staypointCounts'] = $summary['staypointIndex']->getCounts();
 
@@ -488,6 +607,27 @@ final class VacationMemberSelectorTest extends TestCase
         }
 
         return $summary;
+    }
+
+    /**
+     * @param list<Media> $members
+     *
+     * @return array<string, int>
+     */
+    private function countMembersByDay(array $members): array
+    {
+        $counts = [];
+        foreach ($members as $media) {
+            $takenAt = $media->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $day = $takenAt->format('Y-m-d');
+            $counts[$day] = ($counts[$day] ?? 0) + 1;
+        }
+
+        return $counts;
     }
 
     private function createPersonMedia(string $filename, string $time, float $quality, string $person): Media

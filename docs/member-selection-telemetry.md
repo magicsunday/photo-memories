@@ -29,6 +29,19 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
   },
   "per_day_distribution": {"2024-06-10": 5},
   "per_bucket_distribution": {"2024-06-10#slot_3": 2},
+  "thresholds": {
+    "run_day_count": 7,
+    "raw_per_day_cap": 9,
+    "base_per_day_cap": 6,
+    "day_caps": {"2024-06-10": 7, "2024-06-11": 5},
+    "day_categories": {"2024-06-10": "core", "2024-06-11": "peripheral"},
+    "max_per_staypoint": 3,
+    "phash_min_effective": 10,
+    "phash_percentile_25": 8,
+    "phash_sample_count": 42,
+    "spacing_relaxed_to_zero": false,
+    "phash_relaxed_to_zero": false
+  },
   "day_segments": {
     "2024-06-10": {
       "score": 0.78,
@@ -86,6 +99,9 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
     },
     "selection_pre_count": 96,
     "selection_post_count": 60
+  },
+  "metrics": {
+    "phash_samples": [4, 7, 9, 12]
   },
   "options": {
     "selector": "…\\PolicyDrivenMemberSelector",
@@ -154,6 +170,13 @@ gehörenden Profil-/Quotenwerte (Targets, Abstände, Personensteuerung), damit
 Anpassungen per YAML/ENV rückwirkend nachvollzogen werden können. Alle Werte
 werden zusätzlich als Monitoring-Event `cluster.vacation/run_metrics`
 ausgegeben.
+
+Der Block `thresholds` zeigt die adaptiven Grenzwerte des Selektionslaufs, z.B.
+die auf Basis der Tagesklassifikation berechneten Tageskontingente, das
+abgeleitete Staypoint-Limit sowie den dynamisch angehobenen pHash-Schwellwert.
+Unter `metrics.phash_samples` legt der Selektor die für die pHash-Percentile
+genutzten Stichproben (abgeschnitten nach 50 Werten) ab, damit Analysen die
+Rohdaten nachvollziehen können.
 
 ## Monitoring-Log-Payload
 
