@@ -1522,6 +1522,76 @@ HELP;
         self::assertSame($expectedKey, $cache->lookupKey);
     }
 
+    public function testBuildCommandUsesFadeWhenTransitionDiscoveryReturnsNoMatches(): void
+    {
+        $this->resetTransitionCache();
+
+        $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
+
+        $scriptContent = <<<'BASH'
+#!/usr/bin/env bash
+exit 0
+BASH;
+
+        file_put_contents($script, $scriptContent);
+        chmod($script, 0755);
+
+        $slides = [
+            [
+                'image'      => '/tmp/first.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/third.jpg',
+                'mediaId'    => 3,
+                'duration'   => 3.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'discovery-fade-only',
+            '/tmp/discovery.job.json',
+            '/tmp/discovery.mp4',
+            '/tmp/discovery.lock',
+            '/tmp/discovery.error',
+            ['/tmp/first.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
+            $slides,
+            [],
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator(ffmpegBinary: $script);
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        try {
+            /** @var list<string> $command */
+            $command = $method->invoke($generator, $job, $job->slides());
+
+            $parsed = $this->parseTransitionsFromCommand($command);
+
+            self::assertSame(2, count($parsed['transitions']));
+            self::assertSame(['fade', 'fade'], $parsed['transitions']);
+        } finally {
+            $this->resetTransitionCache();
+            unlink($script);
+        }
+    }
+
     public function testTransitionDiscoveryFallsBackToWhitelistWhenCommandFails(): void
     {
         $this->resetTransitionCache();
@@ -1539,7 +1609,11 @@ HELP;
         $constant = $reflector->getReflectionConstant('TRANSITION_WHITELIST');
         self::assertNotFalse($constant);
 
-        self::assertSame($constant->getValue(), $transitions);
+        $whitelist = $constant->getValue();
+        self::assertIsArray($whitelist);
+        self::assertContains('fade', $whitelist);
+
+        self::assertSame(['fade'], $transitions);
 
         /** @var list<string> $cached */
         $cached = $method->invoke($generator);
