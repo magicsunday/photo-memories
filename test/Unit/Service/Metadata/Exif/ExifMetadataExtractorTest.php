@@ -19,6 +19,7 @@ use MagicSunday\Memories\Service\Metadata\Exif\Processor\CameraExifMetadataProce
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\CompositeImageExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\FormatFlagExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\OrientationExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
@@ -62,6 +63,37 @@ final class ExifMetadataExtractorTest extends TestCase
         self::assertSame($computedHeight, $media->getHeight());
         self::assertSame($expectedPortrait, $media->isPortrait());
         self::assertSame($expectedPanorama, $media->isPanorama());
+    }
+
+    #[Test]
+    public function appliesOrientationBeforeAspectFlagDerivation(): void
+    {
+        $media = $this->makeMedia(
+            id: 401,
+            path: '/fixtures/exif/needs-rotation.jpg',
+            configure: static function (Media $value): void {
+                $value->setMime('image/jpeg');
+            },
+        );
+
+        $exif = [
+            'IFD0' => [
+                'Orientation' => 6,
+            ],
+            'COMPUTED' => [
+                'Width'  => 4032,
+                'Height' => 3024,
+            ],
+        ];
+
+        $extractor = new ExifMetadataExtractor($this->createProcessors());
+
+        $this->runProcessors($extractor, $exif, $media);
+
+        self::assertSame(6, $media->getOrientation());
+        self::assertTrue($media->needsRotation());
+        self::assertTrue($media->isPortrait());
+        self::assertFalse($media->isPanorama());
     }
 
     #[Test]
@@ -256,6 +288,7 @@ final class ExifMetadataExtractorTest extends TestCase
         $processors = [
             new FormatFlagExifMetadataProcessor($accessor),
             new DimensionsExifMetadataProcessor(),
+            new OrientationExifMetadataProcessor($accessor),
             new AspectFlagExifMetadataProcessor(),
             new CameraExifMetadataProcessor($accessor),
             new CompositeImageExifMetadataProcessor($accessor),
