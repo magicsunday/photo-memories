@@ -22,6 +22,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\Stage\OrientationBalanceSta
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PeopleBalanceStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PhashDiversityStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SceneDiversityStage;
+use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\StaypointQuotaStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
@@ -309,6 +310,79 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertGreaterThan(0, $reasons[SelectionTelemetry::REASON_SCENE]);
     }
 
+    #[Test]
+    public function pipelineTrimsSortedCandidatesToPolicyTarget(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class() implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'passthrough';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        return $candidates;
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'trim-test',
+            targetTotal: 5,
+            minimumTotal: 3,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 15,
+            phashMinHamming: 8,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.1,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 0,
+            phashPercentile: 0.35,
+            spacingProgressFactor: 0.5,
+            cohortPenalty: 0.05,
+        );
+
+        $candidates = [
+            ['id' => 7, 'timestamp' => 700],
+            ['id' => 3, 'timestamp' => 300],
+            ['id' => 1, 'timestamp' => 100],
+            ['id' => 6, 'timestamp' => 600],
+            ['id' => 2, 'timestamp' => 200],
+            ['id' => 5, 'timestamp' => 500],
+            ['id' => 4, 'timestamp' => 400],
+        ];
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertCount(5, $result);
+        self::assertSame(100, $result[0]['timestamp']);
+        self::assertSame([1, 2, 3, 4, 5], [
+            $result[0]['id'],
+            $result[1]['id'],
+            $result[2]['id'],
+            $result[3]['id'],
+            $result[4]['id'],
+        ]);
+    }
+
     /**
      * @return array<int, Media>
      */
@@ -437,12 +511,13 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         array $qualityScores,
         SelectionPolicy $policy,
         ClusterDraft $draft,
+        array $daySegments = [],
     ): array {
         $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'buildCandidates');
         $method->setAccessible(true);
 
         /** @var array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>} $result */
-        $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft);
+        $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft, $daySegments);
 
         return $result;
     }

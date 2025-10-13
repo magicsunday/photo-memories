@@ -23,6 +23,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function abs;
 use function array_key_exists;
 use function array_map;
+use function array_slice;
 use function array_values;
 use function count;
 use function floor;
@@ -686,7 +687,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return $a['timestamp'] <=> $b['timestamp'];
         });
 
-        return $current;
+        $limit = min(
+            $policy->getTargetTotal(),
+            max($policy->getMinimumTotal(), count($current))
+        );
+
+        return array_slice($current, 0, $limit);
     }
 
     /**
