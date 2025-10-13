@@ -16,18 +16,20 @@ use MagicSunday\Memories\Entity\Media;
 
 use function array_any;
 use function array_filter;
+use function array_slice;
 use function array_unique;
 use function array_values;
 use function basename;
+use function in_array;
 use function is_array;
 use function is_float;
 use function is_int;
 use function is_string;
 use function max;
 use function min;
+use function preg_quote;
 use function preg_split;
 use function str_contains;
-use function str_ends_with;
 use function str_replace;
 use function str_starts_with;
 use function strtolower;
@@ -80,6 +82,15 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         'screen-recording',
         'bildschirmaufnahme',
         'screenrec',
+    ];
+
+    private const array GENERIC_PATH_TOKENS = [
+        'bilder',
+        'documents',
+        'dokumente',
+        'images',
+        'photos',
+        'pictures',
     ];
 
     private const array VISION_KEYWORDS = [
@@ -366,12 +377,8 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         $bag      = $media->getFeatureBag();
         $pathTokens = $bag->filePathTokens();
         if ($pathTokens !== null) {
-            foreach ($pathTokens as $token) {
-                if ($token === '') {
-                    continue;
-                }
-
-                $tokens[] = strtolower($token);
+            foreach ($this->relevantPathTokens($pathTokens) as $token) {
+                $tokens[] = $token;
             }
         }
 
@@ -400,6 +407,45 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     }
 
     /**
+     * @param list<string> $pathTokens
+     *
+     * @return list<string>
+     */
+    private function relevantPathTokens(array $pathTokens): array
+    {
+        if ($pathTokens === []) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($pathTokens as $token) {
+            $lower = strtolower($token);
+            if ($lower === '') {
+                continue;
+            }
+
+            $normalized[] = $lower;
+        }
+
+        if ($normalized === []) {
+            return [];
+        }
+
+        $tail = array_slice($normalized, -5);
+
+        $filtered = [];
+        foreach ($tail as $token) {
+            if (in_array($token, self::GENERIC_PATH_TOKENS, true)) {
+                continue;
+            }
+
+            $filtered[] = $token;
+        }
+
+        return $filtered;
+    }
+
+    /**
      * @param list<string> $tokens
      * @param list<string> $keywords
      */
@@ -411,12 +457,20 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
 
         return array_any(
             $keywords,
-            static fn (string $keyword): bool => array_any(
-                $tokens,
-                static fn (string $token): bool => $token === $keyword
-                    || str_contains($token, $keyword)
-                    || str_ends_with($token, '-' . $keyword)
-            )
+            static function (string $keyword) use ($tokens): bool {
+                return array_any(
+                    $tokens,
+                    static function (string $token) use ($keyword): bool {
+                        if ($token === $keyword) {
+                            return true;
+                        }
+
+                        $pattern = '~\b' . preg_quote($keyword, '~') . '\b~';
+
+                        return preg_match($pattern, $token) === 1;
+                    }
+                );
+            }
         );
     }
 

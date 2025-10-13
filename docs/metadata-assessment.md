@@ -34,6 +34,7 @@
 ### 5. Inhaltliche Klassifikation & Qualitätsbewertung
 - [x] Schwellenwerte des `ContentClassifierExtractor` als konfigurierbare Parameter/DI-Argumente exponieren, um datengetriebenes Tuning zu ermöglichen.【F:src/Service/Metadata/ContentClassifierExtractor.php†L27-L247】
 - [x] Zusätzliche Feature-Quellen (z. B. Vision-Modelle) integrieren und mit Confidence-Scores kombinieren, bevor `noShow` gesetzt wird.【F:src/Service/Metadata/ContentClassifierExtractor.php†L128-L247】【F:test/Unit/Service/Metadata/ContentClassifierExtractorTest.php†L17-L125】
+- [x] Heuristiken für Pfad-Tokens normalisieren: Generische Oberverzeichnisse (z. B. „Documents“, „Bilder“) werden vor der Schlüsselwortsuche verworfen, und Wortgrenzen in Dateinamen werden streng ausgewertet, um Dokumente nur bei echten Hinweisen (z. B. `scan/`, `invoice_2024.jpg`) zu markieren.【F:src/Service/Metadata/ContentClassifierExtractor.php†L41-L110】【F:src/Service/Metadata/ContentClassifierExtractor.php†L268-L358】【F:test/Unit/Service/Metadata/ContentClassifierExtractorTest.php†L38-L153】
 - [x] Qualitätsmetriken aus `MediaQualityAggregator` mit Zeitbezug (z. B. ISO-Schwelle abhängig vom Aufnahmedatum) versehen und Logging weiter strukturieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L30-L251】【F:test/Unit/Service/Metadata/Quality/MediaQualityAggregatorTest.php†L19-L149】
 
 ### 6. QA & Beobachtbarkeit
