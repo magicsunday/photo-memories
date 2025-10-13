@@ -34,19 +34,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             minItemsTotal: 24,
         );
 
-        $items = [];
-        foreach ([2020, 2021, 2022] as $year) {
-            $friday = new DateTimeImmutable(sprintf('%d-06-05 16:00:00', $year), new DateTimeZone('UTC')); // Friday
-            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
-                $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
-                for ($i = 0; $i < 4; ++$i) {
-                    $items[] = $this->createMedia(
-                        ($year * 100) + ($dayOffset * 10) + $i,
-                        $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
-                    );
-                }
-            }
-        }
+        $items = $this->createTripAcrossYears([2020, 2021, 2022], 3, '06-05');
 
         $clusters = $strategy->cluster($items);
 
@@ -56,6 +44,30 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         self::assertSame('weekend_getaways_over_years', $cluster->getAlgorithm());
         self::assertSame([2020, 2021, 2022], $cluster->getParams()['years']);
         self::assertCount(36, $cluster->getMembers());
+    }
+
+    #[Test]
+    public function aggregatesExtendedWeekendTripsAcrossYears(): void
+    {
+        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minNights: 2,
+            maxNights: 3,
+            minItemsPerDay: 4,
+            minYears: 3,
+            minItemsTotal: 24,
+        );
+
+        $items = $this->createTripAcrossYears([2018, 2019, 2021], 4, '05-16');
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame('weekend_getaways_over_years', $cluster->getAlgorithm());
+        self::assertSame([2018, 2019, 2021], $cluster->getParams()['years']);
+        self::assertCount(48, $cluster->getMembers());
     }
 
     #[Test]
@@ -70,19 +82,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             minItemsTotal: 24,
         );
 
-        $items = [];
-        foreach ([2021, 2022] as $year) {
-            $friday = new DateTimeImmutable(sprintf('%d-07-09 16:00:00', $year), new DateTimeZone('UTC'));
-            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
-                $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
-                for ($i = 0; $i < 4; ++$i) {
-                    $items[] = $this->createMedia(
-                        ($year * 1000) + ($dayOffset * 10) + $i,
-                        $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
-                    );
-                }
-            }
-        }
+        $items = $this->createTripAcrossYears([2021, 2022], 3, '07-09');
 
         self::assertSame([], $strategy->cluster($items));
     }
@@ -99,21 +99,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             minItemsTotal: 16,
         );
 
-        $items = [];
-
-        foreach ([2020, 2021] as $year) {
-            $friday = new DateTimeImmutable(sprintf('%d-09-04 16:00:00', $year), new DateTimeZone('UTC'));
-            for ($dayOffset = 0; $dayOffset < 3; ++$dayOffset) {
-                $day = $friday->add(new DateInterval('P' . $dayOffset . 'D'));
-
-                for ($i = 0; $i < 4; ++$i) {
-                    $items[] = $this->createMedia(
-                        ($year * 100) + ($dayOffset * 10) + $i,
-                        $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
-                    );
-                }
-            }
-        }
+        $items = $this->createTripAcrossYears([2020, 2021], 3, '09-04');
 
         $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
 
@@ -146,6 +132,33 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $this->applyRunMetadata($media, null);
 
         return $media;
+    }
+
+    /**
+     * @param list<int> $years
+     *
+     * @return list<Media>
+     */
+    private function createTripAcrossYears(array $years, int $dayCount, string $monthDay): array
+    {
+        $items = [];
+
+        foreach ($years as $year) {
+            $start = new DateTimeImmutable(sprintf('%d-%s 16:00:00', $year, $monthDay), new DateTimeZone('UTC'));
+
+            for ($dayOffset = 0; $dayOffset < $dayCount; ++$dayOffset) {
+                $day = $start->add(new DateInterval('P' . $dayOffset . 'D'));
+
+                for ($i = 0; $i < 4; ++$i) {
+                    $items[] = $this->createMedia(
+                        ($year * 1000) + ($dayOffset * 10) + $i,
+                        $day->add(new DateInterval('PT' . ($i * 900) . 'S')),
+                    );
+                }
+            }
+        }
+
+        return $items;
     }
 
     /**

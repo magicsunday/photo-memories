@@ -48,7 +48,7 @@ use const SORT_NUMERIC;
 use const SORT_STRING;
 
 /**
- * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
+ * Picks the best weekend getaway (2..3 nights) per year and aggregates them into one over-years memory.
  */
 final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {

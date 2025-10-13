@@ -852,7 +852,7 @@ services:
     MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy:
         arguments:
             $timezone: 'Europe/Berlin'
-            $minNights: 1
+            $minNights: 2
             $maxNights: 3
             $minItemsPerDay: 4
             $minYears: 3
