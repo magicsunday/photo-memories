@@ -139,10 +139,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly string $fontFamily = 'DejaVu Sans',
         private readonly float $backgroundBlurSigma = 20.0,
         private readonly bool $kenBurnsEnabled = true,
-        private readonly float $zoomStart = 1.05,
-        private readonly float $zoomEnd = 1.15,
-        private readonly float $panX = 0.15,
-        private readonly float $panY = 0.0,
+        private readonly float $zoomStart = 1.0,
+        private readonly float $zoomEnd = 1.08,
     ) {
     }
 
@@ -533,10 +531,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $slide['image'],
         ]);
 
-        $randomizer = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedPayload, true)));
+        $panXSeed = hash('sha256', $seedPayload . '|panX', true);
+        $panYSeed = hash('sha256', $seedPayload . '|panY', true);
 
-        $panXValue = $this->applyPanOffset($randomizer, $this->panX);
-        $panYValue = $this->applyPanOffset($randomizer, $this->panY);
+        $panXRandomizer = new Randomizer(new Xoshiro256StarStar($panXSeed));
+        $panYRandomizer = new Randomizer(new Xoshiro256StarStar($panYSeed));
+
+        $panXValue = $panXRandomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
+        $panYValue = $panYRandomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
 
         if (($index % 2) === 0) {
             return [
@@ -553,25 +555,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             'panX'      => $panXValue !== 0.0 ? -$panXValue : 0.0,
             'panY'      => $panYValue !== 0.0 ? -$panYValue : 0.0,
         ];
-    }
-
-    private function applyPanOffset(Randomizer $randomizer, float $baseValue): float
-    {
-        $offset = $randomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
-
-        $value = $baseValue + $offset;
-        $minimum = min($baseValue - self::PAN_OFFSET_LIMIT, $baseValue + self::PAN_OFFSET_LIMIT);
-        $maximum = max($baseValue - self::PAN_OFFSET_LIMIT, $baseValue + self::PAN_OFFSET_LIMIT);
-
-        if ($value < $minimum) {
-            return $minimum;
-        }
-
-        if ($value > $maximum) {
-            return $maximum;
-        }
-
-        return $value;
     }
 
     private function resolveSlideDuration(float $duration): float

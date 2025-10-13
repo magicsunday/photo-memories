@@ -822,21 +822,15 @@ parameters:
     # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.
     memories.slideshow.ken_burns_enabled: '%env(default:memories.slideshow.ken_burns_enabled_default:bool:MEMORIES_SLIDESHOW_KEN_BURNS)%'
     # Description: Initial zoom factor used when the animated zoom/pan effect is enabled.
-    memories.slideshow.zoom_start_default: 1.05
+    memories.slideshow.zoom_start_default: 1.0
     # Description: Runtime initial zoom factor for the animated zoom/pan effect.
     memories.slideshow.zoom_start: '%env(default:memories.slideshow.zoom_start_default:float:MEMORIES_SLIDESHOW_ZOOM_START)%'
     # Description: Final zoom factor used when the animated zoom/pan effect is enabled.
-    memories.slideshow.zoom_end_default: 1.15
+    memories.slideshow.zoom_end_default: 1.08
     # Description: Runtime final zoom factor for the animated zoom/pan effect.
     memories.slideshow.zoom_end: '%env(default:memories.slideshow.zoom_end_default:float:MEMORIES_SLIDESHOW_ZOOM_END)%'
-    # Description: Horizontal pan factor (range -1 to 1) applied across the slide duration during animation.
-    memories.slideshow.pan_x_default: 0.15
-    # Description: Runtime horizontal pan factor for the animated zoom/pan effect.
-    memories.slideshow.pan_x: '%env(default:memories.slideshow.pan_x_default:float:MEMORIES_SLIDESHOW_PAN_X)%'
-    # Description: Vertical pan factor (range -1 to 1) applied across the slide duration during animation.
-    memories.slideshow.pan_y_default: 0.0
-    # Description: Runtime vertical pan factor for the animated zoom/pan effect.
-    memories.slideshow.pan_y: '%env(default:memories.slideshow.pan_y_default:float:MEMORIES_SLIDESHOW_PAN_Y)%'
+    # Description: Horizontal pan offsets are determined automatically per slide to introduce subtle movement.
+    # Description: Vertical pan offsets are determined automatically per slide to introduce subtle movement.
     # Description: Transitions that may be used when generating slideshow videos.
     memories.slideshow.transitions:
         - 'fade'

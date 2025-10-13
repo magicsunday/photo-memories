@@ -111,8 +111,6 @@ services:
             $kenBurnsEnabled: '%memories.slideshow.ken_burns_enabled%'
             $zoomStart: '%memories.slideshow.zoom_start%'
             $zoomEnd: '%memories.slideshow.zoom_end%'
-            $panX: '%memories.slideshow.pan_x%'
-            $panY: '%memories.slideshow.pan_y%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
