@@ -13,8 +13,10 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
+use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -24,9 +26,15 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
 {
     private int $batchCount = 0;
 
+    /**
+     * @var list<Media>
+     */
+    private array $pendingMedia = [];
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly int $batchSize,
+        private readonly PersistedMediaTracker $persistedMediaTracker,
     ) {
         if ($batchSize <= 0) {
             throw new InvalidArgumentException('Batch size must be greater than zero.');
@@ -45,13 +53,17 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
             return $context;
         }
 
-        $this->entityManager->persist($context->getMedia());
+        $media = $context->getMedia();
+        if (!$media instanceof Media) {
+            return $context;
+        }
+
+        $this->entityManager->persist($media);
         ++$this->batchCount;
+        $this->pendingMedia[] = $media;
 
         if ($this->batchCount >= $this->batchSize) {
-            $this->entityManager->flush();
-            $this->entityManager->clear();
-            $this->batchCount = 0;
+            $this->flushPendingMedia();
         }
 
         return $context;
@@ -61,11 +73,33 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
     {
         if ($context->isDryRun()) {
             $this->batchCount = 0;
+            $this->pendingMedia = [];
+            $this->persistedMediaTracker->clear();
 
             return;
         }
 
-        $this->entityManager->flush();
-        $this->batchCount = 0;
+        $this->flushPendingMedia();
+    }
+
+    private function flushPendingMedia(): void
+    {
+        if ($this->pendingMedia === []) {
+            return;
+        }
+
+        foreach ($this->pendingMedia as $media) {
+            $this->entityManager->flush($media);
+
+            $id = $media->getId();
+            if ($id !== null) {
+                $this->persistedMediaTracker->record($id);
+            }
+
+            $this->entityManager->detach($media);
+        }
+
+        $this->pendingMedia = [];
+        $this->batchCount   = 0;
     }
 }

@@ -31,10 +31,12 @@ use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
+use MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
 use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
+use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
@@ -173,7 +175,11 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->method('persist')
             ->with(self::isInstanceOf(Media::class));
         $entityManager->expects(self::once())
-            ->method('flush');
+            ->method('flush')
+            ->with(self::isInstanceOf(Media::class))
+            ->willReturnCallback(function (Media $media): void {
+                $this->assignId($media, 1);
+            });
         $entityManager->expects(self::never())
             ->method('clear');
 
@@ -238,7 +244,16 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->method('persist')
             ->with($existing);
         $entityManager->expects(self::once())
-            ->method('flush');
+            ->method('flush')
+            ->with($existing)
+            ->willReturnCallback(function (Media $media): void {
+                static $assigned = false;
+
+                if (!$assigned) {
+                    $this->assignId($media, 1);
+                    $assigned = true;
+                }
+            });
         $entityManager->expects(self::never())
             ->method('clear');
 
@@ -451,6 +466,11 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             $duplicateRepository->expects(self::never())->method('recordDistance');
         }
 
+        $tracker            = new PersistedMediaTracker();
+        $nearDuplicateStage = new NearDuplicateStage($mediaRepository, $duplicateRepository);
+        $burstDetector      = $extractors['burst']['detector'];
+        $livePairLinker     = $extractors['burst']['livePair'];
+
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
             new DuplicateHandlingStage($entityManager, $fastHashGenerator),
@@ -474,16 +494,24 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new QualityStage($extractors['quality']['vision']),
             new ContentKindStage($extractors['content']['classifier']),
             new HashStage($extractors['hash']['perceptual']),
-            new NearDuplicateStage($mediaRepository, $duplicateRepository),
+            $nearDuplicateStage,
             new BurstLiveStage(
-                $extractors['burst']['detector'],
-                $extractors['burst']['livePair'],
+                $burstDetector,
+                $livePairLinker,
                 $extractors['burst']['index'],
             ),
             new FacesStage($extractors['faces']['detector']),
             new SceneStage($extractors['scene']['clip']),
             new ThumbnailGenerationStage($thumbnailService),
-            new PersistenceBatchStage($entityManager, 10),
+            new PersistenceBatchStage($entityManager, 10, $tracker),
+            new PostFlushReprocessingStage(
+                $tracker,
+                $mediaRepository,
+                $nearDuplicateStage,
+                $burstDetector,
+                $livePairLinker,
+                $entityManager,
+            ),
         ]);
     }
 

@@ -358,6 +358,8 @@ services:
         arguments:
             $batchSize: '%memories.index.batch_size%'
 
+    MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage: ~
+
     MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
         arguments:
             $stages:
@@ -375,6 +377,7 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\SceneStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
+                - '@MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage'
 
     MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface:
         alias: MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline

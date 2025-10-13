@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
+use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -28,12 +29,17 @@ final class PersistenceBatchStageTest extends TestCase
     {
         $media = new Media('file', 'checksum', 1);
 
+        $tracker = new PersistedMediaTracker();
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('persist')->with($media);
-        $entityManager->expects(self::once())->method('flush');
-        $entityManager->expects(self::never())->method('clear');
+        $entityManager->expects(self::once())->method('flush')->with($media)->willReturnCallback(
+            function () use ($media): void {
+                $this->assignId($media, 42);
+            }
+        );
+        $entityManager->expects(self::once())->method('detach')->with($media);
 
-        $stage   = new PersistenceBatchStage($entityManager, 10);
+        $stage   = new PersistenceBatchStage($entityManager, 10, $tracker);
         $context = MediaIngestionContext::create(
             'file',
             false,
@@ -45,6 +51,8 @@ final class PersistenceBatchStageTest extends TestCase
 
         $stage->process($context);
         $stage->finalize(MediaIngestionContext::create('', false, false, false, false, new NullOutput()));
+
+        self::assertSame([42], $tracker->drain());
     }
 
     #[Test]
@@ -56,7 +64,7 @@ final class PersistenceBatchStageTest extends TestCase
         $entityManager->expects(self::never())->method('persist');
 
         $output  = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
-        $stage   = new PersistenceBatchStage($entityManager, 10);
+        $stage   = new PersistenceBatchStage($entityManager, 10, new PersistedMediaTracker());
         $context = MediaIngestionContext::create(
             'file',
             false,
@@ -77,10 +85,27 @@ final class PersistenceBatchStageTest extends TestCase
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::exactly(3))->method('persist');
-        $entityManager->expects(self::exactly(2))->method('flush');
-        $entityManager->expects(self::once())->method('clear');
+        $nextId   = 1;
+        $assigned = [];
+        $entityManager->expects(self::exactly(3))->method('flush')->willReturnCallback(
+            function (?object $entity = null) use (&$counter, &$nextId, &$assigned): void {
+                if ($entity instanceof Media) {
+                    $objectId = spl_object_id($entity);
+                    if (!isset($assigned[$objectId])) {
+                        $this->assignId($entity, $nextId++);
+                        $assigned[$objectId] = true;
+                    }
 
-        $stage = new PersistenceBatchStage($entityManager, 2);
+                    ++$counter;
+                }
+            }
+        );
+        $entityManager->expects(self::exactly(3))->method('detach');
+
+        $tracker = new PersistedMediaTracker();
+        $counter = 0;
+
+        $stage = new PersistenceBatchStage($entityManager, 2, $tracker);
 
         for ($index = 0; $index < 3; ++$index) {
             $context = MediaIngestionContext::create(
@@ -96,5 +121,8 @@ final class PersistenceBatchStageTest extends TestCase
         }
 
         $stage->finalize(MediaIngestionContext::create('', false, false, false, false, new NullOutput()));
+
+        self::assertSame(3, $counter);
+        self::assertCount(3, $tracker->drain());
     }
 }
