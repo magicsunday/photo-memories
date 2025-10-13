@@ -141,6 +141,8 @@ services:
         alias: MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor
 
     MagicSunday\Memories\Service\Metadata\XmpIptcExtractor:
+        arguments:
+            $telemetry: '@MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector'
         tags:
             - { name: 'memories.metadata_extractor', priority: 180 }
 
@@ -262,6 +264,7 @@ services:
         arguments:
             $ffprobePath: '%env(string:FFPROBE_PATH)%'
             $slowMoFpsThreshold: 100.0
+            $telemetry: '@MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector'
         tags:
             - { name: 'memories.metadata_extractor', priority: 20 }
 
@@ -364,6 +367,8 @@ services:
 
     MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage: ~
 
+    MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector: ~
+
     MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline:
         arguments:
             $stages:
@@ -382,6 +387,8 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage'
+            $telemetry: '@MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector'
+            $logger: '@logger'
 
     MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface:
         alias: MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Metadata;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionTelemetryInterface;
 
 use function array_merge;
 use function array_unique;
@@ -33,6 +34,11 @@ use function trim;
  */
 final class XmpIptcExtractor implements SingleMetadataExtractorInterface
 {
+    public function __construct(
+        private ?MediaIngestionTelemetryInterface $telemetry = null,
+    ) {
+    }
+
     public function supports(string $filepath, Media $media): bool
     {
         $mime = $media->getMime();
@@ -68,11 +74,11 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
 
         $sidecar = $filepath . '.xmp';
         if (is_file($sidecar)) {
-            $this->parseXmpXml((string) @file_get_contents($sidecar), $keywords, $persons);
+            $this->parseXmpXml($filepath, (string) @file_get_contents($sidecar), $keywords, $persons);
         } else {
             $blob = @file_get_contents($filepath, false, null, 0, 256 * 1024);
             if (is_string($blob) && $blob !== '') {
-                $this->parseXmpXml($blob, $keywords, $persons);
+                $this->parseXmpXml($filepath, $blob, $keywords, $persons);
             }
         }
 
@@ -105,7 +111,7 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
     }
 
     /** @param list<string> $keywords @param list<string> $persons */
-    private function parseXmpXml(?string $xml, array &$keywords, array &$persons): void
+    private function parseXmpXml(string $filepath, ?string $xml, array &$keywords, array &$persons): void
     {
         if (!is_string($xml) || $xml === '') {
             return;
@@ -138,5 +144,38 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
         if (count($persons) > 1) {
             $persons = array_values(array_unique($persons));
         }
+
+        if ($this->telemetry !== null && $this->containsTimezoneInformation($xml)) {
+            $this->telemetry->recordXmpTimezoneHit($filepath);
+        }
+    }
+
+    private function containsTimezoneInformation(string $xml): bool
+    {
+        if ($xml === '') {
+            return false;
+        }
+
+        $matches = [];
+        if (!preg_match_all(
+            '~<(?:xmp:CreateDate|photoshop:DateCreated|exif:DateTimeOriginal)>([^<]+)</[^>]+>~i',
+            $xml,
+            $matches,
+        )) {
+            return false;
+        }
+
+        foreach ($matches[1] as $value) {
+            $candidate = trim(strip_tags($value));
+            if ($candidate === '') {
+                continue;
+            }
+
+            if (preg_match('/(?:[+-][0-9]{2}:[0-9]{2}|Z)$/', $candidate) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
