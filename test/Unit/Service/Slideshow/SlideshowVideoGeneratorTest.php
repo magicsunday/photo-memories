@@ -130,7 +130,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=', $filterComplex);
         self::assertStringContainsString(',gblur=sigma=20[bg0out]', $filterComplex);
-        self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/90\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
@@ -207,6 +207,40 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=1920x1080', $filterComplex);
+    }
+
+    public function testBlurredSlideFilterIncludesFrameCountInZoompan(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildBlurredSlideFilter');
+        $method->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 1,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $method->invoke(
+            $generator,
+            0,
+            3.0,
+            3.0,
+            $slide,
+            null,
+            null,
+        );
+
+        $expectedFrameCount = (int) round(3.0 * 30);
+
+        self::assertStringContainsString(
+            sprintf(':d=%d:fps=30', $expectedFrameCount),
+            $filter,
+        );
     }
 
     public function testBuildIntroTextOverlayFilterChainStacksTitleAboveSubtitle(): void
@@ -472,7 +506,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $filterComplex = $command[$filterComplexIndex];
 
-            self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/89\\,1))'", $filterComplex);
+            self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/90\\,1))'", $filterComplex);
             $panXMatch = [];
             self::assertSame(
                 1,
@@ -904,7 +938,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString("zoompan=z='max(1\\,1.2+(1.3-1.2)*min(on/119\\,1))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='max(1\\,1.2+(1.3-1.2)*min(on/120\\,1))'", $filterComplex);
         $panXMatch = [];
         self::assertSame(
             1,
