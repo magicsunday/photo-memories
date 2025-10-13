@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
+use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaDuplicateRepository;
@@ -25,6 +26,7 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 final readonly class NearDuplicateStage implements MediaIngestionStageInterface
 {
     public function __construct(
+        private EntityManagerInterface $entityManager,
         private MediaRepository $mediaRepository,
         private MediaDuplicateRepository $duplicateRepository,
         private int $maxHammingDistance = 6,
@@ -42,6 +44,10 @@ final readonly class NearDuplicateStage implements MediaIngestionStageInterface
 
         $media = $context->getMedia();
         if (!$media instanceof Media) {
+            return $context;
+        }
+
+        if ($this->entityManager->contains($media) === false) {
             return $context;
         }
 

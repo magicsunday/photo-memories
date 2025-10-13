@@ -21,6 +21,8 @@ use MagicSunday\Memories\Repository\MediaDuplicateRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
 use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
+use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStageInterface;
+use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
@@ -31,7 +33,6 @@ use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
-use MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\QualityStage;
 use MagicSunday\Memories\Service\Indexing\Stage\SceneStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
@@ -467,9 +468,24 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         }
 
         $tracker            = new PersistedMediaTracker();
-        $nearDuplicateStage = new NearDuplicateStage($mediaRepository, $duplicateRepository);
+        $nearDuplicateStage = new NearDuplicateStage($entityManager, $mediaRepository, $duplicateRepository);
         $burstDetector      = $extractors['burst']['detector'];
         $livePairLinker     = $extractors['burst']['livePair'];
+        $postFlushStage     = new class($tracker) implements FinalizableMediaIngestionStageInterface {
+            public function __construct(private PersistedMediaTracker $tracker)
+            {
+            }
+
+            public function process(MediaIngestionContext $context): MediaIngestionContext
+            {
+                return $context;
+            }
+
+            public function finalize(MediaIngestionContext $context): void
+            {
+                $this->tracker->drain();
+            }
+        };
 
         return new DefaultMediaIngestionPipeline([
             new MimeDetectionStage($imageExtensions, $videoExtensions),
@@ -504,14 +520,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new SceneStage($extractors['scene']['clip']),
             new ThumbnailGenerationStage($thumbnailService),
             new PersistenceBatchStage($entityManager, 10, $tracker),
-            new PostFlushReprocessingStage(
-                $tracker,
-                $mediaRepository,
-                $nearDuplicateStage,
-                $burstDetector,
-                $livePairLinker,
-                $entityManager,
-            ),
+            $postFlushStage,
         ]);
     }
 

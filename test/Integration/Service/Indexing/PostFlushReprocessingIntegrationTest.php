@@ -46,7 +46,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
-        $nearDuplicateStage = new NearDuplicateStage($repository, $duplicateRepository, 6);
+        $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);
         $burstDetector      = new BurstDetector($repository);
         $livePairLinker     = new LivePairLinker($repository);
 
@@ -99,7 +99,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $this->configureEntityManager($entityManager, $repository);
 
-        $nearDuplicateStage = new NearDuplicateStage($repository, $duplicateRepository, 6);
+        $nearDuplicateStage = new NearDuplicateStage($entityManager, $repository, $duplicateRepository, 6);
         $burstDetector      = new BurstDetector($repository);
         $livePairLinker     = new LivePairLinker($repository);
 
@@ -186,6 +186,12 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
 
         $entityManager->method('detach')->willReturnCallback(
             static function (): void {
+            }
+        );
+
+        $entityManager->method('contains')->willReturnCallback(
+            static function (object $entity) use (&$assigned): bool {
+                return isset($assigned[spl_object_id($entity)]);
             }
         );
     }
