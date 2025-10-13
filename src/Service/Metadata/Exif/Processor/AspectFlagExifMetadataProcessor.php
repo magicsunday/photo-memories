@@ -29,6 +29,11 @@ final class AspectFlagExifMetadataProcessor implements ExifMetadataProcessorInte
             return;
         }
 
+        $orientation = $media->getOrientation();
+        if ($orientation !== null && $orientation >= 5 && $orientation <= 8) {
+            [$width, $height] = [$height, $width];
+        }
+
         $isPortrait = $height > $width && ((float) $height / (float) $width) >= 1.2;
         $isPanorama = $width > $height && ((float) $width / (float) $height) >= 2.4;
 

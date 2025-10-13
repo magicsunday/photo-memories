@@ -58,6 +58,32 @@ final class VisionSignatureExtractorTest extends TestCase
     }
 
     #[Test]
+    public function respectsOrientationWhenDerivingPortraitFlag(): void
+    {
+        $imagePath = $this->createImageWithDimensions(2400, 800);
+
+        try {
+            $media = $this->makeMedia(
+                id: 104,
+                path: $imagePath,
+                configure: static function (Media $media): void {
+                    $media->setMime('image/png');
+                    $media->setOrientation(6);
+                },
+                size: (int) filesize($imagePath),
+            );
+
+            $extractor = new VisionSignatureExtractor(new MediaQualityAggregator(), 16);
+            $extractor->extract($imagePath, $media);
+
+            self::assertTrue($media->isPortrait());
+            self::assertFalse($media->isPanorama());
+        } finally {
+            unlink($imagePath);
+        }
+    }
+
+    #[Test]
     public function computesClippingForSaturatedImage(): void
     {
         $imagePath = $this->createSaturatedImage();
