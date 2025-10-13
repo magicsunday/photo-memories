@@ -14,6 +14,9 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
+use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\CohortPresenceStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
@@ -31,6 +34,7 @@ use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
@@ -144,5 +148,116 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
         self::assertArrayHasKey('vacation_title', $params);
         self::assertArrayHasKey('vacation_subtitle', $params);
         self::assertStringContainsString('Personenanteil:', (string) $params['vacation_subtitle']);
+    }
+
+    #[Test]
+    public function classifyRunDaysIncorporatesTravelScore(): void
+    {
+        $runDetector = new class implements VacationRunDetectorInterface {
+            public function detectVacationRuns(array $days, array $home): array
+            {
+                return [array_keys($days)];
+            }
+        };
+
+        $scoreCalculator = new class implements VacationScoreCalculatorInterface {
+            /**
+             * @var list<array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>>
+             */
+            public array $receivedContexts = [];
+
+            public function buildDraft(array $dayKeys, array $days, array $home, array $dayContext = []): ?ClusterDraft
+            {
+                $this->receivedContexts[] = $dayContext;
+
+                return null;
+            }
+        };
+
+        $storyTitleBuilder = new StoryTitleBuilder(new RouteSummarizer(), new LocalizedDateFormatter());
+        $assembler         = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
+
+        $home = [
+            'lat'             => 0.0,
+            'lon'             => 0.0,
+            'radius_km'       => 1.0,
+            'country'         => null,
+            'timezone_offset' => 0,
+        ];
+
+        $travelByDay = [
+            '2024-07-01' => 10.0,
+            '2024-07-02' => 200.0,
+            '2024-07-03' => 5.0,
+        ];
+
+        $days = [];
+        foreach ($travelByDay as $day => $travelKm) {
+            $moment   = new DateTimeImmutable($day . 'T08:00:00+00:00');
+            $member   = $this->createConfiguredStub(Media::class, [
+                'hasFaces'        => false,
+                'getQualityScore' => 0.7,
+                'getTakenAt'      => $moment,
+            ]);
+
+            $days[$day] = [
+                'date'                  => $day,
+                'members'               => [$member],
+                'gpsMembers'            => [$member],
+                'maxDistanceKm'         => 0.0,
+                'avgDistanceKm'         => 0.0,
+                'travelKm'              => $travelKm,
+                'maxSpeedKmh'           => 0.0,
+                'avgSpeedKmh'           => 0.0,
+                'hasHighSpeedTransit'   => false,
+                'countryCodes'          => [],
+                'timezoneOffsets'       => [],
+                'localTimezoneIdentifier' => 'Europe/Berlin',
+                'localTimezoneOffset'   => 0,
+                'tourismHits'           => 0,
+                'poiSamples'            => 0,
+                'tourismRatio'          => 0.3,
+                'hasAirportPoi'         => false,
+                'weekday'               => (int) $moment->format('N'),
+                'photoCount'            => 1,
+                'densityZ'              => 0.0,
+                'isAwayCandidate'       => true,
+                'sufficientSamples'     => true,
+                'spotClusters'          => [],
+                'spotNoise'             => [],
+                'spotCount'             => 1,
+                'spotNoiseSamples'      => 0,
+                'spotDensity'           => 0.0,
+                'spotDwellSeconds'      => 0,
+                'staypoints'            => [],
+                'staypointIndex'        => StaypointIndex::empty(),
+                'staypointCounts'       => [],
+                'dominantStaypoints'    => [],
+                'transitRatio'          => 0.0,
+                'poiDensity'            => 0.2,
+                'cohortPresenceRatio'   => 0.4,
+                'cohortMembers'         => [],
+                'baseLocation'          => null,
+                'baseAway'              => true,
+                'awayByDistance'        => true,
+                'firstGpsMedia'         => $member,
+                'lastGpsMedia'          => $member,
+                'isSynthetic'           => false,
+            ];
+        }
+
+        $assembler->detectSegments($days, $home);
+
+        self::assertCount(1, $scoreCalculator->receivedContexts);
+        $context = $scoreCalculator->receivedContexts[0];
+
+        self::assertSame('core', $context['2024-07-02']['category']);
+        self::assertSame('core', $context['2024-07-01']['category']);
+        self::assertSame('peripheral', $context['2024-07-03']['category']);
+
+        self::assertArrayHasKey('travel_score', $context['2024-07-02']['metrics']);
+        self::assertEqualsWithDelta(0.8, $context['2024-07-02']['metrics']['travel_score'], 0.001);
+        self::assertEqualsWithDelta(0.04, $context['2024-07-01']['metrics']['travel_score'], 0.001);
+        self::assertEqualsWithDelta(0.02, $context['2024-07-03']['metrics']['travel_score'], 0.001);
     }
 }
