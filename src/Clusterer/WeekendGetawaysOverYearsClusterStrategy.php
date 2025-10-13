@@ -32,6 +32,7 @@ use function array_values;
 use function arsort;
 use function assert;
 use function count;
+use function in_array;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -48,7 +49,7 @@ use const SORT_NUMERIC;
 use const SORT_STRING;
 
 /**
- * Picks the best weekend getaway (2..3 nights) per year and aggregates them into one over-years memory.
+ * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
  */
 final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
 {
@@ -64,7 +65,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
     public function __construct(
         ?LocationHelper $locHelper = null,
         private string $timezone = 'Europe/Berlin',
-        private int $minNights = 2,
+        private int $minNights = 1,
         private int $maxNights = 3,
         private int $minItemsPerDay = 4,
         private int $minYears = 3,
@@ -231,7 +232,9 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                         return false;
                     }
 
-                    if (!$this->runHasVacationCoreTag($run)) {
+                    $hasCoreTag = $this->runHasVacationCoreTag($run);
+
+                    if (!$hasCoreTag && !$this->runHasCoreDayContext($run)) {
                         return false;
                     }
 
@@ -449,6 +452,51 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         return true;
+    }
+
+    /**
+     * @param array{days:list<string>, items:list<Media>} $run
+     */
+    private function runHasCoreDayContext(array $run): bool
+    {
+        $days = $run['days'];
+
+        foreach ($run['items'] as $media) {
+            $bag      = $media->getFeatureBag();
+            $payload  = $bag->toArray();
+            $vacation = $payload['vacation'] ?? null;
+
+            if (is_array($vacation)) {
+                $dayContext = $vacation['day_context'] ?? ($vacation['dayContext'] ?? null);
+
+                if (is_array($dayContext)) {
+                    foreach ($dayContext as $day => $context) {
+                        if (!is_string($day) || !in_array($day, $days, true)) {
+                            continue;
+                        }
+
+                        if (!is_array($context)) {
+                            continue;
+                        }
+
+                        $category = $context['category'] ?? null;
+
+                        if (is_string($category) && strtolower($category) === 'core') {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            $summary  = $this->extractDaySummary($media);
+            $category = $summary['category'];
+
+            if (is_string($category) && strtolower($category) === 'core') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -18,23 +18,26 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]
-    public function aggregatesWeekendTripsAcrossYears(): void
+    #[DataProvider('provideNightLengths')]
+    public function aggregatesWeekendTripsAcrossYearsForNightCount(int $nightCount): void
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 2,
+            minNights: 1,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 3,
             minItemsTotal: 24,
         );
 
-        $items = $this->createTripAcrossYears([2020, 2021, 2022], 3, '06-05');
+        $years = [2020, 2021, 2022];
+        $items = $this->createTripAcrossYears($years, $nightCount + 1, '06-05');
 
         $clusters = $strategy->cluster($items);
 
@@ -42,32 +45,10 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $cluster = $clusters[0];
 
         self::assertSame('weekend_getaways_over_years', $cluster->getAlgorithm());
-        self::assertSame([2020, 2021, 2022], $cluster->getParams()['years']);
-        self::assertCount(36, $cluster->getMembers());
-    }
+        self::assertSame($years, $cluster->getParams()['years']);
 
-    #[Test]
-    public function aggregatesExtendedWeekendTripsAcrossYears(): void
-    {
-        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
-            timezone: 'Europe/Berlin',
-            minNights: 2,
-            maxNights: 3,
-            minItemsPerDay: 4,
-            minYears: 3,
-            minItemsTotal: 24,
-        );
-
-        $items = $this->createTripAcrossYears([2018, 2019, 2021], 4, '05-16');
-
-        $clusters = $strategy->cluster($items);
-
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
-
-        self::assertSame('weekend_getaways_over_years', $cluster->getAlgorithm());
-        self::assertSame([2018, 2019, 2021], $cluster->getParams()['years']);
-        self::assertCount(48, $cluster->getMembers());
+        $expectedMembers = count($years) * ($nightCount + 1) * 4;
+        self::assertCount($expectedMembers, $cluster->getMembers());
     }
 
     #[Test]
@@ -75,7 +56,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 2,
+            minNights: 1,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 3,
@@ -92,7 +73,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     {
         $strategy = new WeekendGetawaysOverYearsClusterStrategy(
             timezone: 'Europe/Berlin',
-            minNights: 2,
+            minNights: 1,
             maxNights: 3,
             minItemsPerDay: 4,
             minYears: 2,
@@ -116,6 +97,82 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $featureClusters = $this->normaliseClusters($strategy->cluster($items));
 
         self::assertSame($fallbackClusters, $featureClusters);
+    }
+
+    #[Test]
+    public function rejectsRunsWithoutCoreMetadata(): void
+    {
+        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minNights: 1,
+            maxNights: 3,
+            minItemsPerDay: 4,
+            minYears: 3,
+            minItemsTotal: 24,
+        );
+
+        $items = $this->createTripAcrossYears([2020, 2021, 2022], 3, '06-05');
+
+        foreach ($items as $media) {
+            $this->applyRunMetadata($media, null, withCoreTag: false, withCoreDayContext: false);
+        }
+
+        self::assertSame([], $strategy->cluster($items));
+    }
+
+    #[Test]
+    public function acceptsRunsWithDayContextCoreWhenTagsMissing(): void
+    {
+        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minNights: 1,
+            maxNights: 3,
+            minItemsPerDay: 4,
+            minYears: 3,
+            minItemsTotal: 24,
+        );
+
+        $years = [2020, 2021, 2022];
+        $items = $this->createTripAcrossYears($years, 3, '06-05');
+
+        foreach ($items as $media) {
+            $this->applyRunMetadata($media, null, withCoreTag: false, withCoreDayContext: true);
+        }
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        self::assertSame($years, $cluster->getParams()['years']);
+    }
+
+    #[Test]
+    public function rejectsRunsWithoutDistanceSamples(): void
+    {
+        $strategy = new WeekendGetawaysOverYearsClusterStrategy(
+            timezone: 'Europe/Berlin',
+            minNights: 1,
+            maxNights: 3,
+            minItemsPerDay: 4,
+            minYears: 3,
+            minItemsTotal: 24,
+        );
+
+        $items = $this->createTripAcrossYears([2020, 2021, 2022], 3, '06-05');
+
+        foreach ($items as $media) {
+            $this->applyRunMetadata($media, null, withCoreTag: true, withCoreDayContext: false, withDistance: false);
+        }
+
+        self::assertSame([], $strategy->cluster($items));
+    }
+
+    public static function provideNightLengths(): iterable
+    {
+        yield 'one-night-run' => [1];
+        yield 'two-night-run' => [2];
+        yield 'three-night-run' => [3];
     }
 
     private function createMedia(int $id, DateTimeImmutable $takenAt): Media
@@ -179,27 +236,54 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         );
     }
 
-    private function applyRunMetadata(Media $media, ?bool $isWeekend): void
-    {
+    private function applyRunMetadata(
+        Media $media,
+        ?bool $isWeekend,
+        bool $withCoreTag = true,
+        bool $withCoreDayContext = false,
+        bool $withDistance = true,
+    ): void {
         $features = [
             'day_summary' => [
                 'base_away'              => true,
-                'distance_from_home_km'  => 150.0,
-                'max_speed_kmh'          => 110.0,
-                'avg_speed_kmh'          => 80.0,
+                'distance_from_home_km'  => $withDistance ? 150.0 : null,
+                'max_speed_kmh'          => $withDistance ? 110.0 : null,
+                'avg_speed_kmh'          => $withDistance ? 80.0 : null,
                 'category'               => $isWeekend === true ? 'weekend' : null,
             ],
-            'vacation' => [
-                'core_tag'   => 'core',
-                'core_score' => 0.72,
-            ],
         ];
+
+        $vacation = [];
+
+        if ($withCoreTag) {
+            $vacation['core_tag']   = 'core';
+            $vacation['core_score'] = 0.72;
+        }
+
+        if ($withCoreDayContext) {
+            $takenAt = $media->getTakenAt();
+            if ($takenAt instanceof DateTimeImmutable) {
+                $dayKey = $takenAt->setTimezone(new DateTimeZone('Europe/Berlin'))->format('Y-m-d');
+                $vacation['day_context'] = [
+                    $dayKey => [
+                        'score'    => 0.8,
+                        'category' => 'core',
+                        'duration' => null,
+                        'metrics'  => [],
+                    ],
+                ];
+            }
+        }
+
+        if ($vacation !== []) {
+            $features['vacation'] = $vacation;
+        }
 
         if ($isWeekend !== null) {
             $features['calendar'] = ['isWeekend' => $isWeekend];
         }
 
         $media->setFeatures($features);
-        $media->setDistanceKmFromHome(150.0);
+        $media->setDistanceKmFromHome($withDistance ? 150.0 : null);
     }
 }
