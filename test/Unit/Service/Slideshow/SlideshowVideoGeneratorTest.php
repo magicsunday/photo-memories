@@ -130,7 +130,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=', $filterComplex);
         self::assertStringContainsString(',gblur=sigma=20[bg0out]', $filterComplex);
-        self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/90\\,1))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
@@ -456,7 +456,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
     }
 
-    public function testPortraitSlideFilterUsesConditionalZoomAndZeroPan(): void
+    public function testPortraitSlideFilterUsesConditionalZoomAndSubtlePan(): void
     {
         $portraitImage = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
 
@@ -487,8 +487,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $generator = new SlideshowVideoGenerator(
                 kenBurnsEnabled: true,
-                panX: 0.4,
-                panY: -0.25,
             );
 
             $reflector = new ReflectionClass($generator);
@@ -506,7 +504,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $filterComplex = $command[$filterComplexIndex];
 
-            self::assertStringContainsString("zoompan=z='max(1\\,1.05+(1.15-1.05)*min(on/90\\,1))'", $filterComplex);
+            self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
             $panXMatch = [];
             self::assertSame(
                 1,
@@ -530,10 +528,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $panX = (float) $panXMatch['panX'];
             $panY = (float) $panYMatch['panY'];
 
-            self::assertGreaterThanOrEqual(0.35, $panX);
-            self::assertLessThanOrEqual(0.45, $panX);
-            self::assertGreaterThanOrEqual(-0.30, $panY);
-            self::assertLessThanOrEqual(-0.20, $panY);
+            self::assertGreaterThanOrEqual(-0.05, $panX);
+            self::assertLessThanOrEqual(0.05, $panX);
+            self::assertGreaterThanOrEqual(-0.05, $panY);
+            self::assertLessThanOrEqual(0.05, $panY);
         } finally {
             @unlink($portraitImage);
         }
@@ -568,25 +566,28 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $first = $method->invoke($generator, 0, $firstSlide, $title, $subtitle);
         /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $second */
         $second = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
+        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $secondRepeat */
+        $secondRepeat = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
 
-        self::assertLessThan($first['zoomEnd'], $first['zoomStart']);
-        self::assertGreaterThan($second['zoomEnd'], $second['zoomStart']);
-        self::assertSame($first['zoomEnd'], $second['zoomStart']);
-        self::assertSame($first['zoomStart'], $second['zoomEnd']);
-        if ($first['panX'] !== 0.0 && $second['panX'] !== 0.0) {
-            self::assertLessThan(0.0, $first['panX'] * $second['panX']);
-        }
-        if ($first['panY'] !== 0.0 && $second['panY'] !== 0.0) {
-            self::assertLessThan(0.0, $first['panY'] * $second['panY']);
-        }
+        self::assertSame(1.0, $first['zoomStart']);
+        self::assertSame(1.08, $first['zoomEnd']);
+        self::assertSame(1.08, $second['zoomStart']);
+        self::assertSame(1.0, $second['zoomEnd']);
+        self::assertGreaterThanOrEqual(-0.05, $first['panX']);
+        self::assertLessThanOrEqual(0.05, $first['panX']);
+        self::assertGreaterThanOrEqual(-0.05, $second['panX']);
+        self::assertLessThanOrEqual(0.05, $second['panX']);
+        self::assertGreaterThanOrEqual(-0.05, $first['panY']);
+        self::assertLessThanOrEqual(0.05, $first['panY']);
+        self::assertGreaterThanOrEqual(-0.05, $second['panY']);
+        self::assertLessThanOrEqual(0.05, $second['panY']);
+        self::assertSame($second['panX'], $secondRepeat['panX']);
+        self::assertSame($second['panY'], $secondRepeat['panY']);
     }
 
-    public function testKenBurnsPanOffsetsRemainDeterministicWithinBounds(): void
+    public function testKenBurnsPanOffsetsRemainDeterministicWithinRange(): void
     {
-        $generator = new SlideshowVideoGenerator(
-            panX: 0.2,
-            panY: -0.1,
-        );
+        $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('resolveKenBurnsParameters');
@@ -615,32 +616,26 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $firstRepeat = $method->invoke($generator, 0, $firstSlide, $title, $subtitle);
         /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $second */
         $second = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
+        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $secondRepeat */
+        $secondRepeat = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
 
         self::assertSame($first, $firstRepeat);
 
         $panLimit = 0.05;
 
-        $firstTargetPanX  = 0.2;
-        $secondTargetPanX = -0.2;
-        $firstTargetPanY  = -0.1;
-        $secondTargetPanY = 0.1;
+        self::assertGreaterThanOrEqual(-$panLimit, $first['panX']);
+        self::assertLessThanOrEqual($panLimit, $first['panX']);
+        self::assertGreaterThanOrEqual(-$panLimit, $first['panY']);
+        self::assertLessThanOrEqual($panLimit, $first['panY']);
+        self::assertGreaterThanOrEqual(-$panLimit, $second['panX']);
+        self::assertLessThanOrEqual($panLimit, $second['panX']);
+        self::assertGreaterThanOrEqual(-$panLimit, $second['panY']);
+        self::assertLessThanOrEqual($panLimit, $second['panY']);
 
-        self::assertGreaterThanOrEqual($firstTargetPanX - $panLimit, $first['panX']);
-        self::assertLessThanOrEqual($firstTargetPanX + $panLimit, $first['panX']);
-        self::assertGreaterThanOrEqual($secondTargetPanX - $panLimit, $second['panX']);
-        self::assertLessThanOrEqual($secondTargetPanX + $panLimit, $second['panX']);
-
-        self::assertGreaterThanOrEqual($firstTargetPanY - $panLimit, $first['panY']);
-        self::assertLessThanOrEqual($firstTargetPanY + $panLimit, $first['panY']);
-        self::assertGreaterThanOrEqual($secondTargetPanY - $panLimit, $second['panY']);
-        self::assertLessThanOrEqual($secondTargetPanY + $panLimit, $second['panY']);
-
-        if ($first['panX'] !== 0.0 && $second['panX'] !== 0.0) {
-            self::assertLessThan(0.0, $first['panX'] * $second['panX']);
-        }
-        if ($first['panY'] !== 0.0 && $second['panY'] !== 0.0) {
-            self::assertLessThan(0.0, $first['panY'] * $second['panY']);
-        }
+        self::assertSame($first['panX'], $firstRepeat['panX']);
+        self::assertSame($first['panY'], $firstRepeat['panY']);
+        self::assertSame($second['panX'], $secondRepeat['panX']);
+        self::assertSame($second['panY'], $secondRepeat['panY']);
     }
 
     private function createTemporaryImage(string $base64): string
@@ -919,8 +914,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             kenBurnsEnabled: true,
             zoomStart: 1.2,
             zoomEnd: 1.3,
-            panX: 0.4,
-            panY: -0.25,
         );
 
         $reflector = new ReflectionClass($generator);
@@ -962,10 +955,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $panX = (float) $panXMatch['panX'];
         $panY = (float) $panYMatch['panY'];
 
-        self::assertGreaterThanOrEqual(0.35, $panX);
-        self::assertLessThanOrEqual(0.45, $panX);
-        self::assertGreaterThanOrEqual(-0.30, $panY);
-        self::assertLessThanOrEqual(-0.20, $panY);
+        self::assertGreaterThanOrEqual(-0.05, $panX);
+        self::assertLessThanOrEqual(0.05, $panX);
+        self::assertGreaterThanOrEqual(-0.05, $panY);
+        self::assertLessThanOrEqual(0.05, $panY);
         self::assertStringContainsString(':fps=30', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
@@ -1273,13 +1266,13 @@ BASH;
         $method    = $reflector->getMethod('escapeFilterExpression');
         $method->setAccessible(true);
 
-        $expression = 'if(gte(iw/ih,1.778),1.05+(1.15-1.05)*min(t/4.3,1),1)';
+        $expression = 'if(gte(iw/ih,1.778),1+(1.08-1)*min(t/4.3,1),1)';
 
         /** @var string $escaped */
         $escaped = $method->invoke($generator, $expression);
 
         self::assertSame(
-            'if(gte(iw/ih\,1.778)\,1.05+(1.15-1.05)*min(t/4.3\,1)\,1)',
+            'if(gte(iw/ih\,1.778)\,1+(1.08-1)*min(t/4.3\,1)\,1)',
             $escaped,
         );
 
