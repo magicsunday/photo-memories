@@ -21,9 +21,10 @@ interface StaypointDetectorInterface
     /**
      * Detects all staypoints from the given GPS-enabled media entries.
      *
-     * @param list<Media> $gpsMembers
+     * @param list<Media>                 $gpsMembers
+     * @param array{travelKm?:float,spotCount?:int,spotDensity?:float} $context
      *
      * @return list<array{lat:float,lon:float,start:int,end:int,dwell:int}>
      */
-    public function detect(array $gpsMembers): array;
+    public function detect(array $gpsMembers, array $context = []): array;
 }

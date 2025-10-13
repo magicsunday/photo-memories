@@ -188,6 +188,39 @@ parameters:
     # Description: Runtime minimum dwell time in minutes for DBSCAN-derived staypoints.
     memories.cluster.staypoint.fallback_min_dwell_minutes: '%env(default:memories.cluster.staypoint.fallback_min_dwell_minutes_default:int:MEMORIES_CLUSTER_STAYPOINT_FALLBACK_MIN_DWELL_MINUTES)%'
 
+    # Description: Default adaptive staypoint radius lower bound (urban focus) in kilometres.
+    memories.cluster.staypoint.adaptive_radius_min_km_default: 0.18
+    # Description: Runtime adaptive staypoint radius lower bound in kilometres.
+    memories.cluster.staypoint.adaptive_radius_min_km: '%env(default:memories.cluster.staypoint.adaptive_radius_min_km_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_RADIUS_MIN_KM)%'
+    # Description: Default adaptive staypoint radius upper bound (rural focus) in kilometres.
+    memories.cluster.staypoint.adaptive_radius_max_km_default: 0.35
+    # Description: Runtime adaptive staypoint radius upper bound in kilometres.
+    memories.cluster.staypoint.adaptive_radius_max_km: '%env(default:memories.cluster.staypoint.adaptive_radius_max_km_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_RADIUS_MAX_KM)%'
+    # Description: Default adaptive dwell-time lower bound for dense travel days (minutes).
+    memories.cluster.staypoint.adaptive_dwell_min_minutes_default: 15
+    # Description: Runtime adaptive dwell-time lower bound for dense travel days (minutes).
+    memories.cluster.staypoint.adaptive_dwell_min_minutes: '%env(default:memories.cluster.staypoint.adaptive_dwell_min_minutes_default:int:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_DWELL_MIN_MINUTES)%'
+    # Description: Default adaptive dwell-time upper bound for sparse travel days (minutes).
+    memories.cluster.staypoint.adaptive_dwell_max_minutes_default: 25
+    # Description: Runtime adaptive dwell-time upper bound for sparse travel days (minutes).
+    memories.cluster.staypoint.adaptive_dwell_max_minutes: '%env(default:memories.cluster.staypoint.adaptive_dwell_max_minutes_default:int:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_DWELL_MAX_MINUTES)%'
+    # Description: Default travel distance threshold (km) that indicates an urban day for adaptive calibration.
+    memories.cluster.staypoint.adaptive_travel_urban_km_default: 5.0
+    # Description: Runtime travel distance threshold (km) that indicates an urban day for adaptive calibration.
+    memories.cluster.staypoint.adaptive_travel_urban_km: '%env(default:memories.cluster.staypoint.adaptive_travel_urban_km_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_TRAVEL_URBAN_KM)%'
+    # Description: Default travel distance threshold (km) that indicates a rural day for adaptive calibration.
+    memories.cluster.staypoint.adaptive_travel_rural_km_default: 80.0
+    # Description: Runtime travel distance threshold (km) that indicates a rural day for adaptive calibration.
+    memories.cluster.staypoint.adaptive_travel_rural_km: '%env(default:memories.cluster.staypoint.adaptive_travel_rural_km_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_TRAVEL_RURAL_KM)%'
+    # Description: Default staypoint density ratio signalling sparse areas (clusters per kilometre).
+    memories.cluster.staypoint.adaptive_density_rural_default: 0.5
+    # Description: Runtime staypoint density ratio signalling sparse areas (clusters per kilometre).
+    memories.cluster.staypoint.adaptive_density_rural: '%env(default:memories.cluster.staypoint.adaptive_density_rural_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_DENSITY_RURAL)%'
+    # Description: Default staypoint density ratio signalling dense areas (clusters per kilometre).
+    memories.cluster.staypoint.adaptive_density_urban_default: 8.0
+    # Description: Runtime staypoint density ratio signalling dense areas (clusters per kilometre).
+    memories.cluster.staypoint.adaptive_density_urban: '%env(default:memories.cluster.staypoint.adaptive_density_urban_default:float:MEMORIES_CLUSTER_STAYPOINT_ADAPTIVE_DENSITY_URBAN)%'
+
     # Description: Default total number of curated media items selected for a vacation cluster.
     memories.cluster.selection.target_total_default: 40
     # Description: Runtime total number of curated media items selected for a vacation cluster.

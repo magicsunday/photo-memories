@@ -81,6 +81,13 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
             if ($baseLocation !== null && HomeBoundaryHelper::isBeyondHome($home, $baseLocation['lat'], $baseLocation['lon'], true)) {
                 $days[$key]['baseAway'] = true;
+
+                if (($days[$key]['isAwayCandidate'] ?? false) === false) {
+                    $window = $this->createNightWindow($summary['date'], $timezone);
+                    if ($window !== null && !$this->hasStaypointCoveringWindow($summary['staypoints'] ?? [], $window['start'], $window['end'])) {
+                        $days[$key]['isAwayCandidate'] = true;
+                    }
+                }
             }
 
             if ($summary['gpsMembers'] !== [] && HomeBoundaryHelper::hasCoordinateSamples($summary['gpsMembers'])) {
@@ -200,6 +207,43 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             'start' => $start,
             'end'   => $end,
         ];
+    }
+
+    /**
+     * @param list<array{start:int,end:int}> $staypoints
+     */
+    private function hasStaypointCoveringWindow(array $staypoints, DateTimeImmutable $windowStart, DateTimeImmutable $windowEnd): bool
+    {
+        if ($staypoints === []) {
+            return false;
+        }
+
+        $startTs       = $windowStart->getTimestamp();
+        $endTs         = $windowEnd->getTimestamp();
+        $windowSeconds = max(0, $endTs - $startTs);
+        $requiredCover = (int) ($windowSeconds * 0.75);
+
+        foreach ($staypoints as $staypoint) {
+            $stayStart = (int) ($staypoint['start'] ?? 0);
+            $stayEnd   = (int) ($staypoint['end'] ?? 0);
+
+            if ($stayStart === 0 || $stayEnd === 0) {
+                continue;
+            }
+
+            $overlapStart = max($stayStart, $startTs);
+            $overlapEnd   = min($stayEnd, $endTs);
+
+            if ($overlapEnd <= $overlapStart) {
+                continue;
+            }
+
+            if (($overlapEnd - $overlapStart) >= $requiredCover) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

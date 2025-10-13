@@ -16,7 +16,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 - **Heimatregion** – Referenzkoordinaten und Suchradien für „Zuhause“-Logik (`memories.home.*`).
 - **Geocoding** – Zugriffspunkte, Drosselung und erlaubte POI-Typen für Nominatim/Overpass (`memories.geocoding.*`).
 - **Zeit & Cluster** – Zeitzonen, Zeitnormalisierung und Transportgeschwindigkeitsgrenzen (`memories.time.*`, `memories.cluster.transport_speed.*`).
-- **Staypoint-Erkennung** – Radius, Mindestaufenthaltsdauer und DBSCAN-Fallback der Aufenthaltsort-Erkennung (`memories.cluster.staypoint.*`).
+- **Staypoint-Erkennung** – adaptiver Radius (0,18–0,35 km), Aufenthaltsdauer (15–25 min) und DBSCAN-Fallback der Aufenthaltsort-Erkennung (`memories.cluster.staypoint.*`).
 - **Urlaubs- und Kohortenclustering** – Schwellenwerte und Personenlisten zur Bildung von Clustern (`memories.cluster.vacation.*`, `memories.cluster.cohort.*`). Standardmäßig gelten 140 km Mindestentfernung vom Zuhause, vier Medien pro Tag und mindestens zwei Abwesenheitstage (`MEMORIES_CLUSTER_VACATION_MIN_AWAY_DISTANCE_KM`, `MEMORIES_CLUSTER_VACATION_MIN_ITEMS_PER_DAY`, `MEMORIES_CLUSTER_VACATION_MIN_AWAY_DAYS`).
 - **Thumbnails** – Zielgrößen und Orientierungsbehandlung (`memories.thumbnail_*`).
 - **Konsolidierung & Prioritäten** – Gewichtungen und Reihenfolgen für Clusterstrategien (`memories.cluster.consolidate.*`, `memories.cluster.priority.*`).

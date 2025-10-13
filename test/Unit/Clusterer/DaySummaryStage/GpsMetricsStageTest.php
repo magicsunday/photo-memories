@@ -65,7 +65,42 @@ final class GpsMetricsStageTest extends TestCase
         self::assertGreaterThan(0.0, $summary['avgDistanceKm']);
         self::assertSame(count($summary['spotClusters']), $summary['spotCount']);
         self::assertSame(count($summary['spotNoise']), $summary['spotNoiseSamples']);
+        self::assertArrayHasKey('spotDensity', $summary);
+        self::assertGreaterThanOrEqual(0.0, $summary['spotDensity']);
         self::assertTrue($summary['sufficientSamples']);
         self::assertIsArray($summary['staypoints']);
+    }
+
+    #[Test]
+    public function marksDayAsInsufficientWhenBelowDefaultThreshold(): void
+    {
+        $timezoneResolver = new TimezoneResolver('Europe/Berlin');
+        $initialStage     = new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin');
+        $gpsStage         = new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector());
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $items = [];
+        $start = new DateTimeImmutable('2024-05-01 07:00:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 3; ++$i) {
+            $items[] = $this->makeMediaFixture(
+                200 + $i,
+                sprintf('insufficient-%d.jpg', $i),
+                $start->add(new DateInterval('PT' . ($i * 2) . 'H')),
+                52.5 + ($i * 0.005),
+                13.4 + ($i * 0.005),
+            );
+        }
+
+        $initial = $initialStage->process($items, $home);
+        $result  = $gpsStage->process($initial, $home);
+
+        self::assertFalse($result['2024-05-01']['sufficientSamples']);
     }
 }

@@ -253,6 +253,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             'spotNoise'              => [],
             'spotCount'              => 0,
             'spotNoiseSamples'       => 0,
+            'spotDensity'            => 0.0,
             'spotDwellSeconds'       => 0,
             'staypoints'             => [],
             'baseLocation'           => null,

@@ -406,4 +406,104 @@ final class AwayFlagStageTest extends TestCase
         self::assertTrue($result['2024-07-10']['baseAway']);
         self::assertFalse($result['2024-07-11']['baseAway']);
     }
+
+    #[Test]
+    public function flagsAwayCandidateWhenNightWindowHasNoStaypoint(): void
+    {
+        $timezone = new DateTimeZone('Europe/Berlin');
+
+        $timezoneResolver = new class($timezone) implements TimezoneResolverInterface
+        {
+            public function __construct(private DateTimeZone $timezone)
+            {
+            }
+
+            public function resolveMediaTimezone(Media $media, DateTimeImmutable $takenAt, array $home): DateTimeZone
+            {
+                return $this->timezone;
+            }
+
+            public function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
+            {
+                return $this->timezone;
+            }
+
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            {
+                return (int) ($home['timezone_offset'] ?? 0);
+            }
+
+            public function determineLocalTimezoneIdentifier(array $identifierVotes, array $home, ?int $offset): string
+            {
+                return 'Europe/Berlin';
+            }
+        };
+
+        $baseResolver = new class implements BaseLocationResolverInterface
+        {
+            public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): ?array
+            {
+                return [
+                    'lat'         => 48.8566,
+                    'lon'         => 2.3522,
+                    'distance_km' => 900.0,
+                    'source'      => 'test',
+                ];
+            }
+        };
+
+        $stage = new AwayFlagStage($timezoneResolver, $baseResolver);
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'       => 52.5200,
+                'lon'       => 13.4050,
+                'radius_km' => 12.0,
+            ]],
+        ];
+
+        $days = [
+            '2024-08-15' => [
+                'date'                 => '2024-08-15',
+                'gpsMembers'           => [],
+                'staypoints'           => [],
+                'avgDistanceKm'        => 0.0,
+                'baseAway'             => false,
+                'awayByDistance'       => false,
+                'isAwayCandidate'      => false,
+                'photoCount'           => 4,
+                'spotClusters'         => [],
+                'spotNoise'            => [],
+                'spotCount'            => 0,
+                'spotNoiseSamples'     => 0,
+                'spotDensity'          => 0.0,
+                'spotDwellSeconds'     => 0,
+                'sufficientSamples'    => true,
+                'staypointIndex'       => null,
+                'staypointCounts'      => [],
+                'staypointCount'       => 0,
+                'staypointDwellSeconds'=> 0,
+                'dominantStaypoints'   => [],
+                'primaryStaypointKey'  => null,
+                'transitRatio'         => 0.0,
+                'poiDensity'           => 0.0,
+                'cohortPresenceRatio'  => 0.0,
+                'cohortMembers'        => [],
+                'baseLocation'         => null,
+                'firstGpsMedia'        => null,
+                'lastGpsMedia'         => null,
+                'isSynthetic'          => false,
+            ],
+        ];
+
+        $result = $stage->process($days, $home);
+
+        self::assertTrue($result['2024-08-15']['baseAway']);
+        self::assertTrue($result['2024-08-15']['isAwayCandidate']);
+    }
 }

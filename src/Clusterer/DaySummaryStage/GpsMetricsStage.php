@@ -22,6 +22,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function assert;
 use function count;
+use function max;
 use function usort;
 
 /**
@@ -36,7 +37,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
         private readonly StaypointDetectorInterface $staypointDetector,
         private readonly float $gpsOutlierRadiusKm = 1.0,
         private readonly int $gpsOutlierMinSamples = 3,
-        private readonly int $minItemsPerDay = 3,
+        private readonly int $minItemsPerDay = 4,
     ) {
         if ($this->gpsOutlierRadiusKm <= 0.0) {
             throw new InvalidArgumentException('gpsOutlierRadiusKm must be > 0.');
@@ -127,7 +128,6 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
 
                 $summary['firstGpsMedia'] = $gpsMembers[0];
                 $summary['lastGpsMedia']  = $gpsMembers[count($gpsMembers) - 1];
-                $summary['staypoints']    = $this->staypointDetector->detect($gpsMembers);
 
                 $clusters = $this->dbscanHelper->clusterMedia(
                     $gpsMembers,
@@ -139,6 +139,20 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
                 $summary['spotNoise']        = $clusters['noise'];
                 $summary['spotCount']        = count($clusters['clusters']);
                 $summary['spotNoiseSamples'] = count($clusters['noise']);
+
+                $spotDensity = $summary['spotCount'] > 0
+                    ? $summary['spotCount'] / max(0.5, $summary['travelKm'])
+                    : 0.0;
+
+                $summary['spotDensity'] = $spotDensity;
+                $summary['staypoints']  = $this->staypointDetector->detect(
+                    $gpsMembers,
+                    [
+                        'travelKm'    => $summary['travelKm'],
+                        'spotCount'   => $summary['spotCount'],
+                        'spotDensity' => $spotDensity,
+                    ],
+                );
 
                 $dwellSeconds = 0;
                 foreach ($summary['staypoints'] as $staypoint) {
