@@ -73,8 +73,11 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
     private function score(Media $m, ?int $medianTs): float
     {
-        $w      = $m->getWidth() ?? 0;
-        $h      = $m->getHeight() ?? 0;
+        $width  = $m->getWidth() ?? 0;
+        $height = $m->getHeight() ?? 0;
+
+        [$w, $h] = $this->normalizeDimensions($width, $height, $m);
+
         $areaMp = $w > 0 && $h > 0 ? (($w * $h) / 1_000_000.0) : 0.0;
 
         // Orientation bonus
@@ -103,10 +106,31 @@ final class DefaultCoverPicker implements CoverPickerInterface
         // Combine (weights tuned pragmatisch)
         return
             0.35 * min(1.0, $areaMp / 12.0) +  // up to ~12MP normalized
-            0.20 * $landscape +
-            0.15 * $aspectScore +
-            0.15 * $timeScore +
-            0.10 * $sizeScore +
+            0.15 * $landscape +
+            0.10 * $aspectScore +
+            0.20 * $timeScore +
+            0.15 * $sizeScore +
             0.05 * $thumbBonus;
+    }
+
+    /**
+     * @return array{int,int}
+     */
+    private function normalizeDimensions(int $width, int $height, Media $media): array
+    {
+        if ($width === 0 || $height === 0) {
+            return [$width, $height];
+        }
+
+        if (!$media->needsRotation()) {
+            return [$width, $height];
+        }
+
+        $orientation = $media->getOrientation();
+
+        return match ($orientation) {
+            5, 6, 7, 8 => [$height, $width],
+            default => [$width, $height],
+        };
     }
 }
