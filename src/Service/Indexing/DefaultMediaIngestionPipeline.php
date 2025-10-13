@@ -15,8 +15,12 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
+use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionTelemetryInterface;
+use MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function is_array;
 use function iterator_to_array;
@@ -26,17 +30,24 @@ use function iterator_to_array;
  */
 final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipelineInterface
 {
-    /**
-     * @var list<MediaIngestionStageInterface>
-     */
+    /** @var list<MediaIngestionStageInterface> */
     private array $stages;
+
+    private MediaIngestionTelemetryInterface $telemetry;
+
+    private LoggerInterface $logger;
 
     /**
      * @param iterable<MediaIngestionStageInterface> $stages
      */
-    public function __construct(iterable $stages)
-    {
-        $this->stages = is_array($stages) ? $stages : iterator_to_array($stages);
+    public function __construct(
+        iterable $stages,
+        ?MediaIngestionTelemetryInterface $telemetry = null,
+        ?LoggerInterface $logger = null,
+    ) {
+        $this->stages    = is_array($stages) ? $stages : iterator_to_array($stages);
+        $this->telemetry = $telemetry ?? new MediaIngestionTelemetryCollector();
+        $this->logger    = $logger ?? new NullLogger();
     }
 
     public function process(
@@ -61,7 +72,13 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
             return null;
         }
 
-        return $context->getMedia();
+        $media = $context->getMedia();
+
+        if ($media instanceof Media) {
+            $this->telemetry->recordProcessedMedia($context->getFilePath(), $media);
+        }
+
+        return $media;
     }
 
     public function finalize(bool $dryRun): void
@@ -73,5 +90,14 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
                 $stage->finalize($context);
             }
         }
+
+        $metrics = $this->telemetry->metrics();
+
+        $this->logger->info('media_ingestion.finalize', [
+            'dryRun'  => $dryRun,
+            'metrics' => $metrics,
+        ]);
+
+        $this->telemetry->reset();
     }
 }

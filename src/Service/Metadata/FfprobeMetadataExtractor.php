@@ -18,6 +18,7 @@ use Exception;
 use JsonException;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionTelemetryInterface;
 use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
 use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
@@ -53,6 +54,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         private float $slowMoFpsThreshold = 100.0,
         private float $processTimeout = 10.0,
         private ?Closure $processRunner = null,
+        private ?MediaIngestionTelemetryInterface $telemetry = null,
     ) {
     }
 
@@ -84,6 +86,10 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         ];
 
         $out = $this->runCommand($media, $command, 'ffprobe.streams');
+        if ($this->telemetry !== null) {
+            $this->telemetry->recordFfprobeAvailability($filepath, $out !== null);
+        }
+
         if ($out === null) {
             return $media;
         }
@@ -138,6 +144,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         if ($this->shouldExtractQuickTimeMetadata($media)) {
             $this->applyQuickTimeMetadata($filepath, $media);
+            if ($this->telemetry !== null && $media->getTimeSource() === TimeSource::VIDEO_QUICKTIME) {
+                $this->telemetry->recordQuickTimeTimezoneHit($filepath);
+            }
         }
 
         return $media;
