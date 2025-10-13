@@ -391,7 +391,7 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage'
             $telemetry: '@MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector'
-            $logger: '@Psr\\Log\\LoggerInterface'
+            $logger: '@?Psr\\Log\\LoggerInterface'
 
     MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface:
         alias: MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline
