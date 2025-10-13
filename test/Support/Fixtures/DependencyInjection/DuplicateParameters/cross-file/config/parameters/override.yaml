@@ -1,0 +1,3 @@
+parameters:
+    memories.test.cross.override: 'override'
+    memories.test.cross.shared: 'override'

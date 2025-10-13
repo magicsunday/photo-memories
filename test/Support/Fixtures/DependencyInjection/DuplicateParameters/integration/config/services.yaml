@@ -1,0 +1,4 @@
+imports:
+    - { resource: 'parameters.yaml', ignore_errors: true }
+
+services: { }

@@ -78,6 +78,7 @@ Hinterlegt lokalisierte Titel- und Untertitelvorlagen für Cluster-Kategorien. P
 
 ## Ergänzende Hinweise
 
+- Beim Container-Build protokolliert der `DuplicateParameterGuardCompilerPass` eine Warnung, wenn Parameter mehrfach definiert werden – sei es über doppelte Schlüssel innerhalb einer Datei oder über mehrere eingebundene Parameterpfade. Konsolidiere solche Werte, damit klar ist, welche Defaults tatsächlich greifen.
 - Änderungen an Konfigurationswerten sollten im Commit erläutert und – falls sie das Verhalten nach außen beeinflussen – in der README dokumentiert werden.
 - Nach Anpassungen empfiehlt es sich, den Cache unter `var/cache/` zu leeren, damit Symfony die Container-Definitionen neu generiert.
 - Neue Umgebungsvariablen müssen in Deployment-Umgebungen gesetzt werden, bevor sie in Produktion genutzt werden.
