@@ -48,6 +48,9 @@ final class DayAlbumClusterStrategyTest extends TestCase
             ['label' => 'Sonne', 'score' => 0.6],
         ], ['Strand', 'Familie']);
 
+        $mediaItems[0]->setPersons(['Anna']);
+        $mediaItems[1]->setPersons(['Ben']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
@@ -114,10 +117,42 @@ final class DayAlbumClusterStrategyTest extends TestCase
             $this->createShiftedMedia(503, '2023-01-01 08:30:00', '2023-01-01 00:30:00'),
         ];
 
+        $mediaItems[0]->setPersons(['Clara']);
+        $mediaItems[1]->setPersons(['Clara']);
+
         $clusters = $strategy->cluster($mediaItems);
 
         self::assertCount(1, $clusters);
         self::assertSame([501, 502], $clusters[0]->getMembers());
+    }
+
+    #[Test]
+    public function skipsDaysWithoutFacesPoiOrQuality(): void
+    {
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('UTC'),
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerDay: 2,
+        );
+
+        $mediaItems = [
+            $this->makeMediaFixture(901, 'day-album-neutral-901.jpg', '2024-04-05 10:00:00'),
+            $this->makeMediaFixture(902, 'day-album-neutral-902.jpg', '2024-04-05 10:15:00'),
+        ];
+
+        foreach ($mediaItems as $media) {
+            $media->setPersons(null);
+            $media->setHasFaces(false);
+            $media->setSceneTags(null);
+            $media->setKeywords(null);
+            $media->setGpsLat(null);
+            $media->setGpsLon(null);
+            $media->setLocation(null);
+            $media->setWidth(null);
+            $media->setHeight(null);
+        }
+
+        self::assertSame([], $strategy->cluster($mediaItems));
     }
 
     #[Test]
