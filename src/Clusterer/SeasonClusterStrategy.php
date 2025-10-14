@@ -11,12 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -29,11 +31,12 @@ use function mb_strtolower;
  * Groups media by meteorological seasons per year (DE).
  * Winter is Dec–Feb (December assigned to next year).
  */
-final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
+final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
+    use ProgressAwareClusterTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
@@ -187,4 +190,15 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface
 
         return mb_strtolower($value) === 'winter';
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

@@ -11,12 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\LocationHelper;
@@ -51,10 +53,11 @@ use const SORT_STRING;
 /**
  * Picks the best weekend getaway (1..3 nights) per year and aggregates them into one over-years memory.
  */
-final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     private LocationHelper $locHelper;
 
@@ -739,4 +742,15 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         return is_string($firstKey) ? $firstKey : null;
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

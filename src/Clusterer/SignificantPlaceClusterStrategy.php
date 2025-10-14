@@ -11,11 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -30,10 +32,11 @@ use function sprintf;
  * Aggregates recurring places using a coarse geogrid (lat/lon rounding).
  * Creates one cluster per significant place with enough distinct visit days.
  */
-final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyInterface
+final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ProgressAwareClusterTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
@@ -190,4 +193,15 @@ final readonly class SignificantPlaceClusterStrategy implements ClusterStrategyI
 
         return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

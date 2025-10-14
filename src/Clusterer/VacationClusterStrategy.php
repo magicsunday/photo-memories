@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
@@ -35,6 +36,7 @@ use function usort;
 final readonly class VacationClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     private const MONITORING_JOB = 'cluster.vacation';
 
@@ -208,18 +210,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         ]);
 
         return $segments;
-    }
-
-    /**
-     * @param callable(int $done, int $max, string $stage):void|null $update
-     */
-    private function notifyProgress(?callable $update, int $done, int $max, string $stage): void
-    {
-        if ($update === null) {
-            return;
-        }
-
-        $update($done, $max, $stage);
     }
 
     /**

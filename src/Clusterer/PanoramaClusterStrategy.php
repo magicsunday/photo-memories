@@ -11,8 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -23,9 +25,10 @@ use function usort;
 /**
  * Clusters panorama photos (very wide aspect ratio) into time sessions.
  */
-final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
+final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     public function __construct(
         private float $minAspect = 2.4,     // width / height threshold
@@ -139,4 +142,15 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

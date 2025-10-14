@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterfac
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
@@ -48,6 +49,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
+    use ProgressAwareClusterTrait;
 
     private PersonSignatureHelper $personSignatureHelper;
 
@@ -155,7 +157,12 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             ++$processedCandidates;
 
             if ($update !== null && $processedCandidates % $notifyThreshold === 0) {
-                $update($step, $steps, sprintf('Signaturen gruppieren (%d/%d)', $processedCandidates, $totalCandidates));
+                $this->notifyProgress(
+                    $update,
+                    $step,
+                    $steps,
+                    sprintf('Signaturen gruppieren (%d/%d)', $processedCandidates, $totalCandidates)
+                );
             }
         }
 
@@ -193,7 +200,12 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         foreach ($eligibleBuckets as $byDay) {
             ++$processedGroups;
             if ($update !== null) {
-                $update($step, $steps, sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount));
+                $this->notifyProgress(
+                    $update,
+                    $step,
+                    $steps,
+                    sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount)
+                );
             }
 
             ksort($byDay);
@@ -234,18 +246,6 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $this->notifyProgress($update, ++$step, $steps, sprintf('%d Cluster erstellt', count($clusters)));
 
         return $clusters;
-    }
-
-    /**
-     * @param callable(int $done, int $max, string $stage):void|null $update
-     */
-    private function notifyProgress(?callable $update, int $done, int $max, string $stage): void
-    {
-        if ($update === null) {
-            return;
-        }
-
-        $update($done, $max, $stage);
     }
 
     /**

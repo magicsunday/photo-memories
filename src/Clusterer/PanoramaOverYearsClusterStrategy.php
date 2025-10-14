@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -27,9 +29,10 @@ use function usort;
 /**
  * Aggregates panoramas across years; requires per-year minimum.
  */
-final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface
+final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     public function __construct(
         private float $minAspect = 2.4,
@@ -143,4 +146,15 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
             ),
         ];
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }
