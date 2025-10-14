@@ -143,14 +143,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     public function persistStreaming(iterable $drafts, ?callable $onPersisted): int
     {
-        $batchSize = $this->defaultBatchSize > 0 ? $this->defaultBatchSize : 1;
-
         $existing    = [];
         $seenThisRun = [];
         $persisted   = 0;
-
-        /** @var list<array{draft:ClusterDraft, members:list<int>, fingerprint:string, key:string}> $pending */
-        $pending = [];
 
         foreach ($drafts as $draft) {
             $curated = $this->memberSelection->curate($draft);
@@ -158,21 +153,14 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
             $context = $this->resolveDraftContext($curated);
 
-            $pending[] = [
-                'draft'       => $curated,
-                'members'     => $context['members'],
-                'fingerprint' => $context['fingerprint'],
-                'key'         => $context['key'],
-            ];
-
-            if (count($pending) >= $batchSize) {
-                $persisted += $this->flushStreamingBatch($pending, $existing, $seenThisRun, $onPersisted);
-                $pending = [];
-            }
-        }
-
-        if ($pending !== []) {
-            $persisted += $this->flushStreamingBatch($pending, $existing, $seenThisRun, $onPersisted);
+            $persisted += $this->flushStreamingBatch([
+                [
+                    'draft'       => $curated,
+                    'members'     => $context['members'],
+                    'fingerprint' => $context['fingerprint'],
+                    'key'         => $context['key'],
+                ],
+            ], $existing, $seenThisRun, $onPersisted);
         }
 
         return $persisted;
