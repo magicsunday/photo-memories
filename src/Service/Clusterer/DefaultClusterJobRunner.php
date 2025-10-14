@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
+use Throwable;
 
 use function count;
 use function max;
@@ -113,9 +114,6 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
 
         $deleted = 0;
-        if ($options->shouldReplace() && !$options->isDryRun()) {
-            $deleted = $this->persistence->deleteAll();
-        }
 
         $strategyCount = $this->clusterer->countStrategies();
         $clusterHandle = $progressReporter->create('Clustere', '🧩 Strategien', $strategyCount);
@@ -167,6 +165,22 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $draftCount = count($drafts);
         if ($draftCount === 0) {
+            if ($options->shouldReplace() && !$options->isDryRun()) {
+                $connection = $this->entityManager->getConnection();
+                $this->entityManager->beginTransaction();
+
+                try {
+                    $deleted = $this->persistence->deleteAll();
+                    $this->entityManager->commit();
+                } catch (Throwable $exception) {
+                    if ($connection->isTransactionActive()) {
+                        $this->entityManager->rollback();
+                    }
+
+                    throw $exception;
+                }
+            }
+
             return new ClusterJobResult($total, $loadedCount, 0, 0, 0, $deleted, $options->isDryRun());
         }
 
@@ -185,6 +199,22 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $consolidatedCount = count($drafts);
         if ($consolidatedCount === 0) {
+            if ($options->shouldReplace() && !$options->isDryRun()) {
+                $connection = $this->entityManager->getConnection();
+                $this->entityManager->beginTransaction();
+
+                try {
+                    $deleted = $this->persistence->deleteAll();
+                    $this->entityManager->commit();
+                } catch (Throwable $exception) {
+                    if ($connection->isTransactionActive()) {
+                        $this->entityManager->rollback();
+                    }
+
+                    throw $exception;
+                }
+            }
+
             return new ClusterJobResult($total, $loadedCount, $draftCount, 0, 0, $deleted, $options->isDryRun());
         }
 
@@ -209,14 +239,30 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $persistHandle->advance();
             }
         } else {
-            $persisted = $this->persistence->persistStreaming(
-                $stream,
-                function (int $persistedNow) use (&$persisted, $persistHandle, $persistStart): void {
-                    $persisted += $persistedNow;
-                    $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));
-                    $persistHandle->advance($persistedNow);
-                },
-            );
+            $onPersisted = function (int $persistedNow) use (&$persisted, $persistHandle, $persistStart): void {
+                $persisted += $persistedNow;
+                $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));
+                $persistHandle->advance($persistedNow);
+            };
+
+            if ($options->shouldReplace()) {
+                $connection = $this->entityManager->getConnection();
+                $this->entityManager->beginTransaction();
+
+                try {
+                    $deleted = $this->persistence->deleteAll();
+                    $persisted = $this->persistence->persistStreaming($stream, $onPersisted);
+                    $this->entityManager->commit();
+                } catch (Throwable $exception) {
+                    if ($connection->isTransactionActive()) {
+                        $this->entityManager->rollback();
+                    }
+
+                    throw $exception;
+                }
+            } else {
+                $persisted = $this->persistence->persistStreaming($stream, $onPersisted);
+            }
         }
         $persistHandle->finish();
 

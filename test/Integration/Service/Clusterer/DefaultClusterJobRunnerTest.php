@@ -12,11 +12,16 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Integration\Service\Clusterer;
 
 use DateTimeImmutable;
+use Doctrine\DBAL\DriverManager;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\ORMSetup;
+use Doctrine\ORM\Tools\SchemaTool;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
@@ -142,6 +147,97 @@ final class DefaultClusterJobRunnerTest extends TestCase
         self::assertCount(1, $storedClusters, 'Clusters persisted before abort should remain available.');
         self::assertSame('algo-one', $storedClusters[0]->getAlgorithm());
         self::assertSame(1, $storedClusters[0]->getMembersCount());
+    }
+
+    #[Test]
+    public function itRollsBackReplacedClustersWhenPersistenceThrows(): void
+    {
+        $entityManager = $this->createSqliteEntityManager();
+        $this->createClusterSchema($entityManager);
+
+        $mediaOne = new Media('/one.jpg', str_pad('1', 64, '0', STR_PAD_LEFT), 1024);
+        $mediaOneTakenAt = new DateTimeImmutable('2024-02-10T08:00:00+00:00');
+        $mediaOne->setTakenAt($mediaOneTakenAt);
+        $mediaOne->setCapturedLocal($mediaOneTakenAt);
+        $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaOne->setMime('image/jpeg');
+        $mediaOne->setIsVideo(false);
+
+        $mediaTwo = new Media('/two.jpg', str_pad('2', 64, '0', STR_PAD_LEFT), 1024);
+        $mediaTwoTakenAt = new DateTimeImmutable('2024-02-10T09:00:00+00:00');
+        $mediaTwo->setTakenAt($mediaTwoTakenAt);
+        $mediaTwo->setCapturedLocal($mediaTwoTakenAt);
+        $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaTwo->setMime('image/jpeg');
+        $mediaTwo->setIsVideo(false);
+
+        $entityManager->persist($mediaOne);
+        $entityManager->persist($mediaTwo);
+        $entityManager->flush();
+
+        $existingCluster = new Cluster('legacy', [], ['lat' => 0.0, 'lon' => 0.0], [$mediaOne->getId()]);
+        $entityManager->persist($existingCluster);
+        $entityManager->flush();
+
+        $clusterer    = new SequenceHybridClusterer([
+            new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [$mediaOne->getId(), $mediaTwo->getId()]),
+        ]);
+        $consolidator = new PassthroughClusterConsolidator();
+
+        $memberLookup  = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberSelect  = new IdentityClusterMemberSelectionService();
+        $coverPicker   = new NullCoverPicker();
+        $persistence   = new ClusterPersistenceService(
+            em: $entityManager,
+            mediaLookup: $memberLookup,
+            memberSelection: $memberSelect,
+            coverPicker: $coverPicker,
+            defaultBatchSize: 1,
+            maxMembers: 50,
+            fingerprintLookupBatchSize: 10,
+        );
+
+        $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
+        $options = new ClusterJobOptions(false, null, null, true);
+
+        try {
+            $runner->run($options, new ThrowingProgressReporter('💾 Speichern'));
+            self::fail('Expected simulated persistence failure to bubble up.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('Simulated persistence failure', $exception->getMessage());
+        }
+
+        $connection = $entityManager->getConnection();
+        $clusterCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM cluster');
+        self::assertSame(1, $clusterCount, 'Original clusters should be restored after rollback.');
+        $algorithm = $connection->fetchOne('SELECT algorithm FROM cluster LIMIT 1');
+        self::assertSame('legacy', $algorithm);
+    }
+
+    private function createSqliteEntityManager(): EntityManagerInterface
+    {
+        $config = ORMSetup::createAttributeMetadataConfiguration(
+            paths: [dirname(__DIR__, 4) . '/src/Entity'],
+            isDevMode: true,
+        );
+
+        $connection = DriverManager::getConnection([
+            'driver' => 'pdo_sqlite',
+            'memory' => true,
+        ]);
+
+        return EntityManager::create($connection, $config);
+    }
+
+    private function createClusterSchema(EntityManagerInterface $entityManager): void
+    {
+        $schemaTool = new SchemaTool($entityManager);
+
+        $schemaTool->createSchema([
+            $entityManager->getClassMetadata(Media::class),
+            $entityManager->getClassMetadata(Location::class),
+            $entityManager->getClassMetadata(Cluster::class),
+        ]);
     }
 
     /**
@@ -282,6 +378,85 @@ final class FirstCoverPicker implements CoverPickerInterface
     public function pickCover(array $members, array $clusterParams): ?Media
     {
         return $members[0] ?? null;
+    }
+}
+
+final class NullCoverPicker implements CoverPickerInterface
+{
+    public function pickCover(array $members, array $clusterParams): ?Media
+    {
+        return null;
+    }
+}
+
+final class ThrowingProgressReporter implements ProgressReporterInterface
+{
+    public function __construct(private readonly string $headlineToThrow)
+    {
+    }
+
+    public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+    {
+        if ($headline === $this->headlineToThrow) {
+            return new ThrowingProgressHandle();
+        }
+
+        return new NoOpProgressHandle();
+    }
+}
+
+class NoOpProgressHandle implements ProgressHandleInterface
+{
+    public function advance(int $step = 1): void
+    {
+    }
+
+    public function setPhase(?string $message): void
+    {
+    }
+
+    public function setDetail(?string $message): void
+    {
+    }
+
+    public function setRate(?string $message): void
+    {
+    }
+
+    public function setProgress(int $current): void
+    {
+    }
+
+    public function setMax(int $max): void
+    {
+    }
+
+    public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+    {
+        return new self();
+    }
+
+    public function finish(): void
+    {
+    }
+}
+
+final class ThrowingProgressHandle extends NoOpProgressHandle
+{
+    private bool $thrown = false;
+
+    public function advance(int $step = 1): void
+    {
+        if (!$this->thrown) {
+            $this->thrown = true;
+
+            throw new RuntimeException('Simulated persistence failure');
+        }
+    }
+
+    public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+    {
+        return new NoOpProgressHandle();
     }
 }
 
