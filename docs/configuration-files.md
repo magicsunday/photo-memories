@@ -59,7 +59,8 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 
   Die Audiosektion normalisiert die Musikspur mit -14 LUFS als Zielwert. Wer andere Plattformvorgaben bedienen muss, passt
   `memories.slideshow.audio_loudness_lufs` beziehungsweise `MEMORIES_SLIDESHOW_AUDIO_LOUDNESS` an; der FFmpeg-Filter zieht
-  anschließend Dynamikkompression, Limiter und 1-Sekunden-Fades (`dynaudnorm`, `alimiter`, `afade`) automatisch nach.
+  anschließend Dynamikkompression (`dynaudnorm`), einen Limiter (`alimiter`), ein auf 48 kHz Stereo fixiertes Format
+  (`aformat`) und 1-Sekunden-Fades (`afade`) automatisch nach.
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 

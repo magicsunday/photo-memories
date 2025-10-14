@@ -1412,7 +1412,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $limiterLimit    = $this->formatFloat(self::AUDIO_LIMITER_LIMIT_DB);
                 $fadeDuration    = $this->formatFloat(self::AUDIO_FADE_DURATION);
                 $audioFilter     = sprintf(
-                    '%sdynaudnorm=f=250,alimiter=level_in=0:level_out=%s:limit=%s:attack=5:release=50,aformat=sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=%s,afade=out:st=duration-%s:d=%s[aout]',
+                    '%sdynaudnorm=f=250,alimiter=level_in=0:level_out=%s:limit=%s:attack=5:release=50,aformat=sample_rates=48000:sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=%s,afade=out:st=duration-%s:d=%s[aout]',
                     $audioInputLabel,
                     $targetLoudness,
                     $limiterLimit,
