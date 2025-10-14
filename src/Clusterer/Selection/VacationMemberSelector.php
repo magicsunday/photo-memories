@@ -28,6 +28,8 @@ use function count;
 use function floor;
 use function intdiv;
 use function is_array;
+use function is_int;
+use function is_numeric;
 use function is_string;
 use function max;
 use function min;
@@ -64,6 +66,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
      * @var array<string, int>
      */
     private array $dayCaps = [];
+
+    /**
+     * @var array<string, int>
+     */
+    private array $daySpacingThresholds = [];
 
     private int $effectiveMaxPerStaypoint = 0;
 
@@ -224,6 +231,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     private function attemptSelection(array $daySummaries, VacationSelectionOptions $options): array
     {
         $this->dayCaps                  = [];
+        $this->daySpacingThresholds     = [];
         $this->effectiveMaxPerStaypoint = $options->maxPerStaypoint;
         $this->effectivePhashMin        = $options->phashMinHamming;
         $this->basePerDayCap            = $options->maxPerDay;
@@ -263,6 +271,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 'base_per_day_cap'        => null,
                 'day_caps'                => [],
                 'day_categories'          => [],
+                'day_spacing_seconds'     => [],
                 'max_per_staypoint'       => $options->maxPerStaypoint,
                 'phash_min_effective'     => $options->phashMinHamming,
                 'phash_percentile_25'     => null,
@@ -322,6 +331,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $this->telemetry['thresholds']['base_per_day_cap']    = $basePerDayCap;
         $this->telemetry['thresholds']['day_caps']            = $this->dayCaps;
         $this->telemetry['thresholds']['day_categories']      = $this->collectDayCategories($daySummaries, $dayOrder);
+        $this->telemetry['thresholds']['day_spacing_seconds'] = $this->daySpacingThresholds;
         $this->telemetry['thresholds']['max_per_staypoint']   = $this->effectiveMaxPerStaypoint;
         $this->telemetry['thresholds']['phash_min_effective'] = $this->effectivePhashMin;
         $this->telemetry['thresholds']['phash_percentile_25'] = $adaptivePercentile;
@@ -746,7 +756,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
      */
     private function buildDayCaps(array $daySummaries, array $dayOrder, VacationSelectionOptions $options, int $basePerDayCap): array
     {
-        $caps = [];
+        $caps     = [];
+        $spacing  = [];
+        $fallback = max(0, $options->minSpacingSeconds);
+
         foreach ($dayOrder as $day) {
             $category = $this->resolveDayCategory($daySummaries[$day] ?? null);
             $cap      = $basePerDayCap;
@@ -757,10 +770,51 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 $cap -= $options->peripheralDayPenalty;
             }
 
-            $caps[$day] = max(1, min($options->maxPerDay, $cap));
+            $perDayCap     = max(1, min($options->maxPerDay, $cap));
+            $caps[$day]    = $perDayCap;
+            $spacing[$day] = $this->resolveDaySpacingThreshold($daySummaries[$day] ?? null, $perDayCap, $fallback);
         }
 
+        $this->daySpacingThresholds = $spacing;
+
         return $caps;
+    }
+
+    /**
+     * @param DaySummary|array<string, mixed>|null $summary
+     */
+    private function resolveDaySpacingThreshold($summary, int $perDayCap, int $profileMinSpacing): int
+    {
+        $baseline = max(0, $profileMinSpacing);
+
+        if (!is_array($summary)) {
+            return $baseline;
+        }
+
+        $context  = $summary['selectionContext'] ?? null;
+        $duration = null;
+
+        if (is_array($context)) {
+            $candidate = $context['duration'] ?? null;
+            if (is_int($candidate)) {
+                $duration = $candidate;
+            } elseif (is_string($candidate) && is_numeric($candidate)) {
+                $duration = (int) $candidate;
+            }
+        }
+
+        if ($duration === null || $duration <= 0) {
+            return $baseline;
+        }
+
+        $slots    = max(3, $perDayCap + 1);
+        $adaptive = (int) ceil($duration / $slots);
+
+        if ($adaptive < $baseline) {
+            return $baseline;
+        }
+
+        return $adaptive;
     }
 
     /**
@@ -939,9 +993,14 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         }
 
+        $candidateSpacing = $this->daySpacingThresholds[$day] ?? $options->minSpacingSeconds;
+
         foreach ($selected as $existing) {
-            $seconds = $this->metrics->secondsBetween($candidate['media'], $existing['media']);
-            if ($seconds < $options->minSpacingSeconds) {
+            $seconds          = $this->metrics->secondsBetween($candidate['media'], $existing['media']);
+            $existingSpacing  = $this->daySpacingThresholds[$existing['day']] ?? $options->minSpacingSeconds;
+            $pairSpacing      = max($options->minSpacingSeconds, $candidateSpacing, $existingSpacing);
+
+            if ($seconds < $pairSpacing) {
                 ++$this->telemetry['spacing_rejections'];
 
                 return false;
