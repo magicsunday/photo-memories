@@ -28,6 +28,7 @@ use MagicSunday\Memories\Service\Clusterer\TravelWaypointAnnotator;
 use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+use function array_chunk;
 use function array_find;
 use function array_is_list;
 use function array_key_exists;
@@ -63,6 +64,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
         private int $maxMembers = 500,
+        #[Autowire('%memories.cluster.persistence.fingerprint_lookup_batch_size%')]
+        private int $fingerprintLookupBatchSize = 500,
         ?ClusterQualityAggregator $qualityAggregator = null,
         ?ClusterPeopleAggregator $peopleAggregator = null,
         ?TravelWaypointAnnotator $travelWaypointAnnotator = null,
@@ -309,25 +312,54 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         /** @var list<string> $fpList */
         $fpList = array_keys($fps);
 
+        $chunkSize = $this->fingerprintLookupBatchSize > 0 ? $this->fingerprintLookupBatchSize : 1;
+
+        $existing = [];
+        foreach (array_chunk($fpList, $chunkSize) as $chunk) {
+            $rows     = $this->fetchExistingPairsChunk($algList, $chunk);
+            $existing = $this->mergeExistingPairRows($existing, $rows);
+        }
+
+        return $existing;
+    }
+
+    /**
+     * @param list<string> $algorithms
+     * @param list<string> $fingerprints
+     *
+     * @return list<array{alg:string, fp:string}>
+     */
+    private function fetchExistingPairsChunk(array $algorithms, array $fingerprints): array
+    {
         $qb = $this->em->createQueryBuilder()
             ->select('c.algorithm AS alg', 'c.fingerprint AS fp')
             ->from(Cluster::class, 'c')
             ->where('c.algorithm IN (:algs)')
             ->andWhere('c.fingerprint IN (:fps)')
-            ->setParameter('algs', $algList)
-            ->setParameter('fps', $fpList);
+            ->setParameter('algs', $algorithms)
+            ->setParameter('fps', $fingerprints);
 
         $q = $qb->getQuery();
 
         /** @var list<array{alg:string, fp:string}> $rows */
         $rows = $q->getResult();
 
-        $out = [];
+        return $rows;
+    }
+
+    /**
+     * @param array<string, bool>               $existing
+     * @param list<array{alg:string, fp:string}> $rows
+     *
+     * @return array<string, bool>
+     */
+    private function mergeExistingPairRows(array $existing, array $rows): array
+    {
         foreach ($rows as $r) {
-            $out[$r['alg'] . '|' . $r['fp']] = true;
+            $existing[$r['alg'] . '|' . $r['fp']] = true;
         }
 
-        return $out;
+        return $existing;
     }
 
     /**

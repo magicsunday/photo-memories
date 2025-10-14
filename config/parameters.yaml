@@ -615,6 +615,8 @@ parameters:
     memories.cluster.consolidate.min_valid_year: 1990
     # Description: Maximum number of members stored in persistence for a single cluster.
     memories.cluster.persistence.max_members: '%env(int:MEMORIES_CLUSTER_MAX_MEMBERS)%'
+    # Description: Maximum number of fingerprints queried per chunk when validating cluster existence.
+    memories.cluster.persistence.fingerprint_lookup_batch_size: 500
     # Description: Threshold profiles describing transit detection parameters by name.
     memories.cluster.transit.threshold_profiles:
         default:
