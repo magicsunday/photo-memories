@@ -16,14 +16,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
+use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 
 use function count;
 use function max;
+use function min;
 use function microtime;
 use function sprintf;
 
@@ -119,6 +122,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $clusterHandle->setDetail('Vorbereitung');
         $clusterStart  = microtime(true);
 
+        $postProcessingProgress = new ProgressReporterClusterBuildListener($progressReporter);
+
         /** @var list<ClusterDraft> $drafts */
         $drafts = $this->clusterer->build(
             $items,
@@ -148,8 +153,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                     $clusterHandle->setProgress(max(0, $index - 1));
                 };
             },
+            progressCallback: $postProcessingProgress,
         );
         $clusterHandle->finish();
+
+        $postProcessingProgress->finalize();
 
         $draftCount = count($drafts);
         if ($draftCount === 0) {
@@ -218,5 +226,117 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $rate    = $processed / $elapsed;
 
         return sprintf('Durchsatz: %.1f %s/s', $rate, $unit);
+    }
+}
+
+final class ProgressReporterClusterBuildListener implements ClusterBuildProgressCallbackInterface
+{
+    private ?ProgressHandleInterface $handle = null;
+
+    private ?float $stageStartedAt = null;
+
+    private int $maxTotal = 1;
+
+    private string $currentStage = '';
+
+    private bool $finished = false;
+
+    public function __construct(private readonly ProgressReporterInterface $progressReporter)
+    {
+    }
+
+    public function onStageStart(string $stage, int $total): void
+    {
+        $this->currentStage   = $stage;
+        $this->stageStartedAt = microtime(true);
+        $this->maxTotal       = max($this->maxTotal, max(1, $total));
+
+        if ($this->handle === null) {
+            $this->handle = $this->progressReporter->create('Bewerten', '🏅 Score & Titel', $this->maxTotal);
+            $this->handle->setProgress(0);
+            $this->handle->setRate('–');
+        }
+
+        if ($this->handle === null) {
+            return;
+        }
+
+        switch ($stage) {
+            case ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA:
+                $this->handle->setPhase('Score vorbereiten');
+                $this->handle->setDetail('Medien laden');
+                $this->handle->setProgress(0);
+                $this->handle->setRate('–');
+                break;
+            case ClusterBuildProgressCallbackInterface::STAGE_SCORING:
+                $this->handle->setPhase('Score berechnen');
+                $this->handle->setDetail('Heuristiken ausführen');
+                $this->handle->setProgress(0);
+                $this->handle->setRate('–');
+                break;
+            case ClusterBuildProgressCallbackInterface::STAGE_TITLES:
+                $this->handle->setPhase('Titel generieren');
+                $this->handle->setDetail('Vorlagen anwenden');
+                $this->handle->setProgress(0);
+                $this->handle->setRate('–');
+                break;
+        }
+    }
+
+    public function onStageProgress(string $stage, int $processed, int $total, ?string $detail = null): void
+    {
+        if ($this->handle === null || $stage !== $this->currentStage) {
+            return;
+        }
+
+        if ($detail !== null) {
+            $this->handle->setDetail($detail);
+        }
+
+        if ($stage === ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA) {
+            $this->handle->setRate($this->formatRate($processed, 'Medien'));
+
+            return;
+        }
+
+        $this->handle->setProgress(min($processed, $this->maxTotal));
+        $this->handle->setRate($this->formatRate($processed, 'Cluster'));
+    }
+
+    public function onStageFinish(string $stage, int $total): void
+    {
+        if ($this->handle === null) {
+            return;
+        }
+
+        if ($stage === ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA) {
+            $this->handle->setRate($this->formatRate($total, 'Medien'));
+
+            return;
+        }
+
+        $this->handle->setProgress(min($total, $this->maxTotal));
+        $this->handle->setRate($this->formatRate($total, 'Cluster'));
+
+        if ($stage === ClusterBuildProgressCallbackInterface::STAGE_TITLES) {
+            $this->handle->finish();
+            $this->finished = true;
+        }
+    }
+
+    public function finalize(): void
+    {
+        if ($this->handle !== null && !$this->finished) {
+            $this->handle->finish();
+            $this->finished = true;
+        }
+    }
+
+    private function formatRate(int $processed, string $unit): string
+    {
+        $startedAt = $this->stageStartedAt ?? microtime(true);
+        $elapsed   = max(0.000001, microtime(true) - $startedAt);
+
+        return sprintf('Durchsatz: %.1f %s/s', $processed / $elapsed, $unit);
     }
 }

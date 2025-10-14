@@ -18,6 +18,7 @@ use Doctrine\ORM\QueryBuilder;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ClusterScoreHeuristicInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic;
@@ -205,6 +206,100 @@ final class CompositeClusterScorerTest extends TestCase
         self::assertEqualsWithDelta(0.8, $params['poi_score'], 1e-9);
         self::assertEqualsWithDelta(0.65, $params['recency'], 1e-9);
         self::assertSame('travel_and_places', $params['group']);
+    }
+
+    #[Test]
+    public function scoreReportsProgressStages(): void
+    {
+        $mediaMap = $this->createMediaFixtures();
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $queryBuilder  = $this->getMockBuilder(QueryBuilder::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $entityManager->method('createQueryBuilder')->willReturn($queryBuilder);
+        $queryBuilder->method('select')->willReturnSelf();
+        $queryBuilder->method('from')->willReturnSelf();
+        $queryBuilder->method('where')->willReturnSelf();
+        $queryBuilder->method('setParameter')->willReturnSelf();
+        $queryBuilder->method('getQuery')->willReturn($query);
+        $query->method('getResult')->willReturn(array_values($mediaMap));
+
+        $heuristics = [
+            new class implements ClusterScoreHeuristicInterface {
+                public function prepare(array $clusters, array $mediaMap): void
+                {
+                }
+
+                public function supports(ClusterDraft $cluster): bool
+                {
+                    return true;
+                }
+
+                public function enrich(ClusterDraft $cluster, array $mediaMap): void
+                {
+                }
+
+                public function score(ClusterDraft $cluster): float
+                {
+                    return (float) ($cluster->getParams()['seed_score'] ?? 0.0);
+                }
+
+                public function weightKey(): string
+                {
+                    return 'quality';
+                }
+            },
+        ];
+
+        $scorer = new CompositeClusterScorer(
+            em: $entityManager,
+            heuristics: $heuristics,
+            weights: ['quality' => 1.0],
+        );
+
+        $clusters = [
+            new ClusterDraft('vacation', ['seed_score' => 0.4], ['lat' => 0.0, 'lon' => 0.0], [1, 2]),
+            new ClusterDraft('day_album', ['seed_score' => 0.6], ['lat' => 0.0, 'lon' => 0.0], [2, 3]),
+        ];
+
+        $progress = new class implements ClusterBuildProgressCallbackInterface {
+            /** @var list<array{0:string,1:string,2:int,3?:int,4?:string|null}> */
+            public array $events = [];
+
+            public function onStageStart(string $stage, int $total): void
+            {
+                $this->events[] = ['start', $stage, $total];
+            }
+
+            public function onStageProgress(string $stage, int $processed, int $total, ?string $detail = null): void
+            {
+                $this->events[] = ['progress', $stage, $processed, $total, $detail];
+            }
+
+            public function onStageFinish(string $stage, int $total): void
+            {
+                $this->events[] = ['finish', $stage, $total];
+            }
+        };
+
+        $scorer->score($clusters, $progress);
+
+        $expected = [
+            ['start', ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, 3],
+            ['progress', ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, 3, 3, 'Medien 3/3 geladen'],
+            ['finish', ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, 3],
+            ['start', ClusterBuildProgressCallbackInterface::STAGE_SCORING, 2],
+            ['progress', ClusterBuildProgressCallbackInterface::STAGE_SCORING, 1, 2, 'vacation'],
+            ['progress', ClusterBuildProgressCallbackInterface::STAGE_SCORING, 2, 2, 'day_album'],
+            ['finish', ClusterBuildProgressCallbackInterface::STAGE_SCORING, 2],
+        ];
+
+        self::assertSame($expected, $progress->events);
     }
 
     #[Test]

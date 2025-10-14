@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 
@@ -56,6 +57,7 @@ final class HybridClusterer implements HybridClustererInterface
         ?callable $onStart,
         ?callable $onDone,
         ?callable $makeProgress = null,
+        ?ClusterBuildProgressCallbackInterface $progressCallback = null,
     ): array {
         $strategies = $this->getStrategies();
         $total      = count($strategies);
@@ -70,13 +72,13 @@ final class HybridClusterer implements HybridClustererInterface
                 $onStart($s->name(), $idx, $total);
             }
 
-            $progressCallback = null;
+            $strategyProgress = null;
             if ($makeProgress !== null) {
-                $progressCallback = $makeProgress($s->name(), $idx, $total);
+                $strategyProgress = $makeProgress($s->name(), $idx, $total);
             }
 
-            if ($progressCallback !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
-                $res = $s->clusterWithProgress($items, $progressCallback);
+            if ($strategyProgress !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
+                $res = $s->clusterWithProgress($items, $strategyProgress);
             } else {
                 $res = $s->cluster($items);
             }
@@ -96,11 +98,30 @@ final class HybridClusterer implements HybridClustererInterface
             return [];
         }
 
-        $drafts = $this->scorer->score($drafts);
+        $drafts = $this->scorer->score($drafts, $progressCallback);
 
-        foreach ($drafts as $d) {
+        $draftCount = count($drafts);
+
+        if ($progressCallback !== null) {
+            $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_TITLES, $draftCount);
+        }
+
+        foreach ($drafts as $index => $d) {
             $d->setParam('title', $this->titleGenerator->makeTitle($d));
             $d->setParam('subtitle', $this->titleGenerator->makeSubtitle($d));
+
+            if ($progressCallback !== null) {
+                $progressCallback->onStageProgress(
+                    ClusterBuildProgressCallbackInterface::STAGE_TITLES,
+                    $index + 1,
+                    $draftCount,
+                    $d->getAlgorithm(),
+                );
+            }
+        }
+
+        if ($progressCallback !== null) {
+            $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_TITLES, $draftCount);
         }
 
         return $drafts;
