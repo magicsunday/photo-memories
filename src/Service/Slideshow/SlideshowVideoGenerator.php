@@ -18,6 +18,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
+use function abs;
 use function array_filter;
 use function array_fill_keys;
 use function array_intersect;
@@ -37,6 +38,7 @@ use function is_dir;
 use function is_file;
 use function is_float;
 use function is_int;
+use function is_finite;
 use function is_readable;
 use function is_string;
 use function ltrim;
@@ -146,6 +148,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private const float PAN_OFFSET_LIMIT = 0.05;
 
+    private const float AUDIO_FADE_DURATION = 1.0;
+
+    private const float AUDIO_LIMITER_LIMIT_DB = -1.0;
+
     /**
      * @param list<string> $transitions
      */
@@ -170,6 +176,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly float $zoomEnd = 1.08,
         private readonly float $introFadeDuration = 1.0,
         private readonly float $outroFadeDuration = 1.0,
+        private readonly float $beatGridStep = 0.0,
+        private readonly float $audioTargetLoudness = -14.0,
     ) {
     }
 
@@ -259,7 +267,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     ): array
     {
         $duration     = $this->resolveCoverDuration($slide);
-        $clipDuration = max(0.1, $duration);
+        $clipDuration = max(self::MINIMUM_SLIDE_DURATION, $duration);
+
+        [$clipDuration] = $this->applyBeatGrid($clipDuration, 0.0);
+        $clipDuration   = max(self::MINIMUM_SLIDE_DURATION, $clipDuration);
+        $duration       = $clipDuration;
         $filter       = $this->buildBlurredSlideFilter(
             0,
             $clipDuration,
@@ -288,7 +300,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             '-framerate',
             '30',
             '-t',
-            sprintf('%0.3f', max(0.1, $duration)),
+            sprintf('%0.3f', max(self::MINIMUM_SLIDE_DURATION, $duration)),
             '-i',
             $slide['image'],
             '-filter_complex',
@@ -316,7 +328,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $subtitle,
     ): array
     {
-        $command = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
+        $command    = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
+        $slideCount = count($slides);
 
         $transitionWhitelist   = $this->getTransitionWhitelist();
         $transitionCandidates  = $this->transitions;
@@ -357,6 +370,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
             if ($index === 0) {
                 $visibleDuration = max($coverDuration, $visibleDuration);
+            }
+
+            [$visibleDuration, $nextTransition] = $this->applyBeatGrid($visibleDuration, $nextTransition);
+
+            if ($index < $slideCount - 1 && $nextTransition >= 0.0) {
+                if (array_key_exists($index, $transitionDurations) || $nextTransition > 0.0) {
+                    $transitionDurations[$index] = $nextTransition;
+                }
             }
 
             $overlapDuration          = min($visibleDuration, $nextTransition);
@@ -405,7 +426,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $fallbackIndex  = 0;
         $previousChoice = null;
 
-        for ($index = 1; $index < count($slides); ++$index) {
+        for ($index = 1; $index < $slideCount; ++$index) {
             $preferred = $this->normaliseTransitionName($slides[$index - 1]['transition'] ?? null);
             if ($preferred === null) {
                 $transition = 'fade';
@@ -427,7 +448,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $transitionOffset            = max(0.0, $timeline - $effectiveTransitionDuration);
             $effectiveSlideDuration      = $visibleDurations[$index] ?? $this->resolveSlideDuration($slides[$index]['duration']);
 
-            $targetLabel = $index === count($slides) - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
+            $targetLabel = $index === $slideCount - 1 ? '[vout]' : sprintf('[tmp%d]', $index);
             $filters[]   = sprintf(
                 '%s[s%d]xfade=transition=%s:duration=%0.3f:offset=%0.3f %s',
                 $current,
@@ -508,8 +529,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $background .= sprintf('[bg%1$dout];', $index);
 
-        $clipSecondsValue = max(0.1, $clipDuration);
-        $visibleDuration  = max(0.1, min($visibleDuration, $clipSecondsValue));
+        $clipSecondsValue = max(self::MINIMUM_SLIDE_DURATION, $clipDuration);
+        $visibleDuration  = max(self::MINIMUM_SLIDE_DURATION, min($visibleDuration, $clipSecondsValue));
         $frameCount       = max(2, (int) round($visibleDuration * self::ZOOMPAN_FPS));
         $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
@@ -711,7 +732,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $value = $duration > 0.0 ? $duration : $this->slideDuration;
 
-        return max(0.1, $value);
+        return max(self::MINIMUM_SLIDE_DURATION, $value);
     }
 
     /**
@@ -796,6 +817,88 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function clampTransitionDuration(float $duration): float
     {
         return max(self::MIN_TRANSITION_DURATION, min(self::MAX_TRANSITION_DURATION, $duration));
+    }
+
+    /**
+     * @return array{0: float, 1: float}
+     */
+    private function applyBeatGrid(float $visibleDuration, float $transitionDuration): array
+    {
+        if (!$this->isBeatGridEnabled()) {
+            return [
+                max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
+                max(0.0, $transitionDuration),
+            ];
+        }
+
+        $step = $this->beatGridStep;
+
+        $totalDuration = $visibleDuration + $transitionDuration;
+        if ($totalDuration <= 0.0) {
+            return [
+                max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
+                max(0.0, $transitionDuration),
+            ];
+        }
+
+        $alignedTotal = max($step, round($totalDuration / $step) * $step);
+        if ($alignedTotal <= 0.0) {
+            return [
+                max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
+                max(0.0, $transitionDuration),
+            ];
+        }
+
+        $delta = $alignedTotal - $totalDuration;
+        if (abs($delta) < 0.0005) {
+            return [
+                max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
+                max(0.0, min($transitionDuration, $visibleDuration)),
+            ];
+        }
+
+        $adjustedVisible    = $visibleDuration;
+        $adjustedTransition = $transitionDuration;
+
+        if ($delta > 0.0) {
+            $adjustedVisible += $delta;
+        } else {
+            $remaining = $delta;
+
+            $visibleReductionCapacity = $adjustedVisible - self::MINIMUM_SLIDE_DURATION;
+            if ($visibleReductionCapacity > 0.0) {
+                $visibleReduction = max($remaining, -$visibleReductionCapacity);
+                $adjustedVisible += $visibleReduction;
+                $remaining       -= $visibleReduction;
+            }
+
+            if ($remaining < 0.0 && $adjustedTransition > 0.0) {
+                $transitionFloor             = max(0.0, min($adjustedTransition, self::MIN_TRANSITION_DURATION));
+                $transitionReductionCapacity = $adjustedTransition - $transitionFloor;
+                if ($transitionReductionCapacity > 0.0) {
+                    $transitionReduction = max($remaining, -$transitionReductionCapacity);
+                    $adjustedTransition += $transitionReduction;
+                    $remaining          -= $transitionReduction;
+                }
+            }
+
+            if ($remaining < 0.0) {
+                return [
+                    max(self::MINIMUM_SLIDE_DURATION, $visibleDuration),
+                    max(0.0, $transitionDuration),
+                ];
+            }
+        }
+
+        $adjustedVisible    = max(self::MINIMUM_SLIDE_DURATION, $adjustedVisible);
+        $adjustedTransition = max(0.0, min($adjustedTransition, $adjustedVisible));
+
+        return [$adjustedVisible, $adjustedTransition];
+    }
+
+    private function isBeatGridEnabled(): bool
+    {
+        return is_finite($this->beatGridStep) && $this->beatGridStep > 0.0;
     }
 
     /**
@@ -1271,15 +1374,18 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filterIndex = array_search('-filter_complex', $command, true);
             if ($filterIndex !== false) {
                 $filterComplexIndex = $filterIndex + 1;
-                $audioInputLabel    = sprintf('[%d:a:0]', $videoInputs);
-                $fadeDuration       = max(0.0, min(1.5, $totalDuration / 2));
-                $fadeOutStart       = max(0.0, $totalDuration - $fadeDuration);
-                $audioFilter        = sprintf(
-                    '%safade=t=in:st=0:d=%s,afade=t=out:st=%s:d=%s[aout]',
+                $audioInputLabel = sprintf('[%d:a:0]', $videoInputs);
+                $targetLoudness  = $this->formatFloat(max(-60.0, min(0.0, $this->audioTargetLoudness)));
+                $limiterLimit    = $this->formatFloat(self::AUDIO_LIMITER_LIMIT_DB);
+                $fadeDuration    = $this->formatFloat(self::AUDIO_FADE_DURATION);
+                $audioFilter     = sprintf(
+                    '%sdynaudnorm=f=250,alimiter=level_in=0:level_out=%s:limit=%s:attack=5:release=50,aformat=sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=%s,afade=out:st=duration-%s:d=%s[aout]',
                     $audioInputLabel,
-                    $this->formatFloat($fadeDuration),
-                    $this->formatFloat($fadeOutStart),
-                    $this->formatFloat($fadeDuration),
+                    $targetLoudness,
+                    $limiterLimit,
+                    $fadeDuration,
+                    $fadeDuration,
+                    $fadeDuration,
                 );
 
                 $command[$filterComplexIndex] = sprintf(

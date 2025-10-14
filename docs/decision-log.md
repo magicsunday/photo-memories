@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-19 – Snap slideshow timing to a beat grid and expose loudness target
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Operators asked for consistent beat-matched slideshows and predictable loudness so generated clips can be dropped into social templates without manual trimming or audio leveling.
+- **Decision:** Added an optional beat grid (`memories.slideshow.beat_grid_step`) that rounds each slide plus overlap to multiples such as 0.5 s or 0.6 s, refreshed the FFmpeg filter graph to chain `dynaudnorm`, `alimiter`, `aformat`, and fixed one-second fades, and documented the default -14 LUFS target via `memories.slideshow.audio_loudness_lufs`.
+- **Alternatives considered:** Keep raw storyboard durations and rely on editors to retime clips, or normalise audio offline with loudness metadata. Rejected because it slowed delivery and produced inconsistent autoplay volumes across channels.
+- **Follow-up actions:** Gather feedback on preferred raster values beyond 0.5 s/0.6 s and monitor peak levels after the limiter to confirm the -14 LUFS default works across music genres.
+
 ## 2025-10-18 – Grade slideshow backgrounds and overlay safe areas
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** The slideshow renderer blurred backgrounds with a hard-coded gaussian filter and positioned overlays without safe-area guards, which produced halo artefacts on low-powered hardware (when blur was too expensive) and cramped text when subtitles and titles overlapped.

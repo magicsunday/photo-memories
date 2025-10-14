@@ -121,6 +121,8 @@ services:
             $zoomEnd: '%memories.slideshow.zoom_end%'
             $introFadeDuration: '%memories.slideshow.intro_fade_duration_s%'
             $outroFadeDuration: '%memories.slideshow.outro_fade_duration_s%'
+            $beatGridStep: '%memories.slideshow.beat_grid_step%'
+            $audioTargetLoudness: '%memories.slideshow.audio_loudness_lufs%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
