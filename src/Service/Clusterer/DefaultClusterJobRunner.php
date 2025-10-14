@@ -312,6 +312,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
         }
 
         if ($stage === ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA) {
+            $this->handle->setProgress(min($processed, $total));
             $this->handle->setRate($this->formatRate($processed, 'Medien'));
 
             return;
@@ -329,6 +330,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
 
         if ($stage === ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA) {
             $this->handle->setMax(max(1, $total));
+            $this->handle->setProgress(min($total, $this->maxTotal));
             $this->handle->setRate($this->formatRate($total, 'Medien'));
 
             return;
