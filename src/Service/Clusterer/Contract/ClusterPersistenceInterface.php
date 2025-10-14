@@ -25,6 +25,14 @@ interface ClusterPersistenceInterface
     public function persistBatched(array $drafts, int $batchSize, ?callable $onBatchPersisted): int;
 
     /**
+     * Persist clusters while flushing after every entity to keep memory usage low.
+     *
+     * @param iterable<ClusterDraft>  $drafts
+     * @param callable(int):void|null $onPersisted
+     */
+    public function persistStreaming(iterable $drafts, ?callable $onPersisted): int;
+
+    /**
      * @param list<string> $algorithms
      */
     public function deleteByAlgorithms(array $algorithms): int;

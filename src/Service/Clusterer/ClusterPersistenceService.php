@@ -89,79 +89,30 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $batchSize = $batchSize > 0 ? $batchSize : $this->defaultBatchSize;
 
-        // 1) Build pair list (alg, fp) for all drafts
         $drafts = $this->curateDrafts($drafts);
 
         foreach ($drafts as $draft) {
             $this->persistSelectionTelemetryOnDraft($draft);
         }
 
-        /** @var list<array{alg:string, fp:string}> $pairs */
-        $pairs = [];
-        foreach ($drafts as $d) {
-            $alg     = $d->getAlgorithm();
-            $ordered = $this->resolveOrderedMembers($d);
-            $members = $this->clampMembers($ordered);
-            $fp      = Cluster::computeFingerprint($members);
-            $pairs[] = ['alg' => $alg, 'fp' => $fp];
-        }
+        $pairs = $this->computePairs($drafts);
 
-        // 2) Load existing pairs from DB into a set: "alg|fp" => true
-        $existing = $this->loadExistingPairs($pairs);
-
-        // Also prevent duplicates within this run:
-        /** @var array<string, bool> $seenThisRun */
+        $existing    = $this->loadExistingPairs($pairs);
         $seenThisRun = [];
 
         $persisted = 0;
         $inBatch   = 0;
 
-        // 3) Persist only new pairs
-        foreach ($drafts as $d) {
-            $alg     = $d->getAlgorithm();
-            $ordered = $this->resolveOrderedMembers($d);
-            $members = $this->clampMembers($ordered);
-            $fp      = Cluster::computeFingerprint($members);
-            $key     = $alg . '|' . $fp;
-            if (isset($existing[$key])) {
-                // already persisted earlier or within this same run
+        foreach ($drafts as $draft) {
+            $entity = $this->buildEntityForDraft($draft, $existing, $seenThisRun);
+            if (!$entity instanceof Cluster) {
                 continue;
             }
-
-            if (isset($seenThisRun[$key])) {
-                // already persisted earlier or within this same run
-                continue;
-            }
-
-            $media    = $this->hydrateMembers($members);
-            $metadata = $this->buildMetadata($d, $members, $media);
-
-            // Construct and fill entity
-            $entity = new Cluster(
-                $alg,
-                $d->getParams(),
-                $d->getCentroid(),
-                $members
-            );
-
-            $entity->setStartAt($metadata['startAt']);
-            $entity->setEndAt($metadata['endAt']);
-            $entity->setMembersCount($metadata['membersCount']);
-            $entity->setPhotoCount($metadata['photoCount']);
-            $entity->setVideoCount($metadata['videoCount']);
-            $entity->setCover($metadata['cover']);
-            $entity->setLocation($metadata['location']);
-            $entity->setAlgorithmVersion($metadata['algorithmVersion']);
-            $entity->setConfigHash($metadata['configHash']);
-            $entity->setCentroidLat($metadata['centroidLat']);
-            $entity->setCentroidLon($metadata['centroidLon']);
-            $entity->setCentroidCell7($metadata['centroidCell7']);
 
             $this->em->persist($entity);
 
             ++$persisted;
             ++$inBatch;
-            $seenThisRun[$key] = true;
 
             if ($inBatch >= $batchSize) {
                 $this->em->flush();
@@ -185,6 +136,151 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return $persisted;
+    }
+
+    public function persistStreaming(iterable $drafts, ?callable $onPersisted): int
+    {
+        $draftList = $this->collectDrafts($drafts);
+        if ($draftList === []) {
+            return 0;
+        }
+
+        $draftList = $this->curateDrafts($draftList);
+
+        foreach ($draftList as $draft) {
+            $this->persistSelectionTelemetryOnDraft($draft);
+        }
+
+        $pairs = $this->computePairs($draftList);
+
+        $existing    = $this->loadExistingPairs($pairs);
+        $seenThisRun = [];
+        $persisted   = 0;
+
+        foreach ($draftList as $draft) {
+            $entity = $this->buildEntityForDraft($draft, $existing, $seenThisRun);
+            if (!$entity instanceof Cluster) {
+                continue;
+            }
+
+            $this->em->persist($entity);
+            $this->em->flush();
+            $this->em->clear();
+
+            ++$persisted;
+
+            if ($onPersisted !== null) {
+                $onPersisted(1);
+            }
+        }
+
+        return $persisted;
+    }
+
+    /**
+     * @param iterable<ClusterDraft> $drafts
+     *
+     * @return list<ClusterDraft>
+     */
+    private function collectDrafts(iterable $drafts): array
+    {
+        if (is_array($drafts)) {
+            return array_is_list($drafts) ? $drafts : array_values($drafts);
+        }
+
+        $list = [];
+        foreach ($drafts as $draft) {
+            $list[] = $draft;
+        }
+
+        return $list;
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<array{alg:string, fp:string}>
+     */
+    private function computePairs(array $drafts): array
+    {
+        $pairs = [];
+        foreach ($drafts as $draft) {
+            $ordered = $this->resolveOrderedMembers($draft);
+            $members = $this->clampMembers($ordered);
+            $pairs[] = [
+                'alg' => $draft->getAlgorithm(),
+                'fp'  => Cluster::computeFingerprint($members),
+            ];
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * @param array<string, bool> $existing
+     * @param array<string, bool> $seenThisRun
+     */
+    private function buildEntityForDraft(ClusterDraft $draft, array $existing, array &$seenThisRun): ?Cluster
+    {
+        $ordered     = $this->resolveOrderedMembers($draft);
+        $members     = $this->clampMembers($ordered);
+        $fingerprint = Cluster::computeFingerprint($members);
+        $key         = $draft->getAlgorithm() . '|' . $fingerprint;
+
+        if (isset($existing[$key]) || isset($seenThisRun[$key])) {
+            return null;
+        }
+
+        $media    = $this->hydrateMembers($members);
+        $metadata = $this->buildMetadata($draft, $members, $media);
+
+        $entity = $this->createClusterEntity($draft, $members, $metadata);
+
+        $seenThisRun[$key] = true;
+
+        return $entity;
+    }
+
+    /**
+     * @param list<int> $members
+     * @param array{
+     *     startAt:?DateTimeImmutable,
+     *     endAt:?DateTimeImmutable,
+     *     membersCount:int,
+     *     photoCount:?int,
+     *     videoCount:?int,
+     *     cover:?Media,
+     *     location:?Location,
+     *     algorithmVersion:?string,
+     *     configHash:?string,
+     *     centroidLat:?float,
+     *     centroidLon:?float,
+     *     centroidCell7:?string
+     * } $metadata
+     */
+    private function createClusterEntity(ClusterDraft $draft, array $members, array $metadata): Cluster
+    {
+        $entity = new Cluster(
+            $draft->getAlgorithm(),
+            $draft->getParams(),
+            $draft->getCentroid(),
+            $members,
+        );
+
+        $entity->setStartAt($metadata['startAt']);
+        $entity->setEndAt($metadata['endAt']);
+        $entity->setMembersCount($metadata['membersCount']);
+        $entity->setPhotoCount($metadata['photoCount']);
+        $entity->setVideoCount($metadata['videoCount']);
+        $entity->setCover($metadata['cover']);
+        $entity->setLocation($metadata['location']);
+        $entity->setAlgorithmVersion($metadata['algorithmVersion']);
+        $entity->setConfigHash($metadata['configHash']);
+        $entity->setCentroidLat($metadata['centroidLat']);
+        $entity->setCentroidLon($metadata['centroidLon']);
+        $entity->setCentroidCell7($metadata['centroidCell7']);
+
+        return $entity;
     }
 
     /**
