@@ -52,6 +52,8 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertSame(90.0, $media->getVideoRotationDeg());
             self::assertTrue($media->getVideoHasStabilization());
             self::assertFalse($media->isHevc());
+            self::assertSame(1920, $media->getWidth());
+            self::assertSame(1080, $media->getHeight());
 
             $streams = $media->getVideoStreams();
             self::assertIsArray($streams);
@@ -63,6 +65,8 @@ final class FfprobeMetadataExtractorTest extends TestCase
                         'codec_name'     => 'h264',
                         'codec_type'     => 'video',
                         'avg_frame_rate' => '120/1',
+                        'width'          => 1920,
+                        'height'         => 1080,
                         'tags'           => ['rotate' => '90'],
                         'side_data_list' => [
                             [
@@ -107,6 +111,8 @@ final class FfprobeMetadataExtractorTest extends TestCase
             self::assertSame(-90.0, $media->getVideoRotationDeg());
             self::assertNull($media->getVideoHasStabilization());
             self::assertTrue($media->isHevc());
+            self::assertNull($media->getWidth());
+            self::assertNull($media->getHeight());
 
             $streams = $media->getVideoStreams();
             self::assertIsArray($streams);
@@ -136,13 +142,87 @@ final class FfprobeMetadataExtractorTest extends TestCase
     }
 
     #[Test]
+    public function populatesDimensionsFromPrimaryStreamWhenUnset(): void
+    {
+        $fixture   = $this->loadFixture('rotate-stabilised.json');
+        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
+
+        $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+        if ($videoPath === false) {
+            self::fail('Unable to create temporary video fixture.');
+        }
+
+        try {
+            $media = new Media($videoPath, str_repeat('w', 64), 2048);
+            $media->setMime('video/mp4');
+
+            $extractor->extract($videoPath, $media);
+
+            self::assertSame(1920, $media->getWidth());
+            self::assertSame(1080, $media->getHeight());
+        } finally {
+            unlink($videoPath);
+        }
+    }
+
+    #[Test]
+    public function prefersCodedDimensionsWhenExplicitValuesMissing(): void
+    {
+        $fixture   = $this->loadFixture('coded-dimensions.json');
+        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
+
+        $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+        if ($videoPath === false) {
+            self::fail('Unable to create temporary video fixture.');
+        }
+
+        try {
+            $media = new Media($videoPath, str_repeat('x', 64), 1024);
+            $media->setMime('video/webm');
+
+            $extractor->extract($videoPath, $media);
+
+            self::assertSame(1280, $media->getWidth());
+            self::assertSame(720, $media->getHeight());
+        } finally {
+            unlink($videoPath);
+        }
+    }
+
+    #[Test]
+    public function keepsExistingDimensionsIntact(): void
+    {
+        $fixture   = $this->loadFixture('rotate-stabilised.json');
+        $extractor = new FfprobeMetadataExtractor(processRunner: static fn (array $command, float $timeout): string => $fixture);
+
+        $videoPath = tempnam(sys_get_temp_dir(), 'vid');
+        if ($videoPath === false) {
+            self::fail('Unable to create temporary video fixture.');
+        }
+
+        try {
+            $media = new Media($videoPath, str_repeat('y', 64), 1024);
+            $media->setMime('video/mp4');
+            $media->setWidth(4000);
+            $media->setHeight(3000);
+
+            $extractor->extract($videoPath, $media);
+
+            self::assertSame(4000, $media->getWidth());
+            self::assertSame(3000, $media->getHeight());
+        } finally {
+            unlink($videoPath);
+        }
+    }
+
+    #[Test]
     public function appliesQuickTimeFallbackMetadata(): void
     {
         $streamFixture    = $this->loadFixture('displaymatrix-rotation.json');
         $quickTimeFixture = $this->loadFixture('quicktime-metadata.json');
 
         $runner = static function (array $command, float $timeout) use ($streamFixture, $quickTimeFixture): string {
-            if (in_array('stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration', $command, true)) {
+            if (in_array('stream=codec_name,avg_frame_rate,width,height,coded_width,coded_height,side_data_list:stream_tags=rotate:format=duration', $command, true)) {
                 return $streamFixture;
             }
 
