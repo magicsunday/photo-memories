@@ -5,7 +5,7 @@ parameters:
     # Description: File extensions that are considered images during indexing.
     memories.index.image_ext: ['jpg','jpeg','jpe','jxl','avif','heic','heif','png','webp','gif','bmp','tiff','tif','cr2','cr3','nef','arw','rw2','raf','dng']
     # Description: File extensions that are treated as videos during indexing.
-    memories.index.video_ext: ['mp4','mov','m4v','3gp','hevc','mkv','avi']
+    memories.index.video_ext: ['mp4','mov','m4v','3gp','hevc','mkv','avi','webm']
     # Description: Default batch size for the media indexing command when no environment override exists.
     env(MEMORIES_INDEX_BATCH_SIZE): '25'
     # Description: Configured batch size for indexing operations, derived from the environment.

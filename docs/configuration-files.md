@@ -7,7 +7,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 `parameters.yaml` bündelt globale Standardwerte für die Anwendung. Die Werte sind nach Funktionsbereichen gruppiert:
 
 - **Indexierung** – Dateiendungen und Batchgrößen für die Medienaufnahme (`memories.index.*`).
-  - Die Standardliste `memories.index.video_ext` umfasst jetzt `mp4`, `mov`, `m4v`, `3gp`, `hevc`, `mkv` und `avi`. Damit
+  - Die Standardliste `memories.index.video_ext` umfasst jetzt `mp4`, `mov`, `m4v`, `3gp`, `hevc`, `mkv`, `avi` und `webm`. Damit
     erkennt die Indexierung gängige Video-Container bereits ohne lokale Overrides.
 - **Videoverarbeitung** – Pfade und Defaults für `ffmpeg`/`ffprobe` sowie das Posterframe (`memories.video.*`).
 - **Metadaten-Pipeline** – Aktivierung von Telemetrie sowie optionale Verarbeitungsschritte (`memories.metadata.pipeline.*`).
