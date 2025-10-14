@@ -501,7 +501,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $background = sprintf('[%1$d:v]split=2[bg%1$d][fg%1$d];', $index);
         $background .= sprintf(
-            '[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase',
+            '[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int',
             $index,
             $this->width,
             $this->height,
@@ -622,7 +622,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $zoompanFps = $this->formatFloat($frameRate);
 
         $foreground = sprintf(
-            '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease',
+            '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease:flags=lanczos+accurate_rnd+full_chroma_int',
             $index,
             $this->width,
             $this->height,
@@ -630,7 +630,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->kenBurnsEnabled && $kenBurns['enabled']) {
             $foreground .= sprintf(
-                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=%4$d:fps=%5$s:s=%6$dx%7$d,scale=ceil(iw/2)*2:ceil(ih/2)*2',
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=%4$d:fps=%5$s:s=%6$dx%7$d,scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int',
                 $this->quoteFilterExpression($zoomExpr),
                 $this->quoteFilterExpression($panXExpr),
                 $this->quoteFilterExpression($panYExpr),
