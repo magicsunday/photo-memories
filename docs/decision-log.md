@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-18 – Grade slideshow backgrounds and overlay safe areas
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** The slideshow renderer blurred backgrounds with a hard-coded gaussian filter and positioned overlays without safe-area guards, which produced halo artefacts on low-powered hardware (when blur was too expensive) and cramped text when subtitles and titles overlapped.
+- **Decision:** Expose the blur algorithm, vignette toggle, and EQ settings via `memories.slideshow.background_*` parameters (with environment overrides) while adding `box` styling and fixed offsets to the text overlays so subtitles sit above the title and both respect the bottom margin.
+- **Alternatives considered:** Keep the gaussian blur and rely on manual ffmpeg overrides, or move safe-area logic into the calling code. Rejected because operators need a simple parameter switch for box blur and centralising overlay offsets keeps typography consistent.
+- **Follow-up actions:** Monitor rendering durations on constrained devices when switching to `boxblur` and collect feedback on the default vignette strength for potential adjustments.
+
 ## 2025-10-17 – Stabilise slideshow transitions
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Slideshow overlaps still drew pseudo-random durations per render and transition fallback sequences treated all `xfade` options equally, making fades appear as often as novelty effects like `pixelize`.

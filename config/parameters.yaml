@@ -853,6 +853,22 @@ parameters:
     memories.slideshow.font_file: "%env(default:memories.slideshow.font_file_default:MEMORIES_SLIDESHOW_FONT_FILE)%"
     # Description: Sigma value of the gaussian blur used for slideshow backgrounds.
     memories.slideshow.background_blur_sigma: 20.0
+    # Description: Blur filter algorithm for slideshow backgrounds. Accepts `gblur` or `boxblur`.
+    memories.slideshow.background_blur_filter_default: 'gblur'
+    # Description: Runtime blur filter algorithm for slideshow backgrounds.
+    memories.slideshow.background_blur_filter: "%env(default:memories.slideshow.background_blur_filter_default:MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER)%"
+    # Description: Flag toggling vignette shading on blurred slideshow backgrounds.
+    memories.slideshow.background_vignette_enabled_default: true
+    memories.slideshow.background_vignette_enabled: '%env(default:memories.slideshow.background_vignette_enabled_default:bool:MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE)%'
+    # Description: Brightness offset (range -1.0 to 1.0) applied to the slideshow background equaliser.
+    memories.slideshow.background_eq_brightness_default: 0.0
+    memories.slideshow.background_eq_brightness: '%env(default:memories.slideshow.background_eq_brightness_default:float:MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS)%'
+    # Description: Contrast multiplier applied to the slideshow background equaliser.
+    memories.slideshow.background_eq_contrast_default: 1.0
+    memories.slideshow.background_eq_contrast: '%env(default:memories.slideshow.background_eq_contrast_default:float:MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST)%'
+    # Description: Saturation multiplier applied to the slideshow background equaliser.
+    memories.slideshow.background_eq_saturation_default: 1.0
+    memories.slideshow.background_eq_saturation: '%env(default:memories.slideshow.background_eq_saturation_default:float:MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION)%'
     # Description: Flag indicating whether animated zoom/pan is enabled for slideshow slides by default.
     memories.slideshow.ken_burns_enabled_default: true
     # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.

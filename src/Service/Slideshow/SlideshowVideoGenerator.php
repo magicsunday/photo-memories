@@ -160,6 +160,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly ?string $fontFile = null,
         private readonly string $fontFamily = 'DejaVu Sans',
         private readonly float $backgroundBlurSigma = 20.0,
+        private readonly string $backgroundBlurFilter = 'gblur',
+        private readonly bool $backgroundVignetteEnabled = true,
+        private readonly float $backgroundEqBrightness = 0.0,
+        private readonly float $backgroundEqContrast = 1.0,
+        private readonly float $backgroundEqSaturation = 1.0,
         private readonly bool $kenBurnsEnabled = true,
         private readonly float $zoomStart = 1.0,
         private readonly float $zoomEnd = 1.08,
@@ -476,8 +481,29 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
         $background .= sprintf(',crop=%1$d:%2$d', $this->width, $this->height);
 
+        $backgroundFilters = [];
+
         if ($this->backgroundBlurSigma > 0.0) {
-            $background .= sprintf(',gblur=sigma=%s', $this->formatFloat($this->backgroundBlurSigma));
+            $blurFilter = strtolower($this->backgroundBlurFilter) === 'boxblur'
+                ? sprintf('boxblur=luma_radius=%d:luma_power=1', max(1, (int) round($this->backgroundBlurSigma)))
+                : sprintf('gblur=sigma=%s', $this->formatFloat($this->backgroundBlurSigma));
+
+            $backgroundFilters[] = $blurFilter;
+        }
+
+        if ($this->backgroundVignetteEnabled) {
+            $backgroundFilters[] = 'vignette';
+        }
+
+        $backgroundFilters[] = sprintf(
+            'eq=brightness=%s:contrast=%s:saturation=%s',
+            $this->formatFloat($this->backgroundEqBrightness),
+            $this->formatFloat($this->backgroundEqContrast),
+            $this->formatFloat($this->backgroundEqSaturation),
+        );
+
+        if ($backgroundFilters !== []) {
+            $background .= sprintf(',%s', implode(',', $backgroundFilters));
         }
 
         $background .= sprintf('[bg%1$dout];', $index);
@@ -1347,12 +1373,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $titleText    = $this->normaliseDrawText($title);
 
         if ($subtitleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($subtitleText, 48, 'w*0.05', 'h-80');
+            $filters[] = $this->buildDrawTextFilter($subtitleText, 48, '0', 'line_h+40');
         }
 
         if ($titleText !== null) {
-            $titleY    = $subtitleText !== null ? 'h-80-line_h-30' : 'h-80';
-            $filters[] = $this->buildDrawTextFilter($titleText, 64, 'w*0.05', $titleY);
+            $filters[] = $this->buildDrawTextFilter($titleText, 64, '0', '0');
         }
 
         return implode(',', array_filter($filters));
@@ -1373,7 +1398,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         if ($subtitleText !== null) {
             $filters[] = sprintf(
                 "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-                'borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86',
+                'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80-(line_h+40)',
                 $subtitleText,
                 $fontSegment
             );
@@ -1382,9 +1407,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         if ($titleText !== null) {
             $filters[] = sprintf(
                 "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-                'borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92',
+                'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80',
                 $titleText,
-                $fontSegment
+                $fontSegment,
             );
         }
 
@@ -1400,19 +1425,27 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return trim($this->escapeDrawTextValue($value));
     }
 
-    private function buildDrawTextFilter(string $text, int $fontSize, string $positionX, string $positionY): string
+    private function buildDrawTextFilter(string $text, int $fontSize, string $positionXOffset, string $positionYOffset): string
     {
         $fontDirective = $this->resolveFontDirective();
         $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
+        $xExpression = trim($positionXOffset) === '0'
+            ? 'w*0.05'
+            : sprintf('w*0.05+(%s)', $positionXOffset);
+
+        $yExpression = trim($positionYOffset) === '0'
+            ? 'h-80'
+            : sprintf('h-80-(%s)', $positionYOffset);
+
         return sprintf(
             "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-            'borderw=2:bordercolor=black@0.20:x=%s:y=%s',
+            'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=%s:y=%s',
             $text,
             $fontSegment,
             $fontSize,
-            $positionX,
-            $positionY
+            $xExpression,
+            $yExpression,
         );
     }
 
