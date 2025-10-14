@@ -106,7 +106,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterIndex + 1];
         self::assertStringContainsString('dynaudnorm=f=250', $filterComplex);
         self::assertStringContainsString('alimiter=level_in=0:level_out=-14:limit=-1', $filterComplex);
-        self::assertStringContainsString('aformat=sample_fmts=fltp:channel_layouts=stereo', $filterComplex);
+        self::assertStringContainsString('aformat=sample_rates=48000:sample_fmts=fltp:channel_layouts=stereo', $filterComplex);
         self::assertStringContainsString('afade=in:st=0:d=1', $filterComplex);
         self::assertStringContainsString('afade=out:st=duration-1:d=1', $filterComplex);
 
