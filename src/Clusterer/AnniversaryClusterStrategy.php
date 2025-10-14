@@ -125,7 +125,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     {
         $totalStages = 4;
 
-        $this->updateStage(
+        $this->notifyProgress(
             $update,
             0,
             $totalStages,
@@ -144,7 +144,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             $byMonthDay[$takenAt->format('m-d')][] = $media;
         }
 
-        $this->updateStage(
+        $this->notifyProgress(
             $update,
             1,
             $totalStages,
@@ -154,7 +154,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         $eligibleGroups = $this->filterGroupsByMinItems($byMonthDay, $this->minItemsPerAnniversary);
         $candidateTotal = count($eligibleGroups);
 
-        $this->updateStage(
+        $this->notifyProgress(
             $update,
             2,
             $totalStages,
@@ -178,7 +178,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
             $distinctYears = count($years);
             if ($distinctYears < $this->minDistinctYears) {
-                $this->updateStage(
+                $this->notifyProgress(
                     $update,
                     2,
                     $totalStages,
@@ -212,8 +212,8 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 'score' => $score,
             ];
 
-            if ($update !== null && (($processed % 10) === 0 || $processed === $candidateTotal)) {
-                $this->updateStage(
+            if (($processed % 10) === 0 || $processed === $candidateTotal) {
+                $this->notifyProgress(
                     $update,
                     2,
                     $totalStages,
@@ -223,7 +223,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         }
 
         if ($candidateTotal === 0) {
-            $this->updateStage(
+            $this->notifyProgress(
                 $update,
                 $totalStages,
                 $totalStages,
@@ -243,7 +243,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         }
 
         $summaryTotal = count($scoredGroups);
-        $this->updateStage(
+        $this->notifyProgress(
             $update,
             3,
             $totalStages,
@@ -285,8 +285,8 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             );
 
             ++$enriched;
-            if ($update !== null && (($enriched % 10) === 0 || $enriched === $summaryTotal)) {
-                $this->updateStage(
+            if (($enriched % 10) === 0 || $enriched === $summaryTotal) {
+                $this->notifyProgress(
                     $update,
                     3,
                     $totalStages,
@@ -295,7 +295,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             }
         }
 
-        $this->updateStage(
+        $this->notifyProgress(
             $update,
             $totalStages,
             $totalStages,
@@ -303,10 +303,5 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         );
 
         return $drafts;
-    }
-
-    private function updateStage(?callable $update, int $done, int $max, string $stage): void
-    {
-        $this->notifyProgress($update, $done, $max, $stage);
     }
 }
