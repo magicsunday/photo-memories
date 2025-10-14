@@ -26,8 +26,8 @@
 - **Context:** The slideshow renderer lacked dedicated controls for video fade-ins/-outs, leading to abrupt cuts at the start and
   end of exported clips and inconsistent overlays when multiple slides were blended.
 - **Decision:** Added configurable intro/outro fade durations to the FFmpeg filter graph, applied them to both single-image
-  slideshows and multi-image timelines, and exposed the values via `memories.slideshow.intro_fade_duration_s` and
-  `memories.slideshow.outro_fade_duration_s`.
+  slideshows and multi-image timelines, and exposed the values via `memories.slideshow.intro_fade_s` and
+  `memories.slideshow.outro_fade_s`.
 - **Alternatives considered:** Keep the previous hard cuts and rely on audio fades only, or hard-code fade durations directly in
   the filter expression. Rejected because they either preserved the harsh visual transitions or required code edits for every
   adjustment.
