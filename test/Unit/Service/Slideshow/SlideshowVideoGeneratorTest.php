@@ -856,15 +856,19 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
+        $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
+        $resolveTransitionDurationMethod->setAccessible(true);
+        /** @var float $resolvedDefaultDuration */
+        $resolvedDefaultDuration = $resolveTransitionDurationMethod->invoke($generator, $job->transitionDuration());
+
         $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
         $resolvedTransitionsMethod->setAccessible(true);
         /** @var list<float> $resolvedTransitions */
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
             $job->slides(),
+            $resolvedDefaultDuration,
             $job->transitionDurations(),
-            $job->title(),
-            $job->subtitle(),
         );
 
         $resolveCoverDurationMethod = $reflector->getMethod('resolveCoverDuration');
@@ -953,7 +957,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertEqualsWithDelta($expectedFadeStart, $fadeStart, 0.001);
     }
 
-    public function testDeterministicTransitionDurationsAreWithinExpectedRange(): void
+    public function testTransitionDurationsFallbackToConfiguredDefault(): void
     {
         $slides = [
             [
@@ -985,23 +989,24 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
-        $method    = $reflector->getMethod('resolveTransitionDurationsForSlides');
+        $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
+        $resolveTransitionDurationMethod->setAccessible(true);
+        /** @var float $resolvedDefault */
+        $resolvedDefault = $resolveTransitionDurationMethod->invoke($generator, null);
+
+        $method = $reflector->getMethod('resolveTransitionDurationsForSlides');
         $method->setAccessible(true);
 
         /** @var list<float> $first */
-        $first = $method->invoke($generator, $slides, [], 'Gipfelmomente', 'Winter 2024');
+        $first = $method->invoke($generator, $slides, $resolvedDefault, []);
         /** @var list<float> $second */
-        $second = $method->invoke($generator, $slides, [], 'Gipfelmomente', 'Winter 2024');
+        $second = $method->invoke($generator, $slides, $resolvedDefault, []);
 
-        self::assertSame($first, $second, 'Deterministic seeds should produce stable durations.');
+        self::assertSame($first, $second, 'Fallback durations should remain stable for identical input.');
         self::assertCount(3, $first);
 
-        $unique = array_unique(array_map(static fn (float $value): string => sprintf('%.6F', $value), $first));
-        self::assertGreaterThan(1, count($unique), 'Expected at least two distinct transition durations.');
-
         foreach ($first as $duration) {
-            self::assertGreaterThanOrEqual(0.6, $duration);
-            self::assertLessThanOrEqual(1.0, $duration);
+            self::assertEqualsWithDelta($resolvedDefault, $duration, 0.0001);
         }
     }
 
@@ -1401,14 +1406,43 @@ BASH;
         $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
         $buildMethod->setAccessible(true);
 
-        $images = ['/tmp/a.jpg', '/tmp/b.jpg', '/tmp/c.jpg', '/tmp/d.jpg'];
+        $slidesForTransitions = [
+            [
+                'image'      => '/tmp/a.jpg',
+                'mediaId'    => 101,
+                'clusterId'  => 7,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/b.jpg',
+                'mediaId'    => 102,
+                'clusterId'  => 7,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/c.jpg',
+                'mediaId'    => 103,
+                'clusterId'  => 8,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/d.jpg',
+                'mediaId'    => 104,
+                'clusterId'  => 8,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+        ];
 
         /** @var list<string> $first */
-        $first = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Bravo', 3);
+        $first = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
         /** @var list<string> $second */
-        $second = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Bravo', 3);
+        $second = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
         /** @var list<string> $different */
-        $different = $buildMethod->invoke($generator, $filtered, $images, 'Alpha', 'Charlie', 3);
+        $different = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Charlie', 3);
 
         self::assertSame($first, $second);
         self::assertCount(3, $first);
@@ -1422,6 +1456,14 @@ BASH;
         }
 
         self::assertNotSame($first, $different);
+
+        /** @var list<string> $weighted */
+        $weighted = $buildMethod->invoke($generator, $slidesForTransitions, ['fade', 'pixelize'], 'Alpha', 'Bravo', 5);
+
+        $fadeCount     = count(array_filter($weighted, static fn (string $name): bool => $name === 'fade'));
+        $pixelizeCount = count(array_filter($weighted, static fn (string $name): bool => $name === 'pixelize'));
+
+        self::assertGreaterThan($pixelizeCount, $fadeCount, 'Fade should appear more frequently due to weight.');
     }
 
     public function testTransitionDurationsAreClampedAndShortened(): void
@@ -1481,15 +1523,19 @@ BASH;
 
         $parsed = $this->parseTransitionsFromCommand($command);
 
+        $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
+        $resolveTransitionDurationMethod->setAccessible(true);
+        /** @var float $resolvedDefaultDuration */
+        $resolvedDefaultDuration = $resolveTransitionDurationMethod->invoke($generator, $job->transitionDuration());
+
         $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
         $resolvedTransitionsMethod->setAccessible(true);
         /** @var list<float> $resolvedTransitions */
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
             $job->slides(),
+            $resolvedDefaultDuration,
             $job->transitionDurations(),
-            $job->title(),
-            $job->subtitle(),
         );
 
         self::assertSame(3, count($parsed['durations']));
