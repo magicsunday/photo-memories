@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateMalformedStringException;
 use DateTimeImmutable;
@@ -19,6 +20,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -38,11 +40,12 @@ use const SORT_STRING;
 /**
  * Detects the earliest visit session per geogrid cell (first time at this place).
  */
-final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface
+final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use ClusterLocationMetadataTrait;
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     public function __construct(
         private LocationHelper $locationHelper,
@@ -258,4 +261,15 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
 
         return sprintf('%.4f,%.4f', $rlat, $rlon);
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

@@ -11,10 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
@@ -26,10 +28,11 @@ use function usort;
  * Clusters items that are both temporally and spatially close.
  * Sliding-session approach with time gap and radius constraints.
  */
-final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInterface
+final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
@@ -157,4 +160,15 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
 
         return $out;
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

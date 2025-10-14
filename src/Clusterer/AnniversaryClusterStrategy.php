@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
@@ -45,6 +46,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
+    use ProgressAwareClusterTrait;
 
     /**
      * Creates a new anniversary cluster strategy.
@@ -305,10 +307,6 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
     private function updateStage(?callable $update, int $done, int $max, string $stage): void
     {
-        if ($update === null) {
-            return;
-        }
-
-        $update($done, max(1, $max), $stage);
+        $this->notifyProgress($update, $done, $max, $stage);
     }
 }

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -19,6 +20,7 @@ use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterDeviceMetadataAggregator;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 
 use function assert;
@@ -30,10 +32,11 @@ use function usort;
 /**
  * Builds a highlight memory for each (year, month) with sufficient coverage.
  */
-final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface
+final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
+    use ProgressAwareClusterTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
 
@@ -174,4 +177,15 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             default => 'Monat',
         };
     }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+    }
+
 }

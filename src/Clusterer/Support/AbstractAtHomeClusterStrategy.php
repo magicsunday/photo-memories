@@ -15,9 +15,11 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -35,12 +37,13 @@ use const SORT_STRING;
 /**
  * Shared implementation for at-home day clustering strategies.
  */
-abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
+abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
     use ConsecutiveDaysTrait;
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
+    use ProgressAwareClusterTrait;
 
     /**
      * @var array<int, true>
@@ -267,6 +270,17 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         $flush();
 
         return $clusters;
+    }
+
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
     }
 
     private function distanceKmFromHome(Media $media, float $lat, float $lon): float
