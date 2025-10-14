@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Metadata\Support\MediaFormatGuesser;
 use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -242,6 +243,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                 ),
             );
         } catch (Throwable $exception) {
+            $this->handleBinaryMissing($exception);
             IndexLogHelper::appendEntry(
                 $media,
                 IndexLogEntry::error(
@@ -671,5 +673,34 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         return null;
+    }
+
+    private function handleBinaryMissing(Throwable $exception): void
+    {
+        $message = $exception->getMessage();
+        if ($message === '') {
+            return;
+        }
+
+        $needles = [
+            'not found',
+            'No such file or directory',
+            'file does not exist',
+            'executable file not found',
+            'Unable to find the path to the executable',
+        ];
+
+        $lowerMessage = strtolower($message);
+        foreach ($needles as $needle) {
+            if (str_contains($lowerMessage, strtolower($needle))) {
+                $this->telemetry?->recordFfprobeBinaryMissing();
+
+                return;
+            }
+        }
+
+        if ($exception instanceof ProcessRuntimeException) {
+            $this->telemetry?->recordFfprobeBinaryMissing();
+        }
     }
 }

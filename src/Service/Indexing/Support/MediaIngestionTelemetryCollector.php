@@ -45,6 +45,8 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
      */
     private array $xmpTimezone = [];
 
+    private bool $ffprobeBinaryMissing = false;
+
     public function recordProcessedMedia(string $filepath, Media $media): void
     {
         $mime = $media->getMime();
@@ -102,6 +104,11 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
         }
     }
 
+    public function recordFfprobeBinaryMissing(): void
+    {
+        $this->ffprobeBinaryMissing = true;
+    }
+
     public function metrics(): array
     {
         $imagesTotal  = 0;
@@ -142,8 +149,9 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
             'exif_tz_hits'            => count($combinedExifHits),
             'quicktime_timezone_hits' => count($this->quickTimeTimezone),
             'xmp_timezone_hits'       => count($this->xmpTimezone),
-            'ffprobe_available'       => $ffprobeAvail,
+            'ffprobe_ok'              => $ffprobeAvail,
             'ffprobe_missing'         => $ffprobeMiss,
+            'ffprobe_binary_missing'  => $this->ffprobeBinaryMissing,
         ];
     }
 
@@ -153,5 +161,6 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
         $this->ffprobeAvailability = [];
         $this->quickTimeTimezone  = [];
         $this->xmpTimezone        = [];
+        $this->ffprobeBinaryMissing = false;
     }
 }

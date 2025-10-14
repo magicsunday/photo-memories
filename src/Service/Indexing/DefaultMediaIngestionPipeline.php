@@ -110,6 +110,12 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
             ]);
         }
 
+        if (($metrics['ffprobe_binary_missing'] ?? false) === true) {
+            $this->logger->warning('media_ingestion.ffprobe_unavailable', [
+                'message' => 'FFprobe executable could not be located; video metadata extraction was skipped.',
+            ]);
+        }
+
         $this->logger->info('media_ingestion.finalize', [
             'dryRun'  => $dryRun,
             'metrics' => $metrics,
