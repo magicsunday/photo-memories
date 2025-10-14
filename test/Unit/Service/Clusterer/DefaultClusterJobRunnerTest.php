@@ -20,6 +20,7 @@ use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
+use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
@@ -121,9 +122,11 @@ final class DefaultClusterJobRunnerTest extends TestCase
                 self::assertCount(2, $items);
                 $onStart('Strategy', 1, 1);
                 self::assertNotNull($progressFactory);
-                $progressCallback = $progressFactory('Strategy', 1, 1);
-                self::assertIsCallable($progressCallback);
-                $progressCallback(1, 3, 'Zwischenschritt');
+                $progressHandle = $progressFactory('Strategy', 1, 1);
+                self::assertInstanceOf(ProgressHandleInterface::class, $progressHandle);
+                $progressHandle->setDetail('Zwischenschritt');
+                $progressHandle->setProgress(1);
+                $progressHandle->finish();
                 $onDone('Strategy', 1, 1);
 
                 return $drafts;
@@ -215,9 +218,11 @@ final class DefaultClusterJobRunnerTest extends TestCase
             ->willReturnCallback(function (array $items, callable $onStart, callable $onDone, ?callable $progressFactory = null) use ($drafts): array {
                 $onStart('Strategy A', 1, 2);
                 self::assertNotNull($progressFactory);
-                $progressCallback = $progressFactory('Strategy A', 1, 2);
-                self::assertIsCallable($progressCallback);
-                $progressCallback(2, 5, 'Fortschritt');
+                $progressHandle = $progressFactory('Strategy A', 1, 2);
+                self::assertInstanceOf(ProgressHandleInterface::class, $progressHandle);
+                $progressHandle->setDetail('Fortschritt');
+                $progressHandle->setProgress(2);
+                $progressHandle->finish();
                 $onDone('Strategy A', 1, 2);
 
                 return $drafts;

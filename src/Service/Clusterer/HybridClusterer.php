@@ -16,6 +16,7 @@ use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
+use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 
@@ -23,6 +24,9 @@ use function array_merge;
 use function count;
 use function is_array;
 use function iterator_to_array;
+use function max;
+use function min;
+use function sprintf;
 
 /**
  * Class HybridClusterer.
@@ -45,10 +49,10 @@ final class HybridClusterer implements HybridClustererInterface
     /**
      * New API: lifecycle + per-strategy progress.
      *
-     * @param list<Media>                                                                  $items
-     * @param callable(string $strategy, int $index, int $total)|null                      $onStart
-     * @param callable(string $strategy, int $index, int $total)|null                      $onDone
-     * @param callable(string $strategy, int $index, int $total): ?callable(int $cur, int $max, string $stage)|null $makeProgress
+     * @param list<Media>                                                                         $items
+     * @param callable(string $strategy, int $index, int $total)|null                             $onStart
+     * @param callable(string $strategy, int $index, int $total)|null                             $onDone
+     * @param callable(string $strategy, int $index, int $total): ?ProgressHandleInterface|null   $makeProgressHandle
      *
      * @return list<ClusterDraft>
      */
@@ -56,7 +60,7 @@ final class HybridClusterer implements HybridClustererInterface
         array $items,
         ?callable $onStart,
         ?callable $onDone,
-        ?callable $makeProgress = null,
+        ?callable $makeProgressHandle = null,
         ?ClusterBuildProgressCallbackInterface $progressCallback = null,
     ): array {
         $strategies = $this->getStrategies();
@@ -72,19 +76,42 @@ final class HybridClusterer implements HybridClustererInterface
                 $onStart($s->name(), $idx, $total);
             }
 
-            $strategyProgress = null;
-            if ($makeProgress !== null) {
-                $strategyProgress = $makeProgress($s->name(), $idx, $total);
+            $strategyHandle = null;
+            if ($makeProgressHandle !== null) {
+                $strategyHandle = $makeProgressHandle($s->name(), $idx, $total);
             }
 
-            if ($strategyProgress !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
-                $res = $s->clusterWithProgress($items, $strategyProgress);
+            if ($strategyHandle !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
+                $res = $s->clusterWithProgress(
+                    $items,
+                    static function (int $done, int $maxSteps, string $stage) use ($strategyHandle): void {
+                        if ($maxSteps > 0) {
+                            $progress = max(0, min($done, $maxSteps));
+                            $strategyHandle->setMax($maxSteps);
+                            $strategyHandle->setDetail(sprintf('Schritt %d/%d', $progress, $maxSteps));
+                            $strategyHandle->setRate(sprintf('Fortschritt: %d/%d Schritte', $progress, $maxSteps));
+                            $strategyHandle->setProgress($progress);
+                        } else {
+                            $strategyHandle->setDetail($stage);
+                            $strategyHandle->setRate('Fortschritt: –');
+                        }
+
+                        $strategyHandle->setPhase($stage);
+                    },
+                );
             } else {
                 $res = $s->cluster($items);
             }
 
             if ($res !== []) {
                 $drafts[] = $res;
+            }
+
+            if ($strategyHandle !== null) {
+                $strategyHandle->setPhase('Abgeschlossen');
+                $strategyHandle->setDetail(sprintf('%d Cluster erzeugt', count($res)));
+                $strategyHandle->setRate('–');
+                $strategyHandle->finish();
             }
 
             if ($onDone !== null) {
