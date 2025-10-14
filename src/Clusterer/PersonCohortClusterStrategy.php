@@ -123,20 +123,34 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $buckets    = [];
         $candidates = $this->filterTimestampedItems($items);
 
-        $step  = 0;
-        $steps = 4;
+        $totalCandidates     = count($candidates);
+        $progress            = 0;
+        $totalSteps          = 2 + $totalCandidates;
 
-        $this->notifyProgress($update, ++$step, $steps, sprintf('Kandidaten prüfen (%d)', count($candidates)));
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('Kandidaten sammeln (%d Medien)', $totalCandidates)
+        );
+
+        $progress += 1;
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('Kandidaten prüfen (%d)', $totalCandidates)
+        );
 
         if ($candidates === []) {
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Kandidaten gefunden');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Keine Kandidaten gefunden');
 
             return [];
         }
 
-        $totalCandidates      = count($candidates);
-        $processedCandidates  = 0;
-        $notifyThreshold      = max(1, (int) ($totalCandidates / 10));
+        $processedCandidates = 0;
+        $notifyThreshold     = max(1, (int) ($totalCandidates / 10));
+        $candidateBase       = $progress;
 
         // Phase 1: bucket by persons signature per day
         foreach ($candidates as $m) {
@@ -156,17 +170,24 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
             ++$processedCandidates;
 
-            if (($processedCandidates % $notifyThreshold) === 0) {
+            if (($processedCandidates % $notifyThreshold) === 0 || $processedCandidates === $totalCandidates) {
                 $this->notifyProgress(
                     $update,
-                    $step,
-                    $steps,
+                    $candidateBase + $processedCandidates,
+                    $totalSteps,
                     sprintf('Signaturen gruppieren (%d/%d)', $processedCandidates, $totalCandidates)
                 );
             }
         }
 
-        $this->notifyProgress($update, ++$step, $steps, sprintf('%d Signaturen ermittelt', count($buckets)));
+        $progress = $candidateBase + $totalCandidates;
+
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('%d Signaturen ermittelt', count($buckets))
+        );
 
         /** @var array<string, array<string, list<Media>>> $eligibleBuckets */
         $eligibleBuckets = $this->filterGroups(
@@ -185,10 +206,20 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         );
 
         $eligibleCount = count($eligibleBuckets);
-        $this->notifyProgress($update, ++$step, $steps, sprintf('%d Gruppen gültig', $eligibleCount));
+        $totalSteps   += 1 + $eligibleCount;
+
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('%d Signaturen ermittelt', count($buckets))
+        );
+
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, sprintf('%d Gruppen gültig', $eligibleCount));
 
         if ($eligibleBuckets === []) {
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine stabilen Gruppen');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Keine stabilen Gruppen');
 
             return [];
         }
@@ -197,14 +228,19 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
         // Phase 2: merge consecutive days within window for each signature
         $processedGroups = 0;
+        $groupBase       = $progress;
+        $groupThreshold  = $eligibleCount > 0 ? max(1, (int) ($eligibleCount / 10)) : 1;
         foreach ($eligibleBuckets as $byDay) {
             ++$processedGroups;
-            $this->notifyProgress(
-                $update,
-                $step,
-                $steps,
-                sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount)
-            );
+
+            if (($processedGroups % $groupThreshold) === 0 || $processedGroups === $eligibleCount) {
+                $this->notifyProgress(
+                    $update,
+                    $groupBase + $processedGroups,
+                    $totalSteps,
+                    sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount)
+                );
+            }
 
             ksort($byDay);
 
@@ -241,7 +277,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
         }
 
-        $this->notifyProgress($update, ++$step, $steps, sprintf('%d Cluster erstellt', count($clusters)));
+        $progress = $groupBase + $eligibleCount;
+
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, sprintf('%d Cluster erstellt', count($clusters)));
 
         return $clusters;
     }

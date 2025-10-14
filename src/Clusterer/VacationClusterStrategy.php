@@ -95,14 +95,15 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'total_count' => $totalCount,
         ]);
 
-        $step  = 0;
-        $steps = 6;
+        $progress   = 0;
+        $totalSteps = 6;
 
         // Cluster processing requires reliable timestamps to establish the chronology of the trip.
         $timestamped = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
 
-        $this->notifyProgress($update, ++$step, $steps, sprintf('Zeitstempel prüfen (%d Medien)', $timestampedCount));
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, sprintf('Zeitstempel prüfen (%d Medien)', $timestampedCount));
 
         if ($timestampedCount === 0) {
             $this->emitMonitoring('skipped', [
@@ -110,7 +111,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'total_count' => $totalCount,
             ]);
 
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Medien mit Zeitstempel');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Keine Medien mit Zeitstempel');
 
             return [];
         }
@@ -123,7 +124,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         // Ensure chronological ordering so day summaries receive a consistent sequence.
         $ordered = $this->sortChronologically($timestamped);
-        $this->notifyProgress($update, ++$step, $steps, 'Chronologie herstellen');
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, 'Chronologie herstellen');
 
         // Determine the traveller's base location, which anchors day grouping and trip detection.
         $home = $this->homeLocator->determineHome($ordered);
@@ -133,12 +135,13 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'timestamped_count' => $timestampedCount,
             ]);
 
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Zuhause konnte nicht bestimmt werden');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Zuhause konnte nicht bestimmt werden');
 
             return [];
         }
 
-        $this->notifyProgress($update, ++$step, $steps, 'Zuhause bestimmen');
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, 'Zuhause bestimmen');
 
         $this->emitMonitoring('home_determined', [
             'timestamped_count' => $timestampedCount,
@@ -153,7 +156,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $days = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
         $dayCount = count($days);
 
-        $this->notifyProgress($update, ++$step, $steps, sprintf('Tagesübersichten erstellen (%d Tage)', $dayCount));
+        $progress += 1;
+        $this->notifyProgress($update, $progress, $totalSteps, sprintf('Tagesübersichten erstellen (%d Tage)', $dayCount));
 
         if ($dayCount === 0) {
             $this->emitMonitoring('skipped', [
@@ -161,7 +165,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'timestamped_count' => $timestampedCount,
             ]);
 
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Tageszusammenfassungen');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Keine Tageszusammenfassungen');
 
             return [];
         }
@@ -170,8 +174,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
         $this->notifyProgress(
             $update,
-            ++$step,
-            $steps,
+            ++$progress,
+            $totalSteps,
             sprintf('Kennzahlen berechnen (%.1f km)', $metrics['total_travel_km'])
         );
 
@@ -195,12 +199,13 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 'timestamped_count' => $timestampedCount,
             ]);
 
-            $this->notifyProgress($update, $steps, $steps, 'Abbruch: Keine Urlaubssegmente gefunden');
+            $this->notifyProgress($update, $totalSteps, $totalSteps, 'Abbruch: Keine Urlaubssegmente gefunden');
 
             return [];
         }
 
-        $this->notifyProgress($update, $steps, $steps, sprintf('Segmente erkennen (%d)', $segmentCount));
+        $progress = $totalSteps;
+        $this->notifyProgress($update, $progress, $totalSteps, sprintf('Segmente erkennen (%d)', $segmentCount));
 
         $this->emitMonitoring('completed', [
             'segment_count' => $segmentCount,
