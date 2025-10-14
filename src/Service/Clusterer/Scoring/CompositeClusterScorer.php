@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 
 use function array_keys;
 use function array_map;
@@ -107,19 +108,24 @@ final class CompositeClusterScorer
      *
      * @return list<ClusterDraft>
      */
-    public function score(array $clusters): array
+    public function score(array $clusters, ?ClusterBuildProgressCallbackInterface $progressCallback = null): array
     {
         if ($clusters === []) {
             return [];
         }
 
-        $mediaMap = $this->loadMediaMap($clusters);
+        $mediaMap = $this->loadMediaMap($clusters, $progressCallback);
         foreach ($this->heuristics as $heuristic) {
             $heuristic->prepare($clusters, $mediaMap);
         }
 
+        $clusterCount = count($clusters);
+        if ($progressCallback !== null) {
+            $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_SCORING, $clusterCount);
+        }
+
         $rawScores = [];
-        foreach ($clusters as $cluster) {
+        foreach ($clusters as $index => $cluster) {
             $weightedValues = [];
             foreach ($this->heuristics as $heuristic) {
                 if (!$heuristic->supports($cluster)) {
@@ -137,6 +143,19 @@ final class CompositeClusterScorer
                 'algorithm' => $cluster->getAlgorithm(),
                 'score'     => $score,
             ];
+
+            if ($progressCallback !== null) {
+                $progressCallback->onStageProgress(
+                    ClusterBuildProgressCallbackInterface::STAGE_SCORING,
+                    $index + 1,
+                    $clusterCount,
+                    $cluster->getAlgorithm(),
+                );
+            }
+        }
+
+        if ($progressCallback !== null) {
+            $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_SCORING, $clusterCount);
         }
 
         $distributions = $this->buildDistributions($rawScores);
@@ -176,7 +195,7 @@ final class CompositeClusterScorer
      *
      * @return array<int, Media>
      */
-    private function loadMediaMap(array $clusters): array
+    private function loadMediaMap(array $clusters, ?ClusterBuildProgressCallbackInterface $progressCallback = null): array
     {
         $ids = [];
         foreach ($clusters as $c) {
@@ -192,7 +211,13 @@ final class CompositeClusterScorer
 
         $map   = [];
         $chunk = 1000;
-        for ($i = 0, $n = count($allIds); $i < $n; $i += $chunk) {
+        $totalIds = count($allIds);
+
+        if ($progressCallback !== null) {
+            $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, $totalIds);
+        }
+
+        for ($i = 0, $n = $totalIds; $i < $n; $i += $chunk) {
             $slice = array_slice($allIds, $i, $chunk);
             $qb    = $this->em->createQueryBuilder()
                 ->select('m')
@@ -204,6 +229,20 @@ final class CompositeClusterScorer
             foreach ($rows as $m) {
                 $map[$m->getId()] = $m;
             }
+
+            if ($progressCallback !== null) {
+                $processed = min($totalIds, $i + count($slice));
+                $progressCallback->onStageProgress(
+                    ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA,
+                    $processed,
+                    $totalIds,
+                    sprintf('Medien %d/%d geladen', $processed, $totalIds),
+                );
+            }
+        }
+
+        if ($progressCallback !== null) {
+            $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, $totalIds);
         }
 
         return $map;
