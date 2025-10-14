@@ -26,5 +26,9 @@ interface ProgressHandleInterface
 
     public function setProgress(int $current): void;
 
+    public function setMax(int $max): void;
+
+    public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface;
+
     public function finish(): void;
 }

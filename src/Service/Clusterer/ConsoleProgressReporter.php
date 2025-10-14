@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
+use Closure;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -36,56 +37,21 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
 
     public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
     {
+        return $this->createHandle($sectionTitle, $headline, $max);
+    }
+
+    private function createHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+    {
         $this->io->section($sectionTitle);
 
         $section = $this->output->section();
         $bar     = $this->makeBar($section, $max, $headline);
 
-        return new readonly class($section, $bar) implements ProgressHandleInterface {
-            public function __construct(
-                private ConsoleSectionOutput $section,
-                private ProgressBar $bar,
-            ) {
-            }
-
-            public function advance(int $step = 1): void
-            {
-                if ($step <= 0) {
-                    return;
-                }
-
-                $this->bar->advance($step);
-            }
-
-            public function setPhase(?string $message): void
-            {
-                $this->bar->setMessage($message ?? '', 'phase');
-                $this->bar->display();
-            }
-
-            public function setDetail(?string $message): void
-            {
-                $this->bar->setMessage($message ?? '–', 'detail');
-                $this->bar->display();
-            }
-
-            public function setRate(?string $message): void
-            {
-                $this->bar->setMessage($message ?? '–', 'rate');
-                $this->bar->display();
-            }
-
-            public function setProgress(int $current): void
-            {
-                $this->bar->setProgress($current);
-            }
-
-            public function finish(): void
-            {
-                $this->bar->finish();
-                $this->section->writeln('');
-            }
+        $factory = function (string $childSectionTitle, string $childHeadline, int $childMax): ProgressHandleInterface {
+            return $this->createHandle($childSectionTitle, $childHeadline, $childMax);
         };
+
+        return new ConsoleProgressHandle($section, $bar, $factory);
     }
 
     private function makeBar(ConsoleSectionOutput $section, int $max, string $headline): ProgressBar
@@ -115,5 +81,73 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
         $bar->setMessage('–', 'rate');
 
         return $bar;
+    }
+}
+
+/** @internal */
+final class ConsoleProgressHandle implements ProgressHandleInterface
+{
+    /**
+     * @param callable(string,string,int):ProgressHandleInterface $factory
+     */
+    public function __construct(
+        private ConsoleSectionOutput $section,
+        private ProgressBar $bar,
+        private Closure $factory,
+    ) {
+    }
+
+    public function advance(int $step = 1): void
+    {
+        if ($step <= 0) {
+            return;
+        }
+
+        $this->bar->advance($step);
+    }
+
+    public function setPhase(?string $message): void
+    {
+        $this->bar->setMessage($message ?? '', 'phase');
+        $this->bar->display();
+    }
+
+    public function setDetail(?string $message): void
+    {
+        $this->bar->setMessage($message ?? '–', 'detail');
+        $this->bar->display();
+    }
+
+    public function setRate(?string $message): void
+    {
+        $this->bar->setMessage($message ?? '–', 'rate');
+        $this->bar->display();
+    }
+
+    public function setProgress(int $current): void
+    {
+        $maxSteps = $this->bar->getMaxSteps();
+        if ($current > $maxSteps) {
+            $this->bar->setMaxSteps($current);
+        }
+
+        $this->bar->setProgress($current);
+    }
+
+    public function setMax(int $max): void
+    {
+        $this->bar->setMaxSteps(max(0, $max));
+        $this->bar->display();
+    }
+
+    public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+    {
+        return ($this->factory)($sectionTitle, $headline, $max);
+    }
+
+    public function finish(): void
+    {
+        $this->bar->finish();
+        $this->section->writeln('');
     }
 }

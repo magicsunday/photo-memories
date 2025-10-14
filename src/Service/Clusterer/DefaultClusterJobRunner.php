@@ -119,6 +119,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $strategyCount = $this->clusterer->countStrategies();
         $clusterHandle = $progressReporter->create('Clustere', '🧩 Strategien', $strategyCount);
+        $clusterHandle->setMax(max(1, $strategyCount));
         $clusterHandle->setDetail('Vorbereitung');
         $clusterStart  = microtime(true);
 
@@ -139,19 +140,24 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $clusterHandle->setRate($this->formatRate($loadedCount, $clusterStart, 'Medien'));
                 $clusterHandle->advance();
             },
-            function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle): ?callable {
-                return static function (int $done, int $maxSteps, string $stage) use ($clusterHandle, $strategyName, $index, $strategyTotal): void {
-                    $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
-                    $clusterHandle->setDetail($stage);
+            function (string $strategyName, int $index, int $strategyTotal) use ($clusterHandle, $loadedCount): ProgressHandleInterface {
+                $clusterHandle->setPhase(sprintf('Strategie: %s (%d/%d)', $strategyName, $index, $strategyTotal));
+                $clusterHandle->setDetail('Vorbereitung');
+                $clusterHandle->setRate('–');
+                $clusterHandle->setProgress(max(0, $index - 1));
 
-                    if ($maxSteps > 0) {
-                        $clusterHandle->setRate(sprintf('Fortschritt: %d/%d Schritte', $done, $maxSteps));
-                    } else {
-                        $clusterHandle->setRate('Fortschritt: –');
-                    }
+                $strategyHandle = $clusterHandle->createChildHandle(
+                    sprintf('Strategie: %s', $strategyName),
+                    sprintf('⚙️ %s', $strategyName),
+                    max(1, $loadedCount),
+                );
+                $strategyHandle->setMax(max(1, $loadedCount));
+                $strategyHandle->setPhase('Vorbereitung');
+                $strategyHandle->setDetail('Warten auf Fortschritt');
+                $strategyHandle->setRate('–');
+                $strategyHandle->setProgress(0);
 
-                    $clusterHandle->setProgress(max(0, $index - 1));
-                };
+                return $strategyHandle;
             },
             progressCallback: $postProcessingProgress,
         );
@@ -255,6 +261,8 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
             $this->handle = $this->progressReporter->create('Bewerten', '🏅 Score & Titel', $this->maxTotal);
             $this->handle->setProgress(0);
             $this->handle->setRate('–');
+        } else {
+            $this->handle->setMax($this->maxTotal);
         }
 
         if ($this->handle === null) {
@@ -265,18 +273,21 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
             case ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA:
                 $this->handle->setPhase('Score vorbereiten');
                 $this->handle->setDetail('Medien laden');
+                $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
                 break;
             case ClusterBuildProgressCallbackInterface::STAGE_SCORING:
                 $this->handle->setPhase('Score berechnen');
                 $this->handle->setDetail('Heuristiken ausführen');
+                $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
                 break;
             case ClusterBuildProgressCallbackInterface::STAGE_TITLES:
                 $this->handle->setPhase('Titel generieren');
                 $this->handle->setDetail('Vorlagen anwenden');
+                $this->handle->setMax(max(1, $total));
                 $this->handle->setProgress(0);
                 $this->handle->setRate('–');
                 break;
@@ -288,6 +299,8 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
         if ($this->handle === null || $stage !== $this->currentStage) {
             return;
         }
+
+        $this->handle->setMax(max(1, $total));
 
         if ($detail !== null) {
             $this->handle->setDetail($detail);
@@ -310,11 +323,13 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
         }
 
         if ($stage === ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA) {
+            $this->handle->setMax(max(1, $total));
             $this->handle->setRate($this->formatRate($total, 'Medien'));
 
             return;
         }
 
+        $this->handle->setMax(max(1, $total));
         $this->handle->setProgress(min($total, $this->maxTotal));
         $this->handle->setRate($this->formatRate($total, 'Cluster'));
 

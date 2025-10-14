@@ -42,6 +42,15 @@ final class NullProgressReporter implements ProgressReporterInterface
             {
             }
 
+            public function setMax(int $max): void
+            {
+            }
+
+            public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
+            {
+                return new self();
+            }
+
             public function finish(): void
             {
             }
