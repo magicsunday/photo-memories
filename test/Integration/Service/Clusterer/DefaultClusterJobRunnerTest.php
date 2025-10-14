@@ -109,10 +109,6 @@ final class DefaultClusterJobRunnerTest extends TestCase
             static function () use (&$pendingClusters, &$storedClusters, &$flushCalls): void {
                 ++$flushCalls;
 
-                if ($flushCalls === 2) {
-                    throw new RuntimeException('Simulated abort');
-                }
-
                 foreach ($pendingClusters as $entity) {
                     $storedClusters[] = $entity;
                 }
@@ -122,14 +118,14 @@ final class DefaultClusterJobRunnerTest extends TestCase
         );
 
         $mediaLookup   = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect  = new IdentityClusterMemberSelectionService();
+        $memberSelect  = new FailingAfterFirstClusterMemberSelectionService();
         $coverPicker   = new FirstCoverPicker();
         $persistence   = new ClusterPersistenceService(
             em: $clusterEntityManager,
             mediaLookup: $mediaLookup,
             memberSelection: $memberSelect,
             coverPicker: $coverPicker,
-            defaultBatchSize: 1,
+            defaultBatchSize: 10,
             maxMembers: 50,
             fingerprintLookupBatchSize: 10,
         );
@@ -141,9 +137,10 @@ final class DefaultClusterJobRunnerTest extends TestCase
             $runner->run($options, new NullProgressReporter());
             self::fail('Expected simulated abort to bubble up.');
         } catch (RuntimeException $exception) {
-            self::assertSame('Simulated abort', $exception->getMessage());
+            self::assertSame('Simulated abort while curating', $exception->getMessage());
         }
 
+        self::assertSame(1, $flushCalls, 'Exactly one cluster flush should complete before aborting.');
         self::assertCount(1, $storedClusters, 'Clusters persisted before abort should remain available.');
         self::assertSame('algo-one', $storedClusters[0]->getAlgorithm());
         self::assertSame(1, $storedClusters[0]->getMembersCount());
@@ -362,6 +359,22 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
         }
 
         return $result;
+    }
+}
+
+final class FailingAfterFirstClusterMemberSelectionService implements ClusterMemberSelectionServiceInterface
+{
+    private int $calls = 0;
+
+    public function curate(ClusterDraft $draft): ClusterDraft
+    {
+        ++$this->calls;
+
+        if ($this->calls > 1) {
+            throw new RuntimeException('Simulated abort while curating');
+        }
+
+        return $draft;
     }
 }
 
