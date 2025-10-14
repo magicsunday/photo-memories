@@ -156,7 +156,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
             ++$processedCandidates;
 
-            if ($update !== null && $processedCandidates % $notifyThreshold === 0) {
+            if (($processedCandidates % $notifyThreshold) === 0) {
                 $this->notifyProgress(
                     $update,
                     $step,
@@ -199,14 +199,12 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $processedGroups = 0;
         foreach ($eligibleBuckets as $byDay) {
             ++$processedGroups;
-            if ($update !== null) {
-                $this->notifyProgress(
-                    $update,
-                    $step,
-                    $steps,
-                    sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount)
-                );
-            }
+            $this->notifyProgress(
+                $update,
+                $step,
+                $steps,
+                sprintf('Gruppen verarbeiten (%d/%d)', $processedGroups, $eligibleCount)
+            );
 
             ksort($byDay);
 
