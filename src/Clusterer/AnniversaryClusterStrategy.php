@@ -123,17 +123,9 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
      */
     private function buildClusters(array $items, ?callable $update): array
     {
-        $totalStages = 4;
-
-        $this->notifyProgress(
-            $update,
-            0,
-            $totalStages,
-            sprintf('Analysiere %d Medien mit Zeitstempel', count($items))
-        );
-
         /** @var list<Media> $timestamped */
-        $timestamped = $this->filterTimestampedItems($items);
+        $timestamped     = $this->filterTimestampedItems($items);
+        $timestampedCount = count($timestamped);
 
         /** @var array<string, list<Media>> $byMonthDay */
         $byMonthDay = [];
@@ -144,21 +136,57 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             $byMonthDay[$takenAt->format('m-d')][] = $media;
         }
 
-        $this->notifyProgress(
-            $update,
-            1,
-            $totalStages,
-            sprintf('Filtere Jubiläumskandidaten aus %d Tagesgruppen', count($byMonthDay))
-        );
+        $groupCount = count($byMonthDay);
 
         $eligibleGroups = $this->filterGroupsByMinItems($byMonthDay, $this->minItemsPerAnniversary);
         $candidateTotal = count($eligibleGroups);
 
+        $baseSteps  = 3;
+        $finalStep  = 1;
+        $progress   = 0;
+        $totalSteps = $baseSteps + $candidateTotal + $finalStep;
+
         $this->notifyProgress(
             $update,
-            2,
-            $totalStages,
-            sprintf('Bewerte Jubiläen (%d Kandidaten)', $candidateTotal)
+            $progress,
+            $totalSteps,
+            sprintf('Analysiere %d Medien mit Zeitstempel', $timestampedCount)
+        );
+
+        $progress += 1;
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('Gruppiere Aufnahmen in %d Tagesgruppen', $groupCount)
+        );
+
+        $progress += 1;
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('Filtere Jubiläumskandidaten (%d Kandidaten)', $candidateTotal)
+        );
+
+        if ($candidateTotal === 0) {
+            $this->notifyProgress(
+                $update,
+                $totalSteps,
+                $totalSteps,
+                'Keine Jahrestage gefunden'
+            );
+
+            return [];
+        }
+
+        $candidateProgressBase      = $progress;
+        $candidateNotifyThreshold   = max(1, (int) ($candidateTotal / 10));
+        $this->notifyProgress(
+            $update,
+            $progress,
+            $totalSteps,
+            sprintf('Bewerte Jubiläen (0/%d Kandidaten)', $candidateTotal)
         );
 
         $scoredGroups = [];
@@ -178,18 +206,19 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
             $distinctYears = count($years);
             if ($distinctYears < $this->minDistinctYears) {
-                $this->notifyProgress(
-                    $update,
-                    2,
-                    $totalStages,
-                    sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, max(1, $candidateTotal))
-                );
+                if (($processed % $candidateNotifyThreshold) === 0 || $processed === $candidateTotal) {
+                    $this->notifyProgress(
+                        $update,
+                        $candidateProgressBase + $processed,
+                        $totalSteps,
+                        sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, $candidateTotal)
+                    );
+                }
 
                 continue;
             }
 
             $total     = count($group);
-            $spanYears = 0;
             /** @var list<int> $yearKeys */
             $yearKeys  = array_keys($years);
             $spanYears = max($yearKeys) - min($yearKeys) + 1;
@@ -212,26 +241,17 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 'score' => $score,
             ];
 
-            if (($processed % 10) === 0 || $processed === $candidateTotal) {
+            if (($processed % $candidateNotifyThreshold) === 0 || $processed === $candidateTotal) {
                 $this->notifyProgress(
                     $update,
-                    2,
-                    $totalStages,
-                    sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, max(1, $candidateTotal))
+                    $candidateProgressBase + $processed,
+                    $totalSteps,
+                    sprintf('Bewerte Jubiläen (%d/%d Kandidaten)', $processed, $candidateTotal)
                 );
             }
         }
 
-        if ($candidateTotal === 0) {
-            $this->notifyProgress(
-                $update,
-                $totalStages,
-                $totalStages,
-                'Keine Jahrestage gefunden'
-            );
-
-            return [];
-        }
+        $progress = $candidateProgressBase + $candidateTotal;
 
         usort(
             $scoredGroups,
@@ -243,15 +263,22 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         }
 
         $summaryTotal = count($scoredGroups);
+        $totalSteps  += $summaryTotal;
+
         $this->notifyProgress(
             $update,
-            3,
-            $totalStages,
-            sprintf('Berechne Metadaten für Jubiläen (%d Kandidaten)', $summaryTotal)
+            $progress,
+            $totalSteps,
+            $summaryTotal === 0
+                ? 'Berechne Metadaten für Jubiläen (0 Kandidaten)'
+                : sprintf('Berechne Metadaten für Jubiläen (0/%d)', $summaryTotal)
         );
 
-        $drafts   = [];
-        $enriched = 0;
+        $drafts                    = [];
+        $enriched                  = 0;
+        $metadataProgressBase      = $progress;
+        $metadataNotifyThreshold   = $summaryTotal > 0 ? max(1, (int) ($summaryTotal / 10)) : 1;
+
         foreach ($scoredGroups as $entry) {
             /** @var list<Media> $group */
             $group = $entry['group'];
@@ -285,20 +312,29 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             );
 
             ++$enriched;
-            if (($enriched % 10) === 0 || $enriched === $summaryTotal) {
+            if (($enriched % $metadataNotifyThreshold) === 0 || $enriched === $summaryTotal) {
                 $this->notifyProgress(
                     $update,
-                    3,
-                    $totalStages,
-                    sprintf('Berechne Metadaten für Jubiläen (%d/%d)', $enriched, max(1, $summaryTotal))
+                    $metadataProgressBase + $enriched,
+                    $totalSteps,
+                    $summaryTotal === 0
+                        ? 'Berechne Metadaten für Jubiläen (0 Kandidaten)'
+                        : sprintf(
+                            'Berechne Metadaten für Jubiläen (%d/%d)',
+                            $enriched,
+                            $summaryTotal
+                        )
                 );
             }
         }
 
+        $progress = $metadataProgressBase + $summaryTotal;
+
+        $progress += 1;
         $this->notifyProgress(
             $update,
-            $totalStages,
-            $totalStages,
+            $progress,
+            $totalSteps,
             sprintf('Erzeuge finale Cluster (%d Entwürfe)', count($drafts))
         );
 
