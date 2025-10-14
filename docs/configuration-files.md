@@ -29,6 +29,10 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und reicht sie
   unverändert an FFmpeg weiter.
 
+  Für die Ein- und Ausblendung der Clips stehen `memories.slideshow.intro_fade_duration_s` (Fade-In ab Sekunde 0) sowie
+  `memories.slideshow.outro_fade_duration_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
+  sowohl bei Einzelbild-Slideshows als auch bei Übergangssequenzen über mehrere Bilder hinweg.
+
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 
 ### Auswahlprofile (`memories.cluster.selection.profile_values`)

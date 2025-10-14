@@ -1182,6 +1182,106 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
     }
 
+    public function testSingleImageCommandAppliesConfiguredVideoFades(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/single.jpg',
+                'mediaId'    => 1,
+                'duration'   => 10.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'single-fade',
+            '/tmp/single-fade.job.json',
+            '/tmp/single-fade.mp4',
+            '/tmp/single-fade.lock',
+            '/tmp/single-fade.error',
+            ['/tmp/single.jpg'],
+            $slides,
+            [],
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator(
+            introFadeDuration: 0.5,
+            outroFadeDuration: 1.25,
+        );
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplex = $command[$filterIndex + 1];
+
+        self::assertStringContainsString('fade=t=in:st=0:d=0.5', $filterComplex);
+        self::assertStringContainsString('fade=t=out:st=8.75:d=1.25', $filterComplex);
+    }
+
+    public function testMultiImageCommandAppendsVideoFadeStage(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/alpha.jpg',
+                'mediaId'    => 1,
+                'duration'   => 5.0,
+                'transition' => 'fade',
+            ],
+            [
+                'image'      => '/tmp/beta.jpg',
+                'mediaId'    => 2,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'multi-fade',
+            '/tmp/multi-fade.job.json',
+            '/tmp/multi-fade.mp4',
+            '/tmp/multi-fade.lock',
+            '/tmp/multi-fade.error',
+            ['/tmp/alpha.jpg', '/tmp/beta.jpg'],
+            $slides,
+            [0.75],
+            0.75,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator(
+            introFadeDuration: 0.5,
+            outroFadeDuration: 2.0,
+        );
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplex = $command[$filterIndex + 1];
+
+        self::assertStringContainsString('[vout]fade=t=in:st=0:d=0.5,fade=t=out:st=6.25:d=2[vout]', $filterComplex);
+    }
+
     public function testDiscoveredTransitionsAreFilteredAgainstWhitelist(): void
     {
         $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
