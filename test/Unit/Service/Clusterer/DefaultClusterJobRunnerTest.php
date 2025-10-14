@@ -26,6 +26,9 @@ use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Traversable;
+
+use function iterator_to_array;
 
 final class DefaultClusterJobRunnerTest extends TestCase
 {
@@ -155,8 +158,19 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence->expects(self::once())
             ->method('persistStreaming')
             ->willReturnCallback(function (iterable $persistedDrafts, ?callable $callback): int {
-                self::assertIsArray($persistedDrafts);
-                self::assertCount(1, $persistedDrafts);
+                self::assertThat(
+                    $persistedDrafts,
+                    self::logicalOr(
+                        self::isArray(),
+                        self::isInstanceOf(Traversable::class),
+                    ),
+                );
+
+                $persistedList = is_array($persistedDrafts)
+                    ? $persistedDrafts
+                    : iterator_to_array($persistedDrafts, preserve_keys: false);
+
+                self::assertCount(1, $persistedList);
                 self::assertNotNull($callback);
                 $callback(1);
 
