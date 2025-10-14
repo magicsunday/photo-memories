@@ -53,6 +53,7 @@ use function sprintf;
 use function str_replace;
 use function strtolower;
 use function trim;
+use function pi;
 
 /**
  * @internal
@@ -144,8 +145,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'diagbr'     => 1,
     ];
 
-    private const int ZOOMPAN_FPS = 30;
-
     private const float PAN_OFFSET_LIMIT = 0.05;
 
     private const float AUDIO_FADE_DURATION = 1.0;
@@ -165,15 +164,20 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly ?string $audioTrack = null,
         private readonly ?string $fontFile = null,
         private readonly string $fontFamily = 'DejaVu Sans',
+        private readonly bool $textBoxEnabled = true,
         private readonly float $backgroundBlurSigma = 20.0,
         private readonly string $backgroundBlurFilter = 'gblur',
+        private readonly bool $backgroundBoxBlurEnabled = false,
         private readonly bool $backgroundVignetteEnabled = true,
+        private readonly float $backgroundVignetteStrength = 1.0,
         private readonly float $backgroundEqBrightness = 0.0,
         private readonly float $backgroundEqContrast = 1.0,
         private readonly float $backgroundEqSaturation = 1.0,
         private readonly bool $kenBurnsEnabled = true,
+        private readonly string $kenBurnsEasing = 'cosine',
         private readonly float $zoomStart = 1.0,
         private readonly float $zoomEnd = 1.08,
+        private readonly float $frameRate = 30.0,
         private readonly float $introFadeDuration = 1.0,
         private readonly float $outroFadeDuration = 1.0,
         private readonly float $beatGridStep = 0.0,
@@ -512,8 +516,15 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $backgroundFilters[] = $blurFilter;
         }
 
-        if ($this->backgroundVignetteEnabled) {
-            $backgroundFilters[] = 'vignette';
+        if ($this->backgroundBoxBlurEnabled && strtolower($this->backgroundBlurFilter) !== 'boxblur') {
+            $radius = max(1, (int) round(max(1.0, $this->backgroundBlurSigma) / 2.0));
+            $backgroundFilters[] = sprintf('boxblur=luma_radius=%d:luma_power=1', $radius);
+        }
+
+        if ($this->backgroundVignetteEnabled && $this->backgroundVignetteStrength > 0.0) {
+            $strength = max(0.05, min(4.0, $this->backgroundVignetteStrength));
+            $angle    = pi() / (4.0 * $strength);
+            $backgroundFilters[] = sprintf('vignette=angle=%s', $this->formatFloat($angle));
         }
 
         $backgroundFilters[] = sprintf(
@@ -531,11 +542,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $clipSecondsValue = max(self::MINIMUM_SLIDE_DURATION, $clipDuration);
         $visibleDuration  = max(self::MINIMUM_SLIDE_DURATION, min($visibleDuration, $clipSecondsValue));
-        $frameCount       = max(2, (int) round($visibleDuration * self::ZOOMPAN_FPS));
+        $frameRate        = max(1.0, is_finite($this->frameRate) ? $this->frameRate : 30.0);
+        $frameCount       = max(2, (int) round($visibleDuration * $frameRate));
         $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
         if ($this->kenBurnsEnabled && $kenBurns['enabled']) {
-            $easePrelude = sprintf('progress=min(on/%s,1);ease=0.5-0.5*cos(PI*progress);', $frameCount);
+            $easePrelude      = $this->buildEasingPrelude($frameCount);
             $targetAspectRatio = $this->formatFloat($this->width / $this->height);
             $isPortraitExpr    = sprintf('lt(iw/ih,%s)', $targetAspectRatio);
 
@@ -575,14 +587,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $verticalValue     = $this->formatFloat($verticalAmount * $kenBurns['panDirection']);
 
             $horizontalPanExpr = sprintf(
-                'progress=min(on/%1$s,1);ease=0.5-0.5*cos(PI*progress);clip((iw-(iw/zoom))/2 + %2$s*(iw-(iw/zoom))/2*ease,0,max(iw-(iw/zoom),0))',
-                $frameCount,
+                '%sclip((iw-(iw/zoom))/2 + %s*(iw-(iw/zoom))/2*ease,0,max(iw-(iw/zoom),0))',
+                $easePrelude,
                 $horizontalValue,
             );
 
             $verticalPanExpr = sprintf(
-                'progress=min(on/%1$s,1);ease=0.5-0.5*cos(PI*progress);clip((ih-(ih/zoom))/2 + %2$s*(ih-(ih/zoom))/2*ease,0,max(ih-(ih/zoom),0))',
-                $frameCount,
+                '%sclip((ih-(ih/zoom))/2 + %s*(ih-(ih/zoom))/2*ease,0,max(ih-(ih/zoom),0))',
+                $easePrelude,
                 $verticalValue,
             );
 
@@ -605,7 +617,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $panYExpr = '0';
         }
 
-        $zoompanFps = $this->formatFloat((float) self::ZOOMPAN_FPS);
+        $zoompanFps = $this->formatFloat($frameRate);
 
         $foreground = sprintf(
             '[fg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=decrease',
@@ -634,8 +646,28 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $background,
             $foreground,
             $index,
-            '%memories.slideshow.fps%',
+            $this->formatFloat($frameRate),
         );
+    }
+
+    private function buildEasingPrelude(int $frameCount): string
+    {
+        $frames = max(1, $frameCount);
+
+        return sprintf('progress=min(on/%d,1);ease=%s;', $frames, $this->resolveEasingExpressionBody());
+    }
+
+    private function resolveEasingExpressionBody(): string
+    {
+        $mode = strtolower(trim($this->kenBurnsEasing));
+
+        return match ($mode) {
+            'linear' => 'progress',
+            'smoothstep', 'cubic' => 'progress*progress*(3-2*progress)',
+            'sine', 'sin' => 'sin(progress*PI/2)',
+            'quadratic', 'quad' => 'if(lt(progress,0.5),2*progress*progress,1-pow(-2*progress+2,2)/2)',
+            default => '0.5-0.5*cos(PI*progress)',
+        };
     }
 
     /**
@@ -1337,8 +1369,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-map';
         $command[] = '[vout]';
+        $frameRate = max(1.0, is_finite($this->frameRate) ? $this->frameRate : 30.0);
         $command[] = '-r';
-        $command[] = '%memories.slideshow.fps%';
+        $command[] = $this->formatFloat($frameRate);
         $command[] = '-c:v';
         $command[] = 'libx264';
         $command[] = '-preset';
@@ -1350,7 +1383,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = '-level';
         $command[] = '4.1';
         $command[] = '-g';
-        $command[] = '60';
+        $command[] = (string) max(1, (int) round($frameRate * 2.0));
         $command[] = '-bf';
         $command[] = '2';
         $command[] = '-threads';
@@ -1504,18 +1537,20 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         if ($subtitleText !== null) {
             $filters[] = sprintf(
                 "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-                'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80-(line_h+40)',
+                'borderw=2:bordercolor=black@0.20:%s:x=w*0.05:y=h-80-(line_h+40)',
                 $subtitleText,
-                $fontSegment
+                $fontSegment,
+                $this->buildTextBoxOptions(),
             );
         }
 
         if ($titleText !== null) {
             $filters[] = sprintf(
                 "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-                'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80',
+                'borderw=2:bordercolor=black@0.20:%s:x=w*0.05:y=h-80',
                 $titleText,
                 $fontSegment,
+                $this->buildTextBoxOptions(),
             );
         }
 
@@ -1546,13 +1581,23 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         return sprintf(
             "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-            'borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=%s:y=%s',
+            'borderw=2:bordercolor=black@0.20:%s:x=%s:y=%s',
             $text,
             $fontSegment,
             $fontSize,
+            $this->buildTextBoxOptions(),
             $xExpression,
             $yExpression,
         );
+    }
+
+    private function buildTextBoxOptions(): string
+    {
+        if (!$this->textBoxEnabled) {
+            return 'box=0';
+        }
+
+        return 'box=1:boxcolor=0x00000066:boxborderw=8';
     }
 
     private function resolveFontDirective(): string

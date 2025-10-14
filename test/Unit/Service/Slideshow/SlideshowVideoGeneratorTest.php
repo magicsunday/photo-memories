@@ -37,6 +37,7 @@ use function strpos;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
+use function pi;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -1856,6 +1857,115 @@ BASH;
         /** @var list<string> $cached */
         $cached = $method->invoke($generator);
         self::assertSame($transitions, $cached, 'Transitions should be cached across invocations.');
+    }
+
+    public function testCustomFrameRateIsPropagatedToFilters(): void
+    {
+        $generator = new SlideshowVideoGenerator(frameRate: 24.0);
+
+        $reflector    = new ReflectionClass($generator);
+        $appendMethod = $reflector->getMethod('appendAudioOptions');
+        $appendMethod->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $appendMethod->invoke(
+            $generator,
+            ['ffmpeg', '-filter_complex', '[0:v]trim=duration=4[vout]'],
+            1,
+            '/tmp/out.mp4',
+            null,
+            null,
+            null,
+            4.0,
+        );
+
+        $rateIndex = array_search('-r', $command, true);
+        self::assertNotFalse($rateIndex);
+        self::assertSame('24', $command[$rateIndex + 1]);
+
+        $gopIndex = array_search('-g', $command, true);
+        self::assertNotFalse($gopIndex);
+        self::assertSame('48', $command[$gopIndex + 1]);
+
+        $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
+        $blurMethod->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 1,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $blurMethod->invoke($generator, 0, 3.0, 3.0, $slide, null, null);
+
+        self::assertStringContainsString('fps=24', $filter);
+    }
+
+    public function testTextBoxesCanBeDisabled(): void
+    {
+        $generator = new SlideshowVideoGenerator(textBoxEnabled: false);
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
+        $method->setAccessible(true);
+
+        /** @var string $filters */
+        $filters = $method->invoke($generator, 'Rückblick', 'Untertitel');
+
+        self::assertStringContainsString('box=0', $filters);
+        self::assertStringNotContainsString('box=1', $filters);
+    }
+
+    public function testVignetteStrengthAdjustsAngle(): void
+    {
+        $generator = new SlideshowVideoGenerator(backgroundVignetteStrength: 2.0);
+
+        $reflector  = new ReflectionClass($generator);
+        $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
+        $blurMethod->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 1,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $blurMethod->invoke($generator, 0, 3.0, 3.0, $slide, null, null);
+
+        $formatMethod = $reflector->getMethod('formatFloat');
+        $formatMethod->setAccessible(true);
+
+        /** @var string $expected */
+        $expected = $formatMethod->invoke($generator, pi() / 8.0);
+
+        self::assertStringContainsString(sprintf('vignette=angle=%s', $expected), $filter);
+    }
+
+    public function testLinearEasingProducesProgressExpression(): void
+    {
+        $generator = new SlideshowVideoGenerator(kenBurnsEasing: 'linear');
+
+        $reflector  = new ReflectionClass($generator);
+        $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
+        $blurMethod->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 2,
+            'clusterId'  => 5,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $blurMethod->invoke($generator, 1, 3.0, 3.0, $slide, null, null);
+
+        self::assertStringContainsString('ease=progress', $filter);
+        self::assertStringNotContainsString('cos(PI*progress)', $filter);
     }
 
     /**

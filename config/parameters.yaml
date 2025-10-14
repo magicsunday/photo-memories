@@ -836,10 +836,22 @@ parameters:
     # Description: Step size in seconds used to snap slide and transition timing to a beat grid (0 disables snapping).
     memories.slideshow.beat_grid_step_default: 0.0
     memories.slideshow.beat_grid_step: '%env(default:memories.slideshow.beat_grid_step_default:float:MEMORIES_SLIDESHOW_BEAT_GRID_STEP)%'
-    # Description: Duration in seconds of the fade-in applied to slideshow videos.
-    memories.slideshow.intro_fade_duration_s: 1.0
-    # Description: Duration in seconds of the fade-out applied to slideshow videos.
-    memories.slideshow.outro_fade_duration_s: 1.0
+    # Description: Default frame rate in frames per second for generated slideshow videos.
+    memories.slideshow.fps_default: 30
+    # Description: Runtime frame rate for slideshow rendering sourced from the environment.
+    memories.slideshow.fps: '%env(default:memories.slideshow.fps_default:int:MEMORIES_SLIDESHOW_FPS)%'
+    # Description: Default easing profile for Ken-Burns-style zoom/pan animations.
+    memories.slideshow.easing_default: 'cosine'
+    # Description: Runtime easing profile applied to Ken Burns animations.
+    memories.slideshow.easing: "%env(default:memories.slideshow.easing_default:MEMORIES_SLIDESHOW_EASING)%"
+    # Description: Default duration in seconds of the fade-in applied to slideshow videos.
+    memories.slideshow.intro_fade_s_default: 1.0
+    # Description: Runtime fade-in duration for slideshow videos.
+    memories.slideshow.intro_fade_s: '%env(default:memories.slideshow.intro_fade_s_default:float:MEMORIES_SLIDESHOW_INTRO_FADE_S)%'
+    # Description: Default duration in seconds of the fade-out applied to slideshow videos.
+    memories.slideshow.outro_fade_s_default: 1.0
+    # Description: Runtime fade-out duration for slideshow videos.
+    memories.slideshow.outro_fade_s: '%env(default:memories.slideshow.outro_fade_s_default:float:MEMORIES_SLIDESHOW_OUTRO_FADE_S)%'
     # Description: Width in pixels of the generated slideshow video.
     memories.slideshow.video_width: 1920
     # Description: Height in pixels of the generated slideshow video.
@@ -860,9 +872,15 @@ parameters:
     memories.slideshow.background_blur_filter_default: 'gblur'
     # Description: Runtime blur filter algorithm for slideshow backgrounds.
     memories.slideshow.background_blur_filter: "%env(default:memories.slideshow.background_blur_filter_default:MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER)%"
+    # Description: Flag toggling an additional box blur pass after scaling slideshow backgrounds.
+    memories.slideshow.background_boxblur_enabled_default: false
+    memories.slideshow.background_boxblur_enabled: '%env(default:memories.slideshow.background_boxblur_enabled_default:bool:MEMORIES_SLIDESHOW_BACKGROUND_BOXBLUR)%'
     # Description: Flag toggling vignette shading on blurred slideshow backgrounds.
     memories.slideshow.background_vignette_enabled_default: true
     memories.slideshow.background_vignette_enabled: '%env(default:memories.slideshow.background_vignette_enabled_default:bool:MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE)%'
+    # Description: Scalar applied to the vignette intensity when shading slideshow backgrounds.
+    memories.slideshow.background_vignette_strength_default: 1.0
+    memories.slideshow.background_vignette_strength: '%env(default:memories.slideshow.background_vignette_strength_default:float:MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE_STRENGTH)%'
     # Description: Brightness offset (range -1.0 to 1.0) applied to the slideshow background equaliser.
     memories.slideshow.background_eq_brightness_default: 0.0
     memories.slideshow.background_eq_brightness: '%env(default:memories.slideshow.background_eq_brightness_default:float:MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS)%'
@@ -876,6 +894,9 @@ parameters:
     memories.slideshow.ken_burns_enabled_default: true
     # Description: Runtime flag controlling the animated zoom/pan behaviour for slideshow slides.
     memories.slideshow.ken_burns_enabled: '%env(default:memories.slideshow.ken_burns_enabled_default:bool:MEMORIES_SLIDESHOW_KEN_BURNS)%'
+    # Description: Default directive for drawing semi-transparent boxes behind text overlays.
+    memories.slideshow.text_box_enabled_default: true
+    memories.slideshow.text_box_enabled: '%env(default:memories.slideshow.text_box_enabled_default:bool:MEMORIES_SLIDESHOW_TEXT_BOX)%'
     # Description: Initial zoom factor used when the animated zoom/pan effect is enabled.
     memories.slideshow.zoom_start_default: 1.0
     # Description: Runtime initial zoom factor for the animated zoom/pan effect.

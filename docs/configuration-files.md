@@ -29,21 +29,30 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und reicht sie
   unverändert an FFmpeg weiter.
 
-  Für die Ein- und Ausblendung der Clips stehen `memories.slideshow.intro_fade_duration_s` (Fade-In ab Sekunde 0) sowie
-  `memories.slideshow.outro_fade_duration_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
+  Für die Ein- und Ausblendung der Clips stehen `memories.slideshow.intro_fade_s` (Fade-In ab Sekunde 0) sowie
+  `memories.slideshow.outro_fade_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
   sowohl bei Einzelbild-Slideshows als auch bei Übergangssequenzen über mehrere Bilder hinweg.
 
+  Die Animationsgeschwindigkeit kontrollieren `memories.slideshow.fps` (Bildrate des Exportvideos) und
+  `memories.slideshow.easing` (Kurve für Ken-Burns-Zoom/Pan, z. B. `cosine`, `linear`, `smoothstep`, `sine` oder `quadratic`).
   Für rhythmische Storyboards kann `memories.slideshow.beat_grid_step` genutzt werden. Ein Wert wie `0.5` oder `0.6` rundet die
   Summe aus Bildlaufzeit und Übergangsdauer auf Vielfache des gewählten Taktrasters. Der Standard `0.0` deaktiviert das Feature;
   über `MEMORIES_SLIDESHOW_BEAT_GRID_STEP` lässt sich der Rasterwert pro Umgebung überschreiben.
 
-  Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke), `memories.slideshow.background_blur_filter`
-  (`gblur` für Qualität, `boxblur` für Performance), `memories.slideshow.background_vignette_enabled` (Schattierung) sowie den
-  Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
+  Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke),
+  `memories.slideshow.background_blur_filter` (`gblur` für Qualität, `boxblur` für Performance), dem zusätzlichen
+  `memories.slideshow.background_boxblur_enabled` (optional zweiter Boxblur-Durchgang),
+  `memories.slideshow.background_vignette_enabled` (Schattierung) samt `memories.slideshow.background_vignette_strength`
+  sowie den Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
   `memories.slideshow.background_eq_saturation` feintunen. Über die Umgebungsvariablen
-  `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`,
+  `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_BOXBLUR`,
+  `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE_STRENGTH`,
   `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST` und
   `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION` lassen sich diese Vorgaben pro Deployment überschreiben.
+
+  Die Textgestaltung nutzt `memories.slideshow.text_box_enabled`, um halbtransparente Boxen hinter Titeln und Untertiteln
+  zu aktivieren oder auszublenden; Schriften werden weiterhin über `memories.slideshow.font_family` und
+  `memories.slideshow.font_file` gewählt.
 
   Die Audiosektion normalisiert die Musikspur mit -14 LUFS als Zielwert. Wer andere Plattformvorgaben bedienen muss, passt
   `memories.slideshow.audio_loudness_lufs` beziehungsweise `MEMORIES_SLIDESHOW_AUDIO_LOUDNESS` an; der FFmpeg-Filter zieht
