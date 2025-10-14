@@ -24,6 +24,7 @@ use Psr\Log\NullLogger;
 
 use function is_array;
 use function iterator_to_array;
+use function count;
 
 /**
  * Class DefaultMediaIngestionPipeline.
@@ -39,15 +40,24 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
 
     /**
      * @param iterable<MediaIngestionStageInterface> $stages
+     * @param list<string>                            $videoExtensions
      */
     public function __construct(
         iterable $stages,
+        array $videoExtensions,
         ?MediaIngestionTelemetryInterface $telemetry = null,
         ?LoggerInterface $logger = null,
     ) {
         $this->stages    = is_array($stages) ? $stages : iterator_to_array($stages);
         $this->telemetry = $telemetry ?? new MediaIngestionTelemetryCollector();
         $this->logger    = $logger ?? new NullLogger();
+
+        if (count($videoExtensions) === 0) {
+            $this->logger->warning('media_ingestion.video_extensions_unconfigured', [
+                'videoExtensions' => $videoExtensions,
+                'description'     => 'No video file extensions configured; video ingestion might skip video files.',
+            ]);
+        }
     }
 
     public function process(
@@ -92,6 +102,13 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
         }
 
         $metrics = $this->telemetry->metrics();
+
+        if (($metrics['ffprobe_missing'] ?? 0) > 0) {
+            $this->logger->warning('media_ingestion.ffprobe_missing', [
+                'missing_count' => $metrics['ffprobe_missing'],
+                'message'       => 'FFprobe metadata unavailable for one or more processed videos.',
+            ]);
+        }
 
         $this->logger->info('media_ingestion.finalize', [
             'dryRun'  => $dryRun,

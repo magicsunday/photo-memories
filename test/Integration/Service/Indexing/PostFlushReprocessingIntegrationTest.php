@@ -64,7 +64,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
                 $livePairLinker,
                 $entityManager,
             ),
-        ]);
+        ], ['mov']);
 
         $this->runPipeline($pipeline, ['/burst-a.jpg', '/burst-b.jpg']);
 
@@ -117,7 +117,7 @@ final class PostFlushReprocessingIntegrationTest extends TestCase
                 $livePairLinker,
                 $entityManager,
             ),
-        ]);
+        ], ['mov']);
 
         $this->runPipeline($pipeline, ['/live-photo.jpg', '/live-video.mov']);
 

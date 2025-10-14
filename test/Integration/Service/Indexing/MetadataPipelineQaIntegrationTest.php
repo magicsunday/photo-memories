@@ -71,7 +71,7 @@ final class MetadataPipelineQaIntegrationTest extends TestCase
                 new MetadataQaInspector(new DaypartEnricher($captureResolver), new SolarEnricher($captureResolver)),
                 $qaCollector,
             ),
-        ]);
+        ], ['mp4']);
 
         $output = new BufferedOutput();
         $result = $pipeline->process('/fixtures/qa.jpg', false, false, false, false, $output);

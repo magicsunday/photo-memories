@@ -48,9 +48,12 @@ use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Log\AbstractLogger;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use function array_filter;
+use function array_key_first;
 use function file_put_contents;
 use function filesize;
 use function hash_file;
@@ -521,7 +524,38 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new ThumbnailGenerationStage($thumbnailService),
             new PersistenceBatchStage($entityManager, 10, $tracker),
             $postFlushStage,
-        ]);
+        ], $videoExtensions ?? []);
+    }
+
+    #[Test]
+    public function itLogsWarningWhenVideoExtensionsConfigurationIsEmpty(): void
+    {
+        $logger = new class extends AbstractLogger {
+            /** @var array<int, array{level:string,message:string,context:array}> */
+            public array $records = [];
+
+            public function log($level, $message, array $context = []): void
+            {
+                $this->records[] = [
+                    'level'   => (string) $level,
+                    'message' => (string) $message,
+                    'context' => $context,
+                ];
+            }
+        };
+
+        new DefaultMediaIngestionPipeline([], [], null, $logger);
+
+        $warnings = array_filter(
+            $logger->records,
+            static fn (array $record): bool => $record['level'] === 'warning'
+                && $record['message'] === 'media_ingestion.video_extensions_unconfigured'
+        );
+
+        self::assertNotEmpty($warnings);
+
+        $entry = $warnings[array_key_first($warnings)];
+        self::assertSame([], $entry['context']['videoExtensions'] ?? null);
     }
 
     private function createTempFile(string $extension, string $content): string
