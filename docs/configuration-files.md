@@ -46,7 +46,8 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `memories.slideshow.background_vignette_enabled` (Schattierung) samt `memories.slideshow.background_vignette_strength`
   (1:1 auf den FFmpeg-Parameter `vignette=<wert>` gemappt; der Default `0.35` entspricht der bisherigen Intensität)
   sowie den Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
-  `memories.slideshow.background_eq_saturation` feintunen. Über die Umgebungsvariablen
+  `memories.slideshow.background_eq_saturation` feintunen. Standardmäßig sorgt der Mix aus `-0.03` Helligkeit,
+  `1.02` Kontrast und `1.05` Sättigung für etwas mehr Punch, ohne Gesichter auszublasen. Über die Umgebungsvariablen
   `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_BOXBLUR`,
   `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE_STRENGTH`,
   `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST` und
