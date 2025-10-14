@@ -32,7 +32,7 @@ use PHPUnit\Framework\Attributes\Test;
 final class ClusterPersistenceServiceTest extends TestCase
 {
     #[Test]
-    public function persistBatchedComputesMetadata(): void
+    public function persistStreamingComputesMetadata(): void
     {
         $media  = $this->buildMediaSet();
         $lookup = new class($media) implements MemberMediaLookupInterface {
@@ -133,7 +133,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             members: [1, 2, 3],
         );
 
-        $persistedCount = $service->persistBatched([$draft], 5, null);
+        $persistedCount = $service->persistStreaming([$draft], null);
 
         self::assertSame(1, $persistedCount);
         self::assertNotNull($persisted);
@@ -198,6 +198,99 @@ final class ClusterPersistenceServiceTest extends TestCase
             'max_heading_change_threshold_deg'            => 90.0,
             'min_consistent_heading_segments_threshold'   => 1,
         ], $roundtripParams['movement']);
+    }
+
+    #[Test]
+    public function persistStreamingFlushesAfterEveryDraft(): void
+    {
+        $media  = $this->buildMediaSet();
+        $lookup = new class($media) implements MemberMediaLookupInterface {
+            /** @param array<int, Media> $media */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($this->media[$id])) {
+                        $result[] = $this->media[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturn(null);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+
+        $query = $this->getMockBuilder(Query::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getResult'])
+            ->getMock();
+        $query->method('getResult')->willReturn([]);
+
+        $qb = $this->getMockBuilder(QueryBuilder::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery'])
+            ->getMock();
+        $qb->method('select')->willReturnSelf();
+        $qb->method('from')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('andWhere')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+
+        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+
+        $persistedMembers = [];
+        $em->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(function (object $entity) use (&$persistedMembers): void {
+                self::assertInstanceOf(Cluster::class, $entity);
+                $persistedMembers[] = $entity->getMembers();
+            });
+        $em->expects(self::exactly(2))->method('flush');
+        $em->expects(self::exactly(2))->method('clear');
+
+        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
+            public function curate(ClusterDraft $draft): ClusterDraft
+            {
+                return $draft;
+            }
+        };
+
+        $service = new ClusterPersistenceService(
+            $em,
+            $lookup,
+            $selectionService,
+            $coverPicker,
+            defaultBatchSize: 10,
+            maxMembers: 20
+        );
+
+        $drafts = [
+            new ClusterDraft('stream-a', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2]),
+            new ClusterDraft('stream-b', [], ['lat' => 1.0, 'lon' => 1.0], [3]),
+        ];
+
+        $callbackCount = 0;
+        $persistedCount = $service->persistStreaming(
+            $drafts,
+            function (int $count) use (&$callbackCount): void {
+                $callbackCount += $count;
+            }
+        );
+
+        self::assertSame(2, $persistedCount);
+        self::assertSame(2, $callbackCount);
+        self::assertCount(2, $persistedMembers);
+        self::assertSame([1, 2], $persistedMembers[0]);
+        self::assertSame([3], $persistedMembers[1]);
     }
 
     /**

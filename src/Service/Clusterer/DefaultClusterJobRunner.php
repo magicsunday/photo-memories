@@ -203,13 +203,12 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $persistHandle->advance();
             }
         } else {
-            $persisted = $this->persistence->persistBatched(
+            $persisted = $this->persistence->persistStreaming(
                 $drafts,
-                10,
-                function (int $persistedInBatch) use (&$persisted, $persistHandle, $persistStart): void {
-                    $persisted += $persistedInBatch;
+                function (int $persistedNow) use (&$persisted, $persistHandle, $persistStart): void {
+                    $persisted += $persistedNow;
                     $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));
-                    $persistHandle->advance($persistedInBatch);
+                    $persistHandle->advance($persistedNow);
                 },
             );
         }

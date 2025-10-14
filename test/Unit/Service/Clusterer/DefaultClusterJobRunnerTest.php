@@ -59,6 +59,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
         $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
+        $persistence->expects(self::never())->method('persistStreaming');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
         $options = new ClusterJobOptions(false, null, null, false);
@@ -150,10 +151,11 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
                 return 5;
             });
+        $persistence->expects(self::never())->method('persistBatched');
         $persistence->expects(self::once())
-            ->method('persistBatched')
-            ->willReturnCallback(function (array $persistedDrafts, int $batchSize, ?callable $callback): int {
-                self::assertSame(10, $batchSize);
+            ->method('persistStreaming')
+            ->willReturnCallback(function (iterable $persistedDrafts, ?callable $callback): int {
+                self::assertIsArray($persistedDrafts);
                 self::assertCount(1, $persistedDrafts);
                 self::assertNotNull($callback);
                 $callback(1);
@@ -240,6 +242,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
         $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
+        $persistence->expects(self::never())->method('persistStreaming');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
         $options = new ClusterJobOptions(true, null, null, true);
@@ -291,6 +294,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $persistence = $this->createMock(ClusterPersistenceInterface::class);
         $persistence->expects(self::never())->method('deleteAll');
         $persistence->expects(self::never())->method('persistBatched');
+        $persistence->expects(self::never())->method('persistStreaming');
 
         $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
         $options = new ClusterJobOptions(false, null, null, true);
