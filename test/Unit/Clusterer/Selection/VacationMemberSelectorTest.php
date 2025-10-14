@@ -388,7 +388,65 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertSame(3, $thresholds['base_per_day_cap']);
         self::assertSame(['2024-07-01' => 4, '2024-07-02' => 2], $thresholds['day_caps']);
         self::assertSame(['2024-07-01' => 'core', '2024-07-02' => 'peripheral'], $thresholds['day_categories']);
+        self::assertSame(['2024-07-01' => 0, '2024-07-02' => 0], $thresholds['day_spacing_seconds']);
         self::assertSame(1, $thresholds['max_per_staypoint']);
+    }
+
+    public function testDaySpacingDefaultsToProfileMinimum(): void
+    {
+        $first  = $this->createMedia('spacing-default-1.jpg', '2024-09-01T10:00:00+00:00', 0.9);
+        $second = $this->createMedia('spacing-default-2.jpg', '2024-09-01T10:45:00+00:00', 0.85);
+
+        $summary = $this->createDaySummary('2024-09-01', [$first, $second]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 2,
+            maxPerDay: 2,
+            minSpacingSeconds: 1800,
+            qualityFloor: 0.1,
+            minimumTotal: 1,
+        );
+
+        $result    = $this->selector->select(['2024-09-01' => $summary], $this->createHome(), $options);
+        $members   = $result->getMembers();
+        $telemetry = $result->getTelemetry();
+
+        self::assertCount(2, $members);
+        self::assertSame(0, $telemetry['spacing_rejections']);
+
+        $thresholds = $telemetry['thresholds'];
+        self::assertSame(['2024-09-01' => 2], $thresholds['day_caps']);
+        self::assertSame(['2024-09-01' => 1800], $thresholds['day_spacing_seconds']);
+    }
+
+    public function testAdaptiveDaySpacingUsesDuration(): void
+    {
+        $first  = $this->createMedia('spacing-adapt-1.jpg', '2024-08-15T09:00:00+00:00', 0.92);
+        $second = $this->createMedia('spacing-adapt-2.jpg', '2024-08-15T10:00:00+00:00', 0.9);
+        $third  = $this->createMedia('spacing-adapt-3.jpg', '2024-08-15T11:00:00+00:00', 0.88);
+
+        $summary = $this->createDaySummary('2024-08-15', [$first, $second, $third], [
+            'selectionContext' => ['category' => 'core', 'score' => 0.8, 'duration' => 43200, 'metrics' => []],
+        ]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 3,
+            maxPerDay: 3,
+            minSpacingSeconds: 600,
+            qualityFloor: 0.1,
+            minimumTotal: 1,
+        );
+
+        $result    = $this->selector->select(['2024-08-15' => $summary], $this->createHome(), $options);
+        $members   = $result->getMembers();
+        $telemetry = $result->getTelemetry();
+
+        self::assertCount(1, $members);
+        self::assertSame(2, $telemetry['spacing_rejections']);
+
+        $thresholds = $telemetry['thresholds'];
+        self::assertSame(['2024-08-15' => 3], $thresholds['day_caps']);
+        self::assertSame(['2024-08-15' => 10800], $thresholds['day_spacing_seconds']);
     }
 
     public function testRelaxationStopsAfterMinSpacingAdjustment(): void
