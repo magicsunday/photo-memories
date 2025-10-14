@@ -36,6 +36,7 @@ use function in_array;
 use function is_dir;
 use function is_file;
 use function is_float;
+use function is_int;
 use function is_readable;
 use function is_string;
 use function ltrim;
@@ -180,7 +181,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
      *
      * @return list<string>
      */
@@ -212,7 +213,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     * @param array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null} $slide
      *
      * @return list<string>
      */
@@ -265,7 +266,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
      * @param list<string>                                                                      $imagePaths
      * @param list<float>                                                                       $transitionDurations
      *
@@ -457,28 +458,69 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $clipSecondsValue = max(0.1, $clipDuration);
         $visibleDuration  = max(0.1, min($visibleDuration, $clipSecondsValue));
         $frameCount       = max(2, (int) round($visibleDuration * self::ZOOMPAN_FPS));
-        $progressExpr     = $this->escapeFilterExpression(sprintf('min(on/%s,1)', $frameCount));
-
         $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
-        if ($this->kenBurnsEnabled) {
-            $animatedZoomExpr = sprintf(
-                'max(1,%1$s+(%2$s-%1$s)*%3$s)',
+        if ($this->kenBurnsEnabled && $kenBurns['enabled']) {
+            $easePrelude = sprintf('progress=min(on/%s,1);ease=0.5-0.5*cos(PI*progress);', $frameCount);
+            $targetAspectRatio = $this->formatFloat($this->width / $this->height);
+            $isPortraitExpr    = sprintf('lt(iw/ih,%s)', $targetAspectRatio);
+
+            $landscapeZoomExpr = sprintf(
+                'max(1,%1$s+(%2$s-%1$s)*ease)',
                 $this->formatFloat($kenBurns['zoomStart']),
                 $this->formatFloat($kenBurns['zoomEnd']),
-                $progressExpr,
             );
-            $zoomExpr         = $this->escapeFilterExpression($animatedZoomExpr);
+
+            $portraitZoomStart = $kenBurns['zoomStart'] < $kenBurns['zoomEnd'] ? 1.03 : 1.08;
+            $portraitZoomEnd   = $kenBurns['zoomStart'] < $kenBurns['zoomEnd'] ? 1.08 : 1.03;
+
+            $portraitZoomExpr = sprintf(
+                'max(1,%1$s+(%2$s-%1$s)*ease)',
+                $this->formatFloat($portraitZoomStart),
+                $this->formatFloat($portraitZoomEnd),
+            );
+
+            $animatedZoomExpr = sprintf(
+                '%1$sif(%2$s,%3$s,%4$s)',
+                $easePrelude,
+                $isPortraitExpr,
+                $portraitZoomExpr,
+                $landscapeZoomExpr,
+            );
+            $zoomExpr = $this->escapeFilterExpression($animatedZoomExpr);
+
+            $panMagnitude      = $kenBurns['panMagnitude'];
+            $horizontalAmount  = $kenBurns['panAxis'] === 'horizontal'
+                ? $panMagnitude
+                : $panMagnitude * 0.4;
+            $verticalBase      = min($panMagnitude, self::PAN_OFFSET_LIMIT * 0.7);
+            $verticalAmount    = $kenBurns['panAxis'] === 'vertical'
+                ? $verticalBase
+                : $verticalBase * 0.5;
+            $horizontalValue   = $this->formatFloat($horizontalAmount * $kenBurns['panDirection']);
+            $verticalValue     = $this->formatFloat($verticalAmount * $kenBurns['panDirection']);
+
+            $horizontalPanExpr = sprintf(
+                'progress=min(on/%1$s,1);ease=0.5-0.5*cos(PI*progress);clip((iw-(iw/zoom))/2 + %2$s*(iw-(iw/zoom))/2*ease,0,max(iw-(iw/zoom),0))',
+                $frameCount,
+                $horizontalValue,
+            );
+
+            $verticalPanExpr = sprintf(
+                'progress=min(on/%1$s,1);ease=0.5-0.5*cos(PI*progress);clip((ih-(ih/zoom))/2 + %2$s*(ih-(ih/zoom))/2*ease,0,max(ih-(ih/zoom),0))',
+                $frameCount,
+                $verticalValue,
+            );
 
             $panXAnimatedExpr = sprintf(
-                'clip((iw-(iw/zoom))/2 + %1$s*(iw-(iw/zoom))/2*%2$s,0,max(iw-(iw/zoom),0))',
-                $this->formatFloat($kenBurns['panX']),
-                $progressExpr,
+                'if(%1$s,0,%2$s)',
+                $isPortraitExpr,
+                $horizontalPanExpr,
             );
             $panYAnimatedExpr = sprintf(
-                'clip((ih-(ih/zoom))/2 + %1$s*(ih-(ih/zoom))/2*%2$s,0,max(ih-(ih/zoom),0))',
-                $this->formatFloat($kenBurns['panY']),
-                $progressExpr,
+                'if(%1$s,%2$s,0)',
+                $isPortraitExpr,
+                $verticalPanExpr,
             );
 
             $panXExpr = $this->escapeFilterExpression(sprintf('if(eq(%1$s,1),0,%2$s)', $animatedZoomExpr, $panXAnimatedExpr));
@@ -498,14 +540,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $this->height,
         );
 
-        if ($this->kenBurnsEnabled) {
+        if ($this->kenBurnsEnabled && $kenBurns['enabled']) {
             $foreground .= sprintf(
-                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=%4$d:fps=%5$s,scale=ceil(iw/2)*2:ceil(ih/2)*2',
+                ',zoompan=z=%1$s:x=%2$s:y=%3$s:d=%4$d:fps=%5$s:s=%6$dx%7$d,scale=ceil(iw/2)*2:ceil(ih/2)*2',
                 $this->quoteFilterExpression($zoomExpr),
                 $this->quoteFilterExpression($panXExpr),
                 $this->quoteFilterExpression($panYExpr),
                 $frameCount,
                 $zoompanFps,
+                $this->width,
+                $this->height,
             );
         }
 
@@ -521,9 +565,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     * @param array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null} $slide
      *
-     * @return array{zoomStart: float, zoomEnd: float, panX: float, panY: float}
+     * @return array{
+     *     enabled: bool,
+     *     zoomStart: float,
+     *     zoomEnd: float,
+     *     panAxis: 'horizontal'|'vertical',
+     *     panDirection: int,
+     *     panMagnitude: float
+     * }
      */
     private function resolveKenBurnsParameters(
         int $index,
@@ -531,39 +582,75 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $title,
         ?string $subtitle,
     ): array {
-        $minimumZoom = max(1.0, min($this->zoomStart, $this->zoomEnd));
-        $maximumZoom = max(1.0, max($this->zoomStart, $this->zoomEnd));
-
-        $seedPayload = implode('|', [
-            (string) $index,
-            $title ?? '',
-            $subtitle ?? '',
-            $slide['image'],
-        ]);
-
-        $panXSeed = hash('sha256', $seedPayload . '|panX', true);
-        $panYSeed = hash('sha256', $seedPayload . '|panY', true);
-
-        $panXRandomizer = new Randomizer(new Xoshiro256StarStar($panXSeed));
-        $panYRandomizer = new Randomizer(new Xoshiro256StarStar($panYSeed));
-
-        $panXValue = $panXRandomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
-        $panYValue = $panYRandomizer->getFloat(-self::PAN_OFFSET_LIMIT, self::PAN_OFFSET_LIMIT);
-
-        if (($index % 2) === 0) {
+        if ($index === 0 || !$this->kenBurnsEnabled) {
             return [
-                'zoomStart' => $minimumZoom,
-                'zoomEnd'   => $maximumZoom,
-                'panX'      => $panXValue,
-                'panY'      => $panYValue,
+                'enabled'       => false,
+                'zoomStart'     => 1.0,
+                'zoomEnd'       => 1.0,
+                'panAxis'       => 'horizontal',
+                'panDirection'  => 1,
+                'panMagnitude'  => 0.0,
             ];
         }
 
+        $minimumZoom = max(1.0, min($this->zoomStart, $this->zoomEnd));
+        $maximumZoom = max(1.0, max($this->zoomStart, $this->zoomEnd));
+
+        $decisions = $this->resolveKenBurnsDecisions($slide);
+
+        $zoomStart = $decisions['zoomIn'] ? $minimumZoom : $maximumZoom;
+        $zoomEnd   = $decisions['zoomIn'] ? $maximumZoom : $minimumZoom;
+
+        $panMagnitude = $decisions['panMagnitude'];
+
         return [
-            'zoomStart' => $maximumZoom,
-            'zoomEnd'   => $minimumZoom,
-            'panX'      => $panXValue !== 0.0 ? -$panXValue : 0.0,
-            'panY'      => $panYValue !== 0.0 ? -$panYValue : 0.0,
+            'enabled'       => true,
+            'zoomStart'     => $zoomStart,
+            'zoomEnd'       => $zoomEnd,
+            'panAxis'       => $decisions['panAxis'],
+            'panDirection'  => $decisions['panDirection'],
+            'panMagnitude'  => $panMagnitude,
+        ];
+    }
+
+    /**
+     * @param array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null} $slide
+     *
+     * @return array{zoomIn: bool, panAxis: 'horizontal'|'vertical', panDirection: int, panMagnitude: float}
+     */
+    private function resolveKenBurnsDecisions(array $slide): array
+    {
+        $mediaId   = $slide['mediaId'] ?? null;
+        $clusterId = array_key_exists('clusterId', $slide) ? $slide['clusterId'] : null;
+
+        $seedParts = [];
+        if (is_int($mediaId)) {
+            $seedParts[] = sprintf('media:%d', $mediaId);
+        } else {
+            $seedParts[] = sprintf('image:%s', hash('sha256', $slide['image']));
+        }
+
+        if (is_int($clusterId)) {
+            $seedParts[] = sprintf('cluster:%d', $clusterId);
+        }
+
+        $seedBase = implode('|', $seedParts);
+
+        $zoomRandomizer       = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|zoom', true)));
+        $axisRandomizer       = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|axis', true)));
+        $directionRandomizer  = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|direction', true)));
+        $magnitudeRandomizer  = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|magnitude', true)));
+
+        $zoomIn      = $zoomRandomizer->getInt(0, 1) === 1;
+        $panAxis     = $axisRandomizer->getInt(0, 1) === 0 ? 'horizontal' : 'vertical';
+        $panDirection = $directionRandomizer->getInt(0, 1) === 0 ? -1 : 1;
+        $panMagnitude = $magnitudeRandomizer->getFloat(self::PAN_OFFSET_LIMIT * 0.4, self::PAN_OFFSET_LIMIT);
+
+        return [
+            'zoomIn'       => $zoomIn,
+            'panAxis'      => $panAxis,
+            'panDirection' => $panDirection,
+            'panMagnitude' => $panMagnitude,
         ];
     }
 
@@ -575,7 +662,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param array{image:string,mediaId:int|null,duration:float,transition:string|null} $slide
+     * @param array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null} $slide
      */
     private function resolveCoverDuration(array $slide): float
     {
@@ -604,7 +691,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     /**
      * Builds deterministic transition durations for every slide overlap.
      *
-     * @param list<array{image:string,mediaId:int|null,duration:float,transition:string|null}> $slides
+     * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
      * @param list<float>                                                                       $requestedDurations
      *
      * @return list<float>
