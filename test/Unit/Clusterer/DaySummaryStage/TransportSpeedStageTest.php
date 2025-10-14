@@ -30,7 +30,7 @@ final class TransportSpeedStageTest extends TestCase
     {
         $timezoneResolver = new TimezoneResolver('UTC');
         $initialStage     = new InitializationStage($timezoneResolver, new PoiClassifier(), 'UTC');
-        $speedStage       = new TransportSpeedStage(5.0, 10.0, 150.0);
+        $speedStage       = new TransportSpeedStage(5.0, 10.0, 100.0);
 
         $home = [
             'lat'             => 0.0,
