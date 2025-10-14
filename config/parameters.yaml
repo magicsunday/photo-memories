@@ -880,8 +880,8 @@ parameters:
     # Description: Flag toggling vignette shading on blurred slideshow backgrounds.
     memories.slideshow.background_vignette_enabled_default: true
     memories.slideshow.background_vignette_enabled: '%env(default:memories.slideshow.background_vignette_enabled_default:bool:MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE)%'
-    # Description: Scalar applied to the vignette intensity when shading slideshow backgrounds.
-    memories.slideshow.background_vignette_strength_default: 1.0
+    # Description: Direct `vignette` filter strength applied when shading slideshow backgrounds.
+    memories.slideshow.background_vignette_strength_default: 0.35
     memories.slideshow.background_vignette_strength: '%env(default:memories.slideshow.background_vignette_strength_default:float:MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE_STRENGTH)%'
     # Description: Brightness offset (range -1.0 to 1.0) applied to the slideshow background equaliser.
     memories.slideshow.background_eq_brightness_default: 0.0
