@@ -134,6 +134,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly bool $kenBurnsEnabled = true,
         private readonly float $zoomStart = 1.0,
         private readonly float $zoomEnd = 1.08,
+        private readonly float $introFadeDuration = 1.0,
+        private readonly float $outroFadeDuration = 1.0,
     ) {
     }
 
@@ -234,10 +236,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
 
         $filter = $this->appendIntroOverlayFilter($filter, $title, $subtitle);
-        $filter       .= sprintf(
-            ',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]',
-            $clipDuration
-        );
+
+        $fadeChain = $this->buildVideoFadeChain($clipDuration);
+        if ($fadeChain !== '') {
+            $filter = sprintf('%s,%s', $filter, $fadeChain);
+        }
+
+        $filter .= sprintf(',trim=duration=%1$.3f,setpts=PTS-STARTPTS[vout]', $clipDuration);
 
         $command = [
             $this->ffmpegBinary,
@@ -406,6 +411,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $totalDuration = $timeline;
         $filterComplex = implode(';', $filters);
+
+        $fadeChain = $this->buildVideoFadeChain($totalDuration);
+        if ($fadeChain !== '') {
+            $filterComplex = sprintf('%s;[vout]%s[vout]', $filterComplex, $fadeChain);
+        }
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
@@ -1130,6 +1140,35 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = $output;
 
         return $command;
+    }
+
+    private function buildVideoFadeChain(float $clipDuration): string
+    {
+        $effectiveDuration = max(0.0, $clipDuration);
+
+        $introFade = max(0.0, min($this->introFadeDuration, $effectiveDuration));
+        $outroFade = max(0.0, min($this->outroFadeDuration, $effectiveDuration));
+
+        if ($introFade <= 0.0 && $outroFade <= 0.0) {
+            return '';
+        }
+
+        $filters = [];
+
+        if ($introFade > 0.0) {
+            $filters[] = sprintf('fade=t=in:st=0:d=%s', $this->formatFloat($introFade));
+        }
+
+        if ($outroFade > 0.0) {
+            $fadeOutStart = max(0.0, $effectiveDuration - $outroFade);
+            $filters[]    = sprintf(
+                'fade=t=out:st=%s:d=%s',
+                $this->formatFloat($fadeOutStart),
+                $this->formatFloat($outroFade),
+            );
+        }
+
+        return implode(',', $filters);
     }
 
     private function appendIntroOverlayFilter(string $filter, ?string $title, ?string $subtitle): string

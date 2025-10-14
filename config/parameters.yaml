@@ -833,6 +833,10 @@ parameters:
     memories.slideshow.image_duration_s: 3.5
     # Description: Duration in seconds used for transitions between slideshow images.
     memories.slideshow.transition_duration_s: 0.75
+    # Description: Duration in seconds of the fade-in applied to slideshow videos.
+    memories.slideshow.intro_fade_duration_s: 1.0
+    # Description: Duration in seconds of the fade-out applied to slideshow videos.
+    memories.slideshow.outro_fade_duration_s: 1.0
     # Description: Width in pixels of the generated slideshow video.
     memories.slideshow.video_width: 1920
     # Description: Height in pixels of the generated slideshow video.
