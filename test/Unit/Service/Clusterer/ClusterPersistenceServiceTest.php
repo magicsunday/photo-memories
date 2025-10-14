@@ -32,6 +32,132 @@ use PHPUnit\Framework\Attributes\Test;
 final class ClusterPersistenceServiceTest extends TestCase
 {
     #[Test]
+    public function persistBatchedChunksFingerprintLookupAndSkipsExistingClusters(): void
+    {
+        $media = $this->buildMediaRange(12);
+
+        $lookup = new class($media) implements MemberMediaLookupInterface {
+            /** @param array<int, Media> $media */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($this->media[$id])) {
+                        $result[] = $this->media[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturn(null);
+
+        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
+            public function curate(ClusterDraft $draft): ClusterDraft
+            {
+                return $draft;
+            }
+        };
+
+        $drafts = [
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [1, 2]),
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [3, 4]),
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [5, 6]),
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [7, 8]),
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [9, 10]),
+            new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [11, 12]),
+        ];
+
+        $fingerprints = array_map(static fn (ClusterDraft $draft): string => Cluster::computeFingerprint($draft->getMembers()), $drafts);
+
+        $chunkedResults = [
+            [['alg' => 'massive', 'fp' => $fingerprints[0]]],
+            [['alg' => 'massive', 'fp' => $fingerprints[3]]],
+            [],
+        ];
+
+        $capturedFpsParameters = [];
+
+        $qbMocks = [];
+        foreach ($chunkedResults as $index => $rows) {
+            $query = $this->getMockBuilder(Query::class)
+                ->disableOriginalConstructor()
+                ->onlyMethods(['getResult'])
+                ->getMock();
+            $query->method('getResult')->willReturn($rows);
+
+            $qb = $this->getMockBuilder(QueryBuilder::class)
+                ->disableOriginalConstructor()
+                ->onlyMethods(['select', 'from', 'where', 'andWhere', 'setParameter', 'getQuery'])
+                ->getMock();
+
+            $qb->method('select')->willReturnSelf();
+            $qb->method('from')->willReturnSelf();
+            $qb->method('where')->willReturnSelf();
+            $qb->method('andWhere')->willReturnSelf();
+            $qb->method('setParameter')->willReturnCallback(function (string $param, mixed $value) use (&$capturedFpsParameters, $index, $qb): QueryBuilder {
+                if ($param === 'fps') {
+                    $capturedFpsParameters[$index] = $value;
+                }
+
+                return $qb;
+            });
+            $qb->method('getQuery')->willReturn($query);
+
+            $qbMocks[] = $qb;
+        }
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::exactly(count($qbMocks)))->method('createQueryBuilder')->willReturnOnConsecutiveCalls(...$qbMocks);
+
+        $persistedFingerprints = [];
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persistedFingerprints): void {
+            self::assertInstanceOf(Cluster::class, $entity);
+            $persistedFingerprints[] = Cluster::computeFingerprint($entity->getMembers());
+        });
+        $em->expects(self::once())->method('flush');
+        $em->expects(self::once())->method('clear');
+
+        $service = new ClusterPersistenceService(
+            $em,
+            $lookup,
+            $selectionService,
+            $coverPicker,
+            defaultBatchSize: 10,
+            maxMembers: 20,
+            fingerprintLookupBatchSize: 2,
+        );
+
+        $persistedCount = $service->persistBatched($drafts, 10, null);
+
+        ksort($capturedFpsParameters);
+        $expectedChunks = array_chunk($fingerprints, 2);
+        $capturedChunks = array_values($capturedFpsParameters);
+
+        self::assertSame($expectedChunks, $capturedChunks);
+
+        $expectedPersisted = [
+            $fingerprints[1],
+            $fingerprints[2],
+            $fingerprints[4],
+            $fingerprints[5],
+        ];
+        sort($expectedPersisted);
+
+        $actualPersisted = $persistedFingerprints;
+        sort($actualPersisted);
+
+        self::assertSame(4, $persistedCount);
+        self::assertSame($expectedPersisted, $actualPersisted);
+    }
+
+    #[Test]
     public function persistStreamingComputesMetadata(): void
     {
         $media  = $this->buildMediaSet();
@@ -319,6 +445,21 @@ final class ClusterPersistenceServiceTest extends TestCase
             2 => $media2,
             3 => $media3,
         ];
+    }
+
+    /**
+     * @return array<int, Media>
+     */
+    private function buildMediaRange(int $count): array
+    {
+        $base  = new DateTimeImmutable('2024-05-20 10:00:00');
+        $media = [];
+
+        for ($i = 1; $i <= $count; ++$i) {
+            $media[$i] = $this->buildMedia($i, $base->add(new DateInterval('PT' . ($i * 5) . 'M')));
+        }
+
+        return $media;
     }
 
     private function buildMedia(int $id, DateTimeImmutable $takenAt): Media
