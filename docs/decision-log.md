@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-21 – Tone-map slideshow backgrounds with EQ presets
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** The default slideshow background remained visually flat after the vignette calibration, requiring manual EQ overrides to avoid washed-out skies while keeping skin tones natural.
+- **Decision:** Nudged the baseline equaliser to `-0.03` brightness, `1.02` contrast, and `1.05` saturation, mirrored the defaults in `SlideshowVideoGenerator`, documented the look, and extended unit coverage to lock the FFmpeg filter string.
+- **Alternatives considered:** Leave the neutral defaults and ask operators to tune per deployment, or hard-code a stronger LUT-style grade. Rejected because the former led to inconsistent exports across environments and the latter risked colour clipping on archival scans.
+- **Follow-up actions:** Monitor rendered clips for edge cases (e.g. low-light scenes) and gather feedback on whether we need per-story presets or adaptive grading in the generator.
+
 ## 2025-10-20 – Calibrate slideshow vignette intensity
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** The slideshow renderer derived the FFmpeg `vignette` setting from an angle formula, which produced darker than expected backgrounds and made it difficult to reason about overrides.

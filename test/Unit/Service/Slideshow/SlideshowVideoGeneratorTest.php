@@ -166,6 +166,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int,crop=1920:1080,gblur=sigma=', $filterComplex);
         self::assertStringContainsString(',gblur=sigma=20,vignette=', $filterComplex);
+        self::assertStringContainsString('eq=brightness=-0.03:contrast=1.02:saturation=1.05', $filterComplex);
         self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
