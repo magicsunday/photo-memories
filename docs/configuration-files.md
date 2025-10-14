@@ -33,6 +33,14 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `memories.slideshow.outro_fade_duration_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
   sowohl bei Einzelbild-Slideshows als auch bei Übergangssequenzen über mehrere Bilder hinweg.
 
+  Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke), `memories.slideshow.background_blur_filter`
+  (`gblur` für Qualität, `boxblur` für Performance), `memories.slideshow.background_vignette_enabled` (Schattierung) sowie den
+  Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
+  `memories.slideshow.background_eq_saturation` feintunen. Über die Umgebungsvariablen
+  `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`,
+  `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST` und
+  `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION` lassen sich diese Vorgaben pro Deployment überschreiben.
+
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 
 ### Auswahlprofile (`memories.cluster.selection.profile_values`)
