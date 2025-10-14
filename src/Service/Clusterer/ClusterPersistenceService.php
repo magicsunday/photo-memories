@@ -143,25 +143,152 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     public function persistStreaming(iterable $drafts, ?callable $onPersisted): int
     {
-        $draftList = $this->collectDrafts($drafts);
-        if ($draftList === []) {
-            return 0;
-        }
+        $batchSize = $this->defaultBatchSize > 0 ? $this->defaultBatchSize : 1;
 
-        $draftList = $this->curateDrafts($draftList);
-
-        foreach ($draftList as $draft) {
-            $this->persistSelectionTelemetryOnDraft($draft);
-        }
-
-        $pairs = $this->computePairs($draftList);
-
-        $existing    = $this->loadExistingPairs($pairs);
+        $existing    = [];
         $seenThisRun = [];
         $persisted   = 0;
 
-        foreach ($draftList as $draft) {
-            $entity = $this->buildEntityForDraft($draft, $existing, $seenThisRun);
+        /** @var list<array{draft:ClusterDraft, members:list<int>, fingerprint:string, key:string}> $pending */
+        $pending = [];
+
+        foreach ($drafts as $draft) {
+            $curated = $this->memberSelection->curate($draft);
+            $this->persistSelectionTelemetryOnDraft($curated);
+
+            $context = $this->resolveDraftContext($curated);
+
+            $pending[] = [
+                'draft'       => $curated,
+                'members'     => $context['members'],
+                'fingerprint' => $context['fingerprint'],
+                'key'         => $context['key'],
+            ];
+
+            if (count($pending) >= $batchSize) {
+                $persisted += $this->flushStreamingBatch($pending, $existing, $seenThisRun, $onPersisted);
+                $pending = [];
+            }
+        }
+
+        if ($pending !== []) {
+            $persisted += $this->flushStreamingBatch($pending, $existing, $seenThisRun, $onPersisted);
+        }
+
+        return $persisted;
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<array{alg:string, fp:string}>
+     */
+    private function computePairs(array $drafts): array
+    {
+        $pairs = [];
+        foreach ($drafts as $draft) {
+            $context = $this->resolveDraftContext($draft);
+            $pairs[] = [
+                'alg' => $draft->getAlgorithm(),
+                'fp'  => $context['fingerprint'],
+            ];
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * @param array<string, bool> $existing
+     * @param array<string, bool> $seenThisRun
+     */
+    private function buildEntityForDraft(
+        ClusterDraft $draft,
+        array $existing,
+        array &$seenThisRun,
+        ?array $members = null,
+        ?string $fingerprint = null,
+        ?string $key = null,
+    ): ?Cluster {
+        if ($members === null || $fingerprint === null || $key === null) {
+            $context    = $this->resolveDraftContext($draft);
+            $members    = $context['members'];
+            $fingerprint = $context['fingerprint'];
+            $key         = $context['key'];
+        }
+
+        if (isset($existing[$key]) || isset($seenThisRun[$key])) {
+            return null;
+        }
+
+        $media    = $this->hydrateMembers($members);
+        $metadata = $this->buildMetadata($draft, $members, $media);
+
+        $entity = $this->createClusterEntity($draft, $members, $metadata);
+
+        $seenThisRun[$key] = true;
+
+        return $entity;
+    }
+
+    /**
+     * @return array{members:list<int>, fingerprint:string, key:string}
+     */
+    private function resolveDraftContext(ClusterDraft $draft): array
+    {
+        $ordered     = $this->resolveOrderedMembers($draft);
+        $members     = $this->clampMembers($ordered);
+        $fingerprint = Cluster::computeFingerprint($members);
+
+        return [
+            'members'     => $members,
+            'fingerprint' => $fingerprint,
+            'key'         => $draft->getAlgorithm() . '|' . $fingerprint,
+        ];
+    }
+
+    /**
+     * @param list<array{draft:ClusterDraft, members:list<int>, fingerprint:string, key:string}> $batch
+     * @param array<string,bool>                                                                $existing
+     * @param array<string,bool>                                                                $seenThisRun
+     */
+    private function flushStreamingBatch(
+        array $batch,
+        array &$existing,
+        array &$seenThisRun,
+        ?callable $onPersisted,
+    ): int {
+        $pairs = [];
+        foreach ($batch as $entry) {
+            $key = $entry['key'];
+            if (isset($existing[$key]) || isset($seenThisRun[$key])) {
+                continue;
+            }
+
+            $pairs[$key] = [
+                'alg' => $entry['draft']->getAlgorithm(),
+                'fp'  => $entry['fingerprint'],
+            ];
+        }
+
+        if ($pairs !== []) {
+            $resolved = $this->loadExistingPairs(array_values($pairs));
+            foreach ($resolved as $resolvedKey => $flag) {
+                $existing[$resolvedKey] = $flag;
+            }
+        }
+
+        $persisted = 0;
+
+        foreach ($batch as $entry) {
+            $entity = $this->buildEntityForDraft(
+                $entry['draft'],
+                $existing,
+                $seenThisRun,
+                $entry['members'],
+                $entry['fingerprint'],
+                $entry['key'],
+            );
+
             if (!$entity instanceof Cluster) {
                 continue;
             }
@@ -178,70 +305,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return $persisted;
-    }
-
-    /**
-     * @param iterable<ClusterDraft> $drafts
-     *
-     * @return list<ClusterDraft>
-     */
-    private function collectDrafts(iterable $drafts): array
-    {
-        if (is_array($drafts)) {
-            return array_is_list($drafts) ? $drafts : array_values($drafts);
-        }
-
-        $list = [];
-        foreach ($drafts as $draft) {
-            $list[] = $draft;
-        }
-
-        return $list;
-    }
-
-    /**
-     * @param list<ClusterDraft> $drafts
-     *
-     * @return list<array{alg:string, fp:string}>
-     */
-    private function computePairs(array $drafts): array
-    {
-        $pairs = [];
-        foreach ($drafts as $draft) {
-            $ordered = $this->resolveOrderedMembers($draft);
-            $members = $this->clampMembers($ordered);
-            $pairs[] = [
-                'alg' => $draft->getAlgorithm(),
-                'fp'  => Cluster::computeFingerprint($members),
-            ];
-        }
-
-        return $pairs;
-    }
-
-    /**
-     * @param array<string, bool> $existing
-     * @param array<string, bool> $seenThisRun
-     */
-    private function buildEntityForDraft(ClusterDraft $draft, array $existing, array &$seenThisRun): ?Cluster
-    {
-        $ordered     = $this->resolveOrderedMembers($draft);
-        $members     = $this->clampMembers($ordered);
-        $fingerprint = Cluster::computeFingerprint($members);
-        $key         = $draft->getAlgorithm() . '|' . $fingerprint;
-
-        if (isset($existing[$key]) || isset($seenThisRun[$key])) {
-            return null;
-        }
-
-        $media    = $this->hydrateMembers($members);
-        $metadata = $this->buildMetadata($draft, $members, $media);
-
-        $entity = $this->createClusterEntity($draft, $members, $metadata);
-
-        $seenThisRun[$key] = true;
-
-        return $entity;
     }
 
     /**

@@ -196,15 +196,21 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $persistStart = microtime(true);
 
         $persisted = 0;
+        $stream = (static function (array $consolidated): iterable {
+            foreach ($consolidated as $draft) {
+                yield $draft;
+            }
+        })($drafts);
+
         if ($options->isDryRun()) {
-            foreach ($drafts as $_) {
+            foreach ($stream as $_) {
                 ++$persisted;
                 $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));
                 $persistHandle->advance();
             }
         } else {
             $persisted = $this->persistence->persistStreaming(
-                $drafts,
+                $stream,
                 function (int $persistedNow) use (&$persisted, $persistHandle, $persistStart): void {
                     $persisted += $persistedNow;
                     $persistHandle->setRate($this->formatRate($persisted, $persistStart, 'Cluster'));
