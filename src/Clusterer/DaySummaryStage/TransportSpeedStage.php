@@ -32,7 +32,7 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
     public function __construct(
         private float $minLegDurationMinutes = 5.0,
         private float $minLegDistanceKm = 10.0,
-        private float $highSpeedThresholdKmh = 160.0,
+        private float $highSpeedThresholdKmh = 100.0,
     ) {
         if ($this->minLegDurationMinutes <= 0.0) {
             throw new InvalidArgumentException('minLegDurationMinutes must be > 0.');
