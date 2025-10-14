@@ -44,6 +44,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `memories.slideshow.background_blur_filter` (`gblur` für Qualität, `boxblur` für Performance), dem zusätzlichen
   `memories.slideshow.background_boxblur_enabled` (optional zweiter Boxblur-Durchgang),
   `memories.slideshow.background_vignette_enabled` (Schattierung) samt `memories.slideshow.background_vignette_strength`
+  (1:1 auf den FFmpeg-Parameter `vignette=<wert>` gemappt; der Default `0.35` entspricht der bisherigen Intensität)
   sowie den Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
   `memories.slideshow.background_eq_saturation` feintunen. Über die Umgebungsvariablen
   `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_BOXBLUR`,

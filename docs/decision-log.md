@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-20 – Calibrate slideshow vignette intensity
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** The slideshow renderer derived the FFmpeg `vignette` setting from an angle formula, which produced darker than expected backgrounds and made it difficult to reason about overrides.
+- **Decision:** Map `memories.slideshow.background_vignette_strength` directly to the FFmpeg `vignette` value, set the default to `0.35` (matching creative guidance), update documentation, and cover the behaviour with unit tests that inspect the generated filter graph.
+- **Alternatives considered:** Keep the trigonometric mapping and simply tweak the default strength, or disable vignette shading altogether. Rejected because the angle calculation was unintuitive for operators and removing the vignette reduced perceived depth in recap videos.
+- **Follow-up actions:** Gather feedback on whether deployments need per-story overrides and consider surfacing vignette presets in the UI once the direct mapping has been exercised in production.
+
 ## 2025-10-19 – Snap slideshow timing to a beat grid and expose loudness target
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators asked for consistent beat-matched slideshows and predictable loudness so generated clips can be dropped into social templates without manual trimming or audio leveling.

@@ -54,7 +54,6 @@ use function sprintf;
 use function str_replace;
 use function strtolower;
 use function trim;
-use function pi;
 
 /**
  * @internal
@@ -170,7 +169,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly string $backgroundBlurFilter = 'gblur',
         private readonly bool $backgroundBoxBlurEnabled = false,
         private readonly bool $backgroundVignetteEnabled = true,
-        private readonly float $backgroundVignetteStrength = 1.0,
+        private readonly float $backgroundVignetteStrength = 0.35,
         private readonly float $backgroundEqBrightness = 0.0,
         private readonly float $backgroundEqContrast = 1.0,
         private readonly float $backgroundEqSaturation = 1.0,
@@ -525,8 +524,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         if ($this->backgroundVignetteEnabled && $this->backgroundVignetteStrength > 0.0) {
             $strength = max(0.05, min(4.0, $this->backgroundVignetteStrength));
-            $angle    = pi() / (4.0 * $strength);
-            $backgroundFilters[] = sprintf('vignette=angle=%s', $this->formatFloat($angle));
+            $backgroundFilters[] = sprintf('vignette=%s', $this->formatFloat($strength));
         }
 
         $backgroundFilters[] = sprintf(

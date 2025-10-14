@@ -165,7 +165,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int,crop=1920:1080,gblur=sigma=', $filterComplex);
-        self::assertStringContainsString(',gblur=sigma=20[bg0out]', $filterComplex);
+        self::assertStringContainsString(',gblur=sigma=20,vignette=', $filterComplex);
         self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
@@ -2020,9 +2020,9 @@ BASH;
         self::assertStringNotContainsString('box=1', $filters);
     }
 
-    public function testVignetteStrengthAdjustsAngle(): void
+    public function testVignetteStrengthMapsDirectlyToFilter(): void
     {
-        $generator = new SlideshowVideoGenerator(backgroundVignetteStrength: 2.0);
+        $generator = new SlideshowVideoGenerator(backgroundVignetteStrength: 0.5);
 
         $reflector  = new ReflectionClass($generator);
         $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
@@ -2042,9 +2042,36 @@ BASH;
         $formatMethod->setAccessible(true);
 
         /** @var string $expected */
-        $expected = $formatMethod->invoke($generator, pi() / 8.0);
+        $expected = $formatMethod->invoke($generator, 0.5);
 
-        self::assertStringContainsString(sprintf('vignette=angle=%s', $expected), $filter);
+        self::assertStringContainsString(sprintf('vignette=%s', $expected), $filter);
+    }
+
+    public function testDefaultVignetteStrengthMatchesExpectedIntensity(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector  = new ReflectionClass($generator);
+        $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
+        $blurMethod->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 1,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $blurMethod->invoke($generator, 0, 3.0, 3.0, $slide, null, null);
+
+        $formatMethod = $reflector->getMethod('formatFloat');
+        $formatMethod->setAccessible(true);
+
+        /** @var string $expected */
+        $expected = $formatMethod->invoke($generator, 0.35);
+
+        self::assertStringContainsString(sprintf('vignette=%s', $expected), $filter);
     }
 
     public function testLinearEasingProducesProgressExpression(): void
