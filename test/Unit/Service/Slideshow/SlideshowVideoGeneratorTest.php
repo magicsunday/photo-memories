@@ -204,10 +204,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterComplexIndex];
 
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString(':fps=30:s=1920x1080,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
-        self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
-        self::assertStringNotContainsString('s=1920x1080', $filterComplex);
     }
 
     public function testBlurredSlideFilterIncludesFrameCountInZoompan(): void
@@ -573,7 +571,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
     }
 
-    public function testKenBurnsAlternatesZoomDirectionForSubsequentSlides(): void
+    public function testKenBurnsResolvesDeterministicParametersPerMedia(): void
     {
         $generator = new SlideshowVideoGenerator();
 
@@ -598,27 +596,28 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $title    = 'Sommerferien';
         $subtitle = 'Tag 1';
 
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $first */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $first */
         $first = $method->invoke($generator, 0, $firstSlide, $title, $subtitle);
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $second */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $second */
         $second = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $secondRepeat */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $secondRepeat */
         $secondRepeat = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
 
+        self::assertFalse($first['enabled']);
         self::assertSame(1.0, $first['zoomStart']);
-        self::assertSame(1.08, $first['zoomEnd']);
-        self::assertSame(1.08, $second['zoomStart']);
-        self::assertSame(1.0, $second['zoomEnd']);
-        self::assertGreaterThanOrEqual(-0.05, $first['panX']);
-        self::assertLessThanOrEqual(0.05, $first['panX']);
-        self::assertGreaterThanOrEqual(-0.05, $second['panX']);
-        self::assertLessThanOrEqual(0.05, $second['panX']);
-        self::assertGreaterThanOrEqual(-0.05, $first['panY']);
-        self::assertLessThanOrEqual(0.05, $first['panY']);
-        self::assertGreaterThanOrEqual(-0.05, $second['panY']);
-        self::assertLessThanOrEqual(0.05, $second['panY']);
-        self::assertSame($second['panX'], $secondRepeat['panX']);
-        self::assertSame($second['panY'], $secondRepeat['panY']);
+        self::assertSame(1.0, $first['zoomEnd']);
+        self::assertSame(0.0, $first['panMagnitude']);
+
+        self::assertTrue($second['enabled']);
+        self::assertContains($second['zoomStart'], [1.0, 1.08]);
+        self::assertContains($second['zoomEnd'], [1.0, 1.08]);
+        self::assertNotSame($second['zoomStart'], $second['zoomEnd']);
+        self::assertContains($second['panAxis'], ['horizontal', 'vertical']);
+        self::assertContains($second['panDirection'], [-1, 1]);
+        self::assertGreaterThan(0.0, $second['panMagnitude']);
+        self::assertLessThanOrEqual(0.05, $second['panMagnitude']);
+
+        self::assertSame($second, $secondRepeat);
     }
 
     public function testKenBurnsPanOffsetsRemainDeterministicWithinRange(): void
@@ -646,32 +645,27 @@ final class SlideshowVideoGeneratorTest extends TestCase
             'transition' => null,
         ];
 
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $first */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $first */
         $first = $method->invoke($generator, 0, $firstSlide, $title, $subtitle);
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $firstRepeat */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $firstRepeat */
         $firstRepeat = $method->invoke($generator, 0, $firstSlide, $title, $subtitle);
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $second */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $second */
         $second = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
-        /** @var array{zoomStart: float, zoomEnd: float, panX: float, panY: float} $secondRepeat */
+        /** @var array{enabled: bool, zoomStart: float, zoomEnd: float, panAxis: string, panDirection: int, panMagnitude: float} $secondRepeat */
         $secondRepeat = $method->invoke($generator, 1, $secondSlide, $title, $subtitle);
 
         self::assertSame($first, $firstRepeat);
 
         $panLimit = 0.05;
 
-        self::assertGreaterThanOrEqual(-$panLimit, $first['panX']);
-        self::assertLessThanOrEqual($panLimit, $first['panX']);
-        self::assertGreaterThanOrEqual(-$panLimit, $first['panY']);
-        self::assertLessThanOrEqual($panLimit, $first['panY']);
-        self::assertGreaterThanOrEqual(-$panLimit, $second['panX']);
-        self::assertLessThanOrEqual($panLimit, $second['panX']);
-        self::assertGreaterThanOrEqual(-$panLimit, $second['panY']);
-        self::assertLessThanOrEqual($panLimit, $second['panY']);
+        self::assertFalse($first['enabled']);
+        self::assertSame(0.0, $first['panMagnitude']);
 
-        self::assertSame($first['panX'], $firstRepeat['panX']);
-        self::assertSame($first['panY'], $firstRepeat['panY']);
-        self::assertSame($second['panX'], $secondRepeat['panX']);
-        self::assertSame($second['panY'], $secondRepeat['panY']);
+        self::assertTrue($second['enabled']);
+        self::assertGreaterThan(0.0, $second['panMagnitude']);
+        self::assertLessThanOrEqual($panLimit, $second['panMagnitude']);
+
+        self::assertSame($second, $secondRepeat);
     }
 
     private function createTemporaryImage(string $base64): string
