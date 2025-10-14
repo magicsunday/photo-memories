@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Slideshow;
 
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Random\Engine\Xoshiro256StarStar;
 use Random\Randomizer;
 use RuntimeException;
@@ -182,6 +183,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly float $outroFadeDuration = 1.0,
         private readonly float $beatGridStep = 0.0,
         private readonly float $audioTargetLoudness = -14.0,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -1604,8 +1606,25 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         if (is_string($this->fontFile)) {
             $fontFile = trim($this->fontFile);
-            if ($fontFile !== '' && is_file($fontFile)) {
+
+            if ($fontFile === '') {
+                $this->emitMonitoringWarning(
+                    'Keine Schriftdatei angegeben; verwende stattdessen die Schriftfamilie.',
+                    ['reason' => 'font_file_missing'],
+                );
+            } elseif (is_file($fontFile) && is_readable($fontFile)) {
                 return sprintf("fontfile='%s'", $this->escapeDrawTextValue($fontFile));
+            } else {
+                $this->emitMonitoringWarning(
+                    sprintf(
+                        'Die Schriftdatei "%s" konnte nicht gelesen werden; verwende stattdessen die Schriftfamilie.',
+                        $fontFile,
+                    ),
+                    [
+                        'reason'   => 'font_file_unreadable',
+                        'fontFile' => $fontFile,
+                    ],
+                );
             }
         }
 
@@ -1615,6 +1634,20 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return '';
+    }
+
+    private function emitMonitoring(string $status, array $context = []): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('slideshow.generate', $status, $context);
+    }
+
+    private function emitMonitoringWarning(string $message, array $context = []): void
+    {
+        $this->emitMonitoring('warning', array_merge(['message' => $message], $context));
     }
 
     private function escapeDrawTextValue(string $value): string

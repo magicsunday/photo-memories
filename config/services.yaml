@@ -128,6 +128,7 @@ services:
             $outroFadeDuration: '%memories.slideshow.outro_fade_s%'
             $beatGridStep: '%memories.slideshow.beat_grid_step%'
             $audioTargetLoudness: '%memories.slideshow.audio_loudness_lufs%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator

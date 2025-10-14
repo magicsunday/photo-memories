@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowTransitionCache;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
@@ -434,6 +435,72 @@ final class SlideshowVideoGeneratorTest extends TestCase
         );
 
         self::assertSame($expected, $filters);
+    }
+
+    public function testResolveFontDirectiveLogsWarningWhenFontFileIsEmpty(): void
+    {
+        $emitter = new RecordingMonitoringEmitter();
+
+        $generator = new SlideshowVideoGenerator(
+            fontFile: '   ',
+            fontFamily: 'Roboto',
+            monitoringEmitter: $emitter,
+        );
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('resolveFontDirective');
+        $method->setAccessible(true);
+
+        /** @var string $directive */
+        $directive = $method->invoke($generator);
+
+        self::assertSame("font='Roboto'", $directive);
+        self::assertCount(1, $emitter->events);
+
+        $event = $emitter->events[0];
+        self::assertSame('slideshow.generate', $event['job']);
+        self::assertSame('warning', $event['status']);
+        self::assertSame(
+            'Keine Schriftdatei angegeben; verwende stattdessen die Schriftfamilie.',
+            $event['context']['message'],
+        );
+        self::assertSame('font_file_missing', $event['context']['reason']);
+    }
+
+    public function testResolveFontDirectiveLogsWarningWhenFontFileNotReadable(): void
+    {
+        $fontPath = sprintf('%s/%s.ttf', sys_get_temp_dir(), uniqid('font', true));
+
+        $emitter = new RecordingMonitoringEmitter();
+
+        $generator = new SlideshowVideoGenerator(
+            fontFile: $fontPath,
+            fontFamily: 'Roboto',
+            monitoringEmitter: $emitter,
+        );
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('resolveFontDirective');
+        $method->setAccessible(true);
+
+        /** @var string $directive */
+        $directive = $method->invoke($generator);
+
+        self::assertSame("font='Roboto'", $directive);
+        self::assertCount(1, $emitter->events);
+
+        $event = $emitter->events[0];
+        self::assertSame('slideshow.generate', $event['job']);
+        self::assertSame('warning', $event['status']);
+        self::assertSame('font_file_unreadable', $event['context']['reason']);
+        self::assertSame($fontPath, $event['context']['fontFile']);
+        self::assertSame(
+            sprintf(
+                'Die Schriftdatei "%s" konnte nicht gelesen werden; verwende stattdessen die Schriftfamilie.',
+                $fontPath,
+            ),
+            $event['context']['message'],
+        );
     }
 
     public function testEscapeDrawTextValueEscapesLineBreaks(): void
