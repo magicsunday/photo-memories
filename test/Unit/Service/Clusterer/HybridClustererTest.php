@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\HybridClusterer;
@@ -28,6 +29,8 @@ final class HybridClustererTest extends TestCase
     public function buildCreatesPerStrategyProgressHandle(): void
     {
         $progressAwareStrategy = new class implements ProgressAwareClusterStrategyInterface {
+            use ProgressAwareClusterTrait;
+
             public function name(): string
             {
                 return 'progress-aware';
@@ -40,10 +43,11 @@ final class HybridClustererTest extends TestCase
 
             public function clusterWithProgress(array $items, callable $update): array
             {
-                $update(1, 3, 'Initialisiere');
-                $update(3, 3, 'Verarbeite');
-
-                return [];
+                return $this->runWithDefaultProgress(
+                    $items,
+                    $update,
+                    static fn (array $items): array => [],
+                );
             }
         };
 
@@ -121,15 +125,21 @@ final class HybridClustererTest extends TestCase
 
         $events = $handles[0]->events;
 
-        self::assertContains(['max', 3], $events);
-        self::assertContains(['detail', 'Schritt 1/3'], $events);
-        self::assertContains(['rate', 'Fortschritt: 1/3 Schritte'], $events);
+        $maxEvents = array_filter($events, static fn (array $event): bool => $event[0] === 'max');
+        self::assertNotEmpty($maxEvents);
+        self::assertContains(['max', 1], $events);
+
+        self::assertContains(['detail', 'Schritt 0/1'], $events);
+        self::assertContains(['rate', 'Fortschritt: 0/1 Schritte'], $events);
+        self::assertContains(['progress', 0], $events);
+        self::assertContains(['phase', 'Filtern (1)'], $events);
+
+        self::assertContains(['detail', 'Schritt 1/1'], $events);
+        self::assertContains(['rate', 'Fortschritt: 1/1 Schritte'], $events);
         self::assertContains(['progress', 1], $events);
-        self::assertContains(['phase', 'Initialisiere'], $events);
-        self::assertContains(['detail', 'Schritt 3/3'], $events);
-        self::assertContains(['rate', 'Fortschritt: 3/3 Schritte'], $events);
-        self::assertContains(['progress', 3], $events);
-        self::assertContains(['phase', 'Verarbeite'], $events);
+        self::assertContains(['phase', 'Scoring & Metadaten'], $events);
+
+        self::assertContains(['phase', 'Abgeschlossen (0 Memories)'], $events);
         self::assertContains(['phase', 'Abgeschlossen'], $events);
         self::assertContains(['detail', '0 Cluster erzeugt'], $events);
         self::assertContains(['rate', '–'], $events);
