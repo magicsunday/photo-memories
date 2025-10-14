@@ -35,6 +35,7 @@ use function implode;
 use function in_array;
 use function is_dir;
 use function is_file;
+use function is_float;
 use function is_int;
 use function is_readable;
 use function is_string;
@@ -725,7 +726,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function resolveTransitionDurationsForSlides(
         array $slides,
-        float $defaultTransitionDuration,
+        ?float $configuredTransitionDuration,
         array $requestedDurations,
     ): array {
         $count = count($slides);
@@ -733,32 +734,34 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             return [];
         }
 
-        $resolvedDefault = $this->clampTransitionDuration($defaultTransitionDuration);
+        $resolvedDefault = $this->resolveTransitionDuration($configuredTransitionDuration);
+
+        $overrides = [];
+        foreach ($requestedDurations as $index => $duration) {
+            if (!is_float($duration) && !is_int($duration)) {
+                continue;
+            }
+
+            $overrides[(int) $index] = $this->clampTransitionDuration((float) $duration);
+        }
 
         $durations = [];
         for ($index = 0; $index < $count - 1; ++$index) {
             $currentDuration  = $this->resolveSlideDuration($slides[$index]['duration']);
             $nextDuration     = $this->resolveSlideDuration($slides[$index + 1]['duration']);
             $maxOverlap       = min($currentDuration, $nextDuration);
-            $candidate        = $resolvedDefault;
+            $candidate        = $overrides[$index] ?? $resolvedDefault;
 
-            if (array_key_exists($index, $requestedDurations)) {
-                $candidate = (float) $requestedDurations[$index];
+            if ($maxOverlap < self::MIN_TRANSITION_DURATION) {
+                $durations[$index] = $maxOverlap;
+                continue;
             }
 
             if ($candidate <= 0.0) {
                 $candidate = $resolvedDefault;
             }
 
-            $transitionLength = $this->clampTransitionDuration($candidate);
-
-            if ($maxOverlap < self::MIN_TRANSITION_DURATION) {
-                $transitionLength = $maxOverlap;
-            } else {
-                $transitionLength = min($transitionLength, $maxOverlap);
-            }
-
-            $durations[$index] = $transitionLength;
+            $durations[$index] = min($candidate, $maxOverlap);
         }
 
         return $durations;
