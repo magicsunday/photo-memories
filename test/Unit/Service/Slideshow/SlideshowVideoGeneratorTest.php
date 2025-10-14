@@ -164,22 +164,22 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('[0:v]split=2[bg0][fg0]', $filterComplex);
         self::assertStringContainsString('gblur=sigma=', $filterComplex);
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,gblur=sigma=', $filterComplex);
+        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int,crop=1920:1080,gblur=sigma=', $filterComplex);
         self::assertStringContainsString(',gblur=sigma=20[bg0out]', $filterComplex);
         self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
-        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
         self::assertStringNotContainsString('s=1920x1080', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $filterComplex);
-        self::assertStringContainsString('x=w*0.07', $filterComplex);
-        self::assertStringContainsString('y=h*0.86', $filterComplex);
-        self::assertStringContainsString('y=h*0.92', $filterComplex);
+        self::assertStringContainsString('x=w*0.05', $filterComplex);
+        self::assertStringContainsString('y=h-80-(line_h+40)', $filterComplex);
+        self::assertStringContainsString('y=h-80', $filterComplex);
         self::assertStringNotContainsString('safeX', $filterComplex);
         self::assertStringNotContainsString('safeY', $filterComplex);
         self::assertStringNotContainsString('[vtmp]', $filterComplex);
@@ -240,8 +240,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterComplexIndex];
 
         self::assertStringContainsString('zoompan=z=', $filterComplex);
-        self::assertStringContainsString(':fps=30:s=1920x1080,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
-        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString(':fps=30:s=1920x1080,scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
     }
 
     public function testBeatGridSnapsDurationsToConfiguredStep(): void
@@ -310,7 +310,9 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
     public function testBlurredSlideFilterIncludesFrameCountInZoompan(): void
     {
-        $generator = new SlideshowVideoGenerator();
+        $generator = new SlideshowVideoGenerator(
+            kenBurnsEnabled: true,
+        );
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildBlurredSlideFilter');
@@ -326,7 +328,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         /** @var string $filter */
         $filter = $method->invoke(
             $generator,
-            0,
+            1,
             3.0,
             3.0,
             $slide,
@@ -340,6 +342,39 @@ final class SlideshowVideoGeneratorTest extends TestCase
             sprintf(':d=%d:fps=30', $expectedFrameCount),
             $filter,
         );
+    }
+
+    public function testBlurredSlideFilterAppliesLanczosFlags(): void
+    {
+        $generator = new SlideshowVideoGenerator(
+            kenBurnsEnabled: true,
+        );
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildBlurredSlideFilter');
+        $method->setAccessible(true);
+
+        $slide = [
+            'image'      => '/tmp/example.jpg',
+            'mediaId'    => 42,
+            'duration'   => 3.0,
+            'transition' => null,
+        ];
+
+        /** @var string $filter */
+        $filter = $method->invoke(
+            $generator,
+            1,
+            3.0,
+            3.0,
+            $slide,
+            'Title',
+            'Subtitle',
+        );
+
+        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int', $filter);
+        self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos+accurate_rnd+full_chroma_int', $filter);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filter);
     }
 
     public function testBuildIntroTextOverlayFilterChainPlacesSubtitleAboveTitle(): void
@@ -362,15 +397,15 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         self::assertStringContainsString("drawtext=text='01.01.2024 – 31.01.2024'", $subtitleFilter);
         self::assertStringContainsString('fontsize=h*0.038', $subtitleFilter);
-        self::assertStringContainsString('x=w*0.07', $subtitleFilter);
-        self::assertStringContainsString('y=h*0.86', $subtitleFilter);
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $subtitleFilter);
+        self::assertStringContainsString('x=w*0.05', $subtitleFilter);
+        self::assertStringContainsString('y=h-80-(line_h+40)', $subtitleFilter);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8', $subtitleFilter);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $titleFilter);
         self::assertStringContainsString('fontsize=h*0.060', $titleFilter);
-        self::assertStringContainsString('x=w*0.07', $titleFilter);
-        self::assertStringContainsString('y=h*0.92', $titleFilter);
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $titleFilter);
+        self::assertStringContainsString('x=w*0.05', $titleFilter);
+        self::assertStringContainsString('y=h-80', $titleFilter);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8', $titleFilter);
 
         self::assertStringNotContainsString('safeX', $filters);
         self::assertStringNotContainsString('safeY', $filters);
@@ -388,10 +423,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filters = $method->invoke($generator, 'Rückblick', null);
 
         self::assertStringContainsString("drawtext=text='Rückblick'", $filters);
-        self::assertStringContainsString('x=w*0.07', $filters);
+        self::assertStringContainsString('x=w*0.05', $filters);
         self::assertStringContainsString('fontsize=h*0.060', $filters);
-        self::assertStringContainsString('y=h*0.92', $filters);
-        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20', $filters);
+        self::assertStringContainsString('y=h-80', $filters);
+        self::assertStringContainsString('shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8', $filters);
         self::assertStringNotContainsString('safeX', $filters);
         self::assertStringNotContainsString('safeY', $filters);
     }
@@ -427,7 +462,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
 
         $expected = sprintf(
-            "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.86,drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:x=w*0.07:y=h*0.92",
+            "drawtext=text='%s':%sfontcolor=white:fontsize=h*0.038:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80-(line_h+40),drawtext=text='%s':%sfontcolor=white:fontsize=h*0.060:shadowcolor=black@0.25:shadowx=0:shadowy=6:borderw=2:bordercolor=black@0.20:box=1:boxcolor=0x00000066:boxborderw=8:x=w*0.05:y=h-80",
             $escapedSubtitle,
             $fontSegment,
             $escapedTitle,
@@ -628,7 +663,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             self::assertSame(1, preg_match('/\\[bg1\]([^;\[]+)\\[bg1out\]/', $filterComplex, $narrowLandscapeMatch));
             self::assertSame(1, preg_match('/\\[bg2\]([^;\[]+)\\[bg2out\]/', $filterComplex, $wideLandscapeMatch));
 
-            $expectedScale = 'scale=1920:1080:force_original_aspect_ratio=increase';
+            $expectedScale = 'scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int';
             $expectedBlur  = 'gblur=sigma=20';
             $expectedCrop  = ',crop=1920:1080';
 
@@ -1288,7 +1323,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertGreaterThanOrEqual(-0.05, $panY);
         self::assertLessThanOrEqual(0.05, $panY);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+        self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
     }
 
