@@ -26,6 +26,8 @@ interface MediaIngestionTelemetryInterface
 
     public function recordFfprobeAvailability(string $filepath, bool $available): void;
 
+    public function recordFfprobeBinaryMissing(): void;
+
     /**
      * @return array{
      *     images_total:int,
@@ -34,8 +36,9 @@ interface MediaIngestionTelemetryInterface
      *     exif_tz_hits:int,
      *     quicktime_timezone_hits?:int,
      *     xmp_timezone_hits?:int,
-     *     ffprobe_available:int,
-     *     ffprobe_missing:int
+     *     ffprobe_ok:int,
+     *     ffprobe_missing:int,
+     *     ffprobe_binary_missing?:bool
      * }
      */
     public function metrics(): array;

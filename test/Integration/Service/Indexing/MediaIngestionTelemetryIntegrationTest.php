@@ -75,8 +75,9 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
         self::assertSame(2, $metrics['exif_tz_hits'] ?? null);
         self::assertSame(1, $metrics['quicktime_timezone_hits'] ?? null);
         self::assertSame(1, $metrics['xmp_timezone_hits'] ?? null);
-        self::assertSame(1, $metrics['ffprobe_available'] ?? null);
+        self::assertSame(1, $metrics['ffprobe_ok'] ?? null);
         self::assertSame(0, $metrics['ffprobe_missing'] ?? null);
+        self::assertFalse($metrics['ffprobe_binary_missing'] ?? true);
     }
 
     #[Test]
