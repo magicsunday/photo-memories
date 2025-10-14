@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-17 – Stabilise slideshow transitions
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Slideshow overlaps still drew pseudo-random durations per render and transition fallback sequences treated all `xfade` options equally, making fades appear as often as novelty effects like `pixelize`.
+- **Decision:** Clamp every overlap to the resolved global `transitionDuration` (unless storyboard overrides apply) and bound it against the available slide overlap, eliminating random draws. Rework the deterministic transition chooser to weight cinematic fades higher than experimental wipes/pixel effects while seeding the randomizer with media and cluster identifiers for stable playback.【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L92-L116】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L297-L333】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L708-L765】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L820-L895】
+- **Alternatives considered:** Keep per-overlap random draws and rely on manual overrides, or shuffle transitions uniformly. Rejected because they broke predictability, produced hard cuts when the overlap draw exceeded slide content, and overused gimmick transitions in family recap videos.
+- **Follow-up actions:** Observe telemetry for slide overlap saturation to ensure the clamp is sufficient and expand the weighting table if additional transitions are curated.
+
 ## 2025-10-16 – Slideshow fade configuration
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** The slideshow renderer lacked dedicated controls for video fade-ins/-outs, leading to abrupt cuts at the start and
