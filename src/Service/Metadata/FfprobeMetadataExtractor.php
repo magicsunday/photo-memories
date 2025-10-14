@@ -79,7 +79,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             '-select_streams',
             'v',
             '-show_entries',
-            'stream=codec_name,avg_frame_rate,side_data_list:stream_tags=rotate:format=duration',
+            'stream=codec_name,avg_frame_rate,width,height,coded_width,coded_height,side_data_list:stream_tags=rotate:format=duration',
             '-of',
             'json',
             $filepath,
@@ -133,6 +133,16 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
             $stabilised = $this->parseStreamStabilisation($primaryStream['side_data_list'] ?? null);
             $media->setVideoHasStabilization($stabilised);
+
+            $width = $this->parseStreamDimension($primaryStream, 'width', 'coded_width');
+            if ($width !== null && $media->getWidth() === null) {
+                $media->setWidth($width);
+            }
+
+            $height = $this->parseStreamDimension($primaryStream, 'height', 'coded_height');
+            if ($height !== null && $media->getHeight() === null) {
+                $media->setHeight($height);
+            }
         }
 
         if (is_array($format)) {
@@ -356,6 +366,19 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $stream
+     */
+    private function parseStreamDimension(array $stream, string $dimensionKey, string $fallbackKey): ?int
+    {
+        $value = $stream[$dimensionKey] ?? null;
+        if ($value === null && array_key_exists($fallbackKey, $stream)) {
+            $value = $stream[$fallbackKey];
+        }
+
+        return $this->normalisePositiveInt($value);
+    }
+
+    /**
      * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $entry
      */
     private function extractStabilisationFromEntry(?array $entry): ?bool
@@ -515,6 +538,32 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         return (float) $v;
+    }
+
+    private function normalisePositiveInt(string|int|float|null $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_float($value)) {
+            $intValue = (int) $value;
+
+            return $intValue > 0 ? $intValue : null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '' || !is_numeric($trimmed)) {
+            return null;
+        }
+
+        $intValue = (int) (float) $trimmed;
+
+        return $intValue > 0 ? $intValue : null;
     }
 
     /**

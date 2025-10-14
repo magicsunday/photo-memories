@@ -5,6 +5,8 @@
       "codec_name": "h264",
       "codec_type": "video",
       "avg_frame_rate": "120/1",
+      "width": 1920,
+      "height": 1080,
       "tags": {
         "rotate": "90"
       },
