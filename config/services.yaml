@@ -392,6 +392,7 @@ services:
                 - '@MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage'
                 - '@MagicSunday\Memories\Service\Indexing\Stage\PostFlushReprocessingStage'
+            $videoExtensions: '%memories.index.video_ext%'
             $telemetry: '@MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector'
             $logger: '@?Psr\\Log\\LoggerInterface'
 

@@ -41,7 +41,7 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
 
         $pipeline = new DefaultMediaIngestionPipeline([
             new TelemetryFixtureStage($telemetry),
-        ], $telemetry, $logger);
+        ], ['mov'], $telemetry, $logger);
 
         $imagePath = $this->createFixture('jpg');
         $videoPath = $this->createFixture('mov');
@@ -77,6 +77,37 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
         self::assertSame(1, $metrics['xmp_timezone_hits'] ?? null);
         self::assertSame(1, $metrics['ffprobe_available'] ?? null);
         self::assertSame(0, $metrics['ffprobe_missing'] ?? null);
+    }
+
+    #[Test]
+    public function itWarnsWhenFfprobeMetadataIsMissing(): void
+    {
+        $telemetry = new MediaIngestionTelemetryCollector();
+        $logger    = new ArrayLogger();
+
+        $pipeline = new DefaultMediaIngestionPipeline([
+            new MissingFfprobeStage(),
+        ], ['mov'], $telemetry, $logger);
+
+        $videoPath = $this->createFixture('mov');
+
+        try {
+            $pipeline->process($videoPath, false, false, false, false, new NullOutput());
+        } finally {
+            @unlink($videoPath);
+        }
+
+        $pipeline->finalize(false);
+
+        $warnings = array_filter(
+            $logger->records,
+            static fn (array $record): bool => ($record['message'] ?? '') === 'media_ingestion.ffprobe_missing'
+        );
+
+        self::assertNotEmpty($warnings);
+
+        $entry = $warnings[array_key_first($warnings)];
+        self::assertSame(1, $entry['context']['missing_count'] ?? null);
     }
 
     private function createFixture(string $extension): string
@@ -130,6 +161,17 @@ final class TelemetryFixtureStage implements MediaIngestionStageInterface
     private function resolveMime(string $filepath): string
     {
         return str_ends_with($filepath, '.jpg') ? 'image/jpeg' : 'video/quicktime';
+    }
+}
+
+final class MissingFfprobeStage implements MediaIngestionStageInterface
+{
+    public function process(MediaIngestionContext $context): MediaIngestionContext
+    {
+        $media = new Media($context->getFilePath(), str_repeat('b', 64), 1024);
+        $media->setIsVideo(true);
+
+        return $context->withMedia($media);
     }
 }
 
