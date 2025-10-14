@@ -502,10 +502,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $foreground .= sprintf('[fg%1$dout];', $index);
 
         return sprintf(
-            '%1$s%2$s[bg%3$dout][fg%3$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,format=yuv420p,setsar=1',
+            '%1$s%2$s[bg%3$dout][fg%3$dout]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,fps=%4$s,format=yuv420p,setsar=1',
             $background,
             $foreground,
             $index,
+            '%memories.slideshow.fps%',
         );
     }
 
@@ -1059,13 +1060,23 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = '-map';
         $command[] = '[vout]';
         $command[] = '-r';
-        $command[] = '30';
+        $command[] = '%memories.slideshow.fps%';
         $command[] = '-c:v';
         $command[] = 'libx264';
-        $command[] = '-crf';
-        $command[] = '18';
         $command[] = '-preset';
         $command[] = 'medium';
+        $command[] = '-crf';
+        $command[] = '20';
+        $command[] = '-profile:v';
+        $command[] = 'high';
+        $command[] = '-level';
+        $command[] = '4.1';
+        $command[] = '-g';
+        $command[] = '60';
+        $command[] = '-bf';
+        $command[] = '2';
+        $command[] = '-threads';
+        $command[] = '0';
         $command[] = '-movflags';
         $command[] = '+faststart';
         $command[] = '-pix_fmt';
