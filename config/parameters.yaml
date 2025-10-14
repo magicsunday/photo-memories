@@ -833,6 +833,9 @@ parameters:
     memories.slideshow.image_duration_s: 3.5
     # Description: Duration in seconds used for transitions between slideshow images.
     memories.slideshow.transition_duration_s: 0.75
+    # Description: Step size in seconds used to snap slide and transition timing to a beat grid (0 disables snapping).
+    memories.slideshow.beat_grid_step_default: 0.0
+    memories.slideshow.beat_grid_step: '%env(default:memories.slideshow.beat_grid_step_default:float:MEMORIES_SLIDESHOW_BEAT_GRID_STEP)%'
     # Description: Duration in seconds of the fade-in applied to slideshow videos.
     memories.slideshow.intro_fade_duration_s: 1.0
     # Description: Duration in seconds of the fade-out applied to slideshow videos.
@@ -908,3 +911,6 @@ parameters:
     memories.slideshow.music_path_default: ''
     # Description: Runtime music track path for slideshow videos, allowing environment overrides.
     memories.slideshow.music_path: "%env(default:memories.slideshow.music_path_default:MEMORIES_SLIDESHOW_MUSIC)%"
+    # Description: Target integrated loudness in LUFS for slideshow audio limiting.
+    memories.slideshow.audio_loudness_lufs_default: -14.0
+    memories.slideshow.audio_loudness_lufs: '%env(default:memories.slideshow.audio_loudness_lufs_default:float:MEMORIES_SLIDESHOW_AUDIO_LOUDNESS)%'

@@ -33,6 +33,10 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `memories.slideshow.outro_fade_duration_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
   sowohl bei Einzelbild-Slideshows als auch bei Übergangssequenzen über mehrere Bilder hinweg.
 
+  Für rhythmische Storyboards kann `memories.slideshow.beat_grid_step` genutzt werden. Ein Wert wie `0.5` oder `0.6` rundet die
+  Summe aus Bildlaufzeit und Übergangsdauer auf Vielfache des gewählten Taktrasters. Der Standard `0.0` deaktiviert das Feature;
+  über `MEMORIES_SLIDESHOW_BEAT_GRID_STEP` lässt sich der Rasterwert pro Umgebung überschreiben.
+
   Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke), `memories.slideshow.background_blur_filter`
   (`gblur` für Qualität, `boxblur` für Performance), `memories.slideshow.background_vignette_enabled` (Schattierung) sowie den
   Equalizer-Werten `memories.slideshow.background_eq_brightness`, `memories.slideshow.background_eq_contrast` und
@@ -40,6 +44,10 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`,
   `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST` und
   `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION` lassen sich diese Vorgaben pro Deployment überschreiben.
+
+  Die Audiosektion normalisiert die Musikspur mit -14 LUFS als Zielwert. Wer andere Plattformvorgaben bedienen muss, passt
+  `memories.slideshow.audio_loudness_lufs` beziehungsweise `MEMORIES_SLIDESHOW_AUDIO_LOUDNESS` an; der FFmpeg-Filter zieht
+  anschließend Dynamikkompression, Limiter und 1-Sekunden-Fades (`dynaudnorm`, `alimiter`, `afade`) automatisch nach.
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 

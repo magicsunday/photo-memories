@@ -25,6 +25,7 @@ use function chmod;
 use function base64_decode;
 use function count;
 use function explode;
+use function fmod;
 use function file_put_contents;
 use function hash;
 use function implode;
@@ -75,6 +76,39 @@ final class SlideshowVideoGeneratorTest extends TestCase
         }
 
         self::assertContains('comment=01.02.2024 – 14.02.2024', $metadataEntries);
+    }
+
+    public function testAppendAudioOptionsAppliesNormalisationPipeline(): void
+    {
+        $generator = new SlideshowVideoGenerator();
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('appendAudioOptions');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke(
+            $generator,
+            ['ffmpeg', '-filter_complex', '[0:v]trim=duration=4[vout]'],
+            1,
+            '/tmp/out.mp4',
+            '/tmp/music.mp3',
+            null,
+            null,
+            4.0,
+        );
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+
+        $filterComplex = $command[$filterIndex + 1];
+        self::assertStringContainsString('dynaudnorm=f=250', $filterComplex);
+        self::assertStringContainsString('alimiter=level_in=0:level_out=-14:limit=-1', $filterComplex);
+        self::assertStringContainsString('aformat=sample_fmts=fltp:channel_layouts=stereo', $filterComplex);
+        self::assertStringContainsString('afade=in:st=0:d=1', $filterComplex);
+        self::assertStringContainsString('afade=out:st=duration-1:d=1', $filterComplex);
+
+        self::assertContains('-shortest', $command);
     }
 
     public function testTitleOverlayIsAppliedOnlyToFirstSlide(): void
@@ -206,6 +240,70 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('zoompan=z=', $filterComplex);
         self::assertStringContainsString(':fps=30:s=1920x1080,scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2', $filterComplex);
+    }
+
+    public function testBeatGridSnapsDurationsToConfiguredStep(): void
+    {
+        $slides = [
+            [
+                'image'      => '/tmp/cover.jpg',
+                'mediaId'    => 1,
+                'duration'   => 3.2,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
+                'duration'   => 2.3,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/third.jpg',
+                'mediaId'    => 3,
+                'duration'   => 2.8,
+                'transition' => null,
+            ],
+        ];
+
+        $job = new SlideshowJob(
+            'beat-grid',
+            '/tmp/beat-grid.json',
+            '/tmp/beat-grid.mp4',
+            '/tmp/beat-grid.lock',
+            '/tmp/beat-grid.error',
+            ['/tmp/cover.jpg', '/tmp/second.jpg', '/tmp/third.jpg'],
+            $slides,
+            [],
+            0.65,
+            null,
+            null,
+            null,
+        );
+
+        $generator = new SlideshowVideoGenerator(beatGridStep: 0.5);
+
+        $reflector = new ReflectionClass($generator);
+        $method    = $reflector->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        /** @var list<string> $command */
+        $command = $method->invoke($generator, $job, $job->slides());
+
+        $filterIndex = array_search('-filter_complex', $command, true);
+        self::assertNotFalse($filterIndex);
+        $filterComplex = $command[$filterIndex + 1];
+
+        preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $visibleMatches);
+        preg_match_all('/xfade=transition=[^:]+:duration=([0-9.]+)/', $filterComplex, $transitionMatches);
+
+        $visibleDurations     = array_map('floatval', $visibleMatches[1]);
+        $transitionDurations  = array_map('floatval', $transitionMatches[1]);
+
+        self::assertNotEmpty($transitionDurations);
+        foreach ($transitionDurations as $index => $transitionDuration) {
+            $total = $visibleDurations[$index] + $transitionDuration;
+            self::assertEqualsWithDelta(0.0, fmod($total, 0.5), 0.001);
+        }
     }
 
     public function testBlurredSlideFilterIncludesFrameCountInZoompan(): void
