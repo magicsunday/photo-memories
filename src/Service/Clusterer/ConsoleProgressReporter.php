@@ -35,6 +35,11 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
     ) {
     }
 
+    public function getStyle(): SymfonyStyle
+    {
+        return $this->io;
+    }
+
     public function create(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
     {
         return $this->createHandle($sectionTitle, $headline, $max);
