@@ -37,7 +37,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
         private readonly StaypointDetectorInterface $staypointDetector,
         private readonly float $gpsOutlierRadiusKm = 1.0,
         private readonly int $gpsOutlierMinSamples = 3,
-        private readonly int $minItemsPerDay = 4,
+        private readonly int $minItemsPerDay = 3,
     ) {
         if ($this->gpsOutlierRadiusKm <= 0.0) {
             throw new InvalidArgumentException('gpsOutlierRadiusKm must be > 0.');
