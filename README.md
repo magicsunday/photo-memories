@@ -82,6 +82,8 @@ php src/Memories.php memories:geocode --refresh-pois
 
 # Cluster berechnen und speichern
 php src/Memories.php memories:cluster --replace
+# Debug-Infos für Urlaubssegmente anzeigen
+php src/Memories.php memories:cluster --replace --debug-vacation
 
 # Feed prüfen bzw. exportieren
 php src/Memories.php memories:feed:preview --limit-clusters=2000
@@ -115,6 +117,7 @@ make web-dev
 - Die Story-Profile unter `memories.cluster.selection.profile_values` definieren vollständige Optionssätze (`min_spacing_seconds`, `phash_min_hamming`, `max_per_staypoint`, `video_bonus`, `face_bonus`, `selfie_penalty`, `quality_floor`, `minimum_total` usw.). Die Default-Werte folgen den Curation-Briefs für Urlaub, Orte, Szenen, Geräte, „An diesem Tag/Monat“, Freund:innen und Highlights.
 - Individuelle Installationen können diese Werte über `config/parameters.local.yaml` oder deploymentspezifische Overrides anpassen. Für globale Defaults stehen weiterhin die Umgebungsvariablen `MEMORIES_CLUSTER_SELECTION_TARGET_TOTAL`, `MEMORIES_CLUSTER_SELECTION_MAX_PER_DAY`, `MEMORIES_CLUSTER_SELECTION_TIME_SLOT_HOURS`, `MEMORIES_CLUSTER_SELECTION_MIN_SPACING_SECONDS`, `MEMORIES_CLUSTER_SELECTION_PHASH_MIN_HAMMING`, `MEMORIES_CLUSTER_SELECTION_MAX_PER_STAYPOINT`, `MEMORIES_CLUSTER_SELECTION_VIDEO_BONUS`, `MEMORIES_CLUSTER_SELECTION_FACE_BONUS`, `MEMORIES_CLUSTER_SELECTION_SELFIE_PENALTY` und `MEMORIES_CLUSTER_SELECTION_QUALITY_FLOOR` zur Verfügung.
 - Temporäre Laufzeit-Overrides lassen sich über `memories:cluster --sel-target-total=… --sel-max-per-day=… --sel-min-spacing=… --sel-phash-hamming=… --sel-max-staypoint=…` setzen; die Optionen wirken auf sämtliche Profile während dieses Jobs.
+- Mit `--debug-vacation` zeigt der CLI-Lauf vor dem Persistieren eine tabellarische Übersicht der erkannten Urlaubssegmente sowie die fünf bestbewerteten Cluster an.
 
 ## Tests & Qualitätssicherung
 

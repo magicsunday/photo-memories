@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
@@ -23,12 +24,18 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
+use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
+use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use Throwable;
 
 use function count;
+use function array_slice;
 use function max;
 use function min;
 use function microtime;
+use function is_array;
+use function is_numeric;
+use function usort;
 use function sprintf;
 
 /**
@@ -41,6 +48,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         private HybridClustererInterface $clusterer,
         private ClusterConsolidatorInterface $consolidator,
         private ClusterPersistenceInterface $persistence,
+        private ?VacationDebugContext $vacationDebugContext = null,
     ) {
     }
 
@@ -198,6 +206,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $consolidateHandle->finish();
 
         $consolidatedCount = count($drafts);
+
+        if ($options->isVacationDebugEnabled()) {
+            $this->emitVacationDebug($progressReporter, $options, $drafts, $draftCount, $consolidatedCount);
+        }
+
         if ($consolidatedCount === 0) {
             if ($options->shouldReplace() && !$options->isDryRun()) {
                 $connection = $this->entityManager->getConnection();
@@ -275,6 +288,121 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $deleted,
             $options->isDryRun(),
         );
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     */
+    private function emitVacationDebug(
+        ProgressReporterInterface $progressReporter,
+        ClusterJobOptions $options,
+        array $drafts,
+        int $draftCount,
+        int $consolidatedCount,
+    ): void {
+        if (
+            $this->vacationDebugContext === null
+            || !$this->vacationDebugContext->isEnabled()
+            || !$options->isVacationDebugEnabled()
+        ) {
+            return;
+        }
+
+        if (!$progressReporter instanceof ConsoleProgressReporter) {
+            return;
+        }
+
+        $segments = $this->vacationDebugContext->getSegments();
+        $io       = $progressReporter->getStyle();
+
+        $io->section('🏖️ Urlaub Debug');
+
+        if ($segments === []) {
+            $io->text('Keine Urlaubssegmente erkannt.');
+        } else {
+            $segmentRows = [];
+            foreach ($segments as $segment) {
+                $segmentRows[] = [
+                    $segment['start_date'],
+                    $segment['end_date'],
+                    (string) $segment['away_days'],
+                    (string) $segment['members'],
+                    (string) $segment['center_count'],
+                    sprintf('%.1f', $segment['radius_km']),
+                    sprintf('%.2f', $segment['density']),
+                ];
+            }
+
+            $io->table(['Start', 'Ende', 'Away-Tage', 'Medien', 'Zentren', 'Radius (km)', 'Dichte'], $segmentRows);
+        }
+
+        $io->writeln(sprintf('Gebildet → Konsolidiert: %d → %d', $draftCount, $consolidatedCount));
+
+        if ($consolidatedCount === 0) {
+            $io->text('Keine Cluster verfügbar.');
+
+            return;
+        }
+
+        $sortedDrafts = $drafts;
+        usort(
+            $sortedDrafts,
+            static function (ClusterDraft $left, ClusterDraft $right): int {
+                $leftParams  = $left->getParams();
+                $rightParams = $right->getParams();
+
+                $leftScore  = is_numeric($leftParams['score'] ?? null) ? (float) $leftParams['score'] : 0.0;
+                $rightScore = is_numeric($rightParams['score'] ?? null) ? (float) $rightParams['score'] : 0.0;
+
+                return $rightScore <=> $leftScore;
+            }
+        );
+
+        $topDrafts = array_slice($sortedDrafts, 0, 5);
+        $clusterRows = [];
+
+        foreach ($topDrafts as $draft) {
+            $params = $draft->getParams();
+
+            $score = '–';
+            if (is_numeric($params['score'] ?? null)) {
+                $score = sprintf('%.2f', (float) $params['score']);
+            }
+
+            $timeRange = $params['time_range'] ?? null;
+            $range     = '–';
+            if (
+                is_array($timeRange)
+                && isset($timeRange['from'], $timeRange['to'])
+                && is_numeric($timeRange['from'])
+                && is_numeric($timeRange['to'])
+            ) {
+                $range = $this->formatTimeRange((int) $timeRange['from'], (int) $timeRange['to']);
+            }
+
+            $clusterRows[] = [
+                $draft->getAlgorithm(),
+                $draft->getStoryline(),
+                (string) $draft->getMembersCount(),
+                $score,
+                $range,
+            ];
+        }
+
+        $io->table(['Algorithmus', 'Storyline', 'Mitglieder', 'Score', 'Zeitraum'], $clusterRows);
+    }
+
+    private function formatTimeRange(int $from, int $to): string
+    {
+        $timezone = new DateTimeZone('UTC');
+        $fromDate = (new DateTimeImmutable('@' . $from))->setTimezone($timezone)->format('Y-m-d');
+        $toDate   = (new DateTimeImmutable('@' . $to))->setTimezone($timezone)->format('Y-m-d');
+
+        if ($fromDate === $toDate) {
+            return $fromDate;
+        }
+
+        return sprintf('%s → %s', $fromDate, $toDate);
     }
 
     private function formatRate(int $processed, float $startedAt, string $unit): string

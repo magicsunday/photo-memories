@@ -6,6 +6,8 @@ Der Cluster-Lauf enthält seit der Integration des `CompositeClusterScorer` eine
 
 Diese Bewertungsphase zieht sämtliche Medien-IDs aus den Entwürfen, lädt die zugehörigen `Media`-Objekte paketweise erneut aus der Datenbank und lässt anschließend jede registrierte Heuristik die Cluster anreichern. Die zusätzliche Datenbankarbeit und die Berechnungen der Heuristiken erhöhen die Laufzeit signifikant, insbesondere bei großen Medienmengen.
 
+> 💡 Mit der CLI-Option `--debug-vacation` protokolliert `memories:cluster` unmittelbar vor dem Persistieren eine tabellarische Übersicht der erkannten Urlaubssegmente sowie die fünf höchstbewerteten Cluster (Algorithmus, Storyline, Mitgliederzahl, Score und Zeitraum). Das erleichtert Laufzeitdiagnosen, ohne Datenbankänderungen durchzuführen.
+
 ## Ablauf des Cluster-Jobs
 
 1. **Medien laden:** Der `DefaultClusterJobRunner` baut zwei Doctrine-Queries auf, zählt die Treffer und streamt anschließend alle passenden `Media`-Objekte in Speicher. Fortschritt und Durchsatz werden dabei über den `ProgressReporter` visualisiert.

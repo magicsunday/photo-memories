@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Clusterer;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
+use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
+use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Entity\Media;
 
@@ -24,6 +26,7 @@ use function floor;
 use function is_string;
 use function max;
 use function min;
+use function pi;
 use function round;
 use function sort;
 use function trim;
@@ -39,6 +42,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
         private VacationRunDetectorInterface $runDetector,
         private VacationScoreCalculatorInterface $scoreCalculator,
         private StoryTitleBuilder $storyTitleBuilder,
+        private ?VacationDebugContext $debugContext = null,
     ) {
     }
 
@@ -57,6 +61,8 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
         $clusters = [];
         $runs     = $this->runDetector->detectVacationRuns($days, $home);
         foreach ($runs as $run) {
+            $this->recordDebugSegment($run, $days, $home);
+
             $dayContext = $this->classifyRunDays($run, $days);
             $draft      = $this->scoreCalculator->buildDraft($run, $days, $home, $dayContext);
             if ($draft instanceof ClusterDraft) {
@@ -290,6 +296,65 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
             'cohort_presence_ratio' => (float) $summary['cohortPresenceRatio'],
             'travel_score'          => round($this->normalizeTravel((float) ($summary['travelKm'] ?? 0.0)), 3),
         ];
+    }
+
+    /**
+     * @param list<string> $run
+     * @param array<string, array{date:string,members:list<Media>,baseAway:bool}> $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers?:list<array{lat:float,lon:float,radius_km:float,member_count?:int}>} $home
+     */
+    private function recordDebugSegment(array $run, array $days, array $home): void
+    {
+        if ($this->debugContext === null || !$this->debugContext->isEnabled() || $run === []) {
+            return;
+        }
+
+        $startKey = $run[0] ?? null;
+        $endKey   = $run[count($run) - 1] ?? null;
+
+        if ($startKey === null || $endKey === null) {
+            return;
+        }
+
+        $startSummary = $days[$startKey] ?? null;
+        $endSummary   = $days[$endKey] ?? null;
+
+        $startDate = is_string($startSummary['date'] ?? null) ? $startSummary['date'] : (string) $startKey;
+        $endDate   = is_string($endSummary['date'] ?? null) ? $endSummary['date'] : (string) $endKey;
+
+        $members  = 0;
+        $awayDays = 0;
+
+        foreach ($run as $dayKey) {
+            $summary = $days[$dayKey] ?? null;
+            if ($summary === null) {
+                continue;
+            }
+
+            $members += count($summary['members'] ?? []);
+            if (!empty($summary['baseAway'])) {
+                ++$awayDays;
+            }
+        }
+
+        $centers        = HomeBoundaryHelper::centers($home);
+        $centerCount    = count($centers);
+        $primary        = $centers[0] ?? ['radius_km' => $home['radius_km'] ?? 0.0, 'member_count' => 0];
+        $radius         = (float) ($primary['radius_km'] ?? 0.0);
+        $primaryMembers = (int) ($primary['member_count'] ?? 0);
+
+        $area    = $radius > 0.0 ? pi() * $radius * $radius : 0.0;
+        $density = $area > 0.0 ? $primaryMembers / $area : 0.0;
+
+        $this->debugContext->recordSegment([
+            'start_date'   => $startDate,
+            'end_date'     => $endDate,
+            'away_days'    => $awayDays,
+            'members'      => $members,
+            'center_count' => $centerCount,
+            'radius_km'    => $radius,
+            'density'      => $density,
+        ]);
     }
 
     private function normalizeTravel(float $travelKm): float

@@ -23,6 +23,7 @@ final readonly class ClusterJobOptions
         private ?int $limit,
         private ?DateTimeImmutable $since,
         private bool $replace,
+        private bool $vacationDebug = false,
     ) {
     }
 
@@ -44,5 +45,10 @@ final readonly class ClusterJobOptions
     public function shouldReplace(): bool
     {
         return $this->replace;
+    }
+
+    public function isVacationDebugEnabled(): bool
+    {
+        return $this->vacationDebug;
     }
 }
