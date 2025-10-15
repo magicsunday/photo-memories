@@ -18,6 +18,11 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
+use function array_filter;
+use function array_key_last;
+use function array_values;
+use function str_starts_with;
+
 final class SeasonOverYearsClusterStrategyTest extends TestCase
 {
     #[Test]
@@ -113,6 +118,45 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         $featureClusters = $this->normaliseClusters($strategy->cluster($items));
 
         self::assertSame($fallbackClusters, $featureClusters);
+    }
+
+    #[Test]
+    public function clusterWithProgressEmitsGroupingUpdates(): void
+    {
+        $strategy = new SeasonOverYearsClusterStrategy(
+            locationHelper: LocationHelper::createDefault(),
+            minYears: 3,
+            minItemsPerSeason: 6,
+        );
+
+        $items = [
+            $this->createMedia(501, '2019-07-02 09:00:00'),
+            $this->createMedia(502, '2019-07-04 10:00:00'),
+            $this->createMedia(503, '2020-08-06 11:00:00'),
+            $this->createMedia(504, '2020-08-08 12:00:00'),
+            $this->createMedia(505, '2021-06-10 13:00:00'),
+            $this->createMedia(506, '2021-06-12 14:00:00'),
+        ];
+
+        $updates = [];
+        $strategy->clusterWithProgress($items, static function (int $done, int $max, string $stage) use (&$updates): void {
+            $updates[] = ['done' => $done, 'max' => $max, 'stage' => $stage];
+        });
+
+        self::assertNotEmpty($updates);
+
+        $groupingUpdates = array_values(array_filter(
+            $updates,
+            static fn (array $update): bool => str_starts_with($update['stage'], 'Gruppiere'),
+        ));
+
+        self::assertNotEmpty($groupingUpdates);
+        self::assertGreaterThan(0, $groupingUpdates[0]['done']);
+        self::assertGreaterThan($groupingUpdates[0]['done'], $groupingUpdates[0]['max']);
+
+        $finalUpdate = $updates[array_key_last($updates)];
+        self::assertTrue(str_starts_with($finalUpdate['stage'], 'Abgeschlossen'));
+        self::assertSame($finalUpdate['max'], $finalUpdate['done']);
     }
 
     private function createMedia(int $id, string $takenAt): Media

@@ -27,7 +27,10 @@ use function array_keys;
 use function array_values;
 use function assert;
 use function count;
+use function intdiv;
+use function max;
 use function mb_strtolower;
+use function sprintf;
 use function usort;
 
 /**
@@ -40,6 +43,8 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
     use ProgressAwareClusterTrait;
+
+    private const PROGRESS_SEGMENTS = 25;
 
     private LocationHelper $locationHelper;
 
@@ -76,21 +81,156 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
      */
     public function cluster(array $items): array
     {
-        /** @var list<Media> $timestamped */
-        $timestamped = $this->filterTimestampedItems($items);
+        return $this->clusterInternal($items, null);
+    }
 
-        /** @var array<string, list<Media>> $groups */
-        $groups = [];
+    private function resolveSeason(Media $media): string
+    {
+        $takenAt = $media->getTakenAt();
+        assert($takenAt instanceof DateTimeImmutable);
 
-        foreach ($timestamped as $m) {
-            $season = $this->resolveSeason($m);
+        $month            = (int) $takenAt->format('n');
+        $calendarFeatures = CalendarFeatureHelper::extract($media);
+        $seasonLabel      = $this->normaliseSeason($calendarFeatures['season']);
 
-            $groups[$season] ??= [];
-            $groups[$season][] = $m;
+        if ($seasonLabel !== null) {
+            return $seasonLabel;
         }
 
-        $eligibleSeasons = $this->filterGroupsByMinItems($groups, $this->minItemsPerSeason);
+        return match (true) {
+            $month >= 3 && $month <= 5  => 'Frühling',
+            $month >= 6 && $month <= 8  => 'Sommer',
+            $month >= 9 && $month <= 11 => 'Herbst',
+            default                     => 'Winter',
+        };
+    }
 
+    private function normaliseSeason(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = mb_strtolower($value);
+
+        return match ($normalized) {
+            'winter' => 'Winter',
+            'spring', 'frühling' => 'Frühling',
+            'summer', 'sommer' => 'Sommer',
+            'autumn', 'fall', 'herbst' => 'Herbst',
+            default => null,
+        };
+    }
+    /**
+     * @param list<Media>                                 $items
+     * @param callable(int $done, int $max, string $stage):void $update
+     *
+     * @return list<ClusterDraft>
+     */
+    public function clusterWithProgress(array $items, callable $update): array
+    {
+        return $this->clusterInternal($items, $update);
+    }
+
+    /**
+     * @param list<Media> $items
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     *
+     * @return list<ClusterDraft>
+     */
+    private function clusterInternal(array $items, ?callable $update): array
+    {
+        /** @var list<Media> $timestamped */
+        $timestamped = $this->filterTimestampedItems($items);
+        $timestampedCount = count($timestamped);
+        $maxSteps         = max(1, $timestampedCount);
+
+        $this->notifyProgress($update, 0, $maxSteps, sprintf('Filtern (%d)', $timestampedCount));
+
+        if ($timestamped === []) {
+            $this->notifyProgress($update, $maxSteps, $maxSteps, 'Scoring & Metadaten');
+            $this->notifyProgress($update, $maxSteps, $maxSteps, 'Abgeschlossen (0 Memories)');
+
+            return [];
+        }
+
+        [$eligibleSeasons, $processed] = $this->groupSeasons($timestamped, $update, $maxSteps);
+
+        if ($eligibleSeasons === []) {
+            $this->notifyProgress($update, $maxSteps, $maxSteps, 'Scoring & Metadaten');
+            $this->notifyProgress($update, $maxSteps, $maxSteps, 'Abgeschlossen (0 Memories)');
+
+            return [];
+        }
+
+        $this->notifyProgress(
+            $update,
+            max($processed, max(1, $maxSteps - 1)),
+            $maxSteps,
+            'Scoring & Metadaten',
+        );
+
+        $drafts = $this->buildClustersFromEligibleSeasons($eligibleSeasons);
+
+        $this->notifyProgress(
+            $update,
+            $maxSteps,
+            $maxSteps,
+            sprintf('Abgeschlossen (%d Memories)', count($drafts)),
+        );
+
+        return $drafts;
+    }
+
+    /**
+     * @param list<Media>                                 $timestamped
+     * @param callable(int $done, int $max, string $stage):void|null $update
+     *
+     * @return array{0: array<string, list<Media>>, 1: int}
+     */
+    private function groupSeasons(array $timestamped, ?callable $update, int $maxSteps): array
+    {
+        /** @var array<string, list<Media>> $groups */
+        $groups    = [];
+        $processed = 0;
+        $interval  = $this->progressInterval($maxSteps);
+
+        foreach ($timestamped as $media) {
+            $season = $this->resolveSeason($media);
+
+            $groups[$season] ??= [];
+            $groups[$season][] = $media;
+
+            ++$processed;
+
+            if ($update !== null && ($processed % $interval === 0 || $processed === $maxSteps)) {
+                $this->notifyProgress(
+                    $update,
+                    $processed,
+                    $maxSteps,
+                    sprintf('Gruppiere (%d/%d)', $processed, $maxSteps),
+                );
+            }
+        }
+
+        /** @var array<string, list<Media>> $eligible */
+        $eligible = $this->filterGroupsByMinItems($groups, $this->minItemsPerSeason);
+
+        return [$eligible, $processed];
+    }
+
+    private function progressInterval(int $maxSteps): int
+    {
+        return max(1, intdiv($maxSteps + self::PROGRESS_SEGMENTS - 1, self::PROGRESS_SEGMENTS));
+    }
+
+    /**
+     * @param array<string, list<Media>> $eligibleSeasons
+     *
+     * @return list<ClusterDraft>
+     */
+    private function buildClustersFromEligibleSeasons(array $eligibleSeasons): array
+    {
         /** @var list<ClusterDraft> $out */
         $out = [];
 
@@ -141,54 +281,6 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         }
 
         return $out;
-    }
-
-    private function resolveSeason(Media $media): string
-    {
-        $takenAt = $media->getTakenAt();
-        assert($takenAt instanceof DateTimeImmutable);
-
-        $month            = (int) $takenAt->format('n');
-        $calendarFeatures = CalendarFeatureHelper::extract($media);
-        $seasonLabel      = $this->normaliseSeason($calendarFeatures['season']);
-
-        if ($seasonLabel !== null) {
-            return $seasonLabel;
-        }
-
-        return match (true) {
-            $month >= 3 && $month <= 5  => 'Frühling',
-            $month >= 6 && $month <= 8  => 'Sommer',
-            $month >= 9 && $month <= 11 => 'Herbst',
-            default                     => 'Winter',
-        };
-    }
-
-    private function normaliseSeason(?string $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $normalized = mb_strtolower($value);
-
-        return match ($normalized) {
-            'winter' => 'Winter',
-            'spring', 'frühling' => 'Frühling',
-            'summer', 'sommer' => 'Sommer',
-            'autumn', 'fall', 'herbst' => 'Herbst',
-            default => null,
-        };
-    }
-    /**
-     * @param list<Media>                                 $items
-     * @param callable(int $done, int $max, string $stage):void $update
-     *
-     * @return list<ClusterDraft>
-     */
-    public function clusterWithProgress(array $items, callable $update): array
-    {
-        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
     }
 
 }
