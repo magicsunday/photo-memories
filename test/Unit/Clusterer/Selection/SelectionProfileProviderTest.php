@@ -44,8 +44,35 @@ final class SelectionProfileProviderTest extends TestCase
 
         $options = $provider->createOptions('vacation_weekend_transit');
 
-        self::assertSame(0.12, $options->faceBonus);
-        self::assertSame(0.22, $options->videoBonus);
+        self::assertSame(0.10, $options->faceBonus);
+        self::assertSame(0.25, $options->videoBonus);
         self::assertFalse($options->faceDetectionAvailable);
+    }
+
+    public function testItUsesAdjustedRatiosWhenFaceDetectionIsUnavailable(): void
+    {
+        $availability = new FaceDetectionAvailability();
+        $availability->markUnavailable();
+
+        $defaultOptions = new VacationSelectionOptions();
+        $profiles       = [
+            'vacation_weekend_transit' => [
+                'face_bonus' => 0.05,
+                'video_bonus' => 0.18,
+            ],
+        ];
+
+        $provider = new SelectionProfileProvider(
+            $defaultOptions,
+            'default',
+            $profiles,
+            [],
+            $availability,
+        );
+
+        $options = $provider->createOptions('vacation_weekend_transit');
+
+        self::assertSame(0.10, $options->faceBonus);
+        self::assertSame(0.25, $options->videoBonus);
     }
 }
