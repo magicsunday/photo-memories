@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function array_filter;
 use function array_fill;
 use function array_map;
 use function array_values;
+use function max;
 use function count;
 
 use const ARRAY_FILTER_USE_BOTH;
@@ -41,6 +43,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         private readonly float $mergeThreshold,
         private readonly float $dropThreshold,
         array $keepOrder,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         if ($this->mergeThreshold <= 0.0 || $this->mergeThreshold > 1.0) {
             throw new InvalidArgumentException('mergeThreshold must be between 0 and 1.');
@@ -68,11 +71,27 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
      */
     public function process(array $drafts, ?callable $progress = null): array
     {
-        $total = count($drafts);
+        $total              = count($drafts);
+        $resolvedDrops      = 0;
+
+        $this->emitMonitoring('selection_start', [
+            'pre_count'       => $total,
+            'merge_threshold' => $this->mergeThreshold,
+            'drop_threshold'  => $this->dropThreshold,
+            'order_count'     => count($this->priorityMap),
+        ]);
+
         if ($total <= 1) {
             if ($progress !== null) {
                 $progress($total, $total);
             }
+
+            $this->emitMonitoring('selection_completed', [
+                'pre_count'        => $total,
+                'post_count'       => $total,
+                'dropped_count'    => 0,
+                'resolved_drops'   => 0,
+            ]);
 
             return $drafts;
         }
@@ -129,9 +148,15 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
                 );
 
                 if ($preferLeft) {
-                    $keep[$j] = false;
+                    if ($keep[$j]) {
+                        $keep[$j] = false;
+                        ++$resolvedDrops;
+                    }
                 } else {
-                    $keep[$i] = false;
+                    if ($keep[$i]) {
+                        $keep[$i] = false;
+                        ++$resolvedDrops;
+                    }
                     break;
                 }
             }
@@ -152,6 +177,27 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             ARRAY_FILTER_USE_BOTH,
         ));
 
+        $postCount = count($result);
+
+        $this->emitMonitoring('selection_completed', [
+            'pre_count'       => $total,
+            'post_count'      => $postCount,
+            'dropped_count'   => max(0, $total - $postCount),
+            'resolved_drops'  => $resolvedDrops,
+        ]);
+
         return $result;
+    }
+
+    /**
+     * @param array<string, int|float> $payload
+     */
+    private function emitMonitoring(string $event, array $payload): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('overlap_resolver', $event, $payload);
     }
 }

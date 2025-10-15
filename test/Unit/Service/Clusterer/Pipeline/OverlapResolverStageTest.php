@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -80,6 +81,39 @@ final class OverlapResolverStageTest extends TestCase
             $vacation,
             $chapter,
         ], $result);
+    }
+
+    #[Test]
+    public function emitsTelemetryForOverlapResolution(): void
+    {
+        $emitter = new RecordingMonitoringEmitter();
+        $stage   = new OverlapResolverStage(0.5, 0.8, ['vacation', 'hike_adventure'], $emitter);
+
+        $vacation = $this->createDraft('vacation', [1, 2, 3, 4], 0.92, 'vacation');
+        $dayTrip  = $this->createDraft('vacation', [1, 2, 3], 0.6, 'day_trip');
+        $hike     = $this->createDraft('hike_adventure', [5, 6, 7], 0.7, null);
+        $city     = $this->createDraft('significant_place', [8, 9], 0.5, null);
+
+        $stage->process([
+            $vacation,
+            $dayTrip,
+            $hike,
+            $city,
+        ]);
+
+        self::assertCount(2, $emitter->events);
+        $start = $emitter->events[0];
+        self::assertSame('overlap_resolver', $start['job']);
+        self::assertSame('selection_start', $start['status']);
+        self::assertSame(4, $start['context']['pre_count']);
+
+        $completed = $emitter->events[1];
+        self::assertSame('overlap_resolver', $completed['job']);
+        self::assertSame('selection_completed', $completed['status']);
+        self::assertSame(4, $completed['context']['pre_count']);
+        self::assertSame(3, $completed['context']['post_count']);
+        self::assertSame(1, $completed['context']['dropped_count']);
+        self::assertSame(1, $completed['context']['resolved_drops']);
     }
 
     /**
