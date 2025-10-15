@@ -88,7 +88,7 @@ final class GpsMetricsStageTest extends TestCase
 
         $items = [];
         $start = new DateTimeImmutable('2024-05-01 07:00:00', new DateTimeZone('Europe/Berlin'));
-        for ($i = 0; $i < 3; ++$i) {
+        for ($i = 0; $i < 2; ++$i) {
             $items[] = $this->makeMediaFixture(
                 200 + $i,
                 sprintf('insufficient-%d.jpg', $i),
@@ -99,8 +99,10 @@ final class GpsMetricsStageTest extends TestCase
         }
 
         $initial = $initialStage->process($items, $home);
-        $result  = $gpsStage->process($initial, $home);
+        self::assertSame(2, $initial['2024-05-01']['photoCount']);
 
+        $result = $gpsStage->process($initial, $home);
+        self::assertSame(2, $result['2024-05-01']['photoCount']);
         self::assertFalse($result['2024-05-01']['sufficientSamples']);
     }
 }

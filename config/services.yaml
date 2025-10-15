@@ -779,7 +779,7 @@ services:
         arguments:
             $gpsOutlierRadiusKm: 1.0
             $gpsOutlierMinSamples: 3
-            $minItemsPerDay: 4
+            $minItemsPerDay: '%memories.cluster.vacation.min_items_per_day%'
         tags:
             - { name: 'memories.day_summary_stage', priority: 300 }
 
