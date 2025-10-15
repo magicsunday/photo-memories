@@ -1409,6 +1409,75 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function runMetricsIncludePositivePhashAverageWhenDistancesProvided(): void
+    {
+        $locationHelper   = LocationHelper::createDefault();
+        $emitter          = new RecordingMonitoringEmitter();
+        $selectionOptions = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2);
+        $referenceDate    = new DateTimeImmutable('2024-09-15 00:00:00', new DateTimeZone('Europe/Berlin'));
+
+        $calculator = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: $selectionOptions,
+            telemetryOverrides: [
+                'metrics' => [
+                    'phash_distances' => [8, 12, 16],
+                ],
+            ],
+            emitter: $emitter,
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            minAwayDays: 1,
+            referenceDate: $referenceDate,
+        );
+
+        $dayDate = new DateTimeImmutable('2024-09-05 10:00:00');
+        $members = $this->makeMembersForDay(55, $dayDate, 2);
+        $dayKey  = $dayDate->format('Y-m-d');
+
+        $days = [
+            $dayKey => $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 6,
+                poiSamples: 8,
+                travelKm: 80.0,
+                timezoneOffset: 0,
+                hasAirport: false,
+                spotCount: 1,
+                spotDwellSeconds: 3600,
+            ),
+        ];
+
+        $home = [
+            'lat'             => 48.2082,
+            'lon'             => 16.3738,
+            'radius_km'       => 12.0,
+            'country'         => 'at',
+            'timezone_offset' => 60,
+        ];
+
+        $draft = $calculator->buildDraft([$dayKey], $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params     = $draft->getParams();
+        $selection  = $params['member_selection'];
+        $runMetrics = $selection['run_metrics'];
+
+        self::assertGreaterThan(0.0, $runMetrics['phash_distribution']['average']);
+
+        self::assertCount(3, $emitter->events);
+        $metricsEvent = $emitter->events[1];
+        self::assertSame('cluster.vacation', $metricsEvent['job']);
+        self::assertSame('run_metrics', $metricsEvent['status']);
+        self::assertGreaterThan(0.0, $metricsEvent['context']['phash_avg_distance']);
+        self::assertSame(3, $metricsEvent['context']['phash_sample_count']);
+    }
+
+    #[Test]
     public function buildDraftInterleavesMembersAcrossDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
