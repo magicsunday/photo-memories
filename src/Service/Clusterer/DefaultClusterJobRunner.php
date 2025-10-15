@@ -26,6 +26,9 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
+use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummary;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use Throwable;
 
 use function count;
@@ -43,6 +46,8 @@ use function sprintf;
  */
 final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterface
 {
+    private const TOP_CLUSTER_SUMMARY_LIMIT = 5;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private HybridClustererInterface $clusterer,
@@ -77,7 +82,16 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         if ($total === 0) {
-            return new ClusterJobResult(0, 0, 0, 0, 0, 0, $options->isDryRun());
+            return new ClusterJobResult(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                $options->isDryRun(),
+                ClusterJobTelemetry::fromStageCounts(0, 0),
+            );
         }
 
         /** @var list<Media> $items */
@@ -94,7 +108,16 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $loadedCount = count($items);
         if ($loadedCount === 0) {
-            return new ClusterJobResult($total, 0, 0, 0, 0, 0, $options->isDryRun());
+            return new ClusterJobResult(
+                $total,
+                0,
+                0,
+                0,
+                0,
+                0,
+                $options->isDryRun(),
+                ClusterJobTelemetry::fromStageCounts(0, 0),
+            );
         }
 
         $outdatedMedia = [];
@@ -117,7 +140,16 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $warningHandle->finish();
 
             if ($options->shouldReplace()) {
-                return new ClusterJobResult($total, $loadedCount, 0, 0, 0, 0, $options->isDryRun());
+                return new ClusterJobResult(
+                    $total,
+                    $loadedCount,
+                    0,
+                    0,
+                    0,
+                    0,
+                    $options->isDryRun(),
+                    ClusterJobTelemetry::fromStageCounts(0, 0),
+                );
             }
         }
 
@@ -189,7 +221,16 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
             }
 
-            return new ClusterJobResult($total, $loadedCount, 0, 0, 0, $deleted, $options->isDryRun());
+            return new ClusterJobResult(
+                $total,
+                $loadedCount,
+                0,
+                0,
+                0,
+                $deleted,
+                $options->isDryRun(),
+                ClusterJobTelemetry::fromStageCounts(0, 0),
+            );
         }
 
         $consolidateHandle = $progressReporter->create('Konsolidieren', '🧹 Konsolidieren', $draftCount);
@@ -228,8 +269,19 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
             }
 
-            return new ClusterJobResult($total, $loadedCount, $draftCount, 0, 0, $deleted, $options->isDryRun());
+            return new ClusterJobResult(
+                $total,
+                $loadedCount,
+                $draftCount,
+                0,
+                0,
+                $deleted,
+                $options->isDryRun(),
+                ClusterJobTelemetry::fromStageCounts($draftCount, 0),
+            );
         }
+
+        $telemetry = $this->createTelemetry($draftCount, $consolidatedCount, $drafts);
 
         $persistHandle = $progressReporter->create(
             $options->isDryRun() ? 'Persistieren (Trockenlauf)' : 'Persistieren',
@@ -287,7 +339,89 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $persisted,
             $deleted,
             $options->isDryRun(),
+            $telemetry,
         );
+    }
+
+    private function createTelemetry(int $draftCount, int $consolidatedCount, array $consolidatedDrafts): ClusterJobTelemetry
+    {
+        return ClusterJobTelemetry::fromStageCounts(
+            $draftCount,
+            $consolidatedCount,
+            $this->createTopClusterSummaries($consolidatedDrafts, self::TOP_CLUSTER_SUMMARY_LIMIT),
+        );
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<ClusterSummary>
+     */
+    private function createTopClusterSummaries(array $drafts, int $limit): array
+    {
+        if ($drafts === [] || $limit <= 0) {
+            return [];
+        }
+
+        $sortedDrafts = $drafts;
+        usort(
+            $sortedDrafts,
+            static function (ClusterDraft $left, ClusterDraft $right): int {
+                $leftParams  = $left->getParams();
+                $rightParams = $right->getParams();
+
+                $leftScore  = is_numeric($leftParams['score'] ?? null) ? (float) $leftParams['score'] : 0.0;
+                $rightScore = is_numeric($rightParams['score'] ?? null) ? (float) $rightParams['score'] : 0.0;
+
+                return $rightScore <=> $leftScore;
+            }
+        );
+
+        $topDrafts = array_slice($sortedDrafts, 0, $limit);
+
+        $summaries = [];
+        foreach ($topDrafts as $draft) {
+            $summaries[] = $this->createClusterSummary($draft);
+        }
+
+        return $summaries;
+    }
+
+    private function createClusterSummary(ClusterDraft $draft): ClusterSummary
+    {
+        $params = $draft->getParams();
+
+        $score = null;
+        if (is_numeric($params['score'] ?? null)) {
+            $score = (float) $params['score'];
+        }
+
+        $timeRange = null;
+        $timeRangeParams = $params['time_range'] ?? null;
+        if (
+            is_array($timeRangeParams)
+            && isset($timeRangeParams['from'], $timeRangeParams['to'])
+            && is_numeric($timeRangeParams['from'])
+            && is_numeric($timeRangeParams['to'])
+        ) {
+            $timeRange = new ClusterSummaryTimeRange(
+                $this->createUtcDateTime((int) $timeRangeParams['from']),
+                $this->createUtcDateTime((int) $timeRangeParams['to']),
+            );
+        }
+
+        return new ClusterSummary(
+            $draft->getAlgorithm(),
+            $draft->getStoryline(),
+            $draft->getMembersCount(),
+            $score,
+            $timeRange,
+        );
+    }
+
+    private function createUtcDateTime(int $timestamp): DateTimeImmutable
+    {
+        return (new DateTimeImmutable('@' . $timestamp))->setTimezone(new DateTimeZone('UTC'));
     }
 
     /**
@@ -344,47 +478,23 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             return;
         }
 
-        $sortedDrafts = $drafts;
-        usort(
-            $sortedDrafts,
-            static function (ClusterDraft $left, ClusterDraft $right): int {
-                $leftParams  = $left->getParams();
-                $rightParams = $right->getParams();
-
-                $leftScore  = is_numeric($leftParams['score'] ?? null) ? (float) $leftParams['score'] : 0.0;
-                $rightScore = is_numeric($rightParams['score'] ?? null) ? (float) $rightParams['score'] : 0.0;
-
-                return $rightScore <=> $leftScore;
-            }
-        );
-
-        $topDrafts = array_slice($sortedDrafts, 0, 5);
         $clusterRows = [];
-
-        foreach ($topDrafts as $draft) {
-            $params = $draft->getParams();
-
-            $score = '–';
-            if (is_numeric($params['score'] ?? null)) {
-                $score = sprintf('%.2f', (float) $params['score']);
-            }
-
-            $timeRange = $params['time_range'] ?? null;
-            $range     = '–';
-            if (
-                is_array($timeRange)
-                && isset($timeRange['from'], $timeRange['to'])
-                && is_numeric($timeRange['from'])
-                && is_numeric($timeRange['to'])
-            ) {
-                $range = $this->formatTimeRange((int) $timeRange['from'], (int) $timeRange['to']);
+        foreach ($this->createTopClusterSummaries($drafts, self::TOP_CLUSTER_SUMMARY_LIMIT) as $summary) {
+            $score = $summary->getScore();
+            $range = '–';
+            $timeRange = $summary->getTimeRange();
+            if ($timeRange instanceof ClusterSummaryTimeRange) {
+                $range = $this->formatTimeRange(
+                    $timeRange->getFrom()->getTimestamp(),
+                    $timeRange->getTo()->getTimestamp(),
+                );
             }
 
             $clusterRows[] = [
-                $draft->getAlgorithm(),
-                $draft->getStoryline(),
-                (string) $draft->getMembersCount(),
-                $score,
+                $summary->getAlgorithm(),
+                $summary->getStoryline(),
+                (string) $summary->getMemberCount(),
+                $score !== null ? sprintf('%.2f', $score) : '–',
                 $range,
             ];
         }
