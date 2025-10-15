@@ -56,27 +56,136 @@ final class DominanceSelectionStageTest extends TestCase
             overlapDropThreshold: 0.9,
             keepOrder: ['vacation'],
             classificationPriority: [
-                'vacation' => ['vacation', 'short_trip', 'day_trip'],
+                'vacation' => [
+                    'vacation',
+                    'weekend_getaway',
+                    'short_trip',
+                    'day_trip',
+                    'weekend_over_years',
+                    'transit',
+                    'location',
+                    'device',
+                ],
             ],
         );
 
-        $vacation    = $this->createDraft('vacation', 0.8, [1, 2], 'vacation');
-        $shortTrip   = $this->createDraft('vacation', 0.8, [10, 11, 12, 13], 'short_trip');
-        $dayTrip     = $this->createDraft('vacation', 0.8, [20, 21, 22, 23, 24], 'day_trip');
-        $unclassified = $this->createDraft('vacation', 0.8, [30, 31, 32]);
+        $vacation         = $this->createDraft('vacation', 0.8, [1, 2], 'vacation');
+        $weekendGetaway   = $this->createDraft('vacation', 0.8, [5, 6, 7], 'weekend_getaway');
+        $shortTrip        = $this->createDraft('vacation', 0.8, [10, 11, 12, 13], 'short_trip');
+        $dayTrip          = $this->createDraft('vacation', 0.8, [20, 21, 22, 23, 24], 'day_trip');
+        $weekendOverYears = $this->createDraft('vacation', 0.8, [25, 26, 27, 28], 'weekend_over_years');
+        $unclassified     = $this->createDraft('vacation', 0.8, [30, 31, 32]);
 
         $result = $stage->process([
+            $weekendOverYears,
             $shortTrip,
             $vacation,
             $dayTrip,
             $unclassified,
+            $weekendGetaway,
         ]);
 
         self::assertSame([
             $vacation,
+            $weekendGetaway,
             $shortTrip,
             $dayTrip,
+            $weekendOverYears,
             $unclassified,
+        ], $result);
+    }
+
+    #[Test]
+    public function respectsConfiguredHierarchyAcrossAlgorithms(): void
+    {
+        $keepOrder = [
+            'vacation',
+            'weekend_getaways_over_years',
+            'transit_travel_day',
+            'significant_place',
+            'first_visit_place',
+            'location_similarity',
+            'hike_adventure',
+            'snow_vacation_over_years',
+            'season',
+            'season_over_years',
+            'snow_day',
+            'golden_hour',
+            'holiday_event',
+            'new_year_eve',
+            'nightlife_event',
+            'cityscape_night',
+            'anniversary',
+            'people_cohort',
+            'person_cohort',
+            'year_in_review',
+            'monthly_highlights',
+            'this_month_over_years',
+            'on_this_day_over_years',
+            'one_year_ago',
+            'day_album',
+            'time_similarity',
+            'at_home_weekend',
+            'at_home_weekday',
+            'photo_motif',
+            'panorama',
+            'panorama_over_years',
+            'portrait_orientation',
+            'video_stories',
+            'cross_dimension',
+            'device_similarity',
+            'phash_similarity',
+            'burst',
+        ];
+
+        $stage = new DominanceSelectionStage(
+            overlapMergeThreshold: 0.5,
+            overlapDropThreshold: 0.9,
+            keepOrder: $keepOrder,
+            classificationPriority: [
+                'vacation' => [
+                    'vacation',
+                    'weekend_getaway',
+                    'short_trip',
+                    'day_trip',
+                    'weekend_over_years',
+                    'transit',
+                    'location',
+                    'device',
+                ],
+                'device_similarity' => ['device', 'phash_similarity'],
+            ],
+        );
+
+        $device   = $this->createDraft('device_similarity', 0.95, [70, 71]);
+        $vacation = $this->createDraft('vacation', 0.6, [10, 11], 'vacation');
+        $monthly  = $this->createDraft('monthly_highlights', 0.8, [30, 31]);
+        $hike     = $this->createDraft('hike_adventure', 0.7, [20, 21]);
+        $person   = $this->createDraft('person_cohort', 0.9, [40, 41]);
+        $home     = $this->createDraft('at_home_weekday', 0.85, [50, 51]);
+        $panorama = $this->createDraft('panorama', 0.65, [60, 61]);
+        $cross    = $this->createDraft('cross_dimension', 0.5, [80, 81]);
+
+        $result = $stage->process([
+            $device,
+            $monthly,
+            $vacation,
+            $hike,
+            $person,
+            $home,
+            $panorama,
+            $cross,
+        ]);
+
+        self::assertSame([
+            $vacation,
+            $hike,
+            $person,
+            $monthly,
+            $home,
+            $panorama,
+            $cross,
+            $device,
         ], $result);
     }
 
