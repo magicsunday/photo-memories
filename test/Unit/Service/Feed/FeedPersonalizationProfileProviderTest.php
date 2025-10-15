@@ -24,7 +24,7 @@ final class FeedPersonalizationProfileProviderTest extends TestCase
         $provider = new FeedPersonalizationProfileProvider([
             'default' => [
                 'min_score'            => 0.3,
-                'min_members'          => 2,
+                'min_members'          => 3,
                 'max_per_day'          => 5,
                 'max_total'            => 40,
                 'max_per_algorithm'    => 8,
@@ -37,7 +37,7 @@ final class FeedPersonalizationProfileProviderTest extends TestCase
             ],
             'familie' => [
                 'min_score'            => 0.25,
-                'min_members'          => 1,
+                'min_members'          => 2,
                 'max_per_day'          => 6,
                 'max_total'            => 48,
                 'max_per_algorithm'    => 10,
@@ -67,7 +67,7 @@ final class FeedPersonalizationProfileProviderTest extends TestCase
         new FeedPersonalizationProfileProvider([
             'familie' => [
                 'min_score'            => 0.25,
-                'min_members'          => 1,
+                'min_members'          => 2,
                 'max_per_day'          => 6,
                 'max_total'            => 48,
                 'max_per_algorithm'    => 10,

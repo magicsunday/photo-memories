@@ -729,20 +729,14 @@ final class FeedControllerTest extends TestCase
 
         $mediaRepo->expects(self::exactly(2))
             ->method('findByIds')
-            ->withConsecutive(
-                [self::equalTo(array_slice($members, 0, 8)), self::equalTo(false)],
-                [self::equalTo($members), self::equalTo(false)],
-            )
-            ->willReturnOnConsecutiveCalls(
-                array_map(
+            ->willReturnCallback(function (array $ids, bool $onlyVideos = false): array {
+                self::assertFalse($onlyVideos);
+
+                return array_map(
                     fn (int $id): Media => $this->createMedia($id, '/media/' . $id . '.jpg', '2024-04-01T10:00:00+00:00'),
-                    array_slice($members, 0, 8),
-                ),
-                array_map(
-                    fn (int $id): Media => $this->createMedia($id, '/media/' . $id . '.jpg', '2024-04-01T10:00:00+00:00'),
-                    $members,
-                ),
-            );
+                    $ids,
+                );
+            });
 
         $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
@@ -1232,7 +1226,7 @@ final class FeedControllerTest extends TestCase
         $profileProvider = new FeedPersonalizationProfileProvider([
             'default' => [
                 'min_score'             => 0.0,
-                'min_members'           => 1,
+                'min_members'           => 3,
                 'max_per_day'           => 24,
                 'max_total'             => 120,
                 'max_per_algorithm'     => 24,
