@@ -24,6 +24,7 @@ use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
+use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
@@ -209,6 +210,179 @@ final class DefaultClusterJobRunnerTest extends TestCase
         self::assertSame(1, $clusterCount, 'Original clusters should be restored after rollback.');
         $algorithm = $connection->fetchOne('SELECT algorithm FROM cluster LIMIT 1');
         self::assertSame('legacy', $algorithm);
+    }
+
+    #[Test]
+    public function itProvidesTelemetryAfterSuccessfulConsolidation(): void
+    {
+        $entityManager = $this->createSqliteEntityManager();
+        $this->createClusterSchema($entityManager);
+
+        $start = new DateTimeImmutable('2024-03-01T08:00:00+00:00');
+        $end   = new DateTimeImmutable('2024-03-02T18:30:00+00:00');
+
+        $mediaOne = new Media('/telemetry-one.jpg', str_pad('11', 64, '1', STR_PAD_RIGHT), 2048);
+        $mediaOne->setTakenAt($start);
+        $mediaOne->setCapturedLocal($start);
+        $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaOne->setMime('image/jpeg');
+        $mediaOne->setIsVideo(false);
+
+        $mediaTwo = new Media('/telemetry-two.jpg', str_pad('22', 64, '2', STR_PAD_RIGHT), 2048);
+        $mediaTwo->setTakenAt($end);
+        $mediaTwo->setCapturedLocal($end);
+        $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaTwo->setMime('image/jpeg');
+        $mediaTwo->setIsVideo(false);
+
+        $entityManager->persist($mediaOne);
+        $entityManager->persist($mediaTwo);
+        $entityManager->flush();
+
+        $clusterer = new SequenceHybridClusterer([
+            new ClusterDraft(
+                'algo-telemetry',
+                [
+                    'score' => 0.95,
+                    'time_range' => [
+                        'from' => $start->getTimestamp(),
+                        'to' => $end->getTimestamp(),
+                    ],
+                ],
+                ['lat' => 10.0, 'lon' => 20.0],
+                [$mediaOne->getId(), $mediaTwo->getId()],
+                'sunny-days',
+            ),
+        ]);
+
+        $consolidator = new PassthroughClusterConsolidator();
+
+        $memberLookup = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberSelect = new IdentityClusterMemberSelectionService();
+        $coverPicker  = new NullCoverPicker();
+
+        $persistence = new ClusterPersistenceService(
+            em: $entityManager,
+            mediaLookup: $memberLookup,
+            memberSelection: $memberSelect,
+            coverPicker: $coverPicker,
+            defaultBatchSize: 1,
+            maxMembers: 50,
+            fingerprintLookupBatchSize: 10,
+        );
+
+        $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
+        $options = new ClusterJobOptions(false, null, null, false);
+
+        $result = $runner->run($options, new NullProgressReporter());
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(1, $telemetry->getStageCount(ClusterJobTelemetry::STAGE_DRAFTS));
+        self::assertSame(1, $telemetry->getStageCount(ClusterJobTelemetry::STAGE_CONSOLIDATED));
+
+        $topClusters = $telemetry->getTopClusters();
+        self::assertCount(1, $topClusters);
+
+        $summary = $topClusters[0];
+        self::assertSame('algo-telemetry', $summary->getAlgorithm());
+        self::assertSame('sunny-days', $summary->getStoryline());
+        self::assertSame(2, $summary->getMemberCount());
+        self::assertSame(0.95, $summary->getScore());
+        self::assertNotNull($summary->getTimeRange());
+        self::assertSame($start->getTimestamp(), $summary->getTimeRange()?->getFrom()->getTimestamp());
+        self::assertSame($end->getTimestamp(), $summary->getTimeRange()?->getTo()->getTimestamp());
+    }
+
+    #[Test]
+    public function itReportsTelemetryDuringDryRun(): void
+    {
+        $entityManager = $this->createSqliteEntityManager();
+        $this->createClusterSchema($entityManager);
+
+        $first = new DateTimeImmutable('2024-04-05T06:00:00+00:00');
+        $second = new DateTimeImmutable('2024-04-06T06:00:00+00:00');
+
+        $mediaA = new Media('/dry-a.jpg', str_pad('33', 64, '3', STR_PAD_RIGHT), 1024);
+        $mediaA->setTakenAt($first);
+        $mediaA->setCapturedLocal($first);
+        $mediaA->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaA->setMime('image/jpeg');
+        $mediaA->setIsVideo(false);
+
+        $mediaB = new Media('/dry-b.jpg', str_pad('44', 64, '4', STR_PAD_RIGHT), 1024);
+        $mediaB->setTakenAt($second);
+        $mediaB->setCapturedLocal($second);
+        $mediaB->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+        $mediaB->setMime('image/jpeg');
+        $mediaB->setIsVideo(false);
+
+        $entityManager->persist($mediaA);
+        $entityManager->persist($mediaB);
+        $entityManager->flush();
+
+        $clusterer = new SequenceHybridClusterer([
+            new ClusterDraft(
+                'algo-high',
+                [
+                    'score' => 2.0,
+                    'time_range' => [
+                        'from' => $first->getTimestamp(),
+                        'to' => $first->getTimestamp(),
+                    ],
+                ],
+                ['lat' => 0.0, 'lon' => 0.0],
+                [$mediaA->getId()],
+                'top-story',
+            ),
+            new ClusterDraft(
+                'algo-low',
+                [
+                    'score' => 0.5,
+                    'time_range' => [
+                        'from' => $second->getTimestamp(),
+                        'to' => $second->getTimestamp(),
+                    ],
+                ],
+                ['lat' => 1.0, 'lon' => 1.0],
+                [$mediaB->getId()],
+                'backup-story',
+            ),
+        ]);
+
+        $consolidator = new PassthroughClusterConsolidator();
+        $memberLookup = new InMemoryMemberMediaLookup([$mediaA, $mediaB]);
+        $memberSelect = new IdentityClusterMemberSelectionService();
+        $coverPicker  = new NullCoverPicker();
+
+        $persistence = new ClusterPersistenceService(
+            em: $entityManager,
+            mediaLookup: $memberLookup,
+            memberSelection: $memberSelect,
+            coverPicker: $coverPicker,
+            defaultBatchSize: 10,
+            maxMembers: 50,
+            fingerprintLookupBatchSize: 10,
+        );
+
+        $runner  = new DefaultClusterJobRunner($entityManager, $clusterer, $consolidator, $persistence);
+        $options = new ClusterJobOptions(true, null, null, false);
+
+        $result = $runner->run($options, new NullProgressReporter());
+
+        self::assertTrue($result->isDryRun());
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(2, $telemetry->getStageCount(ClusterJobTelemetry::STAGE_DRAFTS));
+        self::assertSame(2, $telemetry->getStageCount(ClusterJobTelemetry::STAGE_CONSOLIDATED));
+
+        $topClusters = $telemetry->getTopClusters();
+        self::assertCount(2, $topClusters);
+        self::assertSame('algo-high', $topClusters[0]->getAlgorithm());
+        self::assertSame('top-story', $topClusters[0]->getStoryline());
+        self::assertSame(1, $topClusters[0]->getMemberCount());
+        self::assertSame(2.0, $topClusters[0]->getScore());
+        self::assertSame('algo-low', $topClusters[1]->getAlgorithm());
+        self::assertSame(0.5, $topClusters[1]->getScore());
     }
 
     private function createSqliteEntityManager(): EntityManagerInterface

@@ -12,12 +12,15 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
+use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -151,11 +154,70 @@ final class ClusterCommand extends Command
 
             $io->success(sprintf('%d Cluster gespeichert.', $result->getPersistedCount()));
 
+            $this->renderTelemetry($io, $result->getTelemetry());
+
             return Command::SUCCESS;
         } finally {
             if ($debugContextActive) {
                 $this->vacationDebugContext?->disable();
             }
         }
+    }
+
+    private function renderTelemetry(SymfonyStyle $io, ClusterJobTelemetry $telemetry): void
+    {
+        $stageCounts = $telemetry->getStageCounts();
+        $topClusters = $telemetry->getTopClusters();
+
+        if ($stageCounts === [] && $topClusters === []) {
+            return;
+        }
+
+        $io->section('📊 Telemetrie');
+
+        if ($stageCounts !== []) {
+            $io->table(
+                ['Phase', 'Anzahl'],
+                [
+                    ['Entwürfe', (string) ($stageCounts[ClusterJobTelemetry::STAGE_DRAFTS] ?? 0)],
+                    ['Konsolidiert', (string) ($stageCounts[ClusterJobTelemetry::STAGE_CONSOLIDATED] ?? 0)],
+                ],
+            );
+        }
+
+        if ($topClusters === []) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($topClusters as $summary) {
+            $score = $summary->getScore();
+            $timeRange = $summary->getTimeRange();
+
+            $rows[] = [
+                $summary->getAlgorithm(),
+                $summary->getStoryline(),
+                (string) $summary->getMemberCount(),
+                $score !== null ? sprintf('%.2f', $score) : '–',
+                $timeRange instanceof ClusterSummaryTimeRange
+                    ? $this->formatTelemetryRange($timeRange)
+                    : '–',
+            ];
+        }
+
+        $io->table(['Algorithmus', 'Storyline', 'Mitglieder', 'Score', 'Zeitraum'], $rows);
+    }
+
+    private function formatTelemetryRange(ClusterSummaryTimeRange $range): string
+    {
+        $timezone = new DateTimeZone('UTC');
+        $from     = $range->getFrom()->setTimezone($timezone)->format('Y-m-d');
+        $to       = $range->getTo()->setTimezone($timezone)->format('Y-m-d');
+
+        if ($from === $to) {
+            return $from;
+        }
+
+        return sprintf('%s → %s', $from, $to);
     }
 }

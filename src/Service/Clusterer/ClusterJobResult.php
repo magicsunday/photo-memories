@@ -16,6 +16,8 @@ namespace MagicSunday\Memories\Service\Clusterer;
  */
 final readonly class ClusterJobResult
 {
+    private ClusterJobTelemetry $telemetry;
+
     public function __construct(
         private int $totalMediaCount,
         private int $loadedMediaCount,
@@ -24,7 +26,9 @@ final readonly class ClusterJobResult
         private int $persistedCount,
         private int $deletedCount,
         private bool $dryRun,
+        ?ClusterJobTelemetry $telemetry = null,
     ) {
+        $this->telemetry = $telemetry ?? ClusterJobTelemetry::empty();
     }
 
     public function getTotalMediaCount(): int
@@ -60,5 +64,10 @@ final readonly class ClusterJobResult
     public function isDryRun(): bool
     {
         return $this->dryRun;
+    }
+
+    public function getTelemetry(): ClusterJobTelemetry
+    {
+        return $this->telemetry;
     }
 }

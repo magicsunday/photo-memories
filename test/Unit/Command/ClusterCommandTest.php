@@ -11,11 +11,15 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Command;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Command\ClusterCommand;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
+use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummary;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
@@ -67,7 +71,33 @@ final class ClusterCommandTest extends TestCase
                     return true;
                 }),
             )
-            ->willReturn(new ClusterJobResult(5, 4, 3, 2, 2, 0, true));
+            ->willReturn(
+                new ClusterJobResult(
+                    5,
+                    4,
+                    3,
+                    2,
+                    2,
+                    0,
+                    true,
+                    ClusterJobTelemetry::fromStageCounts(
+                        3,
+                        2,
+                        [
+                            new ClusterSummary(
+                                'algo-top',
+                                'storyline-top',
+                                4,
+                                1.23,
+                                new ClusterSummaryTimeRange(
+                                    new DateTimeImmutable('2024-05-17T00:00:00+00:00'),
+                                    new DateTimeImmutable('2024-05-18T00:00:00+00:00'),
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+            );
 
         $command = new ClusterCommand($runner, $this->createSelectionProfileProvider());
         $tester  = new CommandTester($command);
@@ -87,6 +117,13 @@ final class ClusterCommandTest extends TestCase
         self::assertStringContainsString('3 Cluster vorgeschlagen.', $display);
         self::assertStringContainsString('3 → 2 Cluster nach Konsolidierung.', $display);
         self::assertStringContainsString('2 Cluster gespeichert.', $display);
+        self::assertStringContainsString('📊 Telemetrie', $display);
+        self::assertStringContainsString('Entwürfe', $display);
+        self::assertStringContainsString('Konsolidiert', $display);
+        self::assertStringContainsString('algo-top', $display);
+        self::assertStringContainsString('storyline-top', $display);
+        self::assertStringContainsString('1.23', $display);
+        self::assertStringContainsString('2024-05-17 → 2024-05-18', $display);
     }
 
     #[Test]
@@ -106,7 +143,18 @@ final class ClusterCommandTest extends TestCase
                 }),
                 self::isInstanceOf(ConsoleProgressReporter::class),
             )
-            ->willReturn(new ClusterJobResult(1, 1, 1, 1, 1, 0, false));
+            ->willReturn(
+                new ClusterJobResult(
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    0,
+                    false,
+                    ClusterJobTelemetry::fromStageCounts(1, 1),
+                ),
+            );
 
         $command = new ClusterCommand($runner, $this->createSelectionProfileProvider(), $context);
         $tester  = new CommandTester($command);
