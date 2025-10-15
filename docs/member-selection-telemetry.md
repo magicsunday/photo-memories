@@ -37,7 +37,8 @@ policy-gesteuerten Selektors einen expliziten Zähler. Ein Beispiel:
     "day_categories": {"2024-06-10": "core", "2024-06-11": "peripheral"},
     "max_per_staypoint": 3,
     "phash_min_effective": 10,
-    "phash_percentile_25": 8,
+    "phash_percentile_ratio": 0.35,
+    "phash_percentile_threshold": 8,
     "phash_sample_count": 42,
     "spacing_relaxed_to_zero": false,
     "phash_relaxed_to_zero": false
