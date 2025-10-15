@@ -9,7 +9,7 @@ parameters:
     # Description: Minimum score threshold for including a cluster in the feed.
     memories.feed.min_score: 0.45
     # Description: Minimum number of members required for a cluster to appear in the feed.
-    memories.feed.min_members: 4
+    memories.feed.min_members: 3
     # Description: Maximum number of feed items delivered per day.
     memories.feed.max_per_day: 6
     # Description: Maximum total number of feed items returned across pagination.
@@ -46,7 +46,7 @@ parameters:
             stale_score_penalty: '%memories.feed.stale_score_penalty%'
         familienfreundlich:
             min_score: 0.32
-            min_members: 3
+            min_members: 2
             max_per_day: 8
             max_total: 80
             max_per_algorithm: 14
