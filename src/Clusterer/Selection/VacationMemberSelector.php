@@ -272,10 +272,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 'day_caps'                => [],
                 'day_categories'          => [],
                 'day_spacing_seconds'     => [],
-                'max_per_staypoint'       => $options->maxPerStaypoint,
-                'phash_min_effective'     => $options->phashMinHamming,
-                'phash_percentile_25'     => null,
-                'phash_sample_count'      => 0,
+                'max_per_staypoint'          => $options->maxPerStaypoint,
+                'phash_min_effective'        => $options->phashMinHamming,
+                'phash_percentile_ratio'     => $options->phashPercentile,
+                'phash_percentile_threshold' => null,
+                'phash_sample_count'         => 0,
                 'spacing_relaxed_to_zero' => false,
                 'phash_relaxed_to_zero'   => false,
             ],
@@ -323,7 +324,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $this->telemetry['metrics']['phash_samples'] = $samplesForTelemetry;
 
-        $adaptivePercentile   = $this->resolvePhashPercentile($samples, 0.25);
+        $adaptivePercentile   = $this->resolvePhashPercentile($samples, $options->phashPercentile);
         $this->effectivePhashMin = max($options->phashMinHamming, $adaptivePercentile);
 
         $this->telemetry['thresholds']['run_day_count']       = $runDays;
@@ -334,8 +335,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $this->telemetry['thresholds']['day_spacing_seconds'] = $this->daySpacingThresholds;
         $this->telemetry['thresholds']['max_per_staypoint']   = $this->effectiveMaxPerStaypoint;
         $this->telemetry['thresholds']['phash_min_effective'] = $this->effectivePhashMin;
-        $this->telemetry['thresholds']['phash_percentile_25'] = $adaptivePercentile;
-        $this->telemetry['thresholds']['phash_sample_count']  = count($samples);
+        $this->telemetry['thresholds']['phash_percentile_ratio']     = $options->phashPercentile;
+        $this->telemetry['thresholds']['phash_percentile_threshold'] = $adaptivePercentile;
+        $this->telemetry['thresholds']['phash_sample_count']         = count($samples);
 
         foreach ($primaryByDay as $day => $list) {
             $primaryByDay[$day] = $this->sortPrimary($list);

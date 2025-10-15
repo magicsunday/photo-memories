@@ -569,8 +569,46 @@ final class VacationMemberSelectorTest extends TestCase
 
         self::assertSame(2, $telemetry['near_duplicate_blocked']);
         self::assertGreaterThanOrEqual($options->phashMinHamming, $thresholds['phash_min_effective']);
-        self::assertGreaterThanOrEqual($options->phashMinHamming, $thresholds['phash_percentile_25']);
+        self::assertSame($options->phashPercentile, $thresholds['phash_percentile_ratio']);
+        self::assertSame(4, $thresholds['phash_percentile_threshold']);
         self::assertGreaterThanOrEqual(1, $thresholds['phash_sample_count']);
+    }
+
+    public function testAdaptivePercentileRespectsCustomOverride(): void
+    {
+        $first = $this->createMedia('adaptive-custom-a.jpg', '2024-08-02T09:00:00+00:00', 0.92);
+        $first->setPhash64('0000000000000000');
+
+        $second = $this->createMedia('adaptive-custom-b.jpg', '2024-08-02T09:02:00+00:00', 0.85);
+        $second->setPhash64('000000000000000f');
+
+        $third = $this->createMedia('adaptive-custom-c.jpg', '2024-08-02T09:04:00+00:00', 0.88);
+        $third->setPhash64('ffffffffffffffff');
+
+        $summary = $this->createDaySummary('2024-08-02', [$first, $second, $third]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 3,
+            maxPerDay: 3,
+            minSpacingSeconds: 0,
+            phashMinHamming: 1,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+            phashPercentile: 0.75,
+        );
+
+        $result = $this->selector->select(['2024-08-02' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(1, $members);
+        self::assertContains($first, $members);
+
+        $telemetry  = $result->getTelemetry();
+        $thresholds = $telemetry['thresholds'];
+
+        self::assertSame($options->phashPercentile, $thresholds['phash_percentile_ratio']);
+        self::assertSame(60, $thresholds['phash_percentile_threshold']);
+        self::assertGreaterThanOrEqual($options->phashMinHamming, $thresholds['phash_min_effective']);
     }
 
     /**
