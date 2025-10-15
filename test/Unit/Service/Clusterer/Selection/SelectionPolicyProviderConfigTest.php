@@ -34,13 +34,13 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         self::assertSame('vacation', $policy->getProfileKey());
         self::assertSame(60, $policy->getTargetTotal());
         self::assertSame(36, $policy->getMinimumTotal());
-        self::assertSame(4, $policy->getMaxPerDay());
+        self::assertSame(6, $policy->getMaxPerDay());
         self::assertSame(4.0, $policy->getTimeSlotHours());
-        self::assertSame(3600, $policy->getMinSpacingSeconds());
-        self::assertSame(11, $policy->getPhashMinHamming());
+        self::assertSame(1800, $policy->getMinSpacingSeconds());
+        self::assertSame(9, $policy->getPhashMinHamming());
         self::assertSame(1, $policy->getMaxPerStaypoint());
         self::assertSame(2, $policy->getRelaxedMaxPerStaypoint());
-        self::assertSame(0.56, $policy->getQualityFloor());
+        self::assertSame(0.5, $policy->getQualityFloor());
         self::assertSame(0.22, $policy->getVideoBonus());
         self::assertSame(0.34, $policy->getFaceBonus());
         self::assertSame(0.26, $policy->getSelfiePenalty());

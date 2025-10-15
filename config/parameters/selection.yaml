@@ -4,13 +4,13 @@ parameters:
         vacation:
             target_total: 60
             minimum_total: 36
-            max_per_day: 4
+            max_per_day: 6
             time_slot_hours: 4
-            min_spacing_seconds: 3600
-            phash_min_hamming: 11
+            min_spacing_seconds: 1800
+            phash_min_hamming: 9
             max_per_staypoint: 1
             max_per_staypoint_relaxed: 2
-            quality_floor: 0.56
+            quality_floor: 0.5
             video_bonus: 0.22
             face_bonus: 0.34
             selfie_penalty: 0.26

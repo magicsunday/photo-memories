@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-23 – Relax vacation selection caps for dense itineraries
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Telemetry from late-summer travel runs showed multi-stop days plateauing at four photos despite six high-quality shots clearing scene diversity and staypoint quotas. Operators compensated by forcing manual relaxations, which also lowered the pHash threshold and quality floor more than desired.
+- **Decision:** Raised the `vacation` profile cap to six members per day, shortened the base spacing to 30 minutes, trimmed the pHash minimum to 9, and eased the quality floor to 0.50 so dense sightseeing days surface more variety without manual overrides. Updated selector tests confirm the relaxed policy keeps six distinct, high-scoring candidates while still rejecting sub-floor assets.
+- **Alternatives considered:** Only adjust spacing (kept day cap too tight), or let the curator depend on runtime relaxations (kept telemetry noisy and risked over-relaxing pHash/quality thresholds). Both were rejected because they either still hid viable shots or eroded dedupe guarantees.
+- **Follow-up actions:** Monitor `member_selection.rejections.day_quota` and `selection_profile.phash_min_hamming` metrics for regression. If duplicate density spikes, revisit pHash percentile tuning rather than tightening the global floor again.
+
 ## 2025-10-22 – Relax vacation away-distance profiles
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Vacation detection still missed compact weekend trips around dense metro areas because the adaptive away-distance profiles required 3+ home centres, tight radii, and 600–1,200 Medien pro Cluster.

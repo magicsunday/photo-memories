@@ -17,6 +17,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
 use MagicSunday\Memories\Service\Clusterer\Selection\PolicyDrivenMemberSelector;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\OrientationBalanceStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\PeopleBalanceStage;
@@ -30,6 +31,7 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 use ReflectionMethod;
+use Symfony\Component\Yaml\Yaml;
 
 final class PolicyDrivenMemberSelectorTest extends TestCase
 {
@@ -108,6 +110,126 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertGreaterThanOrEqual(2, count($telemetry['relaxations']));
         self::assertSame($expectedSpacing, $telemetry['relaxations'][1]['policy']['min_spacing_seconds']);
         self::assertSame($expectedSpacing, $telemetry['policy']['min_spacing_seconds']);
+    }
+
+    #[Test]
+    public function vacationProfileRelaxationKeepsSixHighQualityMembersPerDay(): void
+    {
+        $selector = $this->createSelector();
+
+        $raw         = Yaml::parseFile(__DIR__ . '/../../../../../config/parameters/selection.yaml');
+        $parameters  = $raw['parameters'];
+        $provider    = new SelectionPolicyProvider(
+            profiles: $parameters['memories.selection.profiles'],
+            algorithmProfiles: $parameters['memories.selection.algorithm_profiles'],
+            defaultProfile: $parameters['memories.selection.default_profile'],
+        );
+        $policy      = $provider->forAlgorithm('vacation');
+
+        self::assertSame(6, $policy->getMaxPerDay());
+        self::assertSame(1800, $policy->getMinSpacingSeconds());
+        self::assertSame(9, $policy->getPhashMinHamming());
+        self::assertSame(0.5, $policy->getQualityFloor());
+
+        $timestamps = [
+            1 => '2024-06-01T00:30:00+02:00',
+            2 => '2024-06-01T04:30:00+02:00',
+            3 => '2024-06-01T08:30:00+02:00',
+            4 => '2024-06-01T12:30:00+02:00',
+            5 => '2024-06-01T16:30:00+02:00',
+            6 => '2024-06-01T20:30:00+02:00',
+            7 => '2024-06-01T21:30:00+02:00',
+        ];
+
+        $hashes = [
+            1 => '0000000000000000',
+            2 => 'ffffffffffffffff',
+            3 => '0f0f0f0f0f0f0f0f',
+            4 => 'f0f0f0f0f0f0f0f0',
+            5 => '00ff00ff00ff00ff',
+            6 => 'ff00ff00ff00ff00',
+            7 => '3333333333333333',
+        ];
+
+        $coordinates = [
+            1 => [48.100, 11.500],
+            2 => [48.104, 11.504],
+            3 => [48.108, 11.508],
+            4 => [48.112, 11.512],
+            5 => [48.116, 11.516],
+            6 => [48.120, 11.520],
+            7 => [48.124, 11.524],
+        ];
+
+        $mediaMap      = [];
+        $qualityScores = [];
+
+        foreach ([1, 2, 3, 4, 5, 6] as $id) {
+            $media = $this->createMedia($id, $timestamps[$id], $hashes[$id], [], $coordinates[$id], [4000, 3000]);
+            $media->setQualityScore(0.55);
+            switch ($id) {
+                case 1:
+                    $media->setFacesCount(4);
+                    $media->setHasFaces(true);
+                    $media->setFeatures([
+                        'faces' => ['largest_coverage' => 0.32],
+                    ]);
+                    break;
+                case 2:
+                    $media->setIsPanorama(true);
+                    break;
+                case 3:
+                    $media->setFeatures([
+                        'calendar' => ['daypart' => 'night'],
+                    ]);
+                    break;
+                case 4:
+                    $media->setSceneTags([
+                        ['label' => 'Delicious food spread', 'score' => 0.9],
+                    ]);
+                    break;
+                case 5:
+                    $media->setSceneTags([
+                        ['label' => 'Historic museum interior', 'score' => 0.88],
+                    ]);
+                    break;
+                default:
+                    break;
+            }
+
+            if (in_array($id, [3, 5, 6], true)) {
+                $media->setWidth(3000);
+                $media->setHeight(4000);
+                $media->setOrientation(6);
+            }
+            $mediaMap[$id]      = $media;
+            $qualityScores[$id] = 0.55;
+        }
+
+        $lowQualityId = 7;
+        $lowQuality   = $this->createMedia($lowQualityId, $timestamps[$lowQualityId], $hashes[$lowQualityId], [], $coordinates[$lowQualityId], [4000, 3000]);
+        $lowQuality->setQualityScore(0.45);
+
+        $mediaMap[$lowQualityId]      = $lowQuality;
+        $qualityScores[$lowQualityId] = 0.45;
+
+        $memberIds = array_keys($mediaMap);
+        $draft     = $this->createDraft('vacation', $memberIds, 'vacation.relaxed');
+
+        $context = new MemberSelectionContext($draft, $policy, $mediaMap, $qualityScores, []);
+        $result  = $selector->select('vacation', $memberIds, $context);
+
+        $selectedIds = $result->getMemberIds();
+        sort($selectedIds);
+
+        $telemetry = $result->getTelemetry();
+        self::assertCount(6, $selectedIds);
+        self::assertSame([1, 2, 3, 4, 5, 6], $selectedIds);
+        self::assertNotContains($lowQualityId, $selectedIds);
+        self::assertSame(7, $telemetry['counts']['considered']);
+        self::assertSame(6, $telemetry['counts']['selected']);
+        self::assertArrayHasKey('quality', $telemetry['rejections']);
+        self::assertSame(1, $telemetry['rejections']['quality']);
     }
 
     #[Test]
