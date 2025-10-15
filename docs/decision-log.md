@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-22 – Relax vacation away-distance profiles
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Vacation detection still missed compact weekend trips around dense metro areas because the adaptive away-distance profiles required 3+ home centres, tight radii, and 600–1,200 Medien pro Cluster.
+- **Decision:** Lowered the default adaptive profile to trigger at 100 km with zwei Heimat-Zentren, 60 km Primärradius und rund 180 Medien und reduzierte das DACH-Profil auf 85 km Entfernung, zwei Zentren, 50 km Radius, Mindestdichte 4,0 sowie ca. 210 Medien, damit reale Kurzreisen erfasst werden.
+- **Alternatives considered:** Only tweak the global `min_away_distance_km_default` (risked turning jede Landpartie in eine Urlaubsgeschichte) or add more granular telemetry alerts without touching thresholds (hätte keine Sofortwirkung auf die Auswahl gehabt).
+- **Follow-up actions:** Beobachte Monitoring-Metriken `run_metrics.distance_km` und `run_metrics.members_core_total`, passe Dichte-/Mitglieder-Grenzen nach, falls vermehrt Pendler-Läufe als Urlaub markiert werden.
+
 ## 2025-10-21 – Tone-map slideshow backgrounds with EQ presets
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** The default slideshow background remained visually flat after the vignette calibration, requiring manual EQ overrides to avoid washed-out skies while keeping skin tones natural.

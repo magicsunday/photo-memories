@@ -132,14 +132,14 @@ parameters:
     memories.cluster.vacation.min_away_distance_profiles:
         - distance_km: 100.0
           min_center_count: 2
-          min_total_member_count: 600
-          max_primary_radius_km: 35.0
+          min_total_member_count: 180
+          max_primary_radius_km: 60.0
           min_primary_density: 6.0
         - distance_km: 85.0
-          min_center_count: 3
-          min_total_member_count: 1200
-          max_primary_radius_km: 25.0
-          min_primary_density: 10.0
+          min_center_count: 2
+          min_total_member_count: 210
+          max_primary_radius_km: 50.0
+          min_primary_density: 4.0
           countries: ['de','at','ch']
     # Description: Default minimum number of media items per day to consider a vacation day.
     memories.cluster.vacation.min_items_per_day_default: 4
