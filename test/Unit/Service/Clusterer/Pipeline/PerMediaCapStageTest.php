@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
@@ -146,6 +147,36 @@ final class PerMediaCapStageTest extends TestCase
         self::assertSame(2, $completed['context']['dropped_count']);
         self::assertSame(1, $completed['context']['blocked_candidates']);
         self::assertSame(1, $completed['context']['reassigned_slots']);
+    }
+
+    #[Test]
+    public function allowsRuntimeOverrideAndValidation(): void
+    {
+        $stage = new PerMediaCapStage(
+            perMediaCap: 1,
+            keepOrder: ['primary'],
+            algorithmGroups: ['primary' => 'stories'],
+            defaultAlgorithmGroup: 'default',
+        );
+
+        self::assertSame(1, $stage->getPerMediaCap());
+
+        $stage->setPerMediaCapOverride(3);
+        self::assertSame(3, $stage->getPerMediaCap());
+
+        $first  = $this->createDraft('primary', 0.9, [1]);
+        $second = $this->createDraft('primary', 0.8, [1]);
+
+        $result = $stage->process([$first, $second]);
+
+        self::assertSame([$first, $second], $result);
+
+        $stage->setPerMediaCapOverride(null);
+        self::assertSame(1, $stage->getPerMediaCap());
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Per-media cap must be greater than or equal to 0.');
+        $stage->setPerMediaCapOverride(-1);
     }
 
     /**

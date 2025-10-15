@@ -15,8 +15,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -52,8 +55,10 @@ final class FeedPreviewCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterConsolidatorInterface $consolidation,
+        private readonly PerMediaCapStage $perMediaCapStage,
         private readonly ClusterEntityToDraftMapper $mapper,
         private readonly SelectionPolicyProvider $selectionPolicies,
+        private readonly FeedPersonalizationProfileProvider $profileProvider,
         private readonly int $defaultClusterLimit = 5000,
     ) {
         parent::__construct();
@@ -82,6 +87,12 @@ final class FeedPreviewCommand extends Command
                 'Per-Media-Cap zur Konsolidierung (0 = aus)'
             )
             ->addOption(
+                'min-members',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Mindestanzahl an Mitgliedern für Feed-Kandidaten'
+            )
+            ->addOption(
                 'show-members',
                 null,
                 InputOption::VALUE_NONE,
@@ -98,6 +109,9 @@ final class FeedPreviewCommand extends Command
 
         try {
             $selectionOverrides = $this->resolveSelectionOverrides($input);
+            $minScore           = $this->parseFloatOption($input->getOption('min-score'), 0.0, 'min-score');
+            $minMembers         = $this->parseIntOption($input->getOption('min-members'), 1, 'min-members');
+            $perMediaCap        = $this->parseIntOption($input->getOption('per-media-cap'), 0, 'per-media-cap');
         } catch (InvalidArgumentException $exception) {
             $io->error($exception->getMessage());
 
@@ -105,6 +119,7 @@ final class FeedPreviewCommand extends Command
         }
 
         $this->selectionPolicies->setRuntimeOverrides($selectionOverrides);
+        $profileOverride = $this->resolvePersonalizationProfile($minScore, $minMembers);
 
         $limit = max(1, (int) $input->getOption('limit-clusters'));
 
@@ -128,15 +143,27 @@ final class FeedPreviewCommand extends Command
 
         // Optional Konsolidierung (mit internem Cap etc.)
         $io->section('Konsolidierung');
-        $consolidated = $this->consolidation->consolidate(
-            $drafts,
-            static function (int $done, int $max, string $stage) use ($io): void {
-                // lightweight progress (no heavy bars to keep output tidy)
-                if ($max > 0 && ($done === $max)) {
-                    $io->writeln(sprintf('  ✔ %s (%d)', $stage, $max));
+        $restorePerMediaCap = false;
+        if ($perMediaCap !== null) {
+            $this->perMediaCapStage->setPerMediaCapOverride($perMediaCap);
+            $restorePerMediaCap = true;
+        }
+
+        try {
+            $consolidated = $this->consolidation->consolidate(
+                $drafts,
+                static function (int $done, int $max, string $stage) use ($io): void {
+                    // lightweight progress (no heavy bars to keep output tidy)
+                    if ($max > 0 && ($done === $max)) {
+                        $io->writeln(sprintf('  ✔ %s (%d)', $stage, $max));
+                    }
                 }
+            );
+        } finally {
+            if ($restorePerMediaCap) {
+                $this->perMediaCapStage->setPerMediaCapOverride(null);
             }
-        );
+        }
 
         if ($consolidated === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
@@ -146,7 +173,7 @@ final class FeedPreviewCommand extends Command
 
         // Build feed
         $io->section('Feed erzeugen');
-        $items = $this->feedBuilder->build($consolidated);
+        $items = $this->feedBuilder->build($consolidated, $profileOverride);
 
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
@@ -185,6 +212,30 @@ final class FeedPreviewCommand extends Command
         $io->success(sprintf('%d Feed-Items angezeigt.', count($items)));
 
         return Command::SUCCESS;
+    }
+
+    private function resolvePersonalizationProfile(?float $minScore, ?int $minMembers): ?FeedPersonalizationProfile
+    {
+        if ($minScore === null && $minMembers === null) {
+            return null;
+        }
+
+        $base = $this->profileProvider->getProfile();
+
+        return new FeedPersonalizationProfile(
+            sprintf('%s-cli', $base->getKey()),
+            $minScore ?? $base->getMinScore(),
+            $minMembers ?? $base->getMinMembers(),
+            $base->getMaxPerDay(),
+            $base->getMaxTotal(),
+            $base->getMaxPerAlgorithm(),
+            $base->getQualityFloor(),
+            $base->getPeopleCoverageThreshold(),
+            $base->getRecentDays(),
+            $base->getStaleDays(),
+            $base->getRecentScoreBonus(),
+            $base->getStaleScorePenalty(),
+        );
     }
 
     /**

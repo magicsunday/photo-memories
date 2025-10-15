@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
@@ -32,21 +33,47 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
     /** @var array<string,int> */
     private array $priorityMap = [];
 
+    private int $defaultPerMediaCap;
+
+    private ?int $perMediaCapOverride = null;
+
     /**
      * @param list<string>         $keepOrder
      * @param array<string,string> $algorithmGroups
      */
     public function __construct(
-        private readonly int $perMediaCap,
+        int $perMediaCap,
         array $keepOrder,
         private readonly array $algorithmGroups,
         private readonly string $defaultAlgorithmGroup,
         private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
+        $this->defaultPerMediaCap = $perMediaCap;
+
         $base = count($keepOrder);
         foreach ($keepOrder as $index => $algorithm) {
             $this->priorityMap[$algorithm] = $base - $index;
         }
+    }
+
+    public function getPerMediaCap(): int
+    {
+        return $this->perMediaCapOverride ?? $this->defaultPerMediaCap;
+    }
+
+    public function setPerMediaCapOverride(?int $perMediaCap): void
+    {
+        if ($perMediaCap === null) {
+            $this->perMediaCapOverride = null;
+
+            return;
+        }
+
+        if ($perMediaCap < 0) {
+            throw new InvalidArgumentException('Per-media cap must be greater than or equal to 0.');
+        }
+
+        $this->perMediaCapOverride = $perMediaCap;
     }
 
     public function getLabel(): string
@@ -64,15 +91,16 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         $total             = count($drafts);
         $blockedCandidates = 0;
         $reassignments     = 0;
+        $perMediaCap       = $this->getPerMediaCap();
 
         $this->emitMonitoring('selection_start', [
             'pre_count'        => $total,
-            'per_media_cap'    => $this->perMediaCap,
+            'per_media_cap'    => $perMediaCap,
             'group_count'      => count($this->algorithmGroups),
             'default_group'    => $this->defaultAlgorithmGroup,
         ]);
 
-        if ($this->perMediaCap <= 0 || $total === 0) {
+        if ($perMediaCap <= 0 || $total === 0) {
             if ($progress !== null) {
                 $progress($total, $total);
             }
@@ -152,7 +180,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             $blockedMembers = [];
             foreach ($item['members'] as $member) {
                 $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
-                if ($count >= $this->perMediaCap) {
+                if ($count >= $perMediaCap) {
                     $allowed = false;
                     $blockedMembers[] = $member;
                     break;
@@ -186,7 +214,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                         $blockedMembers = [];
                         foreach ($item['members'] as $member) {
                             $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
-                            if ($count >= $this->perMediaCap) {
+                            if ($count >= $perMediaCap) {
                                 $allowed = false;
                                 $blockedMembers[] = $member;
                                 break;
