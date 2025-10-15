@@ -25,17 +25,25 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use Throwable;
 
+use function array_slice;
 use function count;
+use function is_float;
+use function is_int;
+use function is_numeric;
+use function is_string;
 use function max;
 use function min;
 use function microtime;
 use function sprintf;
+use function usort;
 
 /**
  * Class DefaultClusterJobRunner.
  */
 final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterface
 {
+    private const TELEMETRY_TOP_CLUSTER_LIMIT = 5;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private HybridClustererInterface $clusterer,
@@ -69,7 +77,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
         if ($total === 0) {
-            return new ClusterJobResult(0, 0, 0, 0, 0, 0, $options->isDryRun());
+            return new ClusterJobResult(0, 0, 0, 0, 0, 0, $options->isDryRun(), $this->createTelemetry(0, 0));
         }
 
         /** @var list<Media> $items */
@@ -86,7 +94,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $loadedCount = count($items);
         if ($loadedCount === 0) {
-            return new ClusterJobResult($total, 0, 0, 0, 0, 0, $options->isDryRun());
+            return new ClusterJobResult($total, 0, 0, 0, 0, 0, $options->isDryRun(), $this->createTelemetry(0, 0));
         }
 
         $outdatedMedia = [];
@@ -109,7 +117,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $warningHandle->finish();
 
             if ($options->shouldReplace()) {
-                return new ClusterJobResult($total, $loadedCount, 0, 0, 0, 0, $options->isDryRun());
+                return new ClusterJobResult($total, $loadedCount, 0, 0, 0, 0, $options->isDryRun(), $this->createTelemetry(0, 0));
             }
         }
 
@@ -181,7 +189,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
             }
 
-            return new ClusterJobResult($total, $loadedCount, 0, 0, 0, $deleted, $options->isDryRun());
+            return new ClusterJobResult($total, $loadedCount, 0, 0, 0, $deleted, $options->isDryRun(), $this->createTelemetry(0, 0));
         }
 
         $consolidateHandle = $progressReporter->create('Konsolidieren', '🧹 Konsolidieren', $draftCount);
@@ -215,7 +223,16 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
             }
 
-            return new ClusterJobResult($total, $loadedCount, $draftCount, 0, 0, $deleted, $options->isDryRun());
+            return new ClusterJobResult(
+                $total,
+                $loadedCount,
+                $draftCount,
+                0,
+                0,
+                $deleted,
+                $options->isDryRun(),
+                $this->createTelemetry($draftCount, 0),
+            );
         }
 
         $persistHandle = $progressReporter->create(
@@ -266,6 +283,9 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
         $persistHandle->finish();
 
+        $topClusters = $this->buildTopClusterSummaries($drafts, self::TELEMETRY_TOP_CLUSTER_LIMIT);
+        $telemetry   = $this->createTelemetry($draftCount, $consolidatedCount, $topClusters);
+
         return new ClusterJobResult(
             $total,
             $loadedCount,
@@ -274,7 +294,87 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $persisted,
             $deleted,
             $options->isDryRun(),
+            $telemetry,
         );
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     *
+     * @return list<ClusterTelemetrySummary>
+     */
+    private function buildTopClusterSummaries(array $drafts, int $limit): array
+    {
+        if ($drafts === []) {
+            return [];
+        }
+
+        $sorted = $drafts;
+        usort(
+            $sorted,
+            function (ClusterDraft $left, ClusterDraft $right): int {
+                $leftScore  = $this->resolveDraftScore($left);
+                $rightScore = $this->resolveDraftScore($right);
+
+                $scoreCmp = ($rightScore ?? -INF) <=> ($leftScore ?? -INF);
+                if ($scoreCmp !== 0) {
+                    return $scoreCmp;
+                }
+
+                $memberCmp = $right->getMembersCount() <=> $left->getMembersCount();
+                if ($memberCmp !== 0) {
+                    return $memberCmp;
+                }
+
+                return $left->getAlgorithm() <=> $right->getAlgorithm();
+            },
+        );
+
+        $topDrafts = array_slice($sorted, 0, max(0, $limit));
+
+        $summaries = [];
+        foreach ($topDrafts as $draft) {
+            $summaries[] = new ClusterTelemetrySummary(
+                $draft->getAlgorithm(),
+                $draft->getStoryline(),
+                $draft->getMembersCount(),
+                $this->resolveDraftScore($draft),
+                $draft->getStartAt(),
+                $draft->getEndAt(),
+            );
+        }
+
+        return $summaries;
+    }
+
+    /**
+     * @param list<ClusterTelemetrySummary> $topClusters
+     */
+    private function createTelemetry(int $draftCount, int $consolidatedCount, array $topClusters = []): ClusterJobTelemetry
+    {
+        return new ClusterJobTelemetry(
+            [
+                'drafts'        => max(0, $draftCount),
+                'consolidated'  => max(0, $consolidatedCount),
+            ],
+            $topClusters,
+        );
+    }
+
+    private function resolveDraftScore(ClusterDraft $draft): ?float
+    {
+        $params = $draft->getParams();
+        $score  = $params['score'] ?? null;
+
+        if (is_float($score) || is_int($score)) {
+            return (float) $score;
+        }
+
+        if (is_string($score) && is_numeric($score)) {
+            return (float) $score;
+        }
+
+        return null;
     }
 
     private function formatRate(int $processed, float $startedAt, string $unit): string

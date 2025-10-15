@@ -24,6 +24,7 @@ final readonly class ClusterJobResult
         private int $persistedCount,
         private int $deletedCount,
         private bool $dryRun,
+        private ?ClusterJobTelemetry $telemetry = null,
     ) {
     }
 
@@ -60,5 +61,10 @@ final readonly class ClusterJobResult
     public function isDryRun(): bool
     {
         return $this->dryRun;
+    }
+
+    public function getTelemetry(): ?ClusterJobTelemetry
+    {
+        return $this->telemetry;
     }
 }
