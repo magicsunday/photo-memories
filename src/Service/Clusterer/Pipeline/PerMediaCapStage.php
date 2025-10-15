@@ -14,7 +14,10 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
 
+use function array_filter;
+use function array_values;
 use function count;
+use function in_array;
 use function usort;
 
 /**
@@ -68,7 +71,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             $progress(0, $total);
         }
 
-        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int}> $items */
+        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int, cover: int|null}> $items */
         $items = [];
         /** @var list<array{index: int, draft: ClusterDraft}> $subStories */
         $subStories = [];
@@ -88,6 +91,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                 'size'     => count($members),
                 'group'    => $this->resolveGroup($draft->getAlgorithm(), $this->algorithmGroups, $this->defaultAlgorithmGroup),
                 'index'    => $index,
+                'cover'    => $draft->getCoverMediaId(),
             ];
         }
 
@@ -107,8 +111,10 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             return 0;
         });
 
-        /** @var array<string,array<int,int>> $assignments */
+        /** @var array<string,array<int,list<int>>> $assignments */
         $assignments = [];
+        /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int, cover: int|null, removed: bool}> $accepted */
+        $accepted  = [];
         /** @var list<ClusterDraft> $result */
         $result    = [];
         $processed = 0;
@@ -122,23 +128,75 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
             $group = $item['group'];
             $assignments[$group] ??= [];
             $allowed = true;
+            $blockedMembers = [];
             foreach ($item['members'] as $member) {
-                $count = $assignments[$group][$member] ?? 0;
+                $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
                 if ($count >= $this->perMediaCap) {
                     $allowed = false;
+                    $blockedMembers[] = $member;
                     break;
                 }
             }
 
             if (!$allowed) {
+                $coverId = $item['cover'];
+                if ($coverId !== null && in_array($coverId, $blockedMembers, true)) {
+                    $freed = false;
+                    if (isset($assignments[$group][$coverId])) {
+                        $existingAssignments = $assignments[$group][$coverId];
+                        foreach ($existingAssignments as $assignmentIndex) {
+                            $assignedItem = $accepted[$assignmentIndex] ?? null;
+                            if ($assignedItem === null || $assignedItem['removed']) {
+                                continue;
+                            }
+
+                            if ($assignedItem['cover'] === $coverId) {
+                                continue;
+                            }
+
+                            $this->removeAssignment($assignments, $accepted, $assignmentIndex);
+                            $freed = true;
+                            break;
+                        }
+                    }
+
+                    if ($freed) {
+                        $allowed        = true;
+                        $blockedMembers = [];
+                        foreach ($item['members'] as $member) {
+                            $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
+                            if ($count >= $this->perMediaCap) {
+                                $allowed = false;
+                                $blockedMembers[] = $member;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!$allowed) {
+                    continue;
+                }
+            }
+
+            $acceptedIndex = count($accepted);
+            $accepted[]    = $item + ['removed' => false];
+            foreach ($item['members'] as $member) {
+                $assignments[$group][$member] ??= [];
+                $assignments[$group][$member][] = $acceptedIndex;
+            }
+
+            if ($accepted[$acceptedIndex]['removed']) {
+                continue;
+            }
+        }
+
+        foreach ($accepted as $acceptedItem) {
+            if ($acceptedItem['removed']) {
                 continue;
             }
 
-            foreach ($item['members'] as $member) {
-                $assignments[$group][$member] = ($assignments[$group][$member] ?? 0) + 1;
-            }
-
-            $result[] = $item['draft'];
+            $result[] = $acceptedItem['draft'];
         }
 
         if ($subStories !== []) {
@@ -156,5 +214,38 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string,array<int,list<int>>>                                                              $assignments
+     * @param list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int, cover: int|null, removed: bool}> $accepted
+     */
+    private function removeAssignment(array &$assignments, array &$accepted, int $index): void
+    {
+        if (!isset($accepted[$index]) || $accepted[$index]['removed']) {
+            return;
+        }
+
+        $accepted[$index]['removed'] = true;
+        $group                       = $accepted[$index]['group'];
+
+        foreach ($accepted[$index]['members'] as $member) {
+            if (!isset($assignments[$group][$member])) {
+                continue;
+            }
+
+            $assignments[$group][$member] = array_values(array_filter(
+                $assignments[$group][$member],
+                static fn (int $assignedIndex): bool => $assignedIndex !== $index,
+            ));
+
+            if ($assignments[$group][$member] === []) {
+                unset($assignments[$group][$member]);
+            }
+        }
+
+        if (isset($assignments[$group]) && $assignments[$group] === []) {
+            unset($assignments[$group]);
+        }
     }
 }
