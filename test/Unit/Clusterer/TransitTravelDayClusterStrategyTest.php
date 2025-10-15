@@ -30,8 +30,8 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
         $strategy = new TransitTravelDayClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             locationHelper: LocationHelper::createDefault(),
-            minTravelKm: 60.0,
-            minItemsPerDay: 5,
+            minTravelKm: 50.0,
+            minItemsPerDay: 3,
         );
 
         $day    = new DateTimeImmutable('2024-07-01 06:00:00', new DateTimeZone('UTC'));
@@ -74,13 +74,13 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
 
         self::assertSame('transit_travel_day', $cluster->getAlgorithm());
         self::assertSame(range(2300, 2304), $cluster->getMembers());
-        self::assertGreaterThanOrEqual(60.0, $cluster->getParams()['distance_km']);
+        self::assertGreaterThanOrEqual(50.0, $cluster->getParams()['distance_km']);
         self::assertArrayHasKey('place', $cluster->getParams());
         self::assertNotSame('', $cluster->getParams()['place']);
         self::assertSame('Frankfurt', $cluster->getParams()['place_city']);
         self::assertSame('Germany', $cluster->getParams()['place_country']);
         self::assertSame('default', $cluster->getParams()['travel_profile']);
-        self::assertSame(5, $cluster->getParams()['travel_thresholds']['min_items_per_day']);
+        self::assertSame(3, $cluster->getParams()['travel_thresholds']['min_items_per_day']);
     }
 
     #[Test]

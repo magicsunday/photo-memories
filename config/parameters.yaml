@@ -622,8 +622,8 @@ parameters:
     # Description: Threshold profiles describing transit detection parameters by name.
     memories.cluster.transit.threshold_profiles:
         default:
-            min_travel_km: 70.0
-            min_items_per_day: 6
+            min_travel_km: 50.0
+            min_items_per_day: 3
             min_segment_speed_mps: 5.0
             min_fast_segments: 3
             max_heading_change_deg: 90.0
