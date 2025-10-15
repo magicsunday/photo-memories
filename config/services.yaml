@@ -861,6 +861,7 @@ services:
             $qualityAggregator: '@MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator'
             $metrics: '@MagicSunday\Memories\Clusterer\Selection\SimilarityMetrics'
             $defaultOptions: '@MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions'
+            $logger: '@?Psr\\Log\\LoggerInterface'
 
     MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface:
         alias: MagicSunday\Memories\Clusterer\Selection\VacationMemberSelector

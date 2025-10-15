@@ -16,6 +16,8 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 use function array_key_exists;
 use function array_keys;
@@ -80,12 +82,16 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
     private readonly VacationSelectionOptions $defaultOptions;
 
+    private readonly LoggerInterface $logger;
+
     public function __construct(
         private readonly MediaQualityAggregator $qualityAggregator,
         private readonly SimilarityMetrics $metrics,
         ?VacationSelectionOptions $defaultOptions = null,
+        ?LoggerInterface $logger = null,
     ) {
         $this->defaultOptions = $defaultOptions ?? new VacationSelectionOptions();
+        $this->logger         = $logger ?? new NullLogger();
     }
 
     /**
@@ -220,7 +226,89 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $this->telemetry = $finalTelemetry;
 
+        $this->maybeLogRelaxedThresholds($this->telemetry);
+
         return new SelectionResult($finalMembers, $this->telemetry);
+    }
+
+    /**
+     * @param array<string, mixed> $telemetry
+     */
+    private function maybeLogRelaxedThresholds(array $telemetry): void
+    {
+        $thresholds = $telemetry['thresholds'] ?? null;
+        if (!is_array($thresholds)) {
+            return;
+        }
+
+        $spacingRelaxed = ($thresholds['spacing_relaxed_to_zero'] ?? false) === true;
+        $phashRelaxed   = ($thresholds['phash_relaxed_to_zero'] ?? false) === true;
+
+        if (!$spacingRelaxed && !$phashRelaxed) {
+            return;
+        }
+
+        [$runId, $runTag, $selectionTag] = $this->extractRunContext($telemetry);
+
+        $context = [
+            'run_id'    => $runId,
+            'run_tag'   => $runTag,
+            'tag'       => $selectionTag,
+            'thresholds' => [
+                'spacing_relaxed_to_zero' => $spacingRelaxed,
+                'phash_relaxed_to_zero'   => $phashRelaxed,
+            ],
+            'minimum_total_met' => $telemetry['minimum_total_met'] ?? null,
+        ];
+
+        $relaxations = $telemetry['relaxations'] ?? null;
+        if (is_array($relaxations)) {
+            $context['relaxations'] = $relaxations;
+        }
+
+        $this->logger->warning('vacation_selection.threshold_relaxed', $context);
+    }
+
+    /**
+     * @param array<string, mixed> $telemetry
+     *
+     * @return array{0: string|int|null, 1: string|null, 2: string|null}
+     */
+    private function extractRunContext(array $telemetry): array
+    {
+        $runId  = null;
+        $runTag = null;
+        $tag    = null;
+
+        $run = $telemetry['run'] ?? null;
+        if (is_array($run)) {
+            $candidateId = $run['id'] ?? null;
+            if (is_string($candidateId) || is_int($candidateId)) {
+                $runId = $candidateId;
+            }
+
+            $candidateTag = $run['tag'] ?? null;
+            if (is_string($candidateTag)) {
+                $runTag = $candidateTag;
+            }
+        }
+
+        $directId = $telemetry['run_id'] ?? null;
+        if ($runId === null && (is_string($directId) || is_int($directId))) {
+            $runId = $directId;
+        }
+
+        $directTag = $telemetry['run_tag'] ?? null;
+        if ($runTag === null && is_string($directTag)) {
+            $runTag = $directTag;
+        }
+
+        $tagCandidate = $telemetry['tag'] ?? null;
+        if (is_string($tagCandidate)) {
+            $tag = $tagCandidate;
+        }
+
+        return [$runId, $runTag, $tag];
     }
 
     /**
