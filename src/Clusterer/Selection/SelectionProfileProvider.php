@@ -92,8 +92,8 @@ final class SelectionProfileProvider
 
         $faceDetectionAvailable = $this->faceDetectionAvailability?->isAvailable() ?? true;
         if ($profileKey === 'vacation_weekend_transit' && !$faceDetectionAvailable) {
-            $merged['face_bonus']  = 0.12;
-            $merged['video_bonus'] = 0.22;
+            $merged['face_bonus']  = 0.10;
+            $merged['video_bonus'] = 0.25;
         }
 
         return new VacationSelectionOptions(
