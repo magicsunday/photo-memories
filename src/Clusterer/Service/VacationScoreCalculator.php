@@ -75,6 +75,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
 
+    /**
+     * @var list<string>
+     */
+    private const MISSING_CORE_CATEGORY_EXCEPTIONS = [];
+
     private SelectionProfileProvider $selectionProfiles;
 
     private string $defaultSelectionProfileKey;
@@ -685,7 +690,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $dayCategorySummary = $this->summariseDayCategories($dayKeys, $dayContext);
 
-        if ($dayContext !== [] && $dayCategorySummary['core'] === 0 && $weekendExceptionApplied === false) {
+        $missingCoreAllowed = $this->isMissingCoreAllowed($dayContext);
+
+        if ($dayContext !== [] && $dayCategorySummary['core'] === 0 && $missingCoreAllowed === false) {
             if ($this->monitoringEmitter !== null) {
                 $this->monitoringEmitter->emit(
                     'vacation_curation',
@@ -1042,6 +1049,33 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $draft->setParam('vacation_subtitle', $storyTitle['subtitle']);
 
         return $draft;
+    }
+
+    /**
+     * @param array<string, array{category:string}> $dayContext
+     */
+    private function isMissingCoreAllowed(array $dayContext): bool
+    {
+        if (self::MISSING_CORE_CATEGORY_EXCEPTIONS === []) {
+            return false;
+        }
+
+        foreach ($dayContext as $context) {
+            if (!is_array($context)) {
+                continue;
+            }
+
+            $category = $context['category'] ?? null;
+            if (!is_string($category)) {
+                continue;
+            }
+
+            if (in_array($category, self::MISSING_CORE_CATEGORY_EXCEPTIONS, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

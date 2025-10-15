@@ -593,6 +593,116 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function weekendExceptionDoesNotOverrideMissingCoreRequirement(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $emitter        = new RecordingMonitoringEmitter();
+        $referenceDate  = new DateTimeImmutable('2024-07-01 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
+            emitter: $emitter,
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            minAwayDays: 3,
+            referenceDate: $referenceDate,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 120,
+        ];
+
+        $getawayLocation = (new Location(
+            provider: 'test',
+            providerPlaceId: 'warnemuende',
+            displayName: 'Warnemünde, Germany',
+            lat: 54.1760,
+            lon: 12.0837,
+            cell: 'cell-warnemuende',
+        ))
+            ->setCity('Warnemünde')
+            ->setState('Mecklenburg-Vorpommern')
+            ->setCountry('Germany')
+            ->setCountryCode('DE')
+            ->setCategory('tourism')
+            ->setType('beach');
+
+        $start      = new DateTimeImmutable('2024-07-06 09:00:00');
+        $dayKeys    = [];
+        $days       = [];
+        $dayContext = [];
+
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
+            $members = $this->makeMembersForDay($i, $dayDate, 4, $getawayLocation);
+            $dayKey  = $dayDate->format('Y-m-d');
+
+            $stayDuration = 10800 + ($i * 1800);
+            $firstMember  = $members[0];
+            $startStamp   = $firstMember->getTakenAt()?->getTimestamp() ?? $dayDate->getTimestamp();
+            $staypoints   = [[
+                'lat'   => (float) ($firstMember->getGpsLat() ?? $getawayLocation->getLat()),
+                'lon'   => (float) ($firstMember->getGpsLon() ?? $getawayLocation->getLon()),
+                'start' => $startStamp,
+                'end'   => $startStamp + $stayDuration,
+                'dwell' => $stayDuration,
+            ]];
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 9,
+                poiSamples: 12,
+                travelKm: 160.0,
+                timezoneOffset: 120,
+                hasAirport: false,
+                spotCount: 2,
+                spotDwellSeconds: 5400,
+                maxSpeedKmh: 95.0,
+                avgSpeedKmh: 68.0,
+                hasHighSpeedTransit: false,
+                cohortPresenceRatio: 0.4,
+                cohortMembers: [101 => 2],
+                staypoints: $staypoints,
+                countryCodes: ['de' => true],
+            );
+
+            $dayContext[$dayKey] = [
+                'score'    => 0.35,
+                'category' => 'peripheral',
+                'duration' => null,
+                'metrics'  => [],
+            ];
+
+            $dayKeys[] = $dayKey;
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home, $dayContext);
+
+        self::assertNull($draft);
+
+        self::assertCount(2, $emitter->events);
+
+        $startEvent = $emitter->events[0];
+        self::assertSame('vacation_curation', $startEvent['job']);
+        self::assertSame('selection_start', $startEvent['status']);
+        self::assertTrue($startEvent['context']['weekend_getaway']);
+        self::assertTrue($startEvent['context']['weekend_exception']);
+
+        $completeEvent = $emitter->events[1];
+        self::assertSame('vacation_curation', $completeEvent['job']);
+        self::assertSame('selection_completed', $completeEvent['status']);
+        self::assertSame('missing_core_days', $completeEvent['context']['reason']);
+    }
+
+    #[Test]
     public function buildDraftRequiresConfiguredMinimumMembers(): void
     {
         $locationHelper = LocationHelper::createDefault();
