@@ -470,7 +470,7 @@ parameters:
     # Description: Overlap ratio threshold above which clusters are dropped during consolidation.
     memories.cluster.consolidate.overlap_drop_threshold: 0.7
     # Description: Maximum number of consolidated results a single media item may appear in.
-    memories.cluster.consolidate.per_media_cap: 6
+    memories.cluster.consolidate.per_media_cap: 2
     # Description: Ordered list defining which cluster types should be retained when conflicts arise.
     memories.cluster.consolidate.keep_order:
         - 'vacation'
