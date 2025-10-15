@@ -19,9 +19,12 @@ use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Stringable;
 use function array_filter;
 use function array_map;
 use function array_replace;
+use function array_values;
 use function count;
 use function sha1;
 use function substr;
@@ -33,9 +36,17 @@ final class VacationMemberSelectorTest extends TestCase
 {
     private VacationMemberSelector $selector;
 
+    private InMemoryLogger $logger;
+
     protected function setUp(): void
     {
-        $this->selector = new VacationMemberSelector(new MediaQualityAggregator(), new SimilarityMetrics());
+        $this->logger   = new InMemoryLogger();
+        $this->selector = new VacationMemberSelector(
+            new MediaQualityAggregator(),
+            new SimilarityMetrics(),
+            null,
+            $this->logger,
+        );
     }
 
     public function testQualityFloorFiltersLowScoringItems(): void
@@ -484,6 +495,82 @@ final class VacationMemberSelectorTest extends TestCase
         self::assertSame(2, $telemetry['selected_total']);
     }
 
+    public function testItLogsWarningWhenSpacingRelaxedToZero(): void
+    {
+        $first  = $this->createMedia('log-spacing-first.jpg', '2024-10-01T09:00:00+00:00', 0.9);
+        $second = $this->createMedia('log-spacing-second.jpg', '2024-10-01T09:05:00+00:00', 0.88);
+
+        $first->setCameraBodySerial('Device-A');
+        $second->setCameraBodySerial('Device-B');
+
+        $summary = $this->createDaySummary('2024-10-01', [$first, $second]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 2,
+            maxPerDay: 2,
+            minSpacingSeconds: 1800,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+        );
+
+        $this->selector->select(['2024-10-01' => $summary], $this->createHome(), $options);
+
+        $warnings = $this->logger->recordsWithLevel('warning');
+        self::assertNotEmpty($warnings);
+
+        $warning = $warnings[0];
+        self::assertSame('vacation_selection.threshold_relaxed', $warning['message']);
+
+        $context = $warning['context'];
+        self::assertArrayHasKey('thresholds', $context);
+        self::assertTrue($context['thresholds']['spacing_relaxed_to_zero']);
+        self::assertFalse($context['thresholds']['phash_relaxed_to_zero']);
+        self::assertArrayHasKey('run_id', $context);
+        self::assertArrayHasKey('run_tag', $context);
+        self::assertArrayHasKey('tag', $context);
+        self::assertArrayHasKey('relaxations', $context);
+        self::assertNotEmpty($context['relaxations']);
+    }
+
+    public function testItLogsWarningWhenPhashRelaxedToZero(): void
+    {
+        $first  = $this->createMedia('log-phash-first.jpg', '2024-10-02T09:00:00+00:00', 0.92);
+        $second = $this->createMedia('log-phash-second.jpg', '2024-10-02T09:02:00+00:00', 0.91);
+
+        $first->setPhash64('aaaaaaaaaaaaaaaa');
+        $second->setPhash64('aaaaaaaaaaaaaaaa');
+
+        $summary = $this->createDaySummary('2024-10-02', [$first, $second]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 2,
+            maxPerDay: 2,
+            minSpacingSeconds: 0,
+            phashMinHamming: 10,
+            qualityFloor: 0.1,
+            minimumTotal: 2,
+        );
+
+        $this->selector->select(['2024-10-02' => $summary], $this->createHome(), $options);
+
+        $warnings = array_values(array_filter(
+            $this->logger->recordsWithLevel('warning'),
+            static fn (array $record): bool => $record['message'] === 'vacation_selection.threshold_relaxed',
+        ));
+
+        self::assertNotEmpty($warnings);
+
+        $warning = $warnings[0];
+        $context = $warning['context'];
+        self::assertArrayHasKey('thresholds', $context);
+        self::assertTrue($context['thresholds']['phash_relaxed_to_zero']);
+        self::assertArrayHasKey('run_id', $context);
+        self::assertArrayHasKey('run_tag', $context);
+        self::assertArrayHasKey('tag', $context);
+        self::assertArrayHasKey('relaxations', $context);
+        self::assertFalse($context['thresholds']['spacing_relaxed_to_zero']);
+    }
+
     public function testRelaxationEscalatesWhenMultipleConstraintsApply(): void
     {
         $first  = $this->createMedia('multi-first.jpg', '2024-05-11T08:00:00+00:00', 0.9);
@@ -784,5 +871,36 @@ final class VacationMemberSelectorTest extends TestCase
         $media->setPhash64(substr(sha1($filename), 0, 16));
 
         return $media;
+    }
+}
+
+/**
+ * @internal test logger that keeps collected records in memory.
+ */
+final class InMemoryLogger extends AbstractLogger
+{
+    /**
+     * @var list<array{level: string, message: string, context: array<string, mixed>}> 
+     */
+    private array $records = [];
+
+    public function log($level, $message, array $context = []): void
+    {
+        $this->records[] = [
+            'level' => (string) $level,
+            'message' => $message instanceof Stringable ? (string) $message : (string) $message,
+            'context' => $context,
+        ];
+    }
+
+    /**
+     * @return list<array{level: string, message: string, context: array<string, mixed>}> 
+     */
+    public function recordsWithLevel(string $level): array
+    {
+        return array_values(array_filter(
+            $this->records,
+            static fn (array $record): bool => $record['level'] === $level,
+        ));
     }
 }
