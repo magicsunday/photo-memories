@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
+use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -26,6 +27,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function ctype_digit;
 use function is_string;
+use function number_format;
 use function sprintf;
 
 /**
@@ -135,6 +137,80 @@ final class ClusterCommand extends Command
 
         $io->success(sprintf('%d Cluster gespeichert.', $result->getPersistedCount()));
 
+        $this->renderTelemetry($io, $result);
+
         return Command::SUCCESS;
+    }
+
+    private function renderTelemetry(SymfonyStyle $io, ClusterJobResult $result): void
+    {
+        $telemetry = $result->getTelemetry();
+        if ($telemetry === null) {
+            return;
+        }
+
+        $stageCounts = $telemetry->getStageCounts();
+        if ($stageCounts !== []) {
+            $io->section('📊 Telemetrie');
+            $io->table(
+                ['Stufe', 'Anzahl'],
+                [
+                    ['Entwürfe', (string) ($stageCounts['drafts'] ?? 0)],
+                    ['Konsolidiert', (string) ($stageCounts['consolidated'] ?? 0)],
+                ],
+            );
+        }
+
+        $topClusters = $telemetry->getTopClusters();
+        if ($topClusters === []) {
+            return;
+        }
+
+        $io->section(sprintf('Top %d Cluster', count($topClusters)));
+        $rows = [];
+        foreach ($topClusters as $summary) {
+            $rows[] = [
+                $summary->getAlgorithm(),
+                $summary->getStoryline(),
+                (string) $summary->getMembersCount(),
+                $this->formatScore($summary->getScore()),
+                $this->formatTimeRange($summary->getStartAt(), $summary->getEndAt()),
+            ];
+        }
+
+        $io->table(
+            ['Algorithmus', 'Storyline', 'Mitglieder', 'Score', 'Zeitraum'],
+            $rows,
+        );
+    }
+
+    private function formatScore(?float $score): string
+    {
+        if ($score === null) {
+            return '–';
+        }
+
+        return number_format($score, 2, ',', '');
+    }
+
+    private function formatTimeRange(?DateTimeImmutable $start, ?DateTimeImmutable $end): string
+    {
+        if ($start === null && $end === null) {
+            return '–';
+        }
+
+        if ($start !== null && $end !== null) {
+            if ($start == $end) {
+                return $start->format('Y-m-d H:i');
+            }
+
+            return sprintf('%s → %s', $start->format('Y-m-d H:i'), $end->format('Y-m-d H:i'));
+        }
+
+        if ($start !== null) {
+            return sprintf('ab %s', $start->format('Y-m-d H:i'));
+        }
+
+        return sprintf('bis %s', $end->format('Y-m-d H:i'));
     }
 }
