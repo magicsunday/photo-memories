@@ -381,6 +381,158 @@ final class RunDetectorTest extends TestCase
         self::assertSame(['2024-07-09', '2024-07-10'], $runs[0]);
     }
 
+    #[Test]
+    public function longRunAdoptsSoftDistanceProfileAndBridging(): void
+    {
+        $transportExtender = new TransportDayExtender(
+            transitRatioThreshold: 0.65,
+            transitSpeedThreshold: 100.0,
+            leanPhotoThreshold: 2,
+            maxLeanBridgeDays: 3,
+            minLeanBridgeDistanceKm: 10.0,
+        );
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 140.0,
+            minItemsPerDay: 5,
+            minAwayDistanceProfiles: [
+                [
+                    'distance_km'            => 60.0,
+                    'min_total_member_count' => 500,
+                ],
+            ],
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 40,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $days   = [];
+        $anchor = new DateTimeImmutable('2024-08-01 12:00:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 10; ++$i) {
+            $current   = $anchor->modify(sprintf('+%d days', $i));
+            $date      = $current->format('Y-m-d');
+            $media     = $this->makeMediaFixture(
+                600 + $i,
+                sprintf('base-%02d.jpg', $i + 1),
+                $current,
+                46.94809,
+                7.44744,
+            );
+            $days[$date] = $this->makeDaySummary($date, true, [$media], 120.0, 180.0, 3);
+        }
+
+        $softStart  = $anchor->modify('+10 days');
+        $softOne    = $this->makeMediaFixture(700, 'soft-a.jpg', $softStart, 45.4215, 11.8870);
+        $softOneKey = $softStart->format('Y-m-d');
+        $days[$softOneKey] = $this->makeDaySummary($softOneKey, false, [$softOne], 45.0, 70.0, 2);
+
+        $bridgeDate  = $softStart->modify('+1 day');
+        $bridgeMedia = $this->makeMediaFixture(701, 'bridge.jpg', $bridgeDate, 45.5, 11.5);
+        $bridgeKey   = $bridgeDate->format('Y-m-d');
+        $days[$bridgeKey] = $this->makeDaySummary($bridgeKey, false, [$bridgeMedia], 18.0, 30.0, 1);
+
+        $softEnd    = $bridgeDate->modify('+1 day');
+        $softTwo    = $this->makeMediaFixture(702, 'soft-b.jpg', $softEnd, 45.7610, 12.2460);
+        $softTwoKey = $softEnd->format('Y-m-d');
+        $days[$softTwoKey] = $this->makeDaySummary($softTwoKey, false, [$softTwo], 48.0, 75.0, 2);
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        $expected = [
+            '2024-08-01',
+            '2024-08-02',
+            '2024-08-03',
+            '2024-08-04',
+            '2024-08-05',
+            '2024-08-06',
+            '2024-08-07',
+            '2024-08-08',
+            '2024-08-09',
+            '2024-08-10',
+            '2024-08-11',
+            '2024-08-12',
+            '2024-08-13',
+        ];
+
+        self::assertCount(1, $runs);
+        self::assertSame($expected, $runs[0]);
+    }
+
+    #[Test]
+    public function shortRunKeepsStrictDistanceProfile(): void
+    {
+        $transportExtender = new TransportDayExtender();
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 140.0,
+            minItemsPerDay: 4,
+            minAwayDistanceProfiles: [
+                [
+                    'distance_km'            => 60.0,
+                    'min_total_member_count' => 500,
+                ],
+            ],
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 40,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $days   = [];
+        $anchor = new DateTimeImmutable('2024-09-01 12:00:00', new DateTimeZone('Europe/Berlin'));
+        for ($i = 0; $i < 5; ++$i) {
+            $current   = $anchor->modify(sprintf('+%d days', $i));
+            $date      = $current->format('Y-m-d');
+            $media     = $this->makeMediaFixture(
+                800 + $i,
+                sprintf('short-%02d.jpg', $i + 1),
+                $current,
+                46.2044,
+                6.1432,
+            );
+            $days[$date] = $this->makeDaySummary($date, true, [$media], 115.0, 165.0, 3);
+        }
+
+        $softDate    = $anchor->modify('+5 days');
+        $softMedia   = $this->makeMediaFixture(900, 'soft-short.jpg', $softDate, 45.4642, 9.1900);
+        $softKey     = $softDate->format('Y-m-d');
+        $days[$softKey] = $this->makeDaySummary($softKey, false, [$softMedia], 38.0, 70.0, 3);
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertCount(1, $runs);
+        self::assertSame([
+            '2024-09-01',
+            '2024-09-02',
+            '2024-09-03',
+            '2024-09-04',
+            '2024-09-05',
+        ], $runs[0]);
+    }
+
     /**
      * @param list<Media> $gpsMembers
      */
