@@ -369,7 +369,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 'phash_relaxed_to_zero'   => false,
             ],
             'metrics'                     => [
-                'phash_samples' => [],
+                'phash_distances' => [],
             ],
         ];
 
@@ -410,7 +410,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             $samplesForTelemetry = array_slice($samplesForTelemetry, 0, 50);
         }
 
-        $this->telemetry['metrics']['phash_samples'] = $samplesForTelemetry;
+        $this->telemetry['metrics']['phash_distances'] = $samplesForTelemetry;
 
         $adaptivePercentile   = $this->resolvePhashPercentile($samples, $options->phashPercentile);
         $this->effectivePhashMin = max($options->phashMinHamming, $adaptivePercentile);
