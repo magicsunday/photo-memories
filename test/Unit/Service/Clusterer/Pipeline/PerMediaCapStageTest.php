@@ -78,16 +78,48 @@ final class PerMediaCapStageTest extends TestCase
         ], $result);
     }
 
+    #[Test]
+    public function replacesLowerPriorityClusterToKeepCoverMedia(): void
+    {
+        $stage = new PerMediaCapStage(
+            perMediaCap: 1,
+            keepOrder: ['primary', 'secondary'],
+            algorithmGroups: [
+                'primary'   => 'stories',
+                'secondary' => 'stories',
+            ],
+            defaultAlgorithmGroup: 'default',
+        );
+
+        $nonCover = $this->createDraft('secondary', 0.95, [1, 4], 4);
+        $cover    = $this->createDraft('primary', 0.9, [1, 2], 1);
+
+        $result = $stage->process([
+            $nonCover,
+            $cover,
+        ]);
+
+        self::assertSame([
+            $cover,
+        ], $result);
+    }
+
     /**
      * @param list<int> $members
      */
-    private function createDraft(string $algorithm, float $score, array $members): ClusterDraft
+    private function createDraft(string $algorithm, float $score, array $members, ?int $coverId = null): ClusterDraft
     {
-        return new ClusterDraft(
+        $draft = new ClusterDraft(
             algorithm: $algorithm,
             params: ['score' => $score],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
             members: $members,
         );
+
+        if ($coverId !== null) {
+            $draft->setCoverMediaId($coverId);
+        }
+
+        return $draft;
     }
 }

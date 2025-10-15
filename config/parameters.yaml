@@ -460,16 +460,17 @@ parameters:
     memories.thumbnail.apply_orientation: '%env(default:memories.thumbnail.apply_orientation_default:bool:MEMORIES_THUMBNAIL_APPLY_ORIENTATION)%'
 
     # Consolidation Defaults
+    # TODO(debug-run): Temporarily relaxed consolidation thresholds; revert after validation.
     # Description: Minimum aggregate score required for a cluster to be consolidated.
-    memories.cluster.consolidate.min_score: 0.4
+    memories.cluster.consolidate.min_score: 0.25
     # Description: Minimum number of media items required for a cluster during consolidation.
-    memories.cluster.consolidate.min_size: 3
+    memories.cluster.consolidate.min_size: 2
     # Description: Overlap ratio threshold above which clusters are merged during consolidation.
     memories.cluster.consolidate.overlap_merge_threshold: 0.55
     # Description: Overlap ratio threshold above which clusters are dropped during consolidation.
     memories.cluster.consolidate.overlap_drop_threshold: 0.7
     # Description: Maximum number of consolidated results a single media item may appear in.
-    memories.cluster.consolidate.per_media_cap: 2
+    memories.cluster.consolidate.per_media_cap: 6
     # Description: Ordered list defining which cluster types should be retained when conflicts arise.
     memories.cluster.consolidate.keep_order:
         - 'vacation'
@@ -604,13 +605,14 @@ parameters:
         - 'burst'
     # Description: Minimum share of unique media items required to keep certain cluster types.
     memories.cluster.consolidate.min_unique_share:
+        burst: 0.35
         photo_motif: 0.25
         device_similarity: 0.35
         panorama: 0.25
         portrait_orientation: 0.25
         video_stories: 0.25
     # Description: Flag indicating whether clusters must have valid timestamps to be consolidated.
-    memories.cluster.consolidate.require_valid_time: true
+    memories.cluster.consolidate.require_valid_time: false # TODO(debug-run): Re-enable once timestamps validated.
     # Description: Minimum year required for a cluster to be considered valid during consolidation.
     memories.cluster.consolidate.min_valid_year: 1990
     # Description: Maximum number of members stored in persistence for a single cluster.
