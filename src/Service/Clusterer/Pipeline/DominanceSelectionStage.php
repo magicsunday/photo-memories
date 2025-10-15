@@ -14,11 +14,13 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function array_fill_keys;
 use function array_keys;
 use function array_map;
 use function count;
+use function max;
 use function is_string;
 use function usort;
 
@@ -46,6 +48,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         private readonly float $overlapDropThreshold,
         private readonly array $keepOrder,
         private readonly array $classificationPriority,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         if ($this->overlapDropThreshold < $this->overlapMergeThreshold) {
             throw new InvalidArgumentException('overlapDropThreshold must be >= overlapMergeThreshold');
@@ -89,11 +92,29 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
      */
     public function process(array $drafts, ?callable $progress = null): array
     {
-        $total = count($drafts);
+        $total              = count($drafts);
+        $rejectedCandidates = 0;
+        $subStories         = 0;
+
+        $this->emitMonitoring('selection_start', [
+            'pre_count'        => $total,
+            'merge_threshold'  => $this->overlapMergeThreshold,
+            'drop_threshold'   => $this->overlapDropThreshold,
+            'order_count'      => count($this->keepOrder),
+        ]);
+
         if ($total <= 1) {
             if ($progress !== null) {
                 $progress($total, $total);
             }
+
+            $this->emitMonitoring('selection_completed', [
+                'pre_count'           => $total,
+                'post_count'          => $total,
+                'dropped_count'       => 0,
+                'rejected_candidates' => 0,
+                'sub_story_count'     => 0,
+            ]);
 
             return $drafts;
         }
@@ -179,6 +200,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                 $candidateDraft = $drafts[$candidate];
                 if ($this->isSubStory($candidateDraft)) {
                     $selected[] = $candidate;
+                    ++$subStories;
                     continue;
                 }
 
@@ -202,6 +224,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                 }
 
                 if ($reject) {
+                    ++$rejectedCandidates;
                     continue;
                 }
 
@@ -218,6 +241,16 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
             static fn (int $index): ClusterDraft => $drafts[$index],
             $selected,
         );
+
+        $postCount = count($result);
+
+        $this->emitMonitoring('selection_completed', [
+            'pre_count'           => $total,
+            'post_count'          => $postCount,
+            'dropped_count'       => max(0, $total - $postCount),
+            'rejected_candidates' => $rejectedCandidates,
+            'sub_story_count'     => $subStories,
+        ]);
 
         return $result;
     }
@@ -237,5 +270,17 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         }
 
         return (int) ($map[$classification] ?? 0);
+    }
+
+    /**
+     * @param array<string, int|float> $payload
+     */
+    private function emitMonitoring(string $event, array $payload): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('dominance_selection', $event, $payload);
     }
 }

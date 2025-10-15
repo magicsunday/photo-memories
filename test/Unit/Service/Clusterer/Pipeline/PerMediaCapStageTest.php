@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -102,6 +103,49 @@ final class PerMediaCapStageTest extends TestCase
         self::assertSame([
             $cover,
         ], $result);
+    }
+
+    #[Test]
+    public function emitsTelemetryForCapDecisions(): void
+    {
+        $emitter = new RecordingMonitoringEmitter();
+        $stage   = new PerMediaCapStage(
+            perMediaCap: 1,
+            keepOrder: ['primary', 'secondary'],
+            algorithmGroups: [
+                'primary'   => 'stories',
+                'secondary' => 'stories',
+            ],
+            defaultAlgorithmGroup: 'default',
+            monitoringEmitter: $emitter,
+        );
+
+        $initial  = $this->createDraft('primary', 0.95, [1]);
+        $cover    = $this->createDraft('secondary', 0.9, [1], 1);
+        $blocked  = $this->createDraft('secondary', 0.7, [1]);
+
+        $stage->process([
+            $initial,
+            $cover,
+            $blocked,
+        ]);
+
+        self::assertCount(2, $emitter->events);
+
+        $start = $emitter->events[0];
+        self::assertSame('per_media_cap', $start['job']);
+        self::assertSame('selection_start', $start['status']);
+        self::assertSame(3, $start['context']['pre_count']);
+        self::assertSame(1, $start['context']['per_media_cap']);
+
+        $completed = $emitter->events[1];
+        self::assertSame('per_media_cap', $completed['job']);
+        self::assertSame('selection_completed', $completed['status']);
+        self::assertSame(3, $completed['context']['pre_count']);
+        self::assertSame(1, $completed['context']['post_count']);
+        self::assertSame(2, $completed['context']['dropped_count']);
+        self::assertSame(1, $completed['context']['blocked_candidates']);
+        self::assertSame(1, $completed['context']['reassigned_slots']);
     }
 
     /**

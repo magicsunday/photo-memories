@@ -13,10 +13,13 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function array_fill_keys;
+use function array_keys;
 use function array_map;
 use function count;
+use function max;
 
 /**
  * Removes annotation-only clusters that do not contribute enough unique media.
@@ -35,6 +38,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
     public function __construct(
         array $annotateOnly,
         private readonly array $minUniqueShare,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $this->annotateOnlySet = array_fill_keys($annotateOnly, true);
     }
@@ -51,7 +55,40 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
      */
     public function process(array $drafts, ?callable $progress = null): array
     {
-        $total = count($drafts);
+        $total              = count($drafts);
+        $annotateCandidates = 0;
+        $keptAnnotations    = 0;
+        $droppedAnnotations = 0;
+
+        foreach ($drafts as $draft) {
+            if ($this->isAnnotateOnly($draft->getAlgorithm())) {
+                ++$annotateCandidates;
+            }
+        }
+
+        $this->emitMonitoring('selection_start', [
+            'pre_count'            => $total,
+            'annotate_candidates'  => $annotateCandidates,
+            'annotate_algorithms'  => array_keys($this->annotateOnlySet),
+            'min_unique_share_map' => array_keys($this->minUniqueShare),
+        ]);
+
+        if ($total === 0) {
+            if ($progress !== null) {
+                $progress(0, 0);
+            }
+
+            $this->emitMonitoring('selection_completed', [
+                'pre_count'           => 0,
+                'post_count'          => 0,
+                'dropped_count'       => 0,
+                'kept_annotations'    => 0,
+                'dropped_annotations' => 0,
+            ]);
+
+            return $drafts;
+        }
+
         if ($progress !== null) {
             $progress(0, $total);
         }
@@ -89,6 +126,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
             $members = $normalized[$index];
             $size    = count($members);
             if ($size === 0) {
+                ++$droppedAnnotations;
                 continue;
             }
 
@@ -103,6 +141,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
             $share      = $unique / (float) $size;
             $minAllowed = (float) ($this->minUniqueShare[$draft->getAlgorithm()] ?? 0.0);
             if ($share < $minAllowed) {
+                ++$droppedAnnotations;
                 continue;
             }
 
@@ -110,6 +149,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
                 $memberUse[$member] = ($memberUse[$member] ?? 0) + 1;
             }
 
+            ++$keptAnnotations;
             $result[] = $draft;
         }
 
@@ -117,11 +157,33 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
             $progress($total, $total);
         }
 
+        $postCount = count($result);
+
+        $this->emitMonitoring('selection_completed', [
+            'pre_count'           => $total,
+            'post_count'          => $postCount,
+            'dropped_count'       => max(0, $total - $postCount),
+            'kept_annotations'    => $keptAnnotations,
+            'dropped_annotations' => $droppedAnnotations,
+        ]);
+
         return $result;
     }
 
     private function isAnnotateOnly(string $algorithm): bool
     {
         return isset($this->annotateOnlySet[$algorithm]);
+    }
+
+    /**
+     * @param array<string, int|float|string|list<string>|null> $payload
+     */
+    private function emitMonitoring(string $event, array $payload): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('annotation_pruning', $event, $payload);
     }
 }

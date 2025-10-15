@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\DuplicateCollapseStage;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -112,6 +113,43 @@ final class DuplicateCollapseStageTest extends TestCase
 
         self::assertCount(1, $result);
         self::assertSame($manyFaces, $result[0]);
+    }
+
+    #[Test]
+    public function emitsTelemetryDuringDeduplication(): void
+    {
+        $emitter = new RecordingMonitoringEmitter();
+        $stage   = new DuplicateCollapseStage(['primary', 'secondary'], $emitter);
+
+        $metadata = ['bucket_key' => 'spring'];
+
+        $primaryWinner   = $this->createDraft('primary', 0.8, [1, 2, 3], $metadata);
+        $primaryLower    = $this->createDraft('primary', 0.5, [3, 1, 2], $metadata);
+        $secondaryHigher = $this->createDraft('secondary', 0.9, [1, 2, 3], $metadata);
+        $secondaryEqual  = $this->createDraft('secondary', 0.9, [3, 2, 1], $metadata);
+        $unrelated       = $this->createDraft('primary', 0.7, [4, 5]);
+
+        $stage->process([
+            $primaryWinner,
+            $primaryLower,
+            $secondaryHigher,
+            $secondaryEqual,
+            $unrelated,
+        ]);
+
+        self::assertCount(2, $emitter->events);
+        $start = $emitter->events[0];
+        self::assertSame('duplicate_collapse', $start['job']);
+        self::assertSame('selection_start', $start['status']);
+        self::assertSame(5, $start['context']['pre_count']);
+
+        $completed = $emitter->events[1];
+        self::assertSame('duplicate_collapse', $completed['job']);
+        self::assertSame('selection_completed', $completed['status']);
+        self::assertSame(5, $completed['context']['pre_count']);
+        self::assertSame(2, $completed['context']['post_count']);
+        self::assertSame(3, $completed['context']['dropped_duplicates']);
+        self::assertSame(2, $completed['context']['unique_fingerprints']);
     }
 
     /**

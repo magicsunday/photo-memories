@@ -1021,6 +1021,7 @@ services:
             $minSize: '%memories.cluster.consolidate.min_size%'
             $requireValidTime: '%memories.cluster.consolidate.require_valid_time%'
             $minValidYear: '%memories.cluster.consolidate.min_valid_year%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 500 }
 
@@ -1043,6 +1044,7 @@ services:
     MagicSunday\Memories\Service\Clusterer\Pipeline\DuplicateCollapseStage:
         arguments:
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 400 }
 
@@ -1058,6 +1060,7 @@ services:
             $overlapDropThreshold: '%memories.cluster.consolidate.overlap_drop_threshold%'
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
             $classificationPriority: '%memories.cluster.consolidate.classification_priority%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 325 }
 
@@ -1066,6 +1069,7 @@ services:
             $mergeThreshold: '%memories.cluster.consolidate.overlap_merge_threshold%'
             $dropThreshold: '%memories.cluster.consolidate.overlap_drop_threshold%'
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 300 }
 
@@ -1073,6 +1077,7 @@ services:
         arguments:
             $annotateOnly: '%memories.cluster.consolidate.annotate_only%'
             $minUniqueShare: '%memories.cluster.consolidate.min_unique_share%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 200 }
 
@@ -1082,6 +1087,7 @@ services:
             $keepOrder: '%memories.cluster.consolidate.keep_order%'
             $algorithmGroups: '%memories.cluster.consolidate.groups%'
             $defaultAlgorithmGroup: '%memories.cluster.consolidate.default_group%'
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 100 }
 

@@ -14,7 +14,9 @@ namespace MagicSunday\Memories\Service\Clusterer\Pipeline;
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidationStageInterface;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
+use function array_keys;
 use function array_map;
 use function array_unique;
 use function array_values;
@@ -40,7 +42,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     /**
      * @param list<string> $keepOrder
      */
-    public function __construct(array $keepOrder)
+    public function __construct(array $keepOrder, private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null)
     {
         $base = count($keepOrder);
         foreach ($keepOrder as $index => $algorithm) {
@@ -61,10 +63,24 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
     public function process(array $drafts, ?callable $progress = null): array
     {
         $total = count($drafts);
+
+        $this->emitMonitoring('selection_start', [
+            'pre_count'             => $total,
+            'priority_map_size'     => count($this->priorityMap),
+            'configured_algorithms' => array_keys($this->priorityMap),
+        ]);
+
         if ($total <= 1) {
             if ($progress !== null) {
                 $progress($total, $total);
             }
+
+            $this->emitMonitoring('selection_completed', [
+                'pre_count'         => $total,
+                'post_count'        => $total,
+                'dropped_duplicates'=> 0,
+                'dropped_count'     => 0,
+            ]);
 
             return $drafts;
         }
@@ -116,6 +132,16 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
             static fn (int $index): ClusterDraft => $drafts[$index],
             $winners,
         );
+
+        $postCount = count($result);
+
+        $this->emitMonitoring('selection_completed', [
+            'pre_count'          => $total,
+            'post_count'         => $postCount,
+            'dropped_duplicates' => max(0, $total - $postCount),
+            'dropped_count'      => max(0, $total - $postCount),
+            'unique_fingerprints'=> $postCount,
+        ]);
 
         return $result;
     }
@@ -437,5 +463,17 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, int|float|string|list<string>|null> $payload
+     */
+    private function emitMonitoring(string $event, array $payload): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('duplicate_collapse', $event, $payload);
     }
 }
