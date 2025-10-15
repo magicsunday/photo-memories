@@ -82,7 +82,7 @@ final class RunDetector implements VacationRunDetectorInterface
             $indexByKey[$key] = $index;
         }
 
-        $effectiveMinAwayDistanceKm = $this->determineEffectiveMinAwayDistance($home);
+        [$strictMinAwayDistanceKm, $softMinAwayDistanceKm] = $this->determineEffectiveMinAwayDistanceBounds($home);
 
         $metadata = [];
         foreach ($keys as $key) {
@@ -99,18 +99,26 @@ final class RunDetector implements VacationRunDetectorInterface
                 'baseAway'             => (bool) ($summary['baseAway'] ?? false),
                 'gpsMembers'           => $summary['gpsMembers'] ?? [],
                 'timestamp'            => $this->summaryTimestamp($summary),
+                'softDistanceEligible' => false,
             ];
         }
 
         $isAwayCandidate = [];
+        $softDistanceEligible = [];
         foreach ($keys as $key) {
-            $summary  = $days[$key];
             $features = $metadata[$key];
 
             $candidate = $features['baseAway'];
 
             if ($candidate === false && $features['dominantOutsideHome']) {
                 $candidate = true;
+            }
+
+            $strictDistanceMatch = $features['maxDistanceKm'] > $strictMinAwayDistanceKm;
+            $softDistanceMatch   = $features['maxDistanceKm'] > $softMinAwayDistanceKm;
+
+            if ($strictDistanceMatch === false && $softDistanceMatch === true) {
+                $metadata[$key]['softDistanceEligible'] = true;
             }
 
             if ($candidate === false && $features['hasGpsAnchors']) {
@@ -130,8 +138,12 @@ final class RunDetector implements VacationRunDetectorInterface
                     }
                 }
 
-                if ($candidate === false && $hasUsefulSamples && $features['maxDistanceKm'] > $effectiveMinAwayDistanceKm) {
+                if ($candidate === false && $hasUsefulSamples && $strictDistanceMatch) {
                     $candidate = true;
+                }
+
+                if ($candidate === false && $hasUsefulSamples && $strictDistanceMatch === false && $softDistanceMatch) {
+                    $softDistanceEligible[$key] = true;
                 }
             }
 
@@ -165,26 +177,12 @@ final class RunDetector implements VacationRunDetectorInterface
             }
         }
 
-        for ($i = 0; $i < $countKeys; ++$i) {
-            $key      = $keys[$i];
-            $features = $metadata[$key];
-
-            if ($isAwayCandidate[$key] ?? false) {
-                continue;
-            }
-
-            $prevIsAway = $i > 0 && ($isAwayCandidate[$keys[$i - 1]] ?? false);
-            $nextIsAway = $i + 1 < $countKeys && ($isAwayCandidate[$keys[$i + 1]] ?? false);
-
-            if (
-                $prevIsAway
-                && $nextIsAway
-                && $features['photoCount'] < $this->minItemsPerDay
-                && ($features['hasGpsAnchors'] || $features['transitHeavy'])
-            ) {
-                $isAwayCandidate[$key] = true;
-            }
-        }
+        $this->applyLowSampleBridging(
+            $isAwayCandidate,
+            $keys,
+            $metadata,
+            fn (string $key): int => $this->minItemsPerDay,
+        );
 
         for ($i = 0; $i < $countKeys; ++$i) {
             $key      = $keys[$i];
@@ -219,8 +217,200 @@ final class RunDetector implements VacationRunDetectorInterface
             }
         }
 
-        $runs  = [];
-        $run   = [];
+        $initialRuns = $this->collectRuns($keys, $isAwayCandidate, $indexByKey, $days);
+
+        $longRunMask = [];
+        foreach ($initialRuns as $run) {
+            $summary = $this->summarizeRun($run, $metadata);
+
+            if ($summary['awayDays'] < 10 || $summary['averagePhotoCount'] < 2.0) {
+                continue;
+            }
+
+            foreach ($run as $runKey) {
+                $longRunMask[$runKey] = true;
+            }
+
+            $startIndex = $indexByKey[$run[0]] ?? null;
+            $endIndex   = $indexByKey[$run[count($run) - 1]] ?? null;
+
+            if ($startIndex === null || $endIndex === null) {
+                continue;
+            }
+
+            if ($endIndex < $startIndex) {
+                [$startIndex, $endIndex] = [$endIndex, $startIndex];
+            }
+
+            for ($i = $startIndex; $i <= $endIndex; ++$i) {
+                $longRunMask[$keys[$i]] = true;
+            }
+        }
+
+        if ($longRunMask !== []) {
+            foreach ($longRunMask as $runKey => $_) {
+                if (($isAwayCandidate[$runKey] ?? false) === true) {
+                    continue;
+                }
+
+                if (($softDistanceEligible[$runKey] ?? false) === false) {
+                    continue;
+                }
+
+                $features = $metadata[$runKey];
+                if ($features['dominantInsideHome']) {
+                    continue;
+                }
+
+                if ($features['hasGpsAnchors'] === false && $features['transitHeavy'] === false) {
+                    continue;
+                }
+
+                $isAwayCandidate[$runKey] = true;
+            }
+
+            $this->applyLowSampleBridging(
+                $isAwayCandidate,
+                $keys,
+                $metadata,
+                function (string $key) use ($longRunMask): int {
+                    return ($longRunMask[$key] ?? false) ? 2 : $this->minItemsPerDay;
+                },
+            );
+
+            $this->promoteTransitAdjacency($isAwayCandidate, $keys, $metadata);
+
+            foreach ($keys as $key) {
+                if (($isAwayCandidate[$key] ?? false) === false) {
+                    continue;
+                }
+
+                $features = $metadata[$key];
+
+                if ($features['dominantInsideHome']) {
+                    $isAwayCandidate[$key] = false;
+                    continue;
+                }
+
+                if ($features['hasGpsAnchors'] === false && $features['transitHeavy'] === false) {
+                    $isAwayCandidate[$key] = false;
+                }
+            }
+        }
+
+        return $this->collectRuns($keys, $isAwayCandidate, $indexByKey, $days);
+    }
+
+    /**
+     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
+     *
+     * @return array{strict: float, soft: float}
+     */
+    private function determineEffectiveMinAwayDistanceBounds(array $home): array
+    {
+        if ($this->minAwayDistanceProfiles === []) {
+            return [
+                'strict' => $this->minAwayDistanceKm,
+                'soft'   => $this->minAwayDistanceKm,
+            ];
+        }
+
+        $centers       = HomeBoundaryHelper::centers($home);
+        $centerCount   = count($centers);
+        $totalMembers  = 0;
+        $primary       = $centers[0];
+        $primaryRadius = (float) ($primary['radius_km'] ?? 0.0);
+        $primaryMembers = (int) ($primary['member_count'] ?? 0);
+        $primaryCountry = null;
+
+        if (isset($primary['country']) && is_string($primary['country']) && $primary['country'] !== '') {
+            $primaryCountry = strtolower($primary['country']);
+        }
+
+        foreach ($centers as $center) {
+            $totalMembers += (int) ($center['member_count'] ?? 0);
+        }
+
+        $primaryDensity = 0.0;
+        if ($primaryRadius > 0.0 && $primaryMembers > 0) {
+            $areaKm2       = pi() * $primaryRadius * $primaryRadius;
+            $primaryDensity = $areaKm2 > 0.0 ? $primaryMembers / $areaKm2 : 0.0;
+        }
+
+        $strict = $this->minAwayDistanceKm;
+        $soft   = $this->minAwayDistanceKm;
+
+        foreach ($this->minAwayDistanceProfiles as $profile) {
+            if ($this->matchesDistanceProfile($profile, $centerCount, $totalMembers, $primaryRadius, $primaryDensity, $primaryCountry, false)) {
+                $strict = min($strict, $profile['distance_km']);
+            }
+
+            if ($this->matchesDistanceProfile($profile, $centerCount, $totalMembers, $primaryRadius, $primaryDensity, $primaryCountry, true)) {
+                $soft = min($soft, $profile['distance_km']);
+            }
+        }
+
+        return [
+            'strict' => $strict,
+            'soft'   => $soft,
+        ];
+    }
+
+    /**
+     * @param array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>} $profile
+     * @param bool                                                                                                                                   $ignoreMemberFloor
+     */
+    private function matchesDistanceProfile(
+        array $profile,
+        int $centerCount,
+        int $totalMembers,
+        float $primaryRadius,
+        float $primaryDensity,
+        ?string $primaryCountry,
+        bool $ignoreMemberFloor,
+    ): bool {
+        $minCenterCount = $profile['min_center_count'] ?? null;
+        if (is_int($minCenterCount) && $minCenterCount > 0 && $centerCount < $minCenterCount) {
+            return false;
+        }
+
+        $minTotalMembers = $profile['min_total_member_count'] ?? null;
+        if (!$ignoreMemberFloor && is_int($minTotalMembers) && $minTotalMembers > 0 && $totalMembers < $minTotalMembers) {
+            return false;
+        }
+
+        $maxPrimaryRadius = $profile['max_primary_radius_km'] ?? null;
+        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && (float) $maxPrimaryRadius > 0.0 && $primaryRadius > (float) $maxPrimaryRadius) {
+            return false;
+        }
+
+        $minPrimaryDensity = $profile['min_primary_density'] ?? null;
+        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && (float) $minPrimaryDensity > 0.0 && $primaryDensity < (float) $minPrimaryDensity) {
+            return false;
+        }
+
+        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== []) {
+            if ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<string> $keys
+     * @param array<string, bool> $isAwayCandidate
+     * @param array<string, int> $indexByKey
+     * @param array<string, array<string, mixed>> $days
+     *
+     * @return list<list<string>>
+     */
+    private function collectRuns(array $keys, array $isAwayCandidate, array $indexByKey, array $days): array
+    {
+        $runs = [];
+        $run  = [];
+
         $flush = function () use (&$run, &$runs, $keys, $indexByKey, $days): void {
             if ($run === []) {
                 return;
@@ -256,85 +446,89 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
+     * @param list<string> $run
+     * @param array<string, array{photoCount:int}> $metadata
+     *
+     * @return array{awayDays:int, averagePhotoCount:float}
      */
-    private function determineEffectiveMinAwayDistance(array $home): float
+    private function summarizeRun(array $run, array $metadata): array
     {
-        if ($this->minAwayDistanceProfiles === []) {
-            return $this->minAwayDistanceKm;
+        $awayDays    = count($run);
+        $totalPhotos = 0;
+
+        foreach ($run as $key) {
+            $totalPhotos += $metadata[$key]['photoCount'] ?? 0;
         }
 
-        $centers       = HomeBoundaryHelper::centers($home);
-        $centerCount   = count($centers);
-        $totalMembers  = 0;
-        $primary       = $centers[0];
-        $primaryRadius = (float) ($primary['radius_km'] ?? 0.0);
-        $primaryMembers = (int) ($primary['member_count'] ?? 0);
-        $primaryCountry = null;
-
-        if (isset($primary['country']) && is_string($primary['country']) && $primary['country'] !== '') {
-            $primaryCountry = strtolower($primary['country']);
-        }
-
-        foreach ($centers as $center) {
-            $totalMembers += (int) ($center['member_count'] ?? 0);
-        }
-
-        $primaryDensity = 0.0;
-        if ($primaryRadius > 0.0 && $primaryMembers > 0) {
-            $areaKm2       = pi() * $primaryRadius * $primaryRadius;
-            $primaryDensity = $areaKm2 > 0.0 ? $primaryMembers / $areaKm2 : 0.0;
-        }
-
-        $effective = $this->minAwayDistanceKm;
-
-        foreach ($this->minAwayDistanceProfiles as $profile) {
-            if ($this->matchesDistanceProfile($profile, $centerCount, $totalMembers, $primaryRadius, $primaryDensity, $primaryCountry)) {
-                $effective = min($effective, $profile['distance_km']);
-            }
-        }
-
-        return $effective;
+        return [
+            'awayDays'           => $awayDays,
+            'averagePhotoCount'  => $awayDays > 0 ? $totalPhotos / $awayDays : 0.0,
+        ];
     }
 
     /**
-     * @param array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>} $profile
+     * @param array<string, bool> $isAwayCandidate
+     * @param list<string>        $keys
+     * @param array<string, array{photoCount:int,hasGpsAnchors:bool,transitHeavy:bool}> $metadata
+     * @param callable(string, int):int $thresholdProvider
      */
-    private function matchesDistanceProfile(
-        array $profile,
-        int $centerCount,
-        int $totalMembers,
-        float $primaryRadius,
-        float $primaryDensity,
-        ?string $primaryCountry,
-    ): bool {
-        $minCenterCount = $profile['min_center_count'] ?? null;
-        if (is_int($minCenterCount) && $minCenterCount > 0 && $centerCount < $minCenterCount) {
-            return false;
-        }
+    private function applyLowSampleBridging(
+        array &$isAwayCandidate,
+        array $keys,
+        array $metadata,
+        callable $thresholdProvider,
+    ): void {
+        $countKeys = count($keys);
 
-        $minTotalMembers = $profile['min_total_member_count'] ?? null;
-        if (is_int($minTotalMembers) && $minTotalMembers > 0 && $totalMembers < $minTotalMembers) {
-            return false;
-        }
+        for ($i = 0; $i < $countKeys; ++$i) {
+            $key = $keys[$i];
 
-        $maxPrimaryRadius = $profile['max_primary_radius_km'] ?? null;
-        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && (float) $maxPrimaryRadius > 0.0 && $primaryRadius > (float) $maxPrimaryRadius) {
-            return false;
-        }
+            if ($isAwayCandidate[$key] ?? false) {
+                continue;
+            }
 
-        $minPrimaryDensity = $profile['min_primary_density'] ?? null;
-        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && (float) $minPrimaryDensity > 0.0 && $primaryDensity < (float) $minPrimaryDensity) {
-            return false;
-        }
+            $prevIsAway = $i > 0 && ($isAwayCandidate[$keys[$i - 1]] ?? false);
+            $nextIsAway = $i + 1 < $countKeys && ($isAwayCandidate[$keys[$i + 1]] ?? false);
 
-        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== []) {
-            if ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true)) {
-                return false;
+            if ($prevIsAway === false || $nextIsAway === false) {
+                continue;
+            }
+
+            $threshold = $thresholdProvider($key, $i);
+
+            if (
+                ($metadata[$key]['photoCount'] ?? 0) < $threshold
+                && (($metadata[$key]['hasGpsAnchors'] ?? false) || ($metadata[$key]['transitHeavy'] ?? false))
+            ) {
+                $isAwayCandidate[$key] = true;
             }
         }
+    }
 
-        return true;
+    /**
+     * @param array<string, bool>                                  $isAwayCandidate
+     * @param list<string>                                         $keys
+     * @param array<string, array{transitHeavy:bool}> $metadata
+     */
+    private function promoteTransitAdjacency(array &$isAwayCandidate, array $keys, array $metadata): void
+    {
+        $countKeys = count($keys);
+
+        for ($i = 0; $i < $countKeys; ++$i) {
+            $key      = $keys[$i];
+            $features = $metadata[$key];
+
+            if (($isAwayCandidate[$key] ?? false) || $features['transitHeavy'] === false) {
+                continue;
+            }
+
+            $prevIsAway = $i > 0 && ($isAwayCandidate[$keys[$i - 1]] ?? false);
+            $nextIsAway = $i + 1 < $countKeys && ($isAwayCandidate[$keys[$i + 1]] ?? false);
+
+            if ($prevIsAway || $nextIsAway) {
+                $isAwayCandidate[$key] = true;
+            }
+        }
     }
 
     private function summaryTimestamp(array $summary): ?int
