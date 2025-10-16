@@ -29,6 +29,8 @@ use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Tester\CommandTester;
 
+use function preg_replace;
+
 final class FeedPreviewCommandTest extends TestCase
 {
     #[Test]
@@ -164,6 +166,127 @@ final class FeedPreviewCommandTest extends TestCase
 
         $tester->assertCommandIsSuccessful();
         self::assertSame(2, $perMediaCapStage->getPerMediaCap());
+    }
+
+    #[Test]
+    public function itRendersStorylineCountsAndTimeRangeInTable(): void
+    {
+        $entityManager = $this->createEntityManagerWithResult([
+            $this->createMock(ClusterEntity::class),
+        ], 2);
+
+        $draft = new ClusterDraft(
+            algorithm: 'travel',
+            params: ['score' => 0.82, 'group' => 'stories'],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2, 3, 4],
+        );
+
+        $mapper = $this->createMock(ClusterEntityToDraftMapper::class);
+        $mapper->expects(self::once())
+            ->method('mapMany')
+            ->willReturn([$draft]);
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::once())
+            ->method('consolidate')
+            ->with([$draft], self::isType('callable'))
+            ->willReturn([$draft]);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([$draft], null)
+            ->willReturn([
+                new MemoryFeedItem(
+                    'travel',
+                    'Titel',
+                    'Sub',
+                    null,
+                    [1, 2, 3, 4],
+                    0.91,
+                    [
+                        'storyline'      => 'sunny-days',
+                        'member_quality' => [
+                            'summary' => [
+                                'members_persisted'   => 7,
+                                'selection_counts'    => [
+                                    'raw'      => 6,
+                                    'curated'  => 4,
+                                ],
+                                'selection_storyline' => 'ignored',
+                            ],
+                            'ordered' => [11, 22, 33, 44, 55, 66],
+                        ],
+                        'time_range' => [
+                            'from' => '2024-05-01T00:00:00+00:00',
+                            'to'   => '2024-05-05T00:00:00+00:00',
+                        ],
+                    ],
+                ),
+                new MemoryFeedItem(
+                    'people',
+                    'Titel 2',
+                    'Sub 2',
+                    null,
+                    [5, 6],
+                    0.65,
+                    [
+                        'member_quality' => [
+                            'summary' => [
+                                'selection_counts'    => [
+                                    'raw' => 5,
+                                ],
+                                'selection_storyline' => 'from-summary',
+                            ],
+                            'ordered' => [100, 101, 102, 103, 104],
+                        ],
+                        'time_range' => [
+                            'from' => '2024-06-01',
+                            'to'   => '2024-06-01',
+                        ],
+                    ],
+                ),
+            ]);
+
+        $perMediaCapStage = $this->createPerMediaCapStage();
+        $profileProvider   = $this->createProfileProvider();
+        $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
+
+        $command = new FeedPreviewCommand(
+            $entityManager,
+            $feedBuilder,
+            $consolidator,
+            $perMediaCapStage,
+            $mapper,
+            $selectionPolicies,
+            $profileProvider,
+            10,
+        );
+
+        $tester = new CommandTester($command);
+        $tester->execute([
+            '--limit-clusters' => '2',
+        ], [
+            'decorated' => false,
+        ]);
+
+        $tester->assertCommandIsSuccessful();
+
+        $normalisedOutput = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
+
+        self::assertStringContainsString(
+            '| # | Algorithmus | Storyline | Mitglieder (roh) | Mitglieder (kuratiert) | Score | Zeitraum |',
+            $normalisedOutput,
+        );
+        self::assertStringContainsString(
+            '| 1 | travel | sunny-days | 7 | 4 | 0,910 | 2024-05-01 → 2024-05-05 |',
+            $normalisedOutput,
+        );
+        self::assertStringContainsString(
+            '| 2 | people | from-summary | 5 | 2 | 0,650 | 2024-06-01 |',
+            $normalisedOutput,
+        );
     }
 
     /**

@@ -11,7 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
+use DateTimeImmutable;
+use DateTimeInterface;
+use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
@@ -28,11 +32,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-use function array_slice;
 use function count;
 use function implode;
 use function is_array;
-use function is_float;
 use function is_int;
 use function is_string;
 use function max;
@@ -189,23 +191,30 @@ final class FeedPreviewCommand extends Command
         foreach ($items as $it) {
             ++$idx;
             $params    = $it->getParams();
-            $tagColumn = $this->formatSceneTags($params['scene_tags'] ?? null);
-            $rows[]    = [
+            $memberIds = $it->getMemberIds();
+
+            $row = [
                 (string) $idx,
                 $it->getAlgorithm(),
-                $it->getTitle(),
-                $it->getSubtitle(),
+                $this->resolveStoryline($params),
+                (string) $this->resolveRawMemberCount($params),
+                (string) $this->resolveCuratedMemberCount($memberIds, $params),
                 number_format($it->getScore(), 3, ',', ''),
-                (string) count($it->getMemberIds()),
-                $it->getCoverMediaId() !== null ? (string) $it->getCoverMediaId() : '–',
-                $showMembers ? implode(',', $it->getMemberIds()) : '–',
-                $tagColumn,
+                $this->formatTimeRange($params['time_range'] ?? null),
             ];
+
+            if ($showMembers) {
+                $row[] = $memberIds === [] ? '–' : implode(',', $memberIds);
+            }
+
+            $rows[] = $row;
         }
 
-        $headers   = ['#', 'Strategie', 'Titel', 'Untertitel', 'Score', 'Anz.', 'Cover-ID'];
-        $headers[] = $showMembers ? 'Mitglieder' : '–';
-        $headers[] = 'Tags';
+        $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Score', 'Zeitraum'];
+
+        if ($showMembers) {
+            $headers[] = 'Mitglieder';
+        }
 
         $io->table($headers, $rows);
 
@@ -239,40 +248,148 @@ final class FeedPreviewCommand extends Command
     }
 
     /**
-     * @param array<int, array<string, mixed>|bool|float|int|string|null>|bool|float|int|string|null $value
+     * @param array<string, mixed> $params
      */
-    private function formatSceneTags(array|bool|float|int|string|null $value): string
+    private function resolveStoryline(array $params): string
     {
-        if (!is_array($value)) {
+        $storyline = $params['storyline'] ?? null;
+
+        if (is_string($storyline) && $storyline !== '') {
+            return $storyline;
+        }
+
+        $fallback = $params['member_quality']['summary']['selection_storyline'] ?? null;
+
+        if (is_string($fallback) && $fallback !== '') {
+            return $fallback;
+        }
+
+        return '–';
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function resolveRawMemberCount(array $params): int
+    {
+        $summary = $params['member_quality']['summary'] ?? null;
+
+        if (is_array($summary)) {
+            $persisted = $summary['members_persisted'] ?? null;
+
+            if (is_int($persisted)) {
+                return $persisted;
+            }
+
+            $selectionCounts = $summary['selection_counts'] ?? null;
+
+            if (is_array($selectionCounts)) {
+                $raw = $selectionCounts['raw'] ?? null;
+
+                if (is_int($raw)) {
+                    return $raw;
+                }
+            }
+        }
+
+        $ordered = $params['member_quality']['ordered'] ?? null;
+
+        if (is_array($ordered)) {
+            return count($ordered);
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param list<int> $memberIds
+     * @param array<string, mixed> $params
+     */
+    private function resolveCuratedMemberCount(array $memberIds, array $params): int
+    {
+        $summary = $params['member_quality']['summary'] ?? null;
+
+        if (is_array($summary)) {
+            $selectionCounts = $summary['selection_counts'] ?? null;
+
+            if (is_array($selectionCounts)) {
+                $curated = $selectionCounts['curated'] ?? null;
+
+                if (is_int($curated)) {
+                    return $curated;
+                }
+            }
+        }
+
+        return count($memberIds);
+    }
+
+    /**
+     * @param array<string, mixed>|null $timeRange
+     */
+    private function formatTimeRange(?array $timeRange): string
+    {
+        if ($timeRange === null) {
             return '–';
         }
 
-        $parts = [];
-        foreach (array_slice($value, 0, 3) as $tag) {
-            if (!is_array($tag)) {
-                continue;
-            }
+        $from = $this->normaliseDateTime($timeRange['from'] ?? null);
+        $to   = $this->normaliseDateTime($timeRange['to'] ?? null);
 
-            $label = $tag['label'] ?? null;
-            $score = $tag['score'] ?? null;
-
-            if (!is_string($label)) {
-                continue;
-            }
-
-            $text = $label;
-            if (is_float($score) || is_int($score)) {
-                $formatted = number_format((float) $score, 2, ',', '');
-                $text      = sprintf('%s (%s)', $label, $formatted);
-            }
-
-            $parts[] = $text;
-        }
-
-        if ($parts === []) {
+        if ($from === null && $to === null) {
             return '–';
         }
 
-        return implode(', ', $parts);
+        $timezone = new DateTimeZone('UTC');
+
+        if ($from !== null) {
+            $from = $from->setTimezone($timezone);
+        }
+
+        if ($to !== null) {
+            $to = $to->setTimezone($timezone);
+        }
+
+        if ($from !== null && $to !== null) {
+            $fromFormatted = $from->format('Y-m-d');
+            $toFormatted   = $to->format('Y-m-d');
+
+            if ($fromFormatted === $toFormatted) {
+                return $fromFormatted;
+            }
+
+            return sprintf('%s → %s', $fromFormatted, $toFormatted);
+        }
+
+        $single = $from ?? $to;
+
+        return $single->format('Y-m-d');
+    }
+
+    private function normaliseDateTime(DateTimeInterface|string|null $value): ?DateTimeImmutable
+    {
+        if ($value instanceof DateTimeImmutable) {
+            return $value;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return DateTimeImmutable::createFromInterface($value);
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $dateTime = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $value);
+
+        if ($dateTime instanceof DateTimeImmutable) {
+            return $dateTime;
+        }
+
+        try {
+            return new DateTimeImmutable($value);
+        } catch (Exception) {
+            return null;
+        }
     }
 }
