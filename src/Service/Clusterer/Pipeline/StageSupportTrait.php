@@ -167,8 +167,43 @@ trait StageSupportTrait
         }
 
         $members = $normalizedMembers ?? $this->normalizeMembers($draft->getMembers());
+        $memberCount = count($members);
 
-        return (float) count($members);
+        $summary = $this->extractMemberQualitySummary($draft->getParams());
+        if ($summary !== []) {
+            $selectionCounts = $summary['selection_counts'] ?? null;
+            if (is_array($selectionCounts)) {
+                $curated = $selectionCounts['curated'] ?? null;
+                if (is_numeric($curated)) {
+                    $curatedCount = (int) $curated;
+                    if ($curatedCount > 0 && $curatedCount > $memberCount) {
+                        $memberCount = $curatedCount;
+                    }
+                }
+            }
+        }
+
+        return (float) $memberCount;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return array<string, mixed>
+     */
+    private function extractMemberQualitySummary(array $params): array
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return [];
+        }
+
+        $summary = $memberQuality['summary'] ?? null;
+        if (!is_array($summary)) {
+            return [];
+        }
+
+        return $summary;
     }
 
     protected function hasValidTimeRange(ClusterDraft $draft, int $minValidYear): bool
