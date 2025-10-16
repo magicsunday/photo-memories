@@ -870,6 +870,14 @@ final class VacationClusterStrategyTest extends TestCase
         /** @var list<int> $resolved */
         $resolved = $resolve->invoke($service, $draft);
 
+        $params        = $draft->getParams();
+        $memberQuality = $params['member_quality']['ordered'] ?? [];
+        if (is_array($memberQuality) && $memberQuality !== []) {
+            self::assertNotSame($memberQuality, $draft->getMembers());
+        }
+
+        self::assertSame($draft->getMembers(), $resolved);
+
         $clamp = $reflection->getMethod('clampMembers');
         $clamp->setAccessible(true);
 
