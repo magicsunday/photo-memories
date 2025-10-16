@@ -318,12 +318,14 @@ YAML
                         'first_seen_at' => 300,
                     ],
                 ],
-                'member_selection'    => [
-                    'telemetry' => [
-                        'people_balance_counts' => [
-                            'Anna' => 5,
-                            'Ben'  => 3,
-                            'Chris'=> 2,
+                'member_quality'      => [
+                    'summary' => [
+                        'selection_telemetry' => [
+                            'people_balance_counts' => [
+                                'Anna' => 5,
+                                'Ben'  => 3,
+                                'Chris'=> 2,
+                            ],
                         ],
                     ],
                 ],

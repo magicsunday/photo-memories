@@ -281,6 +281,47 @@ final class DominanceSelectionStageTest extends TestCase
         ], $result);
     }
 
+    #[Test]
+    public function keepsClustersRegardlessOfCuratedCounts(): void
+    {
+        $stage = new DominanceSelectionStage(
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
+            keepOrder: ['primary'],
+            classificationPriority: [],
+        );
+
+        $withCurated = $this->createDraft('primary', 0.0, [1, 2, 3]);
+        $withCurated->setParam('member_quality', [
+            'summary' => [
+                'selection_counts' => [
+                    'raw'     => 3,
+                    'curated' => 2,
+                ],
+            ],
+        ]);
+
+        $zeroCurated = $this->createDraft('primary', 0.0, [4, 5, 6]);
+        $zeroCurated->setParam('member_quality', [
+            'summary' => [
+                'selection_counts' => [
+                    'raw'     => 3,
+                    'curated' => 0,
+                ],
+            ],
+        ]);
+
+        $result = $stage->process([
+            $withCurated,
+            $zeroCurated,
+        ]);
+
+        self::assertSame([
+            $withCurated,
+            $zeroCurated,
+        ], $result);
+    }
+
     /**
      * @param list<int> $members
      */

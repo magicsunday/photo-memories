@@ -198,6 +198,11 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
      */
     private function resolveRouteParts(array $params): array
     {
+        $summaryLabels = $this->resolveStaypointLeaders($params);
+        if ($summaryLabels !== []) {
+            return $summaryLabels;
+        }
+
         $parts = [];
 
         $staypointParts = $params['primaryStaypointLocationParts'] ?? null;
@@ -248,6 +253,76 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
         $unique = array_values(array_unique($parts, SORT_STRING));
 
         return $unique;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return list<string>
+     */
+    private function resolveStaypointLeaders(array $params): array
+    {
+        $summary = $this->extractMemberQualitySummary($params);
+        if ($summary === []) {
+            return [];
+        }
+
+        $candidates = $summary['staypoint_leaders'] ?? null;
+        if (!is_array($candidates) || $candidates === []) {
+            $telemetry = $summary['selection_telemetry'] ?? null;
+            if (is_array($telemetry)) {
+                $candidates = $telemetry['staypoint_leaders'] ?? ($telemetry['staypoint_labels'] ?? null);
+            }
+        }
+
+        if (!is_array($candidates) || $candidates === []) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($candidates as $candidate) {
+            $label = null;
+            if (is_string($candidate)) {
+                $label = $candidate;
+            } elseif (is_array($candidate)) {
+                $label = $candidate['label'] ?? ($candidate['name'] ?? null);
+            }
+
+            if (!is_string($label)) {
+                continue;
+            }
+
+            $trimmed = trim($label);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (!in_array($trimmed, $labels, true)) {
+                $labels[] = $trimmed;
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return array<string, mixed>
+     */
+    private function extractMemberQualitySummary(array $params): array
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return [];
+        }
+
+        $summary = $memberQuality['summary'] ?? null;
+        if (!is_array($summary)) {
+            return [];
+        }
+
+        return $summary;
     }
 
     /**
