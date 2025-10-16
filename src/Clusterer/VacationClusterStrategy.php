@@ -18,6 +18,7 @@ use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
 use function sprintf;
@@ -50,6 +51,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         private DaySummaryBuilderInterface $daySummaryBuilder,
         private VacationSegmentAssemblerInterface $segmentAssembler,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private ?VacationDebugContext $vacationDebugContext = null,
     ) {
     }
 
@@ -126,6 +128,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $ordered = $this->sortChronologically($timestamped);
         $progress += 1;
         $this->notifyProgress($update, $progress, $totalSteps, 'Chronologie herstellen');
+
+        $configuredHome = $this->homeLocator->getConfiguredHome();
+        if ($configuredHome !== null) {
+            $this->emitConfiguredHomeWarnings($configuredHome);
+        }
 
         // Determine the traveller's base location, which anchors day grouping and trip detection.
         $home = $this->homeLocator->determineHome($ordered);
@@ -305,5 +312,29 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     private function emitMonitoring(string $status, array $context = []): void
     {
         $this->monitoringEmitter?->emit(self::MONITORING_JOB, $status, $context);
+    }
+
+    /**
+     * @param array{lat: float, lon: float, radius_km: float} $configuredHome
+     */
+    private function emitConfiguredHomeWarnings(array $configuredHome): void
+    {
+        if ($this->isZeroCoordinate($configuredHome['lat']) && $this->isZeroCoordinate($configuredHome['lon'])) {
+            $message = 'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.';
+
+            $this->vacationDebugContext?->recordWarning($message);
+            $this->emitMonitoring('home_warning', [
+                'code' => 'home_coordinates_default_zero',
+                'message' => $message,
+                'home_lat' => $configuredHome['lat'],
+                'home_lon' => $configuredHome['lon'],
+                'home_radius_km' => $configuredHome['radius_km'],
+            ]);
+        }
+    }
+
+    private function isZeroCoordinate(float $value): bool
+    {
+        return \abs($value) < 0.000001;
     }
 }

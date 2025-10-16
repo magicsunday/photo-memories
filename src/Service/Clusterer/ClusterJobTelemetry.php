@@ -23,10 +23,12 @@ final readonly class ClusterJobTelemetry
     /**
      * @param array<string, int>    $stageCounts
      * @param list<ClusterSummary> $topClusters
+     * @param list<string>         $warnings
      */
     public function __construct(
         private array $stageCounts,
         private array $topClusters,
+        private array $warnings = [],
     ) {
     }
 
@@ -37,8 +39,9 @@ final readonly class ClusterJobTelemetry
 
     /**
      * @param list<ClusterSummary> $topClusters
+     * @param list<string>         $warnings
      */
-    public static function fromStageCounts(int $drafts, int $consolidated, array $topClusters = []): self
+    public static function fromStageCounts(int $drafts, int $consolidated, array $topClusters = [], array $warnings = []): self
     {
         return new self(
             [
@@ -46,6 +49,7 @@ final readonly class ClusterJobTelemetry
                 self::STAGE_CONSOLIDATED => $consolidated,
             ],
             $topClusters,
+            $warnings,
         );
     }
 
@@ -68,5 +72,13 @@ final readonly class ClusterJobTelemetry
     public function getTopClusters(): array
     {
         return $this->topClusters;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getWarnings(): array
+    {
+        return $this->warnings;
     }
 }

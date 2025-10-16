@@ -43,4 +43,23 @@ final class VacationDebugContextTest extends TestCase
         self::assertFalse($context->isEnabled());
         self::assertSame([], $context->getSegments());
     }
+
+    #[Test]
+    public function itCollectsWarningsAndAvoidsDuplicates(): void
+    {
+        $context = new VacationDebugContext();
+
+        $context->recordWarning('Warnung A');
+        $context->recordWarning('Warnung A');
+        $context->recordWarning('Warnung B');
+
+        self::assertSame(['Warnung A', 'Warnung B'], $context->getWarnings());
+
+        $context->reset();
+        self::assertSame([], $context->getWarnings());
+
+        $context->recordWarning('Warnung C');
+        $context->disable();
+        self::assertSame([], $context->getWarnings());
+    }
 }

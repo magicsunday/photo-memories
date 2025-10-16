@@ -77,6 +77,10 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             throw new InvalidArgumentException('fallbackRadiusScale must be >= 1.');
         }
 
+        if (($this->homeLat === null) !== ($this->homeLon === null)) {
+            throw new InvalidArgumentException('homeLat and homeLon must either both be provided or both be null.');
+        }
+
         if ($this->homeLat !== null && ($this->homeLat < -90.0 || $this->homeLat > 90.0)) {
             throw new InvalidArgumentException('homeLat must be within -90 and 90 degrees.');
         }
@@ -88,6 +92,19 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         if ($this->homeRadiusKm !== null && $this->homeRadiusKm <= 0.0) {
             throw new InvalidArgumentException('homeRadiusKm must be > 0 when provided.');
         }
+    }
+
+    public function getConfiguredHome(): ?array
+    {
+        if ($this->homeLat === null || $this->homeLon === null) {
+            return null;
+        }
+
+        return [
+            'lat' => $this->homeLat,
+            'lon' => $this->homeLon,
+            'radius_km' => $this->homeRadiusKm ?? $this->defaultHomeRadiusKm,
+        ];
     }
 
     /**

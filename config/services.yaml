@@ -190,9 +190,9 @@ services:
 
     MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher:
         arguments:
-            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
-            $homeRadiusKm: '%env(default:memories.home.radius_km_default:float:MEMORIES_HOME_RADIUS_KM)%'
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeRadiusKm: '%env(float:MEMORIES_HOME_RADIUS_KM)%'
             $homeVersionHash: '%memories.home.version_hash%'
             $cellDegrees: 0.01
         tags:
@@ -647,8 +647,8 @@ services:
 
     MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy:
         arguments:
-            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
             $homeRadiusMeters: 260.0
             $minHomeShare: 0.62
             $minItemsPerDay: 3
@@ -659,8 +659,8 @@ services:
 
     MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy:
         arguments:
-            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
             $homeRadiusMeters: 250.0
             $minHomeShare: 0.60
             $minItemsPerDay: 3
@@ -717,9 +717,9 @@ services:
         arguments:
             $timezone: 'Europe/Berlin'
             $defaultHomeRadiusKm: 15.0
-            $homeLat: '%env(default:memories.home.lat_default:float:MEMORIES_HOME_LAT)%'
-            $homeLon: '%env(default:memories.home.lon_default:float:MEMORIES_HOME_LON)%'
-            $homeRadiusKm: '%env(default:memories.home.radius_km_default:float:MEMORIES_HOME_RADIUS_KM)%'
+            $homeLat: '%env(float:MEMORIES_HOME_LAT)%'
+            $homeLon: '%env(float:MEMORIES_HOME_LON)%'
+            $homeRadiusKm: '%env(float:MEMORIES_HOME_RADIUS_KM)%'
             $maxHomeCenters: '%env(default:memories.home.max_centers_default:int:MEMORIES_HOME_MAX_CENTERS)%'
             $fallbackRadiusScale: '%env(default:memories.home.fallback_radius_scale_default:float:MEMORIES_HOME_FALLBACK_RADIUS_SCALE)%'
 
