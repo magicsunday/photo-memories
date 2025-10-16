@@ -107,6 +107,40 @@ final class PerMediaCapStageTest extends TestCase
     }
 
     #[Test]
+    public function dropsWholeDraftsWithoutMutatingMemberLists(): void
+    {
+        $stage = new PerMediaCapStage(
+            perMediaCap: 1,
+            keepOrder: ['primary'],
+            algorithmGroups: ['primary' => 'stories'],
+            defaultAlgorithmGroup: 'default',
+        );
+
+        $keptMembers      = [5, 5, 3, 2];
+        $blockedMembers   = [2, 5, 3];
+        $unrelatedMembers = [9, 8, 9];
+
+        $blocked   = $this->createDraft('primary', 0.8, $blockedMembers);
+        $kept      = $this->createDraft('primary', 0.95, $keptMembers);
+        $unrelated = $this->createDraft('primary', 0.7, $unrelatedMembers);
+
+        $result = $stage->process([
+            $blocked,
+            $kept,
+            $unrelated,
+        ]);
+
+        self::assertSame([
+            $kept,
+            $unrelated,
+        ], $result);
+
+        self::assertSame($blockedMembers, $blocked->getMembers());
+        self::assertSame($keptMembers, $kept->getMembers());
+        self::assertSame($unrelatedMembers, $unrelated->getMembers());
+    }
+
+    #[Test]
     public function emitsTelemetryForCapDecisions(): void
     {
         $emitter = new RecordingMonitoringEmitter();

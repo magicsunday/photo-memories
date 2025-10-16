@@ -24,7 +24,8 @@ use function max;
 use function usort;
 
 /**
- * Enforces a per-media cap per algorithm group.
+ * Enforces a per-media cap per algorithm group by dropping whole drafts while
+ * leaving member lists untouched.
  */
 final class PerMediaCapStage implements ClusterConsolidationStageInterface
 {
