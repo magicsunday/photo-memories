@@ -191,13 +191,16 @@ final class ClusterCommand extends Command
 
         $rows = [];
         foreach ($topClusters as $summary) {
-            $score = $summary->getScore();
+            $score     = $summary->getScore();
             $timeRange = $summary->getTimeRange();
+            $policy    = $summary->getPolicyKey();
 
             $rows[] = [
                 $summary->getAlgorithm(),
                 $summary->getStoryline(),
-                (string) $summary->getMemberCount(),
+                $policy !== null && $policy !== '' ? $policy : '–',
+                (string) $summary->getRawMemberCount(),
+                (string) $summary->getCuratedMemberCount(),
                 $score !== null ? sprintf('%.2f', $score) : '–',
                 $timeRange instanceof ClusterSummaryTimeRange
                     ? $this->formatTelemetryRange($timeRange)
@@ -205,7 +208,7 @@ final class ClusterCommand extends Command
             ];
         }
 
-        $io->table(['Algorithmus', 'Storyline', 'Mitglieder', 'Score', 'Zeitraum'], $rows);
+        $io->table(['Algorithmus', 'Storyline', 'Profil', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Score', 'Zeitraum'], $rows);
     }
 
     private function formatTelemetryRange(ClusterSummaryTimeRange $range): string

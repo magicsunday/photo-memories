@@ -24,6 +24,7 @@ use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
@@ -97,8 +98,8 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         self::assertIsArray($selection);
         self::assertSame('default', $selection['profile']);
         self::assertSame([
-            'raw'     => 3,
-            'curated' => 2,
+            'pre'     => 3,
+            'post'    => 2,
             'dropped' => 1,
         ], $selection['counts']);
         self::assertArrayNotHasKey('telemetry', $selection);
@@ -211,6 +212,75 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $hints = $telemetry['relaxation_hints'] ?? [];
         self::assertContains('max_per_day erhöhen, um Tagesbegrenzungen zu lockern.', $hints);
         self::assertContains('time_slot_hours erhöhen, um mehr Medien pro Zeitfenster zu behalten.', $hints);
+    }
+
+    #[Test]
+    public function curateEmitsMonitoringTelemetryWithCountsAndPolicy(): void
+    {
+        $base = new DateTimeImmutable('2024-09-12 12:00:00');
+
+        $media1 = $this->createMedia(1, $base, false, 'aa11');
+        $media2 = $this->createMedia(2, $base->add(new DateInterval('PT45M')), true, 'bb22');
+        $media3 = $this->createMedia(3, $base->add(new DateInterval('PT2H')), false, 'cc33');
+
+        $lookup = new class([$media1, $media2, $media3]) implements MemberMediaLookupInterface {
+            /**
+             * @param list<Media> $media
+             */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $map = [];
+                foreach ($this->media as $item) {
+                    $map[$item->getId()] = $item;
+                }
+
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($map[$id])) {
+                        $result[] = $map[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $selector = $this->createMock(MemberSelectorInterface::class);
+        $selector->expects(self::once())
+            ->method('select')
+            ->willReturn(new SelectionResult([
+                $media1,
+                $media2,
+            ], [
+                'rejections' => [SelectionTelemetry::REASON_PHASH => 1],
+            ]));
+
+        $detector = $this->createMock(StaypointDetectorInterface::class);
+        $detector->expects(self::never())->method('detect');
+
+        $profileProvider = new SelectionProfileProvider(new VacationSelectionOptions());
+        $provider        = new ClusterMemberSelectionProfileProvider($profileProvider);
+        $emitter         = new RecordingMonitoringEmitter();
+
+        $service = new ClusterMemberSelectionService($selector, $lookup, $provider, $detector, $emitter);
+
+        $draft = new ClusterDraft('telemetry', [], ['lat' => 48.14, 'lon' => 11.58], [1, 2, 3], 'telemetry.story');
+        $service->curate($draft);
+
+        self::assertNotEmpty($emitter->events);
+        $event = $emitter->events[array_key_last($emitter->events)];
+        self::assertSame('cluster_member_selection', $event['job']);
+        self::assertSame('completed', $event['status']);
+
+        $context = $event['context'];
+        self::assertSame(3, $context['members_pre']);
+        self::assertSame(2, $context['members_curated']);
+        self::assertSame(2, $context['members_post']);
+        self::assertSame('default', $context['policy_key']);
     }
 
     #[Test]

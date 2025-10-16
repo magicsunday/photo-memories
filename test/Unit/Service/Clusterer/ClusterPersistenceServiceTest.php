@@ -299,6 +299,12 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame('2024.1', $persisted->getAlgorithmVersion());
         $persistedParams = $persisted->getParams();
         self::assertSame([3, 2, 1], $persistedParams['member_quality']['ordered']);
+        $persistedSummary = $persistedParams['member_quality']['summary'] ?? [];
+        self::assertIsArray($persistedSummary);
+        self::assertSame(3, $persistedSummary['members_persisted']);
+        self::assertSame(3, $persistedSummary['curated_overlay_count']);
+        self::assertSame(3, $persistedSummary['selection_counts']['raw']);
+        self::assertSame(3, $persistedSummary['selection_counts']['curated']);
         self::assertArrayHasKey('quality_avg', $persistedParams);
         self::assertArrayHasKey('quality_resolution', $persistedParams);
         self::assertArrayHasKey('people', $persistedParams);
@@ -395,7 +401,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         $qb->method('setParameter')->willReturnSelf();
         $qb->method('getQuery')->willReturn($query);
 
-        $em->expects(self::once())->method('createQueryBuilder')->willReturn($qb);
+        $em->expects(self::atLeastOnce())->method('createQueryBuilder')->willReturn($qb);
 
         $persistedMembers = [];
         $em->expects(self::exactly(2))

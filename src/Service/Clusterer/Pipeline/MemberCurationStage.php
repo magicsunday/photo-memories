@@ -112,11 +112,13 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $preCount = count($members);
             $this->emitMonitoring('selection_start', [
-                'algorithm'   => $draft->getAlgorithm(),
-                'storyline'   => $draft->getStoryline(),
-                'pre_count'   => $preCount,
-                'policy'      => $policy->getProfileKey(),
-                'target_total'=> $policy->getTargetTotal(),
+                'algorithm'     => $draft->getAlgorithm(),
+                'storyline'     => $draft->getStoryline(),
+                'pre_count'     => $preCount,
+                'members_pre'   => $preCount,
+                'policy'        => $policy->getProfileKey(),
+                'policy_key'    => $policy->getProfileKey(),
+                'target_total'  => $policy->getTargetTotal(),
             ]);
 
             $resultSet = $this->selector->select($draft->getAlgorithm(), $members, $context);
@@ -189,14 +191,18 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             }
 
             $this->emitMonitoring('selection_completed', [
-                'algorithm'              => $draft->getAlgorithm(),
-                'storyline'              => $draft->getStoryline(),
-                'pre_count'              => $preCount,
-                'post_count'             => $postCount,
-                'dropped_near_duplicates'=> (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? 0),
-                'dropped_spacing'        => (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? 0),
-                'avg_time_gap_s'         => $telemetry['avg_time_gap_s'],
-                'avg_phash_distance'     => $telemetry['avg_phash_distance'],
+                'algorithm'               => $draft->getAlgorithm(),
+                'storyline'               => $draft->getStoryline(),
+                'pre_count'               => $preCount,
+                'members_pre'             => $preCount,
+                'post_count'              => $postCount,
+                'members_curated'         => $postCount,
+                'policy'                  => $policy->getProfileKey(),
+                'policy_key'              => $policy->getProfileKey(),
+                'dropped_near_duplicates' => (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? 0),
+                'dropped_spacing'         => (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? 0),
+                'avg_time_gap_s'          => $telemetry['avg_time_gap_s'],
+                'avg_phash_distance'      => $telemetry['avg_phash_distance'],
             ]);
 
             if ($progress !== null) {

@@ -19,7 +19,9 @@ final readonly class ClusterSummary
     public function __construct(
         private string $algorithm,
         private string $storyline,
-        private int $memberCount,
+        private int $rawMemberCount,
+        private int $curatedMemberCount,
+        private ?string $policyKey,
         private ?float $score,
         private ?ClusterSummaryTimeRange $timeRange,
     ) {
@@ -35,9 +37,24 @@ final readonly class ClusterSummary
         return $this->storyline;
     }
 
+    public function getRawMemberCount(): int
+    {
+        return $this->rawMemberCount;
+    }
+
+    public function getCuratedMemberCount(): int
+    {
+        return $this->curatedMemberCount;
+    }
+
     public function getMemberCount(): int
     {
-        return $this->memberCount;
+        return $this->curatedMemberCount;
+    }
+
+    public function getPolicyKey(): ?string
+    {
+        return $this->policyKey;
     }
 
     public function getScore(): ?float
