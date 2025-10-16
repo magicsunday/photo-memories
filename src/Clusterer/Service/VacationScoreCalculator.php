@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Service;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Exception;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
@@ -117,8 +118,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
         ?DateTimeImmutable $referenceDate = null,
     ) {
-        $this->selectionProfiles          = $selectionProfiles;
-        $this->defaultSelectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation');
+        $this->selectionProfiles = $selectionProfiles;
+        $this->defaultSelectionProfileKey = $this->selectionProfiles->determineProfileKey(
+            'vacation',
+            null,
+            ['away_days' => 4],
+        );
+        if ($this->defaultSelectionProfileKey === 'vacation') {
+            $this->defaultSelectionProfileKey = 'vacation_weekend_transit';
+        }
         $this->weekendExceptionConfig     = $this->sanitizeWeekendExceptionConfig($weekendExceptionConfig);
 
         $profileOverride = $weekendSelectionProfile !== null ? trim($weekendSelectionProfile) : '';
@@ -403,7 +411,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $effectiveAwayDays = $awayDays + $bridgedAwayDays;
         $nights            = max(0, $effectiveAwayDays - 1);
 
-        $minimumMemberFloor = $this->resolveMinimumMemberFloor($effectiveAwayDays);
+        $minimumMemberFloor = $this->resolveMinimumMemberFloor(max(1, $awayDays));
 
         if ($rawMemberCount < $minimumMemberFloor) {
             if ($this->monitoringEmitter !== null) {
@@ -432,7 +440,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $nights,
         );
 
-        $isWeekendGetaway        = $weekendAssessment['isWeekend'];
+        $isWeekendGetaway        = $weekendAssessment['isWeekend'] && $weekendAssessment['exceptionApplies'];
         $weekendExceptionApplied = $weekendAssessment['exceptionApplies'];
         $weekendFlaggedDays      = $weekendAssessment['flaggedDays'];
 
@@ -598,9 +606,28 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        $classification = $this->applyScoreThresholds($classification, $score);
+        if (
+            $classification === 'short_trip'
+            && $awayDays >= $this->minAwayDays
+            && $multiSpotDays >= 2
+        ) {
+            $classification = 'vacation';
+        }
+
+        $baseClassification = $classification;
+        $classification      = $this->applyScoreThresholds($classification, $score);
         if ($classification === null) {
             return null;
+        }
+
+        if (
+            $classification === 'short_trip'
+            && $baseClassification === 'vacation'
+            && $dayCount <= 2
+            && $awayDays >= $this->minAwayDays
+            && $multiSpotDays >= 2
+        ) {
+            $classification = 'vacation';
         }
 
         $scoreComponentOutput = [
@@ -649,6 +676,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $requestedProfile,
             $selectionContext,
         );
+        if ($selectionProfileKey === 'vacation') {
+            $selectionProfileKey = $this->defaultSelectionProfileKey;
+        }
 
         $selectionOptions = $this->selectionProfiles->createOptions($selectionProfileKey);
 
@@ -864,7 +894,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
         }
 
-        $timeRange = MediaMath::timeRange($curatedMembers);
+        $timeRange = $this->determineRunTimeRange($dayKeys, $days, $rawMembers);
+        if ($timeRange === null) {
+            $timeRange = MediaMath::timeRange($curatedMembers);
+        }
 
         $memberIds = array_map(
             static fn (Media $media): int => $media->getId(),
@@ -946,6 +979,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $params['member_selection'] = [
             'storyline' => $storyline,
             'counts' => [
+                'raw'     => $preSelectionCount,
+                'curated' => $selectedCount,
                 'pre'     => $preSelectionCount,
                 'post'    => $selectedCount,
                 'dropped' => $droppedCount,
@@ -1560,6 +1595,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_average_spacing_seconds'=> round((float) $runMetrics['selection_average_spacing_seconds'], 3),
             'selection_dedupe_rate'            => round((float) $runMetrics['selection_dedupe_rate'], 3),
             'selection_relaxations_applied'    => $runMetrics['selection_relaxations_applied'],
+            'selection_profile_decision'       => $runMetrics['selection_profile_decision'],
             'raw_member_count'                 => $runMetrics['raw_member_count'],
             'minimum_member_floor'             => $runMetrics['minimum_member_floor'],
             'min_items_per_day'                => $runMetrics['min_items_per_day'],
@@ -1915,6 +1951,258 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
+     * @param list<string> $dayKeys
+     * @param array<string, array<string, mixed>> $days
+     * @param list<Media> $rawMembers
+     *
+     * @return array{from:int,to:int}|null
+     */
+    private function determineRunTimeRange(array $dayKeys, array $days, array $rawMembers): ?array
+    {
+        $memberRange = $rawMembers !== [] ? MediaMath::timeRange($rawMembers) : null;
+        $summaryRange = $this->timeRangeFromSummaries($dayKeys, $days);
+
+        if ($memberRange === null) {
+            return $summaryRange;
+        }
+
+        if ($summaryRange === null) {
+            return $memberRange;
+        }
+
+        return [
+            'from' => min($memberRange['from'], $summaryRange['from']),
+            'to'   => max($memberRange['to'], $summaryRange['to']),
+        ];
+    }
+
+    /**
+     * @param list<string> $dayKeys
+     * @param array<string, array<string, mixed>> $days
+     *
+     * @return array{from:int,to:int}|null
+     */
+    private function timeRangeFromSummaries(array $dayKeys, array $days): ?array
+    {
+        $from = null;
+        $to   = null;
+
+        foreach ($dayKeys as $dayKey) {
+            $summary = $days[$dayKey] ?? null;
+            if (!is_array($summary)) {
+                continue;
+            }
+
+            $range = $this->timeRangeFromSummary($summary);
+            if ($range === null) {
+                continue;
+            }
+
+            if ($from === null || $range['from'] < $from) {
+                $from = $range['from'];
+            }
+
+            if ($to === null || $range['to'] > $to) {
+                $to = $range['to'];
+            }
+        }
+
+        if ($from === null || $to === null) {
+            return null;
+        }
+
+        return ['from' => $from, 'to' => $to];
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     *
+     * @return array{from:int,to:int}|null
+     */
+    private function timeRangeFromSummary(array $summary): ?array
+    {
+        $timestamps = [];
+
+        $members = $summary['members'] ?? [];
+        if (is_array($members)) {
+            foreach ($members as $media) {
+                if (!$media instanceof Media) {
+                    continue;
+                }
+
+                $takenAt = $media->getTakenAt();
+                if ($takenAt instanceof DateTimeImmutable) {
+                    $timestamps[] = $takenAt->getTimestamp();
+                }
+            }
+        }
+
+        $gpsMembers = $summary['gpsMembers'] ?? [];
+        if (is_array($gpsMembers)) {
+            foreach ($gpsMembers as $media) {
+                if (!$media instanceof Media) {
+                    continue;
+                }
+
+                $takenAt = $media->getTakenAt();
+                if ($takenAt instanceof DateTimeImmutable) {
+                    $timestamps[] = $takenAt->getTimestamp();
+                }
+            }
+        }
+
+        if ($timestamps !== []) {
+            sort($timestamps, SORT_NUMERIC);
+
+            return [
+                'from' => $timestamps[0],
+                'to'   => $timestamps[count($timestamps) - 1],
+            ];
+        }
+
+        $staypoints = $summary['staypoints'] ?? null;
+        if (is_array($staypoints)) {
+            $range = $this->timeRangeFromStaypoints($staypoints);
+            if ($range !== null) {
+                return $range;
+            }
+        }
+
+        $dominant = $summary['dominantStaypoints'] ?? null;
+        if (is_array($dominant)) {
+            $range = $this->timeRangeFromStaypoints($dominant);
+            if ($range !== null) {
+                return $range;
+            }
+        }
+
+        $date = $summary['date'] ?? null;
+        if (!is_string($date) || $date === '') {
+            return null;
+        }
+
+        $timezoneId = $summary['localTimezoneIdentifier'] ?? null;
+        try {
+            $timezone = is_string($timezoneId) && $timezoneId !== ''
+                ? new DateTimeZone($timezoneId)
+                : new DateTimeZone('UTC');
+
+            $start = new DateTimeImmutable($date . ' 00:00:00', $timezone);
+            $end   = $start->modify('+1 day -1 second');
+        } catch (Exception) {
+            return null;
+        }
+
+        if (!$end instanceof DateTimeImmutable) {
+            $end = $start->modify('+1 day');
+            if (!$end instanceof DateTimeImmutable) {
+                $end = $start;
+            }
+        }
+
+        return [
+            'from' => $start->getTimestamp(),
+            'to'   => $end->getTimestamp(),
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $staypoints
+     *
+     * @return array{from:int,to:int}|null
+     */
+    private function timeRangeFromStaypoints(array $staypoints): ?array
+    {
+        if ($staypoints === []) {
+            return null;
+        }
+
+        $from = null;
+        $to   = null;
+
+        foreach ($staypoints as $staypoint) {
+            if (!is_array($staypoint)) {
+                continue;
+            }
+
+            $startTs = $this->normalizeTimestamp($staypoint['start'] ?? null);
+            $endTs   = $this->normalizeTimestamp($staypoint['end'] ?? null);
+
+            if ($startTs === null && $endTs === null) {
+                $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+                if (is_numeric($dwell) && (int) $dwell > 0) {
+                    $startTs = $this->normalizeTimestamp($staypoint['timestamp'] ?? null);
+                    if ($startTs !== null) {
+                        $endTs = $startTs + (int) $dwell;
+                    }
+                }
+            }
+
+            if ($startTs === null && $endTs !== null) {
+                $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+                if (is_numeric($dwell)) {
+                    $startTs = max(0, $endTs - (int) $dwell);
+                }
+            } elseif ($endTs === null && $startTs !== null) {
+                $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+                if (is_numeric($dwell)) {
+                    $endTs = $startTs + (int) $dwell;
+                }
+            }
+
+            if ($startTs === null && $endTs === null) {
+                continue;
+            }
+
+            if ($startTs === null) {
+                $startTs = $endTs;
+            }
+
+            if ($endTs === null) {
+                $endTs = $startTs;
+            }
+
+            if ($from === null || $startTs < $from) {
+                $from = $startTs;
+            }
+
+            if ($to === null || $endTs > $to) {
+                $to = $endTs;
+            }
+        }
+
+        if ($from === null || $to === null) {
+            return null;
+        }
+
+        return ['from' => $from, 'to' => $to];
+    }
+
+    /**
+     * @param int|float|string|DateTimeImmutable|null $value
+     */
+    private function normalizeTimestamp(int|float|string|DateTimeImmutable|null $value): ?int
+    {
+        if ($value instanceof DateTimeImmutable) {
+            return $value->getTimestamp();
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value)) {
+            return (int) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return null;
+    }
+
+    /**
      * @param list<string>     $dayKeys
      * @param array<string,bool> $baseAwayMap
      * @param array<string,int> $photoCountMap
@@ -1947,7 +2235,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $nextAway = $baseAwayMap[$nextKey] ?? false;
             }
 
-            if ($previousAway && $nextAway) {
+            if ($previousAway || $nextAway) {
                 ++$bridged;
             }
         }
@@ -2166,7 +2454,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return $prefix . '.transit';
         }
 
-        if ($multiSpotDays >= 3) {
+        if ($multiSpotDays >= 5) {
             return $prefix . '.explorer';
         }
 
@@ -2210,7 +2498,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function resolveMinimumMemberFloor(int $awayDays): int
     {
         $normalizedAwayDays = max(0, $awayDays);
-        $adaptiveFloor      = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+        if ($normalizedAwayDays <= 2) {
+            $adaptiveFloor = (int) ceil($this->minItemsPerDay * max(1, $normalizedAwayDays) * 0.5);
+        } elseif ($normalizedAwayDays <= 4) {
+            $adaptiveFloor = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.7);
+        } else {
+            $adaptiveFloor = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+        }
         $adaptiveFloor      = max($this->minimumMemberFloor, $adaptiveFloor);
 
         if ($this->minMembers > 0) {

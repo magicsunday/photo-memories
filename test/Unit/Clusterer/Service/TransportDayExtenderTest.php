@@ -54,6 +54,33 @@ final class TransportDayExtenderTest extends TestCase
     }
 
     #[Test]
+    public function bridgesLeanDayWhenStaypointDwellIsHigh(): void
+    {
+        $extender = new TransportDayExtender();
+
+        $run         = ['2024-07-02'];
+        $orderedKeys = ['2024-07-01', '2024-07-02'];
+        $indexByKey  = ['2024-07-01' => 0, '2024-07-02' => 1];
+        $days        = [
+            '2024-07-01' => $this->makeLeanSummary(48.2082, 16.3738, [
+                'photoCount' => 0,
+                'staypoints' => [[
+                    'lat'   => 48.2082,
+                    'lon'   => 16.3738,
+                    'start' => 1000,
+                    'end'   => 1000 + 21600,
+                    'dwell' => 21600,
+                ]],
+            ]),
+            '2024-07-02' => $this->makeAnchorSummary(48.2082, 16.3738),
+        ];
+
+        $extended = $extender->extend($run, $orderedKeys, $indexByKey, $days);
+
+        self::assertSame(['2024-07-01', '2024-07-02'], $extended);
+    }
+
+    #[Test]
     public function skipsLeanDayWithoutTransitSignalsOrDistance(): void
     {
         $extender = new TransportDayExtender();
