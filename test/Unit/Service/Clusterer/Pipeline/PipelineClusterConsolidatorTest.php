@@ -16,6 +16,8 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\AnnotationPruningStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\DominanceSelectionStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\DuplicateCollapseStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\FilterNormalizationStage;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\NestingResolverStage;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PipelineClusterConsolidator;
 use MagicSunday\Memories\Test\TestCase;
@@ -35,8 +37,8 @@ final class PipelineClusterConsolidatorTest extends TestCase
             ),
             new DuplicateCollapseStage(['primary', 'secondary']),
             new DominanceSelectionStage(
-                overlapMergeThreshold: 0.5,
-                overlapDropThreshold: 0.9,
+                overlapMergeThreshold: 0.45,
+                overlapDropThreshold: 0.85,
                 keepOrder: ['primary', 'secondary'],
                 classificationPriority: [],
             ),
@@ -77,6 +79,48 @@ final class PipelineClusterConsolidatorTest extends TestCase
             $primaryWinner,
             $annotationKeeps,
         ], $result);
+    }
+
+    #[Test]
+    public function testNestingResolverRunsBeforeOverlapResolver(): void
+    {
+        $pipeline = new PipelineClusterConsolidator([
+            new NestingResolverStage(['vacation']),
+            new OverlapResolverStage(0.45, 0.85, ['vacation']),
+        ]);
+
+        $parent = $this->createDraft('vacation', 0.9, [1, 2, 3, 4]);
+        $child  = $this->createDraft('vacation', 0.7, [1, 2, 3]);
+
+        $result = $pipeline->consolidate([
+            $parent,
+            $child,
+        ]);
+
+        self::assertSame([
+            $parent,
+            $child,
+        ], $result);
+
+        $childParams = $child->getParams();
+        self::assertTrue($childParams['is_sub_story'] ?? false, 'Child cluster must be marked as sub story.');
+
+        $overlapFirst = new PipelineClusterConsolidator([
+            new OverlapResolverStage(0.45, 0.85, ['vacation']),
+            new NestingResolverStage(['vacation']),
+        ]);
+
+        $overlapParent = $this->createDraft('vacation', 0.9, [1, 2, 3, 4]);
+        $overlapChild  = $this->createDraft('vacation', 0.7, [1, 2, 3]);
+
+        $overlapResult = $overlapFirst->consolidate([
+            $overlapParent,
+            $overlapChild,
+        ]);
+
+        self::assertSame([
+            $overlapParent,
+        ], $overlapResult, 'Overlap resolver must drop nested child when metadata is missing.');
     }
 
     /**

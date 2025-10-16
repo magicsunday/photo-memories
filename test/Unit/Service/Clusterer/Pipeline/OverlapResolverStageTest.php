@@ -22,7 +22,7 @@ final class OverlapResolverStageTest extends TestCase
     #[Test]
     public function removesHighOverlapWithinSameAlgorithm(): void
     {
-        $stage = new OverlapResolverStage(0.5, 0.8, ['vacation', 'hike_adventure']);
+        $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure']);
 
         $vacation = $this->createDraft('vacation', [1, 2, 3, 4], 0.92, 'vacation');
         $dayTrip  = $this->createDraft('vacation', [1, 2, 3], 0.6, 'day_trip');
@@ -46,10 +46,10 @@ final class OverlapResolverStageTest extends TestCase
     #[Test]
     public function dropsLowerPriorityOnSevereCrossAlgorithmOverlap(): void
     {
-        $stage = new OverlapResolverStage(0.5, 0.8, ['vacation', 'hike_adventure']);
+        $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure']);
 
-        $vacation = $this->createDraft('vacation', [1, 2, 3, 4, 6], 0.9, 'vacation');
-        $hike     = $this->createDraft('hike_adventure', [1, 2, 3, 4, 5, 6], 0.7, null);
+        $vacation = $this->createDraft('vacation', [1, 2, 3, 4, 5, 6], 0.9, 'vacation');
+        $hike     = $this->createDraft('hike_adventure', [1, 2, 3, 4, 5, 6, 7], 0.7, null);
 
         $result = $stage->process([
             $hike,
@@ -64,7 +64,7 @@ final class OverlapResolverStageTest extends TestCase
     #[Test]
     public function ignoresSubStoriesDuringOverlapResolution(): void
     {
-        $stage = new OverlapResolverStage(0.5, 0.8, ['vacation', 'significant_place']);
+        $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'significant_place']);
 
         $vacation = $this->createDraft('vacation', [1, 2, 3, 4], 0.92, 'vacation');
         $chapter  = $this->createDraft('significant_place', [1, 2, 3], 0.6, null);
@@ -87,7 +87,7 @@ final class OverlapResolverStageTest extends TestCase
     public function emitsTelemetryForOverlapResolution(): void
     {
         $emitter = new RecordingMonitoringEmitter();
-        $stage   = new OverlapResolverStage(0.5, 0.8, ['vacation', 'hike_adventure'], $emitter);
+        $stage   = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure'], $emitter);
 
         $vacation = $this->createDraft('vacation', [1, 2, 3, 4], 0.92, 'vacation');
         $dayTrip  = $this->createDraft('vacation', [1, 2, 3], 0.6, 'day_trip');
@@ -114,6 +114,25 @@ final class OverlapResolverStageTest extends TestCase
         self::assertSame(3, $completed['context']['post_count']);
         self::assertSame(1, $completed['context']['dropped_count']);
         self::assertSame(1, $completed['context']['resolved_drops']);
+    }
+
+    #[Test]
+    public function keepsCrossAlgorithmOverlapBelowDropThreshold(): void
+    {
+        $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure']);
+
+        $vacation = $this->createDraft('vacation', [1, 2, 3, 4, 5], 0.92, 'vacation');
+        $hike     = $this->createDraft('hike_adventure', [1, 2, 3, 4, 6], 0.8, null);
+
+        $result = $stage->process([
+            $vacation,
+            $hike,
+        ]);
+
+        self::assertSame([
+            $vacation,
+            $hike,
+        ], $result);
     }
 
     /**

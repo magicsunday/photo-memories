@@ -1050,6 +1050,8 @@ services:
         tags:
             - { name: 'memories.cluster_consolidation.stage', priority: 400 }
 
+    # Ensure nesting metadata is attached before overlap pruning so sub stories survive.
+    # Covered by PipelineClusterConsolidatorTest::testNestingResolverRunsBeforeOverlapResolver.
     MagicSunday\Memories\Service\Clusterer\Pipeline\NestingResolverStage:
         arguments:
             $keepOrder: '%memories.cluster.consolidate.keep_order%'

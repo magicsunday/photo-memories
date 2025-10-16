@@ -23,8 +23,8 @@ final class DominanceSelectionStageTest extends TestCase
     public function prefersPriorityAlgorithmsAndSuppressesOverlap(): void
     {
         $stage = new DominanceSelectionStage(
-            overlapMergeThreshold: 0.5,
-            overlapDropThreshold: 0.9,
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
             keepOrder: ['primary', 'secondary'],
             classificationPriority: [],
         );
@@ -52,8 +52,8 @@ final class DominanceSelectionStageTest extends TestCase
     public function prefersVacationClassificationBeforeSize(): void
     {
         $stage = new DominanceSelectionStage(
-            overlapMergeThreshold: 0.5,
-            overlapDropThreshold: 0.9,
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
             keepOrder: ['vacation'],
             classificationPriority: [
                 'vacation' => [
@@ -139,8 +139,8 @@ final class DominanceSelectionStageTest extends TestCase
         ];
 
         $stage = new DominanceSelectionStage(
-            overlapMergeThreshold: 0.5,
-            overlapDropThreshold: 0.9,
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
             keepOrder: $keepOrder,
             classificationPriority: [
                 'vacation' => [
@@ -193,8 +193,8 @@ final class DominanceSelectionStageTest extends TestCase
     public function keepsSubStoriesEvenWithHighOverlap(): void
     {
         $stage = new DominanceSelectionStage(
-            overlapMergeThreshold: 0.5,
-            overlapDropThreshold: 0.8,
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
             keepOrder: ['primary', 'secondary'],
             classificationPriority: [],
         );
@@ -221,8 +221,8 @@ final class DominanceSelectionStageTest extends TestCase
     {
         $emitter = new RecordingMonitoringEmitter();
         $stage   = new DominanceSelectionStage(
-            overlapMergeThreshold: 0.5,
-            overlapDropThreshold: 0.8,
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
             keepOrder: ['primary', 'secondary'],
             classificationPriority: [],
             monitoringEmitter: $emitter,
@@ -255,6 +255,30 @@ final class DominanceSelectionStageTest extends TestCase
         self::assertSame(2, $completed['context']['post_count']);
         self::assertSame(1, $completed['context']['rejected_candidates']);
         self::assertSame(1, $completed['context']['sub_story_count']);
+    }
+
+    #[Test]
+    public function allowsOverlapJustBelowMergeThreshold(): void
+    {
+        $stage = new DominanceSelectionStage(
+            overlapMergeThreshold: 0.45,
+            overlapDropThreshold: 0.85,
+            keepOrder: ['primary', 'secondary'],
+            classificationPriority: [],
+        );
+
+        $primary   = $this->createDraft('primary', 0.8, [1, 2, 3, 4, 5]);
+        $secondary = $this->createDraft('secondary', 0.7, [3, 4, 5, 6, 7]);
+
+        $result = $stage->process([
+            $primary,
+            $secondary,
+        ]);
+
+        self::assertSame([
+            $primary,
+            $secondary,
+        ], $result);
     }
 
     /**
