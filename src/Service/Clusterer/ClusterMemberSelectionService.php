@@ -89,9 +89,10 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         if ($media === []) {
             $this->emitPhaseSummary($draft, $phaseMetrics, 'skipped', [
-                'reason'       => 'media_lookup_empty',
-                'members_pre'  => $initialCount,
-                'members_post' => 0,
+                'reason'          => 'media_lookup_empty',
+                'members_pre'     => $initialCount,
+                'members_post'    => 0,
+                'members_curated' => 0,
             ]);
 
             return $draft;
@@ -108,10 +109,12 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         if ($daySummaries === []) {
             $this->emitPhaseSummary($draft, $phaseMetrics, 'skipped', [
-                'reason'       => 'day_summary_empty',
-                'members_pre'  => $initialCount,
-                'members_post' => 0,
-                'profile'      => $profile->getKey(),
+                'reason'          => 'day_summary_empty',
+                'members_pre'     => $initialCount,
+                'members_post'    => 0,
+                'members_curated' => 0,
+                'profile'         => $profile->getKey(),
+                'policy_key'      => $profile->getKey(),
             ]);
 
             return $draft;
@@ -134,10 +137,14 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $updated = $this->applySelection($draft, $media, $result, $profile, $phaseMetrics);
         $phaseMetrics?->end('consolidating');
 
+        $curatedCount = $this->resolveCuratedMemberCount($updated);
+
         $this->emitPhaseSummary($updated, $phaseMetrics, 'completed', [
-            'members_pre'  => $initialCount,
-            'members_post' => $updated->getMembersCount(),
-            'profile'      => $profile->getKey(),
+            'members_pre'     => $initialCount,
+            'members_post'    => $curatedCount,
+            'members_curated' => $curatedCount,
+            'profile'         => $profile->getKey(),
+            'policy_key'      => $profile->getKey(),
         ]);
 
         return $updated;
@@ -543,6 +550,18 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return;
         }
 
+        if (!isset($context['policy_key']) && isset($context['profile']) && is_string($context['profile']) && $context['profile'] !== '') {
+            $context['policy_key'] = $context['profile'];
+        }
+
+        if (isset($context['members_curated']) && !isset($context['members_post'])) {
+            $context['members_post'] = $context['members_curated'];
+        }
+
+        if (isset($context['members_post']) && !isset($context['members_curated'])) {
+            $context['members_curated'] = $context['members_post'];
+        }
+
         $payload = $phaseMetrics->summarise([
             'algorithm' => $draft->getAlgorithm(),
             'storyline' => $draft->getStoryline(),
@@ -641,6 +660,35 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         return $hashes;
+    }
+
+    private function resolveCuratedMemberCount(ClusterDraft $draft): int
+    {
+        $params = $draft->getParams();
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return 0;
+        }
+
+        $ordered = $memberQuality['ordered'] ?? null;
+        if (!is_array($ordered)) {
+            return 0;
+        }
+
+        $count = 0;
+        foreach ($ordered as $value) {
+            if (is_int($value)) {
+                ++$count;
+
+                continue;
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                ++$count;
+            }
+        }
+
+        return $count;
     }
 
     /**

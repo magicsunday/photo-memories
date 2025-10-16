@@ -38,6 +38,8 @@ use function min;
 use function microtime;
 use function is_array;
 use function is_numeric;
+use function is_int;
+use function is_string;
 use function usort;
 use function sprintf;
 
@@ -410,10 +412,79 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             );
         }
 
+        $rawCount     = count($draft->getMembers());
+        $curatedCount = $rawCount;
+        $policyKey    = null;
+
+        $memberQuality = $params['member_quality'] ?? null;
+        if (is_array($memberQuality)) {
+            $ordered = $memberQuality['ordered'] ?? null;
+            if (is_array($ordered)) {
+                $curatedCount = 0;
+                foreach ($ordered as $value) {
+                    if (is_int($value)) {
+                        ++$curatedCount;
+
+                        continue;
+                    }
+
+                    if (is_string($value) && is_numeric($value)) {
+                        ++$curatedCount;
+                    }
+                }
+            }
+
+            $summary = $memberQuality['summary'] ?? null;
+            if (is_array($summary)) {
+                $persisted = $summary['members_persisted'] ?? null;
+                if (is_numeric($persisted)) {
+                    $rawCount = (int) $persisted;
+                }
+
+                $overlayCount = $summary['curated_overlay_count'] ?? null;
+                if (is_numeric($overlayCount)) {
+                    $curatedCount = (int) $overlayCount;
+                }
+
+                $selectionCounts = $summary['selection_counts'] ?? null;
+                if (is_array($selectionCounts)) {
+                    if (is_numeric($selectionCounts['raw'] ?? null)) {
+                        $rawCount = (int) $selectionCounts['raw'];
+                    }
+
+                    if (is_numeric($selectionCounts['curated'] ?? null)) {
+                        $curatedCount = (int) $selectionCounts['curated'];
+                    }
+                }
+
+                $policyCandidate = $summary['selection_policy'] ?? ($summary['selection_profile'] ?? null);
+                if (is_string($policyCandidate) && $policyCandidate !== '') {
+                    $policyKey = $policyCandidate;
+                } elseif (isset($summary['selection_telemetry']) && is_array($summary['selection_telemetry'])) {
+                    $telemetryPolicy = $summary['selection_telemetry']['policy']['profile'] ?? null;
+                    if (is_string($telemetryPolicy) && $telemetryPolicy !== '') {
+                        $policyKey = $telemetryPolicy;
+                    }
+                }
+            }
+        }
+
+        if ($policyKey === null) {
+            $memberSelection = $params['member_selection'] ?? null;
+            if (is_array($memberSelection)) {
+                $candidate = $memberSelection['profile'] ?? null;
+                if (is_string($candidate) && $candidate !== '') {
+                    $policyKey = $candidate;
+                }
+            }
+        }
+
         return new ClusterSummary(
             $draft->getAlgorithm(),
             $draft->getStoryline(),
-            $draft->getMembersCount(),
+            max(0, $rawCount),
+            max(0, $curatedCount),
+            $policyKey,
             $score,
             $timeRange,
         );

@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
@@ -214,8 +215,8 @@ final class MemberCurationStageTest extends TestCase
         $selector = new class implements ClusterMemberSelectorInterface {
             public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
             {
-                self::assertSame('demo', $algorithm);
-                self::assertSame([1, 2, 3], $memberIds);
+                MemberCurationStageTest::assertSame('demo', $algorithm);
+                MemberCurationStageTest::assertSame([1, 2, 3], $memberIds);
 
                 return new MemberSelectionResult(
                     memberIds: [1, 3],
@@ -292,6 +293,94 @@ final class MemberCurationStageTest extends TestCase
         self::assertSame('demo', $summary['selection_storyline']);
         self::assertSame('demo', $params['storyline']);
         self::assertArrayHasKey('selection_telemetry', $summary);
+    }
+
+    #[Test]
+    public function processEmitsMonitoringCountsAndPolicy(): void
+    {
+        $mediaA = $this->createConfiguredMock(Media::class, ['getId' => 1, 'isVideo' => false]);
+        $mediaB = $this->createConfiguredMock(Media::class, ['getId' => 2, 'isVideo' => true]);
+        $mediaC = $this->createConfiguredMock(Media::class, ['getId' => 3, 'isVideo' => false]);
+
+        $lookup = new class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
+            /**
+             * @param list<Media> $media
+             */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $map = [];
+                foreach ($this->media as $item) {
+                    $map[$item->getId()] = $item;
+                }
+
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($map[$id])) {
+                        $result[] = $map[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $profiles = [
+            'default' => [
+                'target_total' => 4,
+                'minimum_total' => 1,
+                'max_per_day' => null,
+                'time_slot_hours' => null,
+                'min_spacing_seconds' => 1,
+                'phash_min_hamming' => 1,
+                'max_per_staypoint' => null,
+                'max_per_staypoint_relaxed' => null,
+                'quality_floor' => 0.0,
+                'video_bonus' => 0.0,
+                'face_bonus' => 0.0,
+                'selfie_penalty' => 0.0,
+                'max_per_year' => null,
+                'max_per_bucket' => null,
+                'video_heavy_bonus' => null,
+                'scene_bucket_weights' => null,
+                'core_day_bonus' => 0,
+                'peripheral_day_penalty' => 0,
+                'phash_percentile' => 0.35,
+                'spacing_progress_factor' => 0.5,
+                'cohort_repeat_penalty' => 0.05,
+            ],
+        ];
+
+        $policyProvider = new SelectionPolicyProvider($profiles, 'default');
+
+        $selector = $this->createMock(ClusterMemberSelectorInterface::class);
+        $selector->expects(self::once())
+            ->method('select')
+            ->willReturn(new MemberSelectionResult([1, 3], [
+                'rejections' => [SelectionTelemetry::REASON_TIME_GAP => 1],
+            ]));
+
+        $emitter = new RecordingMonitoringEmitter();
+
+        $stage = new MemberCurationStage($lookup, $policyProvider, $selector, $emitter);
+
+        $draft = new ClusterDraft('algo', ['member_quality' => ['members' => []]], ['lat' => 48.1, 'lon' => 11.5], [1, 2, 3], 'demo.story');
+
+        $stage->process([$draft]);
+
+        self::assertCount(2, $emitter->events);
+
+        $completed = $emitter->events[1];
+        self::assertSame('member_curation', $completed['job']);
+        self::assertSame('selection_completed', $completed['status']);
+
+        $context = $completed['context'];
+        self::assertSame(3, $context['members_pre']);
+        self::assertSame(2, $context['members_curated']);
+        self::assertSame('default', $context['policy_key']);
     }
 
     #[Test]

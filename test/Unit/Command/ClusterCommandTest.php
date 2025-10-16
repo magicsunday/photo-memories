@@ -87,7 +87,9 @@ final class ClusterCommandTest extends TestCase
                             new ClusterSummary(
                                 'algo-top',
                                 'storyline-top',
+                                5,
                                 4,
+                                'default',
                                 1.23,
                                 new ClusterSummaryTimeRange(
                                     new DateTimeImmutable('2024-05-17T00:00:00+00:00'),
@@ -122,6 +124,9 @@ final class ClusterCommandTest extends TestCase
         self::assertStringContainsString('Konsolidiert', $display);
         self::assertStringContainsString('algo-top', $display);
         self::assertStringContainsString('storyline-top', $display);
+        self::assertStringContainsString('default', $display);
+        self::assertStringContainsString('Mitglieder (roh)', $display);
+        self::assertStringContainsString('Mitglieder (kuratiert)', $display);
         self::assertStringContainsString('1.23', $display);
         self::assertStringContainsString('2024-05-17 → 2024-05-18', $display);
     }

@@ -817,10 +817,48 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             return;
         }
 
-        $summary = $memberQuality['summary'] ?? null;
+        $summary = $memberQuality['summary'] ?? [];
         if (!is_array($summary)) {
-            return;
+            $summary = [];
         }
+
+        $ordered = $memberQuality['ordered'] ?? [];
+        if (!is_array($ordered)) {
+            $ordered = [];
+        }
+
+        $overlayCount = 0;
+        foreach ($ordered as $value) {
+            if (is_int($value)) {
+                ++$overlayCount;
+
+                continue;
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                ++$overlayCount;
+            }
+        }
+
+        $persistedCount = count($draft->getMembers());
+
+        $summary['members_persisted'] = $persistedCount;
+        $summary['curated_overlay_count'] = $overlayCount;
+
+        $selectionCounts = $summary['selection_counts'] ?? [];
+        if (!is_array($selectionCounts)) {
+            $selectionCounts = [];
+        }
+
+        $selectionCounts['raw'] = isset($selectionCounts['raw']) && is_numeric($selectionCounts['raw'])
+            ? (int) $selectionCounts['raw']
+            : $persistedCount;
+
+        $selectionCounts['curated'] = isset($selectionCounts['curated']) && is_numeric($selectionCounts['curated'])
+            ? (int) $selectionCounts['curated']
+            : $overlayCount;
+
+        $summary['selection_counts'] = $selectionCounts;
 
         $memberQuality['summary'] = $summary;
         $draft->setParam('member_quality', $memberQuality);
