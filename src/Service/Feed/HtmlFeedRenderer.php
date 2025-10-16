@@ -91,12 +91,17 @@ HTML;
             $st    = htmlspecialchars($c['subtitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $alg   = htmlspecialchars($c['algorithm'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $score = number_format($c['score'], 3, ',', '');
-            $group = $c['group'] ?? null;
+            $group   = $c['group'] ?? null;
+            $curated = ($c['curated'] ?? false) === true;
 
             $chips = [];
             if (is_string($group) && $group !== '') {
                 $grp     = htmlspecialchars($group, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $chips[] = "<span class=\"chip\">$grp</span>";
+            }
+
+            if ($curated) {
+                $chips[] = '<span class="chip chip-curated">Kuratiert</span>';
             }
 
             $chips[] = "<span class=\"chip\">$alg</span>";
@@ -188,6 +193,7 @@ body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial
 .titles .muted{margin:2px 0 0;color:#9aa0a6;font-size:14px}
 .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e2228;color:#c8ccd2;font-size:12px;border:1px solid #2a2f36}
+.chip-curated{background:#1c261a;border-color:#324b2d;color:#9dd48f}
 .chip-tag{background:#16242c;border-color:#27414d;color:#9bd1e3}
 .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 @media (max-width:720px){.thumbs{grid-template-columns:repeat(3,1fr)}}

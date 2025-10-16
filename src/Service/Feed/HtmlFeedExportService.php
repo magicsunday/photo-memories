@@ -22,6 +22,7 @@ use RuntimeException;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function array_filter;
+use function array_key_exists;
 use function array_slice;
 use function array_values;
 use function basename;
@@ -32,14 +33,18 @@ use function implode;
 use function is_array;
 use function is_dir;
 use function is_file;
+use function is_bool;
 use function is_float;
 use function is_int;
+use function is_numeric;
 use function is_string;
 use function mkdir;
 use function number_format;
 use function sprintf;
 use function symlink;
 use function usort;
+
+use const PHP_INT_MAX;
 
 /**
  * Class HtmlFeedExportService.
@@ -157,22 +162,25 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             $item->getAlgorithm() === 'video_stories'
         );
 
-        $coverId = $item->getCoverMediaId();
-        usort($members, static function (Media $a, Media $b) use ($coverId): int {
-            if ($coverId !== null) {
-                if ($a->getId() === $coverId && $b->getId() !== $coverId) {
-                    return -1;
-                }
+        $order = [];
+        foreach ($memberIds as $index => $id) {
+            $order[$id] = $index;
+        }
 
-                if ($b->getId() === $coverId && $a->getId() !== $coverId) {
-                    return 1;
-                }
+        $members = array_values(array_filter(
+            $members,
+            static fn (Media $media): bool => array_key_exists($media->getId(), $order),
+        ));
+
+        usort($members, static function (Media $a, Media $b) use ($order): int {
+            $posA = $order[$a->getId()] ?? PHP_INT_MAX;
+            $posB = $order[$b->getId()] ?? PHP_INT_MAX;
+
+            if ($posA === $posB) {
+                return $a->getId() <=> $b->getId();
             }
 
-            $timestampA = $a->getTakenAt()?->getTimestamp() ?? 0;
-            $timestampB = $b->getTakenAt()?->getTimestamp() ?? 0;
-
-            return $timestampA <=> $timestampB;
+            return $posA <=> $posB;
         });
 
         $images = [];
@@ -211,6 +219,8 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         $sceneTags = $this->normalizeSceneTags($params['scene_tags'] ?? null);
 
+        $curated = $this->isCuratedForFeed($params, $memberIds);
+
         $card = [
             'title'     => $item->getTitle(),
             'subtitle'  => $item->getSubtitle(),
@@ -218,6 +228,10 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             'score'     => $item->getScore(),
             'images'    => $images,
         ];
+
+        if ($curated) {
+            $card['curated'] = true;
+        }
 
         if (is_string($group) && $group !== '') {
             $card['group'] = $group;
@@ -228,6 +242,142 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         }
 
         return $card;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param list<int>            $memberIds
+     */
+    private function isCuratedForFeed(array $params, array $memberIds): bool
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return false;
+        }
+
+        $feedOverlay = $memberQuality['feed_overlay'] ?? null;
+        if (is_array($feedOverlay)) {
+            $used = $feedOverlay['used'] ?? null;
+            if (is_bool($used)) {
+                return $used;
+            }
+        }
+
+        $ordered = $this->normaliseMemberIdList($memberQuality['ordered'] ?? null);
+        if ($ordered === []) {
+            return false;
+        }
+
+        $minimum = $this->resolveOverlayMinimum($memberQuality);
+        if ($minimum > 0 && count($ordered) < $minimum) {
+            return false;
+        }
+
+        $lookup   = [];
+        $sequence = [];
+        foreach ($ordered as $index => $id) {
+            $lookup[$id] = $index;
+        }
+
+        foreach ($memberIds as $id) {
+            if (array_key_exists($id, $lookup)) {
+                $sequence[] = $id;
+            }
+        }
+
+        if ($sequence !== $ordered) {
+            return false;
+        }
+
+        if ($minimum > 0 && count($sequence) < $minimum) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<array-key, mixed>|null $values
+     *
+     * @return list<int>
+     */
+    private function normaliseMemberIdList(null|array $values): array
+    {
+        if (!is_array($values)) {
+            return [];
+        }
+
+        $result = [];
+        $seen   = [];
+
+        foreach ($values as $value) {
+            $id = null;
+            if (is_int($value)) {
+                $id = $value;
+            } elseif (is_string($value) && is_numeric($value)) {
+                $id = (int) $value;
+            }
+
+            if ($id === null || $id <= 0) {
+                continue;
+            }
+
+            if (isset($seen[$id])) {
+                continue;
+            }
+
+            $result[]   = $id;
+            $seen[$id] = true;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $memberQuality
+     */
+    private function resolveOverlayMinimum(array $memberQuality): int
+    {
+        $minimum = 0;
+
+        $summary = $memberQuality['summary'] ?? null;
+        if (is_array($summary)) {
+            $profile = $summary['selection_profile'] ?? null;
+            if (is_array($profile)) {
+                $value = $profile['minimum_total'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $minimum = max($minimum, $min);
+                }
+            }
+
+            $counts = $summary['selection_counts'] ?? null;
+            if (is_array($counts)) {
+                $value = $counts['curated'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $minimum = max($minimum, $min);
+                }
+            }
+        }
+
+        return $minimum;
+    }
+
+    private function normalisePositiveInt(mixed $value): ?int
+    {
+        if (is_int($value) && $value > 0) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $candidate = (int) $value;
+            if ($candidate > 0) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function copyOrLinkThumbnail(string $source, string $targetPath, bool $useSymlink): int
