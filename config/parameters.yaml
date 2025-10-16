@@ -480,9 +480,9 @@ parameters:
     # Description: Minimum number of media items required for a cluster during consolidation.
     memories.cluster.consolidate.min_size: 2
     # Description: Overlap ratio threshold above which clusters are merged during consolidation.
-    memories.cluster.consolidate.overlap_merge_threshold: 0.55
+    memories.cluster.consolidate.overlap_merge_threshold: 0.45
     # Description: Overlap ratio threshold above which clusters are dropped during consolidation.
-    memories.cluster.consolidate.overlap_drop_threshold: 0.7
+    memories.cluster.consolidate.overlap_drop_threshold: 0.85
     # Description: Maximum number of consolidated results a single media item may appear in.
     memories.cluster.consolidate.per_media_cap: 2
     # Description: Ordered list defining which cluster types should be retained when conflicts arise.
