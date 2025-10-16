@@ -290,7 +290,9 @@ final class ClusterPersistenceServiceTest extends TestCase
 
         self::assertInstanceOf(DateTimeImmutable::class, $persisted->getStartAt());
         self::assertInstanceOf(DateTimeImmutable::class, $persisted->getEndAt());
-        self::assertSame([1, 2, 3], $persisted->getMembers());
+
+        $originalMembers = $draft->getMembers();
+        self::assertSame($originalMembers, $persisted->getMembers());
         self::assertSame(3, $persisted->getMembersCount());
         self::assertSame(2, $persisted->getPhotoCount());
         self::assertSame(1, $persisted->getVideoCount());
@@ -298,7 +300,6 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame($media[1]->getLocation(), $persisted->getLocation());
         self::assertSame('2024.1', $persisted->getAlgorithmVersion());
         $persistedParams = $persisted->getParams();
-        self::assertSame([3, 2, 1], $persistedParams['member_quality']['ordered']);
         $persistedSummary = $persistedParams['member_quality']['summary'] ?? [];
         self::assertIsArray($persistedSummary);
         self::assertSame(3, $persistedSummary['members_persisted']);
@@ -521,8 +522,8 @@ final class ClusterPersistenceServiceTest extends TestCase
             'overlay_count' => 2,
         ], $summary);
 
+        self::assertSame([1, 2], $cluster->getMembers());
         $params = $cluster->getParams();
-        self::assertSame([2, 1], $params['member_quality']['ordered']);
 
         $persistedSummary = $params['member_quality']['summary'];
         self::assertSame(2, $persistedSummary['members_persisted']);

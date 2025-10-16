@@ -896,31 +896,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      */
     private function resolveOrderedMembers(ClusterDraft $draft): array
     {
-        $params        = $draft->getParams();
-        $memberQuality = $params['member_quality'] ?? null;
-        if (!is_array($memberQuality)) {
-            return $draft->getMembers();
-        }
-
-        $ordered = $memberQuality['ordered'] ?? null;
-        if (!is_array($ordered) || $ordered === []) {
-            return $draft->getMembers();
-        }
-
-        $result = [];
-        foreach ($ordered as $value) {
-            if (is_int($value)) {
-                $result[] = $value;
-
-                continue;
-            }
-
-            if (is_string($value) && is_numeric($value)) {
-                $result[] = (int) $value;
-            }
-        }
-
-        return $result === [] ? $draft->getMembers() : $result;
+        return $draft->getMembers();
     }
 
     /**
