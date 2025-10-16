@@ -251,6 +251,16 @@ class Cluster
     }
 
     /**
+     * Replaces the algorithm parameters associated with the cluster.
+     *
+     * @param array<string, mixed> $params
+     */
+    public function setParams(array $params): void
+    {
+        $this->params = $params;
+    }
+
+    /**
      * Returns the cluster centroid.
      *
      * @return array{lat: float, lon: float} latitude and longitude pair

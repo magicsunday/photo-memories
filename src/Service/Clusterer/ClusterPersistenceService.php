@@ -44,6 +44,7 @@ use function is_numeric;
 use function is_string;
 use function json_encode;
 use function ksort;
+use function max;
 use function sha1;
 use function spl_object_id;
 
@@ -164,6 +165,32 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return $persisted;
+    }
+
+    /**
+     * Refreshes a persisted cluster by re-applying the curated overlay while keeping raw members intact.
+     *
+     * @return array{raw_count:int, curated_count:int, overlay_count:int}
+     */
+    public function refreshExistingCluster(Cluster $cluster): array
+    {
+        [$draft, $metadata] = $this->rebuildDraftFromEntity($cluster);
+
+        $cluster->setParams($draft->getParams());
+        $cluster->setStartAt($metadata['startAt']);
+        $cluster->setEndAt($metadata['endAt']);
+        $cluster->setMembersCount($metadata['membersCount']);
+        $cluster->setPhotoCount($metadata['photoCount']);
+        $cluster->setVideoCount($metadata['videoCount']);
+        $cluster->setCover($metadata['cover']);
+        $cluster->setLocation($metadata['location']);
+        $cluster->setAlgorithmVersion($metadata['algorithmVersion']);
+        $cluster->setConfigHash($metadata['configHash']);
+        $cluster->setCentroidLat($metadata['centroidLat']);
+        $cluster->setCentroidLon($metadata['centroidLon']);
+        $cluster->setCentroidCell7($metadata['centroidCell7']);
+
+        return $this->extractSelectionSummary($draft);
     }
 
     /**
@@ -862,5 +889,142 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $memberQuality['summary'] = $summary;
         $draft->setParam('member_quality', $memberQuality);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveOrderedMembers(ClusterDraft $draft): array
+    {
+        $params        = $draft->getParams();
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return $draft->getMembers();
+        }
+
+        $ordered = $memberQuality['ordered'] ?? null;
+        if (!is_array($ordered) || $ordered === []) {
+            return $draft->getMembers();
+        }
+
+        $result = [];
+        foreach ($ordered as $value) {
+            if (is_int($value)) {
+                $result[] = $value;
+
+                continue;
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                $result[] = (int) $value;
+            }
+        }
+
+        return $result === [] ? $draft->getMembers() : $result;
+    }
+
+    /**
+     * @return array{0: ClusterDraft, 1: array{
+     *     startAt:?DateTimeImmutable,
+     *     endAt:?DateTimeImmutable,
+     *     membersCount:int,
+     *     photoCount:?int,
+     *     videoCount:?int,
+     *     cover:?Media,
+     *     location:?Location,
+     *     algorithmVersion:?string,
+     *     configHash:?string,
+     *     centroidLat:?float,
+     *     centroidLon:?float,
+     *     centroidCell7:?string
+     * }}
+     */
+    private function rebuildDraftFromEntity(Cluster $cluster): array
+    {
+        $draft = $this->mapClusterToDraft($cluster);
+
+        $curated = $this->memberSelection->curate($draft);
+        $this->persistSelectionTelemetryOnDraft($curated);
+
+        $context = $this->resolveDraftContext($curated);
+        $media   = $this->hydrateMembers($context['members']);
+        $metadata = $this->buildMetadata($curated, $context['members'], $media);
+
+        return [$curated, $metadata];
+    }
+
+    private function mapClusterToDraft(Cluster $cluster): ClusterDraft
+    {
+        $params    = $cluster->getParams();
+        $storyline = null;
+        if (is_string($params['storyline'] ?? null) && $params['storyline'] !== '') {
+            $storyline = $params['storyline'];
+        }
+
+        $draft = new ClusterDraft(
+            $cluster->getAlgorithm(),
+            $params,
+            $cluster->getCentroid(),
+            $cluster->getMembers(),
+            $storyline,
+        );
+
+        $draft->setStartAt($cluster->getStartAt());
+        $draft->setEndAt($cluster->getEndAt());
+        $draft->setMembersCount($cluster->getMembersCount());
+        $draft->setPhotoCount($cluster->getPhotoCount());
+        $draft->setVideoCount($cluster->getVideoCount());
+        $draft->setCoverMediaId($cluster->getCover()?->getId());
+        $draft->setLocation($cluster->getLocation());
+        $draft->setAlgorithmVersion($cluster->getAlgorithmVersion());
+        $draft->setConfigHash($cluster->getConfigHash());
+        $draft->setCentroidLat($cluster->getCentroidLat());
+        $draft->setCentroidLon($cluster->getCentroidLon());
+        $draft->setCentroidCell7($cluster->getCentroidCell7());
+
+        return $draft;
+    }
+
+    /**
+     * @return array{raw_count:int, curated_count:int, overlay_count:int}
+     */
+    private function extractSelectionSummary(ClusterDraft $draft): array
+    {
+        $params        = $draft->getParams();
+        $memberQuality = $params['member_quality'] ?? [];
+        if (!is_array($memberQuality)) {
+            $memberQuality = [];
+        }
+
+        $summary = $memberQuality['summary'] ?? [];
+        if (!is_array($summary)) {
+            $summary = [];
+        }
+
+        $counts = $summary['selection_counts'] ?? [];
+        if (!is_array($counts)) {
+            $counts = [];
+        }
+
+        $rawCount = $counts['raw'] ?? count($draft->getMembers());
+        if (!is_int($rawCount)) {
+            $rawCount = (int) $rawCount;
+        }
+
+        $curatedCount = $counts['curated'] ?? ($summary['curated_overlay_count'] ?? $rawCount);
+        if (!is_int($curatedCount)) {
+            $curatedCount = (int) $curatedCount;
+        }
+
+        $overlayCount = $summary['curated_overlay_count'] ?? $curatedCount;
+        if (!is_int($overlayCount)) {
+            $overlayCount = (int) $overlayCount;
+        }
+
+        return [
+            'raw_count'     => max(0, $rawCount),
+            'curated_count' => max(0, $curatedCount),
+            'overlay_count' => max(0, $overlayCount),
+        ];
     }
 }

@@ -449,6 +449,97 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame([3], $persistedMembers[1]);
     }
 
+    #[Test]
+    public function refreshExistingClusterUpdatesParamsAndMetadata(): void
+    {
+        $media = $this->buildMediaSet();
+
+        $lookup = new class($media) implements MemberMediaLookupInterface {
+            /** @param array<int, Media> $media */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($this->media[$id])) {
+                        $result[] = $this->media[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturn($media[1]);
+
+        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
+            public function curate(ClusterDraft $draft): ClusterDraft
+            {
+                $params = $draft->getParams();
+                $params['member_quality'] = [
+                    'ordered' => [2, 1],
+                    'summary' => [
+                        'selection_counts' => [
+                            'raw'     => count($draft->getMembers()),
+                            'curated' => 2,
+                        ],
+                    ],
+                ];
+
+                return $draft->withParams($params);
+            }
+        };
+
+        $em = $this->createMock(EntityManagerInterface::class);
+
+        $service = new ClusterPersistenceService(
+            $em,
+            $lookup,
+            $selectionService,
+            $coverPicker,
+        );
+
+        $cluster = new Cluster(
+            'demo',
+            ['storyline' => 'default'],
+            ['lat' => 48.123456, 'lon' => 11.654321],
+            [1, 2],
+        );
+
+        $cluster->setStartAt(new DateTimeImmutable('2024-05-20T08:00:00+00:00'));
+        $cluster->setEndAt(new DateTimeImmutable('2024-05-20T09:00:00+00:00'));
+
+        $summary = $service->refreshExistingCluster($cluster);
+
+        self::assertSame([
+            'raw_count'     => 2,
+            'curated_count' => 2,
+            'overlay_count' => 2,
+        ], $summary);
+
+        $params = $cluster->getParams();
+        self::assertSame([2, 1], $params['member_quality']['ordered']);
+
+        $persistedSummary = $params['member_quality']['summary'];
+        self::assertSame(2, $persistedSummary['members_persisted']);
+        self::assertSame(2, $persistedSummary['curated_overlay_count']);
+        self::assertSame(2, $persistedSummary['selection_counts']['raw']);
+        self::assertSame(2, $persistedSummary['selection_counts']['curated']);
+
+        self::assertSame(2, $cluster->getMembersCount());
+        self::assertSame(2, $cluster->getPhotoCount());
+        self::assertSame(0, $cluster->getVideoCount());
+        self::assertSame(1, $cluster->getCover()?->getId());
+        self::assertSame($media[1]->getLocation(), $cluster->getLocation());
+        self::assertNotNull($cluster->getConfigHash());
+        self::assertSame(48.123456, $cluster->getCentroidLat());
+        self::assertSame(11.654321, $cluster->getCentroidLon());
+    }
+
     /**
      * @return array<int, Media>
      */
