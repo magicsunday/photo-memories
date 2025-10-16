@@ -40,6 +40,7 @@ use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
+use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
@@ -113,6 +114,15 @@ final class VacationClusterStrategyTest extends TestCase
             public function determineHome(array $items): ?array
             {
                 return $this->home;
+            }
+
+            public function getConfiguredHome(): ?array
+            {
+                return [
+                    'lat' => $this->home['lat'],
+                    'lon' => $this->home['lon'],
+                    'radius_km' => $this->home['radius_km'],
+                ];
             }
         };
 
@@ -209,6 +219,103 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertNotEmpty($clusters);
         self::assertSame($expected, $clusters[0]->getMembers());
         self::assertSame($expected, $receivedMembers);
+    }
+
+    #[Test]
+    public function emitsWarningWhenConfiguredHomeDefaultsToZero(): void
+    {
+        $home = [
+            'lat' => 0.0,
+            'lon' => 0.0,
+            'radius_km' => 15.0,
+            'country' => null,
+            'timezone_offset' => null,
+        ];
+
+        $homeLocator = new class($home) implements HomeLocatorInterface {
+            public function __construct(private array $home)
+            {
+            }
+
+            public function determineHome(array $items): ?array
+            {
+                return $this->home;
+            }
+
+            public function getConfiguredHome(): ?array
+            {
+                return [
+                    'lat' => $this->home['lat'],
+                    'lon' => $this->home['lon'],
+                    'radius_km' => $this->home['radius_km'],
+                ];
+            }
+        };
+
+        $daySummaryBuilder = new class implements DaySummaryBuilderInterface {
+            public function buildDaySummaries(array $items, array $home): array
+            {
+                return [];
+            }
+        };
+
+        $segmentAssembler = new class implements VacationSegmentAssemblerInterface {
+            public function detectSegments(array $days, array $home): array
+            {
+                return [];
+            }
+        };
+
+        $events  = [];
+        $emitter = new class($events) implements JobMonitoringEmitterInterface {
+            public function __construct(private array &$events)
+            {
+            }
+
+            public function emit(string $job, string $status, array $context = []): void
+            {
+                $this->events[] = [
+                    'job' => $job,
+                    'status' => $status,
+                    'context' => $context,
+                ];
+            }
+        };
+
+        $debugContext = new VacationDebugContext();
+
+        $strategy = new VacationClusterStrategy(
+            $homeLocator,
+            $daySummaryBuilder,
+            $segmentAssembler,
+            $emitter,
+            $debugContext,
+        );
+
+        $location = $this->makeLocation('null-island', 'Null Island', 0.0, 0.0, country: 'Ocean');
+        $items    = [
+            $this->makeMediaFixture(
+                9001,
+                'null-island.jpg',
+                new DateTimeImmutable('2024-01-01 12:00:00', new DateTimeZone('UTC')),
+                0.0,
+                0.0,
+                $location,
+            ),
+        ];
+
+        $clusters = $strategy->cluster($items);
+
+        self::assertSame([], $clusters);
+
+        $warnings = $debugContext->getWarnings();
+        self::assertCount(1, $warnings);
+        self::assertSame(
+            'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.',
+            $warnings[0],
+        );
+
+        self::assertContains('home_warning', array_column($events, 'status'));
     }
 
     #[Test]
@@ -343,6 +450,15 @@ final class VacationClusterStrategyTest extends TestCase
             public function determineHome(array $items): ?array
             {
                 return $this->home;
+            }
+
+            public function getConfiguredHome(): ?array
+            {
+                return [
+                    'lat' => $this->home['lat'],
+                    'lon' => $this->home['lon'],
+                    'radius_km' => $this->home['radius_km'],
+                ];
             }
         };
 

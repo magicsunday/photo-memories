@@ -31,6 +31,11 @@ final class VacationDebugContext
      */
     private array $segments = [];
 
+    /**
+     * @var list<string>
+     */
+    private array $warnings = [];
+
     public function enable(): void
     {
         $this->enabled = true;
@@ -40,11 +45,13 @@ final class VacationDebugContext
     {
         $this->enabled = false;
         $this->segments = [];
+        $this->warnings = [];
     }
 
     public function reset(): void
     {
         $this->segments = [];
+        $this->warnings = [];
     }
 
     public function isEnabled(): bool
@@ -86,5 +93,24 @@ final class VacationDebugContext
     public function getSegments(): array
     {
         return $this->segments;
+    }
+
+    public function recordWarning(string $message): void
+    {
+        if ($message === '') {
+            return;
+        }
+
+        if (!\in_array($message, $this->warnings, true)) {
+            $this->warnings[] = $message;
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getWarnings(): array
+    {
+        return $this->warnings;
     }
 }

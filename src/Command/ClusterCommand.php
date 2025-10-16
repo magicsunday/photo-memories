@@ -168,12 +168,19 @@ final class ClusterCommand extends Command
     {
         $stageCounts = $telemetry->getStageCounts();
         $topClusters = $telemetry->getTopClusters();
+        $warnings    = $telemetry->getWarnings();
 
-        if ($stageCounts === [] && $topClusters === []) {
+        if ($warnings === [] && $stageCounts === [] && $topClusters === []) {
             return;
         }
 
         $io->section('📊 Telemetrie');
+
+        if ($warnings !== []) {
+            foreach ($warnings as $warning) {
+                $io->warning($warning);
+            }
+        }
 
         if ($stageCounts !== []) {
             $io->table(

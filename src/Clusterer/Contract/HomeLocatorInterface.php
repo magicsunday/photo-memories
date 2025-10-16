@@ -30,4 +30,11 @@ interface HomeLocatorInterface
      * }|null
      */
     public function determineHome(array $items): ?array;
+
+    /**
+     * Returns the statically configured home reference when available.
+     *
+     * @return array{lat: float, lon: float, radius_km: float}|null
+     */
+    public function getConfiguredHome(): ?array;
 }

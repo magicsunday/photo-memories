@@ -61,6 +61,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
     public function run(ClusterJobOptions $options, ProgressReporterInterface $progressReporter): ClusterJobResult
     {
+        $this->vacationDebugContext?->reset();
+
         $countQb = $this->entityManager->createQueryBuilder()
             ->select('COUNT(m.id)')
             ->from(Media::class, 'm');
@@ -347,10 +349,13 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
     private function createTelemetry(int $draftCount, int $consolidatedCount, array $consolidatedDrafts): ClusterJobTelemetry
     {
+        $warnings = $this->vacationDebugContext?->getWarnings() ?? [];
+
         return ClusterJobTelemetry::fromStageCounts(
             $draftCount,
             $consolidatedCount,
             $this->createTopClusterSummaries($consolidatedDrafts, self::TOP_CLUSTER_SUMMARY_LIMIT),
+            $warnings,
         );
     }
 
@@ -521,6 +526,13 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $io       = $progressReporter->getStyle();
 
         $io->section('🏖️ Urlaub Debug');
+
+        $warnings = $this->vacationDebugContext->getWarnings();
+        if ($warnings !== []) {
+            foreach ($warnings as $warning) {
+                $io->warning($warning);
+            }
+        }
 
         if ($segments === []) {
             $io->text('Keine Urlaubssegmente erkannt.');

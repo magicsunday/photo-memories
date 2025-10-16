@@ -64,7 +64,8 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
    ```
 4. **Umgebung konfigurieren**
    - `.env` anlegen (siehe `.env.dist`, falls vorhanden) oder Environment-Variablen setzen. `EnvironmentBootstrap::boot()` sucht nacheinander im Arbeitsverzeichnis, in PHAR-Pfaden und im Repository-Root nach `.env`-Dateien und lädt `.env.local`-Varianten automatisch.
-   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_HOME_LAT/LON`, `MEMORIES_THUMBNAIL_DIR`, `MEMORIES_THUMBNAIL_APPLY_ORIENTATION`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`, `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION`.
+   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_THUMBNAIL_DIR`, `MEMORIES_THUMBNAIL_APPLY_ORIENTATION`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`, `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION`.
+   - Heimat-Referenz zwingend setzen: `MEMORIES_HOME_LAT`, `MEMORIES_HOME_LON` und `MEMORIES_HOME_RADIUS_KM` müssen gültige Werte tragen. Bleiben die Defaults `0/0` aktiv, warnt `memories:cluster` im Telemetrie-Block und die Debug-Ausgabe weist auf die Fehlkonfiguration hin.
 5. **Datenbank vorbereiten**
    ```bash
    bin/console doctrine:database:create

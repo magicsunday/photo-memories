@@ -55,12 +55,6 @@ parameters:
     memories.hash.phash_prefix_length: 16
 
     # Home configuration
-    # Description: Default latitude of the home location used for clustering logic.
-    memories.home.lat_default: 0.0
-    # Description: Default longitude of the home location used for clustering logic.
-    memories.home.lon_default: 0.0
-    # Description: Default radius in kilometers defining the proximity of the home area.
-    memories.home.radius_km_default: 15.0
     # Description: Default maximum number of center points representing the home location.
     memories.home.max_centers_default: 2
     # Description: Default factor applied when expanding the fallback search radius around home.

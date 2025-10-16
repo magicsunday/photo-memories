@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -34,6 +35,15 @@ final class DefaultHomeLocatorTest extends TestCase
         );
 
         $home = $locator->determineHome([]);
+
+        self::assertSame(
+            [
+                'lat' => 52.52,
+                'lon' => 13.405,
+                'radius_km' => 8.0,
+            ],
+            $locator->getConfiguredHome(),
+        );
 
         self::assertNotNull($home);
         self::assertSame(52.5200, $home['lat']);
@@ -311,5 +321,18 @@ final class DefaultHomeLocatorTest extends TestCase
         self::assertEqualsWithDelta(25.0, $munichCenter['radius_km'], 0.5);
         self::assertSame($munichValidFrom, $munichCenter['valid_from']);
         self::assertSame($munichValidUntil, $munichCenter['valid_until']);
+    }
+
+    #[Test]
+    public function throwsWhenHomeCoordinatesAreIncomplete(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('homeLat and homeLon must either both be provided or both be null.');
+
+        new DefaultHomeLocator(
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 10.0,
+            homeLat: 52.5200,
+        );
     }
 }

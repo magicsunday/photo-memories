@@ -13,7 +13,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 - **Metadaten-Pipeline** – Aktivierung von Telemetrie sowie optionale Verarbeitungsschritte (`memories.metadata.pipeline.*`).
 - **Gesichtserkennung** – Binärpfade, Klassifizierer und Erkennungsparameter (`memories.face_detection.*`).
 - **Hashing** – Einstellungen für Wahrnehmungshashes (`memories.hash.*`).
-- **Heimatregion** – Referenzkoordinaten und Suchradien für „Zuhause“-Logik (`memories.home.*`).
+- **Heimatregion** – Referenzkoordinaten und Suchradien für „Zuhause“-Logik (`memories.home.*`). `MEMORIES_HOME_LAT`, `MEMORIES_HOME_LON` und `MEMORIES_HOME_RADIUS_KM` sind verpflichtend zu setzen; bleiben sie auf `0/0`, meldet `memories:cluster` eine Warnung im Telemetrie-Block sowie in der Urlaub-Debug-Ausgabe.
 - **Geocoding** – Zugriffspunkte, Drosselung und erlaubte POI-Typen für Nominatim/Overpass (`memories.geocoding.*`).
 - **Zeit & Cluster** – Zeitzonen, Zeitnormalisierung und Transportgeschwindigkeitsgrenzen (`memories.time.*`, `memories.cluster.transport_speed.*`).
 - **Staypoint-Erkennung** – adaptiver Radius (0,18–0,35 km), Aufenthaltsdauer (15–25 min) und DBSCAN-Fallback der Aufenthaltsort-Erkennung (`memories.cluster.staypoint.*`).

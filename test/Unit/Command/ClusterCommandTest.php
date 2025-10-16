@@ -174,6 +174,36 @@ final class ClusterCommandTest extends TestCase
         self::assertFalse($context->isEnabled());
     }
 
+    #[Test]
+    public function renderTelemetryDisplaysWarnings(): void
+    {
+        $runner = $this->createMock(ClusterJobRunnerInterface::class);
+        $runner->expects(self::once())
+            ->method('run')
+            ->willReturn(
+                new ClusterJobResult(
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    0,
+                    false,
+                    ClusterJobTelemetry::fromStageCounts(1, 1, warnings: [
+                        'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.',
+                    ]),
+                ),
+            );
+
+        $command = new ClusterCommand($runner, $this->createSelectionProfileProvider());
+        $tester  = new CommandTester($command);
+
+        $status = $tester->execute([], ['decorated' => false]);
+
+        self::assertSame(Command::SUCCESS, $status);
+        self::assertStringContainsString('Konfiguration unvollständig', $tester->getDisplay());
+    }
+
     private function createSelectionProfileProvider(): SelectionProfileProvider
     {
         return new SelectionProfileProvider(new VacationSelectionOptions());
