@@ -26,6 +26,7 @@ use function array_slice;
 use function array_values;
 use function arsort;
 use function count;
+use function in_array;
 use function floor;
 use function is_array;
 use function is_float;
@@ -231,16 +232,40 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $coverId = $cover?->getId();
             }
 
-            $members   = $this->sortMembersByTakenAt($members, $coverId);
+            $params = $c->getParams();
+
+            $overlay     = $this->resolveCuratedOverlay($params, $profile);
+            $usedCurated = false;
+
+            if ($overlay !== null) {
+                $curated = $this->applyCuratedOverlay($members, $overlay);
+                if ($curated !== null) {
+                    $members     = $curated;
+                    $usedCurated = true;
+                }
+            }
+
+            if ($usedCurated === false) {
+                $members = $this->sortMembersByTakenAt($members, $coverId);
+            }
+
             $memberIds = array_map(static function (Media $media): int {
                 return $media->getId();
             }, $members);
+
+            if ($usedCurated && $coverId !== null && !in_array($coverId, $memberIds, true)) {
+                $cover   = $members[0] ?? null;
+                $coverId = $cover?->getId();
+            }
+
+            if ($overlay !== null) {
+                $params = $this->markFeedOverlayUsage($params, $overlay, $usedCurated, count($memberIds));
+            }
 
             // 5) titles
             $title    = $this->titleGen->makeTitle($c);
             $subtitle = $this->titleGen->makeSubtitle($c);
 
-            $params = $c->getParams();
             if (!isset($params['scene_tags'])) {
                 $aggregated = $this->aggregateSceneTags($members, 5);
                 if ($aggregated !== []) {
@@ -377,6 +402,182 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param list<Media> $members
+     * @param array{ordered: list<int>, minimum: int} $overlay
+     *
+     * @return list<Media>|null
+     */
+    private function applyCuratedOverlay(array $members, array $overlay): ?array
+    {
+        if ($overlay['ordered'] === []) {
+            return null;
+        }
+
+        $map = [];
+        foreach ($members as $media) {
+            $map[$media->getId()] = $media;
+        }
+
+        $curated = [];
+        foreach ($overlay['ordered'] as $id) {
+            $media = $map[$id] ?? null;
+            if ($media === null) {
+                continue;
+            }
+
+            $curated[] = $media;
+        }
+
+        if (count($curated) < $overlay['minimum']) {
+            return null;
+        }
+
+        return $curated;
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     *
+     * @return array{ordered: list<int>, minimum: int}|null
+     */
+    private function resolveCuratedOverlay(array $params, FeedPersonalizationProfile $profile): ?array
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return null;
+        }
+
+        $ordered = $this->normaliseMemberIdList($memberQuality['ordered'] ?? null);
+        if ($ordered === []) {
+            return null;
+        }
+
+        $minimum = max(
+            $profile->getMinMembers(),
+            $this->resolveOverlayMinimum($memberQuality),
+        );
+
+        if ($minimum <= 0) {
+            $minimum = $profile->getMinMembers();
+        }
+
+        return [
+            'ordered' => $ordered,
+            'minimum' => $minimum,
+        ];
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     * @param array{ordered: list<int>, minimum: int} $overlay
+     */
+    private function markFeedOverlayUsage(array $params, array $overlay, bool $used, int $appliedCount): array
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return $params;
+        }
+
+        $memberQuality['feed_overlay'] = [
+            'used'            => $used,
+            'minimum_total'   => $overlay['minimum'],
+            'requested_count' => count($overlay['ordered']),
+        ];
+
+        if ($used) {
+            $memberQuality['feed_overlay']['applied_count'] = $appliedCount;
+        }
+
+        $params['member_quality'] = $memberQuality;
+
+        return $params;
+    }
+
+    /**
+     * @param array<array-key, mixed>|null $values
+     *
+     * @return list<int>
+     */
+    private function normaliseMemberIdList(null|array $values): array
+    {
+        if (!is_array($values)) {
+            return [];
+        }
+
+        $result = [];
+        $seen   = [];
+
+        foreach ($values as $value) {
+            $id = null;
+            if (is_int($value)) {
+                $id = $value;
+            } elseif (is_string($value) && is_numeric($value)) {
+                $id = (int) $value;
+            }
+
+            if ($id === null || $id <= 0) {
+                continue;
+            }
+
+            if (isset($seen[$id])) {
+                continue;
+            }
+
+            $result[]   = $id;
+            $seen[$id] = true;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $memberQuality
+     */
+    private function resolveOverlayMinimum(array $memberQuality): int
+    {
+        $minimum = 0;
+
+        $summary = $memberQuality['summary'] ?? null;
+        if (is_array($summary)) {
+            $profile = $summary['selection_profile'] ?? null;
+            if (is_array($profile)) {
+                $value = $profile['minimum_total'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $minimum = max($minimum, $min);
+                }
+            }
+
+            $counts = $summary['selection_counts'] ?? null;
+            if (is_array($counts)) {
+                $value = $counts['curated'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $minimum = max($minimum, $min);
+                }
+            }
+        }
+
+        return $minimum;
+    }
+
+    private function normalisePositiveInt(mixed $value): ?int
+    {
+        if (is_int($value) && $value > 0) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $candidate = (int) $value;
+            if ($candidate > 0) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

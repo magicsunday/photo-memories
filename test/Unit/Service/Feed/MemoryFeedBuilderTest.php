@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaRepository;
@@ -79,7 +80,7 @@ final class MemoryFeedBuilderTest extends TestCase
         self::assertSame(1, $item->getCoverMediaId());
     }
 
-    private function buildMedia(int $id, bool $noShow): Media
+    private function buildMedia(int $id, bool $noShow, ?DateTimeImmutable $takenAt = null): Media
     {
         $media = new Media('path-' . $id . '.jpg', 'checksum-' . $id, 1024);
 
@@ -87,7 +88,155 @@ final class MemoryFeedBuilderTest extends TestCase
 
         $media->setNoShow($noShow);
 
+        if ($takenAt !== null) {
+            $media->setTakenAt($takenAt);
+        }
+
         return $media;
+    }
+
+    #[Test]
+    public function usesCuratedOverlayWhenAvailable(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2, 3, 4], false)
+            ->willReturn([
+                $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T10:00:00Z')),
+                $this->buildMedia(2, false, new DateTimeImmutable('2024-01-01T11:00:00Z')),
+                $this->buildMedia(3, false, new DateTimeImmutable('2024-01-01T12:00:00Z')),
+                $this->buildMedia(4, false, new DateTimeImmutable('2024-01-01T13:00:00Z')),
+            ]);
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.1,
+            minMembers: 2,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+        );
+
+        $params = [
+            'score'      => 0.8,
+            'time_range' => ['to' => time()],
+            'member_quality' => [
+                'ordered' => [3, 1, 4],
+                'summary' => [
+                    'selection_profile' => ['minimum_total' => 3],
+                    'selection_counts'  => ['curated' => 3],
+                ],
+            ],
+        ];
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test-algo',
+            params: $params,
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2, 3, 4],
+        );
+        $cluster->setCoverMediaId(4);
+
+        $result = $builder->build([$cluster]);
+
+        self::assertCount(1, $result);
+        $item = $result[0];
+
+        self::assertSame([3, 1, 4], $item->getMemberIds());
+
+        $feedOverlay = $item->getParams()['member_quality']['feed_overlay'] ?? null;
+        self::assertIsArray($feedOverlay);
+        self::assertTrue($feedOverlay['used']);
+        self::assertSame(3, $feedOverlay['minimum_total']);
+        self::assertSame(3, $feedOverlay['applied_count']);
+    }
+
+    #[Test]
+    public function fallsBackToChronologicalWhenCuratedBelowMinimum(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2, 3, 4], false)
+            ->willReturn([
+                $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T09:00:00Z')),
+                $this->buildMedia(2, false, new DateTimeImmutable('2024-01-01T10:00:00Z')),
+                $this->buildMedia(3, false, new DateTimeImmutable('2024-01-01T11:00:00Z')),
+                $this->buildMedia(4, false, new DateTimeImmutable('2024-01-01T12:00:00Z')),
+            ]);
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.1,
+            minMembers: 3,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+        );
+
+        $params = [
+            'score'      => 0.75,
+            'time_range' => ['to' => time()],
+            'member_quality' => [
+                'ordered' => [4, 2],
+                'summary' => [
+                    'selection_profile' => ['minimum_total' => 3],
+                    'selection_counts'  => ['curated' => 2],
+                ],
+            ],
+        ];
+
+        $cluster = new ClusterDraft(
+            algorithm: 'fallback',
+            params: $params,
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2, 3, 4],
+        );
+        $cluster->setCoverMediaId(3);
+
+        $result = $builder->build([$cluster]);
+
+        self::assertCount(1, $result);
+        $item = $result[0];
+
+        self::assertSame([3, 1, 2, 4], $item->getMemberIds());
+
+        $feedOverlay = $item->getParams()['member_quality']['feed_overlay'] ?? null;
+        self::assertIsArray($feedOverlay);
+        self::assertFalse($feedOverlay['used']);
+        self::assertSame(3, $feedOverlay['minimum_total']);
+        self::assertArrayNotHasKey('applied_count', $feedOverlay);
     }
 
     #[Test]
