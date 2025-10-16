@@ -75,4 +75,42 @@ final class SelectionProfileProviderTest extends TestCase
         self::assertSame(0.10, $options->faceBonus);
         self::assertSame(0.25, $options->videoBonus);
     }
+
+    public function testItSelectsLongRunProfileForExtendedVacations(): void
+    {
+        $provider = new SelectionProfileProvider(
+            new VacationSelectionOptions(),
+            'default',
+            [
+                'vacation_weekend_transit' => [],
+                'vacation_long_run' => [],
+            ],
+            ['vacation' => 'vacation_weekend_transit'],
+        );
+
+        $profile = $provider->determineProfileKey('vacation', null, ['away_days' => 9]);
+
+        self::assertSame('vacation_long_run', $profile);
+    }
+
+    public function testItSelectsWeekendGetawayProfileForShortTrips(): void
+    {
+        $provider = new SelectionProfileProvider(
+            new VacationSelectionOptions(),
+            'default',
+            [
+                'vacation_weekend_transit' => [],
+                'vacation_weekend_getaway' => [],
+            ],
+            ['vacation' => 'vacation_weekend_transit'],
+        );
+
+        $profile = $provider->determineProfileKey(
+            'vacation',
+            null,
+            ['away_days' => 3, 'nights' => 2, 'weekend_getaway' => true],
+        );
+
+        self::assertSame('vacation_weekend_getaway', $profile);
+    }
 }
