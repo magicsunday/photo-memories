@@ -23,6 +23,8 @@ use function array_unshift;
 use function count;
 use function in_array;
 use function is_array;
+use function is_float;
+use function is_int;
 
 /**
  * Adds potential transport days to a vacation run.
@@ -30,6 +32,8 @@ use function is_array;
 final class TransportDayExtender
 {
     use ConsecutiveDaysTrait;
+
+    private const MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
 
     public function __construct(
         private float $transitRatioThreshold = 0.65,
@@ -140,6 +144,10 @@ final class TransportDayExtender
                 return true;
             }
 
+            if ($this->hasStrongStaypoint($candidate)) {
+                return true;
+            }
+
             $interDayDistance = $this->computeInterDayDistance($candidate, $anchor);
 
             if ($interDayDistance === null || $interDayDistance <= $this->minLeanBridgeDistanceKm) {
@@ -158,6 +166,56 @@ final class TransportDayExtender
         }
 
         return false;
+    }
+
+    /**
+     * @param array{staypoints?:list<array{dwell?:int|float,dwellSeconds?:int|float}>,dominantStaypoints?:list<array{dwell?:int|float,dwellSeconds?:int|float}>} $summary
+     */
+    private function hasStrongStaypoint(array $summary): bool
+    {
+        $staypoints = $summary['staypoints'] ?? [];
+        if (is_array($staypoints)) {
+            foreach ($staypoints as $staypoint) {
+                if (!is_array($staypoint)) {
+                    continue;
+                }
+
+                $dwell = $this->extractDwellSeconds($staypoint);
+                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                    return true;
+                }
+            }
+        }
+
+        $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+        if (is_array($dominantStaypoints)) {
+            foreach ($dominantStaypoints as $staypoint) {
+                if (!is_array($staypoint)) {
+                    continue;
+                }
+
+                $dwell = $this->extractDwellSeconds($staypoint);
+                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $staypoint
+     */
+    private function extractDwellSeconds(array $staypoint): ?int
+    {
+        $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+
+        if (is_int($dwell) || is_float($dwell)) {
+            return (int) $dwell;
+        }
+
+        return null;
     }
 
     /**

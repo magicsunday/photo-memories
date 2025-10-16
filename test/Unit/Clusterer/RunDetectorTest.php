@@ -88,6 +88,88 @@ final class RunDetectorTest extends TestCase
     }
 
     #[Test]
+    public function bridgesMissingMediaDayWhenStaypointDwellIsStrong(): void
+    {
+        $transportExtender = new TransportDayExtender();
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 3,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $startMedia = $this->makeMediaFixture(
+            601,
+            'run-start.jpg',
+            new DateTimeImmutable('2024-08-10 09:00:00', new DateTimeZone('Europe/Berlin')),
+            41.9028,
+            12.4964,
+        );
+        $endMedia = $this->makeMediaFixture(
+            602,
+            'run-end.jpg',
+            new DateTimeImmutable('2024-08-12 19:30:00', new DateTimeZone('Europe/Berlin')),
+            45.4642,
+            9.1900,
+        );
+
+        $bridgeStart = new DateTimeImmutable('2024-08-11 06:30:00', new DateTimeZone('Europe/Berlin'));
+        $bridgeEnd   = new DateTimeImmutable('2024-08-11 22:15:00', new DateTimeZone('Europe/Berlin'));
+
+        $bridgeSummary = $this->makeDaySummary('2024-08-11', false, [$startMedia], 5.0, 45.0, 1);
+        $bridgeSummary['members']            = [];
+        $bridgeSummary['gpsMembers']         = [];
+        $bridgeSummary['photoCount']         = 0;
+        $bridgeSummary['sufficientSamples']  = false;
+        $bridgeSummary['staypoints']         = [[
+            'lat'   => 45.4642,
+            'lon'   => 9.1900,
+            'start' => $bridgeStart->getTimestamp(),
+            'end'   => $bridgeEnd->getTimestamp(),
+            'dwell' => $bridgeEnd->getTimestamp() - $bridgeStart->getTimestamp(),
+        ]];
+        $bridgeSummary['staypointIndex']     = StaypointIndex::empty();
+        $bridgeSummary['staypointCounts']    = ['2024-08-11:bridge' => 6];
+        $bridgeSummary['dominantStaypoints'] = [[
+            'key'          => 'bridge',
+            'lat'          => 45.4642,
+            'lon'          => 9.1900,
+            'start'        => $bridgeStart->getTimestamp(),
+            'end'          => $bridgeEnd->getTimestamp(),
+            'dwellSeconds' => $bridgeEnd->getTimestamp() - $bridgeStart->getTimestamp(),
+            'memberCount'  => 0,
+        ]];
+        $bridgeSummary['baseAway']           = false;
+        $bridgeSummary['awayByDistance']     = false;
+
+        $days = [
+            '2024-08-10' => $this->makeDaySummary('2024-08-10', true, [$startMedia], 140.0, 220.0, 6),
+            '2024-08-11' => $bridgeSummary,
+            '2024-08-12' => $this->makeDaySummary('2024-08-12', true, [$endMedia], 135.0, 210.0, 5),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertSame([
+            ['2024-08-10', '2024-08-11', '2024-08-12'],
+        ], $runs);
+    }
+
+    #[Test]
     public function respectsSecondaryHomeCenterWhenEvaluatingCandidates(): void
     {
         $transportExtender = new TransportDayExtender();
@@ -530,6 +612,7 @@ final class RunDetectorTest extends TestCase
             '2024-09-03',
             '2024-09-04',
             '2024-09-05',
+            '2024-09-06',
         ], $runs[0]);
     }
 

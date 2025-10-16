@@ -37,6 +37,7 @@ final class RunDetector implements VacationRunDetectorInterface
 {
     private const TRANSIT_RATIO_THRESHOLD = 0.6;
     private const TRANSIT_SPEED_THRESHOLD = 90.0;
+    private const MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
 
     /**
      * @param float                                     $minAwayDistanceKm       minimum distance from home to count as away day
@@ -90,6 +91,7 @@ final class RunDetector implements VacationRunDetectorInterface
 
             $metadata[$key] = [
                 'hasGpsAnchors'        => $this->hasGpsAnchors($summary),
+                'hasStaypointDwell'    => $this->hasStaypointDwell($summary),
                 'dominantOutsideHome'  => $this->isDominantStaypointOutsideHome($summary, $home),
                 'dominantInsideHome'   => $this->isDominantStaypointInsideHome($summary, $home),
                 'transitHeavy'         => $this->isTransitHeavyDay($summary),
@@ -212,7 +214,11 @@ final class RunDetector implements VacationRunDetectorInterface
                 continue;
             }
 
-            if ($features['hasGpsAnchors'] === false && $features['transitHeavy'] === false) {
+            if (
+                $features['hasGpsAnchors'] === false
+                && $features['transitHeavy'] === false
+                && ($features['hasStaypointDwell'] ?? false) === false
+            ) {
                 $isAwayCandidate[$key] = false;
             }
         }
@@ -262,7 +268,11 @@ final class RunDetector implements VacationRunDetectorInterface
                     continue;
                 }
 
-                if ($features['hasGpsAnchors'] === false && $features['transitHeavy'] === false) {
+                if (
+                    $features['hasGpsAnchors'] === false
+                    && $features['transitHeavy'] === false
+                    && ($features['hasStaypointDwell'] ?? false) === false
+                ) {
                     continue;
                 }
 
@@ -292,7 +302,11 @@ final class RunDetector implements VacationRunDetectorInterface
                     continue;
                 }
 
-                if ($features['hasGpsAnchors'] === false && $features['transitHeavy'] === false) {
+                if (
+                    $features['hasGpsAnchors'] === false
+                    && $features['transitHeavy'] === false
+                    && ($features['hasStaypointDwell'] ?? false) === false
+                ) {
                     $isAwayCandidate[$key] = false;
                 }
             }
@@ -309,13 +323,14 @@ final class RunDetector implements VacationRunDetectorInterface
     private function determineEffectiveMinAwayDistanceBounds(array $home): array
     {
         if ($this->minAwayDistanceProfiles === []) {
-            return [
-                'strict' => $this->minAwayDistanceKm,
-                'soft'   => $this->minAwayDistanceKm,
-            ];
+            return [$this->minAwayDistanceKm, $this->minAwayDistanceKm];
         }
 
-        $centers       = HomeBoundaryHelper::centers($home);
+        $centers = HomeBoundaryHelper::centers($home);
+        if ($centers === []) {
+            return [$this->minAwayDistanceKm, $this->minAwayDistanceKm];
+        }
+
         $centerCount   = count($centers);
         $totalMembers  = 0;
         $primary       = $centers[0];
@@ -350,10 +365,7 @@ final class RunDetector implements VacationRunDetectorInterface
             }
         }
 
-        return [
-            'strict' => $strict,
-            'soft'   => $soft,
-        ];
+        return [$strict, $soft];
     }
 
     /**
@@ -498,11 +510,65 @@ final class RunDetector implements VacationRunDetectorInterface
 
             if (
                 ($metadata[$key]['photoCount'] ?? 0) < $threshold
-                && (($metadata[$key]['hasGpsAnchors'] ?? false) || ($metadata[$key]['transitHeavy'] ?? false))
+                && (
+                    ($metadata[$key]['hasGpsAnchors'] ?? false)
+                    || ($metadata[$key]['transitHeavy'] ?? false)
+                    || ($metadata[$key]['hasStaypointDwell'] ?? false)
+                )
             ) {
                 $isAwayCandidate[$key] = true;
             }
         }
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     */
+    private function hasStaypointDwell(array $summary): bool
+    {
+        $staypoints = $summary['staypoints'] ?? [];
+        if (is_array($staypoints)) {
+            foreach ($staypoints as $staypoint) {
+                if (!is_array($staypoint)) {
+                    continue;
+                }
+
+                $dwell = $this->extractDwellSeconds($staypoint);
+                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                    return true;
+                }
+            }
+        }
+
+        $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+        if (is_array($dominantStaypoints)) {
+            foreach ($dominantStaypoints as $staypoint) {
+                if (!is_array($staypoint)) {
+                    continue;
+                }
+
+                $dwell = $this->extractDwellSeconds($staypoint);
+                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $staypoint
+     */
+    private function extractDwellSeconds(array $staypoint): ?int
+    {
+        $dwell = $staypoint['dwell'] ?? ($staypoint['dwellSeconds'] ?? null);
+
+        if (is_int($dwell) || is_float($dwell) || is_numeric($dwell)) {
+            return (int) $dwell;
+        }
+
+        return null;
     }
 
     /**

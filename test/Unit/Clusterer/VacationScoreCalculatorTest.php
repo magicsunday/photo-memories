@@ -460,6 +460,114 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function timeRangeUsesRunWindowIncludingStaypointBridge(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $referenceDate  = new DateTimeImmutable('2024-08-15 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            minAwayDays: 2,
+            referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $day1Date    = new DateTimeImmutable('2024-08-10 09:00:00', new DateTimeZone('Europe/Berlin'));
+        $day1Members = $this->makeMembersForDay(0, $day1Date, 3);
+        $day1Key     = $day1Date->format('Y-m-d');
+
+        $bridgeDate  = new DateTimeImmutable('2024-08-11 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $bridgeKey   = $bridgeDate->format('Y-m-d');
+        $bridgeStart = new DateTimeImmutable('2024-08-11 06:30:00', new DateTimeZone('Europe/Berlin'));
+        $bridgeEnd   = new DateTimeImmutable('2024-08-11 22:15:00', new DateTimeZone('Europe/Berlin'));
+
+        $day1Summary = $this->makeDaySummary(
+            date: $day1Key,
+            weekday: (int) $day1Date->format('N'),
+            members: $day1Members,
+            gpsMembers: $day1Members,
+            baseAway: true,
+            tourismHits: 10,
+            poiSamples: 12,
+            travelKm: 160.0,
+            timezoneOffset: 120,
+            hasAirport: false,
+            spotCount: 2,
+            spotDwellSeconds: 5400,
+        );
+
+        $bridgeSeed = $this->makeDaySummary(
+            date: $bridgeKey,
+            weekday: (int) $bridgeDate->format('N'),
+            members: $day1Members,
+            gpsMembers: $day1Members,
+            baseAway: false,
+            tourismHits: 0,
+            poiSamples: 0,
+            travelKm: 12.0,
+            timezoneOffset: 120,
+            hasAirport: false,
+            spotCount: 0,
+            spotDwellSeconds: 0,
+        );
+        $bridgeSeed['members']            = [];
+        $bridgeSeed['gpsMembers']         = [];
+        $bridgeSeed['photoCount']         = 0;
+        $bridgeSeed['sufficientSamples']  = false;
+        $bridgeSeed['staypoints']         = [[
+            'lat'   => 38.7223,
+            'lon'   => -9.1393,
+            'start' => $bridgeStart->getTimestamp(),
+            'end'   => $bridgeEnd->getTimestamp(),
+            'dwell' => $bridgeEnd->getTimestamp() - $bridgeStart->getTimestamp(),
+        ]];
+        $bridgeSeed['staypointIndex']     = StaypointIndex::empty();
+        $bridgeSeed['staypointCounts']    = ['2024-08-11:bridge' => 4];
+        $bridgeSeed['dominantStaypoints'] = [[
+            'key'          => 'bridge',
+            'lat'          => 38.7223,
+            'lon'          => -9.1393,
+            'start'        => $bridgeStart->getTimestamp(),
+            'end'          => $bridgeEnd->getTimestamp(),
+            'dwellSeconds' => $bridgeEnd->getTimestamp() - $bridgeStart->getTimestamp(),
+            'memberCount'  => 0,
+        ]];
+        $bridgeSeed['baseAway']           = false;
+        $bridgeSeed['awayByDistance']     = false;
+        $bridgeSeed['timezoneOffsets']    = [120 => 0];
+        $bridgeSeed['countryCodes']       = ['pt' => true];
+        $bridgeSeed['firstGpsMedia']      = null;
+        $bridgeSeed['lastGpsMedia']       = null;
+
+        $days = [
+            $day1Key   => $day1Summary,
+            $bridgeKey => $bridgeSeed,
+        ];
+
+        $draft = $calculator->buildDraft([$day1Key, $bridgeKey], $days, $home);
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+
+        $params = $draft->getParams();
+
+        $expectedFrom = $day1Members[0]->getTakenAt()?->getTimestamp();
+        $expectedTo   = $bridgeEnd->getTimestamp();
+
+        self::assertSame($expectedFrom, $params['time_range']['from']);
+        self::assertSame($expectedTo, $params['time_range']['to']);
+        self::assertSame(1, $params['bridged_away_days']);
+        self::assertSame(2, $params['away_days']);
+    }
+
+    #[Test]
     public function buildDraftRequiresConfiguredMinimumAwayDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
