@@ -223,8 +223,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      */
     private function resolveDraftContext(ClusterDraft $draft): array
     {
-        $ordered     = $this->resolveOrderedMembers($draft);
-        $members     = $this->clampMembers($ordered);
+        $rawMembers  = $draft->getMembers();
+        $members     = $this->clampMembers($rawMembers);
         $fingerprint = Cluster::computeFingerprint($members);
 
         return [
@@ -773,166 +773,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @return list<int>
-     */
-    private function resolveOrderedMembers(ClusterDraft $draft): array
-    {
-        $original = $draft->getMembers();
-        $params   = $draft->getParams();
-        $metadata = $params['member_quality'] ?? null;
-        if (!is_array($metadata)) {
-            return $original;
-        }
-
-        $balanced = $this->normaliseOrderList($metadata['ordered'] ?? null, $original);
-
-        if ($draft->getAlgorithm() === 'vacation') {
-            if ($balanced !== null) {
-                return $balanced;
-            }
-
-            $quality = $this->resolveQualityRankedOrder($metadata, $original);
-
-            return $quality ?? $original;
-        }
-
-        $quality = $this->resolveQualityRankedOrder($metadata, $original);
-        if ($quality !== null) {
-            return $quality;
-        }
-
-        return $balanced ?? $original;
-    }
-
-    /**
-     * @param array<string, mixed> $metadata
-     * @param list<int>            $original
-     *
-     * @return list<int>|null
-     */
-    private function resolveQualityRankedOrder(array $metadata, array $original): ?array
-    {
-        $qualityRanked = $metadata['quality_ranked'] ?? null;
-        $quality       = $this->extractOrderedList($qualityRanked, $original);
-        if ($quality !== null) {
-            return $quality;
-        }
-
-        return null;
-    }
-
-    /**
-     * @param array|bool|float|int|string|null $value
-     * @param list<int>                        $original
-     *
-     * @return list<int>|null
-     */
-    private function extractOrderedList(array|bool|float|int|string|null $value, array $original): ?array
-    {
-        if (!is_array($value)) {
-            return null;
-        }
-
-        if (isset($value['ordered'])) {
-            return $this->normaliseOrderList($value['ordered'], $original);
-        }
-
-        $ids = [];
-        foreach ($value as $entry) {
-            if (is_int($entry)) {
-                $ids[] = $entry;
-                continue;
-            }
-
-            if (is_numeric($entry)) {
-                $ids[] = (int) $entry;
-                continue;
-            }
-
-            if (is_array($entry) && array_key_exists('id', $entry)) {
-                $idValue = $entry['id'];
-                if (is_int($idValue)) {
-                    $ids[] = $idValue;
-                    continue;
-                }
-
-                if (is_numeric($idValue)) {
-                    $ids[] = (int) $idValue;
-                }
-            }
-        }
-
-        return $this->normaliseOrderList($ids, $original);
-    }
-
-    /**
-     * @param array|bool|float|int|string|null $raw
-     * @param list<int>                        $original
-     *
-     * @return list<int>|null
-     */
-    private function normaliseOrderList(array|bool|float|int|string|null $raw, array $original): ?array
-    {
-        if (!is_array($raw) || $raw === []) {
-            return null;
-        }
-
-        /** @var array<int,int> $originalCounts */
-        $originalCounts = [];
-        foreach ($original as $id) {
-            $intId                  = $id;
-            $originalCounts[$intId] = ($originalCounts[$intId] ?? 0) + 1;
-        }
-
-        if ($originalCounts === []) {
-            return null;
-        }
-
-        /** @var list<int> $ordered */
-        $ordered = [];
-        /** @var array<int,int> $orderedCounts */
-        $orderedCounts = [];
-
-        foreach ($raw as $value) {
-            $intValue = null;
-            if (is_int($value)) {
-                $intValue = $value;
-            } elseif (is_numeric($value)) {
-                $intValue = (int) $value;
-            }
-
-            if ($intValue === null) {
-                continue;
-            }
-
-            if (!isset($originalCounts[$intValue])) {
-                continue;
-            }
-
-            $ordered[]                = $intValue;
-            $orderedCounts[$intValue] = ($orderedCounts[$intValue] ?? 0) + 1;
-        }
-
-        if ($ordered === []) {
-            return null;
-        }
-
-        foreach ($original as $id) {
-            $intId    = $id;
-            $expected = $originalCounts[$intId] ?? 0;
-            $current  = $orderedCounts[$intId] ?? 0;
-            if ($current >= $expected) {
-                continue;
-            }
-
-            $ordered[]             = $intId;
-            $orderedCounts[$intId] = $current + 1;
-        }
-
-        return $ordered;
-    }
-
-    /**
      * @param list<int> $members
      *
      * @return list<int>
@@ -972,16 +812,17 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function persistSelectionTelemetryOnDraft(ClusterDraft $draft): void
     {
         $params     = $draft->getParams();
-        $selection  = $params['member_selection'] ?? null;
-
-        if (!is_array($selection)) {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
             return;
         }
 
-        if (!isset($selection['telemetry']) || !is_array($selection['telemetry'])) {
+        $summary = $memberQuality['summary'] ?? null;
+        if (!is_array($summary)) {
             return;
         }
 
-        $draft->setParam('member_selection', $selection);
+        $memberQuality['summary'] = $summary;
+        $draft->setParam('member_quality', $memberQuality);
     }
 }

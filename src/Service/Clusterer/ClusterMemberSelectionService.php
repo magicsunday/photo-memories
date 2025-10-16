@@ -29,6 +29,7 @@ use Throwable;
 
 use function array_key_exists;
 use function array_map;
+use function array_merge;
 use function array_sum;
 use function count;
 use function gmdate;
@@ -284,8 +285,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             ]);
         }
 
-        $params = $draft->getParams();
-        $params['member_selection'] = $this->buildSelectionMetadata(
+        $params   = $draft->getParams();
+        $metadata = $this->buildSelectionMetadata(
             $profile,
             $preCount,
             $postCount,
@@ -295,16 +296,28 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $phaseMetrics,
         );
 
+        $params['member_selection'] = $metadata['presentation'];
+
+        $memberQuality = $params['member_quality'] ?? [];
+        if (!is_array($memberQuality)) {
+            $memberQuality = [];
+        }
+
+        $memberQuality['ordered'] = $metadata['ordered'];
+
+        $summary = $memberQuality['summary'] ?? [];
+        if (!is_array($summary)) {
+            $summary = [];
+        }
+
+        $memberQuality['summary'] = array_merge($summary, $metadata['summary']);
+        $params['member_quality'] = $memberQuality;
+
         if ($curatedMembers === []) {
             return $draft->withParams($params);
         }
 
-        $memberIds = array_map(
-            static fn (Media $item): int => (int) $item->getId(),
-            $curatedMembers,
-        );
-
-        $updated = $draft->withMembers($memberIds, $params);
+        $updated = $draft->withParams($params);
 
         $photoCount = 0;
         $videoCount = 0;
@@ -323,17 +336,13 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             ]);
         }
 
-        $updated->setMembersCount($postCount);
-        $updated->setPhotoCount($photoCount);
-        $updated->setVideoCount($videoCount);
-
         return $updated;
     }
 
     /**
      * @param list<Media> $members
      *
-     * @return array<string, mixed>
+     * @return array{presentation: array<string, mixed>, ordered: list<int>, summary: array<string, mixed>}
      */
     private function buildSelectionMetadata(
         ClusterMemberSelectionProfile $profile,
@@ -385,40 +394,67 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $nearDuplicateBlocked     = (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? ($telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0));
         $nearDuplicateReplacements = (int) ($telemetry['drops']['selection']['near_duplicate_replacements'] ?? 0);
 
+        $memberIds = array_map(
+            static fn (Media $item): int => (int) $item->getId(),
+            $members,
+        );
+
         return [
-            'profile'                => $profile->getKey(),
-            'storyline'              => $storyline,
-            'counts'                 => $telemetry['counts'],
-            'spacing'                => [
-                'average_seconds' => $spacing['average'],
-                'samples'         => $spacing['samples'],
-                'rejections'      => $spacingRejections,
+            'presentation' => [
+                'profile'   => $profile->getKey(),
+                'storyline' => $storyline,
+                'counts'    => [
+                    'pre'     => $preCount,
+                    'post'    => $postCount,
+                    'dropped' => $droppedCount,
+                ],
+                'spacing'   => [
+                    'average_seconds' => $spacing['average'],
+                    'rejections'      => $spacingRejections,
+                ],
+                'near_duplicates' => [
+                    'blocked'      => $nearDuplicateBlocked,
+                    'replacements' => $nearDuplicateReplacements,
+                ],
+                'options' => [
+                    'selector'            => $this->memberSelector::class,
+                    'target_total'        => $profile->getOptions()->targetTotal,
+                    'max_per_day'         => $profile->getOptions()->maxPerDay,
+                    'time_slot_hours'     => $profile->getOptions()->timeSlotHours,
+                    'min_spacing_seconds' => $profile->getOptions()->minSpacingSeconds,
+                    'phash_min_hamming'   => $profile->getOptions()->phashMinHamming,
+                    'max_per_staypoint'   => $profile->getOptions()->maxPerStaypoint,
+                    'video_bonus'         => $profile->getOptions()->videoBonus,
+                    'face_bonus'          => $profile->getOptions()->faceBonus,
+                    'selfie_penalty'      => $profile->getOptions()->selfiePenalty,
+                    'quality_floor'       => $profile->getOptions()->qualityFloor,
+                    'enable_people_balance' => $profile->getOptions()->enablePeopleBalance,
+                    'people_balance_weight' => $profile->getOptions()->peopleBalanceWeight,
+                    'repeat_penalty'        => $profile->getOptions()->repeatPenalty,
+                ],
             ],
-            'near_duplicates'        => [
-                'blocked'      => $nearDuplicateBlocked,
-                'replacements' => $nearDuplicateReplacements,
+            'ordered' => $memberIds,
+            'summary' => [
+                'selection_counts' => [
+                    'raw'     => $preCount,
+                    'curated' => $postCount,
+                    'dropped' => $droppedCount,
+                ],
+                'selection_per_day_distribution'    => $perDayDistribution,
+                'selection_per_bucket_distribution' => $telemetry['distribution']['per_bucket'],
+                'selection_spacing' => [
+                    'average_seconds' => $spacing['average'],
+                    'rejections'      => $spacingRejections,
+                ],
+                'selection_near_duplicates' => [
+                    'blocked'      => $nearDuplicateBlocked,
+                    'replacements' => $nearDuplicateReplacements,
+                ],
+                'selection_hash_samples' => $hashSamples,
+                'selection_storyline'    => $storyline,
+                'selection_profile'      => $profile->getKey(),
+                'selection_telemetry'    => $telemetry,
             ],
-            'per_day_distribution'   => $perDayDistribution,
-            'per_bucket_distribution'=> $telemetry['distribution']['per_bucket'],
-            'options'                => [
-                'selector'            => $this->memberSelector::class,
-                'target_total'        => $profile->getOptions()->targetTotal,
-                'max_per_day'         => $profile->getOptions()->maxPerDay,
-                'time_slot_hours'     => $profile->getOptions()->timeSlotHours,
-                'min_spacing_seconds' => $profile->getOptions()->minSpacingSeconds,
-                'phash_min_hamming'   => $profile->getOptions()->phashMinHamming,
-                'max_per_staypoint'   => $profile->getOptions()->maxPerStaypoint,
-                'video_bonus'         => $profile->getOptions()->videoBonus,
-                'face_bonus'          => $profile->getOptions()->faceBonus,
-                'selfie_penalty'      => $profile->getOptions()->selfiePenalty,
-                'quality_floor'       => $profile->getOptions()->qualityFloor,
-                'enable_people_balance' => $profile->getOptions()->enablePeopleBalance,
-                'people_balance_weight' => $profile->getOptions()->peopleBalanceWeight,
-                'repeat_penalty'        => $profile->getOptions()->repeatPenalty,
-            ],
-            'hash_samples'           => $hashSamples,
-            'exclusion_reasons'      => $telemetry['rejections'] ?? [],
-            'telemetry'              => $telemetry,
         ];
     }
 

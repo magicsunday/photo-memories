@@ -91,39 +91,44 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $curated = $service->curate($draft);
 
         self::assertNotSame($draft, $curated);
-        self::assertSame([1, 3], $curated->getMembers());
-        self::assertSame(2, $curated->getMembersCount());
-        self::assertSame(1, $curated->getPhotoCount());
-        self::assertSame(1, $curated->getVideoCount());
+        self::assertSame([1, 2, 3], $curated->getMembers());
 
         $selection = $curated->getParams()['member_selection'] ?? [];
         self::assertIsArray($selection);
         self::assertSame('default', $selection['profile']);
-        self::assertSame(['pre' => 3, 'post' => 2, 'dropped' => 1], $selection['counts']);
-        self::assertArrayHasKey('telemetry', $selection);
-        self::assertSame(1, $selection['telemetry']['near_duplicate_blocked']);
-        self::assertSame($selection['counts'], $selection['telemetry']['counts']);
-        self::assertArrayHasKey('averages', $selection['telemetry']);
-        self::assertArrayHasKey('relaxation_hints', $selection['telemetry']);
-        self::assertArrayHasKey('per_day_distribution', $selection);
-        self::assertSame(['2024-05-20' => 1, '2024-05-21' => 1], $selection['per_day_distribution']);
-        self::assertArrayHasKey('per_bucket_distribution', $selection);
+        self::assertSame([
+            'raw'     => 3,
+            'curated' => 2,
+            'dropped' => 1,
+        ], $selection['counts']);
+        self::assertArrayNotHasKey('telemetry', $selection);
         self::assertArrayHasKey('spacing', $selection);
         self::assertGreaterThan(0.0, $selection['spacing']['average_seconds']);
-        self::assertArrayHasKey('rejections', $selection['spacing']);
         self::assertSame(0, $selection['spacing']['rejections']);
         self::assertArrayHasKey('near_duplicates', $selection);
         self::assertSame(['blocked' => 1, 'replacements' => 0], $selection['near_duplicates']);
-        self::assertArrayHasKey('hash_samples', $selection);
-        self::assertCount(2, $selection['hash_samples']);
-        self::assertArrayHasKey('exclusion_reasons', $selection);
-        self::assertIsArray($selection['exclusion_reasons']);
-        self::assertSame('demo.getaway', $selection['storyline']);
-        self::assertSame('demo.getaway', $selection['telemetry']['storyline']);
-        self::assertSame(
-            $selection['per_day_distribution'],
-            $selection['telemetry']['distribution']['per_day'],
-        );
+        self::assertArrayHasKey('options', $selection);
+        self::assertArrayNotHasKey('per_day_distribution', $selection);
+        self::assertArrayNotHasKey('per_bucket_distribution', $selection);
+
+        $quality = $curated->getParams()['member_quality'] ?? [];
+        self::assertIsArray($quality);
+        self::assertSame([1, 3], $quality['ordered']);
+        $summary = $quality['summary'] ?? [];
+        self::assertIsArray($summary);
+        self::assertSame([
+            'raw'     => 3,
+            'curated' => 2,
+            'dropped' => 1,
+        ], $summary['selection_counts']);
+        self::assertSame(['2024-05-20' => 1, '2024-05-21' => 1], $summary['selection_per_day_distribution']);
+        self::assertArrayHasKey('selection_per_bucket_distribution', $summary);
+        self::assertArrayHasKey('selection_spacing', $summary);
+        self::assertSame(0, $summary['selection_spacing']['rejections']);
+        self::assertArrayHasKey('selection_telemetry', $summary);
+        $telemetry = $summary['selection_telemetry'];
+        self::assertIsArray($telemetry);
+        self::assertSame('demo.getaway', $telemetry['storyline']);
     }
 
     #[Test]
@@ -184,8 +189,14 @@ final class ClusterMemberSelectionServiceTest extends TestCase
 
         $selection = $curated->getParams()['member_selection'] ?? [];
         self::assertIsArray($selection);
+        self::assertSame([1, 2], $curated->getMembers());
 
-        $telemetry = $selection['telemetry'] ?? [];
+        $quality = $curated->getParams()['member_quality'] ?? [];
+        self::assertIsArray($quality);
+        $summary = $quality['summary'] ?? [];
+        self::assertIsArray($summary);
+
+        $telemetry = $summary['selection_telemetry'] ?? [];
         self::assertIsArray($telemetry);
 
         $drops = $telemetry['drops']['selection'] ?? [];
