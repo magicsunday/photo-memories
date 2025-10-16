@@ -28,7 +28,7 @@ php src/Memories.php memories:feed:preview --limit-clusters=2000
 
 ## Ausgabeinterpretation
 - Abschnitt „Konsolidierung“ listet jede Pipeline-Stufe mit ihrem Fortschritt auf. Ein Häkchen signalisiert, dass eine Stage abgeschlossen ist.
-- Abschnitt „Feed erzeugen“ zeigt die resultierenden Karten (Strategie, Titel, Untertitel, Score, Mitgliedsanzahl, Cover-ID). `--show-members` fügt eine Spalte mit allen Mitglieds-IDs hinzu.
+- Abschnitt „Feed erzeugen“ zeigt die resultierenden Karten als Tabelle mit Laufnummer (`#`), Algorithmus, Storyline, Roh- und kuratierter Mitgliederzahl, Score sowie Zeitraum. `--show-members` hängt optional eine weitere Spalte mit allen Mitglieds-IDs an.
 - Erfolgreiche Läufe enden mit `✔ <n> Feed-Items angezeigt.`; leere Resultate werden als Warnung markiert.
 
 ## Fehlerbehebung
