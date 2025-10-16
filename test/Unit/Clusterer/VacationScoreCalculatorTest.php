@@ -195,6 +195,10 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame($selectionOptions->maxPerDay, $memberSelection['options']['max_per_day']);
         self::assertGreaterThan(0.0, $memberSelection['spacing']['average_seconds']);
         self::assertArrayNotHasKey('telemetry', $memberSelection);
+        self::assertSame('vacation_weekend_transit', $memberSelection['selection_profile']);
+        self::assertSame('vacation_weekend_transit', $memberSelection['decision']['resolved']);
+        self::assertSame('vacation_weekend_transit', $memberSelection['decision']['base']);
+        self::assertArrayHasKey('context', $memberSelection['decision']);
 
         $quality = $params['member_quality'] ?? [];
         self::assertIsArray($quality);
@@ -208,6 +212,11 @@ final class VacationScoreCalculatorTest extends TestCase
         ], $qualitySummary['selection_per_day_distribution']);
         self::assertSame(9, $qualitySummary['selection_counts']['raw']);
         self::assertSame(9, $qualitySummary['selection_counts']['curated']);
+        self::assertSame('vacation_weekend_transit', $qualitySummary['selection_profile']);
+        self::assertSame(
+            'vacation_weekend_transit',
+            $qualitySummary['selection_profile_decision']['resolved'],
+        );
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
@@ -592,6 +601,19 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(2, $params['away_days']);
         self::assertSame(1, $params['nights']);
         self::assertGreaterThan(0.0, $params['score']);
+
+        $selection = $params['member_selection'];
+        self::assertSame('vacation_weekend_getaway', $selection['selection_profile']);
+        self::assertSame('vacation_weekend_getaway', $selection['decision']['resolved']);
+        self::assertSame('vacation_weekend_transit', $selection['decision']['base']);
+        self::assertSame(
+            [
+                'away_days'       => 2,
+                'nights'          => 1,
+                'weekend_getaway' => true,
+            ],
+            $selection['decision']['context'],
+        );
     }
 
     #[Test]
@@ -697,11 +719,122 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('selection_start', $startEvent['status']);
         self::assertTrue($startEvent['context']['weekend_getaway']);
         self::assertTrue($startEvent['context']['weekend_exception']);
+        self::assertSame(
+            'vacation_weekend_getaway',
+            $startEvent['context']['selection_profile_decision']['resolved'],
+        );
 
         $completeEvent = $emitter->events[1];
         self::assertSame('vacation_curation', $completeEvent['job']);
         self::assertSame('selection_completed', $completeEvent['status']);
         self::assertSame('missing_core_days', $completeEvent['context']['reason']);
+    }
+
+    #[Test]
+    public function longRunsUseLongRunSelectionProfile(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $emitter        = new RecordingMonitoringEmitter();
+        $referenceDate  = new DateTimeImmutable('2024-06-01 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 42, maxPerDay: 6),
+            emitter: $emitter,
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            referenceDate: $referenceDate,
+        );
+
+        $lisbonLocation = (new Location(
+            provider: 'test',
+            providerPlaceId: 'lisbon',
+            displayName: 'Lisboa, Portugal',
+            lat: 38.7223,
+            lon: -9.1393,
+            cell: 'cell-lisbon',
+        ))
+            ->setCity('Lisbon')
+            ->setState('Lisbon District')
+            ->setCountry('Portugal')
+            ->setCountryCode('PT');
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $start   = new DateTimeImmutable('2024-06-10 09:00:00');
+        $dayKeys = [];
+        $days    = [];
+
+        for ($i = 0; $i < 8; ++$i) {
+            $dayDate  = $start->add(new DateInterval('P' . $i . 'D'));
+            $members  = $this->makeMembersForDay($i, $dayDate, 5, $lisbonLocation);
+            $dayKey   = $dayDate->format('Y-m-d');
+            $stayTime = 14400 + ($i * 900);
+            $first    = $members[0];
+            $startTs  = $first->getTakenAt()?->getTimestamp() ?? $dayDate->getTimestamp();
+            $staypoints = [[
+                'lat'   => (float) ($first->getGpsLat() ?? $lisbonLocation->getLat()),
+                'lon'   => (float) ($first->getGpsLon() ?? $lisbonLocation->getLon()),
+                'start' => $startTs,
+                'end'   => $startTs + $stayTime,
+                'dwell' => $stayTime,
+            ]];
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 14,
+                poiSamples: 20,
+                travelKm: 210.0,
+                timezoneOffset: 60,
+                hasAirport: $i === 0 || $i === 7,
+                spotCount: 3,
+                spotDwellSeconds: 7200,
+                maxSpeedKmh: 95.0,
+                avgSpeedKmh: 72.0,
+                hasHighSpeedTransit: false,
+                cohortPresenceRatio: 0.45,
+                cohortMembers: [101 => 5],
+                staypoints: $staypoints,
+                countryCodes: ['pt' => true],
+            );
+
+            $dayKeys[] = $dayKey;
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params     = $draft->getParams();
+        $selection  = $params['member_selection'];
+        $decision   = $selection['decision'];
+
+        self::assertSame(8, $params['away_days']);
+        self::assertSame('vacation_long_run', $params['selection_profile']);
+        self::assertSame('vacation_long_run', $selection['selection_profile']);
+        self::assertSame('vacation_long_run', $decision['resolved']);
+        self::assertSame('vacation_weekend_transit', $decision['base']);
+        self::assertSame(
+            'vacation_long_run',
+            $params['member_quality']['summary']['selection_profile_decision']['resolved'],
+        );
+
+        self::assertNotEmpty($emitter->events);
+        $startEvent = $emitter->events[0];
+        self::assertSame('vacation_curation', $startEvent['job']);
+        self::assertSame('selection_start', $startEvent['status']);
+        self::assertSame(
+            'vacation_long_run',
+            $startEvent['context']['selection_profile_decision']['resolved'],
+        );
     }
 
     #[Test]
@@ -1351,6 +1484,17 @@ final class VacationScoreCalculatorTest extends TestCase
             VacationTestMemberSelector::class,
             $memberSelection['options']['selector'],
         );
+        self::assertSame('vacation_weekend_transit', $memberSelection['selection_profile']);
+        self::assertSame('vacation_weekend_transit', $memberSelection['decision']['resolved']);
+        self::assertSame('vacation_weekend_transit', $memberSelection['decision']['base']);
+        self::assertSame(
+            'vacation_weekend_transit',
+            $runMetrics['selection_profile_decision']['resolved'],
+        );
+        self::assertSame(
+            'vacation_weekend_transit',
+            $memberQuality['summary']['selection_profile_decision']['resolved'],
+        );
 
         self::assertCount(3, $draft->getMembers());
 
@@ -1368,6 +1512,10 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(
             $selectionOptions->peopleBalanceWeight,
             $startEvent['context']['selection_people_balance_weight'],
+        );
+        self::assertSame(
+            'vacation_weekend_transit',
+            $startEvent['context']['selection_profile_decision']['resolved'],
         );
 
         $metricsEvent = $emitter->events[1];
@@ -1394,6 +1542,10 @@ final class VacationScoreCalculatorTest extends TestCase
             0.001,
         );
         self::assertSame([], $metricsEvent['context']['selection_relaxations_applied']);
+        self::assertSame(
+            'vacation_weekend_transit',
+            $metricsEvent['context']['selection_profile_decision']['resolved'],
+        );
 
         $completeEvent = $emitter->events[2];
         self::assertSame('vacation_curation', $completeEvent['job']);

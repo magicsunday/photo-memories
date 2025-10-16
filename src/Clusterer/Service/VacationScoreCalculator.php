@@ -601,12 +601,31 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $multiSpotDays,
         );
 
-        $selectionProfileKey = $this->defaultSelectionProfileKey;
+        $selectionContext = [
+            'away_days'       => $effectiveAwayDays,
+            'nights'          => $nights,
+            'weekend_getaway' => $isWeekendGetaway,
+        ];
+
+        $requestedProfile = null;
         if ($isWeekendGetaway && $this->weekendSelectionProfile !== null) {
-            $selectionProfileKey = $this->selectionProfiles->determineProfileKey('vacation', $this->weekendSelectionProfile);
+            $requestedProfile = $this->weekendSelectionProfile;
         }
 
+        $selectionProfileKey = $this->selectionProfiles->determineProfileKey(
+            'vacation',
+            $requestedProfile,
+            $selectionContext,
+        );
+
         $selectionOptions = $this->selectionProfiles->createOptions($selectionProfileKey);
+
+        $selectionDecision = [
+            'base'      => $this->defaultSelectionProfileKey,
+            'requested' => $requestedProfile,
+            'resolved'  => $selectionProfileKey,
+            'context'   => $selectionContext,
+        ];
 
         if ($this->monitoringEmitter !== null) {
             $startPayload = [
@@ -639,6 +658,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'selection_selfie_penalty'         => $selectionOptions->selfiePenalty,
                 'selection_quality_floor'          => $selectionOptions->qualityFloor,
                 'selection_repeat_penalty'         => $selectionOptions->repeatPenalty,
+                'selection_profile_decision'       => $selectionDecision,
             ];
 
             if ($primaryStaypoint !== null) {
@@ -755,6 +775,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_average_spacing_seconds' => $averageSpacingSeconds,
             'selection_dedupe_rate'             => $dedupeRate,
             'selection_relaxations_applied'     => $relaxationsApplied,
+            'selection_profile_decision'        => $selectionDecision,
         ];
 
         $selectionTelemetry['run_metrics'] = $runMetrics;
@@ -914,6 +935,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
                 'cohort_repeat_penalty'    => $selectionOptions->cohortRepeatPenalty,
             ],
+            'selection_profile' => $selectionProfileKey,
+            'decision' => $selectionDecision,
         ];
 
         $memberQuality = $params['member_quality'] ?? [];
@@ -946,6 +969,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $summary['selection_run_metrics'] = $runMetrics;
         $summary['selection_storyline'] = $storyline;
         $summary['selection_profile'] = $selectionProfileKey;
+        $summary['selection_profile_decision'] = $selectionDecision;
         $summary['selection_telemetry'] = $selectionTelemetry;
 
         $memberQuality['summary'] = $summary;

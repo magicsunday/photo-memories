@@ -63,7 +63,10 @@ final class SelectionProfileProvider
         $this->runtimeOverrides = $this->sanitizeOverrides($overrides);
     }
 
-    public function determineProfileKey(string $algorithm, ?string $requestedProfile = null): string
+    /**
+     * @param array<string, mixed> $context
+     */
+    public function determineProfileKey(string $algorithm, ?string $requestedProfile = null, array $context = []): string
     {
         if (is_string($requestedProfile) && $requestedProfile !== '') {
             return $requestedProfile;
@@ -71,7 +74,14 @@ final class SelectionProfileProvider
 
         $profile = $this->algorithmProfiles[$algorithm] ?? $this->defaultProfile;
         if (!is_string($profile) || $profile === '') {
-            return $this->defaultProfile;
+            $profile = $this->defaultProfile;
+        }
+
+        if ($algorithm === 'vacation') {
+            $runtimeProfile = $this->determineVacationProfile($context, $profile);
+            if ($runtimeProfile !== null) {
+                return $runtimeProfile;
+            }
         }
 
         return $profile;
@@ -228,6 +238,88 @@ final class SelectionProfileProvider
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function determineVacationProfile(array $context, string $fallback): ?string
+    {
+        $awayDays = $this->intContextValue($context, 'away_days');
+        $nights   = $this->intContextValue($context, 'nights');
+        $weekend  = $this->boolContextValue($context, 'weekend_getaway');
+
+        if ($weekend === true) {
+            $nightCount = $nights;
+            if ($nightCount === null && $awayDays !== null) {
+                $nightCount = max(0, $awayDays - 1);
+            }
+
+            if ($nightCount !== null && $nightCount <= 3) {
+                return 'vacation_weekend_getaway';
+            }
+        }
+
+        if ($awayDays !== null) {
+            if ($awayDays >= 8) {
+                return 'vacation_long_run';
+            }
+
+            if ($awayDays >= 4) {
+                return 'vacation_weekend_transit';
+            }
+        }
+
+        if ($fallback !== '') {
+            return $fallback;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function intContextValue(array $context, string $key): ?int
+    {
+        $value = $context[$key] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function boolContextValue(array $context, string $key): ?bool
+    {
+        $value = $context[$key] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value) || is_string($value)) {
+            $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($filtered !== null) {
+                return $filtered;
+            }
+        }
+
+        return null;
     }
 
     /**
