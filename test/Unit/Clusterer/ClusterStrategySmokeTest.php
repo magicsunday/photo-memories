@@ -202,6 +202,8 @@ final class ClusterStrategySmokeTest extends TestCase
                             selectionProfiles: new SelectionProfileProvider(new VacationSelectionOptions(), 'vacation'),
                             storyTitleBuilder: $storyTitleBuilder,
                             holidayResolver: new NullHolidayResolver(),
+                            minItemsPerDay: 4,
+                            minimumMemberFloor: 0,
                         ),
                         $storyTitleBuilder,
                     ),
