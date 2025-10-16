@@ -896,8 +896,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'average_seconds' => $averageSpacingSeconds,
                 'rejections'      => $spacingRejections,
             ],
-            'per_day_distribution' => $orderedDistribution,
-            'per_bucket_distribution' => $selectionTelemetry['per_bucket_distribution'] ?? [],
             'options' => [
                 'selector'            => $this->memberSelector::class,
                 'target_total'        => $selectionOptions->targetTotal,
@@ -916,9 +914,42 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
                 'cohort_repeat_penalty'    => $selectionOptions->cohortRepeatPenalty,
             ],
-            'run_metrics' => $runMetrics,
-            'telemetry' => $selectionTelemetry,
         ];
+
+        $memberQuality = $params['member_quality'] ?? [];
+        if (!is_array($memberQuality)) {
+            $memberQuality = [];
+        }
+
+        $memberQuality['ordered'] = $memberIds;
+
+        $summary = $memberQuality['summary'] ?? [];
+        if (!is_array($summary)) {
+            $summary = [];
+        }
+
+        $summary['selection_counts'] = [
+            'raw'     => $preSelectionCount,
+            'curated' => $selectedCount,
+            'dropped' => $droppedCount,
+        ];
+        $summary['selection_per_day_distribution'] = $orderedDistribution;
+        $summary['selection_per_bucket_distribution'] = $selectionTelemetry['per_bucket_distribution'] ?? [];
+        $summary['selection_spacing'] = [
+            'average_seconds' => $averageSpacingSeconds,
+            'rejections'      => $spacingRejections,
+        ];
+        $summary['selection_near_duplicates'] = [
+            'blocked'      => $nearDupBlocked,
+            'replacements' => $nearDupReplaced,
+        ];
+        $summary['selection_run_metrics'] = $runMetrics;
+        $summary['selection_storyline'] = $storyline;
+        $summary['selection_profile'] = $selectionProfileKey;
+        $summary['selection_telemetry'] = $selectionTelemetry;
+
+        $memberQuality['summary'] = $summary;
+        $params['member_quality'] = $memberQuality;
 
         if ($placeComponents !== []) {
             $city    = $placeComponents['city'] ?? null;
@@ -1036,11 +1067,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $params['place_location'] = $primaryStaypointLocation;
         }
 
+        $rawMemberIds = array_map(
+            static fn (Media $media): int => $media->getId(),
+            $rawMembers,
+        );
+
         $draft = new ClusterDraft(
             algorithm: 'vacation',
             params: $params,
             centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
-            members: $memberIds,
+            members: $rawMemberIds,
             storyline: $storyline,
         );
 

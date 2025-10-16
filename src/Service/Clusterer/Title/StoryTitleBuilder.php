@@ -242,11 +242,24 @@ final class StoryTitleBuilder
         $cohortMembers = $this->sanitizeCohortMembers($params['cohort_members'] ?? null);
 
         $telemetryCounts = null;
-        $memberSelection = $params['member_selection'] ?? null;
-        if (is_array($memberSelection)) {
-            $telemetry = $memberSelection['telemetry'] ?? null;
-            if (is_array($telemetry) && array_key_exists('people_balance_counts', $telemetry)) {
-                $telemetryCounts = $telemetry['people_balance_counts'];
+        $memberQuality = $params['member_quality'] ?? null;
+        if (is_array($memberQuality)) {
+            $summary = $memberQuality['summary'] ?? null;
+            if (is_array($summary)) {
+                $selectionTelemetry = $summary['selection_telemetry'] ?? null;
+                if (is_array($selectionTelemetry) && array_key_exists('people_balance_counts', $selectionTelemetry)) {
+                    $telemetryCounts = $selectionTelemetry['people_balance_counts'];
+                }
+            }
+        }
+
+        if ($telemetryCounts === null) {
+            $memberSelection = $params['member_selection'] ?? null;
+            if (is_array($memberSelection)) {
+                $telemetry = $memberSelection['telemetry'] ?? null;
+                if (is_array($telemetry) && array_key_exists('people_balance_counts', $telemetry)) {
+                    $telemetryCounts = $telemetry['people_balance_counts'];
+                }
             }
         }
 

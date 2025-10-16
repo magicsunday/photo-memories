@@ -23,6 +23,7 @@ use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterfa
 use function arsort;
 use function array_key_exists;
 use function array_filter;
+use function array_merge;
 use function array_keys;
 use function array_sum;
 use function ceil;
@@ -123,14 +124,68 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $postCount = count($curated);
             $telemetry = $this->augmentTelemetry($draft, $policy, $resultSet->getTelemetry(), $preCount, $postCount);
 
-            $params = $draft->getParams();
-            $params['member_selection'] = $telemetry;
+            $dropped = $preCount > $postCount ? $preCount - $postCount : 0;
 
-            $result[] = $draft->withMembers($curated, $params);
+            $presentation = [
+                'storyline' => $draft->getStoryline(),
+                'policy'    => $telemetry['policy'] ?? [],
+                'counts'    => [
+                    'raw'     => $preCount,
+                    'curated' => $postCount,
+                    'dropped' => $dropped,
+                ],
+                'spacing'   => [
+                    'average_seconds' => (float) ($telemetry['avg_time_gap_s'] ?? 0.0),
+                    'rejections'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_TIME_GAP] ?? 0),
+                ],
+                'hash_distance' => (float) ($telemetry['avg_phash_distance'] ?? 0.0),
+                'rejection_counts' => $telemetry['rejection_counts'] ?? [],
+            ];
+
+            $params = $draft->getParams();
+            $params['member_selection'] = $presentation;
+
+            $memberQuality = $params['member_quality'] ?? [];
+            if (!is_array($memberQuality)) {
+                $memberQuality = [];
+            }
+
+            $memberQuality['ordered'] = $curated;
+
+            $summary = $memberQuality['summary'] ?? [];
+            if (!is_array($summary)) {
+                $summary = [];
+            }
+
+            $summary = array_merge($summary, [
+                'selection_counts' => [
+                    'raw'     => $preCount,
+                    'curated' => $postCount,
+                    'dropped' => $dropped,
+                ],
+                'selection_per_day_distribution'    => $telemetry['per_day_distribution'] ?? [],
+                'selection_per_bucket_distribution' => $telemetry['per_bucket_distribution'] ?? [],
+                'selection_spacing' => [
+                    'average_seconds' => (float) ($telemetry['avg_time_gap_s'] ?? 0.0),
+                    'rejections'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_TIME_GAP] ?? 0),
+                ],
+                'selection_near_duplicates' => [
+                    'blocked'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_PHASH] ?? 0),
+                    'replacements' => 0,
+                ],
+                'selection_storyline' => $draft->getStoryline(),
+                'selection_policy'    => $policy->getProfileKey(),
+                'selection_telemetry' => $telemetry,
+            ]);
+
+            $memberQuality['summary'] = $summary;
+            $params['member_quality']  = $memberQuality;
+
+            $result[] = $draft->withParams($params);
 
             $rejections = [];
-            if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
-                $rejections = $telemetry['rejections'];
+            if (isset($telemetry['rejection_counts']) && is_array($telemetry['rejection_counts'])) {
+                $rejections = $telemetry['rejection_counts'];
             }
 
             $this->emitMonitoring('selection_completed', [
@@ -573,6 +628,12 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $telemetry['exclusion_reasons'] = [];
             $telemetry['rejection_counts']  = [];
         }
+
+        $telemetry['counts'] = [
+            'raw'     => $preCount,
+            'curated' => $postCount,
+            'dropped' => $preCount > $postCount ? $preCount - $postCount : 0,
+        ];
 
         unset($telemetry['distribution'], $telemetry['metrics']);
 

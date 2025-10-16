@@ -182,19 +182,11 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertArrayHasKey('member_selection', $params);
         $memberSelection = $params['member_selection'];
-        self::assertSame(9, $memberSelection['counts']['pre']);
-        self::assertSame(9, $memberSelection['counts']['post']);
+        self::assertSame(9, $memberSelection['counts']['raw']);
+        self::assertSame(9, $memberSelection['counts']['curated']);
         self::assertSame(0, $memberSelection['counts']['dropped']);
         self::assertSame(0, $memberSelection['near_duplicates']['blocked']);
         self::assertSame(0, $memberSelection['near_duplicates']['replacements']);
-        self::assertSame(
-            [
-                $dayKeys[0] => 3,
-                $dayKeys[1] => 3,
-                $dayKeys[2] => 3,
-            ],
-            $memberSelection['per_day_distribution'],
-        );
         self::assertSame(
             VacationTestMemberSelector::class,
             $memberSelection['options']['selector'],
@@ -202,10 +194,20 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame($selectionOptions->targetTotal, $memberSelection['options']['target_total']);
         self::assertSame($selectionOptions->maxPerDay, $memberSelection['options']['max_per_day']);
         self::assertGreaterThan(0.0, $memberSelection['spacing']['average_seconds']);
-        self::assertSame(
-            $memberSelection['counts']['post'],
-            $memberSelection['telemetry']['selected_total'],
-        );
+        self::assertArrayNotHasKey('telemetry', $memberSelection);
+
+        $quality = $params['member_quality'] ?? [];
+        self::assertIsArray($quality);
+        self::assertIsArray($quality['ordered']);
+        $qualitySummary = $quality['summary'] ?? [];
+        self::assertIsArray($qualitySummary);
+        self::assertSame([
+            $dayKeys[0] => 3,
+            $dayKeys[1] => 3,
+            $dayKeys[2] => 3,
+        ], $qualitySummary['selection_per_day_distribution']);
+        self::assertSame(9, $qualitySummary['selection_counts']['raw']);
+        self::assertSame(9, $qualitySummary['selection_counts']['curated']);
         self::assertSame(3, $params['spot_cluster_days']);
         self::assertSame(3, $params['total_days']);
         self::assertGreaterThan(0.0, $params['spot_exploration_bonus']);
@@ -1309,11 +1311,9 @@ final class VacationScoreCalculatorTest extends TestCase
         $memberSelection = $params['member_selection'];
         self::assertSame('vacation.day_trip', $params['storyline']);
         self::assertSame('vacation.day_trip', $memberSelection['storyline']);
-        self::assertSame('vacation.day_trip', $memberSelection['telemetry']['storyline']);
 
-        self::assertArrayHasKey('run_metrics', $memberSelection);
-        $runMetrics = $memberSelection['run_metrics'];
-        self::assertSame($runMetrics, $memberSelection['telemetry']['run_metrics']);
+        $memberQuality = $params['member_quality'];
+        $runMetrics    = $memberQuality['summary']['selection_run_metrics'];
         self::assertSame('vacation.day_trip', $runMetrics['storyline']);
         self::assertSame(1, $runMetrics['run_length_days']);
         self::assertSame(1, $runMetrics['run_length_effective_days']);
@@ -1340,19 +1340,19 @@ final class VacationScoreCalculatorTest extends TestCase
         );
         self::assertSame(1, $runMetrics['poi_coverage']['poi_day_count']);
 
-        self::assertSame(3, $memberSelection['counts']['pre']);
-        self::assertSame(2, $memberSelection['counts']['post']);
+        self::assertSame(3, $memberSelection['counts']['raw']);
+        self::assertSame(2, $memberSelection['counts']['curated']);
         self::assertSame(1, $memberSelection['counts']['dropped']);
         self::assertSame(1, $memberSelection['near_duplicates']['blocked']);
         self::assertSame(1, $memberSelection['near_duplicates']['replacements']);
-        self::assertSame([$dayKey => 2], $memberSelection['per_day_distribution']);
+        self::assertSame([$dayKey => 2], $memberQuality['summary']['selection_per_day_distribution']);
         self::assertGreaterThan(0.0, $memberSelection['spacing']['average_seconds']);
         self::assertSame(
             VacationTestMemberSelector::class,
             $memberSelection['options']['selector'],
         );
 
-        self::assertCount(2, $draft->getMembers());
+        self::assertCount(3, $draft->getMembers());
 
         self::assertCount(3, $emitter->events);
         $startEvent = $emitter->events[0];
@@ -1465,7 +1465,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertInstanceOf(ClusterDraft::class, $draft);
         $params     = $draft->getParams();
         $selection  = $params['member_selection'];
-        $runMetrics = $selection['run_metrics'];
+        $runMetrics = $params['member_quality']['summary']['selection_run_metrics'];
 
         self::assertGreaterThan(0.0, $runMetrics['phash_distribution']['average']);
 
@@ -1539,7 +1539,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $memberIds = $draft->getMembers();
         self::assertSame('vacation.extended', $params['storyline']);
 
-        self::assertCount($selectionOptions->targetTotal, $memberIds);
+        self::assertCount($dayCount * 7, $memberIds);
 
         $expectedOrder = [];
         $perDayCounts  = [];
@@ -1557,17 +1557,21 @@ final class VacationScoreCalculatorTest extends TestCase
             }
         }
 
-        self::assertSame($expectedOrder, array_slice($memberIds, 0, count($expectedOrder)));
+        $memberQuality = $params['member_quality'];
+        self::assertSame($expectedOrder, $memberQuality['ordered']);
 
         $selection = $params['member_selection'];
         self::assertSame('vacation.extended', $selection['storyline']);
-        self::assertSame('vacation.extended', $selection['telemetry']['storyline']);
-        self::assertSame(28, $selection['counts']['pre']);
-        self::assertSame($selectionOptions->targetTotal, $selection['counts']['post']);
+        self::assertSame(28, $selection['counts']['raw']);
+        self::assertSame($selectionOptions->targetTotal, $selection['counts']['curated']);
         self::assertSame(4, $selection['counts']['dropped']);
-        self::assertArrayHasKey('per_bucket_distribution', $selection);
-        self::assertArrayHasKey('averages', $selection['telemetry']);
-        self::assertArrayHasKey('relaxation_hints', $selection['telemetry']);
+        self::assertArrayNotHasKey('telemetry', $selection);
+
+        $summary   = $memberQuality['summary'];
+        $telemetry = $summary['selection_telemetry'];
+        self::assertSame('vacation.extended', $telemetry['storyline']);
+        self::assertArrayHasKey('relaxation_hints', $telemetry);
+        self::assertArrayHasKey('selection_per_bucket_distribution', $summary);
 
         $expectedDistribution = [];
         $remaining            = $selectionOptions->targetTotal;
@@ -1581,8 +1585,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $remaining -= $limit;
         }
 
-        self::assertSame($expectedDistribution, $selection['per_day_distribution']);
-        self::assertSame($selection['counts']['post'], $selection['telemetry']['selected_total']);
+        self::assertSame($expectedDistribution, $summary['selection_per_day_distribution']);
     }
 
     /**
