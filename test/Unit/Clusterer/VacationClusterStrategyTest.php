@@ -1837,6 +1837,8 @@ final class VacationClusterStrategyTest extends TestCase
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
+            minItemsPerDay: $minItemsPerDay,
+            minimumMemberFloor: 0,
         );
 
         $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);

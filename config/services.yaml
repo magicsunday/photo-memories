@@ -874,6 +874,7 @@ services:
             $timezone: 'Europe/Berlin'
             $movementThresholdKm: 35.0
             $minAwayDays: '%memories.cluster.vacation.min_away_days%'
+            $minItemsPerDay: '%memories.cluster.vacation.min_items_per_day%'
             $minMembers: '%memories.cluster.vacation.min_members%'
             $weekendExceptionConfig: '%memories.cluster.vacation.weekend_exception%'
             $weekendSelectionProfile: '%memories.cluster.vacation.weekend_selection_profile%'

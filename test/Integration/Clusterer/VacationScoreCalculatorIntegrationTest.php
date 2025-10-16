@@ -170,6 +170,9 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             $telemetryOverrides['relaxation_hints'],
             $runMetrics['selection_relaxations_applied'],
         );
+        self::assertSame($params['raw_member_count'], $runMetrics['raw_member_count']);
+        self::assertSame($params['minimum_member_floor'], $runMetrics['minimum_member_floor']);
+        self::assertSame($params['min_items_per_day'], $runMetrics['min_items_per_day']);
 
         self::assertCount(3, $emitter->events);
         $metricsEvent = $emitter->events[1];
@@ -189,6 +192,9 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             $telemetryOverrides['relaxation_hints'],
             $metricsEvent['context']['selection_relaxations_applied'],
         );
+        self::assertSame($runMetrics['raw_member_count'], $metricsEvent['context']['raw_member_count']);
+        self::assertSame($runMetrics['minimum_member_floor'], $metricsEvent['context']['minimum_member_floor']);
+        self::assertSame($runMetrics['min_items_per_day'], $metricsEvent['context']['min_items_per_day']);
     }
 
     private function createCalculator(
@@ -200,6 +206,8 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         string $timezone = 'Europe/Berlin',
         float $movementThresholdKm = 35.0,
         int $minAwayDays = 2,
+        int $minItemsPerDay = 4,
+        int $minimumMemberFloor = 0,
         int $minMembers = 0,
         ?DateTimeImmutable $referenceDate = null,
     ): VacationScoreCalculator {
@@ -218,6 +226,8 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
             minAwayDays: $minAwayDays,
+            minItemsPerDay: $minItemsPerDay,
+            minimumMemberFloor: $minimumMemberFloor,
             minMembers: $minMembers,
             monitoringEmitter: $emitter,
             referenceDate: $referenceDate,

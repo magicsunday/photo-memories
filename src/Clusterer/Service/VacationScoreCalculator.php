@@ -96,6 +96,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     /**
      * @param float $movementThresholdKm minimum travel distance to count as move day
      * @param int   $minAwayDays         minimum number of away days required to accept a vacation
+     * @param int   $minItemsPerDay      expected minimum number of items captured per away day
+     * @param int   $minimumMemberFloor  base floor applied to the adaptive member threshold
      * @param int   $minMembers          minimum number of media required to accept a vacation
      */
     public function __construct(
@@ -107,6 +109,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
         private int $minAwayDays = 2,
+        private int $minItemsPerDay = 4,
+        private int $minimumMemberFloor = 60,
         private int $minMembers = 0,
         array $weekendExceptionConfig = [],
         ?string $weekendSelectionProfile = null,
@@ -130,6 +134,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         if ($this->minAwayDays < 1) {
             throw new InvalidArgumentException('minAwayDays must be >= 1.');
+        }
+
+        if ($this->minItemsPerDay < 1) {
+            throw new InvalidArgumentException('minItemsPerDay must be >= 1.');
+        }
+
+        if ($this->minimumMemberFloor < 0) {
+            throw new InvalidArgumentException('minimumMemberFloor must be >= 0.');
         }
 
         if ($this->minMembers < 0) {
@@ -362,13 +374,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
         }
 
+        $rawMemberCount = count($rawMembers);
+
         if ($reliableDays === 0) {
             return null;
         }
 
-        if (count($rawMembers) < $this->minMembers) {
-            return null;
-        }
+        $minimumMemberFloor = 0;
 
         $weekendHolidayDays += $this->countAdjacentWeekendHolidayDays($dayKeys, $days, $home, $weekendHolidayFlags);
 
@@ -390,6 +402,26 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $bridgedAwayDays   = $this->countBridgedAwayDays($dayKeys, $baseAwayMap, $photoCountMap, $syntheticMap);
         $effectiveAwayDays = $awayDays + $bridgedAwayDays;
         $nights            = max(0, $effectiveAwayDays - 1);
+
+        $minimumMemberFloor = $this->resolveMinimumMemberFloor($effectiveAwayDays);
+
+        if ($rawMemberCount < $minimumMemberFloor) {
+            if ($this->monitoringEmitter !== null) {
+                $this->monitoringEmitter->emit(
+                    'vacation_curation',
+                    'insufficient_members',
+                    [
+                        'raw_member_count'     => $rawMemberCount,
+                        'minimum_member_floor' => $minimumMemberFloor,
+                        'min_items_per_day'    => $this->minItemsPerDay,
+                        'raw_away_days'        => $awayDays,
+                        'effective_away_days'  => $effectiveAwayDays,
+                    ],
+                );
+            }
+
+            return null;
+        }
 
         $weekendAssessment = $this->evaluateWeekendGetaway(
             $dayKeys,
@@ -593,7 +625,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             unset($summary);
         }
-        $preSelectionCount = count($rawMembers);
+        $preSelectionCount = $rawMemberCount;
         $storyline         = $this->resolveStoryline(
             $classification,
             $moveDays,
@@ -659,6 +691,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'selection_quality_floor'          => $selectionOptions->qualityFloor,
                 'selection_repeat_penalty'         => $selectionOptions->repeatPenalty,
                 'selection_profile_decision'       => $selectionDecision,
+                'raw_member_count'                 => $rawMemberCount,
+                'minimum_member_floor'             => $minimumMemberFloor,
+                'min_items_per_day'                => $this->minItemsPerDay,
             ];
 
             if ($primaryStaypoint !== null) {
@@ -776,6 +811,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_dedupe_rate'             => $dedupeRate,
             'selection_relaxations_applied'     => $relaxationsApplied,
             'selection_profile_decision'        => $selectionDecision,
+            'raw_member_count'                  => $rawMemberCount,
+            'minimum_member_floor'              => $minimumMemberFloor,
+            'min_items_per_day'                 => $this->minItemsPerDay,
         ];
 
         $selectionTelemetry['run_metrics'] = $runMetrics;
@@ -856,6 +894,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'bridged_away_days'        => $bridgedAwayDays,
             'away_days_norm'           => round($awayDaysNorm, 3),
             'total_days'               => $dayCount,
+            'raw_member_count'         => $rawMemberCount,
+            'minimum_member_floor'     => $minimumMemberFloor,
+            'min_items_per_day'        => $this->minItemsPerDay,
             'time_range'               => $timeRange,
             'max_distance_km'          => $centroidDistanceKm,
             'max_observed_distance_km' => $maxDistance,
@@ -908,6 +949,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'pre'     => $preSelectionCount,
                 'post'    => $selectedCount,
                 'dropped' => $droppedCount,
+                'minimum_floor' => $minimumMemberFloor,
             ],
             'near_duplicates' => [
                 'blocked'      => $nearDupBlocked,
@@ -955,6 +997,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'raw'     => $preSelectionCount,
             'curated' => $selectedCount,
             'dropped' => $droppedCount,
+            'minimum_floor' => $minimumMemberFloor,
         ];
         $summary['selection_per_day_distribution'] = $orderedDistribution;
         $summary['selection_per_bucket_distribution'] = $selectionTelemetry['per_bucket_distribution'] ?? [];
@@ -1517,6 +1560,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'selection_average_spacing_seconds'=> round((float) $runMetrics['selection_average_spacing_seconds'], 3),
             'selection_dedupe_rate'            => round((float) $runMetrics['selection_dedupe_rate'], 3),
             'selection_relaxations_applied'    => $runMetrics['selection_relaxations_applied'],
+            'raw_member_count'                 => $runMetrics['raw_member_count'],
+            'minimum_member_floor'             => $runMetrics['minimum_member_floor'],
+            'min_items_per_day'                => $runMetrics['min_items_per_day'],
         ];
 
         if ($people['target_cap'] !== null) {
@@ -2159,6 +2205,19 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         return null;
+    }
+
+    private function resolveMinimumMemberFloor(int $awayDays): int
+    {
+        $normalizedAwayDays = max(0, $awayDays);
+        $adaptiveFloor      = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+        $adaptiveFloor      = max($this->minimumMemberFloor, $adaptiveFloor);
+
+        if ($this->minMembers > 0) {
+            $adaptiveFloor = max($adaptiveFloor, $this->minMembers);
+        }
+
+        return $adaptiveFloor;
     }
 
     /**

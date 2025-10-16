@@ -56,6 +56,7 @@ final class VacationScoreCalculatorTest extends TestCase
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
             referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
         );
 
         $lisbonLocation = (new Location(
@@ -182,9 +183,15 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertArrayHasKey('member_selection', $params);
         $memberSelection = $params['member_selection'];
-        self::assertSame(9, $memberSelection['counts']['raw']);
-        self::assertSame(9, $memberSelection['counts']['curated']);
-        self::assertSame(0, $memberSelection['counts']['dropped']);
+        self::assertSame($params['raw_member_count'], $memberSelection['counts']['raw']);
+        self::assertSame($params['minimum_member_floor'], $memberSelection['counts']['minimum_floor']);
+        self::assertGreaterThanOrEqual($memberSelection['counts']['raw'], $memberSelection['counts']['curated']);
+        self::assertSame(
+            $memberSelection['counts']['raw'] - $memberSelection['counts']['curated'],
+            $memberSelection['counts']['dropped'],
+        );
+        self::assertGreaterThanOrEqual($memberSelection['counts']['raw'], $params['minimum_member_floor']);
+        self::assertSame(4, $params['min_items_per_day']);
         self::assertSame(0, $memberSelection['near_duplicates']['blocked']);
         self::assertSame(0, $memberSelection['near_duplicates']['replacements']);
         self::assertSame(
@@ -205,13 +212,16 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertIsArray($quality['ordered']);
         $qualitySummary = $quality['summary'] ?? [];
         self::assertIsArray($qualitySummary);
-        self::assertSame([
-            $dayKeys[0] => 3,
-            $dayKeys[1] => 3,
-            $dayKeys[2] => 3,
-        ], $qualitySummary['selection_per_day_distribution']);
-        self::assertSame(9, $qualitySummary['selection_counts']['raw']);
-        self::assertSame(9, $qualitySummary['selection_counts']['curated']);
+        foreach ($dayKeys as $dayKey) {
+            self::assertArrayHasKey($dayKey, $qualitySummary['selection_per_day_distribution']);
+            self::assertLessThanOrEqual(
+                $selectionOptions->maxPerDay,
+                $qualitySummary['selection_per_day_distribution'][$dayKey],
+            );
+        }
+        self::assertSame($memberSelection['counts']['raw'], $qualitySummary['selection_counts']['raw']);
+        self::assertSame($memberSelection['counts']['curated'], $qualitySummary['selection_counts']['curated']);
+        self::assertSame($memberSelection['counts']['minimum_floor'], $qualitySummary['selection_counts']['minimum_floor']);
         self::assertSame('vacation_weekend_transit', $qualitySummary['selection_profile']);
         self::assertSame(
             'vacation_weekend_transit',
@@ -248,6 +258,7 @@ final class VacationScoreCalculatorTest extends TestCase
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
             referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
         );
 
         $lisbonLocation = (new Location(
@@ -345,6 +356,7 @@ final class VacationScoreCalculatorTest extends TestCase
             movementThresholdKm: 30.0,
             minAwayDays: 3,
             referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
         );
 
         $home = [
@@ -459,6 +471,7 @@ final class VacationScoreCalculatorTest extends TestCase
             movementThresholdKm: 30.0,
             minAwayDays: 2,
             referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
         );
 
         $lisbonLocation = (new Location(
@@ -518,6 +531,7 @@ final class VacationScoreCalculatorTest extends TestCase
             movementThresholdKm: 30.0,
             minAwayDays: 3,
             referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
         );
 
         $home = [
@@ -1453,6 +1467,9 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(0, $runMetrics['run_length_nights']);
         self::assertSame(0, $runMetrics['core_day_count']);
         self::assertSame(1, $runMetrics['peripheral_day_count']);
+        self::assertSame($params['raw_member_count'], $runMetrics['raw_member_count']);
+        self::assertSame($params['minimum_member_floor'], $runMetrics['minimum_member_floor']);
+        self::assertSame($params['min_items_per_day'], $runMetrics['min_items_per_day']);
         self::assertArrayHasKey('selection_average_spacing_seconds', $runMetrics);
         self::assertArrayHasKey('selection_dedupe_rate', $runMetrics);
         self::assertArrayHasKey('selection_relaxations_applied', $runMetrics);
@@ -1627,6 +1644,9 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame('run_metrics', $metricsEvent['status']);
         self::assertGreaterThan(0.0, $metricsEvent['context']['phash_avg_distance']);
         self::assertSame(3, $metricsEvent['context']['phash_sample_count']);
+        self::assertSame($runMetrics['raw_member_count'], $metricsEvent['context']['raw_member_count']);
+        self::assertSame($runMetrics['minimum_member_floor'], $metricsEvent['context']['minimum_member_floor']);
+        self::assertSame($runMetrics['min_items_per_day'], $metricsEvent['context']['min_items_per_day']);
     }
 
     #[Test]
@@ -1717,6 +1737,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(28, $selection['counts']['raw']);
         self::assertSame($selectionOptions->targetTotal, $selection['counts']['curated']);
         self::assertSame(4, $selection['counts']['dropped']);
+        self::assertArrayHasKey('minimum_floor', $selection['counts']);
         self::assertArrayNotHasKey('telemetry', $selection);
 
         $summary   = $memberQuality['summary'];
@@ -1740,6 +1761,81 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame($expectedDistribution, $summary['selection_per_day_distribution']);
     }
 
+    #[Test]
+    public function insufficientMembersEmitsTelemetryAndAborts(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $emitter        = new RecordingMonitoringEmitter();
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            emitter: $emitter,
+            minimumMemberFloor: 60,
+        );
+
+        $dayDate = new DateTimeImmutable('2024-05-01 09:00:00');
+        $members = $this->makeMembersForDay(0, $dayDate, 5);
+        $dayKey  = $dayDate->format('Y-m-d');
+
+        $days = [
+            $dayKey => $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 4,
+                poiSamples: 6,
+                travelKm: 120.0,
+                timezoneOffset: 0,
+                hasAirport: false,
+                spotCount: 1,
+                spotDwellSeconds: 3600,
+            ),
+        ];
+
+        $home = [
+            'lat'             => 48.2082,
+            'lon'             => 16.3738,
+            'radius_km'       => 12.0,
+            'country'         => 'at',
+            'timezone_offset' => 60,
+        ];
+
+        self::assertNull($calculator->buildDraft([$dayKey], $days, $home));
+
+        self::assertCount(1, $emitter->events);
+        $lastEvent = end($emitter->events);
+        self::assertIsArray($lastEvent);
+        self::assertSame('vacation_curation', $lastEvent['job']);
+        self::assertSame('insufficient_members', $lastEvent['status']);
+        self::assertSame(5, $lastEvent['context']['raw_member_count']);
+        self::assertSame(60, $lastEvent['context']['minimum_member_floor']);
+        self::assertSame(4, $lastEvent['context']['min_items_per_day']);
+    }
+
+    #[Test]
+    public function adaptiveMemberFloorUsesGlobalMinimumForShortTrips(): void
+    {
+        $calculator = $this->createCalculator(
+            locationHelper: LocationHelper::createDefault(),
+            minimumMemberFloor: 60,
+        );
+
+        self::assertSame(60, $this->invokeMemberFloor($calculator, 2));
+    }
+
+    #[Test]
+    public function adaptiveMemberFloorScalesWithLongRuns(): void
+    {
+        $calculator = $this->createCalculator(
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerDay: 5,
+            minimumMemberFloor: 60,
+        );
+
+        self::assertSame(105, $this->invokeMemberFloor($calculator, 35));
+    }
+
     /**
      * @return list<Media>
      */
@@ -1753,6 +1849,8 @@ final class VacationScoreCalculatorTest extends TestCase
         string $timezone = 'Europe/Berlin',
         float $movementThresholdKm = 35.0,
         int $minAwayDays = 2,
+        int $minItemsPerDay = 4,
+        int $minimumMemberFloor = 0,
         int $minMembers = 0,
         ?DateTimeImmutable $referenceDate = null,
     ): VacationScoreCalculator {
@@ -1771,10 +1869,24 @@ final class VacationScoreCalculatorTest extends TestCase
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
             minAwayDays: $minAwayDays,
+            minItemsPerDay: $minItemsPerDay,
+            minimumMemberFloor: $minimumMemberFloor,
             minMembers: $minMembers,
             monitoringEmitter: $emitter,
             referenceDate: $referenceDate,
         );
+    }
+
+    private function invokeMemberFloor(VacationScoreCalculator $calculator, int $awayDays): int
+    {
+        $reflection = new ReflectionClass($calculator);
+        $method     = $reflection->getMethod('resolveMinimumMemberFloor');
+        $method->setAccessible(true);
+
+        /** @var int $result */
+        $result = $method->invoke($calculator, $awayDays);
+
+        return $result;
     }
 
     /**

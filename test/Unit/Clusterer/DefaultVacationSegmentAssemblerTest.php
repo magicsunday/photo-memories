@@ -90,6 +90,8 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             holidayResolver: new NullHolidayResolver(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
+            minItemsPerDay: 4,
+            minimumMemberFloor: 0,
         );
 
         $assembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
