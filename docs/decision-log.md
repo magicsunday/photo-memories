@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-24 – Migration der Cluster-Overlays
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Die Einführung des kuratierten Overlays trennt erstmals rohe Mitgliedslisten von den Highlights, dennoch lagen in der Persistenz weiterhin gemischte Datensätze ohne Telemetrie vor. Operatoren mussten manuell interpretieren, wie viele Bilder pro Urlaub tatsächlich in der Kurationsschicht landeten.
+- **Decision:** Neues Kommando `memories:cluster:migrate-curation` erstellt, das alle bestehenden Algorithmus/Fingerprint-Paare in einer Transaktion neu bewertet. `ClusterPersistenceService::refreshExistingCluster()` rehydriert die Drafts, übernimmt das Overlay in `member_quality.summary` und behält die Rohmitglieder unverändert. Lauf wird per Dry-Run testbar und dokumentiert in `docs/cluster-curation-migration.md`.
+- **Alternatives considered:** Eine einmalige SQL-Migration ohne Service-Layer (hätte Qualitäts-/Personenmetriken und Coverwahl nicht rekonstruieren können) oder nur zukünftige Cluster aktualisieren (Bestandsdaten blieben inkonsistent). Beide Varianten wurden verworfen, weil sie Telemetrie-Lücken und doppelte Pflege von Roh-/Kurationslisten erzeugt hätten.
+- **Follow-up actions:** Nach dem Rollout Urlaubs-Cluster mit ≥14 Tagen per Spotcheck prüfen und Monitoring beobachten, ob `member_quality.summary.curated_overlay_count` plausibel steigt. Bei Ausreißern erneuten Dry-Run mit Algorithmus-Filter fahren und Ursachen in den Selektionsprofilen analysieren.
+
 ## 2025-10-23 – Relax vacation selection caps for dense itineraries
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Telemetry from late-summer travel runs showed multi-stop days plateauing at four photos despite six high-quality shots clearing scene diversity and staypoint quotas. Operators compensated by forcing manual relaxations, which also lowered the pHash threshold and quality floor more than desired.
