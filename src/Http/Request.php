@@ -11,10 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Http;
 
+use Stringable;
+
 use function array_change_key_case;
 use function array_key_exists;
 use function explode;
 use function file_get_contents;
+use function is_float;
+use function is_int;
 use function is_string;
 use function parse_url;
 use function str_replace;
@@ -31,11 +35,6 @@ use const PHP_URL_PATH;
  */
 final class Request
 {
-    /**
-     * @param array<string,string> $query
-     * @param array<string,string> $headers
-     * @param array<string,string> $server
-     */
     /**
      * Creates a new request instance with the given normalized data.
      *
@@ -96,11 +95,12 @@ final class Request
                 continue;
             }
 
-            if (!is_string($value)) {
+            $normalized = self::normalizeScalar($value);
+            if ($normalized === null) {
                 continue;
             }
 
-            $query[$key] = $value;
+            $query[$key] = $normalized;
         }
 
         $method = strtoupper($server['REQUEST_METHOD'] ?? 'GET');
@@ -121,7 +121,7 @@ final class Request
     /**
      * Creates a synthetic request for testing purposes.
      *
-     * @param array<string,string> $query   request query parameters
+     * @param array<string,scalar|Stringable> $query request query parameters
      * @param array<string,string> $headers HTTP headers
      * @param array<string,string> $server  additional server parameters
      *
@@ -141,11 +141,12 @@ final class Request
                 continue;
             }
 
-            if (!is_string($value)) {
+            $normalized = self::normalizeScalar($value);
+            if ($normalized === null) {
                 continue;
             }
 
-            $normalizedQuery[$key] = $value;
+            $normalizedQuery[$key] = $normalized;
         }
 
         $normalizedHeaders = [];
@@ -206,11 +207,38 @@ final class Request
 
         $value = $this->query[$name];
 
+        if (!is_string($value)) {
+            $value = self::normalizeScalar($value);
+            if ($value === null) {
+                return $default;
+            }
+        }
+
         if ($value === '') {
             return $default;
         }
 
         return $value;
+    }
+
+    /**
+     * Normalizes scalar or stringable values into strings suitable for query usage.
+     */
+    private static function normalizeScalar(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        if ($value instanceof Stringable) {
+            return (string) $value;
+        }
+
+        return null;
     }
 
     /**
