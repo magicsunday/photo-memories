@@ -366,7 +366,7 @@ final class FeedPreviewCommand extends Command
         return $single->format('Y-m-d');
     }
 
-    private function normaliseDateTime(DateTimeInterface|string|null $value): ?DateTimeImmutable
+    private function normaliseDateTime(DateTimeInterface|string|int|null $value): ?DateTimeImmutable
     {
         if ($value instanceof DateTimeImmutable) {
             return $value;
@@ -374,6 +374,16 @@ final class FeedPreviewCommand extends Command
 
         if ($value instanceof DateTimeInterface) {
             return DateTimeImmutable::createFromInterface($value);
+        }
+
+        if (is_int($value)) {
+            $dateTime = DateTimeImmutable::createFromFormat('U', (string) $value);
+
+            if ($dateTime instanceof DateTimeImmutable) {
+                return $dateTime;
+            }
+
+            return null;
         }
 
         if ($value === null || $value === '') {

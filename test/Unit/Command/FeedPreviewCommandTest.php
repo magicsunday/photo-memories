@@ -57,7 +57,7 @@ final class FeedPreviewCommandTest extends TestCase
 
                     return true;
                 }),
-                self::isType('callable'),
+                self::isCallable(),
             )
             ->willReturnArgument(0);
 
@@ -201,7 +201,7 @@ final class FeedPreviewCommandTest extends TestCase
 
                     return true;
                 }),
-                self::isType('callable'),
+                self::isCallable(),
             )
             ->willReturnArgument(0);
 
@@ -302,6 +302,86 @@ final class FeedPreviewCommandTest extends TestCase
             '2 people from-summary 5 2 2024-06-01 0,650',
             $normalisedOutput,
         );
+    }
+
+    #[Test]
+    public function itRendersTimeRangeFromUnixTimestamps(): void
+    {
+        $cluster = new ClusterEntity(
+            'travel',
+            ['score' => 0.5, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2],
+        );
+
+        $entityManager = $this->createEntityManagerWithResult([$cluster], 1);
+
+        $mapper = new ClusterEntityToDraftMapper();
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::once())
+            ->method('consolidate')
+            ->with(self::callback(static function (array $drafts): bool {
+                self::assertCount(1, $drafts);
+
+                return true;
+            }), self::isCallable())
+            ->willReturnArgument(0);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->willReturn([
+                new MemoryFeedItem(
+                    'travel',
+                    'Titel',
+                    'Sub',
+                    null,
+                    [1, 2],
+                    0.5,
+                    [
+                        'time_range' => [
+                            'from' => 1720297569,
+                            'to'   => 1720383969,
+                        ],
+                        'member_quality' => [
+                            'summary' => [
+                                'selection_counts' => [
+                                    'raw' => 2,
+                                ],
+                            ],
+                        ],
+                    ],
+                ),
+            ]);
+
+        $perMediaCapStage = $this->createPerMediaCapStage();
+        $profileProvider   = $this->createProfileProvider();
+        $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
+
+        $command = new FeedPreviewCommand(
+            $entityManager,
+            $feedBuilder,
+            $consolidator,
+            $perMediaCapStage,
+            $mapper,
+            $selectionPolicies,
+            $profileProvider,
+            10,
+        );
+
+        $tester = new CommandTester($command);
+        $tester->execute([
+            '--limit-clusters' => '1',
+        ], [
+            'decorated' => false,
+        ]);
+
+        $tester->assertCommandIsSuccessful();
+
+        $normalisedOutput = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
+
+        self::assertStringContainsString('2024-07-06 → 2024-07-07', $normalisedOutput);
     }
 
     /**
