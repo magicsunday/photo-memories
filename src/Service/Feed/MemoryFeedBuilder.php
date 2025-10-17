@@ -538,30 +538,60 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
      */
     private function resolveOverlayMinimum(array $memberQuality): int
     {
-        $minimum = 0;
+        $minimum       = null;
+        $policyMinimum = null;
 
         $summary = $memberQuality['summary'] ?? null;
         if (is_array($summary)) {
+            $policyDetails = $summary['selection_policy_details'] ?? null;
+            if (is_array($policyDetails)) {
+                $value = $policyDetails['minimum_total'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $policyMinimum = max($policyMinimum ?? 0, $min);
+                }
+            }
+        }
+
+        $memberSelection = $memberQuality['member_selection'] ?? null;
+        if (is_array($memberSelection)) {
+            $policy = $memberSelection['policy'] ?? null;
+            if (is_array($policy)) {
+                $value = $policy['minimum_total'] ?? null;
+                $min   = $this->normalisePositiveInt($value);
+                if ($min !== null) {
+                    $policyMinimum = max($policyMinimum ?? 0, $min);
+                }
+            }
+        }
+
+        if ($policyMinimum !== null) {
+            $minimum = $policyMinimum;
+        }
+
+        if ($minimum === null && is_array($summary)) {
             $profile = $summary['selection_profile'] ?? null;
             if (is_array($profile)) {
                 $value = $profile['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
                 if ($min !== null) {
-                    $minimum = max($minimum, $min);
+                    $minimum = $min;
                 }
             }
+        }
 
+        if (is_array($summary)) {
             $counts = $summary['selection_counts'] ?? null;
             if (is_array($counts)) {
                 $value = $counts['curated'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
                 if ($min !== null) {
-                    $minimum = max($minimum, $min);
+                    $minimum = max($minimum ?? 0, $min);
                 }
             }
         }
 
-        return $minimum;
+        return $minimum ?? 0;
     }
 
     private function normalisePositiveInt(mixed $value): ?int
