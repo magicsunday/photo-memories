@@ -240,6 +240,82 @@ final class MemoryFeedBuilderTest extends TestCase
     }
 
     #[Test]
+    public function fallsBackWhenPolicyMinimumExceedsOrderedOverlay(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2, 3, 4], false)
+            ->willReturn([
+                $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T09:00:00Z')),
+                $this->buildMedia(2, false, new DateTimeImmutable('2024-01-01T10:00:00Z')),
+                $this->buildMedia(3, false, new DateTimeImmutable('2024-01-01T11:00:00Z')),
+                $this->buildMedia(4, false, new DateTimeImmutable('2024-01-01T12:00:00Z')),
+            ]);
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.1,
+            minMembers: 3,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+        );
+
+        $params = [
+            'score'      => 0.8,
+            'time_range' => ['to' => time()],
+            'member_quality' => [
+                'ordered' => [4, 2, 1],
+                'summary' => [
+                    'selection_policy_details' => ['minimum_total' => 5],
+                    'selection_profile'        => ['minimum_total' => 3],
+                    'selection_counts'         => ['curated' => 3],
+                ],
+                'member_selection' => [
+                    'policy' => ['minimum_total' => 5],
+                ],
+            ],
+        ];
+
+        $cluster = new ClusterDraft(
+            algorithm: 'policy-fallback',
+            params: $params,
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2, 3, 4],
+        );
+        $cluster->setCoverMediaId(4);
+
+        $result = $builder->build([$cluster]);
+
+        self::assertCount(1, $result);
+        $item = $result[0];
+
+        self::assertSame([3, 1, 2, 4], $item->getMemberIds());
+
+        $feedOverlay = $item->getParams()['member_quality']['feed_overlay'] ?? null;
+        self::assertIsArray($feedOverlay);
+        self::assertFalse($feedOverlay['used']);
+        self::assertSame(5, $feedOverlay['minimum_total']);
+        self::assertArrayNotHasKey('applied_count', $feedOverlay);
+    }
+
+    #[Test]
     public function honoursQualityAndPeopleThresholds(): void
     {
         $titleGen = $this->createMock(TitleGeneratorInterface::class);
