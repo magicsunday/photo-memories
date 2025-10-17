@@ -36,35 +36,43 @@ final class FeedPreviewCommandTest extends TestCase
     #[Test]
     public function itOverridesPersonalizationProfileWhenOptionsProvided(): void
     {
-        $entityManager = $this->createEntityManagerWithResult([
-            $this->createMock(ClusterEntity::class),
-        ], 5);
-
-        $draft = new ClusterDraft(
-            algorithm: 'travel',
-            params: ['score' => 0.82, 'group' => 'stories'],
-            centroid: ['lat' => 0.0, 'lon' => 0.0],
-            members: [1, 2, 3, 4],
+        $clusterEntity = new ClusterEntity(
+            'travel',
+            ['score' => 0.82, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2, 3, 4],
         );
 
-        $mapper = $this->createMock(ClusterEntityToDraftMapper::class);
-        $mapper->expects(self::once())
-            ->method('mapMany')
-            ->willReturn([$draft]);
+        $entityManager = $this->createEntityManagerWithResult([$clusterEntity], 5);
+
+        $mapper = new ClusterEntityToDraftMapper();
 
         $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
         $consolidator->expects(self::once())
             ->method('consolidate')
-            ->with([$draft], self::isType('callable'))
-            ->willReturn([$draft]);
+            ->with(
+                self::callback(static function (array $drafts): bool {
+                    self::assertCount(1, $drafts);
+                    self::assertInstanceOf(ClusterDraft::class, $drafts[0]);
+
+                    return true;
+                }),
+                self::isType('callable'),
+            )
+            ->willReturnArgument(0);
 
         $capturedProfile = null;
 
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $clusters, ?FeedPersonalizationProfile $profile) use ($draft, &$capturedProfile) {
-                self::assertSame([$draft], $clusters);
+            ->willReturnCallback(function (array $clusters, ?FeedPersonalizationProfile $profile) use (&$capturedProfile) {
+                self::assertCount(1, $clusters);
+                $draft = $clusters[0];
+                self::assertInstanceOf(ClusterDraft::class, $draft);
+                self::assertSame('travel', $draft->getAlgorithm());
+                self::assertSame([1, 2, 3, 4], $draft->getMembers());
+                self::assertSame(['score' => 0.82, 'group' => 'stories'], $draft->getParams());
                 $capturedProfile = $profile;
 
                 return [
@@ -106,38 +114,33 @@ final class FeedPreviewCommandTest extends TestCase
     #[Test]
     public function itAppliesPerMediaCapOverrideForSingleRun(): void
     {
-        $entityManager = $this->createEntityManagerWithResult([
-            $this->createMock(ClusterEntity::class),
-        ], 3);
-
-        $draft = new ClusterDraft(
-            algorithm: 'travel',
-            params: ['score' => 0.75, 'group' => 'stories'],
-            centroid: ['lat' => 0.0, 'lon' => 0.0],
-            members: [1, 2, 3],
+        $clusterEntity = new ClusterEntity(
+            'travel',
+            ['score' => 0.75, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2, 3],
         );
 
-        $mapper = $this->createMock(ClusterEntityToDraftMapper::class);
-        $mapper->expects(self::once())
-            ->method('mapMany')
-            ->willReturn([$draft]);
+        $entityManager = $this->createEntityManagerWithResult([$clusterEntity], 3);
+
+        $mapper = new ClusterEntityToDraftMapper();
 
         $perMediaCapStage = $this->createPerMediaCapStage(defaultCap: 2);
 
         $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
         $consolidator->expects(self::once())
             ->method('consolidate')
-            ->willReturnCallback(function (array $clusters) use ($draft, $perMediaCapStage) {
-                self::assertSame([$draft], $clusters);
+            ->willReturnCallback(function (array $clusters) use ($perMediaCapStage) {
+                self::assertCount(1, $clusters);
+                self::assertInstanceOf(ClusterDraft::class, $clusters[0]);
                 self::assertSame(1, $perMediaCapStage->getPerMediaCap());
 
-                return [$draft];
+                return $clusters;
             });
 
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([$draft], null)
             ->willReturn([
                 new MemoryFeedItem('travel', 'Titel', 'Sub', null, [1, 2, 3], 0.9, ['scene_tags' => []]),
             ]);
@@ -171,83 +174,95 @@ final class FeedPreviewCommandTest extends TestCase
     #[Test]
     public function itRendersStorylineCountsAndTimeRangeInTable(): void
     {
-        $entityManager = $this->createEntityManagerWithResult([
-            $this->createMock(ClusterEntity::class),
-        ], 2);
-
-        $draft = new ClusterDraft(
-            algorithm: 'travel',
-            params: ['score' => 0.82, 'group' => 'stories'],
-            centroid: ['lat' => 0.0, 'lon' => 0.0],
-            members: [1, 2, 3, 4],
+        $clusterA = new ClusterEntity(
+            'travel',
+            ['score' => 0.82, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2, 3, 4],
+        );
+        $clusterB = new ClusterEntity(
+            'people',
+            ['score' => 0.65, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [5, 6],
         );
 
-        $mapper = $this->createMock(ClusterEntityToDraftMapper::class);
-        $mapper->expects(self::once())
-            ->method('mapMany')
-            ->willReturn([$draft]);
+        $entityManager = $this->createEntityManagerWithResult([$clusterA, $clusterB], 2);
+
+        $mapper = new ClusterEntityToDraftMapper();
 
         $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
         $consolidator->expects(self::once())
             ->method('consolidate')
-            ->with([$draft], self::isType('callable'))
-            ->willReturn([$draft]);
+            ->with(
+                self::callback(static function (array $drafts): bool {
+                    self::assertCount(2, $drafts);
+                    self::assertInstanceOf(ClusterDraft::class, $drafts[0]);
+
+                    return true;
+                }),
+                self::isType('callable'),
+            )
+            ->willReturnArgument(0);
 
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([$draft], null)
-            ->willReturn([
-                new MemoryFeedItem(
-                    'travel',
-                    'Titel',
-                    'Sub',
-                    null,
-                    [1, 2, 3, 4],
-                    0.91,
-                    [
-                        'storyline'      => 'sunny-days',
-                        'member_quality' => [
-                            'summary' => [
-                                'members_persisted'   => 7,
-                                'selection_counts'    => [
-                                    'raw'      => 6,
-                                    'curated'  => 4,
+            ->willReturnCallback(static function (array $clusters) {
+                self::assertCount(2, $clusters);
+
+                return [
+                    new MemoryFeedItem(
+                        'travel',
+                        'Titel',
+                        'Sub',
+                        null,
+                        [1, 2, 3, 4],
+                        0.91,
+                        [
+                            'storyline'      => 'sunny-days',
+                            'member_quality' => [
+                                'summary' => [
+                                    'members_persisted'   => 7,
+                                    'selection_counts'    => [
+                                        'raw'      => 6,
+                                        'curated'  => 4,
+                                    ],
+                                    'selection_storyline' => 'ignored',
                                 ],
-                                'selection_storyline' => 'ignored',
+                                'ordered' => [11, 22, 33, 44, 55, 66],
                             ],
-                            'ordered' => [11, 22, 33, 44, 55, 66],
+                            'time_range' => [
+                                'from' => '2024-05-01T00:00:00+00:00',
+                                'to'   => '2024-05-05T00:00:00+00:00',
+                            ],
                         ],
-                        'time_range' => [
-                            'from' => '2024-05-01T00:00:00+00:00',
-                            'to'   => '2024-05-05T00:00:00+00:00',
-                        ],
-                    ],
-                ),
-                new MemoryFeedItem(
-                    'people',
-                    'Titel 2',
-                    'Sub 2',
-                    null,
-                    [5, 6],
-                    0.65,
-                    [
-                        'member_quality' => [
-                            'summary' => [
-                                'selection_counts'    => [
-                                    'raw' => 5,
+                    ),
+                    new MemoryFeedItem(
+                        'people',
+                        'Titel 2',
+                        'Sub 2',
+                        null,
+                        [5, 6],
+                        0.65,
+                        [
+                            'member_quality' => [
+                                'summary' => [
+                                    'selection_counts'    => [
+                                        'raw' => 5,
+                                    ],
+                                    'selection_storyline' => 'from-summary',
                                 ],
-                                'selection_storyline' => 'from-summary',
+                                'ordered' => [100, 101, 102, 103, 104],
                             ],
-                            'ordered' => [100, 101, 102, 103, 104],
+                            'time_range' => [
+                                'from' => '2024-06-01',
+                                'to'   => '2024-06-01',
+                            ],
                         ],
-                        'time_range' => [
-                            'from' => '2024-06-01',
-                            'to'   => '2024-06-01',
-                        ],
-                    ],
-                ),
-            ]);
+                    ),
+                ];
+            });
 
         $perMediaCapStage = $this->createPerMediaCapStage();
         $profileProvider   = $this->createProfileProvider();
@@ -276,15 +291,15 @@ final class FeedPreviewCommandTest extends TestCase
         $normalisedOutput = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
 
         self::assertStringContainsString(
-            '| # | Algorithmus | Storyline | Mitglieder (roh) | Mitglieder (kuratiert) | Score | Zeitraum |',
+            'Algorithmus Storyline Mitglieder (roh) Mitglieder (kuratiert) Zeitraum Score',
             $normalisedOutput,
         );
         self::assertStringContainsString(
-            '| 1 | travel | sunny-days | 7 | 4 | 0,910 | 2024-05-01 → 2024-05-05 |',
+            '1 travel sunny-days 7 4 2024-05-01 → 2024-05-05 0,910',
             $normalisedOutput,
         );
         self::assertStringContainsString(
-            '| 2 | people | from-summary | 5 | 2 | 0,650 | 2024-06-01 |',
+            '2 people from-summary 5 2 2024-06-01 0,650',
             $normalisedOutput,
         );
     }

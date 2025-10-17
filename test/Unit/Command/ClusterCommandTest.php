@@ -80,9 +80,19 @@ final class ClusterCommandTest extends TestCase
                     2,
                     0,
                     true,
-                    ClusterJobTelemetry::fromStageCounts(
-                        3,
-                        2,
+                    ClusterJobTelemetry::fromStageStats(
+                        [
+                            ClusterJobTelemetry::STAGE_DRAFTS => [
+                                'clusters'     => 3,
+                                'members_pre'  => 90,
+                                'members_post' => 90,
+                            ],
+                            ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                                'clusters'     => 2,
+                                'members_pre'  => 90,
+                                'members_post' => 60,
+                            ],
+                        ],
                         [
                             new ClusterSummary(
                                 'algo-top',
@@ -122,6 +132,8 @@ final class ClusterCommandTest extends TestCase
         self::assertStringContainsString('📊 Telemetrie', $display);
         self::assertStringContainsString('Entwürfe', $display);
         self::assertStringContainsString('Konsolidiert', $display);
+        self::assertStringContainsString('Mitglieder vor (roh)', $display);
+        self::assertStringContainsString('Mitglieder nach (roh)', $display);
         self::assertStringContainsString('algo-top', $display);
         self::assertStringContainsString('storyline-top', $display);
         self::assertStringContainsString('default', $display);
@@ -157,7 +169,18 @@ final class ClusterCommandTest extends TestCase
                     1,
                     0,
                     false,
-                    ClusterJobTelemetry::fromStageCounts(1, 1),
+                    ClusterJobTelemetry::fromStageStats([
+                        ClusterJobTelemetry::STAGE_DRAFTS => [
+                            'clusters'     => 1,
+                            'members_pre'  => 12,
+                            'members_post' => 12,
+                        ],
+                        ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                            'clusters'     => 1,
+                            'members_pre'  => 12,
+                            'members_post' => 10,
+                        ],
+                    ]),
                 ),
             );
 
@@ -189,7 +212,18 @@ final class ClusterCommandTest extends TestCase
                     1,
                     0,
                     false,
-                    ClusterJobTelemetry::fromStageCounts(1, 1, warnings: [
+                    ClusterJobTelemetry::fromStageStats([
+                        ClusterJobTelemetry::STAGE_DRAFTS => [
+                            'clusters'     => 1,
+                            'members_pre'  => 8,
+                            'members_post' => 8,
+                        ],
+                        ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                            'clusters'     => 1,
+                            'members_pre'  => 8,
+                            'members_post' => 6,
+                        ],
+                    ], warnings: [
                         'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.',
                     ]),
                 ),

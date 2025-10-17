@@ -166,11 +166,11 @@ final class ClusterCommand extends Command
 
     private function renderTelemetry(SymfonyStyle $io, ClusterJobTelemetry $telemetry): void
     {
-        $stageCounts = $telemetry->getStageCounts();
+        $stageStats = $telemetry->getStageStats();
         $topClusters = $telemetry->getTopClusters();
         $warnings    = $telemetry->getWarnings();
 
-        if ($warnings === [] && $stageCounts === [] && $topClusters === []) {
+        if ($warnings === [] && $stageStats === [] && $topClusters === []) {
             return;
         }
 
@@ -182,14 +182,33 @@ final class ClusterCommand extends Command
             }
         }
 
-        if ($stageCounts !== []) {
-            $io->table(
-                ['Phase', 'Anzahl'],
-                [
-                    ['Entwürfe', (string) ($stageCounts[ClusterJobTelemetry::STAGE_DRAFTS] ?? 0)],
-                    ['Konsolidiert', (string) ($stageCounts[ClusterJobTelemetry::STAGE_CONSOLIDATED] ?? 0)],
-                ],
-            );
+        if ($stageStats !== []) {
+            $rows = [];
+            $labels = [
+                ClusterJobTelemetry::STAGE_DRAFTS => 'Entwürfe',
+                ClusterJobTelemetry::STAGE_CONSOLIDATED => 'Konsolidiert',
+            ];
+
+            foreach ($labels as $stage => $label) {
+                $stat = $stageStats[$stage] ?? null;
+                if ($stat === null) {
+                    continue;
+                }
+
+                $rows[] = [
+                    $label,
+                    (string) $stat['clusters'],
+                    (string) $stat['members_pre'],
+                    (string) $stat['members_post'],
+                ];
+            }
+
+            if ($rows !== []) {
+                $io->table(
+                    ['Phase', 'Cluster', 'Mitglieder vor (roh)', 'Mitglieder nach (roh)'],
+                    $rows,
+                );
+            }
         }
 
         if ($topClusters === []) {

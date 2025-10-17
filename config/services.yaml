@@ -1015,7 +1015,9 @@ services:
         arguments:
             $strategies: !tagged_iterator 'memories.cluster_strategy'
 
-    MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService: ~
+    MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService:
+        arguments:
+            $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
 
     MagicSunday\Memories\Service\Clusterer\Pipeline\FilterNormalizationStage:
         arguments:

@@ -166,17 +166,25 @@ trait StageSupportTrait
             return $score;
         }
 
-        $members = $normalizedMembers ?? $this->normalizeMembers($draft->getMembers());
+        $members     = $normalizedMembers ?? $this->normalizeMembers($draft->getMembers());
         $memberCount = count($members);
 
         $summary = $this->extractMemberQualitySummary($draft->getParams());
         if ($summary !== []) {
             $selectionCounts = $summary['selection_counts'] ?? null;
             if (is_array($selectionCounts)) {
+                $raw = $selectionCounts['raw'] ?? null;
+                if (is_numeric($raw)) {
+                    $rawCount = (int) $raw;
+                    if ($rawCount > $memberCount) {
+                        $memberCount = $rawCount;
+                    }
+                }
+
                 $curated = $selectionCounts['curated'] ?? null;
-                if (is_numeric($curated)) {
+                if ($memberCount === 0 && is_numeric($curated)) {
                     $curatedCount = (int) $curated;
-                    if ($curatedCount > 0 && $curatedCount > $memberCount) {
+                    if ($curatedCount > 0) {
                         $memberCount = $curatedCount;
                     }
                 }
