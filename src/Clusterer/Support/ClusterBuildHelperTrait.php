@@ -17,6 +17,7 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function array_map;
 use function array_slice;
 use function array_values;
+use function is_string;
 use function mb_strtolower;
 use function strcasecmp;
 use function trim;
@@ -160,6 +161,10 @@ trait ClusterBuildHelperTrait
             }
 
             foreach ($keywords as $keyword) {
+                if (!is_string($keyword)) {
+                    continue;
+                }
+
                 $trimmed = trim($keyword);
                 if ($trimmed === '') {
                     continue;
