@@ -90,7 +90,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         $poi = $this->poiContextAnalyzer->resolvePrimaryPoi($location);
         if ($poi !== null) {
             $label = $this->poiLabelResolver->preferredLabel($poi);
-            if ($label !== null) {
+            if (is_string($label)) {
                 $normalizedLabel = trim($label);
                 if ($normalizedLabel !== '') {
                     return $this->normalizeLabelCasing($normalizedLabel);
@@ -117,7 +117,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
         }
 
         $label = $this->poiContextAnalyzer->bestLabelForLocation($location);
-        if ($label !== null) {
+        if (is_string($label)) {
             $normalizedLabel = trim($label);
             if ($normalizedLabel !== '') {
                 return $this->normalizeLabelCasing($normalizedLabel);
@@ -141,17 +141,20 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     {
         $poiContext = $this->poiContextAnalyzer->majorityPoiContext($members);
         if ($poiContext !== null) {
-            $normalizedLabel = trim($poiContext['label']);
+            $labelValue = $poiContext['label'] ?? null;
+            $normalizedLabel = is_string($labelValue) ? trim($labelValue) : '';
             if ($normalizedLabel !== '') {
                 $categoryValue = $poiContext['categoryValue'];
-                if ($categoryValue === null) {
+                if (!is_string($categoryValue)) {
                     return $this->normalizeLabelCasing($normalizedLabel);
                 }
 
                 $normalizedCategory = trim($categoryValue);
-                if ($normalizedCategory === ''
-                    || mb_strtolower($normalizedLabel, 'UTF-8') !== mb_strtolower($normalizedCategory, 'UTF-8')
-                ) {
+                if ($normalizedCategory === '') {
+                    return $this->normalizeLabelCasing($normalizedLabel);
+                }
+
+                if (mb_strtolower($normalizedLabel, 'UTF-8') !== mb_strtolower($normalizedCategory, 'UTF-8')) {
                     return $this->normalizeLabelCasing($normalizedLabel);
                 }
             }
