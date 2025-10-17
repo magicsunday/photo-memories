@@ -199,8 +199,8 @@ final class FeedPreviewCommand extends Command
                 $this->resolveStoryline($params),
                 (string) $this->resolveRawMemberCount($params),
                 (string) $this->resolveCuratedMemberCount($memberIds, $params),
-                number_format($it->getScore(), 3, ',', ''),
                 $this->formatTimeRange($params['time_range'] ?? null),
+                number_format($it->getScore(), 3, ',', ''),
             ];
 
             if ($showMembers) {
@@ -210,7 +210,7 @@ final class FeedPreviewCommand extends Command
             $rows[] = $row;
         }
 
-        $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Score', 'Zeitraum'];
+        $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Zeitraum', 'Score'];
 
         if ($showMembers) {
             $headers[] = 'Mitglieder';

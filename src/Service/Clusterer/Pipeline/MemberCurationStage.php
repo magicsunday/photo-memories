@@ -112,13 +112,16 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $preCount = count($members);
             $this->emitMonitoring('selection_start', [
-                'algorithm'     => $draft->getAlgorithm(),
-                'storyline'     => $draft->getStoryline(),
-                'pre_count'     => $preCount,
-                'members_pre'   => $preCount,
-                'policy'        => $policy->getProfileKey(),
-                'policy_key'    => $policy->getProfileKey(),
-                'target_total'  => $policy->getTargetTotal(),
+                'algorithm'        => $draft->getAlgorithm(),
+                'storyline'        => $draft->getStoryline(),
+                'pre_count'        => $preCount,
+                'members_pre'      => $preCount,
+                'policy'           => $policy->getProfileKey(),
+                'policy_key'       => $policy->getProfileKey(),
+                'target_total'     => $policy->getTargetTotal(),
+                'minimum_total'    => $policy->getMinimumTotal(),
+                'policy_profile'   => $policy->getProfileKey(),
+                'policy_minimum_total' => $policy->getMinimumTotal(),
             ]);
 
             $resultSet = $this->selector->select($draft->getAlgorithm(), $members, $context);
@@ -128,9 +131,14 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $dropped = $preCount > $postCount ? $preCount - $postCount : 0;
 
+            $policyDetails = $this->summarizePolicy($policy);
+            if (isset($telemetry['policy']) && is_array($telemetry['policy'])) {
+                $policyDetails = array_merge($policyDetails, $telemetry['policy']);
+            }
+
             $presentation = [
-                'storyline' => $draft->getStoryline(),
-                'policy'    => $telemetry['policy'] ?? [],
+                'storyline'     => $draft->getStoryline(),
+                'policy'        => $policyDetails,
                 'counts'    => [
                     'raw'     => $preCount,
                     'curated' => $postCount,
@@ -142,6 +150,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 ],
                 'hash_distance' => (float) ($telemetry['avg_phash_distance'] ?? 0.0),
                 'rejection_counts' => $telemetry['rejection_counts'] ?? [],
+                'curated_count' => $postCount,
             ];
 
             $params = $draft->getParams();
@@ -178,6 +187,8 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 'selection_storyline' => $draft->getStoryline(),
                 'selection_policy'    => $policy->getProfileKey(),
                 'selection_telemetry' => $telemetry,
+                'curated_count'       => $postCount,
+                'selection_policy_details' => $policyDetails,
             ]);
 
             $memberQuality['summary'] = $summary;
@@ -197,8 +208,11 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 'members_pre'             => $preCount,
                 'post_count'              => $postCount,
                 'members_curated'         => $postCount,
+                'curated_count'           => $postCount,
                 'policy'                  => $policy->getProfileKey(),
                 'policy_key'              => $policy->getProfileKey(),
+                'policy_profile'          => $policy->getProfileKey(),
+                'policy_minimum_total'    => $policy->getMinimumTotal(),
                 'dropped_near_duplicates' => (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? 0),
                 'dropped_spacing'         => (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? 0),
                 'avg_time_gap_s'          => $telemetry['avg_time_gap_s'],
@@ -678,5 +692,33 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         }
 
         $this->monitoringEmitter->emit('member_curation', $event, $payload);
+    }
+
+    private function summarizePolicy(SelectionPolicy $policy): array
+    {
+        $details = [
+            'profile'                   => $policy->getProfileKey(),
+            'target_total'              => $policy->getTargetTotal(),
+            'minimum_total'             => $policy->getMinimumTotal(),
+            'max_per_day'               => $policy->getMaxPerDay(),
+            'time_slot_hours'           => $policy->getTimeSlotHours(),
+            'min_spacing_seconds'       => $policy->getMinSpacingSeconds(),
+            'phash_min_hamming'         => $policy->getPhashMinHamming(),
+            'max_per_staypoint'         => $policy->getMaxPerStaypoint(),
+            'relaxed_max_per_staypoint' => $policy->getRelaxedMaxPerStaypoint(),
+            'quality_floor'             => $policy->getQualityFloor(),
+            'core_day_bonus'            => $policy->getCoreDayBonus(),
+            'peripheral_day_penalty'    => $policy->getPeripheralDayPenalty(),
+        ];
+
+        $metadata = $policy->getMetadata();
+        if ($metadata !== []) {
+            $details['metadata'] = $metadata;
+        }
+
+        return array_filter(
+            $details,
+            static fn (mixed $value): bool => $value !== null,
+        );
     }
 }

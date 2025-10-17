@@ -57,6 +57,7 @@ final class VacationScoreCalculatorTest extends TestCase
             movementThresholdKm: 30.0,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $lisbonLocation = (new Location(
@@ -87,7 +88,7 @@ final class VacationScoreCalculatorTest extends TestCase
             $dayDate       = $start->add(new DateInterval('P' . $i . 'D'));
             $dayLocation   = clone $lisbonLocation;
             $dayLocation->setType($poiTypes[$i % count($poiTypes)])->setCategory('tourism');
-            $members       = $this->makeMembersForDay($i, $dayDate, 3, $dayLocation);
+            $members       = $this->makeMembersForDay($i, $dayDate, 4, $dayLocation);
             $dayKey        = $dayDate->format('Y-m-d');
             $ratio         = 0.2 + (0.2 * $i);
             $cohortMembers = match ($i) {
@@ -183,6 +184,8 @@ final class VacationScoreCalculatorTest extends TestCase
 
         self::assertArrayHasKey('member_selection', $params);
         $memberSelection = $params['member_selection'];
+        $expectedMinimumFloor = (int) \ceil($params['min_items_per_day'] * $params['away_days'] * 0.6);
+        self::assertSame($expectedMinimumFloor, $params['minimum_member_floor']);
         self::assertSame($params['raw_member_count'], $memberSelection['counts']['raw']);
         self::assertSame($params['minimum_member_floor'], $memberSelection['counts']['minimum_floor']);
         self::assertGreaterThanOrEqual($memberSelection['counts']['raw'], $memberSelection['counts']['curated']);
@@ -190,7 +193,6 @@ final class VacationScoreCalculatorTest extends TestCase
             $memberSelection['counts']['raw'] - $memberSelection['counts']['curated'],
             $memberSelection['counts']['dropped'],
         );
-        self::assertGreaterThanOrEqual($memberSelection['counts']['raw'], $params['minimum_member_floor']);
         self::assertSame(4, $params['min_items_per_day']);
         self::assertSame(0, $memberSelection['near_duplicates']['blocked']);
         self::assertSame(0, $memberSelection['near_duplicates']['replacements']);
@@ -259,6 +261,7 @@ final class VacationScoreCalculatorTest extends TestCase
             movementThresholdKm: 30.0,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $lisbonLocation = (new Location(
@@ -357,6 +360,7 @@ final class VacationScoreCalculatorTest extends TestCase
             minAwayDays: 3,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $home = [
@@ -471,6 +475,7 @@ final class VacationScoreCalculatorTest extends TestCase
             minAwayDays: 2,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $home = [
@@ -580,6 +585,7 @@ final class VacationScoreCalculatorTest extends TestCase
             minAwayDays: 2,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $lisbonLocation = (new Location(
@@ -640,6 +646,7 @@ final class VacationScoreCalculatorTest extends TestCase
             minAwayDays: 3,
             referenceDate: $referenceDate,
             minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
         );
 
         $home = [
@@ -1107,7 +1114,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $dayKeys = [];
         for ($i = 0; $i < 2; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
-            $members   = $this->makeMembersForDay(10 + $i, $dayDate, 2);
+            $members   = $this->makeMembersForDay(10 + $i, $dayDate, 3);
             $dayKey    = $dayDate->format('Y-m-d');
             $dayKeys[] = $dayKey;
 
@@ -1254,7 +1261,7 @@ final class VacationScoreCalculatorTest extends TestCase
 
         for ($i = 0; $i < 2; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
-            $members   = $this->makeMembersForDay(30 + $i, $dayDate, 2);
+            $members   = $this->makeMembersForDay(30 + $i, $dayDate, 3);
             $dayKey    = $dayDate->format('Y-m-d');
             $dayKeys[] = $dayKey;
 
@@ -1332,7 +1339,7 @@ final class VacationScoreCalculatorTest extends TestCase
         $dayKeys = [];
         for ($i = 0; $i < 2; ++$i) {
             $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
-            $members   = $this->makeMembersForDay(30 + $i, $dayDate, 2);
+            $members   = $this->makeMembersForDay(30 + $i, $dayDate, 3);
             $gpsMembers = [];
             foreach ($members as $index => $member) {
                 $takenAt = $member->getTakenAt();
@@ -1709,7 +1716,7 @@ final class VacationScoreCalculatorTest extends TestCase
         );
 
         $dayDate = new DateTimeImmutable('2024-09-05 10:00:00');
-        $members = $this->makeMembersForDay(55, $dayDate, 2);
+        $members = $this->makeMembersForDay(55, $dayDate, 3);
         $dayKey  = $dayDate->format('Y-m-d');
 
         $days = [
@@ -1755,6 +1762,63 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame($runMetrics['raw_member_count'], $metricsEvent['context']['raw_member_count']);
         self::assertSame($runMetrics['minimum_member_floor'], $metricsEvent['context']['minimum_member_floor']);
         self::assertSame($runMetrics['min_items_per_day'], $metricsEvent['context']['min_items_per_day']);
+    }
+
+    #[Test]
+    public function enforceDynamicMinimumAppliesBaselineFloor(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 48, maxPerDay: 8),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            referenceDate: new DateTimeImmutable('2024-09-01 00:00:00', new DateTimeZone('Europe/Berlin')),
+            minimumMemberFloor: 0,
+            enforceDynamicMinimum: true,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $start   = new DateTimeImmutable('2024-08-10 09:00:00');
+        $dayKeys = [];
+        $days    = [];
+
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate  = $start->add(new DateInterval('P' . $i . 'D'));
+            $members  = $this->makeMembersForDay($i, $dayDate, 40);
+            $dayKey   = $dayDate->format('Y-m-d');
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 10,
+                poiSamples: 12,
+                travelKm: 180.0,
+                timezoneOffset: 0,
+                hasAirport: false,
+                spotCount: 2,
+                spotDwellSeconds: 7200,
+            );
+
+            $dayKeys[] = $dayKey;
+        }
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertInstanceOf(ClusterDraft::class, $draft);
+        $params = $draft->getParams();
+
+        self::assertSame(2, $params['away_days']);
+        self::assertGreaterThanOrEqual(60, $params['minimum_member_floor']);
     }
 
     #[Test]
@@ -1961,6 +2025,7 @@ final class VacationScoreCalculatorTest extends TestCase
         int $minimumMemberFloor = 0,
         int $minMembers = 0,
         ?DateTimeImmutable $referenceDate = null,
+        bool $enforceDynamicMinimum = false,
     ): VacationScoreCalculator {
         $defaultOptions    = $options ?? new VacationSelectionOptions();
         $selectionProfiles = new SelectionProfileProvider($defaultOptions, 'vacation');
@@ -1982,6 +2047,7 @@ final class VacationScoreCalculatorTest extends TestCase
             minMembers: $minMembers,
             monitoringEmitter: $emitter,
             referenceDate: $referenceDate,
+            enforceDynamicMinimum: $enforceDynamicMinimum,
         );
     }
 

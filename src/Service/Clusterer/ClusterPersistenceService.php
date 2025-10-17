@@ -25,6 +25,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Clusterer\TravelWaypointAnnotator;
+use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -70,6 +71,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         ?ClusterQualityAggregator $qualityAggregator = null,
         ?ClusterPeopleAggregator $peopleAggregator = null,
         ?TravelWaypointAnnotator $travelWaypointAnnotator = null,
+        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
         $this->peopleAggregator  = $peopleAggregator ?? new ClusterPeopleAggregator();
@@ -889,6 +891,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $memberQuality['summary'] = $summary;
         $draft->setParam('member_quality', $memberQuality);
+
+        $this->emitPersistenceMetrics($draft, $persistedCount, $overlayCount);
     }
 
     /**
@@ -897,6 +901,20 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function resolveOrderedMembers(ClusterDraft $draft): array
     {
         return $draft->getMembers();
+    }
+
+    private function emitPersistenceMetrics(ClusterDraft $draft, int $persistedCount, int $overlayCount): void
+    {
+        if ($this->monitoringEmitter === null) {
+            return;
+        }
+
+        $this->monitoringEmitter->emit('cluster_persistence', 'overlay', [
+            'algorithm'           => $draft->getAlgorithm(),
+            'storyline'           => $draft->getStoryline(),
+            'members_persisted'   => $persistedCount,
+            'curated_overlay_len' => $overlayCount,
+        ]);
     }
 
     /**

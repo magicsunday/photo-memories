@@ -203,6 +203,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             },
             progressCallback: $postProcessingProgress,
         );
+        $generatedDrafts = $drafts;
         $clusterHandle->finish();
 
         $postProcessingProgress->finalize();
@@ -240,8 +241,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $consolidateHandle = $progressReporter->create('Konsolidieren', '🧹 Konsolidieren', $draftCount);
         $consolidateStart  = microtime(true);
 
-        $drafts = $this->consolidator->consolidate(
-            $drafts,
+        $consolidatedDrafts = $this->consolidator->consolidate(
+            $generatedDrafts,
             function (int $done, int $maxSteps, string $stage) use ($consolidateHandle, $consolidateStart): void {
                 $consolidateHandle->setPhase($stage);
                 $consolidateHandle->setRate($this->formatRate($done, $consolidateStart, 'Schritte'));
@@ -250,10 +251,10 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         );
         $consolidateHandle->finish();
 
-        $consolidatedCount = count($drafts);
+        $consolidatedCount = count($consolidatedDrafts);
 
         if ($options->isVacationDebugEnabled()) {
-            $this->emitVacationDebug($progressReporter, $options, $drafts, $draftCount, $consolidatedCount);
+            $this->emitVacationDebug($progressReporter, $options, $consolidatedDrafts, $draftCount, $consolidatedCount);
         }
 
         if ($consolidatedCount === 0) {
@@ -273,6 +274,21 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 }
             }
 
+            $rawMemberTotal = $this->aggregateRawMemberCount($generatedDrafts);
+
+            $telemetry = ClusterJobTelemetry::fromStageStats([
+                ClusterJobTelemetry::STAGE_DRAFTS => [
+                    'clusters'     => $draftCount,
+                    'members_pre'  => $rawMemberTotal,
+                    'members_post' => $rawMemberTotal,
+                ],
+                ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                    'clusters'     => 0,
+                    'members_pre'  => $rawMemberTotal,
+                    'members_post' => 0,
+                ],
+            ]);
+
             return new ClusterJobResult(
                 $total,
                 $loadedCount,
@@ -281,11 +297,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 0,
                 $deleted,
                 $options->isDryRun(),
-                ClusterJobTelemetry::fromStageCounts($draftCount, 0),
+                $telemetry,
             );
         }
 
-        $telemetry = $this->createTelemetry($draftCount, $consolidatedCount, $drafts);
+        $telemetry = $this->createTelemetry($generatedDrafts, $consolidatedDrafts);
 
         $persistHandle = $progressReporter->create(
             $options->isDryRun() ? 'Persistieren (Trockenlauf)' : 'Persistieren',
@@ -299,7 +315,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             foreach ($consolidated as $draft) {
                 yield $draft;
             }
-        })($drafts);
+        })($consolidatedDrafts);
 
         if ($options->isDryRun()) {
             foreach ($stream as $_) {
@@ -347,13 +363,32 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         );
     }
 
-    private function createTelemetry(int $draftCount, int $consolidatedCount, array $consolidatedDrafts): ClusterJobTelemetry
+    /**
+     * @param list<ClusterDraft> $generatedDrafts
+     * @param list<ClusterDraft> $consolidatedDrafts
+     */
+    private function createTelemetry(array $generatedDrafts, array $consolidatedDrafts): ClusterJobTelemetry
     {
         $warnings = $this->vacationDebugContext?->getWarnings() ?? [];
+        $draftCount = count($generatedDrafts);
+        $consolidatedCount = count($consolidatedDrafts);
 
-        return ClusterJobTelemetry::fromStageCounts(
-            $draftCount,
-            $consolidatedCount,
+        $draftMembers = $this->aggregateRawMemberCount($generatedDrafts);
+        $consolidatedMembers = $this->aggregateRawMemberCount($consolidatedDrafts);
+
+        return ClusterJobTelemetry::fromStageStats(
+            [
+                ClusterJobTelemetry::STAGE_DRAFTS => [
+                    'clusters'     => $draftCount,
+                    'members_pre'  => $draftMembers,
+                    'members_post' => $draftMembers,
+                ],
+                ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                    'clusters'     => $consolidatedCount,
+                    'members_pre'  => $draftMembers,
+                    'members_post' => $consolidatedMembers,
+                ],
+            ],
             $this->createTopClusterSummaries($consolidatedDrafts, self::TOP_CLUSTER_SUMMARY_LIMIT),
             $warnings,
         );
@@ -363,6 +398,9 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
      * @param list<ClusterDraft> $drafts
      *
      * @return list<ClusterSummary>
+     */
+    /**
+     * @param list<ClusterDraft> $drafts
      */
     private function createTopClusterSummaries(array $drafts, int $limit): array
     {
@@ -392,6 +430,19 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         }
 
         return $summaries;
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     */
+    private function aggregateRawMemberCount(array $drafts): int
+    {
+        $total = 0;
+        foreach ($drafts as $draft) {
+            $total += count($draft->getMembers());
+        }
+
+        return $total;
     }
 
     private function createClusterSummary(ClusterDraft $draft): ClusterSummary
@@ -576,13 +627,14 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $clusterRows[] = [
                 $summary->getAlgorithm(),
                 $summary->getStoryline(),
-                (string) $summary->getMemberCount(),
-                $score !== null ? sprintf('%.2f', $score) : '–',
+                (string) $summary->getRawMemberCount(),
+                (string) $summary->getCuratedMemberCount(),
                 $range,
+                $score !== null ? sprintf('%.2f', $score) : '–',
             ];
         }
 
-        $io->table(['Algorithmus', 'Storyline', 'Mitglieder', 'Score', 'Zeitraum'], $clusterRows);
+        $io->table(['Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Kuratiert (n)', 'Zeitraum', 'Score'], $clusterRows);
     }
 
     private function formatTimeRange(int $from, int $to): string

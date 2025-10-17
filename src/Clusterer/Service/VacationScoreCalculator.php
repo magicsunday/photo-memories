@@ -100,6 +100,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      * @param int   $minItemsPerDay      expected minimum number of items captured per away day
      * @param int   $minimumMemberFloor  base floor applied to the adaptive member threshold
      * @param int   $minMembers          minimum number of media required to accept a vacation
+     * @param bool  $enforceDynamicMinimum whether to enforce the dynamic minimum member floor
      */
     public function __construct(
         private LocationHelper $locationHelper,
@@ -117,6 +118,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ?string $weekendSelectionProfile = null,
         private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
         ?DateTimeImmutable $referenceDate = null,
+        private bool $enforceDynamicMinimum = true,
     ) {
         $this->selectionProfiles = $selectionProfiles;
         $this->defaultSelectionProfileKey = $this->selectionProfiles->determineProfileKey(
@@ -2497,13 +2499,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
     private function resolveMinimumMemberFloor(int $awayDays): int
     {
-        $normalizedAwayDays = max(0, $awayDays);
-        if ($normalizedAwayDays <= 2) {
-            $adaptiveFloor = (int) ceil($this->minItemsPerDay * max(1, $normalizedAwayDays) * 0.5);
-        } elseif ($normalizedAwayDays <= 4) {
-            $adaptiveFloor = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.7);
-        } else {
-            $adaptiveFloor = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+        $normalizedAwayDays = max(1, $awayDays);
+        $adaptiveFloor      = (int) ceil($this->minItemsPerDay * $normalizedAwayDays * 0.6);
+        if ($this->enforceDynamicMinimum) {
+            $adaptiveFloor = max(60, $adaptiveFloor);
         }
         $adaptiveFloor      = max($this->minimumMemberFloor, $adaptiveFloor);
 

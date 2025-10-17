@@ -44,6 +44,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             emitter: $emitter,
             minAwayDays: 1,
             referenceDate: $referenceDate,
+            enforceDynamicMinimum: false,
         );
 
         $home = [
@@ -124,6 +125,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             emitter: $emitter,
             minAwayDays: 1,
             referenceDate: $referenceDate,
+            enforceDynamicMinimum: false,
         );
 
         $dayDate = new DateTimeImmutable('2024-04-12 10:00:00');
@@ -162,8 +164,9 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         self::assertNotNull($draft);
         $params        = $draft->getParams();
         $memberMetrics = $params['member_selection'];
-        $runMetrics    = $memberMetrics['run_metrics'];
-
+        $qualitySummary = $params['member_quality']['summary'] ?? [];
+        $runMetrics    = $memberMetrics['run_metrics']
+            ?? ($qualitySummary['selection_run_metrics'] ?? null);
         self::assertEqualsWithDelta(1 / 3, $runMetrics['selection_dedupe_rate'], 0.001);
         self::assertGreaterThan(0.0, $runMetrics['selection_average_spacing_seconds']);
         self::assertSame(
@@ -210,6 +213,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         int $minimumMemberFloor = 0,
         int $minMembers = 0,
         ?DateTimeImmutable $referenceDate = null,
+        bool $enforceDynamicMinimum = false,
     ): VacationScoreCalculator {
         $defaultOptions    = $options ?? new VacationSelectionOptions();
         $selectionProfiles = new SelectionProfileProvider($defaultOptions, 'vacation');
@@ -231,6 +235,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
             minMembers: $minMembers,
             monitoringEmitter: $emitter,
             referenceDate: $referenceDate,
+            enforceDynamicMinimum: $enforceDynamicMinimum,
         );
     }
 
