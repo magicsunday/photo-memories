@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Monitoring\Contract;
 
+use Stringable;
+
 /**
  * Emits monitoring information for long running jobs.
  */
@@ -19,7 +21,9 @@ interface JobMonitoringEmitterInterface
     /**
      * Emits a monitoring event for the given job name.
      *
-     * @param array<string, mixed> $context
+     * @param Stringable|string|int|float|bool $job
+     * @param Stringable|string|int|float|bool $status
+     * @param array<string, mixed>             $context
      */
-    public function emit(string $job, string $status, array $context = []): void;
+    public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void;
 }

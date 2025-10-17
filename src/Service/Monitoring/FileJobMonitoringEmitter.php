@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use JsonException;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use Psr\Clock\ClockInterface;
+use Stringable;
 
 use function array_key_exists;
 use function array_merge;
@@ -46,20 +47,20 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
     ) {
     }
 
-    public function emit(string $job, string $status, array $context = []): void
+    public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
     {
         if ($this->logPath === '' || !$this->enabled) {
             return;
         }
 
-        $job = trim($job);
-        $status = trim($status);
+        $jobName    = $this->normaliseScalar($job);
+        $statusName = $this->normaliseScalar($status);
 
-        if ($job === '' || $status === '') {
+        if ($jobName === '' || $statusName === '') {
             return;
         }
 
-        $payload = $this->buildPayload($job, $status, $context);
+        $payload = $this->buildPayload($jobName, $statusName, $context);
         $json = $this->encodePayload($payload);
 
         if ($json === null) {
@@ -69,6 +70,11 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
         $this->ensureDirectory();
 
         file_put_contents($this->logPath, $json . PHP_EOL, LOCK_EX | FILE_APPEND);
+    }
+
+    private function normaliseScalar(Stringable|string|int|float|bool $value): string
+    {
+        return trim((string) $value);
     }
 
     /**
