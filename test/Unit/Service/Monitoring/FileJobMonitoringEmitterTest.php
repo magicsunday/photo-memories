@@ -130,4 +130,39 @@ final class FileJobMonitoringEmitterTest extends TestCase
 
         unlink($path);
     }
+
+    #[Test]
+    public function acceptsScalarIdentifiers(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'monitoring-test-');
+        if (!is_string($path)) {
+            self::markTestSkipped('Temp file could not be created.');
+        }
+
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
+        $emitter = new FileJobMonitoringEmitter($path, true);
+        $emitter->emit(42, 7);
+
+        self::assertFileExists($path);
+
+        $contents = file_get_contents($path);
+        self::assertIsString($contents);
+
+        $lines = array_filter(explode("\n", trim($contents)));
+        self::assertCount(1, $lines);
+
+        try {
+            $payload = json_decode($lines[0], true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            self::fail($exception->getMessage());
+        }
+
+        self::assertSame('42', $payload['job']);
+        self::assertSame('7', $payload['status']);
+
+        unlink($path);
+    }
 }
