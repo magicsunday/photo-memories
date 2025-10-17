@@ -39,6 +39,7 @@ use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use RuntimeException;
 use IntlDateFormatter;
 use IntlException;
+use Stringable;
 
 use function array_fill_keys;
 use function array_filter;
@@ -1036,8 +1037,8 @@ final class FeedController
         }
 
         $texts = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
-        $title = trim($texts['title']);
-        $description = trim($texts['description']);
+        $title = $this->normalizeStoryboardText($texts['title'] ?? null);
+        $description = $this->normalizeStoryboardText($texts['description'] ?? null);
 
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->slideshowTransitions,
@@ -2048,6 +2049,23 @@ final class FeedController
         }
 
         return $animations;
+    }
+
+    private function normalizeStoryboardText(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if ($value instanceof Stringable) {
+            return trim((string) $value);
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return trim((string) $value);
+        }
+
+        return '';
     }
 
     private function buildOfflineComponent(DateTimeImmutable $reference, FeedUserPreferences $preferences): array

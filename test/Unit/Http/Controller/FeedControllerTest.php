@@ -37,6 +37,9 @@ use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+use ReflectionMethod;
+use Stringable;
 
 use function file_put_contents;
 use function json_decode;
@@ -185,6 +188,28 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('benachrichtigungen', $payload['items'][0]);
 
         unlink($storagePath);
+    }
+
+    public function testNormalizeStoryboardTextHandlesNonStringValues(): void
+    {
+        $reflection = new ReflectionClass(FeedController::class);
+        $controller = $reflection->newInstanceWithoutConstructor();
+
+        $method = new ReflectionMethod(FeedController::class, 'normalizeStoryboardText');
+        $method->setAccessible(true);
+
+        $stringable = new class() implements Stringable {
+            public function __toString(): string
+            {
+                return '  stringable value  ';
+            }
+        };
+
+        self::assertSame('123', $method->invoke($controller, 123));
+        self::assertSame('12.5', $method->invoke($controller, 12.5));
+        self::assertSame('stringable value', $method->invoke($controller, $stringable));
+        self::assertSame('', $method->invoke($controller, null));
+        self::assertSame('', $method->invoke($controller, ['foo']));
     }
 
     public function testFeedSwapsDimensionsForRotatedMedia(): void
