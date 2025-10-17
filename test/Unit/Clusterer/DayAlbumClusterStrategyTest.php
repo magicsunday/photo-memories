@@ -184,6 +184,38 @@ final class DayAlbumClusterStrategyTest extends TestCase
         self::assertEqualsWithDelta(1.0, $params['quality_iso'], 1e-9);
     }
 
+    #[Test]
+    public function ignoresNonStringKeywordsWhenCollectingDominantTags(): void
+    {
+        $strategy = new DayAlbumClusterStrategy(
+            localTimeHelper: new LocalTimeHelper('UTC'),
+            locationHelper: LocationHelper::createDefault(),
+            minItemsPerDay: 1,
+        );
+
+        $media = $this->makeMedia(
+            id: 1201,
+            path: 'day-album-mixed-1201.jpg',
+            takenAt: '2024-05-01 10:00:00',
+            configure: static function (Media $media): void {
+                $media->setSceneTags([
+                    ['label' => 'Strand', 'score' => 0.8],
+                ]);
+                $media->setKeywords([123, '  Strand  ', 'Meer', 'Strand']);
+                $media->setPersons(['Anna']);
+                $media->setHasFaces(true);
+            },
+        );
+
+        $clusters = $strategy->cluster([$media]);
+
+        self::assertCount(1, $clusters);
+        $params = $clusters[0]->getParams();
+
+        self::assertArrayHasKey('keywords', $params);
+        self::assertSame(['Strand', 'Meer'], $params['keywords']);
+    }
+
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media
     {
         return $this->makeMediaFixture(
