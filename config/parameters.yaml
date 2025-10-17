@@ -302,7 +302,7 @@ parameters:
             time_slot_hours: 4
             min_spacing_seconds: 3600
             phash_min_hamming: 9
-            max_per_staypoint: 3
+            max_per_staypoint: 2
             video_bonus: 0.26
             face_bonus: 0.34
             selfie_penalty: 0.24

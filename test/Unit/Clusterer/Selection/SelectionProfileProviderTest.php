@@ -113,4 +113,22 @@ final class SelectionProfileProviderTest extends TestCase
 
         self::assertSame('vacation_weekend_getaway', $profile);
     }
+
+    public function testItLimitsLongRunStaypointSelectionsToTwoItems(): void
+    {
+        $provider = new SelectionProfileProvider(
+            new VacationSelectionOptions(),
+            'default',
+            [
+                'vacation_long_run' => [
+                    'max_per_staypoint' => 2,
+                ],
+            ],
+            [],
+        );
+
+        $options = $provider->createOptions('vacation_long_run');
+
+        self::assertSame(2, $options->maxPerStaypoint);
+    }
 }
