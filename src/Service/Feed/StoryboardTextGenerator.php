@@ -24,6 +24,8 @@ use function implode;
 use function in_array;
 use function is_array;
 use function is_scalar;
+use function is_float;
+use function is_int;
 use function is_string;
 use function sprintf;
 use function strtolower;
@@ -358,14 +360,14 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<string> $items
+     * @param list<int|float|string|Stringable|null> $items
      */
     private function formatList(array $items, string $locale): string
     {
         $filtered = [];
         foreach ($items as $item) {
-            $value = trim($item);
-            if ($value === '') {
+            $value = $this->normalizeScalarString($item);
+            if ($value === null) {
                 continue;
             }
 
@@ -431,5 +433,24 @@ final readonly class StoryboardTextGenerator
         }
 
         return $catalogue[$locale];
+    }
+
+    private function normalizeScalarString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+        } elseif ($value instanceof Stringable) {
+            $trimmed = trim((string) $value);
+        } elseif (is_int($value) || is_float($value)) {
+            $trimmed = trim((string) $value);
+        } else {
+            return null;
+        }
+
+        return $trimmed === '' ? null : $trimmed;
     }
 }

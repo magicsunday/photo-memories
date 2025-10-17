@@ -190,6 +190,92 @@ final class FeedControllerTest extends TestCase
         unlink($storagePath);
     }
 
+    public function testFeedHandlesNumericClusterContextFields(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $mapper = new ClusterEntityToDraftMapper([]);
+
+        $items = [
+            new MemoryFeedItem(
+                algorithm: 'holiday_event',
+                title: 'Winter in Berlin',
+                subtitle: 'Lichterzauber an der Spree',
+                coverMediaId: 1,
+                memberIds: [1, 2],
+                score: 0.68,
+                params: [
+                    'group'      => 'city_and_events',
+                    'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+                    'place'      => 123,
+                    'place_city' => 456,
+                    'place_region' => 789,
+                    'poi_label'  => 101112,
+                    'scene_tags' => [
+                        ['label' => 'Lichterfest'],
+                        ['label' => 131415],
+                    ],
+                    'keywords'   => ['Winter', 161718],
+                ],
+            ),
+        ];
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn($items);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager     = $this->createMock(EntityManagerInterface::class);
+
+        $mediaOne = new Media('/media/1.jpg', 'checksum-1', 100);
+        $mediaTwo = new Media('/media/2.jpg', 'checksum-2', 110);
+        $this->assignEntityId($mediaOne, 1);
+        $this->assignEntityId($mediaTwo, 2);
+        $timestampOne = new DateTimeImmutable('2024-01-01T10:00:00+00:00');
+        $timestampTwo = new DateTimeImmutable('2024-01-02T10:15:00+00:00');
+        $mediaOne->setTakenAt($timestampOne);
+        $mediaOne->setCapturedLocal($timestampOne);
+        $mediaOne->setTimeSource(TimeSource::EXIF);
+        $mediaOne->setTzId('UTC');
+        $mediaTwo->setTakenAt($timestampTwo);
+        $mediaTwo->setCapturedLocal($timestampTwo);
+        $mediaTwo->setTimeSource(TimeSource::EXIF);
+        $mediaTwo->setTzId('UTC');
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2], false)
+            ->willReturn([$mediaOne, $mediaTwo]);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            $mapper,
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $request  = Request::create('/api/feed', 'GET', ['limit' => '24']);
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        unlink($storagePath);
+    }
+
     public function testNormalizeStoryboardTextHandlesNonStringValues(): void
     {
         $reflection = new ReflectionClass(FeedController::class);

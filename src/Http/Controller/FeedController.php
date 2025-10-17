@@ -39,7 +39,6 @@ use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use RuntimeException;
 use IntlDateFormatter;
 use IntlException;
-use Stringable;
 
 use function array_fill_keys;
 use function array_filter;
@@ -188,25 +187,17 @@ final class FeedController
 
         $transitions = [];
         foreach ($this->slideshowTransitions as $transition) {
-            if (!is_string($transition)) {
+            $normalizedTransition = $this->normalizeScalarString($transition);
+            if ($normalizedTransition === null) {
                 continue;
             }
 
-            $trimmed = trim($transition);
-            if ($trimmed === '') {
-                continue;
-            }
-
-            $transitions[] = $trimmed;
+            $transitions[] = $normalizedTransition;
         }
 
         $this->slideshowTransitions = $transitions;
 
-        if (!is_string($this->slideshowMusic) || trim($this->slideshowMusic) === '') {
-            $this->slideshowMusic = null;
-        } else {
-            $this->slideshowMusic = trim($this->slideshowMusic);
-        }
+        $this->slideshowMusic = $this->normalizeScalarString($this->slideshowMusic);
 
         if ($this->spaTimelineMonths < 1) {
             $this->spaTimelineMonths = 6;
@@ -536,8 +527,8 @@ final class FeedController
         $result = [];
 
         foreach ($tokens as $token) {
-            $trimmed = trim($token);
-            if ($trimmed === '' || !in_array($trimmed, $allowed, true)) {
+            $trimmed = $this->normalizeScalarString($token);
+            if ($trimmed === null || !in_array($trimmed, $allowed, true)) {
                 continue;
             }
 
@@ -714,18 +705,9 @@ final class FeedController
         return (float) $value;
     }
 
-    private function normalizeString(?string $value): ?string
+    private function normalizeString(null|string|int|float|\Stringable $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
-        $trimmed = trim($value);
-        if ($trimmed === '') {
-            return null;
-        }
-
-        return $trimmed;
+        return $this->normalizeScalarString($value);
     }
 
     private function normalizeWidth(?string $value): int
@@ -756,14 +738,14 @@ final class FeedController
         $header = $request->getHeader('accept-language');
         if ($header !== null) {
             foreach (explode(',', $header) as $segment) {
-                $trimmed = trim($segment);
-                if ($trimmed === '') {
+                $trimmed = $this->normalizeScalarString($segment);
+                if ($trimmed === null) {
                     continue;
                 }
 
-                $parts = explode(';', $trimmed);
-                $language = trim($parts[0] ?? '');
-                if ($language === '') {
+                $parts    = explode(';', $trimmed);
+                $language = $this->normalizeScalarString($parts[0] ?? null);
+                if ($language === null) {
                     continue;
                 }
 
@@ -1028,8 +1010,8 @@ final class FeedController
 
             $mediaIds[] = $mediaId;
 
-            $thumbnail = $entry['thumbnail'] ?? null;
-            $imagePaths[] = is_string($thumbnail) ? trim($thumbnail) : '';
+            $thumbnail    = $entry['thumbnail'] ?? null;
+            $imagePaths[] = $this->normalizeScalarString($thumbnail) ?? '';
         }
 
         if ($mediaIds === []) {
@@ -1065,9 +1047,9 @@ final class FeedController
 
             ++$transitionIndex;
 
-            $beschreibung = $entry['beschreibung'] ?? null;
-            if (is_string($beschreibung) && trim($beschreibung) !== '') {
-                $slide['beschreibung'] = trim($beschreibung);
+            $beschreibung = $this->normalizeScalarString($entry['beschreibung'] ?? null);
+            if ($beschreibung !== null) {
+                $slide['beschreibung'] = $beschreibung;
             }
 
             $aufgenommen = $entry['aufgenommenAmText'] ?? null;
@@ -1130,16 +1112,11 @@ final class FeedController
 
     private function resolveStoryboardTransition(?string $transition): ?string
     {
-        if (!is_string($transition) || $transition === '') {
+        if ($transition === null) {
             return null;
         }
 
-        $trimmed = trim($transition);
-        if ($trimmed === '') {
-            return null;
-        }
-
-        return $trimmed;
+        return $this->normalizeScalarString($transition);
     }
 
     private function buildThumbnailUrl(int $mediaId, int $width, string $baseUrl): string
@@ -1311,12 +1288,9 @@ final class FeedController
         }
 
         if ($location === null) {
-            $place = $clusterParams['place'] ?? null;
-            if (is_string($place)) {
-                $trimmed = trim($place);
-                if ($trimmed !== '') {
-                    $location = $trimmed;
-                }
+            $trimmedPlace = $this->normalizeScalarString($clusterParams['place'] ?? null);
+            if ($trimmedPlace !== null) {
+                $location = $trimmedPlace;
             }
         }
 
@@ -1360,12 +1334,8 @@ final class FeedController
         $result = [];
 
         foreach ($values as $value) {
-            if (!is_string($value)) {
-                continue;
-            }
-
-            $trimmed = trim($value);
-            if ($trimmed === '' || in_array($trimmed, $result, true)) {
+            $trimmed = $this->normalizeScalarString($value);
+            if ($trimmed === null || in_array($trimmed, $result, true)) {
                 continue;
             }
 
@@ -1395,13 +1365,8 @@ final class FeedController
                 continue;
             }
 
-            $label = $tag['label'] ?? null;
-            if (!is_string($label)) {
-                continue;
-            }
-
-            $trimmed = trim($label);
-            if ($trimmed === '' || in_array($trimmed, $labels, true)) {
+            $trimmed = $this->normalizeScalarString($tag['label'] ?? null);
+            if ($trimmed === null || in_array($trimmed, $labels, true)) {
                 continue;
             }
 
@@ -1564,13 +1529,8 @@ final class FeedController
 
         $placeParts = [];
         foreach (['place', 'place_city', 'place_region', 'place_country'] as $key) {
-            $value = $params[$key] ?? null;
-            if (!is_string($value)) {
-                continue;
-            }
-
-            $trimmed = trim($value);
-            if ($trimmed === '') {
+            $trimmed = $this->normalizeScalarString($params[$key] ?? null);
+            if ($trimmed === null) {
                 continue;
             }
 
@@ -1584,11 +1544,9 @@ final class FeedController
         }
 
         $poiLabel = $params['poi_label'] ?? null;
-        if (is_string($poiLabel)) {
-            $trimmed = trim($poiLabel);
-            if ($trimmed !== '') {
-                $context['poi'] = $trimmed;
-            }
+        $normalizedPoiLabel = $this->normalizeScalarString($poiLabel);
+        if ($normalizedPoiLabel !== null) {
+            $context['poi'] = $normalizedPoiLabel;
         }
 
         if (isset($params['scene_tags']) && is_array($params['scene_tags'])) {
@@ -1598,13 +1556,8 @@ final class FeedController
                     continue;
                 }
 
-                $label = $tag['label'] ?? null;
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                $trimmed = trim($label);
-                if ($trimmed === '') {
+                $trimmed = $this->normalizeScalarString($tag['label'] ?? null);
+                if ($trimmed === null) {
                     continue;
                 }
 
@@ -1619,12 +1572,8 @@ final class FeedController
         if (isset($params['keywords']) && is_array($params['keywords'])) {
             $keywords = [];
             foreach ($params['keywords'] as $keyword) {
-                if (!is_string($keyword)) {
-                    continue;
-                }
-
-                $trimmed = trim($keyword);
-                if ($trimmed === '') {
+                $trimmed = $this->normalizeScalarString($keyword);
+                if ($trimmed === null) {
                     continue;
                 }
 
@@ -2051,21 +2000,28 @@ final class FeedController
         return $animations;
     }
 
+    private function normalizeScalarString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+        } elseif ($value instanceof \Stringable) {
+            $trimmed = trim((string) $value);
+        } elseif (is_int($value) || is_float($value)) {
+            $trimmed = trim((string) $value);
+        } else {
+            return null;
+        }
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
     private function normalizeStoryboardText(mixed $value): string
     {
-        if (is_string($value)) {
-            return trim($value);
-        }
-
-        if ($value instanceof Stringable) {
-            return trim((string) $value);
-        }
-
-        if (is_int($value) || is_float($value)) {
-            return trim((string) $value);
-        }
-
-        return '';
+        return $this->normalizeScalarString($value) ?? '';
     }
 
     private function buildOfflineComponent(DateTimeImmutable $reference, FeedUserPreferences $preferences): array
@@ -2135,12 +2091,12 @@ final class FeedController
 
             $entries = [];
             foreach ($gestures as $name => $value) {
-                if (!is_string($name) || !is_string($value)) {
+                if (!is_string($name)) {
                     continue;
                 }
 
-                $trimmed = trim($value);
-                if ($trimmed === '') {
+                $trimmed = $this->normalizeScalarString($value);
+                if ($trimmed === null) {
                     continue;
                 }
 
@@ -2165,19 +2121,15 @@ final class FeedController
         $result = [];
 
         $serviceWorker = $config['service_worker'] ?? null;
-        if (is_string($serviceWorker)) {
-            $trimmed = trim($serviceWorker);
-            if ($trimmed !== '') {
-                $result['service_worker'] = $trimmed;
-            }
+        $normalizedServiceWorker = $this->normalizeScalarString($serviceWorker);
+        if ($normalizedServiceWorker !== null) {
+            $result['service_worker'] = $normalizedServiceWorker;
         }
 
         $scope = $config['scope'] ?? null;
-        if (is_string($scope)) {
-            $trimmed = trim($scope);
-            if ($trimmed !== '') {
-                $result['scope'] = $trimmed;
-            }
+        $normalizedScope = $this->normalizeScalarString($scope);
+        if ($normalizedScope !== null) {
+            $result['scope'] = $normalizedScope;
         }
 
         $precache = $config['precache'] ?? null;
@@ -2196,21 +2148,14 @@ final class FeedController
                     continue;
                 }
 
-                $pattern  = $entry['pattern'] ?? null;
-                $strategy = $entry['strategy'] ?? null;
-                if (!is_string($pattern) || !is_string($strategy)) {
+                $pattern  = $this->normalizeScalarString($entry['pattern'] ?? null);
+                $strategy = $this->normalizeScalarString($entry['strategy'] ?? null);
+                if ($pattern === null || $strategy === null) {
                     continue;
                 }
-
-                $patternTrim  = trim($pattern);
-                $strategyTrim = trim($strategy);
-                if ($patternTrim === '' || $strategyTrim === '') {
-                    continue;
-                }
-
                 $entries[] = [
-                    'pattern'  => $patternTrim,
-                    'strategy' => $strategyTrim,
+                    'pattern'  => $pattern,
+                    'strategy' => $strategy,
                 ];
             }
 
@@ -2220,11 +2165,9 @@ final class FeedController
         }
 
         $fallback = $config['fallback'] ?? null;
-        if (is_string($fallback)) {
-            $trimmed = trim($fallback);
-            if ($trimmed !== '') {
-                $result['fallback'] = $trimmed;
-            }
+        $normalizedFallback = $this->normalizeScalarString($fallback);
+        if ($normalizedFallback !== null) {
+            $result['fallback'] = $normalizedFallback;
         }
 
         return $result;
@@ -2271,12 +2214,8 @@ final class FeedController
         $result = [];
 
         foreach ($values as $value) {
-            if (!is_string($value)) {
-                continue;
-            }
-
-            $trimmed = trim($value);
-            if ($trimmed === '') {
+            $trimmed = $this->normalizeScalarString($value);
+            if ($trimmed === null) {
                 continue;
             }
 
