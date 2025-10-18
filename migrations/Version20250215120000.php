@@ -91,6 +91,9 @@ final class Version20250215120000 extends AbstractMigration
                 ordering INT NOT NULL,
                 created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                CONSTRAINT chk_memories_cluster_member_role CHECK (
+                    role IN ('primary', 'support', 'duplicate')
+                ),
                 PRIMARY KEY(id)
             )
         SQL);
