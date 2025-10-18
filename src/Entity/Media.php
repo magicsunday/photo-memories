@@ -473,6 +473,12 @@ class Media
     private ?float $sharpness = null;
 
     /**
+     * Ratio of high-frequency energy (motion blur proxy) in the range [0,1].
+     */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $motionBlurScore = null;
+
+    /**
      * Calculated brightness value used for quality metrics.
      */
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
@@ -1925,6 +1931,16 @@ class Media
     public function setSharpness(?float $v): void
     {
         $this->sharpness = $v;
+    }
+
+    public function getMotionBlurScore(): ?float
+    {
+        return $this->motionBlurScore;
+    }
+
+    public function setMotionBlurScore(?float $v): void
+    {
+        $this->motionBlurScore = $v;
     }
 
     /**
