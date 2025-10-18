@@ -31,17 +31,18 @@ use MagicSunday\Memories\Service\Clusterer\ClusterSummary;
 use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use Throwable;
 
-use function count;
 use function array_slice;
-use function max;
-use function min;
-use function microtime;
+use function count;
+use function in_array;
 use function is_array;
-use function is_numeric;
 use function is_int;
+use function is_numeric;
 use function is_string;
-use function usort;
+use function max;
+use function microtime;
+use function min;
 use function sprintf;
+use function usort;
 
 /**
  * Class DefaultClusterJobRunner.
@@ -82,6 +83,12 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $limit = $options->getLimit();
         if ($limit !== null && $limit > 0) {
             $listQb->setMaxResults($limit);
+        }
+
+        $until = $options->getUntil();
+        if ($until instanceof DateTimeImmutable) {
+            $countQb->andWhere('m.takenAt <= :until')->setParameter('until', $until);
+            $listQb->andWhere('m.takenAt <= :until')->setParameter('until', $until);
         }
 
         $total = (int) $countQb->getQuery()->getSingleScalarResult();
@@ -250,6 +257,23 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             },
         );
         $consolidateHandle->finish();
+
+        $allowedGroups = $options->getAllowedGroups();
+        if ($allowedGroups !== null && $allowedGroups !== []) {
+            $filtered = [];
+            foreach ($consolidatedDrafts as $draft) {
+                $group = $draft->getParams()['group'] ?? null;
+                if (!is_string($group)) {
+                    continue;
+                }
+
+                if (in_array($group, $allowedGroups, true)) {
+                    $filtered[] = $draft;
+                }
+            }
+
+            $consolidatedDrafts = $filtered;
+        }
 
         $consolidatedCount = count($consolidatedDrafts);
 

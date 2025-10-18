@@ -62,6 +62,8 @@ final class ClusterCommandTest extends TestCase
                     self::assertNotNull($options->getSince());
                     self::assertTrue($options->shouldReplace());
                     self::assertFalse($options->isVacationDebugEnabled());
+                    self::assertNull($options->getUntil());
+                    self::assertNull($options->getAllowedGroups());
 
                     return true;
                 }),
