@@ -17,11 +17,13 @@ use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
@@ -33,13 +35,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 use function count;
+use function get_debug_type;
 use function implode;
+use function in_array;
 use function is_array;
+use function is_float;
 use function is_int;
+use function is_scalar;
 use function is_string;
 use function max;
 use function number_format;
 use function sprintf;
+use function strtolower;
+use function trim;
 
 /**
  * Preview a "Für dich" feed in the console from persisted clusters.
@@ -52,6 +60,37 @@ use function sprintf;
 final class FeedPreviewCommand extends Command
 {
     use SelectionOverrideInputTrait;
+
+    private const STAGE_RAW     = 'raw';
+    private const STAGE_MERGED  = 'merged';
+    private const STAGE_CURATED = 'curated';
+
+    /**
+     * @var list<string>
+     */
+    private const STAGE_OPTIONS = [
+        self::STAGE_RAW,
+        self::STAGE_MERGED,
+        self::STAGE_CURATED,
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    private const STAGE_LABELS = [
+        self::STAGE_RAW     => 'Rohdaten',
+        self::STAGE_MERGED  => 'Konsolidiert',
+        self::STAGE_CURATED => 'Kuratiert',
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    private const STAGE_EMOJIS = [
+        self::STAGE_RAW     => '🔰',
+        self::STAGE_MERGED  => '🔀',
+        self::STAGE_CURATED => '🪄',
+    ];
 
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -99,6 +138,13 @@ final class FeedPreviewCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Mitglieds-IDs der Items mit ausgeben'
+            )
+            ->addOption(
+                'stage',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Ausgabestufe (raw|merged|curated)',
+                self::STAGE_CURATED,
             );
 
         $this->configureSelectionOverrideOptions();
@@ -108,6 +154,20 @@ final class FeedPreviewCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('📰 Rückblick-Feed Vorschau');
+
+        $stageInput = $input->getOption('stage');
+        $stageValue = is_string($stageInput) ? $stageInput : self::STAGE_CURATED;
+        $stage      = $this->normaliseStage($stageValue);
+
+        if ($stage === null) {
+            $io->error(sprintf(
+                'Unbekannte Stufe "%s". Erlaubte Werte: %s.',
+                is_scalar($stageInput) ? (string) $stageInput : get_debug_type($stageInput),
+                implode(', ', self::STAGE_OPTIONS),
+            ));
+
+            return Command::INVALID;
+        }
 
         try {
             $selectionOverrides = $this->resolveSelectionOverrides($input);
@@ -141,10 +201,19 @@ final class FeedPreviewCommand extends Command
         }
 
         // Map to drafts
-        $drafts = $this->mapper->mapMany($entities);
+        $drafts      = $this->mapper->mapMany($entities);
+        $showMembers = (bool) $input->getOption('show-members');
+
+        $io->section($this->formatStageTitle(self::STAGE_RAW));
+        $this->renderDraftTable($io, $drafts, $showMembers);
+
+        if ($stage === self::STAGE_RAW) {
+            $io->success(sprintf('%d Cluster (roh) angezeigt.', count($drafts)));
+
+            return Command::SUCCESS;
+        }
 
         // Optional Konsolidierung (mit internem Cap etc.)
-        $io->section('Konsolidierung');
         $restorePerMediaCap = false;
         if ($perMediaCap !== null) {
             $this->perMediaCapStage->setPerMediaCapOverride($perMediaCap);
@@ -167,14 +236,23 @@ final class FeedPreviewCommand extends Command
             }
         }
 
+        $io->section($this->formatStageTitle(self::STAGE_MERGED));
+
         if ($consolidated === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
 
             return Command::SUCCESS;
         }
 
-        // Build feed
-        $io->section('Feed erzeugen');
+        $this->renderDraftTable($io, $consolidated, $showMembers);
+
+        if ($stage === self::STAGE_MERGED) {
+            $io->success(sprintf('%d Cluster (konsolidiert) angezeigt.', count($consolidated)));
+
+            return Command::SUCCESS;
+        }
+
+        $io->section($this->formatStageTitle(self::STAGE_CURATED));
         $items = $this->feedBuilder->build($consolidated, $profileOverride);
 
         if ($items === []) {
@@ -183,40 +261,7 @@ final class FeedPreviewCommand extends Command
             return Command::SUCCESS;
         }
 
-        // Render table
-        $rows        = [];
-        $showMembers = (bool) $input->getOption('show-members');
-        $idx         = 0;
-
-        foreach ($items as $it) {
-            ++$idx;
-            $params    = $it->getParams();
-            $memberIds = $it->getMemberIds();
-
-            $row = [
-                (string) $idx,
-                $it->getAlgorithm(),
-                $this->resolveStoryline($params),
-                (string) $this->resolveRawMemberCount($params),
-                (string) $this->resolveCuratedMemberCount($memberIds, $params),
-                $this->formatTimeRange($params['time_range'] ?? null),
-                number_format($it->getScore(), 3, ',', ''),
-            ];
-
-            if ($showMembers) {
-                $row[] = $memberIds === [] ? '–' : implode(',', $memberIds);
-            }
-
-            $rows[] = $row;
-        }
-
-        $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Zeitraum', 'Score'];
-
-        if ($showMembers) {
-            $headers[] = 'Mitglieder';
-        }
-
-        $io->table($headers, $rows);
+        $this->renderFeedTable($io, $items, $showMembers);
 
         $io->success(sprintf('%d Feed-Items angezeigt.', count($items)));
 
@@ -302,29 +347,6 @@ final class FeedPreviewCommand extends Command
     }
 
     /**
-     * @param list<int> $memberIds
-     * @param array<string, mixed> $params
-     */
-    private function resolveCuratedMemberCount(array $memberIds, array $params): int
-    {
-        $summary = $params['member_quality']['summary'] ?? null;
-
-        if (is_array($summary)) {
-            $selectionCounts = $summary['selection_counts'] ?? null;
-
-            if (is_array($selectionCounts)) {
-                $curated = $selectionCounts['curated'] ?? null;
-
-                if (is_int($curated)) {
-                    return $curated;
-                }
-            }
-        }
-
-        return count($memberIds);
-    }
-
-    /**
      * @param array<string, mixed>|null $timeRange
      */
     private function formatTimeRange(?array $timeRange): string
@@ -364,6 +386,171 @@ final class FeedPreviewCommand extends Command
         $single = $from ?? $to;
 
         return $single->format('Y-m-d');
+    }
+
+    /**
+     * @param list<ClusterDraft> $drafts
+     */
+    private function renderDraftTable(SymfonyStyle $io, array $drafts, bool $showMembers): void
+    {
+        $rows = [];
+        $idx  = 0;
+
+        foreach ($drafts as $draft) {
+            ++$idx;
+            $params    = $draft->getParams();
+            $memberIds = $draft->getMembers();
+
+            $row = [
+                (string) $idx,
+                $draft->getAlgorithm(),
+                $this->resolveDraftStoryline($draft),
+                (string) $this->resolveRawMemberCount($params),
+                $this->resolveCuratedMemberCountDisplay($memberIds, $params, false),
+                $this->formatTimeRange($this->buildDraftTimeRange($draft)),
+                $this->formatDraftScore($params),
+            ];
+
+            if ($showMembers) {
+                $row[] = $memberIds === [] ? '–' : implode(',', $memberIds);
+            }
+
+            $rows[] = $row;
+        }
+
+        $io->table($this->buildTableHeaders($showMembers), $rows);
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     */
+    private function renderFeedTable(SymfonyStyle $io, array $items, bool $showMembers): void
+    {
+        $rows = [];
+        $idx  = 0;
+
+        foreach ($items as $item) {
+            ++$idx;
+            $params    = $item->getParams();
+            $memberIds = $item->getMemberIds();
+
+            $row = [
+                (string) $idx,
+                $item->getAlgorithm(),
+                $this->resolveStoryline($params),
+                (string) $this->resolveRawMemberCount($params),
+                $this->resolveCuratedMemberCountDisplay($memberIds, $params, true),
+                $this->formatTimeRange($params['time_range'] ?? null),
+                number_format($item->getScore(), 3, ',', ''),
+            ];
+
+            if ($showMembers) {
+                $row[] = $memberIds === [] ? '–' : implode(',', $memberIds);
+            }
+
+            $rows[] = $row;
+        }
+
+        $io->table($this->buildTableHeaders($showMembers), $rows);
+    }
+
+    private function buildTableHeaders(bool $showMembers): array
+    {
+        $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Zeitraum', 'Score'];
+
+        if ($showMembers) {
+            $headers[] = 'Mitglieder';
+        }
+
+        return $headers;
+    }
+
+    private function resolveDraftStoryline(ClusterDraft $draft): string
+    {
+        $storyline = $draft->getStoryline();
+
+        if ($storyline !== '') {
+            return $storyline;
+        }
+
+        return $this->resolveStoryline($draft->getParams());
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function formatDraftScore(array $params): string
+    {
+        $score = $params['score'] ?? null;
+
+        if (is_float($score) || is_int($score)) {
+            return number_format((float) $score, 3, ',', '');
+        }
+
+        return '–';
+    }
+
+    private function buildDraftTimeRange(ClusterDraft $draft): ?array
+    {
+        $from = $draft->getStartAt();
+        $to   = $draft->getEndAt();
+
+        if ($from === null && $to === null) {
+            return null;
+        }
+
+        return [
+            'from' => $from,
+            'to'   => $to,
+        ];
+    }
+
+    /**
+     * @param list<int>            $memberIds
+     * @param array<string, mixed> $params
+     */
+    private function resolveCuratedMemberCountDisplay(array $memberIds, array $params, bool $fallbackToCount): string
+    {
+        $summary = $params['member_quality']['summary'] ?? null;
+
+        if (is_array($summary)) {
+            $selectionCounts = $summary['selection_counts'] ?? null;
+
+            if (is_array($selectionCounts)) {
+                $curated = $selectionCounts['curated'] ?? null;
+
+                if (is_int($curated)) {
+                    return (string) $curated;
+                }
+            }
+        }
+
+        if ($fallbackToCount) {
+            return (string) count($memberIds);
+        }
+
+        return '–';
+    }
+
+    private function normaliseStage(string $stage): ?string
+    {
+        $normalised = strtolower(trim($stage));
+
+        if (in_array($normalised, self::STAGE_OPTIONS, true)) {
+            return $normalised;
+        }
+
+        return null;
+    }
+
+    private function formatStageTitle(string $stage): string
+    {
+        return sprintf(
+            '%s %s (%s)',
+            self::STAGE_EMOJIS[$stage] ?? '',
+            self::STAGE_LABELS[$stage] ?? $stage,
+            $stage,
+        );
     }
 
     private function normaliseDateTime(DateTimeInterface|string|int|null $value): ?DateTimeImmutable
