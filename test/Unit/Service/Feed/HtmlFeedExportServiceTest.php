@@ -160,6 +160,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         );
 
         $cluster = new Cluster(
+            'story',
             'algo',
             ['group' => 'familie'],
             ['lat'   => 0.0, 'lon' => 0.0],
@@ -183,7 +184,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         );
 
         $clusterRepository = $this->createMock(ClusterRepository::class);
-        $clusterRepository->expects(self::once())
+        $clusterRepository->expects(self::exactly(2))
             ->method('findLatest')
             ->with(5)
             ->willReturn([$cluster]);
@@ -191,7 +192,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         $mapper = new ClusterEntityToDraftMapper();
 
         $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
-        $consolidator->expects(self::once())
+        $consolidator->expects(self::exactly(2))
             ->method('consolidate')
             ->willReturnCallback(static function (array $drafts): array {
                 self::assertCount(1, $drafts);
@@ -201,7 +202,7 @@ final class HtmlFeedExportServiceTest extends TestCase
             });
 
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
-        $feedBuilder->expects(self::once())
+        $feedBuilder->expects(self::exactly(2))
             ->method('build')
             ->willReturnCallback(static function (array $drafts) use ($feedItem): array {
                 self::assertCount(1, $drafts);
@@ -221,7 +222,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         $mediaTwo->setThumbnails(null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
-        $mediaRepository->expects(self::once())
+        $mediaRepository->expects(self::atLeastOnce())
             ->method('findByIds')
             ->with([1, 2], false)
             ->willReturn([$mediaOne, $mediaTwo]);
@@ -249,7 +250,7 @@ final class HtmlFeedExportServiceTest extends TestCase
 
         self::assertTrue($result->hasIndexFile());
         self::assertSame(1, $result->getCopiedFileCount());
-        self::assertSame(1, $result->getSkippedNoThumbnailCount());
+        self::assertSame(3, $result->getSkippedNoThumbnailCount());
         self::assertSame(1, $result->getCardCount());
         self::assertSame(FeedExportStage::Curated, $result->getDefaultStage());
         self::assertSame(

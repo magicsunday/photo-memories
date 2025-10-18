@@ -268,11 +268,18 @@ final class VacationClusterStrategyTest extends TestCase
 
         $events  = [];
         $emitter = new class($events) implements JobMonitoringEmitterInterface {
+            /**
+             * @param list<array{
+             *     job: \Stringable|string|int|float|bool,
+             *     status: \Stringable|string|int|float|bool,
+             *     context: array<string, mixed>
+             * }> $events
+             */
             public function __construct(private array &$events)
             {
             }
 
-            public function emit(string $job, string $status, array $context = []): void
+            public function emit(\Stringable|string|int|float|bool $job, \Stringable|string|int|float|bool $status, array $context = []): void
             {
                 $this->events[] = [
                     'job' => $job,
@@ -492,13 +499,17 @@ final class VacationClusterStrategyTest extends TestCase
 
         $emitter = new class($events) implements JobMonitoringEmitterInterface {
             /**
-             * @param list<array{job:string,status:string,context:array<string,mixed>}> $events
+             * @param list<array{
+             *     job: \Stringable|string|int|float|bool,
+             *     status: \Stringable|string|int|float|bool,
+             *     context: array<string, mixed>
+             * }> $events
              */
             public function __construct(private array &$events)
             {
             }
 
-            public function emit(string $job, string $status, array $context = []): void
+            public function emit(\Stringable|string|int|float|bool $job, \Stringable|string|int|float|bool $status, array $context = []): void
             {
                 $this->events[] = [
                     'job' => $job,

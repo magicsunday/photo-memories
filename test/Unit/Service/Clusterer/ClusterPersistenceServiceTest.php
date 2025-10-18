@@ -505,6 +505,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         );
 
         $cluster = new Cluster(
+            'story',
             'demo',
             ['storyline' => 'default'],
             ['lat' => 48.123456, 'lon' => 11.654321],

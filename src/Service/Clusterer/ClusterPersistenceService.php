@@ -18,6 +18,8 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Cluster;
+use MagicSunday\Memories\Entity\ClusterMember;
+use MagicSunday\Memories\Entity\Enum\ClusterMemberRole;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
@@ -30,6 +32,7 @@ use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function array_chunk;
+use function array_map;
 use function array_find;
 use function array_is_list;
 use function array_key_exists;
@@ -38,6 +41,7 @@ use function array_slice;
 use function array_unique;
 use function array_values;
 use function count;
+use function in_array;
 use function is_array;
 use function is_float;
 use function is_int;
@@ -46,8 +50,10 @@ use function is_string;
 use function json_encode;
 use function ksort;
 use function max;
+use function min;
 use function sha1;
 use function spl_object_id;
+use function trim;
 
 /**
  * Class ClusterPersistenceService.
@@ -178,19 +184,39 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     {
         [$draft, $metadata] = $this->rebuildDraftFromEntity($cluster);
 
-        $cluster->setParams($draft->getParams());
+        $cluster->setType($metadata['type']);
+        $cluster->setMeta($metadata['meta']);
+        $cluster->setParams($metadata['params']);
         $cluster->setStartAt($metadata['startAt']);
         $cluster->setEndAt($metadata['endAt']);
         $cluster->setMembersCount($metadata['membersCount']);
         $cluster->setPhotoCount($metadata['photoCount']);
         $cluster->setVideoCount($metadata['videoCount']);
-        $cluster->setCover($metadata['cover']);
+        $cluster->setCover($metadata['keyMedia']);
         $cluster->setLocation($metadata['location']);
         $cluster->setAlgorithmVersion($metadata['algorithmVersion']);
         $cluster->setConfigHash($metadata['configHash']);
         $cluster->setCentroidLat($metadata['centroidLat']);
         $cluster->setCentroidLon($metadata['centroidLon']);
         $cluster->setCentroidCell7($metadata['centroidCell7']);
+        $cluster->setBoundingBox($metadata['boundingBox']);
+        $cluster->setScore($metadata['score']);
+        $cluster->setScorePreNorm($metadata['scorePreNorm']);
+        $cluster->setScorePostNorm($metadata['scorePostNorm']);
+        $cluster->setScoreBoosted($metadata['scoreBoosted']);
+        $cluster->setQualityScore($metadata['qualityScore']);
+        $cluster->setPeopleScore($metadata['peopleScore']);
+
+        $memberIds = $metadata['meta']['member_ids'] ?? $cluster->getMembers();
+        if (!is_array($memberIds)) {
+            $memberIds = $cluster->getMembers();
+        }
+
+        /** @var list<int> $memberIds */
+        $memberIds = array_values(array_map(static fn (mixed $value): int => (int) $value, $memberIds));
+        $media     = $this->hydrateMembers($memberIds);
+
+        $this->attachClusterMembers($cluster, $memberIds, $media, $metadata['overlay'], $metadata['memberScores']);
 
         return $this->extractSelectionSummary($draft);
     }
@@ -240,7 +266,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $media    = $this->hydrateMembers($members);
         $metadata = $this->buildMetadata($draft, $members, $media);
 
-        $entity = $this->createClusterEntity($draft, $members, $metadata);
+        $entity = $this->createClusterEntity($draft, $members, $metadata, $media);
 
         $seenThisRun[$key] = true;
 
@@ -341,11 +367,43 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      *     centroidCell7:?string
      * } $metadata
      */
-    private function createClusterEntity(ClusterDraft $draft, array $members, array $metadata): Cluster
+    /**
+     * @param list<int> $members
+     * @param array{
+     *     startAt:?DateTimeImmutable,
+     *     endAt:?DateTimeImmutable,
+     *     membersCount:int,
+     *     photoCount:?int,
+     *     videoCount:?int,
+     *     cover:?Media,
+     *     keyMedia:?Media,
+     *     location:?Location,
+     *     algorithmVersion:?string,
+     *     configHash:?string,
+     *     centroidLat:?float,
+     *     centroidLon:?float,
+     *     centroidCell7:?string,
+     *     params: array<string, mixed>,
+     *     meta: array<string, mixed>,
+     *     boundingBox: array<string, mixed>|null,
+     *     score:?float,
+     *     scorePreNorm:?float,
+     *     scorePostNorm:?float,
+     *     scoreBoosted:?float,
+     *     qualityScore:?float,
+     *     peopleScore:?float,
+     *     type:string,
+     *     overlay: list<int>,
+     *     memberScores: array<int, float>,
+     * } $metadata
+     * @param list<Media> $media
+     */
+    private function createClusterEntity(ClusterDraft $draft, array $members, array $metadata, array $media): Cluster
     {
         $entity = new Cluster(
+            $metadata['type'],
             $draft->getAlgorithm(),
-            $draft->getParams(),
+            $metadata['params'],
             $draft->getCentroid(),
             $members,
         );
@@ -355,13 +413,31 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $entity->setMembersCount($metadata['membersCount']);
         $entity->setPhotoCount($metadata['photoCount']);
         $entity->setVideoCount($metadata['videoCount']);
-        $entity->setCover($metadata['cover']);
+        $entity->setCover($metadata['keyMedia']);
         $entity->setLocation($metadata['location']);
         $entity->setAlgorithmVersion($metadata['algorithmVersion']);
         $entity->setConfigHash($metadata['configHash']);
         $entity->setCentroidLat($metadata['centroidLat']);
         $entity->setCentroidLon($metadata['centroidLon']);
         $entity->setCentroidCell7($metadata['centroidCell7']);
+        $entity->setBoundingBox($metadata['boundingBox']);
+        $entity->setScore($metadata['score']);
+        $entity->setScorePreNorm($metadata['scorePreNorm']);
+        $entity->setScorePostNorm($metadata['scorePostNorm']);
+        $entity->setScoreBoosted($metadata['scoreBoosted']);
+        $entity->setQualityScore($metadata['qualityScore']);
+        $entity->setPeopleScore($metadata['peopleScore']);
+        $entity->setMeta($metadata['meta']);
+        $entity->setParams($metadata['params']);
+        $entity->setType($metadata['type']);
+
+        $this->attachClusterMembers(
+            $entity,
+            $members,
+            $media,
+            $metadata['overlay'],
+            $metadata['memberScores'],
+        );
 
         return $entity;
     }
@@ -412,9 +488,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     private function fetchExistingPairsChunk(array $algorithms, array $fingerprints): array
     {
         $qb = $this->em->createQueryBuilder()
-            ->select('c.algorithm AS alg', 'c.fingerprint AS fp')
+            ->select('c.strategy AS alg', 'c.fingerprint AS fp')
             ->from(Cluster::class, 'c')
-            ->where('c.algorithm IN (:algs)')
+            ->where('c.strategy IN (:algs)')
             ->andWhere('c.fingerprint IN (:fps)')
             ->setParameter('algs', $algorithms)
             ->setParameter('fps', $fingerprints);
@@ -457,7 +533,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $q = $this->em->createQueryBuilder()
             ->delete(Cluster::class, 'c')
-            ->where('c.algorithm IN (:algs)')
+            ->where('c.strategy IN (:algs)')
             ->setParameter('algs', $uniqueAlgorithms)
             ->getQuery();
 
@@ -561,6 +637,29 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
         }
 
+        $boundingBox = $this->buildBoundingBox($media);
+        $overlay     = $this->normaliseMemberIdList($params['member_quality']['ordered'] ?? null);
+        $memberScores = $this->extractMemberScores($params);
+        $type          = $this->resolveClusterType($draft, $params);
+
+        $meta = [
+            'params'     => $params,
+            'member_ids' => $memberIds,
+            'centroid'   => $centroid,
+        ];
+
+        if ($overlay !== []) {
+            $meta['overlay'] = $overlay;
+        }
+
+        if ($boundingBox !== null) {
+            $meta['bounding_box'] = $boundingBox;
+        }
+
+        if ($memberScores !== []) {
+            $meta['member_scores'] = $memberScores;
+        }
+
         $draft->setStartAt($bounds['start']);
         $draft->setEndAt($bounds['end']);
         $draft->setMembersCount($membersCount);
@@ -581,12 +680,25 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             'photoCount'       => $photoCount,
             'videoCount'       => $videoCount,
             'cover'            => $cover,
+            'keyMedia'         => $cover,
             'location'         => $location,
             'algorithmVersion' => $algorithmVersion,
             'configHash'       => $configHash,
             'centroidLat'      => $centroidLat,
             'centroidLon'      => $centroidLon,
             'centroidCell7'    => $centroidCell,
+            'boundingBox'      => $boundingBox,
+            'score'            => $this->numericOrNull($params['score'] ?? null),
+            'scorePreNorm'     => $this->numericOrNull($params['pre_norm_score'] ?? null),
+            'scorePostNorm'    => $this->numericOrNull($params['post_norm_score'] ?? null),
+            'scoreBoosted'     => $this->numericOrNull($params['boosted_score'] ?? null),
+            'qualityScore'     => $this->numericOrNull($params['quality_avg'] ?? null),
+            'peopleScore'      => $this->numericOrNull($params['people'] ?? null),
+            'params'           => $params,
+            'meta'             => $meta,
+            'type'             => $type,
+            'overlay'          => $overlay,
+            'memberScores'     => $memberScores,
         ];
     }
 
@@ -775,6 +887,217 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         return $value;
+    }
+
+    /**
+     * @param list<Media> $media
+     *
+     * @return array<string, mixed>|null
+     */
+    private function buildBoundingBox(array $media): ?array
+    {
+        $minLat = null;
+        $maxLat = null;
+        $minLon = null;
+        $maxLon = null;
+
+        foreach ($media as $item) {
+            $lat = $item->getGpsLat();
+            $lon = $item->getGpsLon();
+
+            if ($lat === null || $lon === null) {
+                continue;
+            }
+
+            $minLat = $minLat === null ? $lat : min($minLat, $lat);
+            $maxLat = $maxLat === null ? $lat : max($maxLat, $lat);
+            $minLon = $minLon === null ? $lon : min($minLon, $lon);
+            $maxLon = $maxLon === null ? $lon : max($maxLon, $lon);
+        }
+
+        if ($minLat === null || $maxLat === null || $minLon === null || $maxLon === null) {
+            return null;
+        }
+
+        return [
+            'type'        => 'Polygon',
+            'coordinates' => [[
+                [$minLon, $minLat],
+                [$minLon, $maxLat],
+                [$maxLon, $maxLat],
+                [$maxLon, $minLat],
+                [$minLon, $minLat],
+            ]],
+        ];
+    }
+
+    /**
+     * @param list<Media> $media
+     *
+     * @return array<int, Media>
+     */
+    private function indexMediaById(array $media): array
+    {
+        $map = [];
+
+        foreach ($media as $item) {
+            $id = $item->getId();
+            if ($id === null) {
+                continue;
+            }
+
+            $map[$id] = $item;
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param list<int>   $memberIds
+     * @param list<Media> $media
+     * @param list<int>   $overlay
+     * @param array<int,float> $memberScores
+     */
+    private function attachClusterMembers(Cluster $cluster, array $memberIds, array $media, array $overlay, array $memberScores): void
+    {
+        $cluster->clearClusterMembers();
+
+        $mediaMap   = $this->indexMediaById($media);
+        $overlayMap = [];
+        foreach ($overlay as $rank => $memberId) {
+            $overlayMap[$memberId] = $rank;
+        }
+
+        $primaryId = $overlay[0] ?? ($memberIds[0] ?? null);
+
+        foreach ($memberIds as $index => $memberId) {
+            $mediaItem = $mediaMap[$memberId] ?? null;
+            if (!$mediaItem instanceof Media) {
+                continue;
+            }
+
+            $role = ClusterMemberRole::DUPLICATE;
+            if ($memberId === $primaryId) {
+                $role = ClusterMemberRole::PRIMARY;
+            } elseif (isset($overlayMap[$memberId])) {
+                $role = ClusterMemberRole::SUPPORT;
+            }
+
+            $localScore = $memberScores[$memberId] ?? null;
+
+            $cluster->addClusterMember(new ClusterMember(
+                $cluster,
+                $mediaItem,
+                $role,
+                $index,
+                $localScore,
+            ));
+        }
+    }
+
+    /**
+     * @param mixed $values
+     *
+     * @return list<int>
+     */
+    private function normaliseMemberIdList(mixed $values): array
+    {
+        if (!is_array($values)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($values as $value) {
+            $id = null;
+            if (is_int($value)) {
+                $id = $value;
+            } elseif (is_string($value) && is_numeric($value)) {
+                $id = (int) $value;
+            }
+
+            if ($id === null || $id === 0) {
+                continue;
+            }
+
+            if (!in_array($id, $result, true)) {
+                $result[] = $id;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return array<int, float>
+     */
+    private function extractMemberScores(array $params): array
+    {
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return [];
+        }
+
+        $details = $memberQuality['members'] ?? null;
+        if (!is_array($details)) {
+            return [];
+        }
+
+        $scores = [];
+        foreach ($details as $memberId => $detail) {
+            if (is_int($memberId)) {
+                $id = $memberId;
+            } elseif (is_string($memberId) && is_numeric($memberId)) {
+                $id = (int) $memberId;
+            } else {
+                continue;
+            }
+
+            if (!is_array($detail)) {
+                continue;
+            }
+
+            $score = $detail['score'] ?? ($detail['quality'] ?? null);
+            if ($score === null) {
+                continue;
+            }
+
+            if (!is_float($score) && !is_int($score) && !is_numeric($score)) {
+                continue;
+            }
+
+            $scores[$id] = (float) $score;
+        }
+
+        return $scores;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function resolveClusterType(ClusterDraft $draft, array $params): string
+    {
+        $candidates = [
+            $params['type'] ?? null,
+            $params['storyline'] ?? null,
+            $params['group'] ?? null,
+            $draft->getStoryline(),
+            $draft->getAlgorithm(),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate)) {
+                continue;
+            }
+
+            $value = trim($candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return 'story';
     }
 
     /**
