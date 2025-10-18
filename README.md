@@ -120,6 +120,21 @@ make web-dev
 - Temporäre Laufzeit-Overrides lassen sich über `memories:cluster --sel-target-total=… --sel-max-per-day=… --sel-min-spacing=… --sel-phash-hamming=… --sel-max-staypoint=…` setzen; die Optionen wirken auf sämtliche Profile während dieses Jobs.
 - Mit `--debug-vacation` zeigt der CLI-Lauf vor dem Persistieren eine tabellarische Übersicht der erkannten Urlaubssegmente sowie die fünf bestbewerteten Cluster an.
 
+#### Filteroption `--types`
+
+`memories:curate --types` akzeptiert weiterhin die internen Konsolidierungsgruppen (`travel_and_places`, `people_and_moments` usw.), kann aber nun auch mit Friendly Names aufgerufen werden. Die Aliasse werden im Container hinterlegt (`memories.cluster.consolidate.group_aliases`) und auf dieselben Gruppen gemappt:
+
+- `travel_and_places` – Friendly Names: `vacation`, `travel`, `trip`, `places`, `sightseeing`
+- `people_and_moments` – Friendly Names: `people`, `friends`, `family`
+- `city_and_events` – Friendly Names: `events`, `city`, `nightlife`
+- `time_and_basics` – Friendly Names: `onthistoday`, `onthisday`, `monthly`, `basics`
+- `nature_and_seasons` – Friendly Names: `seasons`, `nature`
+- `home` – Friendly Names: `home`, `staycation`
+- `motifs_and_formats` – Friendly Names: `motifs`, `formats`
+- `similarity_algorithms` – Friendly Names: `similarity`, `duplicates`
+
+Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-Optionen gesetzt werden; die Eingaben werden fallunabhängig ausgewertet.
+
 ## Tests & Qualitätssicherung
 
 - Komplettes CI-Profil: `composer ci:test` (Linting, PHPStan, Rector/Fractor Dry-Run, Coding-Guidelines, PHPUnit).
