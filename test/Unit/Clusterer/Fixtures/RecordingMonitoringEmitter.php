@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Clusterer\Fixtures;
 
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
+use Stringable;
 
 /**
  * Simple monitoring emitter that records emitted events for assertions.
@@ -19,14 +20,18 @@ use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterfa
 final class RecordingMonitoringEmitter implements JobMonitoringEmitterInterface
 {
     /**
-     * @var list<array{job:string,status:string,context:array<string,mixed>}> recorded events
+     * @var list<array{
+     *     job: Stringable|string|int|float|bool,
+     *     status: Stringable|string|int|float|bool,
+     *     context: array<string, mixed>
+     * }> recorded events
      */
     public array $events = [];
 
     /**
      * {@inheritDoc}
      */
-    public function emit(string $job, string $status, array $context = []): void
+    public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
     {
         $this->events[] = [
             'job'     => $job,

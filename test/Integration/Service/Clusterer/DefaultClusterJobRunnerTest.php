@@ -173,7 +173,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager->persist($mediaTwo);
         $entityManager->flush();
 
-        $existingCluster = new Cluster('legacy', [], ['lat' => 0.0, 'lon' => 0.0], [$mediaOne->getId()]);
+        $existingCluster = new Cluster('story', 'legacy', [], ['lat' => 0.0, 'lon' => 0.0], [$mediaOne->getId()]);
         $entityManager->persist($existingCluster);
         $entityManager->flush();
 

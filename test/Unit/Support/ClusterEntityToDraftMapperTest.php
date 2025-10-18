@@ -22,7 +22,8 @@ final class ClusterEntityToDraftMapperTest extends TestCase
     public function mapManyBackfillsMissingGroup(): void
     {
         $entity = new Cluster(
-            algorithm: 'vacation',
+            type: 'story',
+            strategy: 'vacation',
             params: ['score' => 0.9],
             centroid: ['lat' => 1.0, 'lon' => 2.0],
             members: [3, 1, 2],
@@ -42,7 +43,8 @@ final class ClusterEntityToDraftMapperTest extends TestCase
     public function mapManyKeepsExistingGroup(): void
     {
         $entity = new Cluster(
-            algorithm: 'vacation',
+            type: 'story',
+            strategy: 'vacation',
             params: ['score' => 0.9, 'group' => 'custom_group'],
             centroid: ['lat' => 1.0, 'lon' => 2.0],
             members: [1, 2, 3],
@@ -89,7 +91,8 @@ final class ClusterEntityToDraftMapperTest extends TestCase
         ];
 
         $entity = new Cluster(
-            algorithm: 'vacation',
+            type: 'story',
+            strategy: 'vacation',
             params: $params,
             centroid: ['lat' => 1.0, 'lon' => 2.0],
             members: [3, 1, 2],

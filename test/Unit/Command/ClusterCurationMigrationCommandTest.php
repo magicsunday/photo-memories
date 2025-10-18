@@ -52,8 +52,8 @@ final class ClusterCurationMigrationCommandTest extends TestCase
     #[Test]
     public function executeProcessesClustersInDryRunMode(): void
     {
-        $clusterA = new Cluster('demo', [], ['lat' => 0.0, 'lon' => 0.0], [1]);
-        $clusterB = new Cluster('other', [], ['lat' => 0.0, 'lon' => 0.0], [2]);
+        $clusterA = new Cluster('story', 'demo', [], ['lat' => 0.0, 'lon' => 0.0], [1]);
+        $clusterB = new Cluster('story', 'other', [], ['lat' => 0.0, 'lon' => 0.0], [2]);
 
         $repository = $this->createRepository([$clusterA, $clusterB]);
 
