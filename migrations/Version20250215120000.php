@@ -120,20 +120,24 @@ final class Version20250215120000 extends AbstractMigration
                 kind VARCHAR(32) NOT NULL,
                 label VARCHAR(191) DEFAULT NULL,
                 location_id BIGINT DEFAULT NULL,
-                geometry JSONB NOT NULL,
+                geometry JSON NOT NULL,
                 centroid_lat DOUBLE PRECISION DEFAULT NULL,
                 centroid_lon DOUBLE PRECISION DEFAULT NULL,
                 radius_meters DOUBLE PRECISION DEFAULT NULL,
                 confidence DOUBLE PRECISION DEFAULT NULL,
-                meta JSONB DEFAULT '{}'::jsonb,
+                meta JSON DEFAULT '{}'::json,
                 created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                CONSTRAINT chk_memories_significant_place_kind CHECK (
+                    kind IN ('home', 'work', 'favourite', 'travel', 'other')
+                ),
                 PRIMARY KEY(id)
             )
         SQL);
 
         $this->addSql("CREATE INDEX idx_memories_significant_place_kind ON memories_significant_place (kind)");
-        $this->addSql("CREATE INDEX idx_memories_significant_place_geometry ON memories_significant_place USING GIN (geometry)");
+        $this->addSql("CREATE INDEX idx_memories_significant_place_centroid ON memories_significant_place (centroid_lat, centroid_lon)");
+        $this->addSql("CREATE INDEX idx_memories_significant_place_geometry ON memories_significant_place USING GIN ((geometry::jsonb))");
 
         $this->addSql(<<<'SQL'
             ALTER TABLE memories_significant_place
@@ -145,7 +149,9 @@ final class Version20250215120000 extends AbstractMigration
     public function down(Schema $schema): void
     {
         $this->addSql('ALTER TABLE memories_significant_place DROP CONSTRAINT IF EXISTS fk_memories_significant_place_location');
+        $this->addSql('ALTER TABLE memories_significant_place DROP CONSTRAINT IF EXISTS chk_memories_significant_place_kind');
         $this->addSql('DROP INDEX IF EXISTS idx_memories_significant_place_geometry');
+        $this->addSql('DROP INDEX IF EXISTS idx_memories_significant_place_centroid');
         $this->addSql('DROP INDEX IF EXISTS idx_memories_significant_place_kind');
         $this->addSql('DROP TABLE IF EXISTS memories_significant_place');
 
