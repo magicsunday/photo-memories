@@ -32,13 +32,26 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 final class MemoriesCurateCommandTest extends TestCase
 {
+    private const CLUSTER_GROUP_MAP = [
+        'vacation' => 'travel_and_places',
+        'year_in_review' => 'time_and_basics',
+        'person_cohort' => 'people_and_moments',
+        'holiday_event' => 'city_and_events',
+    ];
+
+    private const CLUSTER_GROUP_ALIAS_MAP = [
+        'vacation' => 'travel_and_places',
+        'people' => 'people_and_moments',
+        'events' => 'city_and_events',
+    ];
+
     #[Test]
     public function itRunsTheFullPipeline(): void
     {
         $locator = $this->createMock(MediaFileLocatorInterface::class);
         $locator->expects(self::once())
             ->method('locate')
-            ->with('/data/media', null, true)
+            ->with($this->getExistingMediaPath(), null, true)
             ->willReturn(new \ArrayIterator(['/data/media/a.jpg', '/data/media/b.jpg']));
 
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
@@ -54,11 +67,7 @@ final class MemoriesCurateCommandTest extends TestCase
             );
         $pipeline->expects(self::once())->method('finalize')->with(false);
 
-        $qaCollector = $this->createMock(MetadataQaReportCollector::class);
-        $qaCollector->expects(self::atLeastOnce())->method('reset');
-        $qaCollector->expects(self::once())
-            ->method('render')
-            ->with(self::isInstanceOf(\Symfony\Component\Console\Output\OutputInterface::class));
+        $qaCollector = new MetadataQaReportCollector();
 
         $telemetry = ClusterJobTelemetry::fromStageCounts(2, 2);
         $jobResult = new ClusterJobResult(5, 4, 3, 2, 2, 0, false, $telemetry);
@@ -112,8 +121,9 @@ final class MemoriesCurateCommandTest extends TestCase
             $qaCollector,
             $runner,
             $exportService,
-            ['vacation' => 'travel_and_places', 'year_in_review' => 'time_and_basics'],
-            '/data/media',
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
         );
 
         $tester = new CommandTester($command);
@@ -135,7 +145,7 @@ final class MemoriesCurateCommandTest extends TestCase
     {
         $locator   = $this->createMock(MediaFileLocatorInterface::class);
         $pipeline  = $this->createMock(MediaIngestionPipelineInterface::class);
-        $qa        = $this->createMock(MetadataQaReportCollector::class);
+        $qa        = new MetadataQaReportCollector();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
@@ -164,8 +174,9 @@ final class MemoriesCurateCommandTest extends TestCase
             $qa,
             $runner,
             $export,
-            ['vacation' => 'travel_and_places'],
-            '/data/media',
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
         );
 
         $pipeline->expects(self::never())->method('process');
@@ -191,6 +202,68 @@ final class MemoriesCurateCommandTest extends TestCase
 
         self::assertSame(Command::INVALID, $status);
         self::assertStringContainsString('Unbekannter Erinnerungstyp', $tester->getDisplay());
+        self::assertStringContainsString('Friendly Names', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function itResolvesFriendlyTypeAliases(): void
+    {
+        $locator = $this->createMock(MediaFileLocatorInterface::class);
+        $locator->expects(self::never())->method('locate');
+
+        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
+        $pipeline->expects(self::never())->method('process');
+        $pipeline->expects(self::never())->method('finalize');
+
+        $qaCollector = new MetadataQaReportCollector();
+
+        $runner = $this->createMock(ClusterJobRunnerInterface::class);
+        $runner->expects(self::once())
+            ->method('run')
+            ->with(self::callback(static function (ClusterJobOptions $options): bool {
+                self::assertSame(['travel_and_places', 'people_and_moments'], $options->getAllowedGroups());
+
+                return true;
+            }), self::anything())
+            ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
+
+        $export = $this->createMock(FeedExportServiceInterface::class);
+        $export->expects(self::once())
+            ->method('export')
+            ->with(self::isInstanceOf(FeedExportRequest::class), self::isInstanceOf(\Symfony\Component\Console\Style\SymfonyStyle::class))
+            ->willReturn(new FeedExportResult(
+                'out',
+                'images',
+                null,
+                0,
+                0,
+                0,
+                FeedExportStage::Curated,
+                [
+                    FeedExportStage::Raw->value     => 0,
+                    FeedExportStage::Merged->value  => 0,
+                    FeedExportStage::Curated->value => 0,
+                ],
+            ));
+
+        $command = new MemoriesCurateCommand(
+            $locator,
+            $pipeline,
+            $qaCollector,
+            $runner,
+            $export,
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
+        );
+
+        $tester = new CommandTester($command);
+        $status = $tester->execute([
+            '--types' => ['vacation', 'people'],
+            '--reindex' => 'skip',
+        ]);
+
+        self::assertSame(Command::SUCCESS, $status, $tester->getDisplay());
     }
 
     #[Test]
@@ -232,8 +305,7 @@ final class MemoriesCurateCommandTest extends TestCase
         $pipeline->expects(self::once())->method('process');
         $pipeline->expects(self::once())->method('finalize')->with(true);
 
-        $qaCollector = $this->createMock(MetadataQaReportCollector::class);
-        $qaCollector->expects(self::atLeastOnce())->method('reset');
+        $qaCollector = new MetadataQaReportCollector();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
@@ -249,8 +321,9 @@ final class MemoriesCurateCommandTest extends TestCase
             $qaCollector,
             $runner,
             $export,
-            ['vacation' => 'travel_and_places'],
-            '/data/media',
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
         );
 
         $tester = new CommandTester($command);
@@ -262,11 +335,16 @@ final class MemoriesCurateCommandTest extends TestCase
         self::assertStringContainsString('Dry-Run: Feed-Export übersprungen', $tester->getDisplay());
     }
 
+    private function getExistingMediaPath(): string
+    {
+        return __DIR__;
+    }
+
     private function createCommand(): MemoriesCurateCommand
     {
         $locator = $this->createMock(MediaFileLocatorInterface::class);
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
-        $qa       = $this->createMock(MetadataQaReportCollector::class);
+        $qa       = new MetadataQaReportCollector();
         $runner   = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
         $export   = $this->createMock(FeedExportServiceInterface::class);
@@ -291,8 +369,9 @@ final class MemoriesCurateCommandTest extends TestCase
             $qa,
             $runner,
             $export,
-            ['vacation' => 'travel_and_places'],
-            '/data/media',
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
         );
     }
 }

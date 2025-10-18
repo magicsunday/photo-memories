@@ -19,6 +19,7 @@ use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
@@ -68,7 +69,18 @@ final class MemoriesCurateCommand extends Command
     private array $allowedGroups;
 
     /**
+     * @var array<string,string>
+     */
+    private array $groupAliases;
+
+    /**
+     * @var list<string>
+     */
+    private array $friendlyNames;
+
+    /**
      * @param array<string,string> $clusterGroupMap
+     * @param array<string,string> $clusterGroupAliasMap
      */
     public function __construct(
         private readonly MediaFileLocatorInterface $fileLocator,
@@ -78,6 +90,8 @@ final class MemoriesCurateCommand extends Command
         private readonly FeedExportServiceInterface $feedExportService,
         #[Autowire('%memories.cluster.consolidate.groups%')]
         private readonly array $clusterGroupMap,
+        #[Autowire('%memories.cluster.consolidate.group_aliases%')]
+        private readonly array $clusterGroupAliasMap,
         #[Autowire(env: 'MEMORIES_MEDIA_DIR')]
         private readonly string $defaultMediaDir,
     ) {
@@ -86,6 +100,23 @@ final class MemoriesCurateCommand extends Command
         $groups = array_values($this->clusterGroupMap);
         $groups = array_map(static fn (mixed $value): ?string => is_string($value) ? $value : null, $groups);
         $this->allowedGroups = array_values(array_unique(array_filter($groups))); // keep deterministic order
+
+        $aliases = [];
+        foreach ($this->clusterGroupAliasMap as $alias => $group) {
+            if (!is_string($alias) || !is_string($group)) {
+                continue;
+            }
+
+            $aliasKey = strtolower(trim($alias));
+            if ($aliasKey === '' || !in_array($group, $this->allowedGroups, true)) {
+                continue;
+            }
+
+            $aliases[$aliasKey] = $group;
+        }
+
+        $this->groupAliases = $aliases;
+        $this->friendlyNames = array_keys($aliases);
     }
 
     protected function configure(): void
@@ -192,12 +223,15 @@ final class MemoriesCurateCommand extends Command
         $normalised = [];
         foreach ($values as $value) {
             foreach (explode(',', (string) $value) as $fragment) {
-                $fragment = trim($fragment);
-                if ($fragment === '') {
+                $trimmed = trim($fragment);
+                if ($trimmed === '') {
                     continue;
                 }
 
-                $normalised[] = strtolower($fragment);
+                $normalised[] = [
+                    'raw' => $trimmed,
+                    'normalised' => strtolower($trimmed),
+                ];
             }
         }
 
@@ -205,17 +239,32 @@ final class MemoriesCurateCommand extends Command
             return null;
         }
 
-        foreach ($normalised as $group) {
-            if (!in_array($group, $this->allowedGroups, true)) {
+        $resolved = [];
+        foreach ($normalised as $entry) {
+            $candidate = $entry['normalised'];
+            $resolvedGroup = $this->groupAliases[$candidate] ?? null;
+
+            if ($resolvedGroup === null && in_array($candidate, $this->allowedGroups, true)) {
+                $resolvedGroup = $candidate;
+            }
+
+            if ($resolvedGroup === null) {
+                $friendlyNames = $this->friendlyNames === []
+                    ? ''
+                    : sprintf(' (Friendly Names: %s)', implode(', ', $this->friendlyNames));
+
                 throw new InvalidArgumentException(sprintf(
-                    'Unbekannter Erinnerungstyp "%s". Erlaubt sind: %s',
-                    $group,
+                    'Unbekannter Erinnerungstyp "%s". Erlaubte Gruppen: %s%s.',
+                    $entry['raw'],
                     implode(', ', $this->allowedGroups),
+                    $friendlyNames,
                 ));
             }
+
+            $resolved[] = $resolvedGroup;
         }
 
-        return array_values(array_unique($normalised));
+        return array_values(array_unique($resolved));
     }
 
     private function parseDateOption(mixed $value, string $label): ?DateTimeImmutable
@@ -422,6 +471,7 @@ final class MemoriesCurateCommand extends Command
             useSymlinks: false,
             baseOutputDirectory: 'var/export',
             timestamp: new DateTimeImmutable('now'),
+            stage: FeedExportStage::Curated,
         );
 
         try {
