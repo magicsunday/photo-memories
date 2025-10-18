@@ -29,6 +29,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\FacesStage;
 use MagicSunday\Memories\Service\Indexing\Stage\GeoStage;
 use MagicSunday\Memories\Service\Indexing\Stage\HashStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MetaExportStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
@@ -54,6 +55,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 use function array_filter;
 use function array_key_first;
+use function dirname;
 use function file_put_contents;
 use function filesize;
 use function hash_file;
@@ -74,6 +76,11 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         foreach ($this->tempFiles as $file) {
             if (is_file($file)) {
                 unlink($file);
+            }
+
+            $metaPath = dirname($file) . '/media_index.meta';
+            if (is_file($metaPath)) {
+                unlink($metaPath);
             }
         }
 
@@ -523,6 +530,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new FacesStage($extractors['faces']['detector']),
             new SceneStage($extractors['scene']['clip']),
             new ThumbnailGenerationStage($thumbnailService),
+            new MetaExportStage(),
             new PersistenceBatchStage($entityManager, 10, $tracker),
             $postFlushStage,
         ], $videoExtensions ?? []);
