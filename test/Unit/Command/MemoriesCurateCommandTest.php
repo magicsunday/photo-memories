@@ -20,6 +20,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
@@ -90,7 +91,20 @@ final class MemoriesCurateCommandTest extends TestCase
                 }),
                 self::isInstanceOf(\Symfony\Component\Console\Style\SymfonyStyle::class),
             )
-            ->willReturn(new FeedExportResult('out', 'images', 'index.html', 5, 1, 3));
+            ->willReturn(new FeedExportResult(
+                'out',
+                'images',
+                'index.html',
+                5,
+                1,
+                3,
+                FeedExportStage::Curated,
+                [
+                    FeedExportStage::Raw->value     => 5,
+                    FeedExportStage::Merged->value  => 4,
+                    FeedExportStage::Curated->value => 3,
+                ],
+            ));
 
         $command = new MemoriesCurateCommand(
             $locator,
@@ -129,7 +143,20 @@ final class MemoriesCurateCommandTest extends TestCase
             ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
 
         $export = $this->createMock(FeedExportServiceInterface::class);
-        $export->expects(self::once())->method('export')->willReturn(new FeedExportResult('out', 'images', null, 0, 0, 0));
+        $export->expects(self::once())->method('export')->willReturn(new FeedExportResult(
+            'out',
+            'images',
+            null,
+            0,
+            0,
+            0,
+            FeedExportStage::Curated,
+            [
+                FeedExportStage::Raw->value     => 0,
+                FeedExportStage::Merged->value  => 0,
+                FeedExportStage::Curated->value => 0,
+            ],
+        ));
 
         $command = new MemoriesCurateCommand(
             $locator,
@@ -243,7 +270,20 @@ final class MemoriesCurateCommandTest extends TestCase
         $runner   = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
         $export   = $this->createMock(FeedExportServiceInterface::class);
-        $export->method('export')->willReturn(new FeedExportResult('out', 'images', null, 0, 0, 0));
+        $export->method('export')->willReturn(new FeedExportResult(
+            'out',
+            'images',
+            null,
+            0,
+            0,
+            0,
+            FeedExportStage::Curated,
+            [
+                FeedExportStage::Raw->value     => 0,
+                FeedExportStage::Merged->value  => 0,
+                FeedExportStage::Curated->value => 0,
+            ],
+        ));
 
         return new MemoriesCurateCommand(
             $locator,

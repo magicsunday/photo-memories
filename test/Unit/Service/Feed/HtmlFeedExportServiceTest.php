@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Feed\HtmlFeedExportService;
 use MagicSunday\Memories\Service\Feed\HtmlFeedRenderer;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
@@ -76,6 +77,7 @@ final class HtmlFeedExportServiceTest extends TestCase
             useSymlinks: false,
             baseOutputDirectory: $baseDir,
             timestamp: new DateTimeImmutable('2024-02-03 10:00:00'),
+            stage: FeedExportStage::Curated,
         );
 
         $clusterRepository = $this->createMock(ClusterRepository::class);
@@ -125,6 +127,15 @@ final class HtmlFeedExportServiceTest extends TestCase
         self::assertSame(0, $result->getCopiedFileCount());
         self::assertSame(0, $result->getSkippedNoThumbnailCount());
         self::assertSame(0, $result->getCardCount());
+        self::assertSame(FeedExportStage::Curated, $result->getDefaultStage());
+        self::assertSame(
+            [
+                FeedExportStage::Raw->value     => 0,
+                FeedExportStage::Merged->value  => 0,
+                FeedExportStage::Curated->value => 0,
+            ],
+            $result->getStageCardCounts(),
+        );
 
         self::assertTrue(is_dir($result->getOutputDirectory()));
         self::assertTrue(is_dir($result->getImageDirectory()));
@@ -145,6 +156,7 @@ final class HtmlFeedExportServiceTest extends TestCase
             useSymlinks: false,
             baseOutputDirectory: $baseDir,
             timestamp: new DateTimeImmutable('2024-02-03 10:30:00'),
+            stage: FeedExportStage::Curated,
         );
 
         $cluster = new Cluster(
@@ -218,7 +230,7 @@ final class HtmlFeedExportServiceTest extends TestCase
         $renderer          = new HtmlFeedRenderer();
 
         $io = $this->createMock(SymfonyStyle::class);
-        $io->expects(self::once())
+        $io->expects(self::exactly(2))
             ->method('title')
             ->with('📰 HTML-Vorschau des Rückblick-Feeds');
         $io->expects(self::never())->method('warning');
@@ -239,6 +251,15 @@ final class HtmlFeedExportServiceTest extends TestCase
         self::assertSame(1, $result->getCopiedFileCount());
         self::assertSame(1, $result->getSkippedNoThumbnailCount());
         self::assertSame(1, $result->getCardCount());
+        self::assertSame(FeedExportStage::Curated, $result->getDefaultStage());
+        self::assertSame(
+            [
+                FeedExportStage::Raw->value     => 1,
+                FeedExportStage::Merged->value  => 1,
+                FeedExportStage::Curated->value => 1,
+            ],
+            $result->getStageCardCounts(),
+        );
 
         $imagePath = $result->getImageDirectory() . '/m1_source-thumb.jpg';
         self::assertTrue(file_exists($imagePath));
@@ -250,6 +271,38 @@ final class HtmlFeedExportServiceTest extends TestCase
         self::assertStringContainsString('Familie (0,92)', $indexHtml);
         self::assertStringContainsString('Outdoor (0,81)', $indexHtml);
         self::assertStringContainsString('Szene: Familie (0,92', $indexHtml);
+        self::assertStringContainsString('Roh-Cluster', $indexHtml);
+        self::assertStringContainsString('Konsolidierte Drafts', $indexHtml);
+        self::assertStringContainsString('Kuratiertes Feed', $indexHtml);
+        self::assertStringContainsString('Feed-Ranking', $indexHtml);
+        self::assertStringContainsString('stage-nav__item is-active"><a href="#stage-curated"', $indexHtml);
+
+        $requestRaw = new FeedExportRequest(
+            limitClusters: 5,
+            maxItems: 10,
+            imagesPerItem: 4,
+            thumbnailWidth: 512,
+            useSymlinks: false,
+            baseOutputDirectory: $baseDir,
+            timestamp: new DateTimeImmutable('2024-02-03 11:00:00'),
+            stage: FeedExportStage::Raw,
+        );
+
+        $resultRaw = $service->export($requestRaw, $io);
+
+        self::assertSame(FeedExportStage::Raw, $resultRaw->getDefaultStage());
+        self::assertSame(
+            [
+                FeedExportStage::Raw->value     => 1,
+                FeedExportStage::Merged->value  => 1,
+                FeedExportStage::Curated->value => 1,
+            ],
+            $resultRaw->getStageCardCounts(),
+        );
+
+        self::assertNotNull($resultRaw->getIndexFilePath());
+        $indexHtmlRaw = file_get_contents($resultRaw->getIndexFilePath());
+        self::assertStringContainsString('stage-nav__item is-active"><a href="#stage-raw"', $indexHtmlRaw);
     }
 
     private function createTempDir(): string

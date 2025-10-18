@@ -11,40 +11,43 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
-use function array_slice;
+use DateTimeImmutable;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
+
 use function htmlspecialchars;
 use function implode;
-use function is_array;
-use function is_float;
-use function is_int;
-use function is_string;
-use function number_format;
 use function sprintf;
 
 use const ENT_QUOTES;
 use const ENT_SUBSTITUTE;
 
 /**
- * Renders a minimal, responsive HTML page with lazy-loaded image grids per card.
+ * Renders a minimal, stage-aware HTML page with navigation between pipeline levels.
  */
 final class HtmlFeedRenderer
 {
     /**
-     * @param list<array{
-     *   title:string,
-     *   subtitle:string,
-     *   algorithm:string,
-     *   group?:string,
-     *   score:float,
-     *   images:list<array{href:string, alt:string}>
-     * }> $cards
+     * @param array<string, array{
+     *   cards:list<array{
+     *     title:string,
+     *     subtitle:string,
+     *     chips:list<array{label:string, variant:string}>,
+     *     images:list<array{href:string, alt:string}>,
+     *     details:list<string>
+     *   }>,
+     *   summary:string,
+     *   emptyMessage:string
+     * }> $stages
      */
-    public function render(array $cards, string $pageTitle): string
+    public function render(FeedExportStage $activeStage, array $stages, string $pageTitle, DateTimeImmutable $generatedAt): string
     {
         $title     = htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $itemsHtml = $this->renderCards($cards);
+        $generated = htmlspecialchars($generatedAt->format('d.m.Y H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $generatedIso = htmlspecialchars($generatedAt->format(DateTimeImmutable::ATOM), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        $css = $this->css();
+        $nav      = $this->renderNavigation($stages, $activeStage);
+        $sections = $this->renderStageSections($stages, $activeStage);
+        $css      = $this->css();
 
         return <<<HTML
 <!doctype html>
@@ -57,14 +60,20 @@ final class HtmlFeedRenderer
 </head>
 <body>
 <header class="header">
-  <h1>Rückblick – Für dich</h1>
-  <p class="sub">Statische Vorschau – lokal erzeugt</p>
+  <div>
+    <h1>Rückblick – Für dich</h1>
+    <p class="sub">Statische Vorschau – lokal erzeugt</p>
+  </div>
+  <div class="generated" data-generated="$generatedIso">Stand: $generated</div>
 </header>
-<main class="grid">
-$itemsHtml
+<nav class="stage-nav">
+$nav
+</nav>
+<main class="stage-content">
+$sections
 </main>
 <footer class="footer">
-  <p>Erzeugt mit Rückblick – Stand: {date('d.m.Y H:i')}</p>
+  <p>Erzeugt mit Rückblick – Stand: $generated</p>
 </footer>
 </body>
 </html>
@@ -72,89 +81,142 @@ HTML;
     }
 
     /**
+     * @param array<string, array{summary:string}> $stages
+     */
+    private function renderNavigation(array $stages, FeedExportStage $activeStage): string
+    {
+        $items = [];
+
+        foreach (FeedExportStage::cases() as $stage) {
+            $payload = $stages[$stage->value] ?? ['summary' => '0'];
+            $summary = htmlspecialchars((string) ($payload['summary'] ?? '0'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $label   = htmlspecialchars($stage->label(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $anchor  = htmlspecialchars($stage->anchor(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $classes = ['stage-nav__item'];
+            $aria    = '';
+
+            if ($stage === $activeStage) {
+                $classes[] = 'is-active';
+                $aria       = ' aria-current="page"';
+            }
+
+            $items[] = sprintf(
+                '<li class="%s"><a href="#%s"%s>%s</a><span class="stage-nav__meta">%s</span></li>',
+                implode(' ', $classes),
+                $anchor,
+                $aria,
+                $label,
+                $summary,
+            );
+        }
+
+        return '<ul class="stage-nav__list">' . implode('', $items) . '</ul>';
+    }
+
+    /**
+     * @param array<string, array{cards:list<array{title:string, subtitle:string, chips:list<array{label:string, variant:string}>, images:list<array{href:string, alt:string}>, details:list<string>}>, emptyMessage:string}> $stages
+     */
+    private function renderStageSections(array $stages, FeedExportStage $activeStage): string
+    {
+        $sections = [];
+
+        foreach (FeedExportStage::cases() as $stage) {
+            $payload      = $stages[$stage->value] ?? ['cards' => [], 'emptyMessage' => 'Keine Inhalte für diese Stufe.'];
+            $cards        = $payload['cards'] ?? [];
+            $emptyMessage = (string) ($payload['emptyMessage'] ?? 'Keine Inhalte für diese Stufe.');
+
+            $content = $cards !== []
+                ? $this->renderCards($cards)
+                : $this->renderEmptyState($emptyMessage);
+
+            $classes = ['stage-section'];
+            if ($stage === $activeStage) {
+                $classes[] = 'is-active';
+            }
+
+            $sections[] = sprintf(
+                '<section id="%s" class="%s"><header class="stage-section__header"><h2>%s</h2><p class="stage-section__desc">%s</p></header>%s</section>',
+                htmlspecialchars($stage->anchor(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+                implode(' ', $classes),
+                htmlspecialchars($stage->label(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+                htmlspecialchars($stage->description(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+                $content,
+            );
+        }
+
+        return implode("\n", $sections);
+    }
+
+    /**
      * @param list<array{
      *   title:string,
      *   subtitle:string,
-     *   algorithm:string,
-     *   group?:string,
-     *   score:float,
+     *   chips:list<array{label:string, variant:string}>,
      *   images:list<array{href:string, alt:string}>,
-     *   sceneTags?:list<array{label:string, score:float}>
+     *   details:list<string>
      * }> $cards
      */
     private function renderCards(array $cards): string
     {
-        $buf = [];
+        $items = [];
 
-        foreach ($cards as $c) {
-            $t     = htmlspecialchars($c['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $st    = htmlspecialchars($c['subtitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $alg   = htmlspecialchars($c['algorithm'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $score = number_format($c['score'], 3, ',', '');
-            $group   = $c['group'] ?? null;
-            $curated = ($c['curated'] ?? false) === true;
+        foreach ($cards as $card) {
+            $title    = htmlspecialchars($card['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $subtitle = htmlspecialchars($card['subtitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $chips    = $this->renderChips($card['chips']);
+            $images   = $this->renderImages($card['images']);
+            $details  = $this->renderDetails($card['details']);
 
-            $chips = [];
-            if (is_string($group) && $group !== '') {
-                $grp     = htmlspecialchars($group, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $chips[] = "<span class=\"chip\">$grp</span>";
-            }
-
-            if ($curated) {
-                $chips[] = '<span class="chip chip-curated">Kuratiert</span>';
-            }
-
-            $chips[] = "<span class=\"chip\">$alg</span>";
-            $chips[] = "<span class=\"chip\">Score $score</span>";
-
-            $sceneTags = $c['sceneTags'] ?? null;
-            if (is_array($sceneTags)) {
-                foreach (array_slice($sceneTags, 0, 3) as $tag) {
-                    if (!is_array($tag)) {
-                        continue;
-                    }
-
-                    $label    = $tag['label'] ?? null;
-                    $scoreTag = $tag['score'] ?? null;
-
-                    if (!is_string($label)) {
-                        continue;
-                    }
-
-                    $text = $label;
-                    if (is_float($scoreTag) || is_int($scoreTag)) {
-                        $formatted = number_format((float) $scoreTag, 2, ',', '');
-                        $text      = sprintf('%s (%s)', $label, $formatted);
-                    }
-
-                    $safe    = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                    $chips[] = "<span class=\"chip chip-tag\">$safe</span>";
-                }
-            }
-
-            $meta = implode("\n      ", $chips);
-
-            $images = $this->renderImages($c['images']);
-
-            $buf[] = <<<CARD
-<section class="card">
+            $items[] = <<<CARD
+<div class="card">
   <div class="card-head">
     <div class="titles">
-      <h2>$t</h2>
-      <p class="muted">$st</p>
+      <h3>$title</h3>
+      <p class="muted">$subtitle</p>
     </div>
     <div class="meta">
-      $meta
+      $chips
     </div>
   </div>
   <div class="thumbs">
     $images
   </div>
-</section>
+  $details
+</div>
 CARD;
         }
 
-        return implode("\n", $buf);
+        return '<div class="stage-section__grid">' . implode("\n", $items) . '</div>';
+    }
+
+    /**
+     * @param list<array{label:string, variant:string}> $chips
+     */
+    private function renderChips(array $chips): string
+    {
+        if ($chips === []) {
+            return '';
+        }
+
+        $elements = [];
+
+        foreach ($chips as $chip) {
+            $label   = htmlspecialchars($chip['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $variant = $chip['variant'] ?? 'default';
+
+            $classes = ['chip'];
+            if ($variant === 'curated') {
+                $classes[] = 'chip-curated';
+            } elseif ($variant === 'tag') {
+                $classes[] = 'chip-tag';
+            } elseif ($variant === 'stage') {
+                $classes[] = 'chip-stage';
+            }
+
+            $elements[] = sprintf('<span class="%s">%s</span>', implode(' ', $classes), $label);
+        }
+
+        return implode('', $elements);
     }
 
     /**
@@ -177,30 +239,69 @@ IMG;
         return implode("\n", $out);
     }
 
+    /**
+     * @param list<string> $details
+     */
+    private function renderDetails(array $details): string
+    {
+        if ($details === []) {
+            return '';
+        }
+
+        $items = [];
+        foreach ($details as $detail) {
+            $items[] = '<li>' . htmlspecialchars($detail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</li>';
+        }
+
+        return '<ul class="details">' . implode('', $items) . '</ul>';
+    }
+
+    private function renderEmptyState(string $message): string
+    {
+        $safe = htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return '<div class="stage-section__empty">' . $safe . '</div>';
+    }
+
     private function css(): string
     {
-        // minimal, responsive grid; cards mit sanfter Optik
         return <<<CSS
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:#0b0c10;color:#e6e7ea}
-.header{padding:24px 16px;border-bottom:1px solid #222}
-.header h1{margin:0 0 4px;font-size:22px}
-.header .sub{margin:0;color:#9aa0a6}
-.grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
-.card{background:#121417;border:1px solid #1e2228;border-radius:16px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.2)}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-.titles h2{margin:0;font-size:18px}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:#0b0c10;color:#e6e7ea;display:flex;flex-direction:column;min-height:100vh}
+.header{padding:24px 16px;border-bottom:1px solid #222;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+.header h1{margin:0;font-size:22px}
+.header .sub{margin:0;color:#9aa0a6;font-size:14px}
+.generated{color:#9aa0a6;font-size:13px}
+.stage-nav{border-bottom:1px solid #222;background:#111317;position:sticky;top:0;z-index:10}
+.stage-nav__list{margin:0;padding:12px 16px;list-style:none;display:flex;gap:12px;flex-wrap:wrap}
+.stage-nav__item{display:flex;align-items:center;gap:8px}
+.stage-nav__item a{display:inline-block;padding:6px 12px;border-radius:999px;background:#1e2228;color:#c8ccd2;text-decoration:none;font-size:14px;border:1px solid #2a2f36;transition:background .2s ease,color .2s ease}
+.stage-nav__item a:hover{background:#2a2f36;color:#fff}
+.stage-nav__item.is-active a{background:#2a3642;border-color:#3a5168;color:#fff}
+.stage-nav__meta{color:#9aa0a6;font-size:12px}
+.stage-content{flex:1;padding:24px 16px;display:flex;flex-direction:column;gap:32px}
+.stage-section{display:flex;flex-direction:column;gap:16px}
+.stage-section__header h2{margin:0;font-size:20px}
+.stage-section__desc{margin:4px 0 0;color:#9aa0a6;font-size:14px;max-width:720px}
+.stage-section__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.stage-section__empty{padding:32px;border:1px dashed #2a2f36;border-radius:12px;background:#111317;color:#9aa0a6;font-size:14px}
+.card{background:#121417;border:1px solid #1e2228;border-radius:16px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:12px}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.titles h3{margin:0;font-size:18px}
 .titles .muted{margin:2px 0 0;color:#9aa0a6;font-size:14px}
 .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;background:#1e2228;color:#c8ccd2;font-size:12px;border:1px solid #2a2f36}
 .chip-curated{background:#1c261a;border-color:#324b2d;color:#9dd48f}
 .chip-tag{background:#16242c;border-color:#27414d;color:#9bd1e3}
+.chip-stage{background:#2a3642;border-color:#3a5168;color:#d0e4ff}
 .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 @media (max-width:720px){.thumbs{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:480px){.thumbs{grid-template-columns:repeat(2,1fr)}}
 .ph{position:relative;aspect-ratio:1/1;margin:0;overflow:hidden;border-radius:10px;background:#0e1116}
 .ph img{width:100%;height:100%;object-fit:cover;display:block;transform:translateZ(0)}
-.footer{padding:24px 16px;border-top:1px solid #222;color:#9aa0a6}
+.details{margin:0;padding:0 0 0 18px;color:#c8ccd2;font-size:13px}
+.details li{margin-bottom:4px}
+.footer{padding:24px 16px;border-top:1px solid #222;color:#9aa0a6;font-size:14px}
 CSS;
     }
 }

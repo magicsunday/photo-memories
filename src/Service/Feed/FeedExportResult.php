@@ -23,6 +23,9 @@ final readonly class FeedExportResult
         private int $copiedFileCount,
         private int $skippedNoThumbnailCount,
         private int $cardCount,
+        private FeedExportStage $defaultStage,
+        /** @var array<string, int> */
+        private array $stageCardCounts,
     ) {
     }
 
@@ -59,5 +62,18 @@ final readonly class FeedExportResult
     public function getCardCount(): int
     {
         return $this->cardCount;
+    }
+
+    public function getDefaultStage(): FeedExportStage
+    {
+        return $this->defaultStage;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getStageCardCounts(): array
+    {
+        return $this->stageCardCounts;
     }
 }

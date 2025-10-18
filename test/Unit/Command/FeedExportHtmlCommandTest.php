@@ -16,6 +16,7 @@ use MagicSunday\Memories\Command\FeedExportHtmlCommand;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -40,6 +41,12 @@ final class FeedExportHtmlCommandTest extends TestCase
             copiedFileCount: 4,
             skippedNoThumbnailCount: 2,
             cardCount: 3,
+            defaultStage: FeedExportStage::Curated,
+            stageCardCounts: [
+                FeedExportStage::Raw->value     => 5,
+                FeedExportStage::Merged->value  => 4,
+                FeedExportStage::Curated->value => 3,
+            ],
         );
 
         $capturedRequest = null;
@@ -75,6 +82,7 @@ final class FeedExportHtmlCommandTest extends TestCase
         self::assertTrue($capturedRequest->useSymlinks());
         self::assertSame($outputDir, $capturedRequest->getBaseOutputDirectory());
         self::assertInstanceOf(DateTimeImmutable::class, $capturedRequest->getTimestamp());
+        self::assertSame(FeedExportStage::Curated, $capturedRequest->getStage());
 
         $display = $tester->getDisplay();
         self::assertStringContainsString('HTML erzeugt: /tmp/feed-out/index.html', $display);

@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
+use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -24,7 +25,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Throwable;
+use ValueError;
 
+use function implode;
 use function max;
 use function sprintf;
 
@@ -56,6 +59,7 @@ final class FeedExportHtmlCommand extends Command
             ->addOption('images-per-item', null, InputOption::VALUE_REQUIRED, 'Maximale Bilder pro Feed-Item', '16')
             ->addOption('thumb-width', null, InputOption::VALUE_REQUIRED, 'Gewünschte Thumbnail-Breite', '512')
             ->addOption('symlink', null, InputOption::VALUE_NONE, 'Anstatt zu kopieren werden Symlinks verwendet (sofern möglich)')
+            ->addOption('stage', null, InputOption::VALUE_REQUIRED, 'Pipeline-Stufe (raw, merged, curated)', FeedExportStage::Curated->value)
             ->addArgument('out-dir', InputArgument::OPTIONAL, 'Ausgabeverzeichnis', 'var/export')
         ;
 
@@ -82,6 +86,20 @@ final class FeedExportHtmlCommand extends Command
         $useSymlink    = (bool) $input->getOption('symlink');
         $baseOutDir    = (string) $input->getArgument('out-dir');
 
+        $stageOption = (string) $input->getOption('stage');
+
+        try {
+            $stage = FeedExportStage::from($stageOption);
+        } catch (ValueError) {
+            $io->error(sprintf(
+                'Ungültige Stufe "%s". Erlaubt sind: %s.',
+                $stageOption,
+                implode(', ', array_map(static fn (FeedExportStage $candidate): string => $candidate->value, FeedExportStage::cases())),
+            ));
+
+            return Command::INVALID;
+        }
+
         $request = new FeedExportRequest(
             limitClusters: $limitClusters,
             maxItems: $maxItems,
@@ -90,6 +108,7 @@ final class FeedExportHtmlCommand extends Command
             useSymlinks: $useSymlink,
             baseOutputDirectory: $baseOutDir,
             timestamp: new DateTimeImmutable('now'),
+            stage: $stage,
         );
 
         try {

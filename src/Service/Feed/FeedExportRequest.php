@@ -40,6 +40,7 @@ final readonly class FeedExportRequest
         private bool $useSymlinks,
         string $baseOutputDirectory,
         private DateTimeImmutable $timestamp,
+        private FeedExportStage $stage,
     ) {
         $this->limitClusters       = max(1, $limitClusters);
         $this->maxItems            = max(1, $maxItems);
@@ -81,6 +82,11 @@ final readonly class FeedExportRequest
     public function getTimestamp(): DateTimeImmutable
     {
         return $this->timestamp;
+    }
+
+    public function getStage(): FeedExportStage
+    {
+        return $this->stage;
     }
 
     public function resolveOutputDirectory(): string
