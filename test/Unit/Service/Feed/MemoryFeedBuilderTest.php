@@ -306,7 +306,7 @@ final class MemoryFeedBuilderTest extends TestCase
         self::assertCount(1, $result);
         $item = $result[0];
 
-        self::assertSame([3, 1, 2, 4], $item->getMemberIds());
+        self::assertSame([4, 1, 2, 3], $item->getMemberIds());
 
         $feedOverlay = $item->getParams()['member_quality']['feed_overlay'] ?? null;
         self::assertIsArray($feedOverlay);

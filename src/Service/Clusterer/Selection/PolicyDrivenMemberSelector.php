@@ -228,7 +228,49 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $telemetry['rejections'][$reason] = $count;
         }
 
+        $minimumRequired = max(0, $policy->getMinimumTotal());
+        $paddingAdded    = 0;
+
+        if ($minimumRequired > 0 && count($selected) < $minimumRequired) {
+            $selectedIds = [];
+            foreach ($selected as $candidate) {
+                $selectedIds[$candidate['id']] = true;
+            }
+
+            foreach ($eligibleCandidates as $candidate) {
+                if (isset($selectedIds[$candidate['id']])) {
+                    continue;
+                }
+
+                $selected[]                     = $candidate;
+                $selectedIds[$candidate['id']]  = true;
+                ++$paddingAdded;
+
+                if (count($selected) >= $minimumRequired) {
+                    break;
+                }
+            }
+
+            if ($paddingAdded > 0) {
+                usort($selected, static function (array $a, array $b): int {
+                    if ($a['timestamp'] === $b['timestamp']) {
+                        return $a['id'] <=> $b['id'];
+                    }
+
+                    return $a['timestamp'] <=> $b['timestamp'];
+                });
+
+                $telemetry['padding'] = [
+                    'added'         => $paddingAdded,
+                    'eligible_pool' => count($eligibleCandidates),
+                ];
+            }
+        }
+
         $telemetry['counts']['selected'] = count($selected);
+        if ($paddingAdded > 0) {
+            $telemetry['counts']['padded'] = $paddingAdded;
+        }
 
         $this->enrichSelectionTelemetry($telemetry, $selected);
 

@@ -666,6 +666,94 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function padsSelectionToMeetMinimumWithFallbackCandidates(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class() implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'limit-one';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        if ($candidates === []) {
+                            return [];
+                        }
+
+                        return [$candidates[0]];
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'pad-test',
+            targetTotal: 4,
+            minimumTotal: 3,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+        );
+
+        $memberIds = [101, 102, 103, 104];
+        $mediaMap  = [];
+        $quality   = [];
+
+        $timestamps = [
+            101 => '2024-01-01T09:00:00+00:00',
+            102 => '2024-01-01T10:00:00+00:00',
+            103 => '2024-01-01T11:00:00+00:00',
+            104 => '2024-01-01T12:00:00+00:00',
+        ];
+
+        $scores = [
+            101 => 0.95,
+            102 => 0.90,
+            103 => 0.85,
+            104 => 0.80,
+        ];
+
+        foreach ($memberIds as $id) {
+            $media = $this->createMedia(
+                $id,
+                $timestamps[$id],
+                'ffffffffffffffff',
+                [],
+                [52.5, 13.4],
+                [4000, 3000],
+            );
+            $media->setQualityScore($scores[$id]);
+
+            $mediaMap[$id] = $media;
+            $quality[$id]  = $scores[$id];
+        }
+
+        $draft   = $this->createDraft('pad-test', $memberIds);
+        $context = new MemberSelectionContext($draft, $policy, $mediaMap, $quality, []);
+
+        $result       = $selector->select('pad-test', $memberIds, $context);
+        $selectedIds  = $result->getMemberIds();
+        $telemetry    = $result->getTelemetry();
+
+        self::assertSame([101, 102, 103], $selectedIds);
+        self::assertSame(3, $telemetry['counts']['selected']);
+        self::assertSame(2, $telemetry['counts']['padded']);
+        self::assertArrayHasKey('padding', $telemetry);
+        self::assertSame(2, $telemetry['padding']['added']);
+        self::assertSame(4, $telemetry['padding']['eligible_pool']);
+    }
+
     /**
      * @return array<int, Media>
      */
