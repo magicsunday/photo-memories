@@ -27,6 +27,7 @@ use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 use function preg_replace;
@@ -382,6 +383,149 @@ final class FeedPreviewCommandTest extends TestCase
         $normalisedOutput = (string) preg_replace('/\s+/', ' ', $tester->getDisplay());
 
         self::assertStringContainsString('2024-07-06 → 2024-07-07', $normalisedOutput);
+    }
+
+    #[Test]
+    public function itSupportsRawStageWithoutConsolidationOrFeedBuild(): void
+    {
+        $clusterEntity = new ClusterEntity(
+            'travel',
+            ['score' => 0.6, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2, 3],
+        );
+
+        $entityManager = $this->createEntityManagerWithResult([$clusterEntity], 4);
+        $mapper        = new ClusterEntityToDraftMapper();
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::never())->method('consolidate');
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::never())->method('build');
+
+        $perMediaCapStage = $this->createPerMediaCapStage();
+        $profileProvider  = $this->createProfileProvider();
+        $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
+
+        $command = new FeedPreviewCommand(
+            $entityManager,
+            $feedBuilder,
+            $consolidator,
+            $perMediaCapStage,
+            $mapper,
+            $selectionPolicies,
+            $profileProvider,
+            10,
+        );
+
+        $tester = new CommandTester($command);
+        $tester->execute([
+            '--limit-clusters' => '4',
+            '--stage'          => 'raw',
+        ], [
+            'decorated' => false,
+        ]);
+
+        $tester->assertCommandIsSuccessful();
+
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('Rohdaten (raw)', $output);
+        self::assertStringContainsString('Cluster (roh) angezeigt.', $output);
+        self::assertStringNotContainsString('Konsolidiert (merged)', $output);
+        self::assertStringNotContainsString('Feed-Items angezeigt.', $output);
+    }
+
+    #[Test]
+    public function itSupportsMergedStageWithoutFeedBuild(): void
+    {
+        $clusterEntity = new ClusterEntity(
+            'travel',
+            ['score' => 0.7, 'group' => 'stories'],
+            ['lat' => 0.0, 'lon' => 0.0],
+            [1, 2, 3, 4],
+        );
+
+        $entityManager = $this->createEntityManagerWithResult([$clusterEntity], 3);
+        $mapper        = new ClusterEntityToDraftMapper();
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::once())
+            ->method('consolidate')
+            ->willReturnArgument(0);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::never())->method('build');
+
+        $perMediaCapStage = $this->createPerMediaCapStage();
+        $profileProvider  = $this->createProfileProvider();
+        $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
+
+        $command = new FeedPreviewCommand(
+            $entityManager,
+            $feedBuilder,
+            $consolidator,
+            $perMediaCapStage,
+            $mapper,
+            $selectionPolicies,
+            $profileProvider,
+            10,
+        );
+
+        $tester = new CommandTester($command);
+        $tester->execute([
+            '--limit-clusters' => '3',
+            '--stage'          => 'merged',
+        ], [
+            'decorated' => false,
+        ]);
+
+        $tester->assertCommandIsSuccessful();
+
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('Rohdaten (raw)', $output);
+        self::assertStringContainsString('Konsolidiert (merged)', $output);
+        self::assertStringContainsString('Cluster (konsolidiert) angezeigt.', $output);
+        self::assertStringNotContainsString('Feed-Items angezeigt.', $output);
+    }
+
+    #[Test]
+    public function itRejectsUnknownStages(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('createQueryBuilder');
+
+        $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
+        $consolidator->expects(self::never())->method('consolidate');
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::never())->method('build');
+
+        $perMediaCapStage = $this->createPerMediaCapStage();
+        $mapper           = new ClusterEntityToDraftMapper();
+        $profileProvider  = $this->createProfileProvider();
+        $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
+
+        $command = new FeedPreviewCommand(
+            $entityManager,
+            $feedBuilder,
+            $consolidator,
+            $perMediaCapStage,
+            $mapper,
+            $selectionPolicies,
+            $profileProvider,
+            10,
+        );
+
+        $tester = new CommandTester($command);
+        $status = $tester->execute([
+            '--stage' => 'unknown',
+        ], [
+            'decorated' => false,
+        ]);
+
+        self::assertSame(Command::INVALID, $status);
+        self::assertStringContainsString('Unbekannte Stufe', $tester->getDisplay());
     }
 
     /**
