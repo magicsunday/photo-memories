@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-02-15 – Persist memories clusters with spatial metadata
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Cluster-Strategien erzeugen inzwischen langlebige Geschichten mit Geometrie- und Highlight-Daten, doch das Projekt besaß keine persistente Ablage kompatibel zu PostGIS/JSONB. Ohne dedizierte Tabellen ließen sich wiederholbare Feed-Läufe, Debugging und Telemetrie-Korrelationen nicht durchführen.
+- **Decision:** Neue Doctrine-Migration `Version20250215120000` erstellt, die `memories_cluster`, `memories_cluster_member` und `memories_significant_place` inklusive ENUM-Typen, JSONB-Metadaten sowie GIST/GIN-Indizes anlegt. Fremdschlüssel binden Cluster an bestehende `media`-Einträge und sorgen dafür, dass Mitglieder/Significant-Place-Datensätze konsistent cascaden.
+- **Alternatives considered:** Eine generische Key/Value-Tabelle ohne Geometrie-Indizes (hätte räumliche Abfragen langsam gemacht) oder das Festhalten an reinem In-Memory-State im Clusterer (keine Migration, aber keine Wiederanlauf-Sicherheit). Beide Varianten verwarfen wir, weil sie komplexe Zeit-/Ortsfilter und nachvollziehbare Historien verhindert hätten.
+- **Follow-up actions:** Nach dem Einspielen der Migration PostGIS-Verfügbarkeit in Zielumgebungen prüfen, die neuen Tabellen in ETL/Backup-Jobs aufnehmen und mittelfristig passende Repository-Services implementieren, damit die Anwendung auf die Struktur zugreifen kann.
+
 ## 2025-10-24 – Migration der Cluster-Overlays
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Die Einführung des kuratierten Overlays trennt erstmals rohe Mitgliedslisten von den Highlights, dennoch lagen in der Persistenz weiterhin gemischte Datensätze ohne Telemetrie vor. Operatoren mussten manuell interpretieren, wie viele Bilder pro Urlaub tatsächlich in der Kurationsschicht landeten.
