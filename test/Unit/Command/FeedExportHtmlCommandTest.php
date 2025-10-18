@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Command;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Command\FeedExportHtmlCommand;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
@@ -29,6 +30,15 @@ use function uniqid;
 
 final class FeedExportHtmlCommandTest extends TestCase
 {
+    private SelectionProfileProvider $selectionProfileProvider;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->selectionProfileProvider = new SelectionProfileProvider(['default' => []], 'default');
+    }
+
     #[Test]
     public function executeDelegatesToExportService(): void
     {
@@ -59,7 +69,7 @@ final class FeedExportHtmlCommandTest extends TestCase
                 return $result;
             });
 
-        $command = new FeedExportHtmlCommand($service);
+        $command = new FeedExportHtmlCommand($service, $this->selectionProfileProvider);
         $tester  = new CommandTester($command);
 
         $outputDir = sys_get_temp_dir() . '/memories-export-' . uniqid('', true);
@@ -97,7 +107,7 @@ final class FeedExportHtmlCommandTest extends TestCase
             ->method('export')
             ->willThrowException(new RuntimeException('Fehler beim Export.'));
 
-        $command = new FeedExportHtmlCommand($service);
+        $command = new FeedExportHtmlCommand($service, $this->selectionProfileProvider);
         $tester  = new CommandTester($command);
 
         $status = $tester->execute([]);
