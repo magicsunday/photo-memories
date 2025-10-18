@@ -1,85 +1,61 @@
 # Memories Pipeline Audit (2025-10-18)
 
-## Zusammenfassung
+## Summary
 
 | Baustein | Status | Hinweise |
 | --- | --- | --- |
-| Cluster-Strategien & Pipeline | gedeckt | `HybridClusterer` orchestriert alle getaggten Strategien und versieht Entwürfe nach dem Scoring mit Titeln; die Service-Konfiguration deklariert die vollständige Strategieliste inklusive Parametern, Qualitäts-Aggregation und Konsolidator-Pipeline.【F:src/Service/Clusterer/HybridClusterer.php†L34-L174】【F:config/services.yaml†L535-L1108】 |
-| Kuration & Selektions-Layer | teilweise | Es existiert kein Namespace `MagicSunday\Memories\Curator`; Selektionsprofile, Stages und Overrides liegen unter `Service\Clusterer\Selection`. Runtime-Overrides und Policy-Auflösung erfolgen über `SelectionPolicyProvider` sowie YAML-Profile.【1bea5f†L1-L4】【F:src/Service/Clusterer/Selection/SelectionPolicyProvider.php†L32-L198】【F:config/services.yaml†L1110-L1158】【F:config/parameters/selection.yaml†L1-L174】 |
-| Indexierung & Signalextraktion | gedeckt | `memories:index` unterstützt Force-/Video-/Thumbnail-Modi und nutzt Ingestion-, QA- und Progress-Komponenten; Time-Normalisierung, Qualitätsaggregation und perceptual Hashing liefern Scores, EXIF/Timezone-Daten sowie Duplikatsignaturen.【F:src/Command/IndexCommand.php†L35-L155】【F:src/Service/Metadata/TimeNormalizer.php†L34-L200】【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L27-L200】【F:src/Service/Metadata/PerceptualHashExtractor.php†L47-L195】 |
-| Feed Preview & HTML-Export | gedeckt | `memories:feed:preview` bietet Score-/Member-/Per-Media-Cap-Overrides samt Konsolidierung, `memories:feed:export-html` generiert statische Vorschauen inkl. Thumbnail-Optionen und Symlink-Support.【F:src/Command/FeedPreviewCommand.php†L44-L200】【F:src/Command/FeedExportHtmlCommand.php†L31-L112】 |
-| `memories:curate-vacation` | fehlt | Im Command-Verzeichnis existiert kein entsprechender Befehl; Vacation-Kuration erfolgt nur indirekt über Cluster- und Selektionsprofile.【b9d521†L1-L2】 |
-| Strategische Gewichtung & Profile | gedeckt | YAML-Parameter definieren Konsolidierungs-Schwellen, Prioritäten aller Strategien sowie Auswahlprofile mit Zielmengen, Abständen und Boni.【F:config/parameters.yaml†L620-L840】【F:config/parameters/selection.yaml†L1-L174】 |
-| Feature-Flags & Runtime-Schalter | teilweise | Zahlreiche `%env()%`-gebundene Parameter (z. B. Telemetrie, Face Detection, Slideshow) existieren, jedoch kein zentrales Feature-Flag-Registry oder konsistentes Flag-Namensschema.【F:config/parameters.yaml†L15-L115】【F:config/parameters.yaml†L900-L960】 |
-| Datenmodell (Cluster/Media/Memory/Location) | teilweise | Doctrine-Entities modellieren Cluster, Medien, Duplikate, Memories und Locations mit Indizes & FKs; Cluster-Mitglieder liegen jedoch als JSON ohne separate Relation, Materialized Views fehlen.【F:src/Entity/Cluster.php†L29-L191】【F:src/Entity/Media.php†L25-L210】【F:src/Entity/MediaDuplicate.php†L22-L158】【F:src/Entity/Memory.php†L21-L200】【F:src/Entity/Location.php†L21-L200】 |
-| Qualitäts-, Ästhetik- & Duplikatheuristiken | gedeckt | Qualitätsscores berücksichtigen Schärfe, Belichtung, ISO, Clipping; Similarity-Metriken bewerten Zeit/GPS/pHash/Personen; pHash-Extraktoren erzeugen aHash/dHash/pHash samt Video-Posterframes.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L27-L200】【F:src/Clusterer/Selection/SimilarityMetrics.php†L33-L200】【F:src/Service/Metadata/PerceptualHashExtractor.php†L47-L195】 |
-| Slideshow-Pipeline | gedeckt | `slideshow:generate` triggert den FFmpeg-basierten `SlideshowVideoGenerator` mit Ken-Burns, Blur/Vignette, Transition-Whitelist und Audio-Normalisierung; Parameterdatei steuert Pfade, Filter, Transitionen, Timing.【F:src/Command/SlideshowGenerateCommand.php†L33-L107】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L76-L200】【F:config/parameters.yaml†L900-L960】 |
+| Cluster-Strategien & Hybrid-Pipeline | gedeckt | `HybridClusterer` orchestriert alle getaggten Strategien und versieht Entwürfe nach dem Score-Lauf mit Titeln; `config/services.yaml` deklariert Zeit-, Orts-, Personen- und Event-Heuristiken inklusive Quality-Aggregation und Video-sensitiver Parameterisierung.【F:src/Service/Clusterer/HybridClusterer.php†L34-L174】【F:config/services.yaml†L535-L708】 |
+| Kuration & Selektions-Layer | teilweise | Es existiert kein eigenständiger Namespace `MagicSunday\\Memories\\Curator`; Selektionsprofile, Laufzeit-Overrides und Hard/Soft-Stages liegen unter `Service\\Clusterer\\Selection` und werden via YAML-Profilen gesteuert.【F:src/Service/Clusterer/Selection/SelectionPolicyProvider.php†L32-L199】【F:config/services.yaml†L1110-L1158】【F:config/parameters.yaml†L340-L436】 |
+| Indexierung & Signalextraktion | gedeckt | Die Default-Media-Ingestion-Pipeline sequentiert MIME-Check, Zeit-/Geo-Normalisierung, Qualitäts- und Hash-Stufen, QA-Logging und Persistenz; `memories:index` bietet Force/Dry-Run/Video/Thumbnail-Optionen sowie QA-Report-Ausgabe.【F:src/Service/Indexing/DefaultMediaIngestionPipeline.php†L24-L108】【F:config/services.yaml†L390-L407】【F:src/Command/IndexCommand.php†L35-L155】 |
+| Feed Preview & HTML-Export | gedeckt | `memories:feed:preview` erlaubt Score-, Member- und Per-Media-Cap-Overrides inklusive Konsolidierung; `memories:feed:export-html` generiert statische Feeds mit Limit-/Thumbnail-Steuerung und Symlink-Modus.【F:src/Command/FeedPreviewCommand.php†L44-L200】【F:src/Command/FeedExportHtmlCommand.php†L36-L112】 |
+| `memories:curate-vacation` | fehlt | Im Command-Verzeichnis liegt kein entsprechender Befehl; Vacation-Kuration erfolgt ausschließlich im Cluster-/Selektionslauf.【09a054†L1-L2】 |
+| Strategische Gewichtung & Prioritäten | gedeckt | YAML-Parameter definieren Konsolidierungs-Schwellen, Keep-Order-Gruppen sowie Prioritäten und Boosts pro Strategie/Algorithmus.【F:config/parameters.yaml†L470-L578】【F:config/parameters.yaml†L728-L798】 |
+| Feature-Flags & Runtime-Schalter | teilweise | Zahlreiche `%env()%`-basierte Schalter (Indexing-, Video-, Face-Detection-, Telemetrie- und Slideshow-Settings) existieren, jedoch ohne zentrale Flag-Registry oder vereinheitlichte Namenskonvention.【F:config/parameters.yaml†L14-L55】【F:config/services.yaml†L560-L569】 |
+| Datenmodell (Cluster/Media/Memory/Location) | teilweise | Doctrine-Entities modellieren Cluster, Medien, Duplikate und Locations mit Indizes/FKs; Cluster-Mitglieder verbleiben jedoch als JSON-Feld ohne relationale Auflösung, Materialized Views fehlen.【F:src/Entity/Cluster.php†L29-L191】【F:src/Entity/Media.php†L25-L156】【F:src/Entity/MediaDuplicate.php†L22-L142】【F:src/Entity/Location.php†L21-L176】 |
+| Qualitäts-, Ästhetik- & Duplikat-Heuristiken | gedeckt | Qualitätsscores berücksichtigen Schärfe, Belichtung, ISO, Clipping und Noise-Dekay; Similarity-Metriken kombinieren Zeit/GPS/pHash/Personen; pHash/Ahash/Dhash-Extraktion plus Near-Duplicate-Stage persistiert Hamming-Distanzen.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L24-L107】【F:src/Clusterer/Selection/SimilarityMetrics.php†L31-L149】【F:src/Service/Metadata/PerceptualHashExtractor.php†L47-L176】【F:src/Service/Indexing/Stage/NearDuplicateStage.php†L1-L64】 |
+| Slideshow-Pipeline | gedeckt | `slideshow:generate` triggert den FFmpeg-basierten `SlideshowVideoGenerator` mit Ken-Burns, Blur/Vignette, Transition-Whitelist und Audio-Normalisierung; Parameterdatei steuert Pfade, Filter, Transitionen, Musik und Loudness.【F:src/Command/SlideshowGenerateCommand.php†L36-L106】【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L77-L239】【F:config/parameters.yaml†L930-L956】 |
 
 ## Namespaces & Pipelines
-- `MagicSunday\Memories\Clusterer` umfasst Strategien, Support-Services und Selektionskomponenten; Build/Score/Title erfolgt im `HybridClusterer` als orchestrierender Einstiegspunkt.【F:src/Service/Clusterer/HybridClusterer.php†L34-L174】【F:config/services.yaml†L535-L1158】
-- Ein dedizierter Namespace `MagicSunday\Memories\Curator` fehlt; kuratierende Logik steckt in `Service\Clusterer\Selection` und Konfigurationsprofilen.【1bea5f†L1-L4】【F:src/Service/Clusterer/Selection/SelectionPolicyProvider.php†L32-L198】
-- Indexierung und Slideshow-Funktionen liegen unter `Service\Indexing` bzw. `Service\Slideshow`; ein `MagicSunday\Memories\Indexer`- oder `MagicSunday\Memories\Slideshow`-Root-Namespace ist nicht vorhanden, die Funktionalität ist jedoch vollständig implementiert.【1bea5f†L1-L4】【F:src/Command/IndexCommand.php†L35-L155】【F:src/Command/SlideshowGenerateCommand.php†L33-L107】
+- `MagicSunday\Memories\Clusterer` und `Service\Clusterer` kapseln Strategien, Quality-Aggregation, Scoring und Titelerzeugung, wobei `HybridClusterer` alle Strategien durchläuft und Titel nach Score-Phase vergibt.【F:src/Service/Clusterer/HybridClusterer.php†L34-L174】【F:config/services.yaml†L535-L708】
+- Kuratierende Logik (Policy-Profile, Hard/Soft-Stages, Overrides) lebt unter `Service\Clusterer\Selection`; dedizierte `Curator`-Namespaces fehlen, die Funktionalität ist jedoch vollständig abgebildet.【F:src/Service/Clusterer/Selection/SelectionPolicyProvider.php†L32-L199】【F:config/services.yaml†L1110-L1158】
+- Indexierung erfolgt unter `Service\Indexing` mit einer fest verdrahteten Stage-Pipeline inklusive MIME-, Zeit-, Geo-, Qualitäts-, Hash- und Persistenzschritten sowie Burst/Live-, Face- und Scene-Heuristiken.【F:config/services.yaml†L390-L407】
+- Slideshow-Funktionalität ist im Namespace `Service\Slideshow` angesiedelt; ein separater Root-Namespace `MagicSunday\Memories\Slideshow` ist nicht erforderlich, da Videoerzeugung, Status und Jobs hier gebündelt sind.【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L77-L239】
 
 ## CLI-Kommandos & Ablaufsteuerung
-- `memories:index` behandelt Force-/Dry-Run-/Video-/Thumbnail-Optionen, zeigt Fortschritt und finalisiert Pipeline-Läufe inklusive QA-Bericht.【F:src/Command/IndexCommand.php†L35-L155】
-- `memories:cluster` erlaubt Dry-Run, Limit, Zeitraum-Filter, Replace sowie Vacation-Debug; Telemetrie und Auswahl-Overrides werden integriert ausgegeben.【F:src/Command/ClusterCommand.php†L38-L206】
-- `memories:feed:preview` lädt Cluster, konsolidiert optional, respektiert Auswahl-Overrides und rendert Score-/Mitgliedertabellen; `memories:feed:export-html` exportiert statische HTML-Feeds mit Thumbnail-Limits und Symlink-Modus.【F:src/Command/FeedPreviewCommand.php†L44-L200】【F:src/Command/FeedExportHtmlCommand.php†L31-L112】
-- `slideshow:generate` verarbeitet JSON-Jobs, erstellt Videos und räumt Lock-/Error-Dateien auf.【F:src/Command/SlideshowGenerateCommand.php†L33-L107】
-- Ein `memories:curate-vacation`-Befehl ist nicht vorhanden; Vacation-Kuration erfolgt ausschließlich innerhalb von Strategien/Profilen.【b9d521†L1-L2】
+- `memories:index` orchestriert Locator, Pipeline, QA-Reporting sowie Force/Dry-Run/Video/Thumbnail-Optionen und zeigt Feature-Version sowie Fortschritt an.【F:src/Command/IndexCommand.php†L35-L155】
+- `memories:cluster` (nicht im Detail auditiert) interagiert mit Selection-Overrides; `memories:feed:preview` und `memories:feed:export-html` decken Konsolidierung, Personalisierung und statische Exporte ab.【F:src/Command/FeedPreviewCommand.php†L44-L200】【F:src/Command/FeedExportHtmlCommand.php†L36-L112】
+- Ein dediziertes `memories:curate-vacation`-Kommando existiert nicht; Vacation-Kuration findet über Cluster-Strategien und Selection-Profile statt.【09a054†L1-L2】
 
-## Strategien & Schwellenwerte
-Die YAML-Konfiguration listet alle aktiven Strategien mit Parametern. Auswahl (Auszug):
-
-| Strategie | Kernparameter |
-| --- | --- |
-| TimeSimilarity | `maxGapSeconds=10800`, `minItemsPerBucket=9`。【F:config/services.yaml†L535-L540】 |
-| LocationSimilarity | `radiusMeters=140`, `minItemsPerPlace=6`, `maxSpanHours=16`。【F:config/services.yaml†L542-L548】 |
-| DeviceSimilarity | `minItemsPerGroup=5`。【F:config/services.yaml†L550-L554】 |
-| PhashSimilarity | `maxHamming=7`, `minItemsPerBucket=2`。【F:config/services.yaml†L584-L589】 |
-| Burst | `maxGapSeconds=90`, `maxMoveMeters=45`, `minItemsPerBurst=3`。【F:config/services.yaml†L592-L599】 |
-| CrossDimension | `timeGapSeconds=5400`, `radiusMeters=130`, `minItemsPerRun=5`。【F:config/services.yaml†L601-L607】 |
-| Panorama / PanoramaOverYears | Aspekt ≥2.3, Session-Gap 9000 s, historische Mindestjahre/Items.【F:config/services.yaml†L609-L624】 |
-| PortraitOrientation | `minPortraitRatio=1.2`, Session-Gap 7200 s.【F:config/services.yaml†L626-L632】 |
-| VideoStories | `minItemsPerDay=2` mit Location-Hilfe.【F:config/services.yaml†L634-L639】 |
-| DayAlbum | `minItemsPerDay=7`。【F:config/services.yaml†L642-L646】 |
-| AtHome (Weekend/Weekday) | Home-Koordinaten via `%env()%`, Mindestanteile & Items.【F:config/services.yaml†L648-L670】 |
-| Anniversary, PersonCohort, HolidayEvent | Jubiläumsjahre, Personenfenster, Holiday-Minima.【F:config/services.yaml†L673-L695】 |
-| Nightlife & NewYearEve | Zeitfenster, Radius, Min-Items pro Nacht.【F:config/services.yaml†L698-L713】 |
-| Vacation / WeekendGetaways / TransitTravelDay | Vacation-Score, Staypoint-/Transit-Profile, minTravelKm 70.【F:config/services.yaml†L872-L918】 |
-| FirstVisitPlace & SignificantPlace | Grid 0.01°, Tages-/Item-Mindestwerte.【F:config/services.yaml†L921-L938】 |
-| Season / SeasonOverYears / GoldenHour | Saisonale Mindestmengen, Golden-Hour-Stunden & Gaps.【F:config/services.yaml†L941-L967】 |
-| ThisMonth/OnThisDay/OneYearAgo/YearInReview/MonthlyHighlights | Zeitzonenabhängige Mindestjahre, Items & Tage.【F:config/services.yaml†L970-L1009】 |
-
-Strategie-Prioritäten, Score-Overrides und Konsolidierungs-Schwellen (Merge/Drop, Min-Score, Per-Media-Caps, Keep-Order) werden zentral in `parameters.yaml` gepflegt.【F:config/parameters.yaml†L620-L840】
-
-## Konsolidierung & Auswahl
-- Konsolidierungsstufen (FilterNormalization, MemberRanking, DuplicateCollapse, Nesting, Dominance, Overlap, AnnotationPruning, PerMediaCap, CanonicalTitle) sind via `memories.cluster_consolidation.stage` getaggt und werden in `PipelineClusterConsolidator` sequenziell ausgeführt.【F:config/services.yaml†L1022-L1108】
-- Hard/Soft-Selection-Stages (DayQuota, TimeGap, TimeSlotDiversification, StaypointQuota, pHash/Scene/Orientation/People) ergänzen den Policy-gesteuerten Member-Selector.【F:config/services.yaml†L1117-L1156】
-- `SelectionPolicyProvider` verarbeitet Profile, Laufzeit-Overrides und Run-Length-Constraints; Profile definieren Ziel- und Mindestmengen, Hamming-Limits, Qualitätsböden und Boni.【F:src/Service/Clusterer/Selection/SelectionPolicyProvider.php†L32-L198】【F:config/parameters/selection.yaml†L1-L174】
+## Strategien, Scoring & Konsolidierung
+- Strategien decken Zeit-/Orts-Nähe, Geräte, pHash, Burst, Panorama, Porträt, Video, Home, Anniversary, Personen, Feiertage, Nightlife sowie Travel/Vacation-Algorithmen ab, alle via `memories.cluster_strategy` getaggt.【F:config/services.yaml†L535-L708】
+- Konsolidierungs-Pipeline umfasst Filter-Normalisierung, Qualitäts-Ranking, Member-Curation, Duplicate-Collapse, Nesting, Dominanz/Overlap-Handling, Annotation-Pruning, Per-Media-Cap und Titelkanonisierung.【F:config/services.yaml†L1022-L1108】
+- Scoring-Heuristiken kombinieren Temporal-, Qualitäts-, People-, Content-, Location-, POI-, Novelty-, Holiday-, Recency- und Density-Scores mit gewichteten Boosts pro Algorithmus.【F:config/services.yaml†L1210-L1254】【F:config/parameters.yaml†L728-L798】
+- YAML-Parameter definieren Konsolidierungs-Schwellen, Keep-Order-Listen, Gruppen, Annotate-only-Typen und Min-Unique-Shares zur Steuerung der Konsolidierungslogik.【F:config/parameters.yaml†L470-L578】
 
 ## Konfiguration & Feature-Flags
-- Indexing-, Metadata- und Face-Detection-Parameter (Hash-Längen, Telemetrie-Flags, Detector-Pfade) sowie Home-/Transit-/Vacation-Einstellungen werden per `%env()%` übersteuerbar bereitgestellt.【F:config/parameters.yaml†L15-L180】
-- Feed-Personalisierung (Score-Limits, Profile, HTTP-Defaults) und SPA-Einstellungen liegen in `parameters/feed.yaml` mit klaren Mindest-/Maximalwerten.【F:config/parameters/feed.yaml†L9-L144】
-- Slideshow-Parameter (FFmpeg/Pfade, Ken-Burns, Blur/Vignette, Transition-Whitelist, Audio-Loudness) sichern reproduzierbare Videoausgaben.【F:config/parameters.yaml†L900-L960】
+- `%env()%`-Overrides steuern Index-Batches, Video-Posterframes, FFmpeg/FFprobe-Pfade, Face-Detection-Binaries, Hash-Längen, Geocoding-Limits und Telemetrie-Schalter für Metadaten-Pipelines.【F:config/parameters.yaml†L14-L55】
+- `VideoFrameSampler` und andere Services ziehen FFmpeg-/FFprobe-Pfade aus den Parametern, womit Pipeline und Slideshow konsistent auf dieselben Binaries zugreifen.【F:config/services.yaml†L560-L569】
+- Feed-Personalisierung nutzt YAML-Profile mit Score-/Member-Limits und Benachrichtigungsplänen für Push/Email; SPA-Settings legen Timeline-/Gesture-/Offline-/Animations-Defaults fest.【F:config/parameters/feed.yaml†L9-L120】【F:config/parameters/feed.yaml†L121-L160】
+- Ein zentraler Feature-Flag-Katalog oder einheitliches Namensschema ist nicht vorhanden; Flags werden dezentral über Parameterdateien gepflegt.
 
 ## Datenmodell & Persistenz
-- `cluster` speichert Algorithmus, Parameter, Mitglieder (JSON), Fingerprint, Cover/Location-Refs, Versionen und Centroid-Indizes.【F:src/Entity/Cluster.php†L29-L168】
-- `media` hält umfangreiche Signale inkl. Checksums, phash/a/dhash-Präfixe, Burst-/Live-Paar-Indizes, Geo-Hashes, Kamera- und Qualitätsmetriken.【F:src/Entity/Media.php†L25-L210】
-- `media_duplicate` erfasst pHash-Hamming-Distanzen als CASCADE-verknüpfte Paare.【F:src/Entity/MediaDuplicate.php†L22-L158】
-- `memory` speichert kuratierte Stories mit Score, HTML-Preview und optionalem Cluster-Bezug; `location` modelliert Geocoder-Resultate mit Bounding-Box, POIs und Indizes.【F:src/Entity/Memory.php†L21-L200】【F:src/Entity/Location.php†L21-L200】
-- Separate Tabellen für Cluster-Mitglieder oder Materialized Views existieren nicht; Analysen benötigen JSON-Auswertung oder Replikation.
+- `Cluster` speichert Algorithmus, Parameter, Mitglieder (JSON), Fingerprint, Cover-/Location-Relationen, Start/End-Zeiten und Centroid-Informationen, gestützt durch Indizes und Unique Constraints.【F:src/Entity/Cluster.php†L29-L191】
+- `Media` hält Pfade, Checksums, pHash/aHash/dHash-Präfixe, Geo-Hashes, Kamera-/Lens-Metadaten, Qualitätskennzahlen, Burst-/Live-Paare und Flags, unterstützt durch zahlreiche Indizes für Lookup-Performance.【F:src/Entity/Media.php†L25-L156】
+- `MediaDuplicate` persistiert Hamming-Distanzen zwischen pHash-Kandidaten mit CASCADE-FKs; `Location` modelliert Geocoder-Resultate inklusive Bounding-Box, POIs und Attributionsdaten.【F:src/Entity/MediaDuplicate.php†L22-L142】【F:src/Entity/Location.php†L21-L176】
+- Da Cluster-Mitglieder als JSON abgelegt werden, fehlen relationale Member-Tabellen oder Materialized Views für schnelle SQL-Auswertungen.
 
-## Qualitäts- & Duplikatheuristiken
-- Qualitätsbewertung kombiniert Auflösung, Schärfe, Belichtung, ISO-Rauschen, Clipping und setzt Low-Quality-Flags; Schwellenwerte lassen sich über Parameter justieren.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L27-L200】【F:config/parameters.yaml†L800-L816】
-- `SimilarityMetrics` liefert Zeit-, Distanz-, pHash- und Personenüberschneidungswerte für Diversifizierung & Duplikat-Kollaps.【F:src/Clusterer/Selection/SimilarityMetrics.php†L33-L200】
-- `PerceptualHashExtractor` generiert pHash/aHash/dHash (inkl. Posterframes) anhand konfigurierbarer DCT-Größen und Präfix-Längen.【F:src/Service/Metadata/PerceptualHashExtractor.php†L47-L195】
+## Qualitäts-, Ästhetik- & Duplikatheuristiken
+- `MediaQualityAggregator` berechnet gewichtete Scores aus Schärfe, Belichtung, ISO, Clipping, Auflösung, wendet Rauschschwellen nach Aufnahmedatum an und markiert Low-Quality-Items inklusive Index-Logs.【F:src/Service/Metadata/Quality/MediaQualityAggregator.php†L24-L107】
+- `TimeStage` kombiniert Zeitnormalisierung, Kalender-/Daypart-/Solar-Features und QA-Inspektion, während `TimeNormalizer` EXIF-, Dateiname- und MTime-Fallbacks inklusive Zeitzonen-Validierung orchestriert.【F:src/Service/Indexing/Stage/TimeStage.php†L26-L87】【F:src/Service/Metadata/TimeNormalizer.php†L36-L191】
+- `FacePresenceDetector` nutzt Posterframes für Videos, prüft Has-Face/Persons und delegiert an ein Backend; `SimilarityMetrics` aggregiert Zeit-, Distanz-, pHash- und Personen-Overlap zur Diversifizierung.【F:src/Service/Metadata/FacePresenceDetector.php†L24-L125】【F:src/Clusterer/Selection/SimilarityMetrics.php†L31-L149】
+- `PerceptualHashExtractor` erstellt 128-Bit-pHash plus aHash/dHash, rotiert nach EXIF/Video und verwendet FFmpeg/FFprobe; `NearDuplicateStage` persistiert Treffer mit konfigurierter Hamming-Schwelle.【F:src/Service/Metadata/PerceptualHashExtractor.php†L47-L176】【F:src/Service/Indexing/Stage/NearDuplicateStage.php†L1-L64】
 
 ## Slideshow-Pipeline
-- `SlideshowVideoGenerator` validiert Assets, arbeitet mit Transition-Whitelist & Gewichtungen, Ken-Burns (Easing, Zoom), Blur/Vignette-Pfaden, Beat-Grid und Audio-Limiter; Fehler werden Job-basiert protokolliert.【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L76-L200】
-- Konfigurierbare Parameter (Dauer, FPS, Blur, Textbox, Musikpfad, FFmpeg/FFprobe) sind per `%env()%` überschreibbar.【F:config/parameters.yaml†L900-L960】
+- `SlideshowVideoGenerator` erzwingt lesbare Assets, baut FFmpeg-Kommandos mit Übergangs-Whitelist, Ken-Burns-Zoom, Blur/Vignette, Easing, Intro/Outro-Fades und Loudness-Normalisierung; Fehler werden als RuntimeException weitergereicht.【F:src/Service/Slideshow/SlideshowVideoGenerator.php†L77-L239】
+- `SlideshowGenerateCommand` verarbeitet JSON-Jobs, bereinigt Lock-/Error-Dateien und meldet Fehler per Job-Log; Konfigurationsparameter definieren Pfade, Dauer, FPS, Transitions, Musikpfad und Audio-Loudness.【F:src/Command/SlideshowGenerateCommand.php†L36-L106】【F:config/parameters.yaml†L930-L956】
 
 ## Festgestellte Lücken & Risiken
-- Kein konsolidierender `memories:curate`- oder `memories:curate-vacation`-Befehl; Operator:innen müssen Index→Cluster→Feed→Export manuell kombinieren.【b9d521†L1-L2】【F:src/Command/ClusterCommand.php†L38-L206】
-- Strategien wie `cityscape_night`, `snow_day`, `hike_adventure` sind in den Prioritäten hinterlegt, aber ohne Service-Definition – hier drohen tote Konfigurationspfade.【F:config/parameters.yaml†L748-L778】【F:config/services.yaml†L535-L1009】
-- Cluster-Mitglieder werden als JSON persistiert; fehlende Relationstabellen erschweren SQL-Auswertungen und Indizierung.【F:src/Entity/Cluster.php†L29-L191】
-- Feature-Flags sind dezentral als Einzelparameter verteilt; ein zentrales Flag-Registry oder konsistentes Naming würde die Steuerbarkeit verbessern.【F:config/parameters.yaml†L15-L115】
+- Kein dediziertes `memories:curate-vacation`; Operator:innen müssen Cluster- und Feed-Kommandos manuell kombinieren.【09a054†L1-L2】
+- Parameter verweisen auf Strategien wie `cityscape_night`, `hike_adventure` oder `snow_vacation_over_years`, für die keine Service-Definition existiert – Konfigurationspfade laufen ins Leere.【F:config/parameters.yaml†L417-L437】【F:config/services.yaml†L535-L708】
+- Cluster-Mitglieder werden als JSON gespeichert, wodurch relationale Auswertungen, Member-Indizes oder Materialized Views fehlen und Analyse-Workloads erschwert werden.【F:src/Entity/Cluster.php†L73-L82】
+- Feature-Flags sind auf mehrere Parameterdateien verteilt; ohne zentrale Registry steigt der Pflegeaufwand und das Risiko inkonsistenter Bezeichnungen.【F:config/parameters.yaml†L14-L55】
