@@ -25,6 +25,7 @@ use MagicSunday\Memories\Support\FeatureFlagProviderInterface;
 use function array_fill;
 use function array_map;
 use function count;
+use function cos;
 use function imagecolorat;
 use function in_array;
 use function is_file;
@@ -32,7 +33,9 @@ use function is_string;
 use function log;
 use function max;
 use function min;
+use function pi;
 use function round;
+use function sin;
 use function sqrt;
 use function str_starts_with;
 use function trim;
@@ -169,6 +172,9 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             // Sharpness (Laplacian variance on luma)
             $sharpness = $this->laplacianVariance($lumaMatrix);
 
+            // Frequency-based motion blur proxy (ratio of high-frequency energy)
+            $motionBlur = $this->motionBlurScore($lumaMatrix);
+
             // Optional: a simple proxy "colorfulness" via luma local contrast
             $colorfulness = $this->localContrastProxy($lumaMatrix);
 
@@ -177,6 +183,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             $media->setEntropy($entropy);
             $media->setSharpness($sharpness);
             $media->setColorfulness($colorfulness);
+            $media->setMotionBlurScore($motionBlur);
             $media->setQualityClipping($clippingShare);
 
             $this->qualityAggregator->aggregate($media);
@@ -457,5 +464,174 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         $avg = $acc / (float) $n;        // ~[0..128]
 
         return max(0.0, min(1.0, $avg / 64.0));
+    }
+
+    /**
+     * @param array<int, array<int, float>> $lumaMatrix
+     */
+    private function motionBlurScore(array $lumaMatrix): ?float
+    {
+        $height = count($lumaMatrix);
+        $width  = $height > 0 ? count($lumaMatrix[0]) : 0;
+
+        if ($width < 2 || $height < 2) {
+            return null;
+        }
+
+        $sum   = 0.0;
+        $count = 0;
+
+        for ($y = 0; $y < $height; ++$y) {
+            $row = $lumaMatrix[$y];
+            for ($x = 0; $x < $width; ++$x) {
+                $sum += $row[$x];
+                ++$count;
+            }
+        }
+
+        if ($count === 0) {
+            return null;
+        }
+
+        $mean       = $sum / (float) $count;
+        $normalized = [];
+
+        for ($y = 0; $y < $height; ++$y) {
+            $row      = $lumaMatrix[$y];
+            $normRow  = [];
+            for ($x = 0; $x < $width; ++$x) {
+                $normRow[] = [($row[$x] - $mean) / 255.0, 0.0];
+            }
+
+            $normalized[] = $normRow;
+        }
+
+        $spectrum = $this->fft2d($normalized);
+
+        if ($spectrum === []) {
+            return null;
+        }
+
+        $totalEnergy = 0.0;
+        $highEnergy  = 0.0;
+        $maxRadius   = sqrt((($width / 2.0) ** 2) + (($height / 2.0) ** 2));
+        $threshold   = 0.35 * $maxRadius;
+
+        for ($y = 0; $y < $height; ++$y) {
+            for ($x = 0; $x < $width; ++$x) {
+                if ($x === 0 && $y === 0) {
+                    continue; // skip the DC component
+                }
+
+                [$real, $imag] = $spectrum[$y][$x];
+                $energy        = ($real * $real) + ($imag * $imag);
+
+                if ($energy <= 0.0) {
+                    continue;
+                }
+
+                $freqX  = min($x, $width - $x);
+                $freqY  = min($y, $height - $y);
+                $radius = sqrt(($freqX * $freqX) + ($freqY * $freqY));
+
+                $totalEnergy += $energy;
+
+                if ($radius >= $threshold) {
+                    $highEnergy += $energy;
+                }
+            }
+        }
+
+        if ($totalEnergy <= 0.0) {
+            return null;
+        }
+
+        $ratio = $highEnergy / $totalEnergy;
+
+        if ($ratio < 0.0) {
+            return 0.0;
+        }
+
+        if ($ratio > 1.0) {
+            return 1.0;
+        }
+
+        return $ratio;
+    }
+
+    /**
+     * @param array<int, array<int, array{0: float, 1: float}>> $matrix
+     *
+     * @return array<int, array<int, array{0: float, 1: float}>>
+     */
+    private function fft2d(array $matrix): array
+    {
+        $height = count($matrix);
+        if ($height === 0) {
+            return [];
+        }
+
+        $width = count($matrix[0]);
+        if ($width === 0) {
+            return [];
+        }
+
+        $rowsTransformed = [];
+        for ($y = 0; $y < $height; ++$y) {
+            $rowsTransformed[$y] = $this->dft1d($matrix[$y]);
+        }
+
+        $result = array_fill(0, $height, array_fill(0, $width, [0.0, 0.0]));
+
+        for ($x = 0; $x < $width; ++$x) {
+            $column = [];
+            for ($y = 0; $y < $height; ++$y) {
+                $column[] = $rowsTransformed[$y][$x];
+            }
+
+            $transformedColumn = $this->dft1d($column);
+
+            for ($y = 0; $y < $height; ++$y) {
+                $result[$y][$x] = $transformedColumn[$y];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<int, array{0: float, 1: float}> $signal
+     *
+     * @return array<int, array{0: float, 1: float}>
+     */
+    private function dft1d(array $signal): array
+    {
+        $length = count($signal);
+        if ($length === 0) {
+            return [];
+        }
+
+        $output      = [];
+        $twoPiOverN  = 2.0 * pi() / (float) $length;
+
+        for ($k = 0; $k < $length; ++$k) {
+            $sumReal = 0.0;
+            $sumImag = 0.0;
+
+            for ($n = 0; $n < $length; ++$n) {
+                [$valueReal, $valueImag] = $signal[$n];
+
+                $angle = $twoPiOverN * $k * $n;
+                $cosA  = cos($angle);
+                $sinA  = sin($angle);
+
+                $sumReal += $valueReal * $cosA + $valueImag * $sinA;
+                $sumImag += -$valueReal * $sinA + $valueImag * $cosA;
+            }
+
+            $output[] = [$sumReal, $sumImag];
+        }
+
+        return $output;
     }
 }

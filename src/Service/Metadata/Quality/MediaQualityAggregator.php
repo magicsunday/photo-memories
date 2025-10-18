@@ -30,6 +30,7 @@ final class MediaQualityAggregator
         private float $minResolutionMegapixels = 2.0,
         private float $lowScoreThreshold = 0.35,
         private float $lowSharpnessThreshold = 0.20,
+        private float $lowMotionBlurThreshold = 0.25,
         private float $lowExposureThreshold = 0.25,
         private float $lowNoiseQualityThreshold = 0.25,
         private float $clippingLowQualityThreshold = 0.15,
@@ -44,14 +45,22 @@ final class MediaQualityAggregator
     {
         $megapixels     = $this->resolutionMegapixels($media);
         $sharpnessScore = $this->clamp01($media->getSharpness());
+        $motionBlurRaw  = $this->clamp01($media->getMotionBlurScore());
         $noiseScore     = $this->isoScore($media->getIso());
         $exposureScore  = $this->exposureScore($media);
         $clippingShare  = $this->clamp01($media->getQualityClipping());
 
         $media->setQualityClipping($clippingShare);
+        $media->setMotionBlurScore($motionBlurRaw);
+
+        $effectiveMotionBlur = $motionBlurRaw;
+        if ($effectiveMotionBlur === null && $sharpnessScore !== null) {
+            $effectiveMotionBlur = $sharpnessScore;
+        }
 
         $qualityScore = $this->weightedScore([
-            [$sharpnessScore, 0.50],
+            [$sharpnessScore, 0.35],
+            [$effectiveMotionBlur, 0.15],
             [$exposureScore, 0.30],
             [$noiseScore, 0.20],
         ]);
@@ -79,6 +88,10 @@ final class MediaQualityAggregator
             $isLowQuality = true;
         }
 
+        if ($motionBlurRaw !== null && $motionBlurRaw < $this->lowMotionBlurThreshold) {
+            $isLowQuality = true;
+        }
+
         if ($exposureScore !== null && $exposureScore < $this->lowExposureThreshold) {
             $isLowQuality = true;
         }
@@ -98,6 +111,7 @@ final class MediaQualityAggregator
             $isLowQuality,
             $qualityScore,
             $sharpnessScore,
+            $motionBlurRaw,
             $noiseScore,
             $exposureScore,
             $clippingShare,
@@ -211,6 +225,7 @@ final class MediaQualityAggregator
         bool $isLowQuality,
         ?float $qualityScore,
         ?float $sharpnessScore,
+        ?float $motionBlur,
         ?float $noiseScore,
         ?float $exposureScore,
         ?float $clippingShare,
@@ -227,6 +242,10 @@ final class MediaQualityAggregator
 
         if ($sharpnessScore !== null) {
             $context['sharpness'] = $sharpnessScore;
+        }
+
+        if ($motionBlur !== null) {
+            $context['motionBlur'] = $motionBlur;
         }
 
         if ($noiseScore !== null) {
