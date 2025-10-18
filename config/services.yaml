@@ -4,6 +4,7 @@ imports:
     - { resource: 'parameters/feed.yaml' }
     - { resource: 'parameters/monitoring.yaml' }
     - { resource: 'parameters/selection.yaml' }
+    - { resource: 'packages/memories.yaml' }
 
 services:
     _defaults:
@@ -55,6 +56,9 @@ services:
 
     MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface:
         alias: MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter
+
+    MagicSunday\Memories\Support\FeatureFlagProviderInterface:
+        alias: MagicSunday\Memories\Support\FeatureFlagProvider
 
     MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface:
         alias: MagicSunday\Memories\Service\Hash\Xxhash64FileHasher

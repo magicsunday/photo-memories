@@ -20,6 +20,7 @@ use MagicSunday\Memories\Service\Metadata\Support\GdImageToolsTrait;
 use MagicSunday\Memories\Service\Metadata\Support\ImageAdapterInterface;
 use MagicSunday\Memories\Service\Metadata\Support\ImagickImageAdapter;
 use MagicSunday\Memories\Service\Metadata\Support\VideoPosterFrameTrait;
+use MagicSunday\Memories\Support\FeatureFlagProviderInterface;
 
 use function array_fill;
 use function array_map;
@@ -55,6 +56,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         string $ffmpegBinary = 'ffmpeg',
         string $ffprobeBinary = 'ffprobe',
         private float $posterFrameSecond = 1.0,
+        private ?FeatureFlagProviderInterface $featureFlags = null,
     ) {
         if ($this->sampleSize < 16) {
             throw new InvalidArgumentException('sampleSize must be >= 16');
@@ -98,6 +100,10 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
     public function extract(string $filepath, Media $media): Media
     {
+        if ($this->featureFlags !== null && !$this->featureFlags->isEnabled('saliency_cropping')) {
+            return $media;
+        }
+
         $sourcePath = $filepath;
         $posterPath = null;
 

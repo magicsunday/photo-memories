@@ -1,0 +1,25 @@
+########################################
+# Feature toggle configuration
+########################################
+parameters:
+    # Default saliency cropping behaviour (true keeps current pipeline active).
+    memories.features.saliency_cropping.enabled_default: true
+    # Runtime toggle reading MEMORIES_FEATURE_SALIENCY_CROPPING ("0"/"1", "false"/"true").
+    memories.features.saliency_cropping.enabled: '%env(default:memories.features.saliency_cropping.enabled_default:bool:MEMORIES_FEATURE_SALIENCY_CROPPING)%'
+
+    # Default storyline generator behaviour (true preserves dynamic storytelling).
+    memories.features.storyline_generator.enabled_default: true
+    # Runtime toggle reading MEMORIES_FEATURE_STORYLINE_GENERATOR ("0"/"1", "false"/"true").
+    memories.features.storyline_generator.enabled: '%env(default:memories.features.storyline_generator.enabled_default:bool:MEMORIES_FEATURE_STORYLINE_GENERATOR)%'
+
+    # Structured view used by documentation and diagnostics.
+    memories:
+        features:
+            saliency_cropping:
+                default: '%memories.features.saliency_cropping.enabled_default%'
+                enabled: '%memories.features.saliency_cropping.enabled%'
+                env: 'MEMORIES_FEATURE_SALIENCY_CROPPING'
+            storyline_generator:
+                default: '%memories.features.storyline_generator.enabled_default%'
+                enabled: '%memories.features.storyline_generator.enabled%'
+                env: 'MEMORIES_FEATURE_STORYLINE_GENERATOR'
