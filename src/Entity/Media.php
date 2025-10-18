@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+use MagicSunday\Memories\Value\PlaceId;
 
 use function count;
 use function max;
@@ -41,6 +42,7 @@ use function min;
         new ORM\Index(name: 'idx_media_video_taken', columns: ['isVideo', 'takenAt']),
         new ORM\Index(name: 'idx_media_location', columns: ['location_id']),
         new ORM\Index(name: 'idx_media_needs_geocode', columns: ['needsGeocode']),
+        new ORM\Index(name: 'idx_media_s2_cell', columns: ['s2CellId']),
         new ORM\Index(name: 'idx_media_candidate', columns: ['noShow', 'lowQuality', 'takenAt']),
     ]
 )]
@@ -310,6 +312,12 @@ class Media
      */
     #[ORM\Column(type: Types::STRING, length: 20, nullable: true)]
     private ?string $geoCell8 = null;
+
+    /**
+     * S2 cell identifier for spatial indexing at the configured level.
+     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
+    private ?string $s2CellId = null;
 
     /**
      * GeoHash at precision seven characters.
@@ -624,6 +632,14 @@ class Media
     #[ORM\ManyToOne(targetEntity: Location::class)]
     #[ORM\JoinColumn(name: 'location_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Location $location = null;
+
+    /**
+     * Heuristic place identifier derived from staypoint clustering.
+     *
+     * @var array{provider:string,id:string,confidence:float|null,meta:array<string,mixed>}|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $placeId = null;
 
     /**
      * @param string $path     absolute filesystem path to the asset
@@ -1443,6 +1459,24 @@ class Media
     public function setGeoCell8(?string $v): void
     {
         $this->geoCell8 = $v;
+    }
+
+    /**
+     * Returns the S2 cell identifier assigned to the media.
+     */
+    public function getS2CellId(): ?string
+    {
+        return $this->s2CellId;
+    }
+
+    /**
+     * Updates the S2 cell identifier assigned to the media.
+     *
+     * @param string|null $s2CellId canonical S2 cell token
+     */
+    public function setS2CellId(?string $s2CellId): void
+    {
+        $this->s2CellId = $s2CellId;
     }
 
     /**
@@ -2322,5 +2356,47 @@ class Media
     public function setLocation(?Location $location): void
     {
         $this->location = $location;
+    }
+
+    /**
+     * Returns the heuristic place identifier assigned to the media.
+     */
+    public function getPlaceId(): ?PlaceId
+    {
+        if ($this->placeId === null) {
+            return null;
+        }
+
+        return PlaceId::fromArray($this->placeId);
+    }
+
+    /**
+     * Updates the heuristic place identifier using a value object.
+     */
+    public function setPlaceId(?PlaceId $placeId): void
+    {
+        $this->placeId = $placeId?->toArray();
+    }
+
+    /**
+     * @return array{provider:string,id:string,confidence:float|null,meta:array<string,mixed>}|null
+     */
+    public function getPlaceIdPayload(): ?array
+    {
+        return $this->placeId;
+    }
+
+    /**
+     * @param array{provider:string,id:string,confidence:float|null,meta:array<string,mixed>}|null $payload
+     */
+    public function setPlaceIdPayload(?array $payload): void
+    {
+        if ($payload === null) {
+            $this->placeId = null;
+
+            return;
+        }
+
+        $this->placeId = PlaceId::fromArray($payload)->toArray();
     }
 }
