@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
+use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\ClusterRepository;
@@ -41,7 +43,10 @@ use function is_string;
 use function mkdir;
 use function number_format;
 use function sprintf;
+use function str_replace;
+use function trim;
 use function symlink;
+use function ucwords;
 use function usort;
 
 use const PHP_INT_MAX;
@@ -78,22 +83,31 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         if ($entities === []) {
             $io->warning('Keine Cluster in der Datenbank gefunden.');
 
-            return new FeedExportResult($outputDirectory, $imageDirectory, null, 0, 0, 0);
+            return new FeedExportResult(
+                $outputDirectory,
+                $imageDirectory,
+                null,
+                0,
+                0,
+                0,
+                $request->getStage(),
+                [
+                    FeedExportStage::Raw->value     => 0,
+                    FeedExportStage::Merged->value  => 0,
+                    FeedExportStage::Curated->value => 0,
+                ],
+            );
         }
 
-        $drafts       = $this->mapper->mapMany($entities);
-        $consolidated = $this->consolidator->consolidate($drafts);
-        if ($consolidated === []) {
+        $rawDrafts    = $this->mapper->mapMany($entities);
+        $mergedDrafts = $this->consolidator->consolidate($rawDrafts);
+        if ($mergedDrafts === []) {
             $io->warning('Keine Cluster nach der Konsolidierung.');
-
-            return new FeedExportResult($outputDirectory, $imageDirectory, null, 0, 0, 0);
         }
 
-        $items = $this->feedBuilder->build($consolidated);
+        $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts);
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
-
-            return new FeedExportResult($outputDirectory, $imageDirectory, null, 0, 0, 0);
         }
 
         if (count($items) > $request->getMaxItems()) {
@@ -103,49 +117,182 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $copiedFileCount   = 0;
         $skippedThumbCount = 0;
 
-        /** @var list<array<string, mixed>|null> $cardCandidates */
-        $cardCandidates = [];
-        foreach ($items as $item) {
-            $cardCandidates[] = $this->createCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
-        }
+        $rawCards    = $this->buildDraftCards($rawDrafts, FeedExportStage::Raw, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+        $mergedCards = $this->buildDraftCards($mergedDrafts, FeedExportStage::Merged, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+        $curatedCards = $this->buildCuratedCards($items, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
 
-        /** @var list<array<string, mixed>> $cards */
-        $cards = array_values(array_filter(
-            $cardCandidates,
-            static fn (?array $cardData): bool => $cardData !== null,
-        ));
-
-        if ($cards === []) {
+        if ($curatedCards === [] && $items !== []) {
             $io->warning('Keine Bilder für die HTML-Ausgabe gefunden.');
-
-            return new FeedExportResult($outputDirectory, $imageDirectory, null, $copiedFileCount, $skippedThumbCount, 0);
         }
 
-        $html = $this->renderer->render($cards, self::FEED_TITLE);
+        $stages = [
+            FeedExportStage::Raw->value => [
+                'cards'        => $rawCards,
+                'summary'      => $this->formatSummary(count($rawCards), 'Cluster', 'Cluster'),
+                'emptyMessage' => 'Keine Cluster in der Datenbank gefunden.',
+            ],
+            FeedExportStage::Merged->value => [
+                'cards'        => $mergedCards,
+                'summary'      => $this->formatSummary(count($mergedCards), 'Draft', 'Drafts'),
+                'emptyMessage' => 'Keine Cluster nach der Konsolidierung.',
+            ],
+            FeedExportStage::Curated->value => [
+                'cards'        => $curatedCards,
+                'summary'      => $this->formatSummary(count($curatedCards), 'Feed-Item', 'Feed-Items'),
+                'emptyMessage' => 'Der Feed ist leer (Filter/Score/Limit zu streng?).',
+            ],
+        ];
+
+        $html = $this->renderer->render(
+            $request->getStage(),
+            $stages,
+            self::FEED_TITLE,
+            $request->getTimestamp(),
+        );
 
         $indexFile = $outputDirectory . '/index.html';
         if (@file_put_contents($indexFile, $html) === false) {
             throw new RuntimeException('Konnte HTML-Datei nicht schreiben: ' . $indexFile);
         }
 
-        return new FeedExportResult($outputDirectory, $imageDirectory, $indexFile, $copiedFileCount, $skippedThumbCount, count($cards));
+        $stageCounts = [
+            FeedExportStage::Raw->value     => count($rawCards),
+            FeedExportStage::Merged->value  => count($mergedCards),
+            FeedExportStage::Curated->value => count($curatedCards),
+        ];
+
+        return new FeedExportResult(
+            $outputDirectory,
+            $imageDirectory,
+            $indexFile,
+            $copiedFileCount,
+            $skippedThumbCount,
+            count($curatedCards),
+            $request->getStage(),
+            $stageCounts,
+        );
     }
 
-    private function ensureDirectoryExists(string $directory): void
+    private function formatSummary(int $count, string $singular, string $plural): string
     {
-        if (is_dir($directory)) {
-            return;
-        }
+        $word = $count === 1 ? $singular : $plural;
 
-        if (!@mkdir($directory, 0775, true) && !is_dir($directory)) {
-            throw new RuntimeException('Could not create output directory: ' . $directory);
-        }
+        return sprintf('%d %s', $count, $word);
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @param list<ClusterDraft> $drafts
+     * @return list<array<string, mixed>>
      */
-    private function createCard(
+    private function buildDraftCards(
+        array $drafts,
+        FeedExportStage $stage,
+        FeedExportRequest $request,
+        string $imageDirectory,
+        int &$copiedFileCount,
+        int &$skippedThumbCount,
+    ): array {
+        $cards = [];
+
+        foreach ($drafts as $index => $draft) {
+            $card = $this->createDraftCard(
+                $draft,
+                $stage,
+                $request,
+                $imageDirectory,
+                $copiedFileCount,
+                $skippedThumbCount,
+                (int) $index,
+            );
+
+            if ($card !== null) {
+                $cards[] = $card;
+            }
+        }
+
+        return $cards;
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     * @return list<array<string, mixed>>
+     */
+    private function buildCuratedCards(
+        array $items,
+        FeedExportRequest $request,
+        string $imageDirectory,
+        int &$copiedFileCount,
+        int &$skippedThumbCount,
+    ): array {
+        $cards = [];
+
+        foreach ($items as $item) {
+            $card = $this->createCuratedCard($item, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+
+            if ($card !== null) {
+                $cards[] = $card;
+            }
+        }
+
+        return $cards;
+    }
+
+    private function createDraftCard(
+        ClusterDraft $draft,
+        FeedExportStage $stage,
+        FeedExportRequest $request,
+        string $imageDirectory,
+        int &$copiedFileCount,
+        int &$skippedThumbCount,
+        int $position,
+    ): ?array {
+        $memberIds = $draft->getMembers();
+        if ($memberIds === []) {
+            return null;
+        }
+
+        $mediaItems = $this->fetchOrderedMedia($memberIds, false);
+        $images     = $this->buildImageEntries($mediaItems, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+
+        if ($images === []) {
+            return null;
+        }
+
+        $params = $draft->getParams();
+        $group  = $params['group'] ?? null;
+
+        $chips   = [];
+        $chips[] = $this->createChip($stage->label(), 'stage');
+        $chips[] = $this->createChip('Algorithmus: ' . $draft->getAlgorithm());
+
+        if (is_string($group) && $group !== '') {
+            $chips[] = $this->createChip('Gruppe: ' . $group);
+        }
+
+        $chips[] = $this->createChip('Mitglieder: ' . $draft->getMembersCount());
+
+        $storyline = $draft->getStoryline();
+        if ($storyline !== '' && $storyline !== 'default') {
+            $chips[] = $this->createChip('Storyline: ' . $this->prettifyStoryline($storyline));
+        }
+
+        $title = sprintf('Cluster %d', $position + 1);
+        if ($storyline !== '' && $storyline !== 'default') {
+            $title .= ' – ' . $this->prettifyStoryline($storyline);
+        }
+
+        $subtitle = $this->formatDraftSubtitle($draft);
+
+        return [
+            'title'    => $title,
+            'subtitle' => $subtitle,
+            'chips'    => $chips,
+            'images'   => $images,
+            'details'  => $this->buildDraftDetails($draft),
+        ];
+    }
+
+    private function createCuratedCard(
         MemoryFeedItem $item,
         FeedExportRequest $request,
         string $imageDirectory,
@@ -157,10 +304,58 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             return null;
         }
 
-        $members = $this->mediaRepository->findByIds(
-            $memberIds,
-            $item->getAlgorithm() === 'video_stories'
-        );
+        $mediaItems = $this->fetchOrderedMedia($memberIds, $item->getAlgorithm() === 'video_stories');
+        $images     = $this->buildImageEntries($mediaItems, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+
+        if ($images === []) {
+            return null;
+        }
+
+        $params    = $item->getParams();
+        $group     = $params['group'] ?? null;
+        $sceneTags = $this->normalizeSceneTags($params['scene_tags'] ?? null);
+
+        $chips   = [];
+        $chips[] = $this->createChip('Feed-Ranking', 'stage');
+        $chips[] = $this->createChip(sprintf('Score %s', number_format($item->getScore(), 3, ',', '')));
+        $chips[] = $this->createChip('Algorithmus: ' . $item->getAlgorithm());
+        $chips[] = $this->createChip('Mitglieder: ' . count($memberIds));
+
+        if (is_string($group) && $group !== '') {
+            $chips[] = $this->createChip('Gruppe: ' . $group);
+        }
+
+        if ($this->isCuratedForFeed($params, $memberIds)) {
+            $chips[] = $this->createChip('Kuratiert', 'curated');
+        }
+
+        foreach (array_slice($sceneTags, 0, 3) as $tag) {
+            $label = $tag['label'];
+            $score = number_format($tag['score'], 2, ',', '');
+
+            $chips[] = $this->createChip(sprintf('%s (%s)', $label, $score), 'tag');
+        }
+
+        return [
+            'title'    => $item->getTitle(),
+            'subtitle' => $item->getSubtitle(),
+            'chips'    => $chips,
+            'images'   => $images,
+            'details'  => $this->buildCuratedDetails($params, $memberIds),
+        ];
+    }
+
+    /**
+     * @param list<int> $memberIds
+     * @return list<Media>
+     */
+    private function fetchOrderedMedia(array $memberIds, bool $preferVideoStory): array
+    {
+        if ($memberIds === []) {
+            return [];
+        }
+
+        $members = $this->mediaRepository->findByIds($memberIds, $preferVideoStory);
 
         $order = [];
         foreach ($memberIds as $index => $id) {
@@ -183,8 +378,23 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             return $posA <=> $posB;
         });
 
+        return $members;
+    }
+
+    /**
+     * @param list<Media> $mediaItems
+     * @return list<array{href:string, alt:string}>
+     */
+    private function buildImageEntries(
+        array $mediaItems,
+        FeedExportRequest $request,
+        string $imageDirectory,
+        int &$copiedFileCount,
+        int &$skippedThumbCount,
+    ): array {
         $images = [];
-        foreach ($members as $media) {
+
+        foreach ($mediaItems as $media) {
             if (count($images) >= $request->getImagesPerItem()) {
                 break;
             }
@@ -210,38 +420,142 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             ];
         }
 
-        if ($images === []) {
+        return $images;
+    }
+
+    /**
+     * @return array{label:string, variant:string}
+     */
+    private function createChip(string $label, string $variant = 'default'): array
+    {
+        return [
+            'label'   => $label,
+            'variant' => $variant,
+        ];
+    }
+
+    private function formatDraftSubtitle(ClusterDraft $draft): string
+    {
+        $range = $this->formatTimeRange($draft->getStartAt(), $draft->getEndAt());
+
+        return sprintf(
+            'Mitglieder: %d • Zeitraum: %s',
+            $draft->getMembersCount(),
+            $range ?? 'unbekannt',
+        );
+    }
+
+    private function formatTimeRange(?DateTimeImmutable $start, ?DateTimeImmutable $end): ?string
+    {
+        if ($start === null && $end === null) {
             return null;
         }
 
-        $params = $item->getParams();
-        $group  = $params['group'] ?? null;
+        if ($start !== null && $end !== null) {
+            $startFormatted = $start->format('d.m.Y H:i');
+            $endFormatted   = $end->format('d.m.Y H:i');
 
-        $sceneTags = $this->normalizeSceneTags($params['scene_tags'] ?? null);
+            if ($startFormatted === $endFormatted) {
+                return $startFormatted;
+            }
 
-        $curated = $this->isCuratedForFeed($params, $memberIds);
+            if ($start->format('d.m.Y') === $end->format('d.m.Y')) {
+                return sprintf('%s – %s', $startFormatted, $end->format('H:i'));
+            }
 
-        $card = [
-            'title'     => $item->getTitle(),
-            'subtitle'  => $item->getSubtitle(),
-            'algorithm' => $item->getAlgorithm(),
-            'score'     => $item->getScore(),
-            'images'    => $images,
-        ];
-
-        if ($curated) {
-            $card['curated'] = true;
+            return sprintf('%s – %s', $startFormatted, $endFormatted);
         }
 
-        if (is_string($group) && $group !== '') {
-            $card['group'] = $group;
+        $single = $start ?? $end;
+
+        return $single?->format('d.m.Y H:i');
+    }
+
+    private function formatCount(?int $count, string $singular, string $plural): ?string
+    {
+        if ($count === null) {
+            return null;
         }
 
-        if ($sceneTags !== []) {
-            $card['sceneTags'] = $sceneTags;
+        $label = $count === 1 ? $singular : $plural;
+
+        return sprintf('%d %s', $count, $label);
+    }
+
+    private function prettifyStoryline(string $storyline): string
+    {
+        $normalized = trim(str_replace(['_', '-'], ' ', $storyline));
+
+        if ($normalized === '') {
+            return 'Unbekannt';
         }
 
-        return $card;
+        return ucwords($normalized);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildDraftDetails(ClusterDraft $draft): array
+    {
+        $details = [];
+
+        $range = $this->formatTimeRange($draft->getStartAt(), $draft->getEndAt());
+        if ($range !== null) {
+            $details[] = 'Zeitraum: ' . $range;
+        }
+
+        $photoCount = $this->formatCount($draft->getPhotoCount(), 'Foto', 'Fotos');
+        if ($photoCount !== null) {
+            $details[] = 'Fotos: ' . $photoCount;
+        }
+
+        $videoCount = $this->formatCount($draft->getVideoCount(), 'Video', 'Videos');
+        if ($videoCount !== null) {
+            $details[] = 'Videos: ' . $videoCount;
+        }
+
+        $algorithmVersion = $draft->getAlgorithmVersion();
+        if (is_string($algorithmVersion) && $algorithmVersion !== '') {
+            $details[] = 'Algo-Version: ' . $algorithmVersion;
+        }
+
+        $configHash = $draft->getConfigHash();
+        if (is_string($configHash) && $configHash !== '') {
+            $details[] = 'Config: ' . $configHash;
+        }
+
+        return $details;
+    }
+
+    /**
+     * @param array<string, scalar|array|null> $params
+     * @param list<int>                        $memberIds
+     *
+     * @return list<string>
+     */
+    private function buildCuratedDetails(array $params, array $memberIds): array
+    {
+        $details   = [];
+        $details[] = sprintf('Mitglieder: %d', count($memberIds));
+
+        $storyline = $params['storyline'] ?? null;
+        if (is_string($storyline) && $storyline !== '' && $storyline !== 'default') {
+            $details[] = 'Storyline: ' . $this->prettifyStoryline($storyline);
+        }
+
+        return $details;
+    }
+
+    private function ensureDirectoryExists(string $directory): void
+    {
+        if (is_dir($directory)) {
+            return;
+        }
+
+        if (!@mkdir($directory, 0775, true) && !is_dir($directory)) {
+            throw new RuntimeException('Could not create output directory: ' . $directory);
+        }
     }
 
     /**
