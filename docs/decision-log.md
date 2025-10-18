@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-25 – Export typed media index metadata files
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Downstream search/index builds required a stable, machine-readable view of all ingestion signals without querying Doctrine or inspecting ad-hoc logs. The pipeline only wrote to the database and thumbnails, leaving no consumable artifact for data lakes or debugging snapshots.
+- **Decision:** Added `MetaExportStage` to the ingestion pipeline right after the extractor stages, serialising the enriched `Media` entity into `media_index.meta` alongside each asset. Documented the schema (`docs/media-index-meta-schema.md`) and covered the behaviour with unit tests that validate the JSON payload.
+- **Alternatives considered:** Generate exports via a separate CLI that queries persisted media (would miss in-flight updates and complicate dry-run verification) or piggy-back on database views (ties consumers to SQL schema changes and excludes filesystem-derived context). Both options were rejected because they either duplicated logic or failed to deliver the per-file artifact required by the ingest team.
+- **Follow-up actions:** Monitor consumer pipelines for adoption, extend the schema when new signals land in `Media`, and wire the export directory into ingestion telemetry so operators can detect write failures quickly.
+
 ## 2025-02-15 – Persist memories clusters with spatial metadata
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Cluster-Strategien erzeugen inzwischen langlebige Geschichten mit Geometrie- und Highlight-Daten, doch das Projekt besaß keine persistente Ablage kompatibel zu PostGIS/JSONB. Ohne dedizierte Tabellen ließen sich wiederholbare Feed-Läufe, Debugging und Telemetrie-Korrelationen nicht durchführen.
