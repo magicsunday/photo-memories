@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer\Title;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Support\FeatureFlagProviderInterface;
 
 use function array_key_exists;
 use function array_map;
@@ -48,6 +49,7 @@ final class StoryTitleBuilder
         private readonly RouteSummarizer $routeSummarizer,
         private readonly LocalizedDateFormatter $dateFormatter,
         private readonly string $preferredLocale = 'de',
+        private readonly ?FeatureFlagProviderInterface $featureFlags = null,
     ) {
     }
 
@@ -58,6 +60,10 @@ final class StoryTitleBuilder
      */
     public function build(ClusterDraft $cluster, ?string $locale = null, ?RouteSummary $summary = null): array
     {
+        if ($this->featureFlags !== null && !$this->featureFlags->isEnabled('storyline_generator')) {
+            return $this->buildDisabledStorylineResponse($cluster, $locale);
+        }
+
         $resolvedLocale = $this->resolveLocale($locale);
         $summary ??= $this->routeSummarizer->summarize($cluster, $resolvedLocale);
 
@@ -68,6 +74,28 @@ final class StoryTitleBuilder
 
         return [
             'title' => $title,
+            'subtitle' => $subtitle,
+        ];
+    }
+
+    private function buildDisabledStorylineResponse(ClusterDraft $cluster, ?string $locale): array
+    {
+        $resolvedLocale = $this->resolveLocale($locale);
+        $params         = $cluster->getParams();
+
+        $label = $this->stringOrEmpty($params['label'] ?? null);
+        if ($label === '') {
+            $label = 'Reise';
+        }
+
+        $timeRange = $params['time_range'] ?? null;
+        $subtitle  = $this->dateFormatter->formatRange($timeRange, $resolvedLocale);
+        if ($subtitle === '') {
+            $subtitle = $this->dateFormatter->formatDate($params['start_date'] ?? null, $resolvedLocale);
+        }
+
+        return [
+            'title'    => $label,
             'subtitle' => $subtitle,
         ];
     }

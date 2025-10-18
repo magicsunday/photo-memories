@@ -67,6 +67,23 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 
+## `config/packages/memories.yaml`
+
+Dieses Paket fasst Feature-Toggles zusammen, die zur Laufzeit auf Umgebungsvariablen hören. Zwei Schalter sind aktuell hinterlegt:
+
+- `memories.features.saliency_cropping.enabled` – aktiviert die Berechnung von Saliency-/Qualitätsmetriken in der `VisionSignatureExtractor`. Standard: `true`, Override via `MEMORIES_FEATURE_SALIENCY_CROPPING` (`0`/`1`, `false`/`true`).
+- `memories.features.storyline_generator.enabled` – steuert, ob der `StoryTitleBuilder` dynamische Storylines und Routen zusammenstellt. Standard: `true`, Override via `MEMORIES_FEATURE_STORYLINE_GENERATOR`.
+
+Beide Flags sind so aufgebaut, dass `*_default` den YAML-Default dokumentiert, während der `enabled`-Parameter den effektiven Wert (inklusive ENV-Override) liefert. Der aggregierte Abschnitt unter `memories.features` erleichtert das Auslesen in Debug-Ausgaben oder Support-Tools.
+
+Ein Beispiel für lokale Overrides in `.env.local`:
+
+```env
+# Feature-Toggles für optionale Verarbeitungsschritte
+MEMORIES_FEATURE_SALIENCY_CROPPING=0
+MEMORIES_FEATURE_STORYLINE_GENERATOR=false
+```
+
 ### Auswahlprofile (`memories.cluster.selection.profile_values`)
 
 - Sämtliche Story-Profile (z. B. `vacation_weekend_transit`, `location`, `scene`, `device`, `this_day_month`, `people_friends`, `highlights`) definieren den kompletten Optionssatz, den der `SelectionPolicyProvider` verarbeitet – inklusive `min_spacing_seconds`, `phash_min_hamming`, `max_per_staypoint`, `max_per_staypoint_relaxed`, `video_bonus`, `face_bonus`, `selfie_penalty`, `quality_floor`, `minimum_total`, `max_per_year`, `max_per_bucket` und `video_heavy_bonus`.
