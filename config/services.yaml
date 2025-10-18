@@ -212,6 +212,20 @@ services:
         tags:
             - { name: 'memories.metadata_extractor', priority: 100 }
 
+    MagicSunday\Memories\Service\Metadata\DoctrineStaypointCandidateProvider: ~
+
+    MagicSunday\Memories\Service\Metadata\Contract\StaypointCandidateProviderInterface:
+        alias: MagicSunday\Memories\Service\Metadata\DoctrineStaypointCandidateProvider
+
+    MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic:
+        arguments:
+            $candidateProvider: '@MagicSunday\Memories\Service\Metadata\Contract\StaypointCandidateProviderInterface'
+            $minSamples: 5
+            $minDurationMinutes: 30
+            $maxSamples: 750
+            $s2Level: 12
+            $provider: 'staypoint:s2'
+
     MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher:
         tags:
             - { name: 'memories.metadata_extractor', priority: 90 }
@@ -359,6 +373,7 @@ services:
     MagicSunday\Memories\Service\Indexing\Stage\GeoStage:
         arguments:
             $geo: '@MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher'
+            $staypoint: '@MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic'
     MagicSunday\Memories\Service\Indexing\Stage\QualityStage:
         arguments:
             $visionSignature: '@MagicSunday\Memories\Service\Metadata\VisionSignatureExtractor'

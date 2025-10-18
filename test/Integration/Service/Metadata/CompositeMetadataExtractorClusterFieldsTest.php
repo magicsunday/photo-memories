@@ -22,6 +22,7 @@ use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\Support\CaptureTimeResolver;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\S2CellId;
 use PHPUnit\Framework\Attributes\Test;
 use function file_put_contents;
 use function is_file;
@@ -115,6 +116,10 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
             self::assertEqualsWithDelta($distanceKm, $processed->getDistanceKmFromHome(), 0.05);
             self::assertSame('48.1200,11.5600', $processed->getGeoCell8());
             self::assertNotNull($processed->getGeohash7());
+            self::assertSame(
+                S2CellId::tokenFromDegrees(48.123400, 11.567800, 12),
+                $processed->getS2CellId(),
+            );
             self::assertTrue($processed->needsGeocode());
 
             $features = $processed->getFeatures();

@@ -373,7 +373,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         return [
             'metadata' => ['exif', 'xmp', 'fileStat', 'filenameKeyword', 'appleHeuristics', 'ffprobe'],
             'time'     => ['normalizer', 'calendar', 'daypart', 'solar'],
-            'geo'      => ['feature'],
+            'geo'      => ['feature', 'staypoint'],
             'quality'  => ['vision'],
             'content'  => ['classifier'],
             'hash'     => ['perceptual'],
@@ -420,7 +420,8 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
                 'solar'      => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'geo' => [
-                'feature' => $this->createMock(SingleMetadataExtractorInterface::class),
+                'feature'   => $this->createMock(SingleMetadataExtractorInterface::class),
+                'staypoint' => $this->createMock(SingleMetadataExtractorInterface::class),
             ],
             'quality' => [
                 'vision' => $this->createMock(SingleMetadataExtractorInterface::class),
@@ -509,7 +510,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
                 $this->createMetadataQaInspector(),
                 new MetadataQaReportCollector(),
             ),
-            new GeoStage($extractors['geo']['feature']),
+            new GeoStage($extractors['geo']['feature'], $extractors['geo']['staypoint']),
             new QualityStage($extractors['quality']['vision']),
             new ContentKindStage($extractors['content']['classifier']),
             new HashStage($extractors['hash']['perceptual']),

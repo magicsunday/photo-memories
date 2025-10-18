@@ -15,6 +15,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
+use MagicSunday\Memories\Utility\S2CellId;
 use PHPUnit\Framework\Attributes\Test;
 
 use function floor;
@@ -56,12 +57,14 @@ final class GeoFeatureEnricherTest extends TestCase
         $expectedDistance = $this->expectedDistanceKm(48.137154, 11.576124);
         $expectedGeohash7 = 'u281z7j';
         $expectedGeohash5 = 'u281z';
+        $expectedS2Cell   = S2CellId::tokenFromDegrees(48.137154, 11.576124, 12);
 
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame($expectedCell, $result->getGeoCell8());
         self::assertSame($expectedDistance, $result->getDistanceKmFromHome());
         self::assertSame($expectedGeohash7, $result->getGeohash7());
         self::assertSame($expectedGeohash5, $result->getGeohash5());
+        self::assertSame($expectedS2Cell, $result->getS2CellId());
         self::assertTrue($result->needsGeocode());
     }
 
@@ -89,12 +92,14 @@ final class GeoFeatureEnricherTest extends TestCase
 
         $expectedGeohash7 = 'u284pyx';
         $expectedGeohash5 = 'u284p';
+        $expectedS2Cell   = S2CellId::tokenFromDegrees(48.200321, 11.601234, 12);
 
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame('custom-cell', $result->getGeoCell8());
         self::assertSame(12.5, $result->getDistanceKmFromHome());
         self::assertSame($expectedGeohash7, $result->getGeohash7());
         self::assertSame($expectedGeohash5, $result->getGeohash5());
+        self::assertSame($expectedS2Cell, $result->getS2CellId());
         self::assertTrue($result->needsGeocode());
     }
 
@@ -124,12 +129,14 @@ final class GeoFeatureEnricherTest extends TestCase
         $expectedDistance = $this->expectedDistanceKm($lat, $lon);
         $expectedGeohash7 = 'u2860h8';
         $expectedGeohash5 = 'u2860';
+        $expectedS2Cell   = S2CellId::tokenFromDegrees($lat, $lon, 12);
 
         self::assertSame($expectedHash, $result->getHomeConfigHash());
         self::assertSame($expectedCell, $result->getGeoCell8());
         self::assertSame($expectedDistance, $result->getDistanceKmFromHome());
         self::assertSame($expectedGeohash7, $result->getGeohash7());
         self::assertSame($expectedGeohash5, $result->getGeohash5());
+        self::assertSame($expectedS2Cell, $result->getS2CellId());
         self::assertTrue($result->needsGeocode());
     }
 
@@ -141,6 +148,7 @@ final class GeoFeatureEnricherTest extends TestCase
             self::HOME_RADIUS_KM,
             self::HOME_VERSION,
             self::CELL_DEGREES,
+            12,
         );
     }
 
