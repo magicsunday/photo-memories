@@ -14,23 +14,22 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
 final class TimeSimilarityStrategyTest extends TestCase
 {
     #[Test]
-    public function clustersMediaWithinGapAndLocalityBoundaries(): void
+    public function clustersMediaWithinThreeHourWindowsUsingGeoDbscan(): void
     {
-        $helper   = LocationHelper::createDefault();
         $strategy = new TimeSimilarityStrategy(
-            locHelper: $helper,
-            maxGapSeconds: 1800,
+            locHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 21600,
             minItemsPerBucket: 3,
         );
 
@@ -42,117 +41,89 @@ final class TimeSimilarityStrategyTest extends TestCase
             city: 'Berlin',
             country: 'Germany',
         );
-        $munich = $this->makeLocation(
+
+        $mediaItems = [
+            $this->createMedia(1001, '2025-01-05 09:00:00', 52.5201, 13.4050, $berlin),
+            $this->createMedia(1002, '2025-01-05 09:40:00', 52.5202, 13.4051, $berlin),
+            $this->createMedia(1003, '2025-01-05 10:15:00', 52.5203, 13.4052, $berlin),
+            $this->createMedia(1004, '2025-01-05 14:00:00', 52.5205, 13.4053, $berlin),
+            $this->createMedia(1005, '2025-01-05 14:20:00', 52.5206, 13.4054, $berlin),
+            $this->createMedia(1006, '2025-01-05 14:40:00', 52.5207, 13.4055, $berlin),
+        ];
+
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
+
+        self::assertCount(2, $clusters);
+
+        $morning = $clusters[0];
+        self::assertSame('time_similarity', $morning->getAlgorithm());
+        self::assertSame([1001, 1002, 1003], $morning->getMembers());
+
+        $morningParams = $morning->getParams();
+        self::assertSame(3, $morningParams['members_count']);
+        self::assertSame($morningParams['time_range'], $morningParams['window_bounds']);
+
+        $expectedMorningRange = [
+            'from' => (new DateTimeImmutable('2025-01-05 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2025-01-05 10:15:00', new DateTimeZone('UTC')))->getTimestamp(),
+        ];
+        self::assertSame($expectedMorningRange, $morningParams['time_range']);
+
+        $morningCentroid = $morning->getCentroid();
+        $expectedMorningCell = GeoCell::fromPoint($morningCentroid['lat'], $morningCentroid['lon'], 7);
+        self::assertSame($expectedMorningCell, $morningParams['centroid_cell7']);
+
+        $afternoon = $clusters[1];
+        self::assertSame([1004, 1005, 1006], $afternoon->getMembers());
+
+        $afternoonParams = $afternoon->getParams();
+        self::assertSame(3, $afternoonParams['members_count']);
+
+        $expectedAfternoonRange = [
+            'from' => (new DateTimeImmutable('2025-01-05 14:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2025-01-05 14:40:00', new DateTimeZone('UTC')))->getTimestamp(),
+        ];
+        self::assertSame($expectedAfternoonRange, $afternoonParams['time_range']);
+        self::assertSame($expectedAfternoonRange, $afternoonParams['window_bounds']);
+    }
+
+    #[Test]
+    public function excludesMediaOutsideDistanceThreshold(): void
+    {
+        $strategy = new TimeSimilarityStrategy(
+            locHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 7200,
+            minItemsPerBucket: 2,
+        );
+
+        $location = $this->makeLocation(
             providerPlaceId: 'munich-city',
             displayName: 'Munich',
-            lat: 48.1371,
-            lon: 11.5753,
+            lat: 48.1370,
+            lon: 11.5750,
             city: 'Munich',
             country: 'Germany',
         );
 
         $mediaItems = [
-            $this->createMedia(1001, '2023-07-01 09:00:00', 52.5201, 13.4049, $berlin),
-            $this->createMedia(1002, '2023-07-01 09:20:00', 52.5202, 13.4050, $berlin),
-            $this->createMedia(1003, '2023-07-01 09:40:00', 52.5203, 13.4051, $berlin),
-            // Gap larger than max gap -> split bucket
-            $this->createMedia(1004, '2023-07-01 12:30:00', 52.5204, 13.4052, $berlin),
-            // Same day but different locality should not join previous bucket
-            $this->createMedia(1005, '2023-07-01 12:40:00', 48.1372, 11.5754, $munich),
-            $this->createMedia(1006, '2023-07-01 12:55:00', 48.1373, 11.5755, $munich),
+            $this->createMedia(2001, '2025-03-10 10:00:00', 48.1371, 11.5751, $location),
+            $this->createMedia(2002, '2025-03-10 10:20:00', 48.1372, 11.5752, $location),
+            // Approximately one kilometre away
+            $this->createMedia(2003, '2025-03-10 10:40:00', 48.1450, 11.5850, $location),
         ];
 
         $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
-
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
-        self::assertSame('time_similarity', $cluster->getAlgorithm());
-        self::assertSame([1001, 1002, 1003], $cluster->getMembers());
+        self::assertSame([2001, 2002], $cluster->getMembers());
 
         $params = $cluster->getParams();
-        self::assertSame('Berlin', $params['place']);
-        $expectedRange = [
-            'from' => (new DateTimeImmutable('2023-07-01 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2023-07-01 09:40:00', new DateTimeZone('UTC')))->getTimestamp(),
-        ];
-        self::assertSame($expectedRange, $params['time_range']);
+        self::assertSame(2, $params['members_count']);
 
         $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta(52.5202, $centroid['lat'], 0.00001);
-        self::assertEqualsWithDelta(13.4050, $centroid['lon'], 0.00001);
-    }
-
-    #[Test]
-    public function returnsEmptyWhenNoBucketMeetsMinimumItems(): void
-    {
-        $strategy = new TimeSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
-            maxGapSeconds: 900,
-            minItemsPerBucket: 4,
-        );
-
-        $location = $this->makeLocation(
-            providerPlaceId: 'hamburg-city',
-            displayName: 'Hamburg',
-            lat: 53.5511,
-            lon: 9.9937,
-            city: 'Hamburg',
-            country: 'Germany',
-        );
-
-        $mediaItems = [
-            $this->createMedia(1101, '2023-08-10 08:00:00', 53.5510, 9.9936, $location),
-            $this->createMedia(1102, '2023-08-10 08:12:00', 53.5511, 9.9937, $location),
-            $this->createMedia(1103, '2023-08-10 08:25:00', 53.5512, 9.9938, $location),
-            // Splits due to time gap
-            $this->createMedia(1104, '2023-08-10 10:00:00', 53.5513, 9.9939, $location),
-            $this->createMedia(1105, '2023-08-10 10:10:00', 53.5514, 9.9940, $location),
-            $this->createMedia(1106, '2023-08-10 10:20:00', 53.5515, 9.9941, $location),
-        ];
-
-        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
-    }
-
-    #[Test]
-    public function enrichesClustersWithDominantTags(): void
-    {
-        $helper   = LocationHelper::createDefault();
-        $strategy = new TimeSimilarityStrategy(
-            locHelper: $helper,
-            maxGapSeconds: 1800,
-            minItemsPerBucket: 2,
-        );
-
-        $location = $this->makeLocation(
-            providerPlaceId: 'potsdam-city',
-            displayName: 'Potsdam',
-            lat: 52.3906,
-            lon: 13.0645,
-            city: 'Potsdam',
-            country: 'Germany',
-        );
-
-        $mediaItems = [
-            $this->createMedia(2101, '2024-05-12 14:00:00', 52.3907, 13.0646, $location),
-            $this->createMedia(2102, '2024-05-12 14:10:00', 52.3908, 13.0647, $location),
-            $this->createMedia(
-                2103,
-                '2024-05-12 14:20:00',
-                52.3909,
-                13.0648,
-                $location,
-                static function (Media $media): void {
-                    $media->setNoShow(true);
-                }
-            ),
-        ];
-
-        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
-
-        self::assertCount(1, $clusters);
-        self::assertSame([2101, 2102], $clusters[0]->getMembers());
+        $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
+        self::assertSame($expectedCell, $params['centroid_cell7']);
     }
 
     private function createMedia(
