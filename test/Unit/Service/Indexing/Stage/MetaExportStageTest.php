@@ -64,6 +64,20 @@ final class MetaExportStageTest extends TestCase
             $media->setNeedsRotation(true);
             $media->setNeedsGeocode(true);
             $media->setNoShow(true);
+            $media->setVideoDurationS(12.34);
+            $media->setVideoFps(29.97);
+            $media->setVideoCodec('h264');
+            $media->setVideoStreams([
+                [
+                    'index' => 0,
+                    'codec_type' => 'video',
+                    'codec_name' => 'h264',
+                    'avg_frame_rate' => '30000/1001',
+                ],
+            ]);
+            $media->setVideoRotationDeg(90.0);
+            $media->setVideoHasStabilization(true);
+            $media->setIsSlowMo(false);
             $media->setTakenAt(new DateTimeImmutable('2024-10-05T12:34:56+00:00'));
             $media->setCapturedLocal(new DateTimeImmutable('2024-10-05T14:34:56+02:00'));
             $media->setTimeSource(TimeSource::EXIF);
@@ -188,6 +202,25 @@ final class MetaExportStageTest extends TestCase
             self::assertSame('Canon', $payload['imaging']['camera']['make']);
             self::assertSame('photo', $payload['classification']['content_kind']);
             self::assertSame(['medium' => '/thumbnails/sample-medium.jpg'], $payload['thumbnails']);
+            self::assertSame(
+                [
+                    'video_duration_s' => 12.34,
+                    'video_fps' => 29.97,
+                    'video_codec' => 'h264',
+                    'video_streams' => [
+                        [
+                            'index' => 0,
+                            'codec_type' => 'video',
+                            'codec_name' => 'h264',
+                            'avg_frame_rate' => '30000/1001',
+                        ],
+                    ],
+                    'video_rotation_deg' => 90.0,
+                    'video_has_stabilization' => true,
+                    'is_slow_mo' => false,
+                ],
+                $payload['video']
+            );
             self::assertSame(
                 [
                     [

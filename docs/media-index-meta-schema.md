@@ -22,6 +22,7 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
 | `capture`         | object                                    | Timestamps, timezone information, and sub-second precision. |
 | `dimensions`      | object                                    | Width, height, and orientation taken from metadata. |
 | `spatial`         | object                                    | GPS coordinates, hashed cells, home distance, resolved location, and heuristic place IDs. |
+| `video`           | object                                    | Video-specific metadata such as duration, codec, rotation, stream descriptors, stabilisation, and slow-motion flags. |
 | `imaging`         | object                                    | Camera, lens, and exposure properties. |
 | `classification`  | object                                    | Content kind, namespaced features, scene tags, and face metrics. |
 | `quality`         | object                                    | Aggregated quality scores and threshold flags. |
@@ -39,6 +40,14 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
 - **QA findings** are only emitted when `MetadataQaInspectionResult::hasIssues()` returns true. Each entry contains:
   - `missing_features`: list of missing feature keys
   - `suggestions`: list of human-readable remediation hints
+- **Video metadata** provides detailed playback characteristics:
+  - `video_duration_s`: duration of the primary video stream in seconds (float, may be `null`).
+  - `video_fps`: frames per second for the primary stream (float, may be `null`).
+  - `video_codec`: codec identifier reported by the probe (string, may be `null`).
+  - `video_streams`: normalised ffprobe stream descriptors (array of objects, may be `null`).
+  - `video_rotation_deg`: clockwise rotation in degrees required for playback (float, may be `null`).
+  - `video_has_stabilization`: whether stabilisation metadata is present (boolean, may be `null`).
+  - `is_slow_mo`: indicates slow-motion captures (boolean, may be `null`).
 
 ### Example excerpt
 
@@ -56,11 +65,26 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
     "mime": "image/jpeg"
   },
   "flags": {
-    "is_video": false,
+    "is_video": true,
     "is_raw": true,
     "needs_rotation": false,
     "needs_geocode": false,
     "no_show": false
+  },
+  "video": {
+    "video_duration_s": 9.87,
+    "video_fps": 59.94,
+    "video_codec": "h264",
+    "video_streams": [
+      {
+        "index": 0,
+        "codec_type": "video",
+        "codec_name": "h264"
+      }
+    ],
+    "video_rotation_deg": 90,
+    "video_has_stabilization": true,
+    "is_slow_mo": false
   },
   "qa_findings": [
     {

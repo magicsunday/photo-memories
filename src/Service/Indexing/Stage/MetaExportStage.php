@@ -139,6 +139,15 @@ final class MetaExportStage implements MediaIngestionStageInterface
                 'location' => $this->serialiseLocation($media->getLocation()),
                 'place' => $media->getPlaceIdPayload(),
             ],
+            'video' => [
+                'video_duration_s' => $media->getVideoDurationS(),
+                'video_fps' => $media->getVideoFps(),
+                'video_codec' => $media->getVideoCodec(),
+                'video_streams' => $media->getVideoStreams(),
+                'video_rotation_deg' => $media->getVideoRotationDeg(),
+                'video_has_stabilization' => $media->getVideoHasStabilization(),
+                'is_slow_mo' => $media->isSlowMo(),
+            ],
             'imaging' => [
                 'camera' => [
                     'make' => $media->getCameraMake(),
