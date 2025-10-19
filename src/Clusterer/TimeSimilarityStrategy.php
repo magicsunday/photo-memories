@@ -18,12 +18,17 @@ use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\Support\GeoTemporalClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_map;
+use function count;
+use function min;
 use function usort;
 
 /**
@@ -34,6 +39,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
     use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
+    use GeoTemporalClusterTrait;
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
 
@@ -41,11 +47,18 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
 
     private ClusterQualityAggregator $qualityAggregator;
 
+    private GeoDbscanHelper $dbscanHelper;
+
+    private const MAX_WINDOW_SECONDS = 10800;
+
+    private const CLUSTER_RADIUS_METERS = 250.0;
+
     public function __construct(
         LocationHelper $locHelper,
         private int $maxGapSeconds = 21600,
         private int $minItemsPerBucket = 5,
         ?ClusterQualityAggregator $qualityAggregator = null,
+        ?GeoDbscanHelper $dbscanHelper = null,
     ) {
         if ($this->maxGapSeconds < 1) {
             throw new InvalidArgumentException('maxGapSeconds must be >= 1.');
@@ -57,6 +70,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
 
         $this->locationHelper    = $locHelper;
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
+        $this->dbscanHelper      = $dbscanHelper ?? new GeoDbscanHelper();
     }
 
     public function name(): string
@@ -73,59 +87,37 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
     {
         $withTs = $this->filterTimestampedItems($items);
 
-        usort(
+        $buckets = $this->buildGeoTemporalBuckets(
             $withTs,
-            static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+            $this->dbscanHelper,
+            $this->minItemsPerBucket,
+            self::CLUSTER_RADIUS_METERS,
+            $this->resolveWindowSeconds(),
         );
 
-        /** @var list<list<Media>> $buckets */
-        $buckets = [];
-        /** @var list<Media> $bucket */
-        $bucket  = [];
-        $prevTs  = null;
-        $prevKey = null;
-
-        foreach ($withTs as $m) {
-            $ts  = $m->getTakenAt()?->getTimestamp() ?? 0;
-            $key = $this->locationHelper->localityKeyForMedia($m);
-
-            $split = false;
-            if ($prevTs !== null && ($ts - $prevTs) > $this->maxGapSeconds) {
-                $split = true;
-            }
-
-            if ($prevKey !== null && $key !== null && $key !== $prevKey) {
-                $split = true;
-            }
-
-            if ($split && $bucket !== []) {
-                $buckets[] = $bucket;
-                $bucket    = [];
-            }
-
-            $bucket[] = $m;
-            $prevTs   = $ts;
-            $prevKey  = $key ?? $prevKey;
-        }
-
-        if ($bucket !== []) {
-            $buckets[] = $bucket;
-        }
-
-        $eligible = $this->filterListsByMinItems($buckets, $this->minItemsPerBucket);
-
         return array_map(
-            fn (array $list): ClusterDraft => $this->makeDraft($list),
-            $eligible
+            fn (array $bucket): ClusterDraft => $this->makeDraft($bucket),
+            $buckets
         );
     }
 
     /** @param list<Media> $bucket */
     private function makeDraft(array $bucket): ClusterDraft
     {
+        $centroid = $this->computeCentroid($bucket);
+        $range    = $this->computeTimeRange($bucket);
+
         $params = [
-            'time_range' => $this->computeTimeRange($bucket),
+            'time_range'     => $range,
+            'window_bounds'  => $range,
+            'members_count'  => count($bucket),
         ];
+
+        $lat = $centroid['lat'] ?? null;
+        $lon = $centroid['lon'] ?? null;
+        if ($lat !== null && $lon !== null) {
+            $params['centroid_cell7'] = GeoCell::fromPoint($lat, $lon, 7);
+        }
 
         $params = $this->appendLocationMetadata($bucket, $params);
 
@@ -147,7 +139,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
         return new ClusterDraft(
             algorithm: $this->name(),
             params: $params,
-            centroid: $this->computeCentroid($bucket),
+            centroid: $centroid,
             members: $this->toMemberIds($bucket)
         );
     }
@@ -165,6 +157,11 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
             $update,
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
+    }
+
+    private function resolveWindowSeconds(): int
+    {
+        return min($this->maxGapSeconds, self::MAX_WINDOW_SECONDS);
     }
 
 }

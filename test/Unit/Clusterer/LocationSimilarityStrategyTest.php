@@ -14,24 +14,26 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
+use function explode;
+use function sort;
 
 final class LocationSimilarityStrategyTest extends TestCase
 {
     #[Test]
-    public function clustersMediaByLocalityWithPoiMetadata(): void
+    public function clustersMediaByLocalityWithUnifiedMetadata(): void
     {
         $strategy = new LocationSimilarityStrategy(
             locationHelper: LocationHelper::createDefault(),
-            radiusMeters: 200.0,
+            radiusMeters: 220.0,
             minItemsPerPlace: 3,
-            maxSpanHours: 12,
+            maxSpanHours: 6,
         );
 
         $museum = $this->makeLocation(
@@ -46,180 +48,74 @@ final class LocationSimilarityStrategyTest extends TestCase
                 $location->setState('Berlin');
             },
         );
-        $museum->setPois([
-            [
-                'name'  => 'Museum Island',
-                'names' => [
-                    'default'   => 'Museum Island',
-                    'localized' => [
-                        'de' => 'Museumsinsel',
-                    ],
-                    'alternates' => [],
-                ],
-                'categoryKey'   => 'tourism',
-                'categoryValue' => 'museum',
-                'tags'          => ['wikidata' => 'Q1234'],
-            ],
-        ]);
 
         $mediaItems = [
-            $this->createMedia(801, '2023-04-01 09:00:00', 52.5201, 13.4049, $museum),
-            $this->createMedia(802, '2023-04-01 09:15:00', 52.5202, 13.4050, $museum),
-            $this->createMedia(803, '2023-04-01 09:35:00', 52.5203, 13.4051, $museum),
-            $this->createMedia(804, '2023-04-01 10:05:00', 52.5204, 13.4052, $museum),
-            // Below the locality threshold: different place
-            $this->createMedia(805, '2023-04-01 11:00:00', 48.1371, 11.5753, $this->makeLocation(
-                providerPlaceId: 'munich-park',
-                displayName: 'Englischer Garten',
-                lat: 48.1371,
-                lon: 11.5753,
-                city: 'Munich',
-                country: 'Germany',
-            )),
+            $this->createMedia(801, '2025-02-01 09:00:00', 52.5201, 13.4049, $museum),
+            $this->createMedia(802, '2025-02-01 09:35:00', 52.5202, 13.4051, $museum),
+            $this->createMedia(803, '2025-02-01 10:10:00', 52.5203, 13.4052, $museum),
         ];
 
         $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
-
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
         self::assertSame('location_similarity', $cluster->getAlgorithm());
-        self::assertSame([801, 802, 803, 804], $cluster->getMembers());
+        self::assertSame([801, 802, 803], $cluster->getMembers());
 
         $params = $cluster->getParams();
-        self::assertSame('suburb:Mitte|city:Berlin|country:Germany', $params['place_key']);
-        self::assertSame('Museum Island', $params['place']);
-        self::assertSame('Berlin', $params['place_city']);
-        self::assertSame('Berlin', $params['place_region']);
-        self::assertSame('Germany', $params['place_country']);
-        self::assertSame('Berlin, Germany', $params['place_location']);
-        self::assertSame('Museum Island', $params['poi_label']);
-        self::assertSame('tourism', $params['poi_category_key']);
-        self::assertSame('museum', $params['poi_category_value']);
-        self::assertSame(['wikidata' => 'Q1234'], $params['poi_tags']);
+        self::assertSame(3, $params['members_count']);
+        self::assertSame($params['time_range'], $params['window_bounds']);
 
-        $expectedRange = [
-            'from' => (new DateTimeImmutable('2023-04-01 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2023-04-01 10:05:00', new DateTimeZone('UTC')))->getTimestamp(),
-        ];
-        self::assertSame($expectedRange, $params['time_range']);
+        $placeParts = $params['place_key'];
+        self::assertIsString($placeParts);
+        $actualTokens = $placeParts === '' ? [] : explode('|', $placeParts);
+        sort($actualTokens);
+        self::assertSame(['city:Berlin', 'country:Germany', 'suburb:Mitte'], $actualTokens);
 
         $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta(52.52025, $centroid['lat'], 0.00001);
-        self::assertEqualsWithDelta(13.40505, $centroid['lon'], 0.00001);
+        $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
+        self::assertSame($expectedCell, $params['centroid_cell7']);
     }
 
     #[Test]
-    public function fallsBackToSpatialWindowsForItemsWithoutLocality(): void
+    public function fallbackClusteringHonoursDistanceAndWindowThresholds(): void
     {
         $strategy = new LocationSimilarityStrategy(
             locationHelper: LocationHelper::createDefault(),
-            radiusMeters: 250.0,
-            minItemsPerPlace: 3,
-            maxSpanHours: 1,
+            radiusMeters: 240.0,
+            minItemsPerPlace: 2,
+            maxSpanHours: 8,
         );
 
         $mediaItems = [
-            $this->createMedia(901, '2023-05-01 10:00:00', 48.1371, 11.5753, null),
-            $this->createMedia(902, '2023-05-01 10:20:00', 48.1372, 11.5754, null),
-            $this->createMedia(903, '2023-05-01 10:35:00', 48.1373, 11.5755, null),
-            // Outside of the spatial window due to distance
-            $this->createMedia(904, '2023-05-01 10:40:00', 48.1400, 11.5800, null),
-            // Different day bucket
-            $this->createMedia(905, '2023-05-02 09:00:00', 48.2000, 11.6000, null),
+            $this->createMedia(901, '2025-04-10 10:00:00', 48.1371, 11.5753, null),
+            $this->createMedia(902, '2025-04-10 10:18:00', 48.1372, 11.5754, null),
+            // Farther away -> should be treated as noise
+            $this->createMedia(903, '2025-04-10 10:25:00', 48.1455, 11.5850, null),
+            // Beyond the three hour window
+            $this->createMedia(904, '2025-04-10 14:30:00', 48.1372, 11.5754, null),
         ];
 
         $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
+        self::assertSame([901, 902], $cluster->getMembers());
 
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
-        self::assertSame('location_similarity', $cluster->getAlgorithm());
-        self::assertSame([901, 902, 903], $cluster->getMembers());
-
-        $params        = $cluster->getParams();
-        $expectedRange = [
-            'from' => (new DateTimeImmutable('2023-05-01 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2023-05-01 10:35:00', new DateTimeZone('UTC')))->getTimestamp(),
-        ];
-        self::assertSame($expectedRange, $params['time_range']);
-        self::assertArrayNotHasKey('place', $params);
+        $params = $cluster->getParams();
+        self::assertSame(2, $params['members_count']);
         self::assertArrayNotHasKey('place_key', $params);
 
-        $centroid = $cluster->getCentroid();
-        self::assertEqualsWithDelta(48.1372, $centroid['lat'], 0.00001);
-        self::assertEqualsWithDelta(11.5754, $centroid['lon'], 0.00001);
-    }
-
-    #[Test]
-    public function usesGeoCellMetadataToPreGroupSpatialWindows(): void
-    {
-        $strategy = new LocationSimilarityStrategy(
-            locationHelper: LocationHelper::createDefault(),
-            radiusMeters: 250.0,
-            minItemsPerPlace: 3,
-            maxSpanHours: 1,
-        );
-
-        $mediaItems = [
-            $this->createMedia(
-                931,
-                '2023-05-03 12:00:00',
-                48.2082,
-                16.3738,
-                null,
-                static function (Media $media): void {
-                    $media->setGeoCell8('u2edk8h2');
-                }
-            ),
-            $this->createMedia(
-                932,
-                '2023-05-03 12:15:00',
-                48.2083,
-                16.3739,
-                null,
-                static function (Media $media): void {
-                    $media->setGeoCell8('u2edk8h2');
-                }
-            ),
-            $this->createMedia(
-                933,
-                '2023-05-03 12:40:00',
-                48.2084,
-                16.3740,
-                null,
-                static function (Media $media): void {
-                    $media->setGeoCell8('u2edk8h2');
-                }
-            ),
-            $this->createMedia(
-                934,
-                '2023-05-03 12:45:00',
-                48.2150,
-                16.3800,
-                null,
-                static function (Media $media): void {
-                    $media->setGeoCell8('u2edk8x0');
-                }
-            ),
-        ];
-
-        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
-
-        self::assertCount(1, $clusters);
-        $cluster = $clusters[0];
-
-        self::assertInstanceOf(ClusterDraft::class, $cluster);
-        self::assertSame([931, 932, 933], $cluster->getMembers());
-
-        $params        = $cluster->getParams();
         $expectedRange = [
-            'from' => (new DateTimeImmutable('2023-05-03 12:00:00', new DateTimeZone('UTC')))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2023-05-03 12:40:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'from' => (new DateTimeImmutable('2025-04-10 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2025-04-10 10:18:00', new DateTimeZone('UTC')))->getTimestamp(),
         ];
         self::assertSame($expectedRange, $params['time_range']);
+        self::assertSame($expectedRange, $params['window_bounds']);
+
+        $centroid = $cluster->getCentroid();
+        $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
+        self::assertSame($expectedCell, $params['centroid_cell7']);
     }
 
     private function createMedia(

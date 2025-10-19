@@ -17,16 +17,16 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\Support\GeoTemporalClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
-use MagicSunday\Memories\Utility\MediaMath;
 
-use function array_values;
-use function assert;
 use function count;
-use function usort;
+use function min;
 
 /**
  * Class LocationSimilarityStrategy.
@@ -36,14 +36,22 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
     use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
+    use GeoTemporalClusterTrait;
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
+
+    private const MAX_WINDOW_SECONDS = 10800;
+
+    private const MAX_RADIUS_METERS = 250.0;
+
+    private GeoDbscanHelper $dbscanHelper;
 
     public function __construct(
         private LocationHelper $locationHelper,
         private float $radiusMeters = 150.0,
         private int $minItemsPerPlace = 5,
         private int $maxSpanHours = 24,
+        ?GeoDbscanHelper $dbscanHelper = null,
     ) {
         if ($this->radiusMeters <= 0.0) {
             throw new InvalidArgumentException('radiusMeters must be > 0.');
@@ -56,6 +64,8 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         if ($this->maxSpanHours < 0) {
             throw new InvalidArgumentException('maxSpanHours must be >= 0.');
         }
+
+        $this->dbscanHelper = $dbscanHelper ?? new GeoDbscanHelper();
     }
 
     public function name(): string
@@ -94,144 +104,73 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
         $drafts = [];
 
         foreach ($eligibleLocalities as $key => $group) {
-            $params = [
-                'place_key'  => $key,
-                'time_range' => $this->computeTimeRange($group),
-            ];
-
-            $params = $this->appendLocationMetadata($group, $params);
-
-            $tagMetadata = $this->collectDominantTags($group);
-            foreach ($tagMetadata as $paramKey => $value) {
-                $params[$paramKey] = $value;
-            }
-
-            $drafts[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: $params,
-                centroid: $this->computeCentroid($group),
-                members: $this->toMemberIds($group)
+            $buckets = $this->buildGeoTemporalBuckets(
+                $group,
+                $this->dbscanHelper,
+                $this->minItemsPerPlace,
+                $this->resolveRadiusMeters(),
+                $this->resolveWindowSeconds(),
             );
+
+            foreach ($buckets as $bucket) {
+                $drafts[] = $this->makeDraft($bucket, $key);
+            }
         }
 
-        // Fallback: räumlich + Zeitfenster
-        /** @var list<list<Media>> $spatialBuckets */
-        $spatialBuckets = $this->spatialWindows($noLocality);
-        /** @var list<list<Media>> $eligibleBuckets */
-        $eligibleBuckets = $this->filterListsByMinItems($spatialBuckets, $this->minItemsPerPlace);
-
-        foreach ($eligibleBuckets as $bucket) {
-            $params = [
-                'time_range' => $this->computeTimeRange($bucket),
-            ];
-
-            $tagMetadata = $this->collectDominantTags($bucket);
-            foreach ($tagMetadata as $paramKey => $value) {
-                $params[$paramKey] = $value;
-            }
-
-            $drafts[] = new ClusterDraft(
-                algorithm: $this->name(),
-                params: $params,
-                centroid: $this->computeCentroid($bucket),
-                members: $this->toMemberIds($bucket)
+        if ($noLocality !== []) {
+            $fallbackBuckets = $this->buildGeoTemporalBuckets(
+                $noLocality,
+                $this->dbscanHelper,
+                $this->minItemsPerPlace,
+                $this->resolveRadiusMeters(),
+                $this->resolveWindowSeconds(),
             );
+
+            foreach ($fallbackBuckets as $bucket) {
+                $drafts[] = $this->makeDraft($bucket, null);
+            }
         }
 
         return $drafts;
     }
 
-    /** @param list<Media> $items @return list<list<Media>> */
-    private function spatialWindows(array $items): array
+    /**
+     * @param list<Media> $bucket
+     */
+    private function makeDraft(array $bucket, ?string $placeKey): ClusterDraft
     {
-        $gps = $this->filterTimestampedGpsItems($items);
+        $centroid = $this->computeCentroid($bucket);
+        $range    = $this->computeTimeRange($bucket);
 
-        /** @var array<string, list<Media>> $byCell */
-        $byCell = [];
-        foreach ($this->filterTimestampedGpsItemsBy(
-            $gps,
-            static fn (Media $media): bool => $media->getGeoCell8() !== null
-        ) as $media) {
-            $cell = $media->getGeoCell8();
-            assert($cell !== null);
-            $byCell[$cell] ??= [];
-            $byCell[$cell][] = $media;
+        $params = [
+            'time_range'    => $range,
+            'window_bounds' => $range,
+            'members_count' => count($bucket),
+        ];
+
+        if ($placeKey !== null) {
+            $params['place_key'] = $placeKey;
         }
 
-        /** @var list<Media> $withoutCell */
-        $withoutCell = $this->filterTimestampedGpsItemsBy(
-            $gps,
-            static fn (Media $media): bool => $media->getGeoCell8() === null
+        $lat = $centroid['lat'] ?? null;
+        $lon = $centroid['lon'] ?? null;
+        if ($lat !== null && $lon !== null) {
+            $params['centroid_cell7'] = GeoCell::fromPoint($lat, $lon, 7);
+        }
+
+        $params = $this->appendLocationMetadata($bucket, $params);
+
+        $tagMetadata = $this->collectDominantTags($bucket);
+        foreach ($tagMetadata as $paramKey => $value) {
+            $params[$paramKey] = $value;
+        }
+
+        return new ClusterDraft(
+            algorithm: $this->name(),
+            params: $params,
+            centroid: $centroid,
+            members: $this->toMemberIds($bucket)
         );
-
-        /** @var list<list<Media>> $groups */
-        $groups = array_values($byCell);
-        if ($withoutCell !== []) {
-            $groups[] = $withoutCell;
-        }
-
-        $out = [];
-
-        foreach ($groups as $group) {
-            usort(
-                $group,
-                static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0) <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
-            );
-
-            /** @var list<Media> $bucket */
-            $bucket = [];
-            $start  = null;
-
-            foreach ($group as $media) {
-                if ($media->getGpsLat() === null || $media->getGpsLon() === null) {
-                    continue;
-                }
-
-                $ts = $media->getTakenAt()?->getTimestamp() ?? 0;
-
-                if ($bucket === []) {
-                    $bucket = [$media];
-                    $start  = $ts;
-                    continue;
-                }
-
-                $anchor    = $bucket[0];
-                $anchorLat = $anchor->getGpsLat();
-                $anchorLon = $anchor->getGpsLon();
-                $mediaLat  = $media->getGpsLat();
-                $mediaLon  = $media->getGpsLon();
-
-                if ($anchorLat === null || $anchorLon === null || $mediaLat === null || $mediaLon === null) {
-                    continue;
-                }
-
-                $dist = MediaMath::haversineDistanceInMeters(
-                    $anchorLat,
-                    $anchorLon,
-                    $mediaLat,
-                    $mediaLon
-                );
-                $spanOk = !($start !== null) || ($ts - $start) <= $this->maxSpanHours * 3600;
-
-                if ($dist <= $this->radiusMeters && $spanOk) {
-                    $bucket[] = $media;
-                    continue;
-                }
-
-                if (count($bucket) > 0) {
-                    $out[] = $bucket;
-                }
-
-                $bucket = [$media];
-                $start  = $ts;
-            }
-
-            if ($bucket !== []) {
-                $out[] = $bucket;
-            }
-        }
-
-        return $out;
     }
     /**
      * @param list<Media>                                 $items
@@ -247,6 +186,18 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             $update,
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
+    }
+
+    private function resolveWindowSeconds(): int
+    {
+        $seconds = (int) ($this->maxSpanHours * 3600);
+
+        return min($seconds, self::MAX_WINDOW_SECONDS);
+    }
+
+    private function resolveRadiusMeters(): float
+    {
+        return min($this->radiusMeters, self::MAX_RADIUS_METERS);
     }
 
 }
