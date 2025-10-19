@@ -616,6 +616,200 @@ final class RunDetectorTest extends TestCase
         ], $runs[0]);
     }
 
+    #[Test]
+    public function centroidDistanceSeedsRunWithoutBaseAwayFlag(): void
+    {
+        $transportExtender = new TransportDayExtender();
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 2,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $dayOneMedia = $this->makeMediaFixture(
+            401,
+            'centroid-one.jpg',
+            new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('Europe/Berlin')),
+            41.9028,
+            12.4964,
+        );
+        $dayTwoMedia = $this->makeMediaFixture(
+            402,
+            'centroid-two.jpg',
+            new DateTimeImmutable('2024-05-11 11:00:00', new DateTimeZone('Europe/Berlin')),
+            43.7696,
+            11.2558,
+        );
+
+        $days = [
+            '2024-05-10' => $this->makeDaySummary('2024-05-10', false, [$dayOneMedia], 90.0, 180.0, 3),
+            '2024-05-11' => $this->makeDaySummary('2024-05-11', false, [$dayTwoMedia], 85.0, 175.0, 3),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertSame([
+            ['2024-05-10', '2024-05-11'],
+        ], $runs);
+    }
+
+    #[Test]
+    public function transportSignalsSeedAwayWhenDistanceDataIsSparse(): void
+    {
+        $transportExtender = new TransportDayExtender();
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 2,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $transitMedia = $this->makeMediaFixture(
+            501,
+            'airport-hop.jpg',
+            new DateTimeImmutable('2024-09-04 07:30:00', new DateTimeZone('Europe/Berlin')),
+            50.0379,
+            8.5622,
+        );
+        $arrivalMedia = $this->makeMediaFixture(
+            502,
+            'arrival.jpg',
+            new DateTimeImmutable('2024-09-05 13:00:00', new DateTimeZone('Europe/Berlin')),
+            52.2297,
+            21.0122,
+        );
+
+        $days = [
+            '2024-09-04' => $this->makeDaySummary(
+                '2024-09-04',
+                false,
+                [$transitMedia],
+                45.0,
+                160.0,
+                2,
+                hasAirport: true,
+                hasHighSpeedTransit: true,
+                overrides: [
+                    'gpsMembers'      => [],
+                    'members'         => [$transitMedia],
+                    'tourismHits'     => 0,
+                    'poiSamples'      => 0,
+                    'dominantStaypoints' => [],
+                ],
+            ),
+            '2024-09-05' => $this->makeDaySummary('2024-09-05', false, [$arrivalMedia], 80.0, 180.0, 3),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertSame([
+            ['2024-09-04', '2024-09-05'],
+        ], $runs);
+    }
+
+    #[Test]
+    public function homeDayBetweenTripsSplitsRuns(): void
+    {
+        $transportExtender = new TransportDayExtender();
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 2,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $awayMediaA = $this->makeMediaFixture(
+            601,
+            'away-a.jpg',
+            new DateTimeImmutable('2024-10-10 10:00:00', new DateTimeZone('Europe/Berlin')),
+            41.3851,
+            2.1734,
+        );
+        $homeMedia = $this->makeMediaFixture(
+            602,
+            'home-break.jpg',
+            new DateTimeImmutable('2024-10-11 12:00:00', new DateTimeZone('Europe/Berlin')),
+            52.5,
+            13.4,
+        );
+        $awayMediaB = $this->makeMediaFixture(
+            603,
+            'away-b.jpg',
+            new DateTimeImmutable('2024-10-12 09:30:00', new DateTimeZone('Europe/Berlin')),
+            48.2082,
+            16.3738,
+        );
+
+        $days = [
+            '2024-10-10' => $this->makeDaySummary('2024-10-10', false, [$awayMediaA], 70.0, 160.0, 4),
+            '2024-10-11' => $this->makeDaySummary(
+                '2024-10-11',
+                false,
+                [$homeMedia],
+                8.0,
+                20.0,
+                5,
+                overrides: [
+                    'baseAway'        => false,
+                    'tourismHits'     => 0,
+                    'poiSamples'      => 0,
+                    'hasHighSpeedTransit' => false,
+                    'hasAirportPoi'   => false,
+                ],
+            ),
+            '2024-10-12' => $this->makeDaySummary('2024-10-12', false, [$awayMediaB], 75.0, 170.0, 4),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertCount(2, $runs);
+        self::assertSame(['2024-10-10'], $runs[0]);
+        self::assertSame(['2024-10-12'], $runs[1]);
+    }
+
     /**
      * @param list<Media> $gpsMembers
      */

@@ -27,6 +27,7 @@ use function is_array;
 use function is_float;
 use function is_int;
 use function is_string;
+use function max;
 use function pi;
 use function strtolower;
 
@@ -87,20 +88,47 @@ final class RunDetector implements VacationRunDetectorInterface
 
         $metadata = [];
         foreach ($keys as $key) {
-            $summary = $days[$key];
+            $summary       = $days[$key];
+            $timestamp     = $this->summaryTimestamp($summary);
+            $hasStaypoint  = $this->hasStaypointDwell($summary);
+            $transitHeavy  = $this->isTransitHeavyDay($summary);
+            $hasAirportPoi = (bool) ($summary['hasAirportPoi'] ?? false);
+            $hasHighSpeed  = (bool) ($summary['hasHighSpeedTransit'] ?? false);
+            $centroid      = $this->resolveDayCentroid($summary);
+
+            $centroidDistance = null;
+            $centroidRadius   = null;
+            $centroidBeyond   = false;
+            $distanceMetric   = (float) ($summary['maxDistanceKm'] ?? 0.0);
+
+            if ($centroid !== null) {
+                $nearest          = HomeBoundaryHelper::nearestCenter($home, $centroid['lat'], $centroid['lon'], $timestamp);
+                $centroidDistance = $nearest['distance_km'];
+                $centroidRadius   = $nearest['radius_km'];
+                $centroidBeyond   = $centroidDistance > $centroidRadius;
+                $distanceMetric   = $centroidDistance;
+            }
 
             $metadata[$key] = [
                 'hasGpsAnchors'        => $this->hasGpsAnchors($summary),
-                'hasStaypointDwell'    => $this->hasStaypointDwell($summary),
+                'hasStaypointDwell'    => $hasStaypoint,
                 'dominantOutsideHome'  => $this->isDominantStaypointOutsideHome($summary, $home),
                 'dominantInsideHome'   => $this->isDominantStaypointInsideHome($summary, $home),
-                'transitHeavy'         => $this->isTransitHeavyDay($summary),
+                'transitHeavy'         => $transitHeavy,
+                'transportSignal'      => $transitHeavy || $hasAirportPoi || $hasHighSpeed,
+                'hotelPoiSignal'       => $this->hasHotelPoiSignal($summary),
+                'hasAirportPoi'        => $hasAirportPoi,
+                'hasHighSpeedTransit'  => $hasHighSpeed,
                 'sufficientSamples'    => (bool) ($summary['sufficientSamples'] ?? false),
                 'photoCount'           => (int) ($summary['photoCount'] ?? 0),
                 'maxDistanceKm'        => (float) ($summary['maxDistanceKm'] ?? 0.0),
+                'distanceMetricKm'     => $distanceMetric,
+                'centroidDistanceKm'   => $centroidDistance,
+                'centroidRadiusKm'     => $centroidRadius,
+                'centroidBeyondHome'   => $centroidBeyond,
                 'baseAway'             => (bool) ($summary['baseAway'] ?? false),
                 'gpsMembers'           => $summary['gpsMembers'] ?? [],
-                'timestamp'            => $this->summaryTimestamp($summary),
+                'timestamp'            => $timestamp,
                 'softDistanceEligible' => false,
             ];
         }
@@ -110,32 +138,27 @@ final class RunDetector implements VacationRunDetectorInterface
         foreach ($keys as $key) {
             $features = $metadata[$key];
 
-            $candidate = $features['baseAway'];
-
-            if ($candidate === false && $features['dominantOutsideHome']) {
-                $candidate = true;
-            }
-
-            $strictDistanceMatch = $features['maxDistanceKm'] > $strictMinAwayDistanceKm;
-            $softDistanceMatch   = $features['maxDistanceKm'] > $softMinAwayDistanceKm;
+            $distanceMetric       = $features['distanceMetricKm'];
+            $strictDistanceMatch  = $distanceMetric > $strictMinAwayDistanceKm;
+            $softDistanceMatch    = $distanceMetric > $softMinAwayDistanceKm;
 
             if ($strictDistanceMatch === false && $softDistanceMatch === true) {
                 $metadata[$key]['softDistanceEligible'] = true;
+                $softDistanceEligible[$key]             = true;
             }
+
+            $candidate = $this->decideInitialAwayCandidate(
+                $features,
+                $strictDistanceMatch,
+                $softDistanceMatch,
+                $strictMinAwayDistanceKm,
+            );
 
             if ($candidate === false && $features['hasGpsAnchors']) {
                 $hasUsefulSamples = $features['sufficientSamples'] || $features['photoCount'] >= 2;
 
-                if ($hasUsefulSamples) {
-                    $centroid   = MediaMath::centroid($features['gpsMembers']);
-                    $nearest    = HomeBoundaryHelper::nearestCenter(
-                        $home,
-                        $centroid['lat'],
-                        $centroid['lon'],
-                        $features['timestamp'],
-                    );
-
-                    if ($nearest['distance_km'] > $nearest['radius_km']) {
+                if ($hasUsefulSamples && $features['centroidDistanceKm'] !== null && $features['centroidRadiusKm'] !== null) {
+                    if ($features['centroidDistanceKm'] > $features['centroidRadiusKm']) {
                         $candidate = true;
                     }
                 }
@@ -147,6 +170,14 @@ final class RunDetector implements VacationRunDetectorInterface
                 if ($candidate === false && $hasUsefulSamples && $strictDistanceMatch === false && $softDistanceMatch) {
                     $softDistanceEligible[$key] = true;
                 }
+            }
+
+            if ($candidate === false && $features['dominantOutsideHome']) {
+                $candidate = true;
+            }
+
+            if ($candidate === false && $features['hotelPoiSignal'] && $features['hasStaypointDwell'] && $softDistanceMatch) {
+                $candidate = true;
             }
 
             $isAwayCandidate[$key] = $candidate;
@@ -595,6 +626,129 @@ final class RunDetector implements VacationRunDetectorInterface
                 $isAwayCandidate[$key] = true;
             }
         }
+    }
+
+    /**
+     * @param array<string, mixed> $features
+     */
+    private function decideInitialAwayCandidate(
+        array $features,
+        bool $strictDistanceMatch,
+        bool $softDistanceMatch,
+        float $strictMinAwayDistanceKm,
+    ): bool {
+        if ($features['centroidBeyondHome']) {
+            return true;
+        }
+
+        $centroidDistance = $features['centroidDistanceKm'];
+        $centroidRadius   = $features['centroidRadiusKm'];
+
+        if ($centroidDistance !== null) {
+            $radiusThreshold = $centroidRadius !== null
+                ? max($strictMinAwayDistanceKm, $centroidRadius)
+                : $strictMinAwayDistanceKm;
+
+            if ($centroidDistance > $radiusThreshold) {
+                return true;
+            }
+        }
+
+        if ($features['transportSignal']) {
+            if ($centroidDistance !== null && $centroidRadius !== null && $centroidDistance > $centroidRadius) {
+                return true;
+            }
+
+            if ($strictDistanceMatch) {
+                return true;
+            }
+
+            if ($features['baseAway'] && $softDistanceMatch) {
+                return true;
+            }
+        }
+
+        if ($features['hotelPoiSignal']) {
+            if ($centroidDistance !== null && $centroidRadius !== null && $centroidDistance > $centroidRadius) {
+                return true;
+            }
+
+            if ($features['baseAway'] && ($features['hasStaypointDwell'] || $features['photoCount'] >= $this->minItemsPerDay)) {
+                return true;
+            }
+        }
+
+        if ($features['baseAway'] && $strictDistanceMatch) {
+            return true;
+        }
+
+        if ($features['baseAway'] && $features['hasStaypointDwell']) {
+            return true;
+        }
+
+        if ($features['baseAway']) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     *
+     * @return array{lat:float,lon:float}|null
+     */
+    private function resolveDayCentroid(array $summary): ?array
+    {
+        $members = $summary['gpsMembers'] ?? [];
+        if (is_array($members) && $members !== []) {
+            $centroid = MediaMath::centroid($members);
+
+            return ['lat' => $centroid['lat'], 'lon' => $centroid['lon']];
+        }
+
+        $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
+        if (is_array($dominantStaypoints) && $dominantStaypoints !== []) {
+            $primary = $dominantStaypoints[0];
+
+            if (isset($primary['lat'], $primary['lon'])) {
+                return ['lat' => (float) $primary['lat'], 'lon' => (float) $primary['lon']];
+            }
+        }
+
+        $baseLocation = $summary['baseLocation'] ?? null;
+        if (is_array($baseLocation) && isset($baseLocation['lat'], $baseLocation['lon'])) {
+            return ['lat' => (float) $baseLocation['lat'], 'lon' => (float) $baseLocation['lon']];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     */
+    private function hasHotelPoiSignal(array $summary): bool
+    {
+        $tourismHits = (int) ($summary['tourismHits'] ?? 0);
+        if ($tourismHits <= 0) {
+            return false;
+        }
+
+        if ($this->hasStaypointDwell($summary)) {
+            return true;
+        }
+
+        $staypointCounts = $summary['staypointCounts'] ?? null;
+        if (is_array($staypointCounts) && $staypointCounts !== []) {
+            return true;
+        }
+
+        $poiDensity = (float) ($summary['poiDensity'] ?? 0.0);
+        if ($poiDensity >= 0.25) {
+            return true;
+        }
+
+        return false;
     }
 
     private function summaryTimestamp(array $summary): ?int

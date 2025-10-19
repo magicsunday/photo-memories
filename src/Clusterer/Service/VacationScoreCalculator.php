@@ -110,7 +110,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         private HolidayResolverInterface $holidayResolver = new NullHolidayResolver(),
         private string $timezone = 'Europe/Berlin',
         private float $movementThresholdKm = 35.0,
-        private int $minAwayDays = 2,
+        private int $minAwayDays = 3,
         private int $minItemsPerDay = 4,
         private int $minimumMemberFloor = 60,
         private int $minMembers = 0,
@@ -440,11 +440,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $weekendHolidayFlags,
             $effectiveAwayDays,
             $nights,
+            $bridgedAwayDays,
         );
 
         $isWeekendGetaway        = $weekendAssessment['isWeekend'] && $weekendAssessment['exceptionApplies'];
         $weekendExceptionApplied = $weekendAssessment['exceptionApplies'];
         $weekendFlaggedDays      = $weekendAssessment['flaggedDays'];
+        $weekendGapDays          = $weekendAssessment['gapDays'];
 
         if ($effectiveAwayDays < $this->minAwayDays && $weekendExceptionApplied === false) {
             return null;
@@ -666,6 +668,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'away_days'       => $effectiveAwayDays,
             'nights'          => $nights,
             'weekend_getaway' => $isWeekendGetaway,
+            'gap_days'        => $weekendGapDays,
         ];
 
         $requestedProfile = null;
@@ -698,10 +701,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'away_days'                        => $effectiveAwayDays,
                 'raw_away_days'                    => $awayDays,
                 'bridged_days'                     => $bridgedAwayDays,
+                'gap_days'                         => $weekendGapDays,
                 'staypoint_detected'               => $primaryStaypoint !== null,
                 'storyline'                        => $storyline,
                 'weekend_getaway'                  => $isWeekendGetaway,
                 'weekend_exception'                => $weekendExceptionApplied,
+                'weekend_gap_days'                 => $weekendGapDays,
                 'selection_profile'                => $selectionProfileKey,
                 'selection_target_total'           => $selectionOptions->targetTotal,
                 'selection_minimum_total'          => $selectionOptions->minimumTotal,
@@ -953,6 +958,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'weekend_getaway'          => $isWeekendGetaway,
             'weekend_exception_applied' => $weekendExceptionApplied,
             'weekend_flagged_days'     => $weekendFlaggedDays,
+            'weekend_gap_days'         => $weekendGapDays,
             'selection_profile'        => $selectionProfileKey,
             'spot_count'               => $spotClusterCount,
             'spot_cluster_days'        => $multiSpotDays,
@@ -1753,6 +1759,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $requireSunday      = isset($config['require_sunday']) ? (bool) $config['require_sunday'] : true;
         $requireWeekendFlag = isset($config['require_weekend_flag']) ? (bool) $config['require_weekend_flag'] : true;
 
+        $maxGapDays = isset($config['max_gap_days']) ? (int) $config['max_gap_days'] : 1;
+        if ($maxGapDays < 0) {
+            $maxGapDays = 0;
+        }
+
+        if ($maxGapDays > 1) {
+            $maxGapDays = 1;
+        }
+
         return [
             'enabled'             => $enabled,
             'min_nights'          => $minNights,
@@ -1761,6 +1776,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'require_saturday'    => $requireSaturday,
             'require_sunday'      => $requireSunday,
             'require_weekend_flag' => $requireWeekendFlag,
+            'max_gap_days'        => $maxGapDays,
         ];
     }
 
@@ -1770,7 +1786,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      * @param array<string, bool>          $baseAwayMap
      * @param array<string, bool>          $weekendHolidayFlags
      *
-     * @return array{isWeekend:bool,exceptionApplies:bool,flaggedDays:int}
+     * @return array{isWeekend:bool,exceptionApplies:bool,flaggedDays:int,gapDays:int}
      */
     private function evaluateWeekendGetaway(
         array $dayKeys,
@@ -1779,15 +1795,16 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         array $weekendHolidayFlags,
         int $effectiveAwayDays,
         int $nights,
+        int $bridgedAwayDays,
     ): array {
         $config = $this->weekendExceptionConfig;
 
         if ($config['enabled'] === false) {
-            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0];
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0, 'gapDays' => 0];
         }
 
         if ($nights < $config['min_nights'] || $nights > $config['max_nights']) {
-            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0];
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => 0, 'gapDays' => 0];
         }
 
         $hasSaturday = false;
@@ -1818,25 +1835,27 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         if ($config['require_saturday'] && $hasSaturday === false) {
-            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
         }
 
         if ($config['require_sunday'] && $hasSunday === false) {
-            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
         }
 
         if ($flaggedDays < $config['min_flagged_days']) {
             if ($config['require_weekend_flag'] || $config['min_flagged_days'] > 0) {
-                return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays];
+                return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
             }
         }
 
-        $exceptionApplies = $effectiveAwayDays < $this->minAwayDays;
+        $gapDays = max(0, $bridgedAwayDays);
+        $exceptionApplies = $effectiveAwayDays < $this->minAwayDays && $gapDays <= $config['max_gap_days'];
 
         return [
             'isWeekend'        => true,
             'exceptionApplies' => $exceptionApplies,
             'flaggedDays'      => $flaggedDays,
+            'gapDays'          => $gapDays,
         ];
     }
 

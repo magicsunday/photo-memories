@@ -208,7 +208,7 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         ?RecordingMonitoringEmitter $emitter = null,
         string $timezone = 'Europe/Berlin',
         float $movementThresholdKm = 35.0,
-        int $minAwayDays = 2,
+        int $minAwayDays = 3,
         int $minItemsPerDay = 4,
         int $minimumMemberFloor = 0,
         int $minMembers = 0,
