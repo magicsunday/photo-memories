@@ -30,12 +30,15 @@ use function is_string;
 use function min;
 use function strlen;
 use function substr;
+use function sprintf;
 
 /**
  * Class PhashSimilarityStrategy.
  */
 final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    private const MAX_HAMMING_CEILING = 5;
+
     use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
     use MediaFilterTrait;
@@ -43,11 +46,13 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
     public function __construct(
         private LocationHelper $locHelper,
-        private int $maxHamming = 6,
+        private int $maxHamming = self::MAX_HAMMING_CEILING,
         private int $minItemsPerBucket = 2,
     ) {
-        if ($this->maxHamming < 0) {
-            throw new InvalidArgumentException('maxHamming must be >= 0.');
+        if ($this->maxHamming < 0 || $this->maxHamming > self::MAX_HAMMING_CEILING) {
+            throw new InvalidArgumentException(
+                sprintf('maxHamming must be between 0 and %d.', self::MAX_HAMMING_CEILING)
+            );
         }
 
         if ($this->minItemsPerBucket < 1) {
