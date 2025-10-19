@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-26 – Raise vacation minimum away days to three
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Two-day getaways frequently slipped through the curation guardrails once the weekend exception toggled in, even when operators expected the default pipeline to focus on longer vacations. As a result, short transit hops flooded review queues and diluted highlight quality.
+- **Decision:** Increased `memories.cluster.vacation.min_away_days_default` to three, mirrored the new default in `.env.dist` and documentation, and extended the score-calculator tests to assert that two-day runs are rejected unless the configuration explicitly relaxes the threshold.
+- **Alternatives considered:** Disable the weekend exception globally (too coarse and removed a desired feature) or only tighten selection profiles (left scoring logic accepting short runs). Both options were rejected because they either harmed legitimate weekend trips or failed to enforce the baseline minimum days requirement.
+- **Follow-up actions:** Monitor telemetry for `cluster.vacation` runs to confirm that legitimate long-weekend trips still succeed when the explicit weekend exception applies, and revisit the minimum once new regional profiles are tuned.
+
 ## 2025-10-25 – Export typed media index metadata files
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Downstream search/index builds required a stable, machine-readable view of all ingestion signals without querying Doctrine or inspecting ad-hoc logs. The pipeline only wrote to the database and thumbnails, leaving no consumable artifact for data lakes or debugging snapshots.

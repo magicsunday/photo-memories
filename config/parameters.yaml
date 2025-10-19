@@ -140,7 +140,7 @@ parameters:
     # Description: Runtime minimum number of media items per day for vacation detection, allowing environment overrides.
     memories.cluster.vacation.min_items_per_day: '%env(default:memories.cluster.vacation.min_items_per_day_default:int:MEMORIES_CLUSTER_VACATION_MIN_ITEMS_PER_DAY)%'
     # Description: Default minimum number of days away from home to identify a vacation.
-    memories.cluster.vacation.min_away_days_default: 2
+    memories.cluster.vacation.min_away_days_default: 3
     # Description: Runtime minimum number of days away from home for vacation detection, allowing environment overrides.
     memories.cluster.vacation.min_away_days: '%env(default:memories.cluster.vacation.min_away_days_default:int:MEMORIES_CLUSTER_VACATION_MIN_AWAY_DAYS)%'
     # Description: Default minimum number of members in a cluster to qualify as a vacation highlight.
