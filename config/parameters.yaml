@@ -825,6 +825,8 @@ parameters:
     # Scoring Defaults
     # Description: Megapixel baseline used to determine high quality imagery.
     memories.score.quality_baseline_megapixels: 12.0
+    # Description: Number of top quality members considered when averaging cluster metrics (0 = all).
+    memories.score.quality.top_k: 0
     # Description: Minimum acceptable resolution in megapixels for quality scoring.
     memories.score.quality.min_resolution_megapixels: 2.0
     # Description: Score threshold below which an image is considered low quality.

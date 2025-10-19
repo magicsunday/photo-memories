@@ -32,6 +32,7 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
     {
         $params    = $cluster->getParams();
         $mediaList = $this->collectMediaItems($cluster, $mediaMap);
+        $qualityMembers = $params['quality_members'] ?? null;
 
         $quality     = $this->floatOrNull($params['quality_avg'] ?? null);
         $aesthetics  = $this->floatOrNull($params['aesthetics_score'] ?? null);
@@ -62,7 +63,14 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             || $videoPenalty === null
             || $iso === null
         ) {
-            $metrics = $this->qualityAggregator->buildParams($mediaList);
+            if (is_array($qualityMembers)) {
+                $metrics = $this->qualityAggregator->aggregateFromMembers($qualityMembers);
+            } else {
+                $metrics        = $this->qualityAggregator->buildParams($mediaList);
+                $qualityMembers = $metrics['quality_members'] ?? null;
+                unset($metrics['quality_members']);
+            }
+
             $quality ??= $metrics['quality_avg'];
             $aesthetics ??= $this->floatOrNull($metrics['aesthetics_score']);
             $resolution ??= $this->floatOrNull($metrics['quality_resolution']);
@@ -127,6 +135,10 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
         if ($iso !== null) {
             $cluster->setParam('quality_iso', $iso);
+        }
+
+        if (is_array($qualityMembers)) {
+            $cluster->setParam('quality_members', $qualityMembers);
         }
     }
 

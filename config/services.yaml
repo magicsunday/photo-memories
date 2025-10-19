@@ -602,6 +602,7 @@ services:
                 keyframe: 0.05
             $videoBonusWeight: 0.08
             $videoPenaltyWeight: 0.12
+            $topK: '%memories.score.quality.top_k%'
 
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
