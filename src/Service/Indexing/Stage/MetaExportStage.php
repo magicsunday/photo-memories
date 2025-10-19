@@ -187,6 +187,14 @@ final class MetaExportStage implements MediaIngestionStageInterface
                 'clipping' => $media->getQualityClipping(),
                 'low_quality' => $media->isLowQuality(),
             ],
+            'quality_proxies' => [
+                'sharpness' => $media->getSharpness(),
+                'brightness' => $media->getBrightness(),
+                'contrast' => $media->getContrast(),
+                'entropy' => $media->getEntropy(),
+                'motion_blur_score' => $media->getMotionBlurScore(),
+                'colorfulness' => $media->getColorfulness(),
+            ],
             'hashes' => [
                 'checksum_sha256' => $media->getChecksum(),
                 'fast_checksum_xxhash64' => $media->getFastChecksumXxhash64(),

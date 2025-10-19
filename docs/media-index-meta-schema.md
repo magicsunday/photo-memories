@@ -26,6 +26,7 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
 | `imaging`         | object                                    | Camera, lens, and exposure properties. |
 | `classification`  | object                                    | Content kind, namespaced features, scene tags, and face metrics. |
 | `quality`         | object                                    | Aggregated quality scores and threshold flags. |
+| `quality_proxies` | object                                    | Normalised perceptual proxies emitted by the quality extractor. |
 | `hashes`          | object                                    | Perceptual hashes, fast checksums, and live-photo linkage hashes. |
 | `relationships`   | object                                    | Burst grouping metadata and live-photo partner references. |
 | `thumbnails`      | object or null                            | Map of generated thumbnails keyed by label. |
@@ -48,6 +49,14 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
   - `video_rotation_deg`: clockwise rotation in degrees required for playback (float, may be `null`).
   - `video_has_stabilization`: whether stabilisation metadata is present (boolean, may be `null`).
   - `is_slow_mo`: indicates slow-motion captures (boolean, may be `null`).
+- **Quality proxies** expose the raw heuristics that feed into `quality`:
+  - `sharpness`: float in `[0, 1]`; higher values indicate crisp edges and fine detail, whereas `0` represents fully blurred frames.
+  - `brightness`: float in `[0, 1]`; values near `0` are under-exposed, around `0.5` balanced, and near `1` over-exposed.
+  - `contrast`: float in `[0, 1]`; low readings (`≈0`) mean flat tonal range, while high readings mark punchy contrast.
+  - `entropy`: float in `[0, 1]`; captures texture complexity where `0` is uniform noise-free areas and `1` denotes highly varied scenes.
+  - `motion_blur_score`: float in `[0, 1]`; expresses the ratio of preserved high-frequency energy with `1` signalling minimal motion blur.
+  - `colorfulness`: float in `[0, 1]`; `0` indicates grayscale/low saturation scenes and `1` very saturated imagery.
+  - All proxies may be `null` when the extractor lacks enough signal (e.g. missing thumbnails).
 
 ### Example excerpt
 
