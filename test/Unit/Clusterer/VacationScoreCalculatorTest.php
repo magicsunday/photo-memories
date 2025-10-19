@@ -634,6 +634,71 @@ final class VacationScoreCalculatorTest extends TestCase
     }
 
     #[Test]
+    public function buildDraftRejectsTwoDayRunsWithDefaultMinimum(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $referenceDate  = new DateTimeImmutable('2024-05-10 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
+        );
+
+        $lisbonLocation = (new Location(
+            provider: 'test',
+            providerPlaceId: 'lisbon',
+            displayName: 'Lisboa, Portugal',
+            lat: 38.7223,
+            lon: -9.1393,
+            cell: 'cell-lisbon',
+        ))
+            ->setCity('Lisbon')
+            ->setState('Lisbon District')
+            ->setCountry('Portugal')
+            ->setCountryCode('PT');
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+        ];
+
+        $start   = new DateTimeImmutable('2024-05-06 09:00:00');
+        $dayKeys = [];
+        $days    = [];
+
+        for ($i = 0; $i < 2; ++$i) {
+            $dayDate   = $start->add(new DateInterval('P' . $i . 'D'));
+            $members   = $this->makeMembersForDay($i, $dayDate, 4, $lisbonLocation);
+            $dayKey    = $dayDate->format('Y-m-d');
+            $dayKeys[] = $dayKey;
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 12 + $i,
+                poiSamples: 18,
+                travelKm: 180.0,
+                timezoneOffset: 0,
+                hasAirport: $i === 0,
+                spotCount: 2,
+                spotDwellSeconds: 5400,
+            );
+        }
+
+        self::assertNull($calculator->buildDraft($dayKeys, $days, $home));
+    }
+
+    #[Test]
     public function weekendExceptionAllowsTripsBelowMinimumAwayDays(): void
     {
         $locationHelper = LocationHelper::createDefault();
