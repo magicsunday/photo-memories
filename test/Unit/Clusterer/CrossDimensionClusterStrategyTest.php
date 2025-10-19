@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -39,7 +40,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
             $this->createMedia(1205, '2023-08-15 13:00:00', 40.7300, -74.0000),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -77,7 +78,7 @@ final class CrossDimensionClusterStrategyTest extends TestCase
             $this->createMedia(1304, '2023-09-10 15:10:00', 34.0600, -118.2500),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media

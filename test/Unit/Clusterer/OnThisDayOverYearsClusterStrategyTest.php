@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\OnThisDayOverYearsClusterStrategy;
@@ -63,7 +64,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
 
                 $mediaItems[] = $this->createMedia($id++, $this->dateString(2022, $month, $day + 5, '10:00:00'));
 
-                $clusters = $strategy->cluster($mediaItems);
+                $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
                 if (!$isStable()) {
                     return false;
@@ -119,7 +120,7 @@ final class OnThisDayOverYearsClusterStrategyTest extends TestCase
                     return false;
                 }
 
-                self::assertSame([], $strategy->cluster($mediaItems));
+                self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
 
                 return true;
             }

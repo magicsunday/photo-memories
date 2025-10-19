@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -66,7 +67,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -119,7 +120,7 @@ final class FirstVisitPlaceClusterStrategyTest extends TestCase
             }
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     private function createLocation(string $id, string $city, float $lat, float $lon): Location

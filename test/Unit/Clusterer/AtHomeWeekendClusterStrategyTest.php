@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
@@ -68,7 +69,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
         $mediaItems[6]->setDistanceKmFromHome(0.05);
         $mediaItems[6]->setHomeConfigHash($hash);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -112,7 +113,7 @@ final class AtHomeWeekendClusterStrategyTest extends TestCase
             $this->createMedia(406, '2023-06-18 11:30:00', 52.5202, 13.4052),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createMedia(int $id, string $takenAt, ?float $lat, ?float $lon): Media

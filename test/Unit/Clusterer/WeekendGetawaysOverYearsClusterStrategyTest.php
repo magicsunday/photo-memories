@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -39,7 +40,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         $years = [2020, 2021, 2022];
         $items = $this->createTripAcrossYears($years, $nightCount + 1, '06-05');
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -65,7 +66,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         $items = $this->createTripAcrossYears([2021, 2022], 3, '07-09');
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -82,7 +83,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
 
         $items = $this->createTripAcrossYears([2020, 2021], 3, '09-04');
 
-        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+        $fallbackClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         foreach ($items as $media) {
             $takenAt = $media->getTakenAt();
@@ -94,7 +95,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             $this->applyRunMetadata($media, $isWeekend);
         }
 
-        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+        $featureClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         self::assertSame($fallbackClusters, $featureClusters);
     }
@@ -117,7 +118,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             $this->applyRunMetadata($media, null, withCoreTag: false, withCoreDayContext: false);
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -139,7 +140,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             $this->applyRunMetadata($media, null, withCoreTag: false, withCoreDayContext: true);
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -165,7 +166,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
             $this->applyRunMetadata($media, null, withCoreTag: true, withCoreDayContext: false, withDistance: false);
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     public static function provideNightLengths(): iterable

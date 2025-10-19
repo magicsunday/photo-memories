@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -50,7 +51,7 @@ final class PhashSimilarityStrategyTest extends TestCase
             $this->createMedia(1601, '2023-09-01 11:00:00', 48.1371, 11.5753, 'ffff999988887777', $location),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -97,7 +98,7 @@ final class PhashSimilarityStrategyTest extends TestCase
             $this->createMedia(1703, '2023-10-05 09:02:00', 48.1373, 11.5755, 'abcd111111111111', $location),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createMedia(

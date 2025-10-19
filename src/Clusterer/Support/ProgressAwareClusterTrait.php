@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Support;
 
 use Closure;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Entity\Media;
 
 use function count;
@@ -109,18 +110,19 @@ trait ProgressAwareClusterTrait
      * Wraps a clustering run with coarse progress notifications.
      *
      * @param list<Media>                                 $items
+     * @param Context                                     $ctx
      * @param callable(int $done, int $max, string $stage):void $update
-     * @param callable(array<Media>):array<ClusterDraft>  $cluster
+     * @param callable(array<Media>, Context):array<ClusterDraft>  $cluster
      *
      * @return list<ClusterDraft>
      */
-    protected function runWithDefaultProgress(array $items, callable $update, callable $cluster): array
+    protected function runWithDefaultProgress(array $items, Context $ctx, callable $update, callable $cluster): array
     {
         $max = max(1, count($items));
 
         $this->notifyProgress($update, 0, $max, sprintf('Filtern (%d)', count($items)));
 
-        $drafts = $cluster($items);
+        $drafts = $cluster($items, $ctx);
 
         $this->notifyProgress($update, max(1, $max - 1), $max, 'Scoring & Metadaten');
         $this->notifyProgress($update, $max, $max, sprintf('Abgeschlossen (%d Memories)', count($drafts)));

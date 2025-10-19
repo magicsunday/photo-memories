@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
@@ -273,14 +274,36 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
+     * @param list<Media> $scope
+     *
+     * @return list<ClusterDraft>
+     */
+    public function draft(array $scope, Context $ctx): array
+    {
+        $drafts = $this->cluster($scope);
+
+        foreach ($drafts as $draft) {
+            $ctx->applyToDraft($draft);
+        }
+
+        return $drafts;
+    }
+
+    /**
      * @param list<Media>                                 $items
+     * @param Context                                     $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
      */
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+        return $this->runWithDefaultProgress(
+            $items,
+            $ctx,
+            $update,
+            fn (array $payload, Context $context): array => $this->draft($payload, $context)
+        );
     }
 
     private function distanceKmFromHome(Media $media, float $lat, float $lon): float

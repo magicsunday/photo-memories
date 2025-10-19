@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -48,7 +49,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
         $items[] = $this->createPersonMedia(1800, $start, [1]);
         $items[] = $this->createPersonMedia(1801, $start, [4, 5]);
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -85,7 +86,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             );
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -137,7 +138,7 @@ final class PersonCohortClusterStrategyTest extends TestCase
             },
         );
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];

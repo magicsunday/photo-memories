@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -61,7 +62,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             $this->createMedia(1006, '2023-07-01 12:55:00', 48.1373, 11.5755, $munich),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -111,7 +112,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             $this->createMedia(1106, '2023-08-10 10:20:00', 53.5515, 9.9941, $location),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -148,7 +149,7 @@ final class TimeSimilarityStrategyTest extends TestCase
             ),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         self::assertSame([2101, 2102], $clusters[0]->getMembers());

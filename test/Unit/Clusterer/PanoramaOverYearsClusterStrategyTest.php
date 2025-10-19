@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -42,7 +43,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
             }
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -68,7 +69,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
             }
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -95,7 +96,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
             }
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         self::assertCount(9, $clusters[0]->getMembers());
@@ -125,7 +126,7 @@ final class PanoramaOverYearsClusterStrategyTest extends TestCase
             }
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     private function createPanorama(int $id, DateTimeImmutable $takenAt): Media

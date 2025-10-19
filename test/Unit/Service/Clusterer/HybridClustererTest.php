@@ -12,7 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Clusterer;
 
 use Doctrine\ORM\EntityManagerInterface;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
@@ -30,6 +32,7 @@ final class HybridClustererTest extends TestCase
     {
         $progressAwareStrategy = new class implements ProgressAwareClusterStrategyInterface {
             use ProgressAwareClusterTrait;
+            use ContextualClusterBridgeTrait;
 
             public function name(): string
             {
@@ -41,12 +44,13 @@ final class HybridClustererTest extends TestCase
                 return [];
             }
 
-            public function clusterWithProgress(array $items, callable $update): array
+            public function clusterWithProgress(array $items, Context $ctx, callable $update): array
             {
                 return $this->runWithDefaultProgress(
                     $items,
+                    $ctx,
                     $update,
-                    static fn (array $items): array => [],
+                    static fn (array $items, Context $context): array => [],
                 );
             }
         };
@@ -151,6 +155,7 @@ final class HybridClustererTest extends TestCase
     {
         $dynamicStrategy = new class implements ProgressAwareClusterStrategyInterface {
             use ProgressAwareClusterTrait;
+            use ContextualClusterBridgeTrait;
 
             public function name(): string
             {
@@ -162,7 +167,7 @@ final class HybridClustererTest extends TestCase
                 return [];
             }
 
-            public function clusterWithProgress(array $items, callable $update): array
+            public function clusterWithProgress(array $items, Context $ctx, callable $update): array
             {
                 $this->notifyProgress($update, 0, 2, 'Initialisiere');
                 $this->notifyProgress($update, 1, 2, 'Vorbereitung abgeschlossen');

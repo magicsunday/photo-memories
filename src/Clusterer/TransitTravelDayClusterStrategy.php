@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -37,6 +39,7 @@ use function usort;
  */
 final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    use ContextualClusterBridgeTrait;
     use MediaFilterTrait;
     use ClusterLocationMetadataTrait;
     use ProgressAwareClusterTrait;
@@ -417,9 +420,14 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
      *
      * @return list<ClusterDraft>
      */
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+        return $this->runWithDefaultProgress(
+            $items,
+            $ctx,
+            $update,
+            fn (array $payload, Context $context): array => $this->draft($payload, $context)
+        );
     }
 
 }

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\BurstClusterStrategy;
@@ -71,7 +72,8 @@ final class BurstClusterStrategyTest extends TestCase
         ]);
         $mediaItems[0]->setKeywords(['Serienaufnahme']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $context  = Context::fromScope($mediaItems);
+        $clusters = $strategy->draft($mediaItems, $context);
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -101,6 +103,19 @@ final class BurstClusterStrategyTest extends TestCase
         self::assertSame('museum', $params['poi_category_value']);
         self::assertSame(['wikidata' => 'Q1234'], $params['poi_tags']);
 
+        self::assertSame($context->timeWindow(), $params['context_time_window']);
+        self::assertNotNull($context->locationCell());
+        self::assertSame($context->locationCell(), $params['context_location_cell']);
+        self::assertArrayHasKey('context_people', $params);
+        self::assertArrayHasKey('context_people_count', $params);
+
+        $deviceDiversity = $context->deviceDiversity();
+        if ($deviceDiversity !== null) {
+            self::assertSame($deviceDiversity, $params['context_device_diversity']);
+        } else {
+            self::assertArrayNotHasKey('context_device_diversity', $params);
+        }
+
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.5202, $centroid['lat'], 0.0001);
         self::assertEqualsWithDelta(13.4052, $centroid['lon'], 0.0001);
@@ -125,7 +140,7 @@ final class BurstClusterStrategyTest extends TestCase
             $this->createMedia(4005, '2023-04-15 09:06:20', 40.7131, -74.0057),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -149,7 +164,7 @@ final class BurstClusterStrategyTest extends TestCase
             $this->createMedia(5003, '2023-07-20 14:01:15', 34.0523, -118.2434),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -176,7 +191,7 @@ final class BurstClusterStrategyTest extends TestCase
 
         $mediaItems[0]->setBurstRepresentative(true);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -208,7 +223,7 @@ final class BurstClusterStrategyTest extends TestCase
             $this->createMedia(7003, '2023-09-10 08:05:30', 35.6897, 139.6919),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];

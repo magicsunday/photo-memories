@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ThisMonthOverYearsClusterStrategy;
@@ -56,7 +57,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
                 ]);
                 $mediaItems[0]->setKeywords(['Frühlingsausflug']);
 
-                $clusters = $strategy->cluster($mediaItems);
+                $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
                 if (!$isStable()) {
                     return false;
@@ -106,7 +107,7 @@ final class ThisMonthOverYearsClusterStrategyTest extends TestCase
                     return false;
                 }
 
-                self::assertSame([], $strategy->cluster($mediaItems));
+                self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
 
                 return true;
             }

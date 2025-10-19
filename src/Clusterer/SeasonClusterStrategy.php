@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -37,6 +39,7 @@ use function sprintf;
  */
 final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    use ContextualClusterBridgeTrait;
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
@@ -74,7 +77,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
      */
     public function cluster(array $items): array
     {
-        return $this->clusterInternal($items, null);
+        return $this->clusterInternal($items, null, null);
     }
 
     /**
@@ -140,22 +143,24 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
     }
     /**
      * @param list<Media>                                 $items
+     * @param Context                                     $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
      */
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->clusterInternal($items, $update);
+        return $this->clusterInternal($items, $ctx, $update);
     }
 
     /**
      * @param list<Media> $items
+     * @param Context $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
      */
-    private function clusterInternal(array $items, ?callable $update): array
+    private function clusterInternal(array $items, ?Context $ctx, ?callable $update): array
     {
         /** @var list<Media> $timestamped */
         $timestamped = $this->filterTimestampedItems($items);
@@ -181,6 +186,12 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
         );
 
         $drafts = $this->buildClustersFromGroups($eligibleGroups);
+
+        if ($ctx !== null) {
+            foreach ($drafts as $draft) {
+                $ctx->applyToDraft($draft);
+            }
+        }
 
         $this->notifyProgress(
             $update,

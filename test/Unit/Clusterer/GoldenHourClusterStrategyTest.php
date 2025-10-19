@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -45,7 +46,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         self::assertSame('golden_hour', $clusters[0]->getAlgorithm());
@@ -75,7 +76,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         self::assertSame(range(2800, 2804), $clusters[0]->getMembers());
@@ -99,7 +100,7 @@ final class GoldenHourClusterStrategyTest extends TestCase
             );
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     private function createMedia(int $id, DateTimeImmutable $takenAt, ?bool $golden = null): Media

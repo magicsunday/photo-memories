@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -51,7 +52,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($media);
+        $clusters = $strategy->draft($media, Context::fromScope($media));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -93,7 +94,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($media);
+        $clusters = $strategy->draft($media, Context::fromScope($media));
 
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
@@ -154,7 +155,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($media);
+        $clusters = $strategy->draft($media, Context::fromScope($media));
 
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
@@ -185,7 +186,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             );
         }
 
-        self::assertSame([], $strategy->cluster($media));
+        self::assertSame([], $strategy->draft($media, Context::fromScope($media)));
     }
 
     #[Test]
@@ -215,7 +216,7 @@ final class NightlifeEventClusterStrategyTest extends TestCase
             );
         }
 
-        self::assertSame([], $strategy->cluster($media));
+        self::assertSame([], $strategy->draft($media, Context::fromScope($media)));
     }
 
     private function createMedia(

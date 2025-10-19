@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -211,7 +212,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $strategy = new VacationClusterStrategy($homeLocator, $daySummaryBuilder, $segmentAssembler);
 
-        $clusters = $strategy->cluster($noisyOrder);
+        $clusters = $strategy->draft($noisyOrder, Context::fromScope($noisyOrder));
 
         $expected = [2003, 2002, 2001];
 
@@ -311,7 +312,7 @@ final class VacationClusterStrategyTest extends TestCase
             ),
         ];
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertSame([], $clusters);
 
@@ -521,7 +522,7 @@ final class VacationClusterStrategyTest extends TestCase
 
         $strategy = new VacationClusterStrategy($homeLocator, $daySummaryBuilder, $segmentAssembler, $emitter);
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertSame($segments, $clusters);
 
@@ -691,7 +692,7 @@ final class VacationClusterStrategyTest extends TestCase
             $items[]                               = $nightMedia;
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -1119,7 +1120,7 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertSame([], $clusters);
     }
@@ -1233,7 +1234,7 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -1377,7 +1378,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -1487,7 +1488,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -1678,7 +1679,7 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -1797,7 +1798,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertSame([], $clusters);
     }
@@ -1880,7 +1881,7 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertSame([], $clusters);
     }
@@ -1918,7 +1919,7 @@ final class VacationClusterStrategyTest extends TestCase
             );
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     private function makeStrategy(

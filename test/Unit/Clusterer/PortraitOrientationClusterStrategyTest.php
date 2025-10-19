@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -39,7 +40,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             $items[] = $media;
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -67,7 +68,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             $items[] = $media;
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -90,7 +91,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             },
         );
 
-        $clusters = $strategy->cluster([$media]);
+        $clusters = $strategy->draft([$media], Context::fromScope([$media]));
 
         self::assertCount(1, $clusters);
         self::assertSame([3900], $clusters[0]->getMembers());
@@ -118,7 +119,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             },
         );
 
-        self::assertSame([], $strategy->cluster([$media]));
+        self::assertSame([], $strategy->draft([$media], Context::fromScope([$media])));
     }
 
     #[Test]
@@ -140,7 +141,7 @@ final class PortraitOrientationClusterStrategyTest extends TestCase
             },
         );
 
-        self::assertSame([], $strategy->cluster([$media]));
+        self::assertSame([], $strategy->draft([$media], Context::fromScope([$media])));
     }
 
     private function createPortraitMedia(int $id, DateTimeImmutable $takenAt): Media

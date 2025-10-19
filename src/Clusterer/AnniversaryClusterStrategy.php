@@ -11,9 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -43,6 +45,7 @@ use function sprintf;
  */
 final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
@@ -110,9 +113,15 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         return $this->buildClusters($items, null);
     }
 
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->buildClusters($items, $update);
+        $drafts = $this->buildClusters($items, $update);
+
+        foreach ($drafts as $draft) {
+            $ctx->applyToDraft($draft);
+        }
+
+        return $drafts;
     }
 
     /**

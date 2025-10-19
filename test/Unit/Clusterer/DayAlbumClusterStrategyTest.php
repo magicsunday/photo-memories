@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -51,7 +52,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
         $mediaItems[0]->setPersons(['Anna']);
         $mediaItems[1]->setPersons(['Ben']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -99,7 +100,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
             $this->createMedia(202, '2022-08-01 10:00:00', 52.5002, 13.4002),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -120,7 +121,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
         $mediaItems[0]->setPersons(['Clara']);
         $mediaItems[1]->setPersons(['Clara']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         self::assertSame([501, 502], $clusters[0]->getMembers());
@@ -152,7 +153,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
             $media->setHeight(null);
         }
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -169,7 +170,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
             $this->createAnnotatedMedia(802, '2023-12-24 10:00:00'),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
@@ -207,7 +208,7 @@ final class DayAlbumClusterStrategyTest extends TestCase
             },
         );
 
-        $clusters = $strategy->cluster([$media]);
+        $clusters = $strategy->draft([$media], Context::fromScope([$media]));
 
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();
