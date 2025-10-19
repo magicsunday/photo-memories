@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -77,7 +78,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             )),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -129,7 +130,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             $this->createMedia(905, '2023-05-02 09:00:00', 48.2000, 11.6000, null),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -205,7 +206,7 @@ final class LocationSimilarityStrategyTest extends TestCase
             ),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];

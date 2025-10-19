@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -51,7 +52,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
                 ]);
                 $mediaItems[0]->setKeywords(['Jahresrückblick']);
 
-                $clusters = $strategy->cluster($mediaItems);
+                $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
                 if (!$isStable()) {
                     return false;
@@ -98,7 +99,7 @@ final class OneYearAgoClusterStrategyTest extends TestCase
                     return false;
                 }
 
-                self::assertSame([], $strategy->cluster($mediaItems));
+                self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
 
                 return true;
             }

@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekdayClusterStrategy;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
@@ -90,7 +91,7 @@ final class ClusterStrategySmokeTest extends TestCase
 
         self::assertInstanceOf(ClusterStrategyInterface::class, $strategy);
         self::assertSame($expectedName, $strategy->name());
-        self::assertSame([], $strategy->cluster([]));
+        self::assertSame([], $strategy->draft([], Context::fromScope([])));
     }
 
     /**

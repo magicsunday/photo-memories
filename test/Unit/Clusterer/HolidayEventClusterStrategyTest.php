@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
@@ -68,7 +69,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
         ]);
         $mediaItems[0]->setKeywords(['Weihnachten']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(2, $clusters);
 
@@ -105,7 +106,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
             $this->createMedia(13, '2023-10-03 11:00:00', 52.0010, 13.0010),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -121,7 +122,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
             $this->createMedia(202, '2024-03-29 11:00:00', 50.0005, 8.0005),
         ];
 
-        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+        $fallbackClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         foreach ($items as $media) {
             $media->setFeatures([
@@ -132,7 +133,7 @@ final class HolidayEventClusterStrategyTest extends TestCase
             ]);
         }
 
-        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+        $featureClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         self::assertSame($fallbackClusters, $featureClusters);
     }

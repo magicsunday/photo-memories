@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Clusterer;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
@@ -65,6 +66,7 @@ final class HybridClusterer implements HybridClustererInterface
     ): array {
         $strategies = $this->getStrategies();
         $total      = count($strategies);
+        $context    = Context::fromScope($items);
 
         $drafts = [[]];
         $idx    = 0;
@@ -84,6 +86,7 @@ final class HybridClusterer implements HybridClustererInterface
             if ($strategyHandle !== null && $s instanceof ProgressAwareClusterStrategyInterface) {
                 $res = $s->clusterWithProgress(
                     $items,
+                    $context,
                     static function (int $done, int $maxSteps, string $stage) use ($strategyHandle): void {
                         if ($maxSteps > 0) {
                             $progress = max(0, min($done, $maxSteps));
@@ -100,7 +103,7 @@ final class HybridClusterer implements HybridClustererInterface
                     },
                 );
             } else {
-                $res = $s->cluster($items);
+                $res = $s->draft($items, $context);
             }
 
             if ($res !== []) {

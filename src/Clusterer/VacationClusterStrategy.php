@@ -11,10 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -36,6 +38,7 @@ use function usort;
  */
 final readonly class VacationClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    use ContextualClusterBridgeTrait;
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
 
@@ -70,27 +73,29 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        return $this->clusterInternal($items, null);
+        return $this->clusterInternal($items, null, null);
     }
 
     /**
      * @param list<Media>                                 $items
+     * @param Context                                     $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
      */
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->clusterInternal($items, $update);
+        return $this->clusterInternal($items, $ctx, $update);
     }
 
     /**
      * @param list<Media>                                 $items
+     * @param Context|null                                $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
      */
-    private function clusterInternal(array $items, ?callable $update): array
+    private function clusterInternal(array $items, ?Context $ctx, ?callable $update): array
     {
         $totalCount = count($items);
         $this->emitMonitoring('start', [
@@ -220,6 +225,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             'away_day_count' => $metrics['away_day_count'],
             'timestamped_count' => $timestampedCount,
         ]);
+
+        if ($ctx !== null) {
+            foreach ($segments as $segment) {
+                $ctx->applyToDraft($segment);
+            }
+        }
 
         return $segments;
     }

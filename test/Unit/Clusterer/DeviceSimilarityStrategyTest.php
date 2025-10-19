@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -47,7 +48,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
             $this->createMedia(305, '2023-05-02 12:00:00', 'Canon EOS R5', $berlin, 52.5207, 13.4057),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -125,7 +126,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
             ),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
 
@@ -164,7 +165,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
             $this->createMedia(403, '2023-06-10 08:10:00', 'iPhone 14 Pro', $location, 48.1373, 11.5755),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -190,7 +191,7 @@ final class DeviceSimilarityStrategyTest extends TestCase
             $this->createMedia(606, '2023-07-10 10:05:00', 'Fujifilm X-T5', $paris, 48.8571, 2.3527, cameraOwner: 'Bob', cameraMake: 'Fujifilm', cameraSerial: 'SN-123'),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(3, $clusters);
 

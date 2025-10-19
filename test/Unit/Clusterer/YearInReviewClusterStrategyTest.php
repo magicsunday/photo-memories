@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
@@ -50,7 +51,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
             ], ['Jahresrückblick', 'Reisen']);
         }
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -97,7 +98,7 @@ final class YearInReviewClusterStrategyTest extends TestCase
             $this->createMedia(703, '2022-03-01 11:00:00', 40.7130, -74.0058),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media

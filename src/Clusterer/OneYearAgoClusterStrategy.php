@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInterval;
 use DateInvalidOperationException;
@@ -19,6 +20,7 @@ use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -36,6 +38,7 @@ use function usort;
  */
 final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
+    use ContextualClusterBridgeTrait;
     use MediaFilterTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
@@ -142,9 +145,14 @@ final readonly class OneYearAgoClusterStrategy implements ClusterStrategyInterfa
      *
      * @return list<ClusterDraft>
      */
-    public function clusterWithProgress(array $items, callable $update): array
+    public function clusterWithProgress(array $items, Context $ctx, callable $update): array
     {
-        return $this->runWithDefaultProgress($items, $update, fn (array $payload): array => $this->cluster($payload));
+        return $this->runWithDefaultProgress(
+            $items,
+            $ctx,
+            $update,
+            fn (array $payload, Context $context): array => $this->draft($payload, $context)
+        );
     }
 
 }

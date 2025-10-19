@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
@@ -51,7 +52,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             ], ['Sommer', 'Urlaub']);
         }
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -88,7 +89,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(14, '2021-04-04 11:00:00'),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -107,7 +108,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             $this->createMedia(204, '2020-08-12 11:00:00'),
         ];
 
-        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+        $fallbackClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         foreach ($items as $media) {
             $media->setFeatures([
@@ -115,7 +116,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
             ]);
         }
 
-        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+        $featureClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         self::assertSame($fallbackClusters, $featureClusters);
     }
@@ -139,7 +140,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
         ];
 
         $updates = [];
-        $strategy->clusterWithProgress($items, static function (int $done, int $max, string $stage) use (&$updates): void {
+        $strategy->clusterWithProgress($items, Context::fromScope($items), static function (int $done, int $max, string $stage) use (&$updates): void {
             $updates[] = ['done' => $done, 'max' => $max, 'stage' => $stage];
         });
 

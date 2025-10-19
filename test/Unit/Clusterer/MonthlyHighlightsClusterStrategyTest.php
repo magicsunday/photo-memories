@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
@@ -45,7 +46,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             ], ['Highlights', 'Stadt']);
         }
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -95,7 +96,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             $this->createMedia(14, '2023-05-03 09:00:00'),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -117,7 +118,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
             $this->createMedia(26, '2023-03-22 13:00:00'),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(3, $clusters);
 

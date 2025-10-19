@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\AnniversaryClusterStrategy;
@@ -53,7 +54,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
         ]);
         $mediaItems[0]->setKeywords(['Jubiläum']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -98,7 +99,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
             $this->createMedia(2003, '2023-07-04 10:05:00', $location, 53.5513, 9.9939),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -119,7 +120,7 @@ final class AnniversaryClusterStrategyTest extends TestCase
             $this->createMedia(3003, '2022-09-15 12:10:00', $location, 52.5203, 13.4051),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createMedia(

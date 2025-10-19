@@ -19,11 +19,11 @@ use MagicSunday\Memories\Entity\Media;
 interface ClusterStrategyInterface
 {
     /**
-     * @param list<Media> $items Sorted or unsorted
+     * @param list<Media> $scope Sorted or unsorted
      *
      * @return list<ClusterDraft>
      */
-    public function cluster(array $items): array;
+    public function draft(array $scope, Context $ctx): array;
 
     public function name(): string;
 }

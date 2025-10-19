@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\SeasonClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
@@ -56,7 +57,7 @@ final class SeasonClusterStrategyTest extends TestCase
             ['label' => 'Schnee', 'score' => 0.65],
         ], ['Winter']);
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -93,7 +94,7 @@ final class SeasonClusterStrategyTest extends TestCase
             $this->createMedia(12, '2024-06-05 11:00:00'),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     #[Test]
@@ -111,7 +112,7 @@ final class SeasonClusterStrategyTest extends TestCase
             $this->createMedia(104, '2023-02-18 11:30:00'),
         ];
 
-        $fallbackClusters = $this->normaliseClusters($strategy->cluster($items));
+        $fallbackClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         foreach ($items as $media) {
             $media->setFeatures([
@@ -119,7 +120,7 @@ final class SeasonClusterStrategyTest extends TestCase
             ]);
         }
 
-        $featureClusters = $this->normaliseClusters($strategy->cluster($items));
+        $featureClusters = $this->normaliseClusters($strategy->draft($items, Context::fromScope($items)));
 
         self::assertSame($fallbackClusters, $featureClusters);
     }
@@ -142,7 +143,7 @@ final class SeasonClusterStrategyTest extends TestCase
         ];
 
         $updates = [];
-        $strategy->clusterWithProgress($items, static function (int $done, int $max, string $stage) use (&$updates): void {
+        $strategy->clusterWithProgress($items, Context::fromScope($items), static function (int $done, int $max, string $stage) use (&$updates): void {
             $updates[] = ['done' => $done, 'max' => $max, 'stage' => $stage];
         });
 

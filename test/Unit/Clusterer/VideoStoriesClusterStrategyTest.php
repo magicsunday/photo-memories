@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -87,7 +88,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             $videos[] = $video;
         }
 
-        $clusters = $strategy->cluster($videos);
+        $clusters = $strategy->draft($videos, Context::fromScope($videos));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -138,7 +139,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             $this->createPhoto(3401, new DateTimeImmutable('2024-03-16 09:00:00', new DateTimeZone('UTC'))),
         ];
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -159,7 +160,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             },
         );
 
-        $clusters = $strategy->cluster([$video]);
+        $clusters = $strategy->draft([$video], Context::fromScope([$video]));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -192,7 +193,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             },
         );
 
-        self::assertSame([], $strategy->cluster([$nonVideo]));
+        self::assertSame([], $strategy->draft([$nonVideo], Context::fromScope([$nonVideo])));
     }
 
     private function createVideo(int $id, DateTimeImmutable $takenAt, ?Location $location = null): Media

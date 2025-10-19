@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -67,7 +68,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             );
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -105,7 +106,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(2400 + $idx, $day->add(new DateInterval('PT' . ($idx * 600) . 'S')), $lat, $lon);
         }
 
-        self::assertSame([], $strategy->cluster($items));
+        self::assertSame([], $strategy->draft($items, Context::fromScope($items)));
     }
 
     #[Test]
@@ -138,7 +139,7 @@ final class TransitTravelDayClusterStrategyTest extends TestCase
             $items[] = $this->createMedia(2500 + $idx, $day->add(new DateInterval('PT' . ($idx * 1800) . 'S')), $lat, $lon);
         }
 
-        $clusters = $strategy->cluster($items);
+        $clusters = $strategy->draft($items, Context::fromScope($items));
 
         self::assertCount(1, $clusters);
         $params = $clusters[0]->getParams();

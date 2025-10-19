@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\SignificantPlaceClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -41,7 +42,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             $this->createMedia(6, '2024-04-01 09:00:00', 48.1, 11.6, $this->createLocation('loc-munich', 'Marienplatz')),
         ];
 
-        $clusters = $strategy->cluster($mediaItems);
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
 
         self::assertCount(1, $clusters);
         $cluster = $clusters[0];
@@ -77,7 +78,7 @@ final class SignificantPlaceClusterStrategyTest extends TestCase
             $this->createMedia(15, '2024-03-04 12:00:00', 52.5199, 13.4049, $location),
         ];
 
-        self::assertSame([], $strategy->cluster($mediaItems));
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
     }
 
     private function createLocation(string $id, string $displayName): Location
