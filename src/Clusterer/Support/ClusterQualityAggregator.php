@@ -15,11 +15,13 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Quality\DeterministicImageQualityEstimator;
 use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
 
+use function array_slice;
 use function ceil;
 use function count;
 use function floor;
 use function max;
 use function sort;
+use function usort;
 
 /**
  * Aggregates per-media quality metrics for cluster level annotations.
@@ -52,18 +54,22 @@ final class ClusterQualityAggregator
 
     private readonly float $videoPenaltyWeight;
 
+    private readonly int $topK;
+
     public function __construct(
         float $qualityBaselineMegapixels = 12.0,
         ?ImageQualityEstimatorInterface $estimator = null,
         ?array $qualityWeights = null,
         float $videoBonusWeight = self::DEFAULT_VIDEO_BONUS_WEIGHT,
         float $videoPenaltyWeight = self::DEFAULT_VIDEO_PENALTY_WEIGHT,
+        int $topK = 0,
     ) {
         $this->qualityBaselineMegapixels = $qualityBaselineMegapixels;
         $this->estimator                 = $estimator ?? new DeterministicImageQualityEstimator();
         $this->qualityWeights            = $qualityWeights ?? self::DEFAULT_QUALITY_WEIGHTS;
         $this->videoBonusWeight          = $videoBonusWeight;
         $this->videoPenaltyWeight        = $videoPenaltyWeight;
+        $this->topK                      = max(0, $topK);
     }
 
     /**
@@ -101,12 +107,6 @@ final class ClusterQualityAggregator
         $blockinessSamples = [];
         $clippingSamples   = [];
         $keyframeSamples   = [];
-
-        $videoBonusSum   = 0.0;
-        $videoBonusCount = 0;
-
-        $videoPenaltySum   = 0.0;
-        $videoPenaltyCount = 0;
 
         foreach ($mediaItems as $media) {
             $width  = $media->getWidth();
@@ -152,6 +152,14 @@ final class ClusterQualityAggregator
             $keyframeRaw = (float) $score->keyframeQuality;
             $keyframeSamples[] = $keyframeRaw;
 
+            $videoBonusValue   = null;
+            $videoPenaltyValue = null;
+
+            if ($media->isVideo()) {
+                $videoBonusValue   = $this->clamp01($score->videoBonus);
+                $videoPenaltyValue = $this->clamp01($score->videoPenalty);
+            }
+
             $measurements[] = [
                 'resolution_raw'   => $resolutionRaw,
                 'resolution_norm'  => $resolutionNorm,
@@ -167,15 +175,9 @@ final class ClusterQualityAggregator
                 'exposure_norm'    => $this->clamp01($score->exposure),
                 'keyframe_raw'     => $keyframeRaw,
                 'keyframe_norm'    => $this->clamp01($score->keyframeQuality),
+                'video_bonus'      => $videoBonusValue,
+                'video_penalty'    => $videoPenaltyValue,
             ];
-
-            if ($media->isVideo()) {
-                $videoBonusSum += $this->clamp01($score->videoBonus);
-                ++$videoBonusCount;
-
-                $videoPenaltySum += $this->clamp01($score->videoPenalty);
-                ++$videoPenaltyCount;
-            }
         }
 
         $resolutionPercentiles = $this->percentileRange($resolutionSamples);
@@ -186,64 +188,138 @@ final class ClusterQualityAggregator
         $clippingPercentiles   = $this->percentileRange($clippingSamples);
         $keyframePercentiles   = $this->percentileRange($keyframeSamples);
 
-        $resolution = $this->averageScaled($measurements, 'resolution_raw', 'resolution_norm', $resolutionPercentiles, true);
-        $sharpness  = $this->averageScaled($measurements, 'sharpness_raw', 'sharpness_norm', $sharpnessPercentiles, true);
-        $exposure   = $this->averageScaled($measurements, 'clipping_raw', 'exposure_norm', $clippingPercentiles, false);
-        $contrast   = $this->averageScaled($measurements, 'contrast_raw', 'contrast_norm', $contrastPercentiles, true);
-        $noise      = $this->averageScaled($measurements, 'noise_raw', 'noise_norm', $noisePercentiles, false);
-        $blockiness = $this->averageScaled($measurements, 'blockiness_raw', 'blockiness_norm', $blockinessPercentiles, false);
-        $keyframe   = $this->averageScaled($measurements, 'keyframe_raw', 'keyframe_norm', $keyframePercentiles, true);
+        $members = [];
 
-        $clipping = $this->averageRaw($measurements, 'clipping_raw');
-        if ($clipping !== null) {
-            $clipping = $this->clamp01($clipping);
-        }
+        foreach ($measurements as $measurement) {
+            $resolution = $this->scaleWithFallback(
+                $measurement['resolution_raw'] ?? null,
+                $resolutionPercentiles,
+                true,
+                $measurement['resolution_norm'] ?? null,
+            );
+            $sharpness = $this->scaleWithFallback(
+                $measurement['sharpness_raw'] ?? null,
+                $sharpnessPercentiles,
+                true,
+                $measurement['sharpness_norm'] ?? null,
+            );
+            $exposure = $this->scaleWithFallback(
+                $measurement['clipping_raw'] ?? null,
+                $clippingPercentiles,
+                false,
+                $measurement['exposure_norm'] ?? null,
+            );
+            $contrast = $this->scaleWithFallback(
+                $measurement['contrast_raw'] ?? null,
+                $contrastPercentiles,
+                true,
+                $measurement['contrast_norm'] ?? null,
+            );
+            $noise = $this->scaleWithFallback(
+                $measurement['noise_raw'] ?? null,
+                $noisePercentiles,
+                false,
+                $measurement['noise_norm'] ?? null,
+            );
+            $blockiness = $this->scaleWithFallback(
+                $measurement['blockiness_raw'] ?? null,
+                $blockinessPercentiles,
+                false,
+                $measurement['blockiness_norm'] ?? null,
+            );
+            $keyframe = $this->scaleWithFallback(
+                $measurement['keyframe_raw'] ?? null,
+                $keyframePercentiles,
+                true,
+                $measurement['keyframe_norm'] ?? null,
+            );
 
-        $videoBonus  = $videoBonusCount > 0 ? $videoBonusSum / $videoBonusCount : null;
-        $videoPenalty = $videoPenaltyCount > 0 ? $videoPenaltySum / $videoPenaltyCount : null;
+            $components = $this->buildQualityComponents([
+                'resolution' => $resolution,
+                'sharpness'  => $sharpness,
+                'exposure'   => $exposure,
+                'contrast'   => $contrast,
+                'noise'      => $noise,
+                'blockiness' => $blockiness,
+                'keyframe'   => $keyframe,
+            ]);
 
-        $quality = $this->combineScores($this->buildQualityComponents([
-            'resolution' => $resolution,
-            'sharpness'  => $sharpness,
-            'exposure'   => $exposure,
-            'contrast'   => $contrast,
-            'noise'      => $noise,
-            'blockiness' => $blockiness,
-            'keyframe'   => $keyframe,
-        ]), null);
+            $quality = $this->combineScores($components, null);
+            $aesthetics = $this->combineScores([
+                [$exposure, 0.45],
+                [$contrast, 0.35],
+                [$sharpness, 0.20],
+            ], null);
 
-        if ($quality !== null) {
-            if ($videoBonus !== null && $this->videoBonusWeight > 0.0) {
-                $quality += $this->videoBonusWeight * $videoBonus;
+            $clipping = $measurement['clipping_raw'] ?? null;
+            if ($clipping !== null) {
+                $clipping = $this->clamp01($clipping);
             }
 
-            if ($videoPenalty !== null && $this->videoPenaltyWeight > 0.0) {
-                $quality -= $this->videoPenaltyWeight * $videoPenalty;
-            }
-
-            $quality = $this->clamp01($quality);
+            $members[] = [
+                'quality'       => $quality,
+                'aesthetics'    => $aesthetics,
+                'resolution'    => $resolution,
+                'sharpness'     => $sharpness,
+                'exposure'      => $exposure,
+                'contrast'      => $contrast,
+                'noise'         => $noise,
+                'blockiness'    => $blockiness,
+                'keyframe'      => $keyframe,
+                'clipping'      => $clipping,
+                'iso'           => $noise,
+                'video_bonus'   => $measurement['video_bonus'] ?? null,
+                'video_penalty' => $measurement['video_penalty'] ?? null,
+            ];
         }
 
-        $aesthetics = $this->combineScores([
-            [$exposure, 0.45],
-            [$contrast, 0.35],
-            [$sharpness, 0.20],
-        ], null);
+        $aggregated = $this->aggregateFromMembers($members);
 
         return [
-            'quality_avg'        => $quality ?? 0.0,
-            'aesthetics_score'   => $aesthetics,
-            'quality_resolution' => $resolution,
-            'quality_sharpness'  => $sharpness,
-            'quality_exposure'   => $exposure,
-            'quality_contrast'   => $contrast,
-            'quality_noise'      => $noise,
-            'quality_blockiness' => $blockiness,
-            'quality_video_keyframe' => $keyframe,
-            'quality_video_bonus'    => $videoBonus,
-            'quality_video_penalty'  => $videoPenalty,
-            'quality_clipping'       => $clipping,
-            'quality_iso'            => $noise,
+            ...$aggregated,
+            'quality_members' => $members,
+        ];
+    }
+
+    /**
+     * @param list<array<string,float|null>> $memberMetrics
+     *
+     * @return array{
+     *     quality_avg: float,
+     *     aesthetics_score: float|null,
+     *     quality_resolution: float|null,
+     *     quality_sharpness: float|null,
+     *     quality_exposure: float|null,
+     *     quality_contrast: float|null,
+     *     quality_noise: float|null,
+     *     quality_blockiness: float|null,
+     *     quality_video_keyframe: float|null,
+     *     quality_video_bonus: float|null,
+     *     quality_video_penalty: float|null,
+     *     quality_clipping: float|null,
+     *     quality_iso: float|null,
+     * }
+     */
+    public function aggregateFromMembers(array $memberMetrics): array
+    {
+        $topMembers = $this->selectTopQualityMembers($memberMetrics);
+        $top        = $this->computeAggregateMetrics($topMembers);
+        $overall    = $this->computeAggregateMetrics($memberMetrics);
+
+        return [
+            'quality_avg'        => $top['quality'] ?? 0.0,
+            'aesthetics_score'   => $top['aesthetics'],
+            'quality_resolution' => $overall['resolution'],
+            'quality_sharpness'  => $overall['sharpness'],
+            'quality_exposure'   => $overall['exposure'],
+            'quality_contrast'   => $overall['contrast'],
+            'quality_noise'      => $overall['noise'],
+            'quality_blockiness' => $overall['blockiness'],
+            'quality_video_keyframe' => $overall['keyframe'],
+            'quality_video_bonus'    => $overall['video_bonus'],
+            'quality_video_penalty'  => $overall['video_penalty'],
+            'quality_clipping'       => $overall['clipping'],
+            'quality_iso'            => $overall['iso'],
         ];
     }
 
@@ -309,40 +385,6 @@ final class ClusterQualityAggregator
     }
 
     /**
-     * @param list<array<string,float|null>> $measurements
-     * @param array{p10: float, p90: float}|null $percentiles
-     */
-    private function averageScaled(
-        array $measurements,
-        string $rawKey,
-        string $fallbackKey,
-        ?array $percentiles,
-        bool $higherIsBetter,
-    ): ?float {
-        $sum   = 0.0;
-        $count = 0;
-
-        foreach ($measurements as $measurement) {
-            $rawValue = $measurement[$rawKey] ?? null;
-            $fallback = $measurement[$fallbackKey] ?? null;
-
-            $scaled = $this->scaleWithFallback($rawValue, $percentiles, $higherIsBetter, $fallback);
-            if ($scaled === null) {
-                continue;
-            }
-
-            $sum += $scaled;
-            ++$count;
-        }
-
-        if ($count === 0) {
-            return null;
-        }
-
-        return $sum / $count;
-    }
-
-    /**
      * @param array{p10: float, p90: float}|null $percentiles
      */
     private function scaleWithFallback(
@@ -365,29 +407,6 @@ final class ClusterQualityAggregator
             : ($percentiles['p90'] - $value) / $range;
 
         return $this->clamp01($scaled);
-    }
-
-    /**
-     * @param list<float> $samples
-     *
-     * @return array{p10: float, p90: float}|null
-     */
-    private function percentileRange(array $samples): ?array
-    {
-        if (count($samples) === 0) {
-            return null;
-        }
-
-        sort($samples);
-
-        $p10 = $this->percentile($samples, 0.10);
-        $p90 = $this->percentile($samples, 0.90);
-
-        if ($p10 === null || $p90 === null) {
-            return null;
-        }
-
-        return ['p10' => $p10, 'p90' => $p90];
     }
 
     /**
@@ -417,15 +436,38 @@ final class ClusterQualityAggregator
     }
 
     /**
-     * @param list<array<string,float|null>> $measurements
+     * @param list<float> $samples
+     *
+     * @return array{p10: float, p90: float}|null
      */
-    private function averageRaw(array $measurements, string $key): ?float
+    private function percentileRange(array $samples): ?array
+    {
+        if (count($samples) === 0) {
+            return null;
+        }
+
+        sort($samples);
+
+        $p10 = $this->percentile($samples, 0.10);
+        $p90 = $this->percentile($samples, 0.90);
+
+        if ($p10 === null || $p90 === null) {
+            return null;
+        }
+
+        return ['p10' => $p10, 'p90' => $p90];
+    }
+
+    /**
+     * @param list<array<string,float|null>> $members
+     */
+    private function averageMemberMetric(array $members, string $key): ?float
     {
         $sum   = 0.0;
         $count = 0;
 
-        foreach ($measurements as $measurement) {
-            $value = $measurement[$key] ?? null;
+        foreach ($members as $member) {
+            $value = $member[$key] ?? null;
             if ($value === null) {
                 continue;
             }
@@ -439,5 +481,141 @@ final class ClusterQualityAggregator
         }
 
         return $sum / $count;
+    }
+
+    /**
+     * @param list<array<string,float|null>> $members
+     *
+     * @return list<array<string,float|null>>
+     */
+    private function selectTopQualityMembers(array $members): array
+    {
+        if ($this->topK <= 0 || $this->topK >= count($members)) {
+            return $members;
+        }
+
+        $sorted = $members;
+        usort($sorted, static function (array $left, array $right): int {
+            $leftQuality  = $left['quality'] ?? null;
+            $rightQuality = $right['quality'] ?? null;
+
+            if ($leftQuality === null && $rightQuality === null) {
+                return 0;
+            }
+
+            if ($leftQuality === null) {
+                return 1;
+            }
+
+            if ($rightQuality === null) {
+                return -1;
+            }
+
+            return $rightQuality <=> $leftQuality;
+        });
+
+        return array_slice($sorted, 0, $this->topK);
+    }
+
+    /**
+     * @param list<array<string,float|null>> $members
+     *
+     * @return array{
+     *     quality: float|null,
+     *     aesthetics: float|null,
+     *     resolution: float|null,
+     *     sharpness: float|null,
+     *     exposure: float|null,
+     *     contrast: float|null,
+     *     noise: float|null,
+     *     blockiness: float|null,
+     *     keyframe: float|null,
+     *     clipping: float|null,
+     *     iso: float|null,
+     *     video_bonus: float|null,
+     *     video_penalty: float|null,
+     * }
+     */
+    private function computeAggregateMetrics(array $members): array
+    {
+        if ($members === []) {
+            return [
+                'quality'       => null,
+                'aesthetics'    => null,
+                'resolution'    => null,
+                'sharpness'     => null,
+                'exposure'      => null,
+                'contrast'      => null,
+                'noise'         => null,
+                'blockiness'    => null,
+                'keyframe'      => null,
+                'clipping'      => null,
+                'iso'           => null,
+                'video_bonus'   => null,
+                'video_penalty' => null,
+            ];
+        }
+
+        $resolution = $this->averageMemberMetric($members, 'resolution');
+        $sharpness  = $this->averageMemberMetric($members, 'sharpness');
+        $exposure   = $this->averageMemberMetric($members, 'exposure');
+        $contrast   = $this->averageMemberMetric($members, 'contrast');
+        $noise      = $this->averageMemberMetric($members, 'noise');
+        $blockiness = $this->averageMemberMetric($members, 'blockiness');
+        $keyframe   = $this->averageMemberMetric($members, 'keyframe');
+
+        $videoBonus   = $this->averageMemberMetric($members, 'video_bonus');
+        $videoPenalty = $this->averageMemberMetric($members, 'video_penalty');
+
+        $quality = $this->combineScores($this->buildQualityComponents([
+            'resolution' => $resolution,
+            'sharpness'  => $sharpness,
+            'exposure'   => $exposure,
+            'contrast'   => $contrast,
+            'noise'      => $noise,
+            'blockiness' => $blockiness,
+            'keyframe'   => $keyframe,
+        ]), null);
+
+        if ($quality !== null) {
+            if ($videoBonus !== null && $this->videoBonusWeight > 0.0) {
+                $quality += $this->videoBonusWeight * $videoBonus;
+            }
+
+            if ($videoPenalty !== null && $this->videoPenaltyWeight > 0.0) {
+                $quality -= $this->videoPenaltyWeight * $videoPenalty;
+            }
+
+            $quality = $this->clamp01($quality);
+        }
+
+        $aesthetics = $this->combineScores([
+            [$exposure, 0.45],
+            [$contrast, 0.35],
+            [$sharpness, 0.20],
+        ], null);
+
+        $clipping = $this->averageMemberMetric($members, 'clipping');
+        if ($clipping !== null) {
+            $clipping = $this->clamp01($clipping);
+        }
+
+        $iso = $noise;
+
+        return [
+            'quality'       => $quality,
+            'aesthetics'    => $aesthetics,
+            'resolution'    => $resolution,
+            'sharpness'     => $sharpness,
+            'exposure'      => $exposure,
+            'contrast'      => $contrast,
+            'noise'         => $noise,
+            'blockiness'    => $blockiness,
+            'keyframe'      => $keyframe,
+            'clipping'      => $clipping,
+            'iso'           => $iso,
+            'video_bonus'   => $videoBonus,
+            'video_penalty' => $videoPenalty,
+        ];
     }
 }
