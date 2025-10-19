@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\Test;
 final class OverlapResolverStageTest extends TestCase
 {
     #[Test]
-    public function removesHighOverlapWithinSameAlgorithm(): void
+    public function dedupesLowerPriorityWithinSameAlgorithmAndLogsDecision(): void
     {
         $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure']);
 
@@ -36,11 +36,12 @@ final class OverlapResolverStageTest extends TestCase
             $city,
         ]);
 
-        self::assertSame([
-            $vacation,
-            $hike,
-            $city,
-        ], $result);
+        self::assertCount(3, $result);
+        $kept = $result[0];
+        self::assertSame('vacation', $kept->getAlgorithm());
+        $merges = $kept->getParams()['meta']['merges'] ?? [];
+        self::assertNotSame([], $merges);
+        self::assertSame('dedupe', $merges[0]['decision']);
     }
 
     #[Test]
@@ -56,9 +57,12 @@ final class OverlapResolverStageTest extends TestCase
             $vacation,
         ]);
 
-        self::assertSame([
-            $vacation,
-        ], $result);
+        self::assertCount(1, $result);
+        $kept = $result[0];
+        self::assertSame('vacation', $kept->getAlgorithm());
+        $merges = $kept->getParams()['meta']['merges'] ?? [];
+        self::assertNotSame([], $merges);
+        self::assertSame('dedupe', $merges[0]['decision']);
     }
 
     #[Test]
@@ -81,6 +85,58 @@ final class OverlapResolverStageTest extends TestCase
             $vacation,
             $chapter,
         ], $result);
+    }
+
+    #[Test]
+    public function mergesCompatibleDraftsAndExtendsMetadata(): void
+    {
+        $stage = new OverlapResolverStage(0.45, 0.85, ['vacation', 'hike_adventure']);
+
+        $primary = $this->createDraft(
+            'vacation',
+            [10, 11, 12],
+            0.82,
+            'vacation',
+            [
+                'time_range' => ['from' => 1_000, 'to' => 3_600],
+                'primaryStaypoint' => ['lat' => 48.13, 'lon' => 11.58],
+                'member_selection' => ['hash_samples' => ['abcd1234abcd1234', 'abcd1234ffff0000']],
+                'meta' => ['merges' => []],
+            ],
+        );
+
+        $secondary = $this->createDraft(
+            'vacation',
+            [11, 12, 13],
+            0.8,
+            'vacation',
+            [
+                'time_range' => ['from' => 1_600, 'to' => 3_800],
+                'primaryStaypoint' => ['lat' => 48.1301, 'lon' => 11.5802],
+                'member_selection' => ['hash_samples' => ['abcd1234aaaa0000']],
+            ],
+        );
+
+        $result = $stage->process([
+            $primary,
+            $secondary,
+        ]);
+
+        self::assertCount(1, $result);
+        $merged = $result[0];
+        self::assertSame([10, 11, 12, 13], $merged->getMembers());
+
+        $params = $merged->getParams();
+        self::assertSame(1_000, $params['time_range']['from']);
+        self::assertSame(3_800, $params['time_range']['to']);
+        self::assertArrayHasKey('member_selection', $params);
+        self::assertCount(3, $params['member_selection']['hash_samples']);
+
+        $merges = $params['meta']['merges'] ?? [];
+        self::assertNotSame([], $merges);
+        $entry = $merges[0];
+        self::assertSame('merge', $entry['decision']);
+        self::assertSame('winner', $entry['role']);
     }
 
     #[Test]
@@ -138,12 +194,19 @@ final class OverlapResolverStageTest extends TestCase
     /**
      * @param list<int> $members
      */
-    private function createDraft(string $algorithm, array $members, float $score, ?string $classification): ClusterDraft
-    {
+    private function createDraft(
+        string $algorithm,
+        array $members,
+        float $score,
+        ?string $classification,
+        array $extraParams = [],
+    ): ClusterDraft {
         $params = ['score' => $score];
         if ($classification !== null) {
             $params['classification'] = $classification;
         }
+
+        $params = array_merge($params, $extraParams);
 
         return new ClusterDraft(
             algorithm: $algorithm,
