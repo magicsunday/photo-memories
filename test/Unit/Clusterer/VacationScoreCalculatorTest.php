@@ -730,6 +730,7 @@ final class VacationScoreCalculatorTest extends TestCase
         self::assertSame(2, $params['away_days']);
         self::assertSame(1, $params['nights']);
         self::assertGreaterThan(0.0, $params['score']);
+        self::assertSame(0, $params['weekend_gap_days']);
 
         $selection = $params['member_selection'];
         self::assertSame('vacation_weekend_getaway', $selection['selection_profile']);
@@ -740,9 +741,144 @@ final class VacationScoreCalculatorTest extends TestCase
                 'away_days'       => 2,
                 'nights'          => 1,
                 'weekend_getaway' => true,
+                'gap_days'        => 0,
             ],
             $selection['decision']['context'],
         );
+    }
+
+    #[Test]
+    public function weekendExceptionRespectsGapTolerance(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $referenceDate  = new DateTimeImmutable('2024-07-01 00:00:00', new DateTimeZone('Europe/Berlin'));
+        $calculator     = $this->createCalculator(
+            locationHelper: $locationHelper,
+            options: new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 30.0,
+            minAwayDays: 5,
+            referenceDate: $referenceDate,
+            minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
+        );
+
+        $home = [
+            'lat'             => 52.5200,
+            'lon'             => 13.4050,
+            'radius_km'       => 12.0,
+            'country'         => 'de',
+            'timezone_offset' => 120,
+        ];
+
+        $start = new DateTimeImmutable('2024-07-05 09:00:00');
+
+        $dayKeys = [];
+        $days    = [];
+
+        // Home day before the weekend (bridged)
+        $bridgeBeforeMembers = $this->makeMembersForDay(10, $start, 1);
+        $bridgeBeforeKey     = $start->format('Y-m-d');
+        $bridgeBefore        = $this->makeDaySummary(
+            date: $bridgeBeforeKey,
+            weekday: (int) $start->format('N'),
+            members: $bridgeBeforeMembers,
+            gpsMembers: $bridgeBeforeMembers,
+            baseAway: false,
+            tourismHits: 0,
+            poiSamples: 0,
+            travelKm: 0.0,
+            timezoneOffset: 120,
+            hasAirport: false,
+            spotCount: 0,
+            spotDwellSeconds: 0,
+            maxSpeedKmh: 10.0,
+            avgSpeedKmh: 5.0,
+            hasHighSpeedTransit: false,
+            cohortPresenceRatio: 0.0,
+            cohortMembers: [],
+            staypoints: [],
+            countryCodes: ['de' => true],
+        );
+        $bridgeBefore['members']            = [];
+        $bridgeBefore['gpsMembers']         = [];
+        $bridgeBefore['sufficientSamples']  = false;
+        $bridgeBefore['dominantStaypoints'] = [];
+        $bridgeBefore['staypoints']         = [];
+        $bridgeBefore['baseAway']           = false;
+        $bridgeBefore['awayByDistance']     = false;
+        $bridgeBefore['photoCount']         = 1;
+        $bridgeBefore['firstGpsMedia']      = null;
+        $bridgeBefore['lastGpsMedia']       = null;
+
+        $dayKeys[]                = $bridgeBeforeKey;
+        $days[$bridgeBeforeKey]   = $bridgeBefore;
+
+        for ($i = 1; $i <= 2; ++$i) {
+            $dayDate = $start->add(new DateInterval('P' . $i . 'D'));
+            $members = $this->makeMembersForDay($i + 10, $dayDate, 4);
+            $dayKey  = $dayDate->format('Y-m-d');
+
+            $days[$dayKey] = $this->makeDaySummary(
+                date: $dayKey,
+                weekday: (int) $dayDate->format('N'),
+                members: $members,
+                gpsMembers: $members,
+                baseAway: true,
+                tourismHits: 8,
+                poiSamples: 10,
+                travelKm: 150.0,
+                timezoneOffset: 120,
+                hasAirport: false,
+                spotCount: 2,
+                spotDwellSeconds: 5400,
+            );
+
+            $dayKeys[] = $dayKey;
+        }
+
+        // Home day after the weekend (bridged)
+        $bridgeAfterDate    = $start->add(new DateInterval('P3D'));
+        $bridgeAfterMembers = $this->makeMembersForDay(13, $bridgeAfterDate, 1);
+        $bridgeAfterKey     = $bridgeAfterDate->format('Y-m-d');
+        $bridgeAfter        = $this->makeDaySummary(
+            date: $bridgeAfterKey,
+            weekday: (int) $bridgeAfterDate->format('N'),
+            members: $bridgeAfterMembers,
+            gpsMembers: $bridgeAfterMembers,
+            baseAway: false,
+            tourismHits: 0,
+            poiSamples: 0,
+            travelKm: 0.0,
+            timezoneOffset: 120,
+            hasAirport: false,
+            spotCount: 0,
+            spotDwellSeconds: 0,
+            maxSpeedKmh: 10.0,
+            avgSpeedKmh: 5.0,
+            hasHighSpeedTransit: false,
+            cohortPresenceRatio: 0.0,
+            cohortMembers: [],
+            staypoints: [],
+            countryCodes: ['de' => true],
+        );
+        $bridgeAfter['members']            = [];
+        $bridgeAfter['gpsMembers']         = [];
+        $bridgeAfter['sufficientSamples']  = false;
+        $bridgeAfter['dominantStaypoints'] = [];
+        $bridgeAfter['staypoints']         = [];
+        $bridgeAfter['baseAway']           = false;
+        $bridgeAfter['awayByDistance']     = false;
+        $bridgeAfter['photoCount']         = 1;
+        $bridgeAfter['firstGpsMedia']      = null;
+        $bridgeAfter['lastGpsMedia']       = null;
+
+        $dayKeys[]                = $bridgeAfterKey;
+        $days[$bridgeAfterKey]    = $bridgeAfter;
+
+        $draft = $calculator->buildDraft($dayKeys, $days, $home);
+
+        self::assertNull($draft);
     }
 
     #[Test]
@@ -1098,6 +1234,7 @@ final class VacationScoreCalculatorTest extends TestCase
             options: new VacationSelectionOptions(targetTotal: 20, maxPerDay: 4),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
+            minAwayDays: 2,
             referenceDate: $referenceDate,
         );
 
@@ -1244,6 +1381,7 @@ final class VacationScoreCalculatorTest extends TestCase
             options: new VacationSelectionOptions(targetTotal: 16, maxPerDay: 4),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 25.0,
+            minAwayDays: 2,
             referenceDate: $referenceDate,
         );
 
@@ -1310,6 +1448,7 @@ final class VacationScoreCalculatorTest extends TestCase
             options: new VacationSelectionOptions(),
             timezone: 'Europe/Berlin',
             movementThresholdKm: 30.0,
+            minAwayDays: 2,
             referenceDate: $referenceDate,
         );
 
@@ -2020,7 +2159,7 @@ final class VacationScoreCalculatorTest extends TestCase
         ?HolidayResolverInterface $holidayResolver = null,
         string $timezone = 'Europe/Berlin',
         float $movementThresholdKm = 35.0,
-        int $minAwayDays = 2,
+        int $minAwayDays = 3,
         int $minItemsPerDay = 4,
         int $minimumMemberFloor = 0,
         int $minMembers = 0,

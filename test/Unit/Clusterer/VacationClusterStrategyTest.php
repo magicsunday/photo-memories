@@ -1973,6 +1973,7 @@ final class VacationClusterStrategyTest extends TestCase
             holidayResolver: $holidayResolver ?? $this->createHolidayResolver(),
             timezone: $timezone,
             movementThresholdKm: $movementThresholdKm,
+            minAwayDays: 2,
             minItemsPerDay: $minItemsPerDay,
             minimumMemberFloor: 0,
         );
