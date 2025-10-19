@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
+use function array_key_last;
 use function array_merge;
 use function array_values;
 use function count;
@@ -187,6 +188,69 @@ trait GeoTemporalClusterTrait
 
                 $buckets[] = $windowMembers;
             }
+        }
+
+        /** @var list<Media> $nonGps */
+        $nonGps = [];
+        foreach ($timestamped as $media) {
+            if ($media->getGpsLat() !== null && $media->getGpsLon() !== null) {
+                continue;
+            }
+
+            if (isset($clusteredIds[$media->getId()])) {
+                continue;
+            }
+
+            $nonGps[] = $media;
+        }
+
+        if ($nonGps !== [] && $buckets !== []) {
+            foreach ($buckets as &$bucket) {
+                if ($bucket === []) {
+                    continue;
+                }
+
+                $first = $bucket[0]->getTakenAt();
+                $lastIndex = array_key_last($bucket);
+                $last      = $lastIndex !== null ? $bucket[$lastIndex]->getTakenAt() : null;
+
+                if (!$first instanceof DateTimeImmutable || !$last instanceof DateTimeImmutable) {
+                    continue;
+                }
+
+                $startTs = $first->getTimestamp();
+                $endTs   = $last->getTimestamp();
+                $attached = false;
+
+                foreach ($nonGps as $index => $candidate) {
+                    $takenAt = $candidate->getTakenAt();
+                    if (!$takenAt instanceof DateTimeImmutable) {
+                        continue;
+                    }
+
+                    $ts = $takenAt->getTimestamp();
+                    if ($ts < $startTs || $ts > $endTs) {
+                        continue;
+                    }
+
+                    $bucket[] = $candidate;
+                    unset($nonGps[$index]);
+                    $attached = true;
+                }
+
+                if ($attached) {
+                    usort(
+                        $bucket,
+                        static fn (Media $a, Media $b): int => ($a->getTakenAt()?->getTimestamp() ?? 0)
+                            <=> ($b->getTakenAt()?->getTimestamp() ?? 0)
+                    );
+                }
+
+                if ($nonGps === []) {
+                    break;
+                }
+            }
+            unset($bucket);
         }
 
         return $buckets;

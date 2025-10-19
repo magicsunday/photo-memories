@@ -88,6 +88,60 @@ final class TimeSimilarityStrategyTest extends TestCase
     }
 
     #[Test]
+    public function attachesNonGpsMediaToMatchingWindowBuckets(): void
+    {
+        $strategy = new TimeSimilarityStrategy(
+            locHelper: LocationHelper::createDefault(),
+            maxGapSeconds: 7200,
+            minItemsPerBucket: 2,
+        );
+
+        $berlin = $this->makeLocation(
+            providerPlaceId: 'berlin-city',
+            displayName: 'Berlin',
+            lat: 52.5200,
+            lon: 13.4050,
+            city: 'Berlin',
+            country: 'Germany',
+        );
+
+        $mediaItems = [
+            $this->createMedia(3001, '2025-04-15 08:00:00', 52.5201, 13.4051, $berlin),
+            $this->createMedia(3002, '2025-04-15 08:03:00', 52.5202, 13.4052, $berlin, static function (Media $media): void {
+                $media->setGpsLat(null);
+                $media->setGpsLon(null);
+            }),
+            $this->createMedia(3003, '2025-04-15 08:05:00', 52.5203, 13.4053, $berlin, static function (Media $media): void {
+                $media->setGpsLat(null);
+                $media->setGpsLon(null);
+            }),
+            $this->createMedia(3004, '2025-04-15 08:08:00', 52.5204, 13.4054, $berlin),
+            $this->createMedia(3005, '2025-04-15 12:00:00', 52.5205, 13.4055, $berlin, static function (Media $media): void {
+                $media->setGpsLat(null);
+                $media->setGpsLon(null);
+            }),
+        ];
+
+        $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));
+
+        self::assertCount(1, $clusters);
+
+        $cluster = $clusters[0];
+        self::assertSame([3001, 3002, 3003, 3004], $cluster->getMembers());
+
+        $params = $cluster->getParams();
+        self::assertSame(4, $params['members_count']);
+
+        $expectedRange = [
+            'from' => (new DateTimeImmutable('2025-04-15 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2025-04-15 08:08:00', new DateTimeZone('UTC')))->getTimestamp(),
+        ];
+
+        self::assertSame($expectedRange, $params['time_range']);
+        self::assertSame($expectedRange, $params['window_bounds']);
+    }
+
+    #[Test]
     public function excludesMediaOutsideDistanceThreshold(): void
     {
         $strategy = new TimeSimilarityStrategy(
