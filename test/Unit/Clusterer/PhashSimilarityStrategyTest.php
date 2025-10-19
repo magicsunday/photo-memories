@@ -29,7 +29,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     {
         $strategy = new PhashSimilarityStrategy(
             locHelper: LocationHelper::createDefault(),
-            maxHamming: 6,
+            maxHamming: 5,
             minItemsPerBucket: 3,
         );
 
@@ -96,6 +96,31 @@ final class PhashSimilarityStrategyTest extends TestCase
             $this->createMedia(1701, '2023-10-05 09:00:00', 48.1371, 11.5753, 'abcd000000000000', $location),
             $this->createMedia(1702, '2023-10-05 09:01:00', 48.1372, 11.5754, 'abcdffffffffffff', $location),
             $this->createMedia(1703, '2023-10-05 09:02:00', 48.1373, 11.5755, 'abcd111111111111', $location),
+        ];
+
+        self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));
+    }
+
+    #[Test]
+    public function rejectsPairsBeyondDefaultCeiling(): void
+    {
+        $strategy = new PhashSimilarityStrategy(
+            locHelper: LocationHelper::createDefault(),
+            minItemsPerBucket: 2,
+        );
+
+        $location = $this->makeLocation(
+            providerPlaceId: 'hamburg-phash',
+            displayName: 'Speicherstadt',
+            lat: 53.5436,
+            lon: 9.9933,
+            city: 'Hamburg',
+            country: 'Germany',
+        );
+
+        $mediaItems = [
+            $this->createMedia(1801, '2023-11-10 12:00:00', 53.5436, 9.9933, '0000000000000000', $location),
+            $this->createMedia(1802, '2023-11-10 12:01:00', 53.5437, 9.9934, '000000000000003f', $location),
         ];
 
         self::assertSame([], $strategy->draft($mediaItems, Context::fromScope($mediaItems)));

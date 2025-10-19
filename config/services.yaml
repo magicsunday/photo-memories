@@ -605,7 +605,7 @@ services:
 
     MagicSunday\Memories\Clusterer\PhashSimilarityStrategy:
         arguments:
-            $maxHamming: 7
+            $maxHamming: 5
             $minItemsPerBucket: 2
         tags:
             - { name: 'memories.cluster_strategy', priority: '%memories.cluster.priority.phash_similarity_strategy%' }
