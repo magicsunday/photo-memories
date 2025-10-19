@@ -1024,6 +1024,7 @@ services:
 
     MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy:
         arguments:
+            $locationHelper: '@MagicSunday\Memories\Utility\LocationHelper'
             $timezone: 'Europe/Berlin'
             $minItemsPerMonth: 28
             $minDistinctDays: 7
