@@ -16,9 +16,11 @@ use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterfac
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function abs;
@@ -41,11 +43,12 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
     use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
+    use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
 
     public function __construct(
-        private LocationHelper $locHelper,
+        private LocationHelper $locationHelper,
         private int $maxHamming = self::MAX_HAMMING_CEILING,
         private int $minItemsPerBucket = 2,
     ) {
@@ -103,18 +106,27 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
                     continue;
                 }
 
+                $centroid = $this->computeCentroid($comp);
+
                 $params = [
-                    'time_range' => $this->computeTimeRange($comp),
+                    'time_range'    => $this->computeTimeRange($comp),
+                    'members_count' => count($comp),
                 ];
-                $place = $this->locHelper->majorityLabel($comp);
-                if ($place !== null) {
-                    $params['place'] = $place;
+
+                $lat = $centroid['lat'] ?? null;
+                $lon = $centroid['lon'] ?? null;
+                if ($lat !== null && $lon !== null) {
+                    $params['centroid_cell7'] = GeoCell::fromPoint($lat, $lon, 7);
                 }
+
+                $params = $this->appendLocationMetadata($comp, $params);
+                $peopleParams = $this->buildPeopleParams($comp);
+                $params       = [...$params, ...$peopleParams];
 
                 $drafts[] = new ClusterDraft(
                     algorithm: $this->name(),
                     params: $params,
-                    centroid: $this->computeCentroid($comp),
+                    centroid: $centroid,
                     members: $this->toMemberIds($comp)
                 );
             }

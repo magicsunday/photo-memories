@@ -19,6 +19,7 @@ use MagicSunday\Memories\Clusterer\PhashSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -28,7 +29,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     public function clustersNearDuplicateMediaByPhash(): void
     {
         $strategy = new PhashSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             maxHamming: 5,
             minItemsPerBucket: 3,
         );
@@ -62,6 +63,10 @@ final class PhashSimilarityStrategyTest extends TestCase
 
         $params = $cluster->getParams();
         self::assertSame('Berlin', $params['place']);
+        self::assertSame('Berlin', $params['place_city']);
+        self::assertSame('Germany', $params['place_country']);
+        self::assertSame('Berlin, Germany', $params['place_location']);
+        self::assertSame(4, $params['members_count']);
 
         $expectedRange = [
             'from' => (new DateTimeImmutable('2023-09-01 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -72,13 +77,26 @@ final class PhashSimilarityStrategyTest extends TestCase
         $centroid = $cluster->getCentroid();
         self::assertEqualsWithDelta(52.52005, $centroid['lat'], 0.00001);
         self::assertEqualsWithDelta(13.40505, $centroid['lon'], 0.00001);
+        self::assertArrayHasKey('centroid_cell7', $params);
+        self::assertSame(GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7), $params['centroid_cell7']);
+
+        self::assertArrayHasKey('people', $params);
+        self::assertArrayHasKey('people_count', $params);
+        self::assertArrayHasKey('people_unique', $params);
+        self::assertArrayHasKey('people_coverage', $params);
+        self::assertArrayHasKey('people_face_coverage', $params);
+        self::assertSame(0.0, $params['people']);
+        self::assertSame(0, $params['people_count']);
+        self::assertSame(0, $params['people_unique']);
+        self::assertSame(0.0, $params['people_coverage']);
+        self::assertSame(0.0, $params['people_face_coverage']);
     }
 
     #[Test]
     public function returnsEmptyWhenHashesAreTooDissimilar(): void
     {
         $strategy = new PhashSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             maxHamming: 2,
             minItemsPerBucket: 2,
         );
@@ -105,7 +123,7 @@ final class PhashSimilarityStrategyTest extends TestCase
     public function rejectsPairsBeyondDefaultCeiling(): void
     {
         $strategy = new PhashSimilarityStrategy(
-            locHelper: LocationHelper::createDefault(),
+            locationHelper: LocationHelper::createDefault(),
             minItemsPerBucket: 2,
         );
 
