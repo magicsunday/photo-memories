@@ -28,6 +28,7 @@ use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 
 final class ClusterPersistenceServiceTest extends TestCase
 {
@@ -540,6 +541,74 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertNotNull($cluster->getConfigHash());
         self::assertSame(48.123456, $cluster->getCentroidLat());
         self::assertSame(11.654321, $cluster->getCentroidLon());
+    }
+
+    #[Test]
+    public function buildMetadataCarriesMergeTelemetryIntoPersistedMeta(): void
+    {
+        $media = $this->buildMediaSet();
+
+        $lookup = new class($media) implements MemberMediaLookupInterface {
+            /** @param array<int, Media> $media */
+            public function __construct(private readonly array $media)
+            {
+            }
+
+            public function findByIds(array $ids, bool $onlyVideos = false): array
+            {
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($this->media[$id])) {
+                        $result[] = $this->media[$id];
+                    }
+                }
+
+                return $result;
+            }
+        };
+
+        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
+            public function curate(ClusterDraft $draft): ClusterDraft
+            {
+                return $draft;
+            }
+        };
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturn($media[1]);
+
+        $service = new ClusterPersistenceService(
+            $this->createMock(EntityManagerInterface::class),
+            $lookup,
+            $selectionService,
+            $coverPicker,
+        );
+
+        $draft = new ClusterDraft(
+            'demo',
+            [
+                'meta' => [
+                    'merges' => [
+                        ['decision' => 'merge', 'winner' => 'abc', 'role' => 'winner'],
+                    ],
+                ],
+                'score' => 1.5,
+            ],
+            ['lat' => 48.0, 'lon' => 11.0],
+            [1, 2],
+        );
+
+        $reflection = new ReflectionClass(ClusterPersistenceService::class);
+        $method     = $reflection->getMethod('buildMetadata');
+        $method->setAccessible(true);
+
+        $metadata = $method->invoke($service, $draft, [1, 2], [$media[1], $media[2]]);
+
+        self::assertArrayHasKey('meta', $metadata);
+        self::assertArrayHasKey('merges', $metadata['meta']);
+        self::assertSame([
+            ['decision' => 'merge', 'winner' => 'abc', 'role' => 'winner'],
+        ], $metadata['meta']['merges']);
     }
 
     /**

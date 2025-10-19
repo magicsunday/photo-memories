@@ -648,6 +648,19 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             'centroid'   => $centroid,
         ];
 
+        $mergeTelemetry = null;
+        $metaParams     = $params['meta'] ?? null;
+        if (is_array($metaParams)) {
+            $merges = $metaParams['merges'] ?? null;
+            if (is_array($merges) && $merges !== []) {
+                $mergeTelemetry = $merges;
+            }
+        }
+
+        if ($mergeTelemetry !== null) {
+            $meta['merges'] = $mergeTelemetry;
+        }
+
         if ($overlay !== []) {
             $meta['overlay'] = $overlay;
         }
