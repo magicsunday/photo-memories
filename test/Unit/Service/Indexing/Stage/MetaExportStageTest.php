@@ -128,6 +128,12 @@ final class MetaExportStageTest extends TestCase
             ]);
             $media->setHasFaces(true);
             $media->setFacesCount(2);
+            $media->setSharpness(0.78);
+            $media->setBrightness(0.62);
+            $media->setContrast(0.55);
+            $media->setEntropy(0.68);
+            $media->setMotionBlurScore(0.81);
+            $media->setColorfulness(0.73);
             $media->setQualityScore(0.82);
             $media->setQualityExposure(0.75);
             $media->setQualityNoise(0.33);
@@ -220,6 +226,17 @@ final class MetaExportStageTest extends TestCase
                     'is_slow_mo' => false,
                 ],
                 $payload['video']
+            );
+            self::assertSame(
+                [
+                    'sharpness' => 0.78,
+                    'brightness' => 0.62,
+                    'contrast' => 0.55,
+                    'entropy' => 0.68,
+                    'motion_blur_score' => 0.81,
+                    'colorfulness' => 0.73,
+                ],
+                $payload['quality_proxies']
             );
             self::assertSame(
                 [
