@@ -69,6 +69,7 @@ use function min;
 use function preg_split;
 use function round;
 use function sort;
+use function usort;
 use function str_ends_with;
 use function strtolower;
 use function sprintf;
@@ -371,6 +372,7 @@ final class FeedController
         $drafts       = $this->clusterMapper->mapMany($clusters);
         $items        = $this->feedBuilder->build($drafts, $profile, $visibilityFilter, $preferences);
         $items        = $this->applyAlgorithmPreferences($items, $preferences);
+        $items        = $this->sortItemsByScoreDescending($items);
 
         $filtered = array_values(array_filter(
             $items,
@@ -2098,6 +2100,40 @@ final class FeedController
         }
 
         return $result;
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     *
+     * @return list<MemoryFeedItem>
+     */
+    private function sortItemsByScoreDescending(array $items): array
+    {
+        if ($items === []) {
+            return $items;
+        }
+
+        $indexed = [];
+        foreach ($items as $index => $item) {
+            $indexed[] = ['item' => $item, 'index' => $index];
+        }
+
+        usort($indexed, static function (array $a, array $b): int {
+            $comparison = $b['item']->getScore() <=> $a['item']->getScore();
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+
+            return $a['index'] <=> $b['index'];
+        });
+
+        /** @var list<MemoryFeedItem> $sorted */
+        $sorted = array_map(
+            static fn (array $entry): MemoryFeedItem => $entry['item'],
+            $indexed,
+        );
+
+        return $sorted;
     }
 
     /**

@@ -83,6 +83,102 @@ final class MemoryFeedBuilderTest extends TestCase
         self::assertSame(1, $item->getCoverMediaId());
     }
 
+    #[Test]
+    public function resortsItemsByAdjustedScoreAfterPreferencePenalties(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturnOnConsecutiveCalls('Penalised', 'Preferred');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository
+            ->expects(self::exactly(2))
+            ->method('findByIds')
+            ->willReturnCallback(function (array $ids, bool $onlyVideos): array {
+                self::assertFalse($onlyVideos);
+
+                static $call = 0;
+                ++$call;
+
+                if ($call === 1) {
+                    self::assertSame([1, 2], $ids);
+
+                    return [
+                        $this->buildMedia(1, false),
+                        $this->buildMedia(2, false),
+                    ];
+                }
+
+                self::assertSame([3, 4], $ids);
+
+                return [
+                    $this->buildMedia(3, false),
+                    $this->buildMedia(4, false),
+                ];
+            });
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.0,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            negativePersonMultiplier: 0.5,
+        );
+
+        $penalisedCluster = new ClusterDraft(
+            algorithm: 'penalised_algo',
+            params: [
+                'score'      => 0.9,
+                'time_range' => ['to' => 1_706_486_400],
+                'persons'    => ['Alice'],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2],
+        );
+
+        $preferredCluster = new ClusterDraft(
+            algorithm: 'preferred_algo',
+            params: [
+                'score'      => 0.8,
+                'time_range' => ['to' => 1_706_572_800],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [3, 4],
+        );
+
+        $preferences = new FeedUserPreferences(
+            'user',
+            'default',
+            [],
+            [],
+            [],
+            ['Alice'],
+        );
+
+        $result = $builder->build([
+            $penalisedCluster,
+            $preferredCluster,
+        ], null, null, $preferences);
+
+        self::assertCount(2, $result);
+        self::assertSame('preferred_algo', $result[0]->getAlgorithm());
+        self::assertSame('penalised_algo', $result[1]->getAlgorithm());
+        self::assertEqualsWithDelta(0.8, $result[0]->getScore(), 1e-9);
+        self::assertEqualsWithDelta(0.9 * 0.5, $result[1]->getScore(), 1e-9);
+    }
+
     private function buildMedia(int $id, bool $noShow, ?DateTimeImmutable $takenAt = null): Media
     {
         $media = new Media('path-' . $id . '.jpg', 'checksum-' . $id, 1024);
