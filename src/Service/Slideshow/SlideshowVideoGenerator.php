@@ -61,16 +61,14 @@ use function trim;
 final class SlideshowTransitionCache
 {
     /**
-     * @var list<string>|null
+     * @var array<string, list<string>>
      */
-    public ?array $whitelist = null;
+    public array $whitelists = [];
 
     /**
-     * @var array<string, bool>|null
+     * @var array<string, array<string, bool>>
      */
-    public ?array $lookup = null;
-
-    public ?string $lookupKey = null;
+    public array $lookups = [];
 }
 
 /**
@@ -89,6 +87,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'dissolve',
         'fadeblack',
         'fadewhite',
+        'pushleft',
+        'pushright',
+        'pushup',
+        'pushdown',
         'wipeleft',
         'wiperight',
         'wipeup',
@@ -97,6 +99,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'slideright',
         'slideup',
         'slidedown',
+        'zoom',
+    ];
+
+    private const array UNSTABLE_TRANSITIONS = [
         'smoothleft',
         'smoothright',
         'smoothup',
@@ -110,6 +116,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         'diagtr',
         'diagbl',
         'diagbr',
+        'hlslice',
+        'vuslice',
+        'distance',
     ];
 
     /**
@@ -118,31 +127,39 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private const array DEFAULT_TRANSITIONS = self::TRANSITION_WHITELIST;
 
     private const array TRANSITION_WEIGHT_PRESETS = [
-        'fade'       => 6,
-        'dissolve'   => 5,
-        'fadeblack'  => 4,
-        'fadewhite'  => 4,
-        'smoothleft' => 3,
-        'smoothright' => 3,
-        'smoothup'   => 3,
-        'smoothdown' => 3,
-        'slideleft'  => 2,
+        'fade'      => 6,
+        'dissolve'  => 5,
+        'fadeblack' => 4,
+        'fadewhite' => 4,
+        'pushleft'  => 3,
+        'pushright' => 3,
+        'pushup'    => 3,
+        'pushdown'  => 3,
+        'wipeleft'  => 2,
+        'wiperight' => 2,
+        'wipeup'    => 2,
+        'wipedown'  => 2,
+        'slideleft' => 2,
         'slideright' => 2,
-        'slideup'    => 2,
-        'slidedown'  => 2,
-        'wipeleft'   => 2,
-        'wiperight'  => 2,
-        'wipeup'     => 2,
-        'wipedown'   => 2,
-        'circleopen' => 2,
-        'circleclose' => 2,
-        'radial'     => 2,
-        'rectcrop'   => 1,
-        'pixelize'   => 1,
-        'diagtl'     => 1,
-        'diagtr'     => 1,
-        'diagbl'     => 1,
-        'diagbr'     => 1,
+        'slideup'   => 2,
+        'slidedown' => 2,
+        'zoom'      => 2,
+        'smoothleft' => 2,
+        'smoothright' => 2,
+        'smoothup'  => 2,
+        'smoothdown' => 2,
+        'circleopen' => 1,
+        'circleclose' => 1,
+        'radial'    => 1,
+        'rectcrop'  => 1,
+        'pixelize'  => 1,
+        'diagtl'    => 1,
+        'diagtr'    => 1,
+        'diagbl'    => 1,
+        'diagbr'    => 1,
+        'hlslice'   => 1,
+        'vuslice'   => 1,
+        'distance'  => 1,
     ];
 
     private const float PAN_OFFSET_LIMIT = 0.05;
@@ -183,6 +200,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly float $beatGridStep = 0.0,
         private readonly float $audioTargetLoudness = -14.0,
         private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private readonly bool $allowUnstableTransitions = false,
     ) {
     }
 
@@ -1109,27 +1127,31 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function getTransitionWhitelist(): array
     {
         $cache = self::transitionCache();
+        $cacheKey = $this->getTransitionCacheKey();
 
-        if ($cache->whitelist !== null) {
-            return $cache->whitelist;
+        if (array_key_exists($cacheKey, $cache->whitelists)) {
+            return $cache->whitelists[$cacheKey];
         }
+
+        $allowedTransitions = $this->allowUnstableTransitions
+            ? array_merge(self::TRANSITION_WHITELIST, self::UNSTABLE_TRANSITIONS)
+            : self::TRANSITION_WHITELIST;
 
         $discovered = $this->discoverAvailableTransitions();
         $filtered   = [];
 
         if ($discovered !== []) {
-            $filtered = array_values(array_intersect(self::TRANSITION_WHITELIST, $discovered));
+            $filtered = array_values(array_intersect($allowedTransitions, $discovered));
         }
 
         if ($filtered === []) {
-            $filtered = ['fade'];
+            $filtered = [$allowedTransitions[0] ?? 'fade'];
         }
 
-        $cache->lookup    = null;
-        $cache->lookupKey = null;
-        $cache->whitelist = $filtered;
+        $cache->whitelists[$cacheKey] = $filtered;
+        unset($cache->lookups[$cacheKey]);
 
-        return $cache->whitelist;
+        return $cache->whitelists[$cacheKey];
     }
 
     /**
@@ -1138,18 +1160,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function getTransitionLookup(): array
     {
         $cache = self::transitionCache();
+        $cacheKey = $this->getTransitionCacheKey();
 
-        $whitelist = $this->getTransitionWhitelist();
-        $lookupKey = hash('sha256', implode('|', $whitelist));
-
-        if ($cache->lookup !== null && $cache->lookupKey === $lookupKey) {
-            return $cache->lookup;
+        if (array_key_exists($cacheKey, $cache->lookups)) {
+            return $cache->lookups[$cacheKey];
         }
 
-        $cache->lookup    = array_fill_keys($whitelist, true);
-        $cache->lookupKey = $lookupKey;
+        $whitelist = $this->getTransitionWhitelist();
 
-        return $cache->lookup;
+        $cache->lookups[$cacheKey] = array_fill_keys($whitelist, true);
+
+        return $cache->lookups[$cacheKey];
     }
 
     private static function transitionCache(): SlideshowTransitionCache
@@ -1167,9 +1188,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         $cache = self::transitionCache();
 
-        $cache->whitelist = null;
-        $cache->lookup    = null;
-        $cache->lookupKey = null;
+        $cache->whitelists = [];
+        $cache->lookups    = [];
+    }
+
+    private function getTransitionCacheKey(): string
+    {
+        return $this->allowUnstableTransitions ? 'unstable-enabled' : 'stable-only';
     }
 
     /**
