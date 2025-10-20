@@ -52,9 +52,12 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 
   Die Animationsgeschwindigkeit kontrollieren `memories.slideshow.fps` (Bildrate des Exportvideos) und
   `memories.slideshow.easing` (Kurve für Ken-Burns-Zoom/Pan, z. B. `cosine`, `linear`, `smoothstep`, `sine` oder `quadratic`).
-  Für rhythmische Storyboards kann `memories.slideshow.beat_grid_step` genutzt werden. Ein Wert wie `0.5` oder `0.6` rundet die
-  Summe aus Bildlaufzeit und Übergangsdauer auf Vielfache des gewählten Taktrasters. Der Standard `0.0` deaktiviert das Feature;
-  über `MEMORIES_SLIDESHOW_BEAT_GRID_STEP` lässt sich der Rasterwert pro Umgebung überschreiben.
+  Der Startzoom `memories.slideshow.zoom_start` beginnt standardmäßig bei `1.03` und wird – ebenso wie `memories.slideshow.zoom_end`
+  – im Generator auf mindestens `1.03` geklemmt, damit leichte Bewegungen erhalten bleiben. Werte oberhalb von etwa `1.25` wirken
+  in der Praxis schnell zu aggressiv, sollten also nur mit Vorsicht eingesetzt werden. Für rhythmische Storyboards kann
+  `memories.slideshow.beat_grid_step` genutzt werden. Ein Wert wie `0.5` oder `0.6` rundet die Summe aus Bildlaufzeit und
+  Übergangsdauer auf Vielfache des gewählten Taktrasters. Der Standard `0.0` deaktiviert das Feature; über
+  `MEMORIES_SLIDESHOW_BEAT_GRID_STEP` lässt sich der Rasterwert pro Umgebung überschreiben.
 
   Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke),
   `memories.slideshow.background_blur_filter` (`gblur` für Qualität, `boxblur` für Performance), dem zusätzlichen

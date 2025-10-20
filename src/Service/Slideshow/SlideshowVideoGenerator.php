@@ -168,6 +168,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private const float AUDIO_LIMITER_LIMIT_DB = -1.0;
 
+    private const float MINIMUM_KEN_BURNS_ZOOM = 1.03;
+
     /**
      * @param list<string> $transitions
      */
@@ -192,7 +194,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly float $backgroundEqSaturation = 1.05,
         private readonly bool $kenBurnsEnabled = true,
         private readonly string $kenBurnsEasing = 'cosine',
-        private readonly float $zoomStart = 1.0,
+        private readonly float $zoomStart = 1.03,
         private readonly float $zoomEnd = 1.08,
         private readonly float $frameRate = 30.0,
         private readonly float $introFadeDuration = 1.0,
@@ -717,8 +719,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ];
         }
 
-        $minimumZoom = max(1.0, min($this->zoomStart, $this->zoomEnd));
-        $maximumZoom = max(1.0, max($this->zoomStart, $this->zoomEnd));
+        $minimumZoom = max(self::MINIMUM_KEN_BURNS_ZOOM, min($this->zoomStart, $this->zoomEnd));
+        $maximumZoom = max(self::MINIMUM_KEN_BURNS_ZOOM, max($this->zoomStart, $this->zoomEnd));
 
         $decisions = $this->resolveKenBurnsDecisions($slide);
 
