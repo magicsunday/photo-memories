@@ -71,6 +71,7 @@ final class CompositeClusterScorer
             'location'      => 0.05,
             'poi'           => 0.02,
             'time_coverage' => 0.10,
+            'liveliness'    => 0.08,
         ],
         private array $algorithmBoosts = [],
         array $algorithmGroups = [],
@@ -269,7 +270,8 @@ final class CompositeClusterScorer
             ($weights['recency'] ?? 0.0) * ($weightedValues['recency'] ?? 0.0) +
             ($weights['location'] ?? 0.0) * ($weightedValues['location'] ?? 0.0) +
             ($weights['poi'] ?? 0.0) * ($weightedValues['poi'] ?? 0.0) +
-            ($weights['time_coverage'] ?? 0.0) * ($weightedValues['time_coverage'] ?? 0.0);
+            ($weights['time_coverage'] ?? 0.0) * ($weightedValues['time_coverage'] ?? 0.0) +
+            ($weights['liveliness'] ?? 0.0) * ($weightedValues['liveliness'] ?? 0.0);
     }
 
     private function floatOrNull(mixed $value): ?float

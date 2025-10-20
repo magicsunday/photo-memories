@@ -879,6 +879,28 @@ parameters:
     memories.score.poi.iconic_similarity_threshold: 0.75
     # Description: Mapping of community scene identifiers to representative pHash signatures.
     memories.score.poi.iconic_signatures: {}
+    # Description: Weight applied to the video share component in the liveliness heuristic.
+    memories.score.liveliness.video_share_weight: 0.45
+    # Description: Weight applied to the live photo share component in the liveliness heuristic.
+    memories.score.liveliness.live_photo_share_weight: 0.25
+    # Description: Weight applied to the motion coverage component in the liveliness heuristic.
+    memories.score.liveliness.motion_weight: 0.30
+    # Description: Share of videos required to reach full credit in the liveliness heuristic.
+    memories.score.liveliness.video_share_target: 0.35
+    # Description: Share of live photos required to reach full credit in the liveliness heuristic.
+    memories.score.liveliness.live_photo_share_target: 0.20
+    # Description: Share of motion-flagged media required to reach full credit in the liveliness heuristic.
+    memories.score.liveliness.motion_share_target: 0.45
+    # Description: Motion blur score threshold that marks a photo as motion-rich.
+    memories.score.liveliness.motion_blur_threshold: 0.32
+    # Description: Average motion blur score that earns the maximum motion contribution.
+    memories.score.liveliness.motion_blur_target: 0.55
+    # Description: Weight assigned to motion coverage versus blur intensity when blending the motion component.
+    memories.score.liveliness.motion_coverage_weight: 0.65
+    # Description: Minimum video duration in seconds to flag a clip as motion-rich.
+    memories.score.liveliness.motion_video_duration_threshold: 8.0
+    # Description: Minimum frames per second to flag a clip as motion-rich.
+    memories.score.liveliness.motion_video_fps_threshold: 45.0
 
 
     # Description: Directory where generated slideshow videos are stored.

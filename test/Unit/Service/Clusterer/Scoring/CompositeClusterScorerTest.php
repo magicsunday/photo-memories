@@ -24,6 +24,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\ClusterScoreHeuristicInterfac
 use MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\DensityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic;
+use MagicSunday\Memories\Service\Clusterer\Scoring\LivelinessClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
@@ -66,6 +67,19 @@ final class CompositeClusterScorerTest extends TestCase
             new QualityClusterScoreHeuristic(new ClusterQualityAggregator(12.0)),
             new PeopleClusterScoreHeuristic(),
             new ContentClusterScoreHeuristic(),
+            new LivelinessClusterScoreHeuristic(
+                videoShareWeight: 0.45,
+                livePhotoShareWeight: 0.25,
+                motionWeight: 0.30,
+                videoShareTarget: 0.35,
+                livePhotoShareTarget: 0.20,
+                motionShareTarget: 0.45,
+                motionBlurThreshold: 0.32,
+                motionBlurTarget: 0.55,
+                motionCoverageWeight: 0.65,
+                motionVideoDurationThreshold: 8.0,
+                motionVideoFpsThreshold: 45.0,
+            ),
             new LocationClusterScoreHeuristic(),
             new PoiClusterScoreHeuristic(['tourism/*' => 0.1]),
             new NoveltyHeuristic(),
@@ -89,6 +103,7 @@ final class CompositeClusterScorerTest extends TestCase
                 'location'      => 0.05,
                 'poi'           => 0.02,
                 'time_coverage' => 0.10,
+                'liveliness'    => 0.08,
             ],
             algorithmBoosts: ['vacation' => 1.45],
             algorithmGroups: ['vacation' => 'travel_and_places'],
@@ -128,7 +143,8 @@ final class CompositeClusterScorerTest extends TestCase
             0.12 * $values['recency'] +
             0.05 * $values['location'] +
             0.02 * $values['poi'] +
-            0.10 * $values['time_coverage'];
+            0.10 * $values['time_coverage'] +
+            0.08 * $values['liveliness'];
 
         $boosted = 0.5 * 1.45;
 
