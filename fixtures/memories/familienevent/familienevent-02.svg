@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="familienevent02" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#047857" />
+      <stop offset="100%" stop-color="#bbf7d0" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#familienevent02)" rx="8" />
+  <g fill="#ecfdf5" font-family="'Arial', sans-serif" font-size="10" font-weight="600">
+    <text x="8" y="20">Familienfoto</text>
+    <text x="8" y="38">Empfang</text>
+    <text x="8" y="54">Samstag</text>
+  </g>
+</svg>

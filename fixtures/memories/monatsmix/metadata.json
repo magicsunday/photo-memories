@@ -1,0 +1,102 @@
+{
+  "dataset": "monatsmix",
+  "title": "Monatsmix Februar",
+  "themes": ["Alltag", "Lücken", "Stimmung"],
+  "primary_cluster": "winterspaziergang",
+  "storyboard": {
+    "transitions": [
+      "Schnee → Atelier",
+      "Homeoffice → Konzert",
+      "Leerstellen → Ausblick"
+    ]
+  },
+  "clusters": [
+    {
+      "id": "winterspaziergang",
+      "title": "Winterspaziergang & Atelier",
+      "summary": "Schneeimpressionen und spätes Atelierlicht.",
+      "expected_days": ["2024-02-01", "2024-02-02", "2024-02-03"],
+      "items": [
+        {
+          "filename": "monatsmix-01.svg",
+          "preview": "monatsmix-01.svg",
+          "taken_at": "2024-02-01T08:20:00+01:00",
+          "quality": 0.76,
+          "tags": ["schnee", "morgen", "spaziergang"],
+          "people": ["Mara"],
+          "location": {"city": "Dresden", "country": "DE"},
+          "story_label": "Erster Schnee im Park",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "monatsmix-02.svg",
+          "preview": "monatsmix-02.svg",
+          "taken_at": "2024-02-03T17:45:00+01:00",
+          "quality": 0.82,
+          "tags": ["atelier", "licht", "malerei"],
+          "people": ["Mara"],
+          "location": {"city": "Dresden", "country": "DE"},
+          "story_label": "Atelier in goldenem Licht",
+          "roles": ["key", "highlight"]
+        }
+      ]
+    },
+    {
+      "id": "alltag-und-pausen",
+      "title": "Homeoffice, Konzert & Pausen",
+      "summary": "Arbeit im Homeoffice, spontanes Konzert und spürbare Pausen.",
+      "expected_days": [
+        "2024-02-10",
+        "2024-02-11",
+        "2024-02-12",
+        "2024-02-13",
+        "2024-02-14",
+        "2024-02-15",
+        "2024-02-16"
+      ],
+      "items": [
+        {
+          "filename": "monatsmix-03.svg",
+          "preview": "monatsmix-03.svg",
+          "taken_at": "2024-02-10T09:00:00+01:00",
+          "quality": 0.79,
+          "tags": ["homeoffice", "kaffee"],
+          "people": ["Mara"],
+          "location": {"city": "Dresden", "country": "DE"},
+          "story_label": "Homeoffice mit Kaffee",
+          "roles": []
+        },
+        {
+          "filename": "monatsmix-04.svg",
+          "preview": "monatsmix-04.svg",
+          "taken_at": "2024-02-13T21:10:00+01:00",
+          "quality": 0.88,
+          "tags": ["konzert", "abend", "freunde"],
+          "people": ["Mara", "Jonas"],
+          "location": {"city": "Dresden", "country": "DE"},
+          "story_label": "Indie-Konzert im Club",
+          "roles": ["highlight"]
+        }
+      ]
+    },
+    {
+      "id": "abschlussblick",
+      "title": "Leerstellen & Ausblick",
+      "summary": "Notizen für neue Projekte, bewusst gelassene Pausen.",
+      "expected_days": ["2024-02-24", "2024-02-25", "2024-02-26"],
+      "items": [
+        {
+          "filename": "monatsmix-02.svg",
+          "preview": "monatsmix-02.svg",
+          "taken_at": "2024-02-25T15:00:00+01:00",
+          "quality": 0.8,
+          "tags": ["notizbuch", "planung", "reflexion"],
+          "people": ["Mara"],
+          "location": {"city": "Dresden", "country": "DE"},
+          "story_label": "Skizzen für März",
+          "roles": ["highlight"]
+        }
+      ]
+    }
+  ]
+}
