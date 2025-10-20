@@ -1218,7 +1218,10 @@ services:
         arguments:
             $qualityAggregator: '@MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator'
 
-    MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic: ~
+    MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic:
+        arguments:
+            $favouritePersonIds: '%memories.cluster.cohort.important_person_ids%'
+            $fallbackPersonIds: '%memories.cluster.cohort.fallback_person_ids%'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic: ~
 

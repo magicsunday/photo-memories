@@ -59,6 +59,7 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         self::assertSame(3, $params['people_count']);
         self::assertSame(2, $params['people_unique']);
         self::assertEqualsWithDelta(2 / 3, $params['people_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.0, $params['people_favourite_coverage'], 1e-9);
         self::assertGreaterThan(0.0, $heuristic->score($cluster));
         self::assertSame('people', $heuristic->weightKey());
     }
@@ -76,6 +77,7 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
                 'people_unique'        => 5,
                 'people_coverage'      => 0.8,
                 'people_face_coverage' => 0.6,
+                'people_favourite_coverage' => 0.4,
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
             members: [1, 2, 3],
@@ -91,6 +93,7 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         self::assertSame(5, $params['people_unique']);
         self::assertEqualsWithDelta(0.8, $params['people_coverage'], 1e-9);
         self::assertEqualsWithDelta(0.6, $params['people_face_coverage'], 1e-9);
+        self::assertEqualsWithDelta(0.4, $params['people_favourite_coverage'], 1e-9);
         self::assertEqualsWithDelta(0.75, $heuristic->score($cluster), 1e-9);
     }
 }
