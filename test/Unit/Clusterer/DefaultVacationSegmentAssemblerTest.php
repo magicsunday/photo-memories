@@ -160,6 +160,210 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
     }
 
     #[Test]
+    public function detectSegmentsKeepsRunIntactAcrossStaypointGap(): void
+    {
+        $locationHelper = LocationHelper::createDefault();
+        $homeLocator    = new DefaultHomeLocator(
+            timezone: 'Europe/Berlin',
+            defaultHomeRadiusKm: 12.0,
+            homeLat: 52.5200,
+            homeLon: 13.4050,
+            homeRadiusKm: 12.0,
+        );
+
+        $timezoneResolver = new TimezoneResolver('Europe/Berlin');
+        $dayBuilder       = new DefaultDaySummaryBuilder([
+            new InitializationStage($timezoneResolver, new PoiClassifier(), 'Europe/Berlin'),
+            new CohortPresenceStage(),
+            new GpsMetricsStage(new GeoDbscanHelper(), new StaypointDetector(), 1.0, 3, 2),
+            new DensityStage(),
+            new AwayFlagStage($timezoneResolver, new BaseLocationResolver()),
+        ]);
+
+        $transportExtender = new TransportDayExtender();
+        $runDetector       = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 80.0,
+            minItemsPerDay: 2,
+        );
+        $selectionOptions   = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
+        $selectionProfiles  = new SelectionProfileProvider($selectionOptions, 'vacation');
+        $routeSummarizer    = new RouteSummarizer();
+        $dateFormatter      = new LocalizedDateFormatter();
+        $storyTitleBuilder  = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
+
+        $scoreCalculator = new VacationScoreCalculator(
+            locationHelper: $locationHelper,
+            memberSelector: new VacationTestMemberSelector(),
+            selectionProfiles: $selectionProfiles,
+            storyTitleBuilder: $storyTitleBuilder,
+            holidayResolver: new NullHolidayResolver(),
+            timezone: 'Europe/Berlin',
+            movementThresholdKm: 25.0,
+            minAwayDays: 2,
+            minItemsPerDay: 4,
+            minimumMemberFloor: 0,
+            enforceDynamicMinimum: false,
+        );
+
+        $assembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
+
+        $tripLocation = $this->makeLocation('trip-dresden', 'Dresden, Deutschland', 51.0504, 13.7373, country: 'Germany', configure: static function (Location $loc): void {
+            $loc->setCategory('tourism');
+            $loc->setType('city');
+            $loc->setCountryCode('DE');
+        });
+
+        $items = [];
+        $id    = 2000;
+
+        $firstDay = new DateTimeImmutable('2024-02-01 09:00:00', new DateTimeZone('Europe/Berlin'));
+        foreach ([0, 3, 7, 11] as $hourOffset) {
+            $timestamp = $firstDay->add(new DateInterval('PT' . $hourOffset . 'H'));
+            $items[]   = $this->makeMedia(
+                ++$id,
+                __DIR__ . '/../../../fixtures/memories/monatsmix/monatsmix-01.svg',
+                $timestamp,
+                $tripLocation->getLat() + ($hourOffset * 0.0003),
+                $tripLocation->getLon() + ($hourOffset * 0.0003),
+                $tripLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                    $media->setHasFaces(true);
+                    $media->setFacesCount(2);
+                    $media->setQualityScore(0.86);
+                }
+            );
+        }
+
+        $thirdDay = new DateTimeImmutable('2024-02-03 10:30:00', new DateTimeZone('Europe/Berlin'));
+        foreach ([0, 4, 8, 12] as $hourOffset) {
+            $timestamp = $thirdDay->add(new DateInterval('PT' . $hourOffset . 'H'));
+            $items[]   = $this->makeMedia(
+                ++$id,
+                __DIR__ . '/../../../fixtures/memories/monatsmix/monatsmix-02.svg',
+                $timestamp,
+                $tripLocation->getLat() + ($hourOffset * 0.0004),
+                $tripLocation->getLon() + ($hourOffset * 0.0004),
+                $tripLocation,
+                static function (Media $media): void {
+                    $media->setTimezoneOffsetMin(60);
+                    $media->setHasFaces(true);
+                    $media->setFacesCount(1);
+                    $media->setQualityScore(0.9);
+                }
+            );
+        }
+
+        $home = $homeLocator->determineHome($items);
+        self::assertNotNull($home);
+
+        $days = $dayBuilder->buildDaySummaries($items, $home);
+
+        $gapDate   = '2024-02-02';
+        $gapStart  = new DateTimeImmutable('2024-02-02 07:30:00', new DateTimeZone('Europe/Berlin'));
+        $gapEnd    = new DateTimeImmutable('2024-02-02 21:15:00', new DateTimeZone('Europe/Berlin'));
+        $gapDwell  = $gapEnd->getTimestamp() - $gapStart->getTimestamp();
+        $staypoint = [
+            'lat'   => $tripLocation->getLat(),
+            'lon'   => $tripLocation->getLon(),
+            'start' => $gapStart->getTimestamp(),
+            'end'   => $gapEnd->getTimestamp(),
+            'dwell' => $gapDwell,
+        ];
+        $dominantStaypoint = [
+            'key'          => StaypointIndex::createKeyFromStaypoint($gapDate, $staypoint),
+            'lat'          => $tripLocation->getLat(),
+            'lon'          => $tripLocation->getLon(),
+            'start'        => $staypoint['start'],
+            'end'          => $staypoint['end'],
+            'dwellSeconds' => $gapDwell,
+            'memberCount'  => 0,
+        ];
+
+        $days[$gapDate] = [
+            'date'                    => $gapDate,
+            'members'                 => [],
+            'gpsMembers'              => [],
+            'maxDistanceKm'           => 190.0,
+            'avgDistanceKm'           => 165.0,
+            'travelKm'                => 8.0,
+            'maxSpeedKmh'             => 60.0,
+            'avgSpeedKmh'             => 18.0,
+            'hasHighSpeedTransit'     => false,
+            'countryCodes'            => ['de' => true],
+            'timezoneOffsets'         => [],
+            'localTimezoneIdentifier' => 'Europe/Berlin',
+            'localTimezoneOffset'     => 60,
+            'tourismHits'             => 3,
+            'poiSamples'              => 5,
+            'tourismRatio'            => 0.48,
+            'hasAirportPoi'           => false,
+            'weekday'                 => (int) $gapStart->format('N'),
+            'photoCount'              => 0,
+            'densityZ'                => 0.0,
+            'isAwayCandidate'         => true,
+            'sufficientSamples'       => true,
+            'spotClusters'            => [],
+            'spotNoise'               => [],
+            'spotCount'               => 1,
+            'spotNoiseSamples'        => 0,
+            'spotDwellSeconds'        => $gapDwell,
+            'staypoints'              => [$staypoint],
+            'staypointIndex'          => StaypointIndex::empty(),
+            'staypointCounts'         => [],
+            'staypointCount'          => 1,
+            'dominantStaypoints'      => [$dominantStaypoint],
+            'transitRatio'            => 0.0,
+            'poiDensity'              => 0.22,
+            'cohortPresenceRatio'     => 0.15,
+            'cohortMembers'           => [],
+            'baseLocation'            => [
+                'lat'         => $tripLocation->getLat(),
+                'lon'         => $tripLocation->getLon(),
+                'distance_km' => 190.0,
+                'source'      => 'staypoint',
+            ],
+            'baseAway'                => true,
+            'awayByDistance'          => true,
+            'firstGpsMedia'           => null,
+            'lastGpsMedia'            => null,
+            'isSynthetic'             => true,
+        ];
+
+        ksort($days);
+
+        $clusters = $assembler->detectSegments($days, $home);
+
+        self::assertCount(1, $clusters);
+        $cluster = $clusters[0];
+
+        $params   = $cluster->getParams();
+        $segments = $params['day_segments'] ?? [];
+
+        self::assertSame(3, $params['total_days']);
+        self::assertSame(3, $params['raw_away_days']);
+        self::assertSame(0, $params['bridged_away_days']);
+        self::assertSame(3, $params['away_days']);
+        self::assertSame(8, $params['raw_member_count']);
+
+        self::assertArrayHasKey('day_segments', $params);
+        self::assertSame(['2024-02-01', '2024-02-02', '2024-02-03'], array_keys($segments));
+
+        $gapSegment = $segments[$gapDate];
+        self::assertSame('peripheral', $gapSegment['category']);
+        self::assertNull($gapSegment['duration']);
+        self::assertArrayHasKey('metrics', $gapSegment);
+        self::assertEqualsWithDelta(0.032, $gapSegment['metrics']['travel_score'], 0.0005);
+
+        $firstDayScore = $segments['2024-02-01']['score'];
+        $thirdDayScore = $segments['2024-02-03']['score'];
+
+        self::assertGreaterThan($gapSegment['score'], $firstDayScore);
+        self::assertGreaterThan($gapSegment['score'], $thirdDayScore);
+    }
+
+    #[Test]
     public function classifyRunDaysIncorporatesTravelScore(): void
     {
         $runDetector = new class implements VacationRunDetectorInterface {
