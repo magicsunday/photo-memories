@@ -1085,10 +1085,11 @@ final class FeedControllerTest extends TestCase
         $mediaRepo = $this->createMock(MediaRepository::class);
         $mediaRepo->expects(self::once())
             ->method('findByIds')
-            ->with([1, 2], false)
+            ->with([1, 2, 3], false)
             ->willReturn([$mediaOne, $mediaTwo]);
 
         $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(3.5));
         $slideshowManager->expects(self::once())
             ->method('ensureForItem')
             ->with(
@@ -1113,7 +1114,7 @@ final class FeedControllerTest extends TestCase
         );
 
         $itemId  = hash('sha1', 'holiday_event|1,2');
-        $request = Request::create('/api/feed/' . $itemId . '/video?dry-run=1', 'POST');
+        $request = Request::create('/api/feed/' . $itemId . '/video', 'POST', ['dry-run' => '1']);
         $response = $controller->triggerSlideshow($request, $itemId);
 
         self::assertSame(200, $response->getStatusCode());
@@ -1301,6 +1302,124 @@ final class FeedControllerTest extends TestCase
 
         $meta = $payload['meta'];
         self::assertContains('holiday_event', $meta['personalisierung']['optOutAlgorithmen']);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedRanksOptedOutAlgorithmsAfterPenalty(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $penalisedItem = new MemoryFeedItem(
+            algorithm: 'holiday_event',
+            title: 'Winter in Berlin',
+            subtitle: 'Lichterzauber an der Spree',
+            coverMediaId: 10,
+            memberIds: [10],
+            score: 0.9,
+            params: [
+                'group'      => 'city_and_events',
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+            ],
+        );
+
+        $preferredItem = new MemoryFeedItem(
+            algorithm: 'travel_story',
+            title: 'Herbstwanderung',
+            subtitle: 'Klares Licht im Wald',
+            coverMediaId: 20,
+            memberIds: [20],
+            score: 0.8,
+            params: [
+                'group'      => 'nature_and_seasons',
+                'time_range' => ['from' => 1_700_100_000, 'to' => 1_700_100_800],
+            ],
+        );
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
+            ->willReturn([
+                $penalisedItem,
+                $preferredItem,
+            ]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+
+        $mediaRepo = $this->createMock(MediaRepository::class);
+        $mediaById = [
+            10 => $this->createMedia(10, '/media/10.jpg', '2024-02-01T12:00:00+00:00'),
+            20 => $this->createMedia(20, '/media/20.jpg', '2024-02-02T12:00:00+00:00'),
+        ];
+
+        $mediaRepo->method('findByIds')
+            ->willReturnCallback(static function (array $ids) use ($mediaById): array {
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($mediaById[$id])) {
+                        $result[] = $mediaById[$id];
+                    }
+                }
+
+                return $result;
+            });
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $preferences = [
+            'users' => [
+                'standard' => [
+                    'profiles' => [
+                        'default' => [
+                            'favourites'          => [],
+                            'hidden_algorithms'   => ['holiday_event'],
+                            'blocked_algorithms'  => [],
+                            'hidden_persons'      => [],
+                            'hidden_pets'         => [],
+                            'hidden_places'       => [],
+                            'hidden_dates'        => [],
+                            'favourite_persons'   => [],
+                            'favourite_places'    => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        file_put_contents($storagePath, json_encode($preferences, JSON_THROW_ON_ERROR));
+
+        $request  = Request::create('/api/feed', 'GET');
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('items', $payload);
+        self::assertCount(2, $payload['items']);
+
+        self::assertSame('travel_story', $payload['items'][0]['algorithmus']);
+        self::assertSame('holiday_event', $payload['items'][1]['algorithmus']);
+        self::assertEqualsWithDelta(0.8, $payload['items'][0]['score'], 1e-9);
+        self::assertEqualsWithDelta(0.9 * 0.35, $payload['items'][1]['score'], 1e-9);
 
         unlink($storagePath);
     }

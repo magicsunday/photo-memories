@@ -325,6 +325,30 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $algCount[$alg]   = ($algCount[$alg] ?? 0) + 1;
         }
 
+        if ($result === []) {
+            return $result;
+        }
+
+        $indexed = [];
+        foreach ($result as $index => $item) {
+            $indexed[] = ['item' => $item, 'index' => $index];
+        }
+
+        usort($indexed, static function (array $a, array $b): int {
+            $scoreComparison = $b['item']->getScore() <=> $a['item']->getScore();
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
+
+            return $a['index'] <=> $b['index'];
+        });
+
+        /** @var list<MemoryFeedItem> $result */
+        $result = array_map(
+            static fn (array $entry): MemoryFeedItem => $entry['item'],
+            $indexed,
+        );
+
         return $result;
     }
 
