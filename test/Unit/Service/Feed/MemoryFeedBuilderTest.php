@@ -577,6 +577,7 @@ final class MemoryFeedBuilderTest extends TestCase
             [],
             [],
             [],
+            [],
             ['Alice'],
             [],
         );
@@ -647,6 +648,7 @@ final class MemoryFeedBuilderTest extends TestCase
             [],
             [],
             [],
+            [],
             ['Berlin'],
             [],
             [],
@@ -695,6 +697,14 @@ final class MemoryFeedBuilderTest extends TestCase
                     'score'      => 0.9,
                     'time_range' => ['from' => $from, 'to' => $to],
                     'place'      => 'Berlin',
+                ],
+                new FeedVisibilityFilter([], [], ['Berlin']),
+            ],
+            'places list' => [
+                [
+                    'score'      => 0.9,
+                    'time_range' => ['from' => $from, 'to' => $to],
+                    'places'     => ['  Berlin  '],
                 ],
                 new FeedVisibilityFilter([], [], ['Berlin']),
             ],
