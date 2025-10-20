@@ -68,6 +68,16 @@ final class PersonSignatureHelper
         return $ids;
     }
 
+    public function idFromName(string $name): ?int
+    {
+        $normalized = mb_strtolower(trim($name));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return $this->cache[$normalized] ??= $this->hashPerson($normalized);
+    }
+
     private function hashPerson(string $name): int
     {
         $hash  = substr(hash('sha256', $name), 0, 15);

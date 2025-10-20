@@ -30,6 +30,18 @@ parameters:
     memories.feed.recent_score_bonus: 0.03
     # Description: Penalty score applied to stale clusters.
     memories.feed.stale_score_penalty: 0.05
+    # Description: Score multiplier applied to items produced by opt-out algorithms before pagination.
+    memories.feed.preference.hidden_algorithm_penalty: 0.35
+    # Description: Multiplier applied when clusters include favourite persons from user preferences.
+    memories.feed.preference.favourite_person_multiplier: 1.15
+    # Description: Multiplier applied when clusters include favourite places from user preferences.
+    memories.feed.preference.favourite_place_multiplier: 1.10
+    # Description: Penalty multiplier applied when clusters include hidden persons from user feedback.
+    memories.feed.preference.negative_person_multiplier: 0.55
+    # Description: Penalty multiplier applied when clusters include hidden places from user feedback.
+    memories.feed.preference.negative_place_multiplier: 0.60
+    # Description: Penalty multiplier applied when clusters intersect hidden dates from user feedback.
+    memories.feed.preference.negative_date_multiplier: 0.65
     # Description: Personalization profiles controlling feed thresholds for different audience types.
     memories.feed.personalization.profiles:
         default:

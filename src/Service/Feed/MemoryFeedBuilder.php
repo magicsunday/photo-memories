@@ -23,7 +23,9 @@ use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use function array_filter;
 use function array_key_exists;
 use function array_map;
+use function array_merge;
 use function array_slice;
+use function array_unique;
 use function array_values;
 use function arsort;
 use function count;
@@ -35,6 +37,7 @@ use function is_int;
 use function is_iterable;
 use function is_numeric;
 use function is_string;
+use function mb_strtolower;
 use function sprintf;
 use function usort;
 use function trim;
@@ -72,6 +75,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         private int $staleDays = 365,
         private float $recentScoreBonus = 0.03,
         private float $staleScorePenalty = 0.05,
+        private float $favouritePersonMultiplier = 1.0,
+        private float $favouritePlaceMultiplier = 1.0,
+        private float $negativePersonMultiplier = 1.0,
+        private float $negativePlaceMultiplier = 1.0,
+        private float $negativeDateMultiplier = 1.0,
     ) {
         $this->defaultProfile = new FeedPersonalizationProfile(
             'default',
@@ -98,6 +106,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         array $clusters,
         ?FeedPersonalizationProfile $profile = null,
         ?FeedVisibilityFilter $visibilityFilter = null,
+        ?FeedUserPreferences $preferences = null,
     ): array {
         $profile ??= $this->defaultProfile;
 
@@ -293,13 +302,17 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
             $params['personalisierungsProfil'] = $profile->getKey();
 
+            $preferenceResult = $this->applyPreferenceAdjustments($params, $preferences, $members);
+            $params          = $preferenceResult['params'];
+            $adjustedScore   = $preferenceResult['score'];
+
             $result[] = new MemoryFeedItem(
                 algorithm: $alg,
                 title: $title,
                 subtitle: $subtitle,
                 coverMediaId: $coverId,
                 memberIds: $memberIds,
-                score: (float) ($c->getParams()['score'] ?? 0.0),
+                score: $adjustedScore,
                 params: $params
             );
 
@@ -313,6 +326,225 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     * @param list<Media>          $members
+     * @return array{score: float, params: array<string, scalar|array|null>}
+     */
+    private function applyPreferenceAdjustments(
+        array $params,
+        ?FeedUserPreferences $preferences,
+        array $members,
+    ): array {
+        $baseScore = (float) ($params['score'] ?? 0.0);
+
+        if ($preferences === null) {
+            return ['score' => $baseScore, 'params' => $params];
+        }
+
+        $multiplier = 1.0;
+        $favouritePersonMatches = [];
+        $favouritePlaceMatches  = [];
+        $negativePersonMatches  = [];
+        $negativePlaceMatches   = [];
+        $negativeDateMatches    = [];
+
+        $clusterPersons = $this->normaliseIdList($params['persons'] ?? null);
+        $clusterPersonLookup = $this->normaliseMatchIndex($clusterPersons);
+        $preferenceFavouritePersons = $this->normaliseMatchIndex($preferences->getFavouritePersons());
+
+        foreach ($clusterPersons as $index => $person) {
+            $normalized = $clusterPersonLookup[$index] ?? null;
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (in_array($normalized, $preferenceFavouritePersons, true)) {
+                $favouritePersonMatches[] = $person;
+            }
+        }
+
+        if ($favouritePersonMatches !== [] && $this->favouritePersonMultiplier !== 1.0) {
+            $multiplier *= $this->favouritePersonMultiplier;
+        }
+
+        $preferenceHiddenPersons = $this->normaliseMatchIndex($preferences->getHiddenPersons());
+        foreach ($clusterPersons as $index => $person) {
+            $normalized = $clusterPersonLookup[$index] ?? null;
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (in_array($normalized, $preferenceHiddenPersons, true)) {
+                $negativePersonMatches[] = $person;
+            }
+        }
+
+        if ($negativePersonMatches !== [] && $this->negativePersonMultiplier !== 1.0) {
+            $multiplier *= $this->negativePersonMultiplier;
+        }
+
+        $placeCandidates = [];
+        $primaryPlace    = $this->normaliseScalarString($params['place'] ?? null);
+        if ($primaryPlace !== null) {
+            $placeCandidates[] = $primaryPlace;
+        }
+
+        $placeCandidates = array_values(array_unique(array_merge(
+            $placeCandidates,
+            $this->normaliseIdList($params['places'] ?? null),
+        )));
+        $placeLookup = $this->normaliseMatchIndex($placeCandidates);
+
+        $preferenceFavouritePlaces = $this->normaliseMatchIndex($preferences->getFavouritePlaces());
+        foreach ($placeCandidates as $index => $place) {
+            $normalized = $placeLookup[$index] ?? null;
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (in_array($normalized, $preferenceFavouritePlaces, true)) {
+                $favouritePlaceMatches[] = $place;
+            }
+        }
+
+        if ($favouritePlaceMatches !== [] && $this->favouritePlaceMultiplier !== 1.0) {
+            $multiplier *= $this->favouritePlaceMultiplier;
+        }
+
+        $preferenceHiddenPlaces = $this->normaliseMatchIndex($preferences->getHiddenPlaces());
+        foreach ($placeCandidates as $index => $place) {
+            $normalized = $placeLookup[$index] ?? null;
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (in_array($normalized, $preferenceHiddenPlaces, true)) {
+                $negativePlaceMatches[] = $place;
+            }
+        }
+
+        if ($negativePlaceMatches !== [] && $this->negativePlaceMultiplier !== 1.0) {
+            $multiplier *= $this->negativePlaceMultiplier;
+        }
+
+        $clusterDates = $this->extractTimeRangeDates($params['time_range'] ?? null);
+        $dateLookup   = $this->normaliseMatchIndex($clusterDates);
+        $hiddenDates  = $this->normaliseMatchIndex($preferences->getHiddenDates());
+        foreach ($clusterDates as $index => $date) {
+            $normalized = $dateLookup[$index] ?? null;
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (in_array($normalized, $hiddenDates, true)) {
+                $negativeDateMatches[] = $date;
+            }
+        }
+
+        if ($negativeDateMatches !== [] && $this->negativeDateMultiplier !== 1.0) {
+            $multiplier *= $this->negativeDateMultiplier;
+        }
+
+        if ($multiplier < 0.0) {
+            $multiplier = 0.0;
+        }
+
+        $adjustedScore = $baseScore * $multiplier;
+        if ($adjustedScore < 0.0) {
+            $adjustedScore = 0.0;
+        }
+
+        $params['score_preference'] = [
+            'base' => $baseScore,
+            'multiplier' => $multiplier,
+            'favourite_persons' => $favouritePersonMatches,
+            'favourite_places' => $favouritePlaceMatches,
+            'hidden_persons' => $negativePersonMatches,
+            'hidden_places' => $negativePlaceMatches,
+            'hidden_dates' => $negativeDateMatches,
+            'hidden_algorithms' => [],
+        ];
+        $params['score'] = $adjustedScore;
+
+        if (!isset($params['people_favourite_coverage']) && $favouritePersonMatches !== []) {
+            $params['people_favourite_coverage'] = $this->estimateFavouriteCoverage($members, $favouritePersonMatches);
+        }
+
+        return ['score' => $adjustedScore, 'params' => $params];
+    }
+
+    /**
+     * @param list<Media>       $members
+     * @param list<string>      $favourites
+     */
+    private function estimateFavouriteCoverage(array $members, array $favourites): float
+    {
+        if ($members === [] || $favourites === []) {
+            return $this->clampPreferenceValue(0.0);
+        }
+
+        $normalisedFavourites = $this->normaliseMatchIndex($favourites);
+        $withFavourites       = 0;
+
+        foreach ($members as $media) {
+            $persons = $media->getPersons();
+            if ($persons === null || $persons === []) {
+                continue;
+            }
+
+            $personLookup = $this->normaliseMatchIndex($persons);
+            foreach ($personLookup as $normalized) {
+                if (in_array($normalized, $normalisedFavourites, true)) {
+                    ++$withFavourites;
+                    break;
+                }
+            }
+        }
+
+        $coverage = $withFavourites / count($members);
+
+        return $this->clampPreferenceValue($coverage);
+    }
+
+    /**
+     * @param list<string> $values
+     *
+     * @return list<string>
+     */
+    private function normaliseMatchIndex(array $values): array
+    {
+        $index = [];
+
+        foreach ($values as $value) {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            $normalized = mb_strtolower(trim($value));
+            if ($normalized === '') {
+                continue;
+            }
+
+            $index[] = $normalized;
+        }
+
+        return $index;
+    }
+
+    private function clampPreferenceValue(float $value): float
+    {
+        if ($value < 0.0) {
+            return 0.0;
+        }
+
+        if ($value > 1.0) {
+            return 1.0;
+        }
+
+        return $value;
     }
 
     private function isClusterHidden(ClusterDraft $cluster, FeedVisibilityFilter $filter): bool

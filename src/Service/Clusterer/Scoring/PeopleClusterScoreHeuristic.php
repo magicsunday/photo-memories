@@ -14,22 +14,29 @@ namespace MagicSunday\Memories\Service\Clusterer\Scoring;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterPeopleAggregator;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 
 use function count;
 
 /**
  * Class PeopleClusterScoreHeuristic.
  */
-final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
+final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic implements PreferenceAwareClusterScoreHeuristicInterface
 {
     /**
-     * @param list<int> $favouritePersonIds
-     * @param list<int> $fallbackPersonIds
+     * @param list<int|string> $favouritePersonIds
+     * @param list<int|string> $fallbackPersonIds
      */
     public function __construct(
-        private readonly array $favouritePersonIds = [],
+        private readonly array $defaultFavouritePersonIds = [],
         private readonly array $fallbackPersonIds = [],
+        private ?FeedUserPreferences $preferences = null,
     ) {
+    }
+
+    public function setFeedUserPreferences(?FeedUserPreferences $preferences): void
+    {
+        $this->preferences = $preferences;
     }
 
     public function supports(ClusterDraft $cluster): bool
@@ -94,7 +101,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             ];
         }
 
-        $aggregator   = new ClusterPeopleAggregator($this->favouritePersonIds, $this->fallbackPersonIds);
+        $aggregator   = new ClusterPeopleAggregator($this->resolveFavouritePersonIds(), $this->fallbackPersonIds);
         $peopleParams = $aggregator->buildParams($mediaItems);
 
         return [
@@ -105,5 +112,17 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             'faceCoverage' => $peopleParams['people_face_coverage'],
             'favouriteCoverage' => $peopleParams['people_favourite_coverage'],
         ];
+    }
+
+    /**
+     * @return list<int|string>
+     */
+    private function resolveFavouritePersonIds(): array
+    {
+        if ($this->preferences !== null) {
+            return $this->preferences->getFavouritePersons();
+        }
+
+        return $this->defaultFavouritePersonIds;
     }
 }

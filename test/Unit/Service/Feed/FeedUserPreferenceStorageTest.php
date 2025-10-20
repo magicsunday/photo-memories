@@ -36,6 +36,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
         $initial = $storage->getPreferences('alice', 'default');
         self::assertSame([], $initial->getFavourites());
         self::assertSame([], $initial->getHiddenAlgorithms());
+        self::assertSame([], $initial->getBlockedAlgorithms());
         self::assertSame([], $initial->getHiddenPersons());
         self::assertSame([], $initial->getHiddenPets());
         self::assertSame([], $initial->getHiddenPlaces());
@@ -46,6 +47,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
         $storage->markFavourite('alice', 'default', 'cluster-1', true);
         $storage->markFavourite('alice', 'default', 'cluster-2', true);
         $storage->setAlgorithmOptOut('alice', 'default', 'holiday_event', true);
+        $storage->setAlgorithmBlock('alice', 'default', 'video_story', true);
         $storage->setHiddenPersons('alice', 'default', ['bob', 'bob', 'carol']);
         $storage->setHiddenPets('alice', 'default', ['dog-1']);
         $storage->setHiddenPlaces('alice', 'default', ['berlin']);
@@ -56,6 +58,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
         $updated = $storage->getPreferences('alice', 'default');
         self::assertSame(['cluster-1', 'cluster-2'], $updated->getFavourites());
         self::assertSame(['holiday_event'], $updated->getHiddenAlgorithms());
+        self::assertSame(['video_story'], $updated->getBlockedAlgorithms());
         self::assertSame(['bob', 'carol'], $updated->getHiddenPersons());
         self::assertSame(['dog-1'], $updated->getHiddenPets());
         self::assertSame(['berlin'], $updated->getHiddenPlaces());
@@ -65,6 +68,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
 
         $storage->markFavourite('alice', 'default', 'cluster-1', false);
         $storage->setAlgorithmOptOut('alice', 'default', 'holiday_event', false);
+        $storage->setAlgorithmBlock('alice', 'default', 'video_story', false);
         $storage->setHiddenPersons('alice', 'default', []);
         $storage->setHiddenPets('alice', 'default', []);
         $storage->setHiddenPlaces('alice', 'default', []);
@@ -75,6 +79,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
         $final = $storage->getPreferences('alice', 'default');
         self::assertSame(['cluster-2'], $final->getFavourites());
         self::assertSame([], $final->getHiddenAlgorithms());
+        self::assertSame([], $final->getBlockedAlgorithms());
         self::assertSame([], $final->getHiddenPersons());
         self::assertSame([], $final->getHiddenPets());
         self::assertSame([], $final->getHiddenPlaces());
@@ -112,6 +117,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
 
         self::assertSame(['cluster-1'], $preferences->getFavourites());
         self::assertSame(['algo'], $preferences->getHiddenAlgorithms());
+        self::assertSame([], $preferences->getBlockedAlgorithms());
         self::assertSame([], $preferences->getHiddenPersons());
         self::assertSame([], $preferences->getHiddenPets());
         self::assertSame([], $preferences->getHiddenPlaces());
@@ -130,6 +136,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
         self::assertArrayHasKey('hidden_dates', $decoded['users']['legacy-user']['profiles']['only']);
         self::assertArrayHasKey('favourite_persons', $decoded['users']['legacy-user']['profiles']['only']);
         self::assertArrayHasKey('favourite_places', $decoded['users']['legacy-user']['profiles']['only']);
+        self::assertArrayHasKey('blocked_algorithms', $decoded['users']['legacy-user']['profiles']['only']);
 
         @unlink($path);
     }

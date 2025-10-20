@@ -28,5 +28,6 @@ interface FeedBuilderInterface
         array $clusters,
         ?FeedPersonalizationProfile $profile = null,
         ?FeedVisibilityFilter $visibilityFilter = null,
+        ?FeedUserPreferences $preferences = null,
     ): array;
 }

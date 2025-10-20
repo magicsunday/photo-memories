@@ -21,6 +21,7 @@ use function array_values;
 use function count;
 use function intval;
 use function is_array;
+use function is_numeric;
 use function is_string;
 use function min;
 use function trim;
@@ -45,17 +46,17 @@ final readonly class ClusterPeopleAggregator
     private PersonSignatureHelper $personHelper;
 
     /**
-     * @param list<int> $favouritePersonIds
-     * @param list<int> $fallbackPersonIds
+     * @param list<int|string> $favouritePersonIds
+     * @param list<int|string> $fallbackPersonIds
      */
     public function __construct(
         array $favouritePersonIds = [],
         array $fallbackPersonIds = [],
         ?PersonSignatureHelper $personHelper = null,
     ) {
-        $this->favouritePersonIds = array_values(array_map('intval', $favouritePersonIds));
-        $this->fallbackPersonIds  = array_values(array_map('intval', $fallbackPersonIds));
         $this->personHelper       = $personHelper ?? new PersonSignatureHelper();
+        $this->favouritePersonIds = $this->normalisePreferredIds($favouritePersonIds);
+        $this->fallbackPersonIds  = $this->normalisePreferredIds($fallbackPersonIds);
     }
 
     /**
@@ -199,6 +200,46 @@ final readonly class ClusterPeopleAggregator
         }
 
         return count(array_intersect($personIds, $favourites));
+    }
+
+    /**
+     * @param list<int|string> $values
+     *
+     * @return list<int>
+     */
+    private function normalisePreferredIds(array $values): array
+    {
+        $result = [];
+
+        foreach ($values as $value) {
+            if (is_int($value)) {
+                $id = $value;
+            } elseif (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                if (is_numeric($trimmed)) {
+                    $id = (int) $trimmed;
+                } else {
+                    $id = $this->personHelper->idFromName($trimmed);
+                    if ($id === null) {
+                        continue;
+                    }
+                }
+            } else {
+                continue;
+            }
+
+            if ($id <= 0) {
+                continue;
+            }
+
+            $result[] = $id;
+        }
+
+        return array_values(array_unique($result));
     }
 
     private function clamp01(float $value): float

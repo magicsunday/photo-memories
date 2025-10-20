@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Scoring;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -95,5 +96,56 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         self::assertEqualsWithDelta(0.6, $params['people_face_coverage'], 1e-9);
         self::assertEqualsWithDelta(0.4, $params['people_favourite_coverage'], 1e-9);
         self::assertEqualsWithDelta(0.75, $heuristic->score($cluster), 1e-9);
+    }
+
+    #[Test]
+    public function enrichUsesFavouritePersonsFromPreferences(): void
+    {
+        $heuristic = new PeopleClusterScoreHeuristic();
+
+        $cluster = new ClusterDraft(
+            algorithm: 'test',
+            params: [],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2],
+        );
+
+        $mediaMap = [
+            1 => $this->makeMedia(
+                id: 1,
+                path: __DIR__ . '/favourite-1.jpg',
+                configure: static function (Media $media): void {
+                    $media->setPersons(['Alice']);
+                },
+            ),
+            2 => $this->makeMedia(
+                id: 2,
+                path: __DIR__ . '/favourite-2.jpg',
+                configure: static function (Media $media): void {
+                    $media->setPersons(['Bob']);
+                },
+            ),
+        ];
+
+        $preferences = new FeedUserPreferences(
+            'user',
+            'default',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            ['Alice'],
+            [],
+        );
+
+        $heuristic->setFeedUserPreferences($preferences);
+        $heuristic->prepare([$cluster], $mediaMap);
+        $heuristic->enrich($cluster, $mediaMap);
+
+        $params = $cluster->getParams();
+        self::assertGreaterThan(0.0, $params['people_favourite_coverage']);
+        self::assertGreaterThan(0.0, $params['people']);
     }
 }

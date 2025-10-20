@@ -70,4 +70,20 @@ final readonly class MemoryFeedItem
     {
         return $this->params;
     }
+
+    /**
+     * @param array<string, scalar|array|null>|null $params
+     */
+    public function withScore(float $score, ?array $params = null): self
+    {
+        return new self(
+            $this->algorithm,
+            $this->title,
+            $this->subtitle,
+            $this->coverMediaId,
+            $this->memberIds,
+            $score,
+            $params ?? $this->params,
+        );
+    }
 }
