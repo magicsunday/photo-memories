@@ -976,7 +976,7 @@ parameters:
     memories.slideshow.text_box_enabled_default: true
     memories.slideshow.text_box_enabled: '%env(default:memories.slideshow.text_box_enabled_default:bool:MEMORIES_SLIDESHOW_TEXT_BOX)%'
     # Description: Initial zoom factor used when the animated zoom/pan effect is enabled.
-    memories.slideshow.zoom_start_default: 1.0
+    memories.slideshow.zoom_start_default: 1.03
     # Description: Runtime initial zoom factor for the animated zoom/pan effect.
     memories.slideshow.zoom_start: '%env(default:memories.slideshow.zoom_start_default:float:MEMORIES_SLIDESHOW_ZOOM_START)%'
     # Description: Final zoom factor used when the animated zoom/pan effect is enabled.
