@@ -13,19 +13,36 @@ namespace MagicSunday\Memories\Test\Unit\Utility;
 
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\Phash;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class PhashTest extends TestCase
 {
-    public function hammingFromHexReturnsMaxDistanceForInvalidHex(): void
+    #[DataProvider('provideInvalidHexPairs')]
+    public function testHammingFromHexReturnsMaxDistanceForInvalidHex(string $a, string $b): void
     {
-        self::assertSame(64, Phash::hammingFromHex('abc', '00'));
-        self::assertSame(64, Phash::hammingFromHex('00', 'abc'));
+        self::assertSame(64, Phash::hammingFromHex($a, $b));
     }
 
-    public function hammingFromHexCalculatesDistanceForValidHex(): void
+    #[DataProvider('provideValidHexPairs')]
+    public function testHammingFromHexCalculatesDistanceForValidHex(string $a, string $b, int $expectedDistance): void
     {
-        $distance = Phash::hammingFromHex('ffffffffffffffff', '0000000000000000');
+        self::assertSame($expectedDistance, Phash::hammingFromHex($a, $b));
+    }
 
-        self::assertSame(64, $distance);
+    public static function provideInvalidHexPairs(): iterable
+    {
+        yield 'odd length first argument' => ['abc', '00'];
+        yield 'odd length second argument' => ['00', 'abc'];
+        yield 'non-hex characters in first argument' => ['zz', '00'];
+        yield 'non-hex characters in second argument' => ['00', 'gg'];
+    }
+
+    public static function provideValidHexPairs(): iterable
+    {
+        yield 'empty strings' => ['', '', 0];
+        yield 'uppercase vs lowercase' => ['ffffffffffffffff', 'FFFFFFFFFFFFFFFF', 0];
+        yield 'maximum distance' => ['ffffffffffffffff', '0000000000000000', 64];
+        yield 'different byte lengths' => ['00', '0000', 8];
+        yield 'length and bit difference' => ['ff', '0000', 16];
     }
 }

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Utility;
 
 use function abs;
+use function ctype_xdigit;
 use function hex2bin;
 use function min;
 use function ord;
@@ -47,6 +48,10 @@ final class Phash
     private static function decodeHex(string $value): ?string
     {
         if ((strlen($value) & 1) === 1) {
+            return null;
+        }
+
+        if ($value !== '' && ctype_xdigit($value) === false) {
             return null;
         }
 
