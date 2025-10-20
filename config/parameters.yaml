@@ -909,8 +909,16 @@ parameters:
     memories.slideshow.storyboard_dir: "%env(default:memories.slideshow.storyboard_dir_default:MEMORIES_SLIDESHOW_STORYBOARD_DIR)%"
     # Description: Duration in seconds each slideshow image remains on screen.
     memories.slideshow.image_duration_s: 3.5
+    # Description: Maximum reduction applied to the per-slide duration when randomising slideshow timing.
+    memories.slideshow.image_duration_jitter_lower_s: 0.5
+    # Description: Maximum increase applied to the per-slide duration when randomising slideshow timing.
+    memories.slideshow.image_duration_jitter_upper_s: 0.5
     # Description: Duration in seconds used for transitions between slideshow images.
     memories.slideshow.transition_duration_s: 0.75
+    # Description: Maximum reduction applied to the transition duration when randomising slideshow timing.
+    memories.slideshow.transition_duration_jitter_lower_s: 0.15
+    # Description: Maximum increase applied to the transition duration when randomising slideshow timing.
+    memories.slideshow.transition_duration_jitter_upper_s: 0.25
     # Description: Step size in seconds used to snap slide and transition timing to a beat grid (0 disables snapping).
     memories.slideshow.beat_grid_step_default: 0.0
     memories.slideshow.beat_grid_step: '%env(default:memories.slideshow.beat_grid_step_default:float:MEMORIES_SLIDESHOW_BEAT_GRID_STEP)%'

@@ -84,13 +84,17 @@ final class SlideshowVideoManagerTest extends TestCase
 
         $manager = new SlideshowVideoManager(
             $baseDir,
-            1.0,
-            0.5,
+            3.5,
+            0.75,
             $generator,
             $writer,
             $transitions,
             null,
             null,
+            0.5,
+            0.5,
+            0.15,
+            0.25,
         );
 
         try {
@@ -235,6 +239,13 @@ final class SlideshowVideoManagerTest extends TestCase
             0.75,
             $generator,
             new SlideshowStoryboardWriter(sys_get_temp_dir() . '/memories-storyboard-' . uniqid('', true)),
+            [],
+            null,
+            null,
+            0.5,
+            0.5,
+            0.15,
+            0.25,
         );
 
         $reflection = new ReflectionClass($manager);
@@ -254,12 +265,22 @@ final class SlideshowVideoManagerTest extends TestCase
         /** @var array{slides:list<array{duration:float}>,transitionDurations:list<float>} $second */
         $second = $method->invoke($manager, 'deterministic-item', $slides, $paths, 'Titel', 'Untertitel');
 
-        self::assertSame(
-            array_map(static fn (array $slide): float => $slide['duration'], $first['slides']),
-            array_map(static fn (array $slide): float => $slide['duration'], $second['slides'])
-        );
+        $firstDurations  = array_map(static fn (array $slide): float => $slide['duration'], $first['slides']);
+        $secondDurations = array_map(static fn (array $slide): float => $slide['duration'], $second['slides']);
+
+        self::assertSame($firstDurations, $secondDurations);
 
         self::assertSame($first['transitionDurations'], $second['transitionDurations']);
+
+        foreach ($firstDurations as $duration) {
+            self::assertGreaterThanOrEqual(3.0, $duration);
+            self::assertLessThanOrEqual(4.0, $duration);
+        }
+
+        foreach ($first['transitionDurations'] as $duration) {
+            self::assertGreaterThanOrEqual(0.6, $duration);
+            self::assertLessThanOrEqual(1.0, $duration);
+        }
     }
 
     public function testEnsureForItemReturnsErrorWhenGenerationFails(): void
