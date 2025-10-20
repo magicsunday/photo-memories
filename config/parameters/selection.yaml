@@ -2,8 +2,8 @@ parameters:
     memories.selection.default_profile: 'highlights'
     memories.selection.profiles:
         vacation:
-            target_total: 60
-            minimum_total: 36
+            target_total: 25
+            minimum_total: 15
             max_per_day: 6
             time_slot_hours: 4
             min_spacing_seconds: 1800
@@ -27,8 +27,8 @@ parameters:
             spacing_progress_factor: 0.45
             cohort_repeat_penalty: 0.05
         location:
-            target_total: 48
-            minimum_total: 30
+            target_total: 23
+            minimum_total: 14
             max_per_day: 4
             time_slot_hours: 3
             min_spacing_seconds: 3000
@@ -46,8 +46,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.24
         scene:
-            target_total: 42
-            minimum_total: 26
+            target_total: 21
+            minimum_total: 13
             max_per_day: 4
             time_slot_hours: 3
             min_spacing_seconds: 3000
@@ -65,8 +65,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.2
         device:
-            target_total: 36
-            minimum_total: 22
+            target_total: 19
+            minimum_total: 12
             max_per_day: 4
             time_slot_hours: 3
             min_spacing_seconds: 3000
@@ -84,8 +84,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.18
         over_years:
-            target_total: 32
-            minimum_total: 20
+            target_total: 18
+            minimum_total: 11
             max_per_day: 3
             time_slot_hours: 3
             min_spacing_seconds: 3000
@@ -103,8 +103,8 @@ parameters:
             max_per_bucket: 4
             video_heavy_bonus: 0.18
         highlights:
-            target_total: 30
-            minimum_total: 18
+            target_total: 16
+            minimum_total: 10
             max_per_day: 3
             time_slot_hours: 3
             min_spacing_seconds: 3300
@@ -122,8 +122,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.32
         panorama:
-            target_total: 28
-            minimum_total: 18
+            target_total: 15
+            minimum_total: 10
             max_per_day: 3
             time_slot_hours: 3
             min_spacing_seconds: 3300
@@ -141,8 +141,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.22
         nightlife:
-            target_total: 24
-            minimum_total: 14
+            target_total: 14
+            minimum_total: 10
             max_per_day: 3
             time_slot_hours: 3
             min_spacing_seconds: 2700
@@ -160,8 +160,8 @@ parameters:
             max_per_bucket: null
             video_heavy_bonus: 0.26
         video:
-            target_total: 24
-            minimum_total: 16
+            target_total: 15
+            minimum_total: 11
             max_per_day: 3
             time_slot_hours: 3
             min_spacing_seconds: 2700

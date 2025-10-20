@@ -22,8 +22,8 @@ final class SelectionPolicyProviderTest extends TestCase
     {
         $profiles = [
             'vacation_weekend_transit' => [
-                'target_total' => 36,
-                'minimum_total' => 24,
+                'target_total' => 30,
+                'minimum_total' => 18,
                 'max_per_day' => 4,
                 'time_slot_hours' => 4.0,
                 'min_spacing_seconds' => 3600,
@@ -53,14 +53,14 @@ final class SelectionPolicyProviderTest extends TestCase
                     'short_run_target_total' => 18,
                     'medium_run_max_days' => 4,
                     'medium_run_target_total' => 24,
-                    'long_run_target_total' => 36,
+                    'long_run_target_total' => 32,
                 ],
                 'minimum_total_by_run_length' => [
                     'short_run_max_days' => 2,
                     'short_run_minimum_total' => 12,
                     'medium_run_max_days' => 4,
                     'medium_run_minimum_total' => 18,
-                    'long_run_minimum_total' => 24,
+                    'long_run_minimum_total' => 28,
                 ],
                 'enable_people_balance' => false,
                 'people_balance_weight' => 0.25,
@@ -97,13 +97,25 @@ final class SelectionPolicyProviderTest extends TestCase
         self::assertSame(4, $medium->getMaxPerDay());
 
         $long = $provider->forAlgorithmWithRunLength('vacation', null, 7);
-        self::assertSame(36, $long->getTargetTotal());
-        self::assertSame(24, $long->getMinimumTotal());
+        self::assertSame(25, $long->getTargetTotal());
+        self::assertSame(25, $long->getMinimumTotal());
         self::assertSame(4, $long->getMaxPerDay());
 
+        $longMetadata = $long->getMetadata();
+        self::assertArrayHasKey('constraint_overrides', $longMetadata);
+        self::assertSame(
+            [
+                'enable_people_balance' => false,
+                'people_balance_weight' => 0.25,
+                'target_total' => 25,
+                'minimum_total' => 25,
+            ],
+            $longMetadata['constraint_overrides'],
+        );
+
         $default = $provider->forAlgorithm('vacation');
-        self::assertSame(36, $default->getTargetTotal());
-        self::assertSame(24, $default->getMinimumTotal());
+        self::assertSame(25, $default->getTargetTotal());
+        self::assertSame(18, $default->getMinimumTotal());
         self::assertSame(4, $default->getMaxPerDay());
         $defaultMetadata = $default->getMetadata();
         self::assertArrayHasKey('constraint_overrides', $defaultMetadata);

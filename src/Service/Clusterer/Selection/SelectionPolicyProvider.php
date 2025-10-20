@@ -32,6 +32,7 @@ use function trim;
 final class SelectionPolicyProvider
 {
     private const DEFAULT_STORYLINE = 'default';
+    private const MAX_TARGET_TOTAL = 25;
 
     /**
      * @var array<string, int|float|null>
@@ -102,6 +103,13 @@ final class SelectionPolicyProvider
         $config   = $this->finalizeConfig($config);
         $metadata = $constraintResolution['metadata'];
 
+        if (isset($metadata['constraint_overrides']) && is_array($metadata['constraint_overrides'])) {
+            $metadata['constraint_overrides'] = $this->normaliseOverrideMetadata(
+                $metadata['constraint_overrides'],
+                $config,
+            );
+        }
+
         return $this->createPolicy($profileKey, $config, $metadata);
     }
 
@@ -149,14 +157,60 @@ final class SelectionPolicyProvider
      */
     private function finalizeConfig(array $config): array
     {
-        $targetTotal  = $config['target_total'] ?? null;
-        $minimumTotal = $config['minimum_total'] ?? null;
+        $targetTotal = $config['target_total'] ?? null;
+        if (is_int($targetTotal)) {
+            $targetTotal            = $this->clampTargetTotal($targetTotal);
+            $config['target_total'] = $targetTotal;
+        } else {
+            $targetTotal = null;
+        }
 
-        if (is_int($targetTotal) && is_int($minimumTotal) && $minimumTotal > $targetTotal) {
-            $config['minimum_total'] = $targetTotal;
+        $minimumTotal = $config['minimum_total'] ?? null;
+        if (is_int($minimumTotal)) {
+            $minimumTotal = $this->clampTargetTotal($minimumTotal);
+
+            if ($targetTotal !== null && $minimumTotal > $targetTotal) {
+                $minimumTotal = $targetTotal;
+            }
+
+            $config['minimum_total'] = $minimumTotal;
         }
 
         return $config;
+    }
+
+    /**
+     * @param array<string, int|float|bool> $overrides
+     * @param array<string, int|float|string|null> $config
+     *
+     * @return array<string, int|float|bool>
+     */
+    private function normaliseOverrideMetadata(array $overrides, array $config): array
+    {
+        if (array_key_exists('target_total', $overrides)) {
+            $target = $config['target_total'] ?? null;
+            if (is_int($target)) {
+                $overrides['target_total'] = $target;
+            } else {
+                unset($overrides['target_total']);
+            }
+        }
+
+        if (array_key_exists('minimum_total', $overrides)) {
+            $minimum = $config['minimum_total'] ?? null;
+            if (is_int($minimum)) {
+                $overrides['minimum_total'] = $minimum;
+            } else {
+                unset($overrides['minimum_total']);
+            }
+        }
+
+        return $overrides;
+    }
+
+    private function clampTargetTotal(int $value): int
+    {
+        return $value > self::MAX_TARGET_TOTAL ? self::MAX_TARGET_TOTAL : $value;
     }
 
     /**
@@ -218,14 +272,14 @@ final class SelectionPolicyProvider
         $longTarget     = $runLengthConfig['long_run_target_total'] ?? $runLengthConfig['long_run_minimum_total'] ?? null;
 
         if (is_int($shortMaxDays) && $runLengthDays <= $shortMaxDays && is_int($shortTarget)) {
-            return $shortTarget;
+            return $this->clampTargetTotal($shortTarget);
         }
 
         if (is_int($mediumMaxDays) && $runLengthDays <= $mediumMaxDays && is_int($mediumTarget)) {
-            return $mediumTarget;
+            return $this->clampTargetTotal($mediumTarget);
         }
 
-        return is_int($longTarget) ? $longTarget : null;
+        return is_int($longTarget) ? $this->clampTargetTotal($longTarget) : null;
     }
 
     /**
