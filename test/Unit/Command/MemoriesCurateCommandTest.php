@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
+use MagicSunday\Memories\Service\Explainability\ClusterModelCardWriter;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
@@ -68,9 +69,10 @@ final class MemoriesCurateCommandTest extends TestCase
         $pipeline->expects(self::once())->method('finalize')->with(false);
 
         $qaCollector = new MetadataQaReportCollector();
+        $writer      = $this->createModelCardWriter();
 
         $telemetry = ClusterJobTelemetry::fromStageCounts(2, 2);
-        $jobResult = new ClusterJobResult(5, 4, 3, 2, 2, 0, false, $telemetry);
+        $jobResult = new ClusterJobResult(5, 4, 3, 2, 2, 0, false, $telemetry, []);
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
@@ -121,6 +123,7 @@ final class MemoriesCurateCommandTest extends TestCase
             $qaCollector,
             $runner,
             $exportService,
+            $writer,
             self::CLUSTER_GROUP_MAP,
             self::CLUSTER_GROUP_ALIAS_MAP,
             $this->getExistingMediaPath(),
@@ -146,11 +149,12 @@ final class MemoriesCurateCommandTest extends TestCase
         $locator   = $this->createMock(MediaFileLocatorInterface::class);
         $pipeline  = $this->createMock(MediaIngestionPipelineInterface::class);
         $qa        = new MetadataQaReportCollector();
+        $writer    = $this->createModelCardWriter();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
             ->method('run')
-            ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
+            ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
 
         $export = $this->createMock(FeedExportServiceInterface::class);
         $export->expects(self::once())->method('export')->willReturn(new FeedExportResult(
@@ -174,6 +178,7 @@ final class MemoriesCurateCommandTest extends TestCase
             $qa,
             $runner,
             $export,
+            $writer,
             self::CLUSTER_GROUP_MAP,
             self::CLUSTER_GROUP_ALIAS_MAP,
             $this->getExistingMediaPath(),
@@ -188,6 +193,85 @@ final class MemoriesCurateCommandTest extends TestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $status);
+    }
+
+    #[Test]
+    public function explainOptionWritesModelCards(): void
+    {
+        $locator = $this->createMock(MediaFileLocatorInterface::class);
+        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
+        $qa       = new MetadataQaReportCollector();
+        $outputDir = sys_get_temp_dir() . '/memories-modelcards-spec-' . uniqid('', true);
+        $writer   = new ClusterModelCardWriter($outputDir);
+
+        $draft = new \MagicSunday\Memories\Clusterer\ClusterDraft(
+            algorithm: 'demo',
+            params: [
+                'group' => 'demo',
+                'score' => 1.0,
+                'member_selection' => [
+                    'counts' => ['raw' => 2, 'curated' => 1],
+                    'policy' => ['profile' => 'demo_policy'],
+                    'rejection_counts' => ['time_gap' => 1],
+                ],
+                'member_quality' => [
+                    'summary' => [
+                        'selection_counts' => ['raw' => 2, 'curated' => 1],
+                        'rejection_counts' => ['time_gap' => 1],
+                        'selection_telemetry' => [
+                            'rejection_counts' => ['time_gap' => 1],
+                            'counts' => ['selected' => 1],
+                            'mmr' => [
+                                'lambda' => 0.5,
+                                'similarity_floor' => 0.1,
+                                'similarity_cap' => 0.9,
+                                'max_considered' => 3,
+                                'pool_size' => 3,
+                                'selected' => [1],
+                                'iterations' => [],
+                            ],
+                        ],
+                        'curated_count' => 1,
+                    ],
+                ],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2],
+        );
+
+        $runner = $this->createMock(ClusterJobRunnerInterface::class);
+        $runner->expects(self::once())
+            ->method('run')
+            ->willReturn(new ClusterJobResult(2, 2, 1, 1, 0, 0, true, ClusterJobTelemetry::fromStageCounts(1, 1), [$draft]));
+
+        $export = $this->createMock(FeedExportServiceInterface::class);
+        $export->expects(self::never())->method('export');
+
+        $command = new MemoriesCurateCommand(
+            $locator,
+            $pipeline,
+            $qa,
+            $runner,
+            $export,
+            $writer,
+            self::CLUSTER_GROUP_MAP,
+            self::CLUSTER_GROUP_ALIAS_MAP,
+            $this->getExistingMediaPath(),
+        );
+
+        $pipeline->expects(self::never())->method('process');
+
+        $tester = new CommandTester($command);
+        $status = $tester->execute([
+            '--reindex' => 'skip',
+            '--dry-run' => true,
+            '--explain' => true,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $status);
+        $files = glob($outputDir . DIRECTORY_SEPARATOR . '*.html');
+        self::assertNotFalse($files);
+        self::assertNotEmpty($files);
     }
 
     #[Test]
@@ -216,6 +300,7 @@ final class MemoriesCurateCommandTest extends TestCase
         $pipeline->expects(self::never())->method('finalize');
 
         $qaCollector = new MetadataQaReportCollector();
+        $writer      = $this->createModelCardWriter();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
@@ -225,7 +310,7 @@ final class MemoriesCurateCommandTest extends TestCase
 
                 return true;
             }), self::anything())
-            ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
+            ->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
 
         $export = $this->createMock(FeedExportServiceInterface::class);
         $export->expects(self::once())
@@ -252,6 +337,7 @@ final class MemoriesCurateCommandTest extends TestCase
             $qaCollector,
             $runner,
             $export,
+            $writer,
             self::CLUSTER_GROUP_MAP,
             self::CLUSTER_GROUP_ALIAS_MAP,
             $this->getExistingMediaPath(),
@@ -306,11 +392,12 @@ final class MemoriesCurateCommandTest extends TestCase
         $pipeline->expects(self::once())->method('finalize')->with(true);
 
         $qaCollector = new MetadataQaReportCollector();
+        $writer      = $this->createModelCardWriter();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
             ->method('run')
-            ->willReturn(new ClusterJobResult(1, 1, 1, 1, 0, 0, true));
+            ->willReturn(new ClusterJobResult(1, 1, 1, 1, 0, 0, true, null, []));
 
         $export = $this->createMock(FeedExportServiceInterface::class);
         $export->expects(self::never())->method('export');
@@ -321,6 +408,7 @@ final class MemoriesCurateCommandTest extends TestCase
             $qaCollector,
             $runner,
             $export,
+            $writer,
             self::CLUSTER_GROUP_MAP,
             self::CLUSTER_GROUP_ALIAS_MAP,
             $this->getExistingMediaPath(),
@@ -340,13 +428,20 @@ final class MemoriesCurateCommandTest extends TestCase
         return __DIR__;
     }
 
+    private function createModelCardWriter(): ClusterModelCardWriter
+    {
+        $directory = sys_get_temp_dir() . '/memories-modelcards-' . uniqid('', true);
+
+        return new ClusterModelCardWriter($directory);
+    }
+
     private function createCommand(): MemoriesCurateCommand
     {
         $locator = $this->createMock(MediaFileLocatorInterface::class);
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
         $qa       = new MetadataQaReportCollector();
         $runner   = $this->createMock(ClusterJobRunnerInterface::class);
-        $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false));
+        $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
         $export   = $this->createMock(FeedExportServiceInterface::class);
         $export->method('export')->willReturn(new FeedExportResult(
             'out',
@@ -369,6 +464,7 @@ final class MemoriesCurateCommandTest extends TestCase
             $qa,
             $runner,
             $export,
+            $this->createModelCardWriter(),
             self::CLUSTER_GROUP_MAP,
             self::CLUSTER_GROUP_ALIAS_MAP,
             $this->getExistingMediaPath(),

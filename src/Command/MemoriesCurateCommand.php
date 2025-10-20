@@ -17,6 +17,7 @@ use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
+use MagicSunday\Memories\Service\Explainability\ClusterModelCardWriter;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportStage;
@@ -88,6 +89,7 @@ final class MemoriesCurateCommand extends Command
         private readonly MetadataQaReportCollector $qaReportCollector,
         private readonly ClusterJobRunnerInterface $clusterJobRunner,
         private readonly FeedExportServiceInterface $feedExportService,
+        private readonly ClusterModelCardWriter $modelCardWriter,
         #[Autowire('%memories.cluster.consolidate.groups%')]
         private readonly array $clusterGroupMap,
         #[Autowire('%memories.cluster.consolidate.group_aliases%')]
@@ -127,7 +129,8 @@ final class MemoriesCurateCommand extends Command
             ->addOption('since', null, InputOption::VALUE_REQUIRED, 'Nur Medien ab Datum (YYYY-MM-DD) berücksichtigen.')
             ->addOption('until', null, InputOption::VALUE_REQUIRED, 'Nur Medien bis Datum (YYYY-MM-DD) berücksichtigen.')
             ->addOption('reindex', null, InputOption::VALUE_OPTIONAL, 'Steuert die Metadaten-Indexierung (auto|force|skip).', self::REINDEX_AUTO)
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur Simulation: keine Änderungen in der Datenbank und kein Export.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Nur Simulation: keine Änderungen in der Datenbank und kein Export.')
+            ->addOption('explain', null, InputOption::VALUE_NONE, 'Erzeuge Explainability-Model-Cards für konsolidierte Cluster.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -166,7 +169,8 @@ final class MemoriesCurateCommand extends Command
             return Command::INVALID;
         }
 
-        $dryRun = (bool) $input->getOption('dry-run');
+        $dryRun  = (bool) $input->getOption('dry-run');
+        $explain = (bool) $input->getOption('explain');
 
         $reindexOption = $input->getOption('reindex');
         $reindexStrategy = $this->normaliseReindexStrategy($reindexOption);
@@ -193,6 +197,8 @@ final class MemoriesCurateCommand extends Command
             return Command::FAILURE;
         }
 
+        $this->maybeGenerateModelCards($result, $io, $explain);
+
         if ($dryRun) {
             $io->info('Dry-Run: Feed-Export übersprungen.');
 
@@ -200,6 +206,37 @@ final class MemoriesCurateCommand extends Command
         }
 
         return $this->runFeedExportStage($io);
+    }
+
+    private function maybeGenerateModelCards(ClusterJobResult $result, SymfonyStyle $io, bool $enabled): void
+    {
+        if (!$enabled) {
+            return;
+        }
+
+        $clusters = $result->getConsolidatedDrafts();
+        if ($clusters === []) {
+            $io->note('Explain-Modus: Keine konsolidierten Cluster vorhanden – Model Cards entfallen.');
+
+            return;
+        }
+
+        try {
+            $paths = $this->modelCardWriter->writeCards($clusters);
+        } catch (Throwable $exception) {
+            $io->warning(sprintf('Explain-Modus: Model Cards konnten nicht erzeugt werden (%s).', $exception->getMessage()));
+
+            return;
+        }
+
+        if ($paths === []) {
+            $io->note('Explain-Modus: Keine Model Cards erzeugt.');
+
+            return;
+        }
+
+        $io->section('📄 Explainability');
+        $io->listing($paths);
     }
 
     /**

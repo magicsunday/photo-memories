@@ -25,6 +25,8 @@ use function is_array;
 use function is_string;
 use function json_encode;
 use function mkdir;
+use function str_contains;
+use function str_starts_with;
 use function rtrim;
 use function trim;
 
@@ -133,7 +135,88 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
             }
         }
 
-        return $extra;
+        return $this->enrichDecisionContext($extra);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     *
+     * @return array<string, mixed>
+     */
+    private function enrichDecisionContext(array $payload): array
+    {
+        $decisionFeatures = $payload['decision_features'] ?? [];
+        $thresholds       = $payload['thresholds'] ?? [];
+        $finalDecisions   = $payload['final_decisions'] ?? [];
+
+        if (!is_array($decisionFeatures)) {
+            $decisionFeatures = [];
+        }
+
+        if (!is_array($thresholds)) {
+            $thresholds = [];
+        }
+
+        if (!is_array($finalDecisions)) {
+            $finalDecisions = [];
+        }
+
+        $metaKeys = [
+            'job' => true,
+            'status' => true,
+            'timestamp' => true,
+            'schema_version' => true,
+            'decision_features' => true,
+            'thresholds' => true,
+            'final_decisions' => true,
+        ];
+
+        foreach ($payload as $key => $value) {
+            if (!is_string($key) || isset($metaKeys[$key])) {
+                continue;
+            }
+
+            $lowerKey = strtolower($key);
+
+            if ($this->isThresholdKey($lowerKey)) {
+                $thresholds[$key] = $value;
+
+                continue;
+            }
+
+            if ($this->isFinalDecisionKey($lowerKey)) {
+                $finalDecisions[$key] = $value;
+
+                continue;
+            }
+
+            $decisionFeatures[$key] = $value;
+        }
+
+        $payload['decision_features'] = $decisionFeatures;
+        $payload['thresholds']       = $thresholds;
+        $payload['final_decisions']  = $finalDecisions;
+
+        return $payload;
+    }
+
+    private function isThresholdKey(string $key): bool
+    {
+        return str_contains($key, 'threshold')
+            || str_contains($key, 'limit')
+            || str_starts_with($key, 'min_')
+            || str_starts_with($key, 'max_');
+    }
+
+    private function isFinalDecisionKey(string $key): bool
+    {
+        return str_contains($key, 'post')
+            || str_contains($key, 'dropped')
+            || str_contains($key, 'kept')
+            || str_contains($key, 'selected')
+            || str_contains($key, 'resolved')
+            || str_contains($key, 'persisted')
+            || str_contains($key, 'deleted');
     }
 
     /**

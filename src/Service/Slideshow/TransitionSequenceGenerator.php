@@ -44,6 +44,7 @@ final class TransitionSequenceGenerator
         int $slideCount,
         ?string $title,
         ?string $subtitle,
+        ?string $seedOverride = null,
     ): array
     {
         if ($slideCount === 0 || $transitions === []) {
@@ -68,7 +69,7 @@ final class TransitionSequenceGenerator
             return [];
         }
 
-        $seedSource = self::buildSeedSource($mediaIds, $imagePaths, $slideCount, $title, $subtitle);
+        $seedSource = self::buildSeedSource($mediaIds, $imagePaths, $slideCount, $title, $subtitle, $seedOverride);
         $randomizer = new Randomizer(new Xoshiro256StarStar($seedSource));
 
         $uniqueTransitions = array_values(array_unique($pool));
@@ -119,6 +120,7 @@ final class TransitionSequenceGenerator
         int $slideCount,
         ?string $title,
         ?string $subtitle,
+        ?string $seedOverride,
     ): string
     {
         $filteredIds = array_values(array_filter(
@@ -153,6 +155,13 @@ final class TransitionSequenceGenerator
         ];
 
         $payload = implode('||', $payloadParts);
+
+        if ($seedOverride !== null) {
+            $seedOverride = trim($seedOverride);
+            if ($seedOverride !== '') {
+                $payload = $seedOverride . '||' . $payload;
+            }
+        }
 
         return hash('sha256', $payload, true);
     }

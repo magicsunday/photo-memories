@@ -63,6 +63,13 @@
 - **Alternatives considered:** Leave the neutral defaults and ask operators to tune per deployment, or hard-code a stronger LUT-style grade. Rejected because the former led to inconsistent exports across environments and the latter risked colour clipping on archival scans.
 - **Follow-up actions:** Monitor rendered clips for edge cases (e.g. low-light scenes) and gather feedback on whether we need per-story presets or adaptive grading in the generator.
 
+## 2025-10-21 – Telemetrie, Explainability und deterministische Slideshows
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Monitoring-Logs enthielten bislang nur aggregierte Zähler, Explainability-Ausgaben fehlten komplett und Slideshow-Übergänge variieren zufällig zwischen Läufen, wodurch Reproduktionen und RCA-Analysen erschwert wurden.
+- **Decision:** Strukturierte Telemetrie-Payloads um `decision_features`, `thresholds` und `final_decisions` erweitert, einen `ClusterModelCardWriter` samt `--explain`-Option implementiert, der pro Cluster HTML-„Model Cards“ unter `%memories.explain.model_card_dir%` ablegt, und einen deterministischen Seed (`memories.slideshow.seed`) eingeführt, der zufallsbasierte Übergangs-/Zoom-Auswahlen reproduzierbar macht.
+- **Alternatives considered:** Status quo beibehalten und Analysen auf ad-hoc Dumps stützen (zu fehleranfällig), nur JSON-Dumps erzeugen statt HTML-Model-Cards (zu unhandlich für Nicht-Tech-Nutzer:innen) oder Seeds ausschließlich als Laufzeitparameter zulassen (erschwert Konfigurationsmanagement). Alle verworfen zugunsten einer integrierten Lösung mit konfigurierbaren Defaults.
+- **Follow-up actions:** Beobachten, ob die erweiterten Logs volumenseitig unkritisch bleiben, bei Bedarf CI-Prüfungen für Model-Card-Markup ergänzen und evaluieren, ob weitere Zufallsquellen (z. B. Musikselektion) ebenfalls Seeds benötigen.
+
 ## 2025-10-20 – Calibrate slideshow vignette intensity
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** The slideshow renderer derived the FFmpeg `vignette` setting from an angle formula, which produced darker than expected backgrounds and made it difficult to reason about overrides.

@@ -35,3 +35,11 @@ php src/Memories.php memories:feed:preview --limit-clusters=2000
 - Prüfen, ob genügend Cluster in der Datenbank vorhanden sind (`Keine Cluster ...`).
 - Bei leerem Feed trotz vorhandener Cluster die kombinierten Limits prüfen (`--min-score`, `--min-members`, Konsolidierungs-Cap) und ggf. lockern.
 - Konsolidierungs-Telemetrie (`JobMonitoringEmitter`) liefert zusätzliche Kontextdaten, falls aktiviert.
+
+## Explainability-Artefakte miterzeugen
+- Für tiefere Analysen lässt sich ein Feed-Preview-Lauf mit einem nachgelagerten Kurationslauf kombinieren:
+  ```bash
+  php src/Memories.php memories:curate --dry-run --explain
+  ```
+- Der Schalter `--explain` aktiviert den `ClusterModelCardWriter`, der pro Cluster eine HTML-„Model Card“ mit den verwendeten Strategien, Merge-Historien, Scores, abgelehnten Medien (inkl. Begründungen) sowie der Key-Photo- und MMR-Re-Ranking-Entscheidungsgrundlage erzeugt. Die Dateien landen im Verzeichnis `%memories.explain.model_card_dir%` (Standard: `var/log/memories/model-cards`, Override via `MEMORIES_MODEL_CARD_DIR`).
+- Nach jedem Lauf sollte geprüft werden, ob das Zielverzeichnis auf einen persistenten Pfad zeigt und ausreichend Berechtigungen besitzt; fehlende Schreibrechte werden im Monitoring-Log `var/log/memories/pipeline.jsonl` protokolliert.

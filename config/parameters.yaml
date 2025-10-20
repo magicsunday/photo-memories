@@ -903,6 +903,11 @@ parameters:
     memories.score.liveliness.motion_video_fps_threshold: 45.0
 
 
+    # Description: Default directory where per-cluster model cards are written when explain mode is enabled.
+    memories.explain.model_card_dir_default: '%kernel.project_dir%/var/log/memories/model-cards'
+    # Description: Runtime directory for explainability artefacts allowing environment overrides.
+    memories.explain.model_card_dir: "%env(default:memories.explain.model_card_dir_default:MEMORIES_MODEL_CARD_DIR)%"
+
     # Description: Directory where generated slideshow videos are stored.
     memories.slideshow.video_dir: '%env(string:MEMORIES_SLIDESHOW_DIR)%'
     memories.slideshow.storyboard_dir_default: '%kernel.project_dir%/var/memories'
@@ -922,6 +927,10 @@ parameters:
     # Description: Step size in seconds used to snap slide and transition timing to a beat grid (0 disables snapping).
     memories.slideshow.beat_grid_step_default: 0.0
     memories.slideshow.beat_grid_step: '%env(default:memories.slideshow.beat_grid_step_default:float:MEMORIES_SLIDESHOW_BEAT_GRID_STEP)%'
+    # Description: Default deterministic seed used for slideshow transition and zoom randomisation (empty keeps legacy behaviour).
+    memories.slideshow.seed_default: ''
+    # Description: Runtime deterministic seed for slideshow randomisation, allowing reproducible outputs across runs.
+    memories.slideshow.seed: "%env(default:memories.slideshow.seed_default:MEMORIES_SLIDESHOW_SEED)%"
     # Description: Default frame rate in frames per second for generated slideshow videos.
     memories.slideshow.fps_default: 30
     # Description: Runtime frame rate for slideshow rendering sourced from the environment.
