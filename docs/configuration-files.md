@@ -100,19 +100,22 @@ Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnami
 
 ## `config/packages/memories.yaml`
 
-Dieses Paket fasst Feature-Toggles zusammen, die zur Laufzeit auf Umgebungsvariablen hören. Zwei Schalter sind aktuell hinterlegt:
+Dieses Paket bündelt zur Laufzeit überschreibbare Parameter und Feature-Toggles, die via `%env()%` an `.env` gekoppelt sind. Jeder Eintrag besitzt ein `*_default`, das den YAML-Ausgangswert dokumentiert, sowie einen `value`/`enabled`-Schlüssel für den effektiven Wert inklusive ENV-Overrides. Der strukturierte Block unter `memories.*` fasst alle Defaults, aktiven Werte und ENV-Namen für Support-Tools zusammen.
 
-- `memories.features.saliency_cropping.enabled` – aktiviert die Berechnung von Saliency-/Qualitätsmetriken in der `VisionSignatureExtractor`. Standard: `true`, Override via `MEMORIES_FEATURE_SALIENCY_CROPPING` (`0`/`1`, `false`/`true`).
-- `memories.features.storyline_generator.enabled` – steuert, ob der `StoryTitleBuilder` dynamische Storylines und Routen zusammenstellt. Standard: `true`, Override via `MEMORIES_FEATURE_STORYLINE_GENERATOR`.
-
-Beide Flags sind so aufgebaut, dass `*_default` den YAML-Default dokumentiert, während der `enabled`-Parameter den effektiven Wert (inklusive ENV-Override) liefert. Der aggregierte Abschnitt unter `memories.features` erleichtert das Auslesen in Debug-Ausgaben oder Support-Tools.
+- **Kontinuitätsgrenzen (`memories.thresholds.*`)** – `time_gap_hours_default` (2.0 h) trennt Storylines nach größeren Zeitlücken; `space_gap_meters_default` (250 m) entscheidet über räumliche Clustertrennung. Beide Werte lassen sich über `MEMORIES_THRESHOLDS_TIME_GAP_HOURS` bzw. `MEMORIES_THRESHOLDS_SPACE_GAP_METERS` justieren.
+- **Urlaubsdauer (`memories.vacation.min_days`)** – orientiert sich am Basisschwellwert aus `parameters.yaml` (3 Tage) und wird bei Bedarf mit `MEMORIES_VACATION_MIN_DAYS` verlängert oder verkürzt.
+- **Dubletten-Stacking (`memories.dupstack.hamming_max`)** – begrenzt den maximalen Hamming-Abstand für Dublettencluster (Default 9). Deployments mit engeren/lockereren Dublettenprüfungen setzen `MEMORIES_DUPSTACK_HAMMING_MAX`.
+- **Scoring-Gewichte (`memories.scoring.weights.*`)** – verteilen den Gesamt-Score auf Qualität (0.22), Relevanz (0.45), Lebendigkeit (0.08) und Diversität (0.25). Über `MEMORIES_SCORING_WEIGHT_*` lassen sich Prioritäten verschieben, etwa für dynamischere Feeds.
+- **Slideshow-Laufzeiten (`memories.slideshow.*`)** – stellen die Basiswerte für Storyboard-Tempo und Ken-Burns-Zoom bereit: `duration_per_image_default` (3.5 s), `transition_duration_default` (0.75 s), `zoom_min_default` (1.03) und `zoom_max_default` (1.08). Mit `MEMORIES_SLIDESHOW_DURATION_PER_IMAGE`, `MEMORIES_SLIDESHOW_TRANSITION_DURATION`, `MEMORIES_SLIDESHOW_ZOOM_MIN` und `MEMORIES_SLIDESHOW_ZOOM_MAX` passen Operator:innen Tempo und Zoom-Verlauf an Musik & Ausspielkanal an.
+- **Feature-Toggles (`memories.features.*`)** – behalten die bisherigen Schalter für Saliency-Cropping (`MEMORIES_FEATURE_SALIENCY_CROPPING`) und den Storyline-Generator (`MEMORIES_FEATURE_STORYLINE_GENERATOR`).
 
 Ein Beispiel für lokale Overrides in `.env.local`:
 
 ```env
-# Feature-Toggles für optionale Verarbeitungsschritte
-MEMORIES_FEATURE_SALIENCY_CROPPING=0
-MEMORIES_FEATURE_STORYLINE_GENERATOR=false
+# Kontinuitäts- und Slideshow-Tuning für Debug-Läufe
+MEMORIES_THRESHOLDS_TIME_GAP_HOURS=1.5
+MEMORIES_SLIDESHOW_DURATION_PER_IMAGE=4.0
+MEMORIES_SLIDESHOW_ZOOM_MAX=1.12
 ```
 
 ### Auswahlprofile (`memories.cluster.selection.profile_values`)

@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-29 – Harmonise continuity, scoring, and slideshow ENV defaults
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Operators fine-tuning storyline continuity and slideshow pacing lacked a single source of truth: `.env.dist` recommended other values than the compiled defaults, docs still listed only legacy feature toggles, and support tools could not surface the new runtime keys.
+- **Decision:** Added documented defaults for continuity thresholds, vacation minimum days, duplicate stack distance, scoring weights, and slideshow timing/zoom in `config/packages/memories.yaml`, mirrored the `%env()%` overrides in `.env.dist`, updated README tuning guidance, and extended `docs/configuration-files.md` with the full parameter list plus usage examples.
+- **Alternatives considered:** Leave defaults scattered across `parameters.yaml` and README (kept ENV suggestions drifting from runtime behaviour) or rely solely on operator runbooks (raised the entry barrier for new clusters). Both options were rejected because they prolonged misaligned tuning and hindered support tooling.
+- **Follow-up actions:** Monitor upcoming clustering runs for telemetry regressions when the new defaults ship, and revisit slideshow timings after the next music licensing review to confirm 3.5 s/0.75 s remain acceptable.
+
 ## 2025-10-28 – Capture motion-heavy clusters via liveliness heuristic
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Composite scoring treated video-heavy drafts identically to static photo sets, so stories with live photos, slow-motion clips, or high-motion bursts underperformed even when telemetry highlighted strong engagement with dynamic media.
