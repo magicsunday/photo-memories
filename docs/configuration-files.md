@@ -30,6 +30,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   - `memories.score.poi.iconic_similarity_threshold` legt den erforderlichen Dominanz-/Ähnlichkeitswert (0–1) für den Bonus fest.
   - `memories.score.poi.iconic_signatures` hinterlegt pHash-Signaturen bekannter Community-Szenen, die beim Boosting berücksichtigt werden.
   - `memories.score.liveliness.*` bewertet, wie bewegungsstark ein Cluster wirkt. `video_share_weight`, `live_photo_share_weight` und `motion_weight` definieren die Gewichtung der Teilkomponenten, während `video_share_target`, `live_photo_share_target` und `motion_share_target` festlegen, ab welchem Anteil Videos, Live Photos oder Motion-Cues voll ausschlagen. `motion_blur_threshold`/`motion_blur_target` steuern die Fotoauswertung, `motion_video_duration_threshold` und `motion_video_fps_threshold` markieren bewegte Clips, `motion_coverage_weight` balanciert Deckung und Intensität.
+- **Explainability** – Das Verzeichnis für die HTML-„Model Cards“, die `memories:curate --explain` pro Cluster erzeugt (`memories.explain.model_card_dir`). Der Default `%kernel.project_dir%/var/log/memories/model-cards` lässt sich über `MEMORIES_MODEL_CARD_DIR` überschreiben; Operatoren sollten das Zielverzeichnis auf persistente Storage-Pfade legen, wenn mehrere Läufe verglichen werden sollen.
 - **Slideshow** – Verzeichnisse, Laufzeiten, Übergänge sowie Schrifteinstellungen der Slideshow-Funktion (`memories.slideshow.*`).
 
   Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl stabiler `xfade`-Effekte wider und
@@ -88,6 +89,12 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `memories.slideshow.audio_loudness_lufs` beziehungsweise `MEMORIES_SLIDESHOW_AUDIO_LOUDNESS` an; der FFmpeg-Filter zieht
   anschließend Dynamikkompression (`dynaudnorm`), einen Limiter (`alimiter`), ein auf 48 kHz Stereo fixiertes Format
   (`aformat`) und 1-Sekunden-Fades (`afade`) automatisch nach.
+
+  Für reproduzierbare Übergangs- und Zoomfolgen kann `memories.slideshow.seed` gesetzt werden. Der Parameter übernimmt einen
+  deterministischen Seed, der vom Manager über den Generator bis zum `TransitionSequenceGenerator` weitergereicht wird und
+  so zufällige Auswahlentscheidungen (Transitions, Zoom-Offsets, Ken-Burns-Startpunkte) stabil hält. Bleibt der Wert leer
+  (Default), verhält sich die Pipeline wie bisher und erzeugt pro Lauf frische Varianten. Konfigurationen mit mehreren
+  Operator:innen sollten sich auf einen gemeinsamen Seed einigen, wenn Storyboards zwischen Umgebungen verglichen werden.
 
 Die meisten Parameter besitzen einen `*_default`-Wert, der über eine gleichnamige Umgebungsvariable (z. B. `MEMORIES_HOME_RADIUS_KM`) übersteuert werden kann.
 

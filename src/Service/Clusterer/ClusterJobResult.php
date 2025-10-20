@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
+use MagicSunday\Memories\Clusterer\ClusterDraft;
+
 /**
  * Class ClusterJobResult.
  */
@@ -18,6 +20,9 @@ final readonly class ClusterJobResult
 {
     private ClusterJobTelemetry $telemetry;
 
+    /**
+     * @param list<\MagicSunday\Memories\Clusterer\ClusterDraft> $consolidatedDrafts
+     */
     public function __construct(
         private int $totalMediaCount,
         private int $loadedMediaCount,
@@ -27,6 +32,7 @@ final readonly class ClusterJobResult
         private int $deletedCount,
         private bool $dryRun,
         ?ClusterJobTelemetry $telemetry = null,
+        private array $consolidatedDrafts = [],
     ) {
         $this->telemetry = $telemetry ?? ClusterJobTelemetry::empty();
     }
@@ -69,5 +75,13 @@ final readonly class ClusterJobResult
     public function getTelemetry(): ClusterJobTelemetry
     {
         return $this->telemetry;
+    }
+
+    /**
+     * @return list<\MagicSunday\Memories\Clusterer\ClusterDraft>
+     */
+    public function getConsolidatedDrafts(): array
+    {
+        return $this->consolidatedDrafts;
     }
 }

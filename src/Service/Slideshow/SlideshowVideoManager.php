@@ -81,6 +81,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private ?string $musicTrack;
 
+    private string $deterministicSeed;
+
     /**
      * @param list<string> $transitions
      */
@@ -97,6 +99,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         float $slideDurationJitterUpper = 0.0,
         float $transitionDurationJitterLower = 0.0,
         float $transitionDurationJitterUpper = 0.0,
+        string $deterministicSeed = '',
     ) {
         $this->videoDirectory     = $videoDirectory;
         $this->generator           = $generator;
@@ -115,6 +118,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $musicTrack       = $musicTrack !== null ? trim($musicTrack) : '';
         $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
+        $this->deterministicSeed = trim($deterministicSeed);
     }
 
     /**
@@ -399,7 +403,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $storySlides = [];
 
         $mediaIds = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
-        $seed      = hash('sha256', $itemId . '|' . implode(',', $mediaIds), true);
+        $seed      = $this->hashSeed($itemId . '|' . implode(',', $mediaIds));
 
         $randomizer = new Randomizer(new Xoshiro256StarStar($seed));
 
@@ -410,7 +414,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $imagePaths,
             $slideCount,
             $title,
-            $subtitle
+            $subtitle,
+            $this->deterministicSeed,
         );
         $sequenceIndex = 0;
         $transitionDurations = [];
@@ -483,6 +488,16 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         return $value;
+    }
+
+    private function hashSeed(string $payload): string
+    {
+        $base = $payload;
+        if ($this->deterministicSeed !== '') {
+            $base = $this->deterministicSeed . '|' . $payload;
+        }
+
+        return hash('sha256', $base, true);
     }
 
     private function normaliseMetadata(?string $value): ?string

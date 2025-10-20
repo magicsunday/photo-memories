@@ -203,6 +203,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         private readonly float $audioTargetLoudness = -14.0,
         private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
         private readonly bool $allowUnstableTransitions = false,
+        private readonly string $deterministicSeed = '',
     ) {
     }
 
@@ -762,10 +763,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $seedBase = implode('|', $seedParts);
 
-        $zoomRandomizer       = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|zoom', true)));
-        $axisRandomizer       = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|axis', true)));
-        $directionRandomizer  = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|direction', true)));
-        $magnitudeRandomizer  = new Randomizer(new Xoshiro256StarStar(hash('sha256', $seedBase . '|magnitude', true)));
+        $zoomRandomizer       = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|zoom')));
+        $axisRandomizer       = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|axis')));
+        $directionRandomizer  = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|direction')));
+        $magnitudeRandomizer  = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|magnitude')));
 
         $zoomIn      = $zoomRandomizer->getInt(0, 1) === 1;
         $panAxis     = $axisRandomizer->getInt(0, 1) === 0 ? 'horizontal' : 'vertical';
@@ -1079,7 +1080,17 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $payload = implode('|', $payloadParts);
 
-        return hash('sha256', $payload, true);
+        return $this->hashSeed($payload);
+    }
+
+    private function hashSeed(string $payload): string
+    {
+        $base = $payload;
+        if ($this->deterministicSeed !== '') {
+            $base = $this->deterministicSeed . '|' . $payload;
+        }
+
+        return hash('sha256', $base, true);
     }
 
     /**

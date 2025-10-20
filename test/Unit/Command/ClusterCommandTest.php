@@ -110,6 +110,7 @@ final class ClusterCommandTest extends TestCase
                             ),
                         ],
                     ),
+                    [],
                 ),
             );
 
@@ -183,6 +184,7 @@ final class ClusterCommandTest extends TestCase
                             'members_post' => 10,
                         ],
                     ]),
+                    [],
                 ),
             );
 
@@ -214,20 +216,24 @@ final class ClusterCommandTest extends TestCase
                     1,
                     0,
                     false,
-                    ClusterJobTelemetry::fromStageStats([
-                        ClusterJobTelemetry::STAGE_DRAFTS => [
-                            'clusters'     => 1,
-                            'members_pre'  => 8,
-                            'members_post' => 8,
+                    ClusterJobTelemetry::fromStageStats(
+                        [
+                            ClusterJobTelemetry::STAGE_DRAFTS => [
+                                'clusters'     => 1,
+                                'members_pre'  => 8,
+                                'members_post' => 8,
+                            ],
+                            ClusterJobTelemetry::STAGE_CONSOLIDATED => [
+                                'clusters'     => 1,
+                                'members_pre'  => 8,
+                                'members_post' => 6,
+                            ],
                         ],
-                        ClusterJobTelemetry::STAGE_CONSOLIDATED => [
-                            'clusters'     => 1,
-                            'members_pre'  => 8,
-                            'members_post' => 6,
+                        warnings: [
+                            'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.',
                         ],
-                    ], warnings: [
-                        'Konfiguration unvollständig: MEMORIES_HOME_LAT/MEMORIES_HOME_LON stehen auf 0/0. Bitte gültige Koordinaten und MEMORIES_HOME_RADIUS_KM setzen.',
-                    ]),
+                    ),
+                    [],
                 ),
             );
 

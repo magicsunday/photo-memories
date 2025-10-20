@@ -102,6 +102,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 0,
                 $options->isDryRun(),
                 ClusterJobTelemetry::fromStageCounts(0, 0),
+                [],
             );
         }
 
@@ -128,6 +129,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 0,
                 $options->isDryRun(),
                 ClusterJobTelemetry::fromStageCounts(0, 0),
+                [],
             );
         }
 
@@ -160,6 +162,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                     0,
                     $options->isDryRun(),
                     ClusterJobTelemetry::fromStageCounts(0, 0),
+                    [],
                 );
             }
         }
@@ -242,6 +245,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $deleted,
                 $options->isDryRun(),
                 ClusterJobTelemetry::fromStageCounts(0, 0),
+                [],
             );
         }
 
@@ -322,6 +326,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $deleted,
                 $options->isDryRun(),
                 $telemetry,
+                [],
             );
         }
 
@@ -384,6 +389,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $deleted,
             $options->isDryRun(),
             $telemetry,
+            $consolidatedDrafts,
         );
     }
 

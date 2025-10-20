@@ -57,6 +57,10 @@ services:
     MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface:
         alias: MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter
 
+    MagicSunday\Memories\Service\Explainability\ClusterModelCardWriter:
+        arguments:
+            $outputDirectory: '%memories.explain.model_card_dir%'
+
     MagicSunday\Memories\Support\FeatureFlagProviderInterface:
         alias: MagicSunday\Memories\Support\FeatureFlagProvider
 
@@ -134,6 +138,7 @@ services:
             $audioTargetLoudness: '%memories.slideshow.audio_loudness_lufs%'
             $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
             $allowUnstableTransitions: '%memories.slideshow.transitions_unstable_enabled%'
+            $deterministicSeed: '%memories.slideshow.seed%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -156,6 +161,7 @@ services:
             $slideDurationJitterUpper: '%memories.slideshow.image_duration_jitter_upper_s%'
             $transitionDurationJitterLower: '%memories.slideshow.transition_duration_jitter_lower_s%'
             $transitionDurationJitterUpper: '%memories.slideshow.transition_duration_jitter_upper_s%'
+            $deterministicSeed: '%memories.slideshow.seed%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager
