@@ -1230,6 +1230,9 @@ services:
     MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic:
         arguments:
             $poiCategoryBoosts: '%memories.score.poi_category_boosts%'
+            $iconicBoost: '%memories.score.poi.iconic_boost%'
+            $iconicSimilarityThreshold: '%memories.score.poi.iconic_similarity_threshold%'
+            $iconicSignatures: '%memories.score.poi.iconic_signatures%'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic:
         arguments:

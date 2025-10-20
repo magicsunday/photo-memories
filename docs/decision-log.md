@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-27 – Boost iconic POI clusters via pHash dominance
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** POI scoring treated every labelled cluster equally, even when member photos clearly focused on a single community-recognised motif (e.g. Brandenburger Tor). Without a dominance signal, telemetry could not explain why iconic scenes failed to surface, and manual adjustments to category boosts distorted other locations.
+- **Decision:** Extended `PoiClusterScoreHeuristic` to analyse member pHashes, persist dominance telemetry (`poi_iconic_*` params), and add a configurable `%memories.score.poi.iconic_boost%` when the dominant hash either matches `%memories.score.poi.iconic_signatures%` or clears `%memories.score.poi.iconic_similarity_threshold%`. Updated configuration docs and unit tests to cover the new scoring path.
+- **Alternatives considered:** Maintain static category boosts (too coarse for motif-specific highlights) or add a standalone curator stage (duplicated scoring logic and delayed telemetry). Both were rejected because they obscured why iconic clusters underperformed and complicated tuning.
+- **Follow-up actions:** Monitor cluster telemetry for `poi_iconic_*` ratios to confirm the boost triggers on intended motifs only, and expand the signature catalogue once community feedback identifies additional landmarks.
+
 ## 2025-10-26 – Raise vacation minimum away days to three
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Two-day getaways frequently slipped through the curation guardrails once the weekend exception toggled in, even when operators expected the default pipeline to focus on longer vacations. As a result, short transit hops flooded review queues and diluted highlight quality.

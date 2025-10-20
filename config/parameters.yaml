@@ -873,6 +873,13 @@ parameters:
         'natural/viewpoint': 0.12
         'shop/mall': 0.06
 
+    # Description: Score boost applied when clusters exhibit iconic scene dominance.
+    memories.score.poi.iconic_boost: 0.08
+    # Description: Similarity threshold (0-1) required for iconic scene boosts.
+    memories.score.poi.iconic_similarity_threshold: 0.75
+    # Description: Mapping of community scene identifiers to representative pHash signatures.
+    memories.score.poi.iconic_signatures: {}
+
 
     # Description: Directory where generated slideshow videos are stored.
     memories.slideshow.video_dir: '%env(string:MEMORIES_SLIDESHOW_DIR)%'
