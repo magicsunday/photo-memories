@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Slideshow\SlideshowStoryboardWriter;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
@@ -21,6 +22,7 @@ use ReflectionClass;
 
 use function array_map;
 use function file_get_contents;
+use function json_decode;
 use function file_put_contents;
 use function is_dir;
 use function is_file;
@@ -33,6 +35,7 @@ use function uniqid;
 use function unlink;
 use function str_repeat;
 
+use const JSON_THROW_ON_ERROR;
 use const LOCK_EX;
 
 /**
@@ -76,11 +79,15 @@ final class SlideshowVideoManagerTest extends TestCase
             'pixelize',
         ];
 
+        $storyboardDirectory = $baseDir . '/storyboards';
+        $writer              = new SlideshowStoryboardWriter($storyboardDirectory);
+
         $manager = new SlideshowVideoManager(
             $baseDir,
             1.0,
             0.5,
             $generator,
+            $writer,
             $transitions,
             null,
             null,
@@ -142,6 +149,78 @@ final class SlideshowVideoManagerTest extends TestCase
         }
     }
 
+    public function testEnsureForItemDryRunExportsStoryboard(): void
+    {
+        $baseDir = sys_get_temp_dir() . '/memories-slideshow-' . uniqid('', true);
+        if (!is_dir($baseDir) && !mkdir($baseDir, 0775, true) && !is_dir($baseDir)) {
+            self::fail(sprintf('Could not create temporary directory "%s".', $baseDir));
+        }
+
+        $imageOnePath = $baseDir . '/image-one.jpg';
+        $imageTwoPath = $baseDir . '/image-two.jpg';
+        file_put_contents($imageOnePath, 'image-stub', LOCK_EX);
+        file_put_contents($imageTwoPath, 'image-stub', LOCK_EX);
+
+        $mediaOne = new Media($imageOnePath, str_repeat('d', 64), 1024);
+        $mediaTwo = new Media($imageTwoPath, str_repeat('e', 64), 1024);
+
+        $generator = new class implements SlideshowVideoGeneratorInterface {
+            public bool $called = false;
+
+            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            {
+                $this->called = true;
+            }
+        };
+
+        $writer  = new SlideshowStoryboardWriter($baseDir . '/storyboards');
+        $manager = new SlideshowVideoManager(
+            $baseDir,
+            2.0,
+            0.5,
+            $generator,
+            $writer,
+        );
+
+        try {
+            $status = $manager->ensureForItem(
+                'memory-dry',
+                [10, 11],
+                [
+                    10 => $mediaOne,
+                    11 => $mediaTwo,
+                ],
+                'Titel',
+                'Untertitel',
+                true,
+            );
+
+            self::assertSame(SlideshowVideoStatus::STATUS_UNAVAILABLE, $status->status());
+            self::assertFalse($generator->called);
+
+            $videoPath = $baseDir . '/memory-dry.mp4';
+            self::assertFileDoesNotExist($videoPath);
+            self::assertFileDoesNotExist($videoPath . '.job.json');
+
+            $storyboardPath = $baseDir . '/storyboards/memory-dry/storyboard.json';
+            self::assertFileExists($storyboardPath);
+
+            $payload = json_decode(file_get_contents($storyboardPath), true, 512, JSON_THROW_ON_ERROR);
+
+            self::assertSame('memory-dry', $payload['id']);
+            self::assertSame('Titel', $payload['title']);
+            self::assertSame('Untertitel', $payload['subtitle']);
+            self::assertCount(2, $payload['images']);
+            self::assertArrayHasKey('storyboard', $payload);
+            self::assertCount(2, $payload['storyboard']['slides']);
+            self::assertSame(0.5, $payload['storyboard']['transitionDuration']);
+            self::assertArrayHasKey('transitionDurations', $payload['storyboard']);
+            self::assertCount(1, $payload['storyboard']['transitionDurations']);
+        } finally {
+            $this->cleanupDirectory($baseDir);
+        }
+    }
+
     public function testStoryboardDurationsAreDeterministic(): void
     {
         $generator = new class implements SlideshowVideoGeneratorInterface {
@@ -155,6 +234,7 @@ final class SlideshowVideoManagerTest extends TestCase
             3.5,
             0.75,
             $generator,
+            new SlideshowStoryboardWriter(sys_get_temp_dir() . '/memories-storyboard-' . uniqid('', true)),
         );
 
         $reflection = new ReflectionClass($manager);
@@ -201,11 +281,13 @@ final class SlideshowVideoManagerTest extends TestCase
             }
         };
 
-        $manager = new SlideshowVideoManager(
+        $storyboardDirectory = $baseDir . '/storyboards';
+        $manager             = new SlideshowVideoManager(
             $baseDir,
             1.0,
             0.5,
             $generator,
+            new SlideshowStoryboardWriter($storyboardDirectory),
             [],
             null,
             null,

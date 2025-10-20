@@ -137,12 +137,17 @@ services:
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
 
+    MagicSunday\Memories\Service\Slideshow\SlideshowStoryboardWriter:
+        arguments:
+            $storyboardDirectory: '%memories.slideshow.storyboard_dir%'
+
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager:
         arguments:
             $videoDirectory: '%memories.slideshow.video_dir%'
             $slideDuration: '%memories.slideshow.image_duration_s%'
             $transitionDuration: '%memories.slideshow.transition_duration_s%'
             $generator: '@MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface'
+            $storyboardWriter: '@MagicSunday\Memories\Service\Slideshow\SlideshowStoryboardWriter'
             $transitions: '%memories.slideshow.transitions%'
             $musicTrack: '%memories.slideshow.music_path%'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'

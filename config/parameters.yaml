@@ -905,6 +905,8 @@ parameters:
 
     # Description: Directory where generated slideshow videos are stored.
     memories.slideshow.video_dir: '%env(string:MEMORIES_SLIDESHOW_DIR)%'
+    memories.slideshow.storyboard_dir_default: '%kernel.project_dir%/var/memories'
+    memories.slideshow.storyboard_dir: "%env(default:memories.slideshow.storyboard_dir_default:MEMORIES_SLIDESHOW_STORYBOARD_DIR)%"
     # Description: Duration in seconds each slideshow image remains on screen.
     memories.slideshow.image_duration_s: 3.5
     # Description: Duration in seconds used for transitions between slideshow images.

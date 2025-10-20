@@ -38,6 +38,12 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und reicht sie
   unverändert an FFmpeg weiter.
 
+  Storyboard-Vorschauen landen unter `memories.slideshow.storyboard_dir` (Default: `%kernel.project_dir%/var/memories`).
+  Für jeden Dry-Run erzeugt der Manager dort `<item-id>/storyboard.json`. Die Ablage lässt sich über
+  `MEMORIES_SLIDESHOW_STORYBOARD_DIR` anpassen; Auslöser sind entweder der HTTP-Query-Parameter `dry-run=1` auf
+  `/api/feed/{id}/video` oder die neue CLI-Option `slideshow:generate --dry-run`, die nur das Storyboard schreibt und kein
+  Video rendert.
+
   Für die Ein- und Ausblendung der Clips stehen `memories.slideshow.intro_fade_s` (Fade-In ab Sekunde 0) sowie
   `memories.slideshow.outro_fade_s` (Fade-Out beginnend bei Gesamtdauer minus Wert) zur Verfügung. Beide Werte greifen
   sowohl bei Einzelbild-Slideshows als auch bei Übergangssequenzen über mehrere Bilder hinweg.

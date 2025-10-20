@@ -61,6 +61,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private SlideshowVideoGeneratorInterface $generator;
 
+    private SlideshowStoryboardWriter $storyboardWriter;
+
     private ?JobMonitoringEmitterInterface $monitoringEmitter;
 
     /**
@@ -78,12 +80,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         float $slideDuration,
         float $transitionDuration,
         SlideshowVideoGeneratorInterface $generator,
+        SlideshowStoryboardWriter $storyboardWriter,
         array $transitions = [],
         ?string $musicTrack = null,
         ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
         $this->videoDirectory     = $videoDirectory;
         $this->generator           = $generator;
+        $this->storyboardWriter    = $storyboardWriter;
         $this->monitoringEmitter  = $monitoringEmitter;
 
         $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
@@ -129,6 +133,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         array $mediaMap,
         ?string $title = null,
         ?string $subtitle = null,
+        bool $dryRun = false,
     ): SlideshowVideoStatus
     {
         $slides = $this->collectSlides($memberIds, $mediaMap);
@@ -188,8 +193,6 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         $images     = array_map(static fn (array $slide): string => $slide['path'], $slides);
         $storyboard = $this->buildStoryboard($itemId, $slides, $images, $title, $subtitle);
 
-        $this->ensureVideoDirectory();
-
         $job = new SlideshowJob(
             $itemId,
             $jobPath,
@@ -204,6 +207,24 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $title,
             $subtitle,
         );
+        if ($dryRun) {
+            $storyboardPath = $this->storyboardWriter->write($job);
+
+            $this->emitMonitoring('generated', [
+                'itemId'              => $itemId,
+                'slideCount'          => count($slides),
+                'mode'                => 'dry_run',
+                'storyboardPath'      => $storyboardPath,
+                'music'               => $storyboard['music'],
+                'transitionDuration'  => $storyboard['transitionDuration'],
+                'transitionDurations' => $storyboard['transitionDurations'],
+            ]);
+
+            return SlideshowVideoStatus::unavailable($this->slideDuration);
+        }
+
+        $this->ensureVideoDirectory();
+
         $writtenBytes = file_put_contents($jobPath, $job->toJson(), LOCK_EX);
         if ($writtenBytes === false) {
             throw new ProcessRuntimeException(sprintf('Job file "%s" could not be written.', $jobPath));
