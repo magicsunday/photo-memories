@@ -13,8 +13,13 @@ namespace MagicSunday\Memories\Clusterer\Support;
 
 use MagicSunday\Memories\Entity\Media;
 
+use function array_intersect;
 use function array_key_exists;
+use function array_map;
+use function array_unique;
+use function array_values;
 use function count;
+use function intval;
 use function is_array;
 use function is_string;
 use function min;
@@ -25,6 +30,34 @@ use function trim;
  */
 final readonly class ClusterPeopleAggregator
 {
+    private const FAVOURITE_BOOST = 0.35;
+
+    /**
+     * @var list<int>
+     */
+    private array $favouritePersonIds;
+
+    /**
+     * @var list<int>
+     */
+    private array $fallbackPersonIds;
+
+    private PersonSignatureHelper $personHelper;
+
+    /**
+     * @param list<int> $favouritePersonIds
+     * @param list<int> $fallbackPersonIds
+     */
+    public function __construct(
+        array $favouritePersonIds = [],
+        array $fallbackPersonIds = [],
+        ?PersonSignatureHelper $personHelper = null,
+    ) {
+        $this->favouritePersonIds = array_values(array_map('intval', $favouritePersonIds));
+        $this->fallbackPersonIds  = array_values(array_map('intval', $fallbackPersonIds));
+        $this->personHelper       = $personHelper ?? new PersonSignatureHelper();
+    }
+
     /**
      * Builds the people related parameters for a list of media items.
      *
@@ -35,7 +68,8 @@ final readonly class ClusterPeopleAggregator
      *     people_count: int,
      *     people_unique: int,
      *     people_coverage: float,
-     *     people_face_coverage: float
+     *     people_face_coverage: float,
+     *     people_favourite_coverage: float
      * }
      */
     public function buildParams(array $mediaItems): array
@@ -49,6 +83,7 @@ final readonly class ClusterPeopleAggregator
                 'people_unique'        => 0,
                 'people_coverage'      => 0.0,
                 'people_face_coverage' => 0.0,
+                'people_favourite_coverage' => 0.0,
             ];
         }
 
@@ -57,18 +92,38 @@ final readonly class ClusterPeopleAggregator
         $mentions    = 0;
         $withPeople  = 0;
         $withFaces   = 0;
+        $favouriteMembers  = 0;
+        $favouriteMentions = 0;
+
+        $favouriteUniverse = $this->resolveFavouriteUniverse();
 
         foreach ($mediaItems as $media) {
             if ($media->hasFaces() === true) {
                 ++$withFaces;
             }
 
-            $persons = $media->getPersons();
-            if (!is_array($persons) || $persons === []) {
-                continue;
+            $personIds = $favouriteUniverse !== []
+                ? $this->personHelper->personIds($media)
+                : [];
+            $favouriteMatches = $favouriteUniverse !== []
+                ? $this->countFavourites($personIds, $favouriteUniverse)
+                : 0;
+
+            if ($favouriteMatches > 0) {
+                ++$favouriteMembers;
+                $favouriteMentions += $favouriteMatches;
             }
 
-            ++$withPeople;
+            $persons = $media->getPersons();
+            $hasPersons = is_array($persons) && $persons !== [];
+
+            if ($hasPersons || ($personIds !== [] && $favouriteMatches > 0)) {
+                ++$withPeople;
+            }
+
+            if (!$hasPersons) {
+                continue;
+            }
 
             foreach ($persons as $person) {
                 if (!is_string($person)) {
@@ -93,7 +148,13 @@ final readonly class ClusterPeopleAggregator
         $faceCoverage  = $withFaces > 0 ? $withFaces / $members : 0.0;
         $richness      = $uniqueCount > 0 ? min(1.0, $uniqueCount / 4.0) : 0.0;
         $mentionScore  = $mentions > 0 ? min(1.0, $mentions / (float) $members) : 0.0;
-        $coverageScore = $this->clamp01($coverage);
+        $baseCoverage  = $this->clamp01($coverage);
+        $favouriteCoverage = $members > 0 ? $favouriteMembers / $members : 0.0;
+        $favouriteMentionShare = $members > 0 ? $favouriteMentions / $members : 0.0;
+
+        $coverageScore = $this->clamp01($baseCoverage + ($favouriteCoverage * self::FAVOURITE_BOOST));
+        $mentionScore  = $this->clamp01($mentionScore + ($favouriteMentionShare * self::FAVOURITE_BOOST));
+        $favouriteCoverage = $this->clamp01($favouriteCoverage);
 
         $score = $this->combineScores([
             [$coverageScore, 0.4],
@@ -105,9 +166,39 @@ final readonly class ClusterPeopleAggregator
             'people'               => $score,
             'people_count'         => $mentions,
             'people_unique'        => $uniqueCount,
-            'people_coverage'      => $coverageScore,
+            'people_coverage'      => $baseCoverage,
             'people_face_coverage' => $this->clamp01($faceCoverage),
+            'people_favourite_coverage' => $favouriteCoverage,
         ];
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveFavouriteUniverse(): array
+    {
+        if ($this->favouritePersonIds === []) {
+            return $this->fallbackPersonIds;
+        }
+
+        if ($this->fallbackPersonIds === []) {
+            return $this->favouritePersonIds;
+        }
+
+        return array_values(array_unique([...$this->favouritePersonIds, ...$this->fallbackPersonIds]));
+    }
+
+    /**
+     * @param list<int> $personIds
+     * @param list<int> $favourites
+     */
+    private function countFavourites(array $personIds, array $favourites): int
+    {
+        if ($personIds === [] || $favourites === []) {
+            return 0;
+        }
+
+        return count(array_intersect($personIds, $favourites));
     }
 
     private function clamp01(float $value): float
