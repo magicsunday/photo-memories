@@ -152,6 +152,10 @@ services:
             $transitions: '%memories.slideshow.transitions%'
             $musicTrack: '%memories.slideshow.music_path%'
             $monitoringEmitter: '@MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
+            $slideDurationJitterLower: '%memories.slideshow.image_duration_jitter_lower_s%'
+            $slideDurationJitterUpper: '%memories.slideshow.image_duration_jitter_upper_s%'
+            $transitionDurationJitterLower: '%memories.slideshow.transition_duration_jitter_lower_s%'
+            $transitionDurationJitterUpper: '%memories.slideshow.transition_duration_jitter_upper_s%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager

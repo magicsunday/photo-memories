@@ -38,6 +38,7 @@ use function preg_match;
 use function proc_close;
 use function proc_get_status;
 use function proc_open;
+use function round;
 use function sprintf;
 use function time;
 use function trim;
@@ -65,6 +66,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private ?JobMonitoringEmitterInterface $monitoringEmitter;
 
+    private float $slideDurationJitterLower;
+
+    private float $slideDurationJitterUpper;
+
+    private float $transitionDurationJitterLower;
+
+    private float $transitionDurationJitterUpper;
+
     /**
      * @var list<string>
      */
@@ -84,6 +93,10 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         array $transitions = [],
         ?string $musicTrack = null,
         ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        float $slideDurationJitterLower = 0.0,
+        float $slideDurationJitterUpper = 0.0,
+        float $transitionDurationJitterLower = 0.0,
+        float $transitionDurationJitterUpper = 0.0,
     ) {
         $this->videoDirectory     = $videoDirectory;
         $this->generator           = $generator;
@@ -92,6 +105,11 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
         $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.75;
+
+        $this->slideDurationJitterLower       = $this->normaliseJitter($slideDurationJitterLower);
+        $this->slideDurationJitterUpper       = $this->normaliseJitter($slideDurationJitterUpper);
+        $this->transitionDurationJitterLower  = $this->normaliseJitter($transitionDurationJitterLower);
+        $this->transitionDurationJitterUpper  = $this->normaliseJitter($transitionDurationJitterUpper);
 
         $this->transitions = $this->sanitizeTransitions($transitions);
 
@@ -401,7 +419,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $storySlide = [
                 'mediaId'    => $slide['mediaId'],
                 'image'      => $slide['path'],
-                'duration'   => $randomizer->getInt(3000, 4000) / 1000,
+                'duration'   => $this->randomizeDuration(
+                    $randomizer,
+                    $this->slideDuration,
+                    $this->slideDurationJitterLower,
+                    $this->slideDurationJitterUpper,
+                ),
                 'transition' => null,
             ];
 
@@ -415,7 +438,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $storySlides[] = $storySlide;
 
             if ($index < $slideCount - 1) {
-                $transitionDurations[$index] = $randomizer->getInt(600, 1000) / 1000;
+                $transitionDurations[$index] = $this->randomizeDuration(
+                    $randomizer,
+                    $this->transitionDuration,
+                    $this->transitionDurationJitterLower,
+                    $this->transitionDurationJitterUpper,
+                );
             }
         }
 
@@ -427,6 +455,34 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         ];
 
         return $payload;
+    }
+
+    private function randomizeDuration(
+        Randomizer $randomizer,
+        float $base,
+        float $lowerJitter,
+        float $upperJitter,
+    ): float {
+        $minimum = max(0.0, $base - $lowerJitter);
+        $maximum = max($minimum, $base + $upperJitter);
+
+        $minimumMs = (int) round($minimum * 1000);
+        $maximumMs = (int) round($maximum * 1000);
+
+        if ($minimumMs >= $maximumMs) {
+            return $minimumMs / 1000;
+        }
+
+        return $randomizer->getInt($minimumMs, $maximumMs) / 1000;
+    }
+
+    private function normaliseJitter(float $value): float
+    {
+        if ($value <= 0.0) {
+            return 0.0;
+        }
+
+        return $value;
     }
 
     private function normaliseMetadata(?string $value): ?string

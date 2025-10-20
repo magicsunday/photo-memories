@@ -59,6 +59,14 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   Übergangsdauer auf Vielfache des gewählten Taktrasters. Der Standard `0.0` deaktiviert das Feature; über
   `MEMORIES_SLIDESHOW_BEAT_GRID_STEP` lässt sich der Rasterwert pro Umgebung überschreiben.
 
+  Die effektive Dauer einzelner Slides orientiert sich am Basiswert `memories.slideshow.image_duration_s` und streut optional
+  mithilfe von `memories.slideshow.image_duration_jitter_lower_s` sowie `memories.slideshow.image_duration_jitter_upper_s`.
+  Beide Parameter geben an, wie stark der Manager die Laufzeit pro Bild nach unten bzw. oben abwandeln darf (in Sekunden).
+  Die Übergangszeiten folgen dem gleichen Schema: `memories.slideshow.transition_duration_s` dient als Grundwert, während
+  `memories.slideshow.transition_duration_jitter_lower_s` und `memories.slideshow.transition_duration_jitter_upper_s` das
+  zufällige Delta begrenzen. Setzen Sie die jeweiligen Jitter-Werte auf `0`, um deterministische Storyboards ohne Zufallsanteil
+  zu erhalten.
+
   Die Hintergrundgestaltung lässt sich mit `memories.slideshow.background_blur_sigma` (Stärke),
   `memories.slideshow.background_blur_filter` (`gblur` für Qualität, `boxblur` für Performance), dem zusätzlichen
   `memories.slideshow.background_boxblur_enabled` (optional zweiter Boxblur-Durchgang),
