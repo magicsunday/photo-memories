@@ -213,6 +213,289 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     }
 
     #[Test]
+    public function maximalMarginalRelevancePrefersLowerIdWhenScoresTie(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'noop';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        return $candidates;
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'tie-break-id',
+            targetTotal: 1,
+            minimumTotal: 1,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.0,
+            cohortPenalty: 0.0,
+            mmrLambda: 1.0,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 5,
+        );
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        $candidates = [
+            [
+                'id' => 99,
+                'score' => 0.75,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 1_700_000_100,
+            ],
+            [
+                'id' => 42,
+                'score' => 0.75,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 1_700_000_100,
+            ],
+        ];
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertCount(1, $result);
+        self::assertSame(42, $result[0]['id']);
+
+        $summary = $telemetry->mmrSummary();
+        self::assertNotNull($summary);
+        self::assertSame([42], $summary['selected']);
+        self::assertSame(5, $summary['max_considered']);
+        self::assertSame(2, $summary['pool_size']);
+        self::assertArrayHasKey(0, $summary['iterations']);
+
+        $evaluations = [];
+        foreach ($summary['iterations'][0]['evaluations'] as $evaluation) {
+            $evaluations[$evaluation['id']] = $evaluation;
+        }
+
+        self::assertArrayHasKey(42, $evaluations);
+        self::assertSame(0.75, $evaluations[42]['score']);
+        self::assertSame(0.75, $evaluations[42]['mmr_score']);
+        self::assertTrue($evaluations[42]['selected']);
+
+        self::assertArrayHasKey(99, $evaluations);
+        self::assertSame(0.75, $evaluations[99]['score']);
+        self::assertSame(0.75, $evaluations[99]['mmr_score']);
+        self::assertFalse($evaluations[99]['selected']);
+    }
+
+    #[Test]
+    public function maximalMarginalRelevanceTieRemainsDeterministicWithDifferentTimestamps(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'noop';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        return $candidates;
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'tie-break-timestamp',
+            targetTotal: 1,
+            minimumTotal: 1,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.0,
+            cohortPenalty: 0.0,
+            mmrLambda: 1.0,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 4,
+        );
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        $candidates = [
+            [
+                'id' => 7,
+                'score' => 0.8,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 1_700_000_500,
+            ],
+            [
+                'id' => 8,
+                'score' => 0.8,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 1_700_000_100,
+            ],
+        ];
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertCount(1, $result);
+        self::assertSame(7, $result[0]['id']);
+
+        $summary = $telemetry->mmrSummary();
+        self::assertNotNull($summary);
+        self::assertSame([7], $summary['selected']);
+        self::assertSame(2, $summary['pool_size']);
+
+        $iteration = $summary['iterations'][0];
+        self::assertSame(7, $iteration['selected']);
+
+        $evaluations = [];
+        foreach ($iteration['evaluations'] as $evaluation) {
+            $evaluations[$evaluation['id']] = $evaluation;
+        }
+
+        self::assertArrayHasKey(7, $evaluations);
+        self::assertArrayHasKey(8, $evaluations);
+        self::assertSame($evaluations[7]['mmr_score'], $evaluations[8]['mmr_score']);
+        self::assertSame($evaluations[7]['score'], $evaluations[8]['score']);
+        self::assertTrue($evaluations[7]['selected']);
+        self::assertFalse($evaluations[8]['selected']);
+    }
+
+    #[Test]
+    public function maximalMarginalRelevanceKeepsStableOrderWhenPoolExceedsCandidates(): void
+    {
+        $selector = new PolicyDrivenMemberSelector(
+            hardStages: [
+                new class implements SelectionStageInterface {
+                    public function getName(): string
+                    {
+                        return 'noop';
+                    }
+
+                    public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+                    {
+                        return $candidates;
+                    }
+                },
+            ],
+            softStages: [],
+        );
+
+        $policy = new SelectionPolicy(
+            profileKey: 'stable-order',
+            targetTotal: 3,
+            minimumTotal: 3,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.0,
+            cohortPenalty: 0.0,
+            mmrLambda: 0.9,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 10,
+        );
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        $candidates = [
+            [
+                'id' => 3,
+                'score' => 0.9,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 100,
+            ],
+            [
+                'id' => 1,
+                'score' => 0.85,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 50,
+            ],
+            [
+                'id' => 2,
+                'score' => 0.8,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 75,
+            ],
+        ];
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertCount(3, $result);
+        self::assertSame([1, 2, 3], array_column($result, 'id'));
+
+        $summary = $telemetry->mmrSummary();
+        self::assertNotNull($summary);
+        self::assertSame(10, $summary['max_considered']);
+        self::assertSame(3, $summary['pool_size']);
+        self::assertSame([3, 1, 2], $summary['selected']);
+
+        $iterations = $summary['iterations'];
+        self::assertSame(3, count($iterations));
+        self::assertSame([3, 1, 2], array_map(static fn (array $iteration): int => $iteration['selected'], $iterations));
+    }
+
+    #[Test]
     public function vacationProfileRelaxationKeepsSixHighQualityMembersPerDay(): void
     {
         $selector = $this->createSelector();
