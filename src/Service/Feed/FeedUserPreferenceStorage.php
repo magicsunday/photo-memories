@@ -15,6 +15,7 @@ use RuntimeException;
 
 use function array_filter;
 use function array_key_exists;
+use function array_unique;
 use function array_values;
 use function dirname;
 use function file_exists;
@@ -27,7 +28,6 @@ use function is_string;
 use function json_decode;
 use function json_encode;
 use function mkdir;
-use function array_unique;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -36,6 +36,17 @@ use const JSON_THROW_ON_ERROR;
  */
 final class FeedUserPreferenceStorage
 {
+    private const PROFILE_DEFAULTS = [
+        'favourites' => [],
+        'hidden_algorithms' => [],
+        'hidden_persons' => [],
+        'hidden_pets' => [],
+        'hidden_places' => [],
+        'hidden_dates' => [],
+        'favourite_persons' => [],
+        'favourite_places' => [],
+    ];
+
     public function __construct(private readonly string $storagePath)
     {
     }
@@ -44,15 +55,20 @@ final class FeedUserPreferenceStorage
     {
         $data = $this->load();
 
-        $userData = $data['users'][$userId]['profiles'][$profileKey] ?? [
-            'favourites' => [],
-            'hidden_algorithms' => [],
-        ];
+        $profile = $this->initialiseProfile($data, $userId, $profileKey);
 
-        $favourites      = $this->normaliseList($userData['favourites'] ?? []);
-        $hiddenAlgorithms = $this->normaliseList($userData['hidden_algorithms'] ?? []);
-
-        return new FeedUserPreferences($userId, $profileKey, $favourites, $hiddenAlgorithms);
+        return new FeedUserPreferences(
+            $userId,
+            $profileKey,
+            $this->normaliseList($profile['favourites']),
+            $this->normaliseList($profile['hidden_algorithms']),
+            $this->normaliseList($profile['hidden_persons']),
+            $this->normaliseList($profile['hidden_pets']),
+            $this->normaliseList($profile['hidden_places']),
+            $this->normaliseList($profile['hidden_dates']),
+            $this->normaliseList($profile['favourite_persons']),
+            $this->normaliseList($profile['favourite_places']),
+        );
     }
 
     public function markFavourite(string $userId, string $profileKey, string $itemId, bool $favourite): void
@@ -76,6 +92,54 @@ final class FeedUserPreferenceStorage
         $data['users'][$userId]['profiles'][$profileKey]['favourites'] = $list;
 
         $this->persist($data);
+    }
+
+    /**
+     * @param list<string> $persons
+     */
+    public function setHiddenPersons(string $userId, string $profileKey, array $persons): void
+    {
+        $this->replaceList($userId, $profileKey, 'hidden_persons', $persons);
+    }
+
+    /**
+     * @param list<string> $pets
+     */
+    public function setHiddenPets(string $userId, string $profileKey, array $pets): void
+    {
+        $this->replaceList($userId, $profileKey, 'hidden_pets', $pets);
+    }
+
+    /**
+     * @param list<string> $places
+     */
+    public function setHiddenPlaces(string $userId, string $profileKey, array $places): void
+    {
+        $this->replaceList($userId, $profileKey, 'hidden_places', $places);
+    }
+
+    /**
+     * @param list<string> $dates
+     */
+    public function setHiddenDates(string $userId, string $profileKey, array $dates): void
+    {
+        $this->replaceList($userId, $profileKey, 'hidden_dates', $dates);
+    }
+
+    /**
+     * @param list<string> $persons
+     */
+    public function setFavouritePersons(string $userId, string $profileKey, array $persons): void
+    {
+        $this->replaceList($userId, $profileKey, 'favourite_persons', $persons);
+    }
+
+    /**
+     * @param list<string> $places
+     */
+    public function setFavouritePlaces(string $userId, string $profileKey, array $places): void
+    {
+        $this->replaceList($userId, $profileKey, 'favourite_places', $places);
     }
 
     public function setAlgorithmOptOut(string $userId, string $profileKey, string $algorithm, bool $optOut): void
@@ -123,10 +187,15 @@ final class FeedUserPreferenceStorage
         if (!array_key_exists($profileKey, $data['users'][$userId]['profiles'])
             || !is_array($data['users'][$userId]['profiles'][$profileKey])
         ) {
-            $data['users'][$userId]['profiles'][$profileKey] = [
-                'favourites' => [],
-                'hidden_algorithms' => [],
-            ];
+            $data['users'][$userId]['profiles'][$profileKey] = self::PROFILE_DEFAULTS;
+        } else {
+            foreach (self::PROFILE_DEFAULTS as $key => $default) {
+                if (!array_key_exists($key, $data['users'][$userId]['profiles'][$profileKey])
+                    || !is_array($data['users'][$userId]['profiles'][$profileKey][$key])
+                ) {
+                    $data['users'][$userId]['profiles'][$profileKey][$key] = $default;
+                }
+            }
         }
 
         return $data['users'][$userId]['profiles'][$profileKey];
@@ -148,7 +217,11 @@ final class FeedUserPreferenceStorage
 
         $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($decoded)) {
-            return ['users' => []];
+            $decoded = ['users' => []];
+        }
+
+        if ($this->ensureStructure($decoded)) {
+            $this->persist($decoded);
         }
 
         return $decoded;
@@ -168,6 +241,64 @@ final class FeedUserPreferenceStorage
         if (@file_put_contents($this->storagePath, $payload) === false) {
             throw new RuntimeException('Konnte Präferenzen nicht speichern: ' . $this->storagePath);
         }
+    }
+
+    /**
+     * @param list<string> $values
+     */
+    private function replaceList(string $userId, string $profileKey, string $listKey, array $values): void
+    {
+        $data = $this->load();
+
+        $this->initialiseProfile($data, $userId, $profileKey);
+
+        $data['users'][$userId]['profiles'][$profileKey][$listKey] = $this->normaliseList($values);
+
+        $this->persist($data);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function ensureStructure(array &$data): bool
+    {
+        $changed = false;
+
+        if (!array_key_exists('users', $data) || !is_array($data['users'])) {
+            $data['users'] = [];
+            $changed      = true;
+        }
+
+        foreach ($data['users'] as $userId => &$userData) {
+            if (!is_array($userData)) {
+                $userData = ['profiles' => []];
+                $changed  = true;
+            }
+
+            if (!array_key_exists('profiles', $userData) || !is_array($userData['profiles'])) {
+                $userData['profiles'] = [];
+                $changed              = true;
+            }
+
+            foreach ($userData['profiles'] as $profileKey => &$profileData) {
+                if (!is_array($profileData)) {
+                    $profileData = self::PROFILE_DEFAULTS;
+                    $changed     = true;
+                    continue;
+                }
+
+                foreach (self::PROFILE_DEFAULTS as $key => $default) {
+                    if (!array_key_exists($key, $profileData) || !is_array($profileData[$key])) {
+                        $profileData[$key] = $default;
+                        $changed           = true;
+                    }
+                }
+            }
+            unset($profileData);
+        }
+        unset($userData);
+
+        return $changed;
     }
 
     /**
