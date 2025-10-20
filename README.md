@@ -64,7 +64,15 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
    ```
 4. **Umgebung konfigurieren**
    - `.env` anlegen (siehe `.env.dist`, falls vorhanden) oder Environment-Variablen setzen. `EnvironmentBootstrap::boot()` sucht nacheinander im Arbeitsverzeichnis, in PHAR-Pfaden und im Repository-Root nach `.env`-Dateien und lädt `.env.local`-Varianten automatisch.
-   - Wichtige Variablen: `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `NOMINATIM_EMAIL`, `MEMORIES_THUMBNAIL_DIR`, `MEMORIES_THUMBNAIL_APPLY_ORIENTATION`, `FFMPEG_PATH`, `FFPROBE_PATH`, `MEMORIES_CLUSTER_MAX_MEMBERS`, `MEMORIES_SLIDESHOW_FONT_FILE`, `MEMORIES_SLIDESHOW_FONT_FAMILY`, `MEMORIES_SLIDESHOW_BACKGROUND_BLUR_FILTER`, `MEMORIES_SLIDESHOW_BACKGROUND_VIGNETTE`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_BRIGHTNESS`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_CONTRAST`, `MEMORIES_SLIDESHOW_BACKGROUND_EQ_SATURATION`.
+   - Neue Regler für Kontinuitäts- und Scoring-Verhalten besitzen Defaults in `config/packages/memories.yaml` (z. B. `memories.thresholds.time_gap_hours_default = 2.0`) und können über `.env` überschrieben werden. `.env.dist` dokumentiert empfohlene Bereiche; ohne ENV greift stets der YAML-Default, ENV-Werte ersetzen diesen zur Laufzeit.
+   - Relevante Variablen im Überblick:
+     - `MEMORIES_THRESHOLDS_TIME_GAP_HOURS` startet bei 2.0 h, trennt Storylines bei größeren Zeitlücken und sollte je nach Episodenlänge zwischen 1–12 h liegen.
+     - `MEMORIES_THRESHOLDS_SPACE_GAP_METERS` beginnt bei 250 m, entscheidet über räumliche Trennung und bewegt sich typischerweise zwischen 150–500 m.
+     - `MEMORIES_VACATION_MIN_DAYS` (Default 3 Tage) legt die minimale Urlaubsdauer fest; Werte zwischen 2–7 Tagen passen die Empfindlichkeit an.
+     - `MEMORIES_DUPSTACK_HAMMING_MAX` (Start 9) steuert die pHash-Dublettenbildung und lässt sich für feinere bzw. lockerere Gruppen im Bereich 6–12 variieren.
+     - `MEMORIES_SCORING_WEIGHT_QUALITY`, `MEMORIES_SCORING_WEIGHT_RELEVANCE`, `MEMORIES_SCORING_WEIGHT_LIVELINESS` und `MEMORIES_SCORING_WEIGHT_DIVERSITY` balancieren Qualitäts-, Kontext-, Bewegungs- und Diversitätseinflüsse (Defaults 0.22/0.45/0.08/0.25; empfohlen 0.2–0.3 / 0.4–0.6 / 0.05–0.15 / 0.2–0.3).
+     - `MEMORIES_SLIDESHOW_DURATION_PER_IMAGE` (5.0 s), `MEMORIES_SLIDESHOW_TRANSITION_DURATION` (1.0 s) und `MEMORIES_SLIDESHOW_ZOOM_MIN/MAX` (1.05/1.15) bestimmen Tempo und Ken-Burns-Zoombereich, üblich sind 4–8 s, 0.5–1.5 s bzw. 1.0–1.2 / 1.05–1.25.
+   - Weitere Laufzeitvariablen wie `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `MEMORIES_THUMBNAIL_DIR`, `FFMPEG_PATH` oder `MEMORIES_CLUSTER_MAX_MEMBERS` sollten wie gewohnt projekt- bzw. umgebungsspezifisch gesetzt werden.
    - Heimat-Referenz zwingend setzen: `MEMORIES_HOME_LAT`, `MEMORIES_HOME_LON` und `MEMORIES_HOME_RADIUS_KM` müssen gültige Werte tragen. Bleiben die Defaults `0/0` aktiv, warnt `memories:cluster` im Telemetrie-Block und die Debug-Ausgabe weist auf die Fehlkonfiguration hin.
 5. **Datenbank vorbereiten**
    ```bash
@@ -112,6 +120,13 @@ make web-dev
 - **Geocoding**: Zeitversatz, POI-Radius, erlaubte Kategorien und bevorzugte Locale lassen sich zentral konfigurieren.
 - **Cluster & Feed**: Konsolidierungsregeln, Gruppen, Prioritäten sowie Limits pro Strategie stehen in `config/parameters.yaml`. Anpassungen wirken sich unmittelbar auf Konsolidierung und Feed-Ranking aus.
 - **Video/Thumbnails**: Pfade zu `ffmpeg`/`ffprobe`, Ausgabeverzeichnisse, Bildgrößen und Orientierungsverhalten sind parametrisiert.
+
+### Schwellen & Scores feinjustieren
+
+- Passe `MEMORIES_THRESHOLDS_TIME_GAP_HOURS` und `MEMORIES_THRESHOLDS_SPACE_GAP_METERS` an, wenn Storylines zu häufig getrennt bzw. zusammengefasst werden – kleinere Werte verdichten Tagebücher, größere lassen Reisecluster länger bestehen.
+- `MEMORIES_VACATION_MIN_DAYS` und `MEMORIES_DUPSTACK_HAMMING_MAX` helfen, Urlaubserkennung und Dublettenbildung an Datenlage und Gerätevielfalt anzunähern.
+- Bei veränderten Qualitätsanforderungen oder lebhafteren Feeds lohnt ein Feintuning der Gewichte `MEMORIES_SCORING_WEIGHT_*`; ziehe dabei die Default-Matrix aus `config/packages/memories.yaml` und die Richtwerte in `.env.dist` heran, um Balanceverschiebungen gezielt zu testen.
+- Für langsamere/kompaktere Slideshows `MEMORIES_SLIDESHOW_DURATION_PER_IMAGE`, `MEMORIES_SLIDESHOW_TRANSITION_DURATION` und `MEMORIES_SLIDESHOW_ZOOM_MIN/MAX` im Einklang mit Teampräferenzen und Playerlaufzeiten variieren.
 
 ### Kuratierungsprofile anpassen
 
