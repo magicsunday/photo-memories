@@ -32,11 +32,13 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   - `memories.score.liveliness.*` bewertet, wie bewegungsstark ein Cluster wirkt. `video_share_weight`, `live_photo_share_weight` und `motion_weight` definieren die Gewichtung der Teilkomponenten, während `video_share_target`, `live_photo_share_target` und `motion_share_target` festlegen, ab welchem Anteil Videos, Live Photos oder Motion-Cues voll ausschlagen. `motion_blur_threshold`/`motion_blur_target` steuern die Fotoauswertung, `motion_video_duration_threshold` und `motion_video_fps_threshold` markieren bewegte Clips, `motion_coverage_weight` balanciert Deckung und Intensität.
 - **Slideshow** – Verzeichnisse, Laufzeiten, Übergänge sowie Schrifteinstellungen der Slideshow-Funktion (`memories.slideshow.*`).
 
-  Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl des `xfade`-Filters wider und enthalten
-  standardmäßig `fade`, `dissolve`, `fadeblack`, `fadewhite`, `wipeleft`, `wiperight`, `wipeup`, `wipedown`, `slideleft`,
-  `slideright`, `smoothleft`, `smoothright`, `circleopen`, `circleclose`, `radial`, `hlslice`, `vuslice`, `distance` und
-  `pixelize`. Die Liste kann beliebig erweitert oder reduziert werden; der Slideshow-Manager trimmt Eingaben und reicht sie
-  unverändert an FFmpeg weiter.
+  Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl stabiler `xfade`-Effekte wider und
+  enthalten standardmäßig die Kategorien Crossfade (`fade`, `dissolve`, `fadeblack`, `fadewhite`), Push (`pushleft`,
+  `pushright`, `pushup`, `pushdown`), Wipe (`wipeleft`, `wiperight`, `wipeup`, `wipedown`), Slide (`slideleft`,
+  `slideright`, `slideup`, `slidedown`) und Zoom (`zoom`). Über `memories.slideshow.transitions_unstable_enabled` können
+  zusätzliche, als experimentell markierte Effekte wie `circleopen`, `pixelize` oder `distance` explizit freigeschaltet
+  werden, sofern sie auch in `memories.slideshow.transitions` gelistet sind. Die Liste lässt sich erweitern oder
+  reduzieren; der Slideshow-Manager trimmt Eingaben und reicht sie unverändert an FFmpeg weiter.
 
   Storyboard-Vorschauen landen unter `memories.slideshow.storyboard_dir` (Default: `%kernel.project_dir%/var/memories`).
   Für jeden Dry-Run erzeugt der Manager dort `<item-id>/storyboard.json`. Die Ablage lässt sich über

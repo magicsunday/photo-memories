@@ -133,6 +133,7 @@ services:
             $beatGridStep: '%memories.slideshow.beat_grid_step%'
             $audioTargetLoudness: '%memories.slideshow.audio_loudness_lufs%'
             $monitoringEmitter: '@?MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface'
+            $allowUnstableTransitions: '%memories.slideshow.transitions_unstable_enabled%'
 
     MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface:
         alias: MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator

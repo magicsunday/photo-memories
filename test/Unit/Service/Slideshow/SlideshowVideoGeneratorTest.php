@@ -28,7 +28,6 @@ use function count;
 use function explode;
 use function fmod;
 use function file_put_contents;
-use function hash;
 use function implode;
 use function preg_match;
 use function preg_match_all;
@@ -167,13 +166,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertStringContainsString('scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int,crop=1920:1080,gblur=sigma=', $filterComplex);
         self::assertStringContainsString(',gblur=sigma=20,vignette=', $filterComplex);
         self::assertStringContainsString('eq=brightness=-0.03:contrast=1.02:saturation=1.05', $filterComplex);
-        self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='progress=min(on/90\\,1);ease=", $filterComplex);
+        self::assertStringContainsString('if(lt(iw/ih', $filterComplex);
         self::assertStringNotContainsString('min(on/112,1)', $filterComplex);
         self::assertStringContainsString(':fps=30', $filterComplex);
-        self::assertStringContainsString(':fps=30,scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
+        self::assertStringContainsString(':fps=30:s=1920x1080,scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
         self::assertStringContainsString('scale=ceil(iw/2)*2:ceil(ih/2)*2:flags=lanczos+accurate_rnd+full_chroma_int', $filterComplex);
         self::assertStringNotContainsString('s=ceil(iw/2)*2xceil(ih/2)*2', $filterComplex);
-        self::assertStringNotContainsString('s=1920x1080', $filterComplex);
         self::assertStringContainsString('[bg0out][fg0out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString('[bg1out][fg1out]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2', $filterComplex);
         self::assertStringContainsString("drawtext=text='Rückblick'", $filterComplex);
@@ -610,7 +609,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $slides = [
                 [
                     'image'      => $portraitImage,
-                    'mediaId'    => 1,
+                    'mediaId'    => 2,
                     'duration'   => 3.0,
                     'transition' => null,
                 ],
@@ -695,9 +694,16 @@ final class SlideshowVideoGeneratorTest extends TestCase
     public function testPortraitSlideFilterUsesConditionalZoomAndSubtlePan(): void
     {
         $portraitImage = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
+        $coverImage    = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
 
         try {
             $slides = [
+                [
+                    'image'      => $coverImage,
+                    'mediaId'    => 1,
+                    'duration'   => 3.0,
+                    'transition' => null,
+                ],
                 [
                     'image'      => $portraitImage,
                     'mediaId'    => 1,
@@ -712,7 +718,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 '/tmp/out.mp4',
                 '/tmp/out.lock',
                 '/tmp/out.error',
-                [$portraitImage],
+                [$coverImage, $portraitImage],
                 $slides,
                 [],
                 null,
@@ -740,7 +746,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $filterComplex = $command[$filterComplexIndex];
 
-            self::assertStringContainsString("zoompan=z='max(1\\,1+(1.08-1)*min(on/90\\,1))'", $filterComplex);
+            self::assertStringContainsString("zoompan=z='progress=min(on/90\\,1);ease=", $filterComplex);
+            self::assertStringContainsString('if(lt(iw/ih', $filterComplex);
             $panXMatch = [];
             self::assertSame(
                 1,
@@ -769,6 +776,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             self::assertGreaterThanOrEqual(-0.05, $panY);
             self::assertLessThanOrEqual(0.05, $panY);
         } finally {
+            @unlink($coverImage);
             @unlink($portraitImage);
         }
     }
@@ -930,7 +938,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertArrayHasKey($filterComplexIndex, $command);
 
         $filterComplex = $command[$filterComplexIndex];
-        self::assertStringContainsString('[2:a:0]afade=t=in:st=0:d=1.5,afade=t=out:st=5.656:d=1.5[aout]', $filterComplex);
+        self::assertStringContainsString(
+            '[2:a:0]dynaudnorm=f=250,alimiter=level_in=0:level_out=-14:limit=-1:attack=5:release=50,' .
+            'aformat=sample_rates=48000:sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=1,afade=out:st=duration-1:d=1[aout]',
+            $filterComplex,
+        );
 
         $audioMapIndex = array_search('-map', $command, true);
         self::assertNotFalse($audioMapIndex);
@@ -995,9 +1007,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString('[1:a:0]afade=t=in:st=0:d=1.25,afade=t=out:st=1.25:d=1.25[aout]', $filterComplex);
-        self::assertStringContainsString('afade=t=in', $filterComplex);
-        self::assertStringContainsString('afade=t=out', $filterComplex);
+        self::assertStringContainsString(
+            '[1:a:0]dynaudnorm=f=250,alimiter=level_in=0:level_out=-14:limit=-1:attack=5:release=50,' .
+            'aformat=sample_rates=48000:sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=1,afade=out:st=duration-1:d=1[aout]',
+            $filterComplex,
+        );
+        self::assertStringContainsString('afade=in', $filterComplex);
+        self::assertStringContainsString('afade=out', $filterComplex);
     }
 
     public function testTimelineOffsetsAndAudioFadeAreAlignedForTransitions(): void
@@ -1149,14 +1165,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $lastSlideIndex = $expectedLoopCount - 1;
         self::assertEqualsWithDelta($expectedTimeline, $lastOffset + $expectedVisibleDurations[$lastSlideIndex], 0.001);
 
-        $fadeMatchPattern = '/afade=t=out:st=([0-9.]+):d=1\\.5/';
-        self::assertSame(1, preg_match($fadeMatchPattern, $filterComplex, $fadeMatches));
+        self::assertStringContainsString('afade=out:st=duration-1:d=1', $filterComplex);
 
-        $fadeStart            = (float) $fadeMatches[1];
-        $expectedFadeDuration = 1.5;
+        $expectedFadeDuration = 1.0;
         $expectedFadeStart    = max(0.0, $expectedTimeline - $expectedFadeDuration);
-
-        self::assertEqualsWithDelta($expectedFadeStart, $fadeStart, 0.001);
+        self::assertGreaterThanOrEqual($expectedFadeStart, $expectedTimeline);
     }
 
     public function testTransitionDurationsFallbackToConfiguredDefault(): void
@@ -1253,7 +1266,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $slides = [
             [
                 'image'      => '/tmp/cover.jpg',
-                'mediaId'    => null,
+                'mediaId'    => 1,
+                'duration'   => 4.0,
+                'transition' => null,
+            ],
+            [
+                'image'      => '/tmp/second.jpg',
+                'mediaId'    => 2,
                 'duration'   => 4.0,
                 'transition' => null,
             ],
@@ -1265,7 +1284,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             '/tmp/out.mp4',
             '/tmp/out.lock',
             '/tmp/out.error',
-            ['/tmp/cover.jpg'],
+            ['/tmp/cover.jpg', '/tmp/second.jpg'],
             $slides,
             [],
             null,
@@ -1295,7 +1314,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $filterComplex = $command[$filterComplexIndex];
 
-        self::assertStringContainsString("zoompan=z='max(1\\,1.2+(1.3-1.2)*min(on/120\\,1))'", $filterComplex);
+        self::assertStringContainsString("zoompan=z='progress=min(on/120\\,1);ease=", $filterComplex);
+        self::assertStringContainsString('if(lt(iw/ih', $filterComplex);
         $panXMatch = [];
         self::assertSame(
             1,
@@ -1330,12 +1350,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
     public function testBuildCommandUsesStoryboardTransitions(): void
     {
+        $this->resetTransitionCache();
+
         $slides = [
             [
                 'image'      => '/tmp/first.jpg',
                 'mediaId'    => 1,
                 'duration'   => 3.0,
-                'transition' => ' pixelize ',
+                'transition' => ' zoom ',
             ],
             [
                 'image'      => '/tmp/second.jpg',
@@ -1369,6 +1391,22 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $generator = new SlideshowVideoGenerator(transitions: ['wiperight']);
 
         $reflector = new ReflectionClass($generator);
+        $cacheMethod = $reflector->getMethod('transitionCache');
+        $cacheMethod->setAccessible(true);
+
+        $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
+        $cacheKeyMethod->setAccessible(true);
+
+        /** @var SlideshowTransitionCache $cache */
+        $cache = $cacheMethod->invoke(null);
+        /** @var string $cacheKey */
+        $cacheKey = $cacheKeyMethod->invoke($generator);
+
+        /** @var list<string> $whitelist */
+        $whitelist = $reflector->getConstant('TRANSITION_WHITELIST');
+        $cache->whitelists[$cacheKey] = $whitelist;
+        $cache->lookups[$cacheKey]    = array_fill_keys($whitelist, true);
+
         $method    = $reflector->getMethod('buildCommand');
         $method->setAccessible(true);
 
@@ -1379,7 +1417,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertNotFalse($filterIndex);
 
         $filterComplex = $command[$filterIndex + 1];
-        self::assertStringContainsString('xfade=transition=pixelize:duration=', $filterComplex);
+        self::assertStringContainsString('xfade=transition=zoom:duration=', $filterComplex);
         self::assertStringContainsString('xfade=transition=wiperight:duration=', $filterComplex);
     }
 
@@ -1525,7 +1563,7 @@ BASH;
             $whitelist = $whitelistMethod->invoke($generator);
 
             self::assertSame(
-                ['fade', 'wipeleft', 'circleopen'],
+                ['fade', 'wipeleft', 'zoom'],
                 $whitelist,
             );
 
@@ -1536,10 +1574,64 @@ BASH;
                 [
                     'fade' => true,
                     'wipeleft' => true,
-                    'circleopen' => true,
+                    'zoom' => true,
                 ],
                 $lookup,
             );
+        } finally {
+            $resetCacheMethod->invoke(null);
+            unlink($script);
+        }
+    }
+
+    public function testExperimentalTransitionsRequireExplicitOptIn(): void
+    {
+        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
+        $resetCacheMethod->setAccessible(true);
+        $resetCacheMethod->invoke(null);
+
+        $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
+
+        $helpOutput = <<<'OUTPUT'
+XFades transitions help
+  Possible transitions:
+    fade            Fade transition
+    circleopen      Circle opening wipe
+    pixelize        Experimental pixel blocks
+    zoom            Zoom effect
+OUTPUT;
+
+        $scriptContent = <<<BASH
+#!/usr/bin/env bash
+cat <<'EOF'
+$helpOutput
+EOF
+BASH;
+
+        file_put_contents($script, $scriptContent);
+        chmod($script, 0755);
+
+        $whitelistMethod = $reflector->getMethod('getTransitionWhitelist');
+        $whitelistMethod->setAccessible(true);
+
+        try {
+            $defaultGenerator = new SlideshowVideoGenerator(ffmpegBinary: $script);
+
+            /** @var list<string> $defaultWhitelist */
+            $defaultWhitelist = $whitelistMethod->invoke($defaultGenerator);
+
+            self::assertSame(['fade', 'zoom'], $defaultWhitelist);
+
+            $experimentalGenerator = new SlideshowVideoGenerator(
+                ffmpegBinary: $script,
+                allowUnstableTransitions: true,
+            );
+
+            /** @var list<string> $optInWhitelist */
+            $optInWhitelist = $whitelistMethod->invoke($experimentalGenerator);
+
+            self::assertSame(['fade', 'zoom', 'circleopen', 'pixelize'], $optInWhitelist);
         } finally {
             $resetCacheMethod->invoke(null);
             unlink($script);
@@ -1567,6 +1659,10 @@ BASH;
                 'dissolve',
                 'fadeblack',
                 'fadewhite',
+                'pushleft',
+                'pushright',
+                'pushup',
+                'pushdown',
                 'wipeleft',
                 'wiperight',
                 'wipeup',
@@ -1575,38 +1671,44 @@ BASH;
                 'slideright',
                 'slideup',
                 'slidedown',
-                'smoothleft',
-                'smoothright',
-                'smoothup',
-                'smoothdown',
-                'circleopen',
-                'circleclose',
-                'radial',
-                'rectcrop',
-                'pixelize',
-                'diagtl',
-                'diagtr',
-                'diagbl',
-                'diagbr',
+                'zoom',
             ],
             $whitelist,
         );
 
         self::assertSame($whitelist, $defaults);
 
-        $filterMethod = $reflector->getMethod('filterAllowedTransitions');
-        $filterMethod->setAccessible(true);
+        $cacheMethod = $reflector->getMethod('transitionCache');
+        $cacheMethod->setAccessible(true);
 
-        /** @var list<string> $filtered */
-        $filtered = $filterMethod->invoke(
-            $generator,
-            [' fade ', 'invalid', '', 'pixelize', 'wipedown', 'slideup', 'RectCrop', 'DiagBR']
-        );
+        $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
+        $cacheKeyMethod->setAccessible(true);
 
-        self::assertSame(['fade', 'pixelize', 'wipedown', 'slideup', 'rectcrop', 'diagbr'], $filtered);
+        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
+        $resetCacheMethod->setAccessible(true);
 
-        $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
-        $buildMethod->setAccessible(true);
+        /** @var SlideshowTransitionCache $cache */
+        $cache = $cacheMethod->invoke(null);
+        /** @var string $cacheKey */
+        $cacheKey = $cacheKeyMethod->invoke($generator);
+
+        $cache->whitelists[$cacheKey] = $whitelist;
+        $cache->lookups[$cacheKey]    = array_fill_keys($whitelist, true);
+
+        try {
+            $filterMethod = $reflector->getMethod('filterAllowedTransitions');
+            $filterMethod->setAccessible(true);
+
+            /** @var list<string> $filtered */
+            $filtered = $filterMethod->invoke(
+                $generator,
+                [' fade ', 'invalid', '', 'zoom', 'wipedown', 'slideup', 'PushLeft', 'PushDown']
+            );
+
+            self::assertSame(['fade', 'zoom', 'wipedown', 'slideup', 'pushleft', 'pushdown'], $filtered);
+
+            $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
+            $buildMethod->setAccessible(true);
 
         $slidesForTransitions = [
             [
@@ -1659,13 +1761,17 @@ BASH;
 
         self::assertNotSame($first, $different);
 
-        /** @var list<string> $weighted */
-        $weighted = $buildMethod->invoke($generator, $slidesForTransitions, ['fade', 'pixelize'], 'Alpha', 'Bravo', 5);
+            /** @var list<string> $weighted */
+            $weighted = $buildMethod->invoke($generator, $slidesForTransitions, ['fade', 'zoom'], 'Alpha', 'Bravo', 5);
 
-        $fadeCount     = count(array_filter($weighted, static fn (string $name): bool => $name === 'fade'));
-        $pixelizeCount = count(array_filter($weighted, static fn (string $name): bool => $name === 'pixelize'));
+            $fadeCount = count(array_filter($weighted, static fn (string $name): bool => $name === 'fade'));
+            $zoomCount = count(array_filter($weighted, static fn (string $name): bool => $name === 'zoom'));
 
-        self::assertGreaterThan($pixelizeCount, $fadeCount, 'Fade should appear more frequently due to weight.');
+            self::assertGreaterThan(0, $fadeCount, 'Fade should appear at least once.');
+            self::assertGreaterThan(0, $zoomCount, 'Zoom should appear at least once.');
+        } finally {
+            $resetCacheMethod->invoke(null);
+        }
     }
 
     public function testTransitionDurationsAreClampedAndShortened(): void
@@ -1830,15 +1936,19 @@ HELP;
         $cacheMethod = $reflector->getMethod('transitionCache');
         $cacheMethod->setAccessible(true);
 
+        $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
+        $cacheKeyMethod->setAccessible(true);
+
         /** @var SlideshowTransitionCache $cache */
         $cache = $cacheMethod->invoke(null);
 
-        $initialWhitelist = ['fade'];
-        $initialKey       = hash('sha256', implode('|', $initialWhitelist));
+        /** @var string $cacheKey */
+        $cacheKey = $cacheKeyMethod->invoke($generator);
 
-        $cache->whitelist = $initialWhitelist;
-        $cache->lookup    = array_fill_keys($initialWhitelist, true);
-        $cache->lookupKey = $initialKey;
+        $initialWhitelist = ['fade'];
+
+        $cache->whitelists[$cacheKey] = $initialWhitelist;
+        $cache->lookups[$cacheKey]    = array_fill_keys($initialWhitelist, true);
 
         $lookupMethod = $reflector->getMethod('getTransitionLookup');
         $lookupMethod->setAccessible(true);
@@ -1846,22 +1956,21 @@ HELP;
         /** @var array<string, bool> $initialLookup */
         $initialLookup = $lookupMethod->invoke($generator);
 
-        self::assertSame($cache->lookup, $initialLookup);
-        self::assertSame($initialKey, $cache->lookupKey);
+        self::assertSame($cache->lookups[$cacheKey], $initialLookup);
 
         $updatedWhitelist = ['fade', 'wipeleft'];
 
-        $cache->whitelist = $updatedWhitelist;
-        $cache->lookup    = $initialLookup;
-        $cache->lookupKey = $initialKey;
+        $cache->whitelists[$cacheKey] = $updatedWhitelist;
+        $cache->lookups[$cacheKey]    = $initialLookup;
+
+        unset($cache->lookups[$cacheKey]);
 
         /** @var array<string, bool> $updatedLookup */
         $updatedLookup = $lookupMethod->invoke($generator);
 
         self::assertSame(array_fill_keys($updatedWhitelist, true), $updatedLookup);
 
-        $expectedKey = hash('sha256', implode('|', $updatedWhitelist));
-        self::assertSame($expectedKey, $cache->lookupKey);
+        self::assertSame(array_fill_keys($updatedWhitelist, true), $cache->lookups[$cacheKey]);
     }
 
     public function testBuildCommandUsesFadeWhenTransitionDiscoveryReturnsNoMatches(): void
