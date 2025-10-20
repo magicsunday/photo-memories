@@ -1230,7 +1230,7 @@ services:
 
     MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic:
         arguments:
-            $favouritePersonIds: '%memories.cluster.cohort.important_person_ids%'
+            $defaultFavouritePersonIds: '%memories.cluster.cohort.important_person_ids%'
             $fallbackPersonIds: '%memories.cluster.cohort.fallback_person_ids%'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic: ~
@@ -1249,7 +1249,9 @@ services:
             $motionVideoDurationThreshold: '%memories.score.liveliness.motion_video_duration_threshold%'
             $motionVideoFpsThreshold: '%memories.score.liveliness.motion_video_fps_threshold%'
 
-    MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic: ~
+    MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic:
+        arguments:
+            $favouritePlaceMultiplier: '%memories.feed.preference.favourite_place_multiplier%'
 
     MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic:
         arguments:
@@ -1388,6 +1390,11 @@ services:
             $staleDays: '%memories.feed.stale_days%'
             $recentScoreBonus: '%memories.feed.recent_score_bonus%'
             $staleScorePenalty: '%memories.feed.stale_score_penalty%'
+            $favouritePersonMultiplier: '%memories.feed.preference.favourite_person_multiplier%'
+            $favouritePlaceMultiplier: '%memories.feed.preference.favourite_place_multiplier%'
+            $negativePersonMultiplier: '%memories.feed.preference.negative_person_multiplier%'
+            $negativePlaceMultiplier: '%memories.feed.preference.negative_place_multiplier%'
+            $negativeDateMultiplier: '%memories.feed.preference.negative_date_multiplier%'
 
     MagicSunday\Memories\Service\Feed\FeedBuilderInterface:
         alias: MagicSunday\Memories\Service\Feed\MemoryFeedBuilder
@@ -1426,6 +1433,7 @@ services:
             $spaGestureConfig: '%memories.spa.gestures%'
             $spaOfflineConfig: '%memories.spa.offline%'
             $spaAnimationConfig: '%memories.spa.animations%'
+            $hiddenAlgorithmPenalty: '%memories.feed.preference.hidden_algorithm_penalty%'
 
     # Title
     MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider:

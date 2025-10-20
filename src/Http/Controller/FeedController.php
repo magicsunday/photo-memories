@@ -126,6 +126,7 @@ final class FeedController
         private readonly StoryboardTextGenerator $storyboardTextGenerator,
         private readonly NotificationPlanner $notificationPlanner,
         private readonly AlgorithmLabelProvider $algorithmLabelProvider,
+        private float $hiddenAlgorithmPenalty = 1.0,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -368,13 +369,8 @@ final class FeedController
         $clusterLimit = max($limit * $this->clusterFetchMultiplier, $limit);
         $clusters     = $this->clusterRepository->findLatest($clusterLimit);
         $drafts       = $this->clusterMapper->mapMany($clusters);
-        $items        = $this->feedBuilder->build($drafts, $profile, $visibilityFilter);
-        $items        = array_values(array_filter(
-            $items,
-            static function (MemoryFeedItem $item) use ($preferences): bool {
-                return !$preferences->isAlgorithmOptedOut($item->getAlgorithm());
-            },
-        ));
+        $items        = $this->feedBuilder->build($drafts, $profile, $visibilityFilter, $preferences);
+        $items        = $this->applyAlgorithmPreferences($items, $preferences);
 
         $filtered = array_values(array_filter(
             $items,
@@ -443,6 +439,7 @@ final class FeedController
                 'schwellenwerte'     => $profile->describe(),
                 'favoriten'          => $preferences->getFavourites(),
                 'optOutAlgorithmen'  => $preferences->getHiddenAlgorithms(),
+                'blockierteAlgorithmen' => $preferences->getBlockedAlgorithms(),
             ],
             'filter'                => [
                 'score'     => $minScore,
@@ -2033,6 +2030,74 @@ final class FeedController
         }
 
         return new FeedVisibilityFilter($hiddenPersons, $hiddenPets, $hiddenPlaces, $hiddenDates);
+    }
+
+    /**
+     * @param list<MemoryFeedItem> $items
+     *
+     * @return list<MemoryFeedItem>
+     */
+    private function applyAlgorithmPreferences(array $items, FeedUserPreferences $preferences): array
+    {
+        if ($items === []) {
+            return [];
+        }
+
+        $penalty = $this->hiddenAlgorithmPenalty;
+        if ($penalty < 0.0) {
+            $penalty = 0.0;
+        }
+
+        $result = [];
+
+        foreach ($items as $item) {
+            if ($preferences->isAlgorithmBlocked($item->getAlgorithm())) {
+                continue;
+            }
+
+            if ($preferences->isAlgorithmOptedOut($item->getAlgorithm()) && $penalty !== 1.0) {
+                $params = $item->getParams();
+
+                /** @var array<string, mixed> $adjustments */
+                $adjustments = $params['score_preference'] ?? [
+                    'base' => $item->getScore(),
+                    'multiplier' => 1.0,
+                    'favourite_persons' => [],
+                    'favourite_places' => [],
+                    'hidden_persons' => [],
+                    'hidden_places' => [],
+                    'hidden_dates' => [],
+                    'hidden_algorithms' => [],
+                ];
+
+                $baseScore  = isset($adjustments['base']) ? (float) $adjustments['base'] : $item->getScore();
+                $multiplier = isset($adjustments['multiplier']) ? (float) $adjustments['multiplier'] : 1.0;
+                $multiplier *= $penalty;
+
+                $hiddenAlgorithms = $adjustments['hidden_algorithms'] ?? [];
+                if (!in_array($item->getAlgorithm(), $hiddenAlgorithms, true)) {
+                    $hiddenAlgorithms[] = $item->getAlgorithm();
+                }
+
+                $adjustments['multiplier'] = $multiplier;
+                $adjustments['hidden_algorithms'] = $hiddenAlgorithms;
+                $adjustments['algorithm_penalty'] = $penalty;
+
+                $newScore = $baseScore * $multiplier;
+                if ($newScore < 0.0) {
+                    $newScore = 0.0;
+                }
+
+                $params['score_preference'] = $adjustments;
+                $params['score']            = $newScore;
+
+                $item = $item->withScore($newScore, $params);
+            }
+
+            $result[] = $item;
+        }
+
+        return $result;
     }
 
     /**

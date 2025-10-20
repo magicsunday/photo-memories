@@ -26,6 +26,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Feed\NotificationPlanner;
@@ -100,7 +101,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -179,6 +180,9 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('pagination', $meta);
         self::assertFalse($meta['pagination']['hatWeitere']);
         self::assertNull($meta['pagination']['nextCursor']);
+        self::assertArrayHasKey('personalisierung', $meta);
+        self::assertArrayHasKey('blockierteAlgorithmen', $meta['personalisierung']);
+        self::assertSame([], $meta['personalisierung']['blockierteAlgorithmen']);
 
         $storyboard = $payload['items'][0]['storyboard'];
         self::assertIsArray($storyboard);
@@ -229,7 +233,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -328,7 +332,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -437,7 +441,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -537,7 +541,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -660,7 +664,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn([
                 new MemoryFeedItem(
                     algorithm: 'exif_offset',
@@ -748,7 +752,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -834,7 +838,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn([$item]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -899,7 +903,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn([]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -991,7 +995,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn([$item]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -1072,7 +1076,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([], self::anything(), self::isNull())
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
             ->willReturn([$item]);
 
         $mediaOne = $this->createMedia(1, '/media/1.jpg', '2024-01-01T10:00:00+00:00');
@@ -1141,7 +1145,8 @@ final class FeedControllerTest extends TestCase
                         && $filter->intersectsPets(['pet-7'])
                         && $filter->isPlaceHidden('Berlin')
                         && $filter->intersectsDates(['2024-01-05']);
-                })
+                }),
+                self::isInstanceOf(FeedUserPreferences::class)
             )
             ->willReturn([]);
 
@@ -1170,6 +1175,7 @@ final class FeedControllerTest extends TestCase
                         'default' => [
                             'favourites'          => [],
                             'hidden_algorithms'   => [],
+                            'blocked_algorithms'  => [],
                             'hidden_persons'      => ['person-42'],
                             'hidden_pets'         => ['pet-7'],
                             'hidden_places'       => ['Berlin'],
@@ -1190,6 +1196,197 @@ final class FeedControllerTest extends TestCase
         self::assertSame(200, $response->getStatusCode());
         $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame([], $payload['items']);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedAppliesHiddenAlgorithmPenaltyTelemetry(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $item = new MemoryFeedItem(
+            algorithm: 'holiday_event',
+            title: 'Winter in Berlin',
+            subtitle: 'Lichterzauber an der Spree',
+            coverMediaId: 1,
+            memberIds: [1, 2],
+            score: 0.8,
+            params: [
+                'group'      => 'city_and_events',
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+            ],
+        );
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
+            ->willReturn([$item]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+
+        $mediaOne = $this->createMedia(1, '/media/1.jpg', '2024-01-01T10:00:00+00:00');
+        $mediaTwo = $this->createMedia(2, '/media/2.jpg', '2024-01-02T11:00:00+00:00');
+
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2], false)
+            ->willReturn([$mediaOne, $mediaTwo]);
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $preferences = [
+            'users' => [
+                'standard' => [
+                    'profiles' => [
+                        'default' => [
+                            'favourites'          => [],
+                            'hidden_algorithms'   => ['holiday_event'],
+                            'blocked_algorithms'  => [],
+                            'hidden_persons'      => [],
+                            'hidden_pets'         => [],
+                            'hidden_places'       => [],
+                            'hidden_dates'        => [],
+                            'favourite_persons'   => [],
+                            'favourite_places'    => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        file_put_contents($storagePath, json_encode($preferences, JSON_THROW_ON_ERROR));
+
+        $request  = Request::create('/api/feed', 'GET');
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('items', $payload);
+        self::assertCount(1, $payload['items']);
+
+        $itemPayload = $payload['items'][0];
+        self::assertEqualsWithDelta(0.8 * 0.35, $itemPayload['score'], 1e-9);
+        self::assertArrayHasKey('zusatzdaten', $itemPayload);
+        $extra = $itemPayload['zusatzdaten'];
+        self::assertArrayHasKey('score_preference', $extra);
+        $telemetry = $extra['score_preference'];
+
+        self::assertArrayHasKey('algorithm_penalty', $telemetry);
+        self::assertEqualsWithDelta(0.35, $telemetry['algorithm_penalty'], 1e-9);
+        self::assertEqualsWithDelta(0.35, $telemetry['multiplier'], 1e-9);
+        self::assertSame(['holiday_event'], $telemetry['hidden_algorithms']);
+        self::assertEqualsWithDelta(0.8, $telemetry['base'], 1e-9);
+        self::assertEqualsWithDelta(0.8 * 0.35, $extra['score'], 1e-9);
+
+        $meta = $payload['meta'];
+        self::assertContains('holiday_event', $meta['personalisierung']['optOutAlgorithmen']);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedSkipsBlockedAlgorithmsFromPreferences(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $item = new MemoryFeedItem(
+            algorithm: 'holiday_event',
+            title: 'Winter in Berlin',
+            subtitle: 'Lichterzauber an der Spree',
+            coverMediaId: 1,
+            memberIds: [1, 2],
+            score: 0.8,
+            params: [
+                'group'      => 'city_and_events',
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+            ],
+        );
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([], self::anything(), self::isNull(), self::isInstanceOf(FeedUserPreferences::class))
+            ->willReturn([$item]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $mediaRepo->expects(self::never())->method('findByIds');
+
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $entityManager    = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $preferences = [
+            'users' => [
+                'standard' => [
+                    'profiles' => [
+                        'default' => [
+                            'favourites'          => [],
+                            'hidden_algorithms'   => [],
+                            'blocked_algorithms'  => ['holiday_event'],
+                            'hidden_persons'      => [],
+                            'hidden_pets'         => [],
+                            'hidden_places'       => [],
+                            'hidden_dates'        => [],
+                            'favourite_persons'   => [],
+                            'favourite_places'    => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        file_put_contents($storagePath, json_encode($preferences, JSON_THROW_ON_ERROR));
+
+        $request  = Request::create('/api/feed', 'GET');
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('items', $payload);
+        self::assertSame([], $payload['items']);
+
+        $meta = $payload['meta'];
+        self::assertSame(0, $meta['anzahlGeliefert']);
+        self::assertSame(0, $meta['gesamtVerfuegbar']);
+        self::assertSame([], $meta['verfuegbareStrategien']);
+        self::assertContains('holiday_event', $meta['personalisierung']['blockierteAlgorithmen']);
 
         unlink($storagePath);
     }
@@ -1527,6 +1724,7 @@ final class FeedControllerTest extends TestCase
             $storyboardGenerator,
             $notificationPlanner,
             $labelProvider,
+            0.35,
             24,
             120,
             8,

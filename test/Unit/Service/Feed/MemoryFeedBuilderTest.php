@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -521,6 +522,147 @@ final class MemoryFeedBuilderTest extends TestCase
         $result = $builder->build([$cluster], null, $visibility);
 
         self::assertSame([], $result);
+    }
+
+    #[Test]
+    public function appliesFavouritePersonBoostFromPreferences(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $media = $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
+        $media->setPersons(['Alice']);
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository->method('findByIds')->with([1], false)->willReturn([$media]);
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.0,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            favouritePersonMultiplier: 1.2,
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'people_boost',
+            params: [
+                'score'      => 0.5,
+                'persons'    => ['Alice'],
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_100],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1],
+        );
+
+        $preferences = new FeedUserPreferences(
+            'user',
+            'default',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            ['Alice'],
+            [],
+        );
+
+        $items = $builder->build([$cluster], null, null, $preferences);
+        self::assertCount(1, $items);
+
+        $item = $items[0];
+        self::assertEqualsWithDelta(0.6, $item->getScore(), 1e-6);
+
+        $preference = $item->getParams()['score_preference'] ?? null;
+        self::assertIsArray($preference);
+        self::assertSame(1.2, $preference['multiplier']);
+        self::assertSame(['Alice'], $preference['favourite_persons']);
+    }
+
+    #[Test]
+    public function appliesNegativePlacePenaltyFromPreferences(): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->method('makeTitle')->willReturn('Titel');
+        $titleGen->method('makeSubtitle')->willReturn('Untertitel');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
+            return $members[0] ?? null;
+        });
+
+        $media = $this->buildMedia(5, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository->method('findByIds')->with([5], false)->willReturn([$media]);
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.0,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+            favouritePersonMultiplier: 1.0,
+            favouritePlaceMultiplier: 1.0,
+            negativePersonMultiplier: 1.0,
+            negativePlaceMultiplier: 0.6,
+            negativeDateMultiplier: 1.0,
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'place_penalty',
+            params: [
+                'score'      => 0.7,
+                'place'      => 'Berlin',
+                'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_200],
+            ],
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [5],
+        );
+
+        $preferences = new FeedUserPreferences(
+            'user',
+            'default',
+            [],
+            [],
+            [],
+            [],
+            ['Berlin'],
+            [],
+            [],
+            [],
+        );
+
+        $items = $builder->build([$cluster], null, null, $preferences);
+        self::assertCount(1, $items);
+
+        $item = $items[0];
+        self::assertEqualsWithDelta(0.42, $item->getScore(), 1e-6);
+
+        $preference = $item->getParams()['score_preference'] ?? null;
+        self::assertIsArray($preference);
+        self::assertSame(0.6, $preference['multiplier']);
+        self::assertSame(['Berlin'], $preference['hidden_places']);
     }
 
     /**

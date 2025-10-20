@@ -10,6 +10,7 @@ The feed preference storage keeps user-specific toggles in a JSON document locat
         "<profile-key>": {
           "favourites": [],
           "hidden_algorithms": [],
+          "blocked_algorithms": [],
           "hidden_persons": [],
           "hidden_pets": [],
           "hidden_places": [],
@@ -25,4 +26,6 @@ The feed preference storage keeps user-specific toggles in a JSON document locat
 
 All lists contain string identifiers and are stored without duplicates or empty values. Existing files that pre-date the extended schema are automatically migrated on read; missing keys are added with empty arrays before the document is written back to disk.
 
-Use the dedicated setters on `FeedUserPreferenceStorage` to update each list (`setHiddenPersons`, `setHiddenPets`, `setHiddenPlaces`, `setHiddenDates`, `setFavouritePersons`, `setFavouritePlaces`) to ensure consistent normalisation.
+`blocked_algorithms` represents the hard opt-out list. Algorithms appearing in this list are removed from personalised feeds entirely, while `hidden_algorithms` only applies a score penalty that can be tuned via the `%memories.feed.preference.*%` parameters.
+
+Use the dedicated setters on `FeedUserPreferenceStorage` to update each list (`setHiddenPersons`, `setHiddenPets`, `setHiddenPlaces`, `setHiddenDates`, `setFavouritePersons`, `setFavouritePlaces`, `setAlgorithmOptOut`, `setAlgorithmBlock`) to ensure consistent normalisation.

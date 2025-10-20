@@ -21,6 +21,7 @@ final class FeedUserPreferences
     /**
      * @param list<string> $favourites
      * @param list<string> $hiddenAlgorithms
+     * @param list<string> $blockedAlgorithms
      * @param list<string> $hiddenPersons
      * @param list<string> $hiddenPets
      * @param list<string> $hiddenPlaces
@@ -33,6 +34,7 @@ final class FeedUserPreferences
         private readonly string $profileKey,
         private readonly array $favourites,
         private readonly array $hiddenAlgorithms,
+        private readonly array $blockedAlgorithms = [],
         private readonly array $hiddenPersons = [],
         private readonly array $hiddenPets = [],
         private readonly array $hiddenPlaces = [],
@@ -66,6 +68,14 @@ final class FeedUserPreferences
     public function getHiddenAlgorithms(): array
     {
         return $this->hiddenAlgorithms;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getBlockedAlgorithms(): array
+    {
+        return $this->blockedAlgorithms;
     }
 
     /**
@@ -126,9 +136,15 @@ final class FeedUserPreferences
         return in_array($algorithm, $this->hiddenAlgorithms, true);
     }
 
+    public function isAlgorithmBlocked(string $algorithm): bool
+    {
+        return in_array($algorithm, $this->blockedAlgorithms, true);
+    }
+
     /**
      * @param list<string>      $favourites
      * @param list<string>      $hiddenAlgorithms
+     * @param list<string>|null $blockedAlgorithms
      * @param list<string>|null $hiddenPersons
      * @param list<string>|null $hiddenPets
      * @param list<string>|null $hiddenPlaces
@@ -139,6 +155,7 @@ final class FeedUserPreferences
     public function withLists(
         array $favourites,
         array $hiddenAlgorithms,
+        ?array $blockedAlgorithms = null,
         ?array $hiddenPersons = null,
         ?array $hiddenPets = null,
         ?array $hiddenPlaces = null,
@@ -151,6 +168,7 @@ final class FeedUserPreferences
             $this->profileKey,
             $favourites,
             $hiddenAlgorithms,
+            $blockedAlgorithms ?? $this->blockedAlgorithms,
             $hiddenPersons ?? $this->hiddenPersons,
             $hiddenPets ?? $this->hiddenPets,
             $hiddenPlaces ?? $this->hiddenPlaces,

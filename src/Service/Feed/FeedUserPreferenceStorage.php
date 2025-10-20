@@ -39,6 +39,7 @@ final class FeedUserPreferenceStorage
     private const PROFILE_DEFAULTS = [
         'favourites' => [],
         'hidden_algorithms' => [],
+        'blocked_algorithms' => [],
         'hidden_persons' => [],
         'hidden_pets' => [],
         'hidden_places' => [],
@@ -62,6 +63,7 @@ final class FeedUserPreferenceStorage
             $profileKey,
             $this->normaliseList($profile['favourites']),
             $this->normaliseList($profile['hidden_algorithms']),
+            $this->normaliseList($profile['blocked_algorithms']),
             $this->normaliseList($profile['hidden_persons']),
             $this->normaliseList($profile['hidden_pets']),
             $this->normaliseList($profile['hidden_places']),
@@ -161,6 +163,29 @@ final class FeedUserPreferenceStorage
         }
 
         $data['users'][$userId]['profiles'][$profileKey]['hidden_algorithms'] = $list;
+
+        $this->persist($data);
+    }
+
+    public function setAlgorithmBlock(string $userId, string $profileKey, string $algorithm, bool $blocked): void
+    {
+        $data = $this->load();
+
+        $preferences = $this->initialiseProfile($data, $userId, $profileKey);
+        $list        = $this->normaliseList($preferences['blocked_algorithms']);
+
+        if ($blocked) {
+            if (!in_array($algorithm, $list, true)) {
+                $list[] = $algorithm;
+            }
+        } else {
+            $list = array_values(array_filter(
+                $list,
+                static fn (string $candidate): bool => $candidate !== $algorithm,
+            ));
+        }
+
+        $data['users'][$userId]['profiles'][$profileKey]['blocked_algorithms'] = $list;
 
         $this->persist($data);
     }

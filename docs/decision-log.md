@@ -91,6 +91,13 @@
 - **Alternatives considered:** Rely solely on the existing pHash diversity stage or hard-drop candidates once a similarity cap is exceeded. Rejected because they either lacked nuance (dropping useful near-duplicates) or offered no per-run traceability into the scoring penalty.
 - **Follow-up actions:** Monitor the new telemetry block for excessively aggressive penalties and consider adaptive lambda tuning per storyline if high-quality duplicates remain suppressed.
 
+## 2025-10-18 – Preference-aware feed scoring and telemetry
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Algorithm opt-outs were previously handled with a hard drop inside the feed controller, so the response payload lacked telemetry explaining why scores changed and blocked strategies silently disappeared from pagination. Cluster heuristics also consumed static favourite lists, preventing boosts/penalties from reflecting current user preferences.
+- **Decision:** Adjust feed scoring to apply a configurable penalty multiplier for opted-out algorithms while preserving telemetry that captures the applied multiplier and penalty context. Pass `FeedUserPreferences` into the feed builder and preference-aware heuristics so favourite persons/places provide score boosts and negative feedback applies penalties before pagination. Expose the enriched preference metadata (including algorithm penalties) in controller responses and cover the behaviour with unit tests.【F:src/Http/Controller/FeedController.php†L351-L430】【F:src/Service/Feed/MemoryFeedBuilder.php†L400-L474】【F:src/Service/Clusterer/Scoring/PeopleClusterScoreHeuristic.php†L17-L95】【F:src/Service/Clusterer/Scoring/LocationClusterScoreHeuristic.php†L1-L120】【F:test/Unit/Http/Controller/FeedControllerTest.php†L520-L706】
+- **Alternatives considered:** Keep removing opted-out algorithms entirely (rejected because it hid content shifts from telemetry consumers) or leave heuristics unaware of dynamic preferences (rejected as it required redeploying configuration to adapt boosts/penalties).
+- **Follow-up actions:** Monitor feed telemetry for large penalty multipliers to confirm penalties remain within acceptable ranges and extend integration coverage for the composite scorer preference path.
+
 ## 2025-10-17 – Stabilise slideshow transitions
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Slideshow overlaps still drew pseudo-random durations per render and transition fallback sequences treated all `xfade` options equally, making fades appear as often as novelty effects like `pixelize`.

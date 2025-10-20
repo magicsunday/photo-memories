@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 
 use function array_keys;
 use function array_map;
@@ -109,7 +110,11 @@ final class CompositeClusterScorer
      *
      * @return list<ClusterDraft>
      */
-    public function score(array $clusters, ?ClusterBuildProgressCallbackInterface $progressCallback = null): array
+    public function score(
+        array $clusters,
+        ?ClusterBuildProgressCallbackInterface $progressCallback = null,
+        ?FeedUserPreferences $preferences = null,
+    ): array
     {
         if ($clusters === []) {
             return [];
@@ -117,6 +122,9 @@ final class CompositeClusterScorer
 
         $mediaMap = $this->loadMediaMap($clusters, $progressCallback);
         foreach ($this->heuristics as $heuristic) {
+            if ($heuristic instanceof PreferenceAwareClusterScoreHeuristicInterface) {
+                $heuristic->setFeedUserPreferences($preferences);
+            }
             $heuristic->prepare($clusters, $mediaMap);
         }
 
@@ -187,6 +195,14 @@ final class CompositeClusterScorer
         }
 
         usort($clusters, static fn (ClusterDraft $a, ClusterDraft $b): int => ($b->getParams()['score'] ?? 0.0) <=> ($a->getParams()['score'] ?? 0.0));
+
+        if ($preferences !== null) {
+            foreach ($this->heuristics as $heuristic) {
+                if ($heuristic instanceof PreferenceAwareClusterScoreHeuristicInterface) {
+                    $heuristic->setFeedUserPreferences(null);
+                }
+            }
+        }
 
         return $clusters;
     }
