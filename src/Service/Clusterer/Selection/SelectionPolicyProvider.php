@@ -125,6 +125,10 @@ final class SelectionPolicyProvider
             videoBonus: $this->floatValue($config, 'video_bonus'),
             faceBonus: $this->floatValue($config, 'face_bonus'),
             selfiePenalty: $this->floatValue($config, 'selfie_penalty'),
+            mmrLambda: $this->floatOptional($config, 'mmr_lambda', 0.75),
+            mmrSimilarityFloor: $this->floatOptional($config, 'mmr_similarity_floor', 0.35),
+            mmrSimilarityCap: $this->floatOptional($config, 'mmr_similarity_cap', 0.9),
+            mmrMaxConsideration: $this->intOptional($config, 'mmr_max_results', 120),
             maxPerYear: $this->intOrNull($config, 'max_per_year'),
             maxPerBucket: $this->intOrNull($config, 'max_per_bucket'),
             videoHeavyBonus: $this->floatOrNull($config, 'video_heavy_bonus'),
@@ -372,6 +376,10 @@ final class SelectionPolicyProvider
         $this->assignFloatOverride($sanitised, $overrides, 'video_bonus');
         $this->assignFloatOverride($sanitised, $overrides, 'face_bonus');
         $this->assignFloatOverride($sanitised, $overrides, 'selfie_penalty');
+        $this->assignFloatOverride($sanitised, $overrides, 'mmr_lambda');
+        $this->assignFloatOverride($sanitised, $overrides, 'mmr_similarity_floor');
+        $this->assignFloatOverride($sanitised, $overrides, 'mmr_similarity_cap');
+        $this->assignIntOverride($sanitised, $overrides, 'mmr_max_results');
         $this->assignIntOrNullOverride($sanitised, $overrides, 'max_per_year');
         $this->assignIntOrNullOverride($sanitised, $overrides, 'max_per_bucket');
         $this->assignFloatOrNullOverride($sanitised, $overrides, 'video_heavy_bonus');
@@ -497,7 +505,7 @@ final class SelectionPolicyProvider
             }
         }
 
-        foreach (['people_balance_weight', 'repeat_penalty'] as $floatKey) {
+        foreach (['people_balance_weight', 'repeat_penalty', 'mmr_lambda', 'mmr_similarity_floor', 'mmr_similarity_cap'] as $floatKey) {
             if (!array_key_exists($floatKey, $definition)) {
                 continue;
             }
@@ -514,7 +522,7 @@ final class SelectionPolicyProvider
             }
         }
 
-        foreach (['target_total', 'minimum_total'] as $intKey) {
+        foreach (['target_total', 'minimum_total', 'mmr_max_results'] as $intKey) {
             if (!array_key_exists($intKey, $definition)) {
                 continue;
             }

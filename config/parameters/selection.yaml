@@ -14,6 +14,10 @@ parameters:
             video_bonus: 0.22
             face_bonus: 0.34
             selfie_penalty: 0.26
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.34
@@ -34,6 +38,10 @@ parameters:
             video_bonus: 0.24
             face_bonus: 0.32
             selfie_penalty: 0.26
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.24
@@ -49,6 +57,10 @@ parameters:
             video_bonus: 0.22
             face_bonus: 0.3
             selfie_penalty: 0.24
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.2
@@ -64,6 +76,10 @@ parameters:
             video_bonus: 0.2
             face_bonus: 0.28
             selfie_penalty: 0.23
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.18
@@ -79,6 +95,10 @@ parameters:
             video_bonus: 0.26
             face_bonus: 0.34
             selfie_penalty: 0.22
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: 4
             max_per_bucket: 4
             video_heavy_bonus: 0.18
@@ -94,6 +114,10 @@ parameters:
             video_bonus: 0.38
             face_bonus: 0.36
             selfie_penalty: 0.24
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.32
@@ -109,6 +133,10 @@ parameters:
             video_bonus: 0.26
             face_bonus: 0.3
             selfie_penalty: 0.24
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.22
@@ -124,6 +152,10 @@ parameters:
             video_bonus: 0.32
             face_bonus: 0.34
             selfie_penalty: 0.24
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.26
@@ -139,6 +171,10 @@ parameters:
             video_bonus: 0.45
             face_bonus: 0.36
             selfie_penalty: 0.2
+            mmr_lambda: 0.7
+            mmr_similarity_floor: 0.35
+            mmr_similarity_cap: 0.95
+            mmr_max_results: 120
             max_per_year: null
             max_per_bucket: null
             video_heavy_bonus: 0.36

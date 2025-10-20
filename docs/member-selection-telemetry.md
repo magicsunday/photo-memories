@@ -156,6 +156,19 @@ alle bekannten Gründe (`time_gap`, `day_quota`, `time_slot`,
 `scene_balance`, `people_balance`). Wenn kein Ausschluss stattfand, ist der
 Zähler `0`.
 
+Neu ist der Block `mmr`, der die Maximal-Marginal-Relevance-Nachbewertung
+aufschlüsselt. Er enthält die verwendeten Parameter (`lambda`,
+`similarity_floor`, `similarity_cap`, `max_considered`) sowie `pool_size` und
+die final gewählte Reihenfolge (`selected`). Unter `iterations` werden die
+einzelnen Auswahlrunden festgehalten. Jede Iteration listet sämtliche
+Kandidaten mit ihrem Rohscore (`score`), der gemessenen Ähnlichkeit (`raw_similarity`),
+dem nach Floor/Cap wirksamen Wert (`penalised_similarity`), dem daraus
+resultierenden Abzug (`penalty`) und dem berechneten MMR-Score (`mmr_score`).
+Das Flag `selected` innerhalb einer Evaluation zeigt, welcher Kandidat in der
+Iteration in die finale Menge übernommen wurde, während `reference` den am
+stärksten ähnlichen, bereits platzierten Nachbarn referenziert. So lassen sich
+entdoppelte Frames oder Serienaufnahmen retrospektiv nachvollziehen.
+
 Der Abschnitt `day_segments` beschreibt den Tageskontext, den der
 `DefaultVacationSegmentAssembler` vor der Draft-Erstellung berechnet. Jeder Tag
 erhält einen Core-Score (`score`), die Einordnung als `core` oder `peripheral`,

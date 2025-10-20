@@ -84,6 +84,13 @@
 - **Alternatives considered:** Keep the gaussian blur and rely on manual ffmpeg overrides, or move safe-area logic into the calling code. Rejected because operators need a simple parameter switch for box blur and centralising overlay offsets keeps typography consistent.
 - **Follow-up actions:** Monitor rendering durations on constrained devices when switching to `boxblur` and collect feedback on the default vignette strength for potential adjustments.
 
+## 2025-10-18 – Introduce MMR re-ranking for member selection
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** High-scoring burst shots and near-duplicate frames frequently displaced diverse content even after the hard pHash diversity stage, leaving storylines with repetitive imagery and little observability around the trade-offs.
+- **Decision:** Added a Maximal Marginal Relevance pass to `PolicyDrivenMemberSelector` that balances raw scores with perceptual-hash similarity, exposed lambda/similarity/limit settings via selection profiles, and captured the iteration details in telemetry so analysts can trace why duplicates were demoted.【F:src/Service/Clusterer/Selection/PolicyDrivenMemberSelector.php†L231-L333】【F:config/parameters/selection.yaml†L6-L116】【F:docs/member-selection-telemetry.md†L110-L130】
+- **Alternatives considered:** Rely solely on the existing pHash diversity stage or hard-drop candidates once a similarity cap is exceeded. Rejected because they either lacked nuance (dropping useful near-duplicates) or offered no per-run traceability into the scoring penalty.
+- **Follow-up actions:** Monitor the new telemetry block for excessively aggressive penalties and consider adaptive lambda tuning per storyline if high-quality duplicates remain suppressed.
+
 ## 2025-10-17 – Stabilise slideshow transitions
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Slideshow overlaps still drew pseudo-random durations per render and transition fallback sequences treated all `xfade` options equally, making fades appear as often as novelty effects like `pixelize`.

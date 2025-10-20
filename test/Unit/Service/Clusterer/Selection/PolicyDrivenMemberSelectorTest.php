@@ -110,6 +110,106 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         self::assertGreaterThanOrEqual(2, count($telemetry['relaxations']));
         self::assertSame($expectedSpacing, $telemetry['relaxations'][1]['policy']['min_spacing_seconds']);
         self::assertSame($expectedSpacing, $telemetry['policy']['min_spacing_seconds']);
+        self::assertArrayHasKey('mmr', $telemetry);
+        self::assertNotEmpty($telemetry['mmr']['iterations'] ?? []);
+    }
+
+    #[Test]
+    public function maximalMarginalRelevancePenalisesNearDuplicates(): void
+    {
+        $stage = new class implements SelectionStageInterface {
+            public function getName(): string
+            {
+                return 'noop';
+            }
+
+            public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+            {
+                return $candidates;
+            }
+        };
+
+        $selector = new PolicyDrivenMemberSelector([$stage], []);
+
+        $policy = new SelectionPolicy(
+            profileKey: 'mmr-test',
+            targetTotal: 2,
+            minimumTotal: 2,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.0,
+            cohortPenalty: 0.0,
+            mmrLambda: 0.45,
+            mmrSimilarityFloor: 0.3,
+            mmrSimilarityCap: 0.95,
+            mmrMaxConsideration: 3,
+        );
+
+        $telemetry = new SelectionTelemetry();
+        $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        $candidates = [
+            [
+                'id' => 1,
+                'score' => 0.96,
+                'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
+                'timestamp' => 10,
+            ],
+            [
+                'id' => 2,
+                'score' => 0.95,
+                'hash_bits' => $this->bitsFromHex('fffffffffffffffe'),
+                'timestamp' => 20,
+            ],
+            [
+                'id' => 3,
+                'score' => 0.7,
+                'hash_bits' => $this->bitsFromHex('0000000000000000'),
+                'timestamp' => 30,
+            ],
+        ];
+
+        /** @var list<array<string, mixed>> $result */
+        $result = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        self::assertCount(2, $result);
+        self::assertSame([1, 3], array_map(static fn (array $candidate): int => $candidate['id'], $result));
+
+        $mmr = $telemetry->mmrSummary();
+        self::assertNotNull($mmr);
+        self::assertSame([1, 3], $mmr['selected']);
+        self::assertCount(2, $mmr['iterations']);
+        $secondIteration = $mmr['iterations'][1];
+        self::assertSame(3, $secondIteration['selected']);
+
+        $duplicateEvaluation = null;
+        foreach ($secondIteration['evaluations'] as $evaluation) {
+            if (($evaluation['id'] ?? null) === 2) {
+                $duplicateEvaluation = $evaluation;
+
+                break;
+            }
+        }
+
+        self::assertNotNull($duplicateEvaluation);
+        self::assertGreaterThan(0.0, $duplicateEvaluation['penalty']);
+        self::assertFalse($duplicateEvaluation['selected']);
     }
 
     #[Test]
@@ -569,13 +669,13 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         );
 
         $candidates = [
-            ['id' => 7, 'timestamp' => 700],
-            ['id' => 3, 'timestamp' => 300],
-            ['id' => 1, 'timestamp' => 100],
-            ['id' => 6, 'timestamp' => 600],
-            ['id' => 2, 'timestamp' => 200],
-            ['id' => 5, 'timestamp' => 500],
-            ['id' => 4, 'timestamp' => 400],
+            ['id' => 7, 'timestamp' => 700, 'score' => 1.0],
+            ['id' => 3, 'timestamp' => 300, 'score' => 0.95],
+            ['id' => 1, 'timestamp' => 100, 'score' => 0.9],
+            ['id' => 6, 'timestamp' => 600, 'score' => 0.85],
+            ['id' => 2, 'timestamp' => 200, 'score' => 0.8],
+            ['id' => 5, 'timestamp' => 500, 'score' => 0.75],
+            ['id' => 4, 'timestamp' => 400, 'score' => 0.7],
         ];
 
         $telemetry = new SelectionTelemetry();
@@ -891,6 +991,25 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft, $daySegments);
 
         return $result;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function bitsFromHex(string $hash): array
+    {
+        $bits      = [];
+        $normalised = strtolower($hash);
+        $length    = strlen($normalised);
+
+        for ($i = 0; $i < $length && $i < 16; ++$i) {
+            $nibble = hexdec($normalised[$i]);
+            for ($bit = 3; $bit >= 0; --$bit) {
+                $bits[] = ($nibble >> $bit) & 1;
+            }
+        }
+
+        return $bits;
     }
 
     private function createMedia(
