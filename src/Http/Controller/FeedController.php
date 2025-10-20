@@ -69,6 +69,7 @@ use function preg_split;
 use function round;
 use function sort;
 use function str_ends_with;
+use function strtolower;
 use function sprintf;
 use function trim;
 use const SORT_STRING;
@@ -304,6 +305,9 @@ final class FeedController
         }
 
         $result = $this->buildFeedResult($request, $dateInfo['date']);
+        $dryRun = $this->normalizeBoolean($request->getQueryParam('dry-run'))
+            ?? $this->normalizeBoolean($request->getQueryParam('dryRun'))
+            ?? false;
 
         foreach ($result['matchingItems'] as $item) {
             if ($this->createItemId($item) !== $itemId) {
@@ -318,6 +322,7 @@ final class FeedController
                 $mediaMap,
                 $item->getTitle(),
                 $item->getSubtitle(),
+                $dryRun,
             );
 
             return new JsonResponse([
@@ -676,6 +681,20 @@ final class FeedController
         $response->setHeader('Cache-Control', 'public, max-age=3600');
 
         return $response;
+    }
+
+    private function normalizeBoolean(null|string|int|float|\Stringable $value): ?bool
+    {
+        $normalized = $this->normalizeScalarString($value);
+        if ($normalized === null) {
+            return null;
+        }
+
+        return match (strtolower($normalized)) {
+            '1', 'true', 'yes', 'ja', 'on' => true,
+            '0', 'false', 'no', 'nein', 'off' => false,
+            default => null,
+        };
     }
 
     private function normalizeLimit(?string $value): int

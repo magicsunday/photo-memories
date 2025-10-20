@@ -1020,6 +1020,7 @@ final class FeedControllerTest extends TestCase
                 }),
                 self::identicalTo('Winter in Berlin'),
                 self::identicalTo('Lichterzauber an der Spree'),
+                self::identicalTo(false),
             )
             ->willReturn(SlideshowVideoStatus::ready('/api/feed/' . $itemId . '/video', 3.5));
 
@@ -1044,6 +1045,75 @@ final class FeedControllerTest extends TestCase
         self::assertSame('bereit', $payload['slideshow']['status']);
         self::assertSame('/api/feed/' . $itemId . '/video', $payload['slideshow']['url']);
         self::assertSame(1.0, $payload['slideshow']['fortschritt']);
+
+        unlink($storagePath);
+    }
+
+    public function testTriggerSlideshowSupportsDryRunParameter(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $item = new MemoryFeedItem(
+            algorithm: 'holiday_event',
+            title: 'Winter in Berlin',
+            subtitle: 'Lichterzauber an der Spree',
+            coverMediaId: 3,
+            memberIds: [1, 2],
+            score: 0.9,
+            params: [],
+        );
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with([])
+            ->willReturn([$item]);
+
+        $mediaOne = $this->createMedia(1, '/media/1.jpg', '2024-01-01T10:00:00+00:00');
+        $mediaTwo = $this->createMedia(2, '/media/2.jpg', '2024-01-02T11:00:00+00:00');
+
+        $mediaRepo = $this->createMock(MediaRepository::class);
+        $mediaRepo->expects(self::once())
+            ->method('findByIds')
+            ->with([1, 2], false)
+            ->willReturn([$mediaOne, $mediaTwo]);
+
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $slideshowManager->expects(self::once())
+            ->method('ensureForItem')
+            ->with(
+                self::isString(),
+                self::equalTo([1, 2]),
+                self::isArray(),
+                self::identicalTo('Winter in Berlin'),
+                self::identicalTo('Lichterzauber an der Spree'),
+                self::identicalTo(true),
+            )
+            ->willReturn(SlideshowVideoStatus::unavailable(3.5));
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            new ThumbnailPathResolver(),
+            $mediaRepo,
+            $this->createMock(ThumbnailServiceInterface::class),
+            $slideshowManager,
+            $this->createMock(EntityManagerInterface::class),
+        );
+
+        $itemId  = hash('sha1', 'holiday_event|1,2');
+        $request = Request::create('/api/feed/' . $itemId . '/video?dry-run=1', 'POST');
+        $response = $controller->triggerSlideshow($request, $itemId);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('nicht_verfuegbar', $payload['slideshow']['status']);
+        self::assertArrayNotHasKey('url', $payload['slideshow']);
 
         unlink($storagePath);
     }

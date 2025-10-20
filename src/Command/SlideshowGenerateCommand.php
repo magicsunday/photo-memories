@@ -12,12 +12,14 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Command;
 
 use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
+use MagicSunday\Memories\Service\Slideshow\SlideshowStoryboardWriter;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Throwable;
@@ -36,7 +38,10 @@ use const LOCK_EX;
 #[AsCommand(name: 'slideshow:generate', description: 'Erstellt ein Slideshow-Video für die angegebene Job-Datei.')]
 final class SlideshowGenerateCommand extends Command
 {
-    public function __construct(private readonly SlideshowVideoGeneratorInterface $generator)
+    public function __construct(
+        private readonly SlideshowVideoGeneratorInterface $generator,
+        private readonly SlideshowStoryboardWriter $storyboardWriter,
+    )
     {
         parent::__construct();
     }
@@ -44,6 +49,12 @@ final class SlideshowGenerateCommand extends Command
     protected function configure(): void
     {
         $this->addArgument('job', InputArgument::REQUIRED, 'Absolute path to the job file.');
+        $this->addOption(
+            'dry-run',
+            null,
+            InputOption::VALUE_NONE,
+            'Erstellt nur das Storyboard und rendert kein Video.',
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -57,6 +68,20 @@ final class SlideshowGenerateCommand extends Command
             $io->error($exception->getMessage());
 
             return Command::FAILURE;
+        }
+
+        $dryRun = (bool) $input->getOption('dry-run');
+
+        if ($dryRun) {
+            $storyboardPath = $this->storyboardWriter->write($job);
+            $this->cleanup($job);
+            if (is_file($job->jobFile())) {
+                unlink($job->jobFile());
+            }
+
+            $io->success(sprintf('Storyboard für "%s" wurde geschrieben: %s', $job->id(), $storyboardPath));
+
+            return Command::SUCCESS;
         }
 
         try {

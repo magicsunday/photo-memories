@@ -28,6 +28,7 @@ interface SlideshowVideoManagerInterface
         array $mediaMap,
         ?string $title = null,
         ?string $subtitle = null,
+        bool $dryRun = false,
     ): SlideshowVideoStatus;
 
     public function getStatusForItem(string $itemId): SlideshowVideoStatus;
