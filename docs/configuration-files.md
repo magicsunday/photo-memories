@@ -25,6 +25,10 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
 - **Cluster-Persistenz** – Begrenzung der Mitgliedermenge pro Cluster und die Größe der Fingerabdruck-Abfragen (`memories.cluster.persistence.max_members`, `memories.cluster.persistence.fingerprint_lookup_batch_size`). Letzteres definiert, wie viele Fingerprints Doctrine pro Abfrage in `IN`-Klauseln bündelt (Standard: 500), um riesige Parameterlisten zu vermeiden.
   - Achtet darauf, dass Deployments mindestens `MEMORIES_CLUSTER_MAX_MEMBERS=300` exportieren (die Vorlage `.env.dist` setzt `500`). So verhindern wir, dass große Cluster trotz der gelockerten Konsolidierungsschwellen beim Persistieren abgeschnitten werden.
 - **Scoring** – Basiswerte und POI-spezifische Verstärkungen zur Qualitätsbewertung (`memories.score.*`).
+  - `memories.score.poi_category_boosts` priorisiert ausgewählte OSM-Kategorien (Museen, Galerien, Freizeitparks usw.) beim Scoring.
+  - `memories.score.poi.iconic_boost` addiert einen Bonus, sobald ein Cluster eine dominante Szene (z. B. Community-Motive) aufweist.
+  - `memories.score.poi.iconic_similarity_threshold` legt den erforderlichen Dominanz-/Ähnlichkeitswert (0–1) für den Bonus fest.
+  - `memories.score.poi.iconic_signatures` hinterlegt pHash-Signaturen bekannter Community-Szenen, die beim Boosting berücksichtigt werden.
 - **Slideshow** – Verzeichnisse, Laufzeiten, Übergänge sowie Schrifteinstellungen der Slideshow-Funktion (`memories.slideshow.*`).
 
   Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl des `xfade`-Filters wider und enthalten
