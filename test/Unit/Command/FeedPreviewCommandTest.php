@@ -24,6 +24,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -67,7 +68,11 @@ final class FeedPreviewCommandTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->willReturnCallback(function (array $clusters, ?FeedPersonalizationProfile $profile) use (&$capturedProfile) {
+            ->willReturnCallback(function (
+                array $clusters,
+                ?FeedPersonalizationProfile $profile,
+                ?FeedVisibilityFilter $visibility,
+            ) use (&$capturedProfile) {
                 self::assertCount(1, $clusters);
                 $draft = $clusters[0];
                 self::assertInstanceOf(ClusterDraft::class, $draft);
@@ -75,6 +80,7 @@ final class FeedPreviewCommandTest extends TestCase
                 self::assertSame([1, 2, 3, 4], $draft->getMembers());
                 self::assertSame(['score' => 0.82, 'group' => 'stories'], $draft->getParams());
                 $capturedProfile = $profile;
+                self::assertNull($visibility);
 
                 return [
                     new MemoryFeedItem('travel', 'Titel', 'Sub', null, [1, 2, 3], 0.91, ['scene_tags' => []]),
@@ -209,8 +215,13 @@ final class FeedPreviewCommandTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->willReturnCallback(static function (array $clusters) {
+            ->willReturnCallback(static function (
+                array $clusters,
+                ?FeedPersonalizationProfile $profile = null,
+                ?FeedVisibilityFilter $visibility = null,
+            ) {
                 self::assertCount(2, $clusters);
+                self::assertNull($visibility);
 
                 return [
                     new MemoryFeedItem(

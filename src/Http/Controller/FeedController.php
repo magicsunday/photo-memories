@@ -31,6 +31,7 @@ use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
 use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
@@ -362,11 +363,12 @@ final class FeedController
         $profile    = $this->profileProvider->getProfile($profileKey);
         $preferences = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
         $locale      = $this->resolveLocale($request);
+        $visibilityFilter = $this->createVisibilityFilter($preferences);
 
         $clusterLimit = max($limit * $this->clusterFetchMultiplier, $limit);
         $clusters     = $this->clusterRepository->findLatest($clusterLimit);
         $drafts       = $this->clusterMapper->mapMany($clusters);
-        $items        = $this->feedBuilder->build($drafts, $profile);
+        $items        = $this->feedBuilder->build($drafts, $profile, $visibilityFilter);
         $items        = array_values(array_filter(
             $items,
             static function (MemoryFeedItem $item) use ($preferences): bool {
@@ -2017,6 +2019,43 @@ final class FeedController
         }
 
         return $animations;
+    }
+
+    private function createVisibilityFilter(FeedUserPreferences $preferences): ?FeedVisibilityFilter
+    {
+        $hiddenPersons = $this->normalisePreferenceList($preferences->getHiddenPersons());
+        $hiddenPets    = $this->normalisePreferenceList($preferences->getHiddenPets());
+        $hiddenPlaces  = $this->normalisePreferenceList($preferences->getHiddenPlaces());
+        $hiddenDates   = $this->normalisePreferenceList($preferences->getHiddenDates());
+
+        if ($hiddenPersons === [] && $hiddenPets === [] && $hiddenPlaces === [] && $hiddenDates === []) {
+            return null;
+        }
+
+        return new FeedVisibilityFilter($hiddenPersons, $hiddenPets, $hiddenPlaces, $hiddenDates);
+    }
+
+    /**
+     * @param list<string> $values
+     *
+     * @return list<string>
+     */
+    private function normalisePreferenceList(array $values): array
+    {
+        $result = [];
+
+        foreach ($values as $value) {
+            $normalized = $this->normalizeScalarString($value);
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (!in_array($normalized, $result, true)) {
+                $result[] = $normalized;
+            }
+        }
+
+        return $result;
     }
 
     private function normalizeScalarString(mixed $value): ?string

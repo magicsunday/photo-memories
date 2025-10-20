@@ -26,6 +26,7 @@ use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
@@ -43,6 +44,7 @@ use Stringable;
 
 use function file_put_contents;
 use function json_decode;
+use function json_encode;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
@@ -98,7 +100,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -227,7 +229,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -326,7 +328,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -435,7 +437,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -535,7 +537,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -658,7 +660,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn([
                 new MemoryFeedItem(
                     algorithm: 'exif_offset',
@@ -746,7 +748,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn($items);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -832,7 +834,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn([$item]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -897,7 +899,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn([]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -989,7 +991,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn([$item]);
 
         $thumbnailResolver = new ThumbnailPathResolver();
@@ -1070,7 +1072,7 @@ final class FeedControllerTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::once())
             ->method('build')
-            ->with([])
+            ->with([], self::anything(), self::isNull())
             ->willReturn([$item]);
 
         $mediaOne = $this->createMedia(1, '/media/1.jpg', '2024-01-01T10:00:00+00:00');
@@ -1114,6 +1116,80 @@ final class FeedControllerTest extends TestCase
         $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('nicht_verfuegbar', $payload['slideshow']['status']);
         self::assertArrayNotHasKey('url', $payload['slideshow']);
+
+        unlink($storagePath);
+    }
+
+    public function testFeedBuildsVisibilityFilterFromPreferences(): void
+    {
+        $clusterRepo = $this->createMock(ClusterRepository::class);
+        $clusterRepo->expects(self::once())
+            ->method('findLatest')
+            ->with(96)
+            ->willReturn([]);
+
+        $feedBuilder = $this->createMock(FeedBuilderInterface::class);
+        $feedBuilder->expects(self::once())
+            ->method('build')
+            ->with(
+                [],
+                self::anything(),
+                self::callback(static function (?FeedVisibilityFilter $filter): bool {
+                    self::assertInstanceOf(FeedVisibilityFilter::class, $filter);
+
+                    return $filter->intersectsPersons(['person-42'])
+                        && $filter->intersectsPets(['pet-7'])
+                        && $filter->isPlaceHidden('Berlin')
+                        && $filter->intersectsDates(['2024-01-05']);
+                })
+            )
+            ->willReturn([]);
+
+        $thumbnailResolver = new ThumbnailPathResolver();
+        $mediaRepo         = $this->createMock(MediaRepository::class);
+        $mediaRepo->expects(self::never())->method('findByIds');
+        $thumbnailService = $this->createMock(ThumbnailServiceInterface::class);
+        $slideshowManager = $this->createMock(SlideshowVideoManagerInterface::class);
+        $entityManager    = $this->createMock(EntityManagerInterface::class);
+
+        [$controller, $storagePath] = $this->createControllerWithDependencies(
+            $feedBuilder,
+            $clusterRepo,
+            new ClusterEntityToDraftMapper([]),
+            $thumbnailResolver,
+            $mediaRepo,
+            $thumbnailService,
+            $slideshowManager,
+            $entityManager,
+        );
+
+        $preferences = [
+            'users' => [
+                'standard' => [
+                    'profiles' => [
+                        'default' => [
+                            'favourites'          => [],
+                            'hidden_algorithms'   => [],
+                            'hidden_persons'      => ['person-42'],
+                            'hidden_pets'         => ['pet-7'],
+                            'hidden_places'       => ['Berlin'],
+                            'hidden_dates'        => ['2024-01-05'],
+                            'favourite_persons'   => [],
+                            'favourite_places'    => [],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        file_put_contents($storagePath, json_encode($preferences, JSON_THROW_ON_ERROR));
+
+        $request  = Request::create('/api/feed', 'GET');
+        $response = $controller->feed($request);
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame([], $payload['items']);
 
         unlink($storagePath);
     }

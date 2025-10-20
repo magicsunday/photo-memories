@@ -18,10 +18,12 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class MemoryFeedBuilderTest extends TestCase
 {
@@ -479,5 +481,88 @@ final class MemoryFeedBuilderTest extends TestCase
         self::assertCount(1, $result);
         self::assertSame('familie', $result[0]->getAlgorithm());
         self::assertSame('familienfreundlich', $result[0]->getParams()['personalisierungsProfil']);
+    }
+
+    #[Test]
+    #[DataProvider('hiddenClusterProvider')]
+    public function skipsClustersMatchingVisibilityFilter(array $params, FeedVisibilityFilter $visibility): void
+    {
+        $titleGen = $this->createMock(TitleGeneratorInterface::class);
+        $titleGen->expects(self::never())->method('makeTitle');
+        $titleGen->expects(self::never())->method('makeSubtitle');
+
+        $coverPicker = $this->createMock(CoverPickerInterface::class);
+        $coverPicker->expects(self::never())->method('pickCover');
+
+        $mediaRepository = $this->createMock(MediaRepository::class);
+        $mediaRepository->expects(self::never())->method('findByIds');
+
+        $seriesHighlightService = new SeriesHighlightService();
+
+        $builder = new MemoryFeedBuilder(
+            $titleGen,
+            $coverPicker,
+            $mediaRepository,
+            $seriesHighlightService,
+            minScore: 0.1,
+            minMembers: 1,
+            maxPerDay: 5,
+            maxTotal: 10,
+            maxPerAlgorithm: 5,
+        );
+
+        $cluster = new ClusterDraft(
+            algorithm: 'filtered',
+            params: $params,
+            centroid: ['lat' => 0.0, 'lon' => 0.0],
+            members: [1, 2],
+        );
+
+        $result = $builder->build([$cluster], null, $visibility);
+
+        self::assertSame([], $result);
+    }
+
+    /**
+     * @return iterable<string, array{0: array<string, mixed>, 1: FeedVisibilityFilter}>
+     */
+    public static function hiddenClusterProvider(): iterable
+    {
+        $from = strtotime('2024-01-05T10:00:00Z');
+        $to   = $from + 3600;
+
+        return [
+            'person' => [
+                [
+                    'score'      => 0.9,
+                    'time_range' => ['from' => $from, 'to' => $to],
+                    'persons'    => [42],
+                ],
+                new FeedVisibilityFilter(['42']),
+            ],
+            'pet' => [
+                [
+                    'score'      => 0.9,
+                    'time_range' => ['from' => $from, 'to' => $to],
+                    'pet_ids'    => ['pet-7'],
+                ],
+                new FeedVisibilityFilter([], ['pet-7']),
+            ],
+            'place' => [
+                [
+                    'score'      => 0.9,
+                    'time_range' => ['from' => $from, 'to' => $to],
+                    'place'      => 'Berlin',
+                ],
+                new FeedVisibilityFilter([], [], ['Berlin']),
+            ],
+            'date' => [
+                [
+                    'score'      => 0.9,
+                    'time_range' => ['from' => $from, 'to' => $to],
+                ],
+                new FeedVisibilityFilter([], [], [], ['2024-01-05']),
+            ],
+        ];
     }
 }

@@ -19,11 +19,13 @@ use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
+use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
 use MagicSunday\Memories\Service\Feed\FeedExportResult;
 use MagicSunday\Memories\Service\Feed\FeedExportStage;
 use MagicSunday\Memories\Service\Feed\HtmlFeedExportService;
 use MagicSunday\Memories\Service\Feed\HtmlFeedRenderer;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
@@ -204,9 +206,14 @@ final class HtmlFeedExportServiceTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::exactly(2))
             ->method('build')
-            ->willReturnCallback(static function (array $drafts) use ($feedItem): array {
+            ->willReturnCallback(static function (
+                array $drafts,
+                ?FeedPersonalizationProfile $profile = null,
+                ?FeedVisibilityFilter $visibility = null,
+            ) use ($feedItem): array {
                 self::assertCount(1, $drafts);
                 self::assertInstanceOf(ClusterDraft::class, $drafts[0]);
+                self::assertNull($visibility);
 
                 return [$feedItem];
             });
