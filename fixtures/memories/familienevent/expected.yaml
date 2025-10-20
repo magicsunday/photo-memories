@@ -1,0 +1,137 @@
+dataset: familienevent
+title: 'Familienfeier zum 70. Geburtstag'
+clusters:
+  -
+    id: vorbereitung
+    title: 'Dekoration & Vorbereitung'
+    summary: 'Aufbau des Festsaals mit Hilfe aller Generationen.'
+    member_count: 2
+    timeline:
+      start: '2024-03-08T17:05:00+01:00'
+      end: '2024-03-08T19:45:00+01:00'
+      coverage_hours: 2.67
+      days_present:
+        - '2024-03-08'
+    missing_dates: []
+    key_photo: familienevent-02.svg
+    highlight_photos:
+      - familienevent-01.svg
+      - familienevent-02.svg
+    locations:
+      - 'Leipzig (DE)'
+    tags:
+      - aufbau
+      - dekoration
+      - familie
+      - küche
+      - liebevoll
+      - torte
+    people:
+      - Lisa
+      - 'Oma Herta'
+      - Tom
+    story_beats:
+      - 'Girlanden werden aufgehängt'
+      - 'Torte wird verziert'
+  -
+    id: feierabend
+    title: 'Empfang, Reden & Tanz'
+    summary: 'Der große Abend mit emotionalen Reden und Tanzrunden.'
+    member_count: 3
+    timeline:
+      start: '2024-03-09T17:10:00+01:00'
+      end: '2024-03-09T22:30:00+01:00'
+      coverage_hours: 5.33
+      days_present:
+        - '2024-03-09'
+    missing_dates: []
+    key_photo: familienevent-03.svg
+    highlight_photos:
+      - familienevent-02.svg
+      - familienevent-03.svg
+      - familienevent-04.svg
+    locations:
+      - 'Leipzig (DE)'
+    tags:
+      - abend
+      - emotion
+      - empfang
+      - familie
+      - feuerwerk
+      - jubilar
+      - porträt
+      - rede
+      - tanz
+    people:
+      - 'Enkel Paul'
+      - Familie
+      - Lisa
+      - 'Oma Herta'
+    story_beats:
+      - 'Begrüßung mit Enkel'
+      - 'Ansprache der Jubilarin'
+      - 'Tanzfläche & Feuerwerk'
+  -
+    id: sonntag-ausklang
+    title: 'Ausklang & Familienfrühstück'
+    summary: 'Gemütlicher Brunch mit Anekdoten und Familienfotos.'
+    member_count: 2
+    timeline:
+      start: '2024-03-10T09:30:00+01:00'
+      end: '2024-03-10T11:15:00+01:00'
+      coverage_hours: 1.75
+      days_present:
+        - '2024-03-10'
+    missing_dates: []
+    key_photo: familienevent-02.svg
+    highlight_photos:
+      - familienevent-01.svg
+    locations:
+      - 'Leipzig (DE)'
+    tags:
+      - erinnerungen
+      - familie
+      - frühstück
+      - geschenke
+      - porzellan
+    people:
+      - Lisa
+      - 'Oma Herta'
+      - Tom
+    story_beats:
+      - 'Brunch mit Familienporzellan'
+      - 'Geschenke werden sortiert'
+storyboard:
+  cover_photo: familienevent-03.svg
+  themes:
+    - Familie
+    - Jubiläum
+    - Generationen
+  transitions:
+    - 'Vorbereitung → Empfang'
+    - 'Anstoßen → Spiele'
+    - 'Tanzfläche → Feuerwerk'
+  key_photos:
+    - familienevent-02.svg
+    - familienevent-03.svg
+    - familienevent-02.svg
+  sequences:
+    -
+      cluster: vorbereitung
+      title: 'Dekoration & Vorbereitung'
+      story_beats:
+        - 'Girlanden werden aufgehängt'
+        - 'Torte wird verziert'
+    -
+      cluster: feierabend
+      title: 'Empfang, Reden & Tanz'
+      story_beats:
+        - 'Begrüßung mit Enkel'
+        - 'Ansprache der Jubilarin'
+        - 'Tanzfläche & Feuerwerk'
+    -
+      cluster: sonntag-ausklang
+      title: 'Ausklang & Familienfrühstück'
+      story_beats:
+        - 'Brunch mit Familienporzellan'
+        - 'Geschenke werden sortiert'

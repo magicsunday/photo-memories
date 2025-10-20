@@ -119,6 +119,17 @@
 - **Alternatives considered:** Keep removing opted-out algorithms entirely (rejected because it hid content shifts from telemetry consumers) or leave heuristics unaware of dynamic preferences (rejected as it required redeploying configuration to adapt boosts/penalties).
 - **Follow-up actions:** Monitor feed telemetry for large penalty multipliers to confirm penalties remain within acceptable ranges and extend integration coverage for the composite scorer preference path.
 
+## 2025-10-18 – Curated memory fixtures for cluster regression
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Cluster-related regressions were hard to reproduce because no shared datasets existed for typical scenarios (Kurztrip,
+  Familienfeier, Monatsmix mit Lücken). Manual QA relied on ad-hoc folders without gold standards.
+- **Decision:** Added lightweight fixtures under `fixtures/memories/` (metadata, previews, expected YAML) plus a `MemoryDatasetPipeline`
+  integration test that validates clusters, key photos, and storyboard signals against the curated gold standard. Documented the
+  workflow in the README and a dedicated test guide.
+- **Alternatives considered:** Mock the cluster pipeline with synthetic arrays or rely on full database snapshots. Rejected because mocks
+  fail to capture sequencing/coverage logic and DB snapshots are heavy and brittle.
+- **Follow-up actions:** Extend the catalogue when new algorithms emerge (e.g., person cohorts) and monitor test duration as datasets grow.
+
 ## 2025-10-17 – Stabilise slideshow transitions
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Slideshow overlaps still drew pseudo-random durations per render and transition fallback sequences treated all `xfade` options equally, making fades appear as often as novelty effects like `pixelize`.

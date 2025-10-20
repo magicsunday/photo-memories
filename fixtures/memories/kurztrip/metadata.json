@@ -1,0 +1,138 @@
+{
+  "dataset": "kurztrip",
+  "title": "Kurztrip nach Prag",
+  "themes": ["Kurztrip", "Urban", "Kulinarik"],
+  "primary_cluster": "anreise-altstadt",
+  "storyboard": {
+    "transitions": [
+      "Frühstart → Check-in",
+      "Altstadt → Abendlichter",
+      "Kaffeehaus → Heimfahrt"
+    ]
+  },
+  "clusters": [
+    {
+      "id": "anreise-altstadt",
+      "title": "Anreise & Altstadtspaziergang",
+      "summary": "Früher Zug, Kaffeehaus und Abendstimmung an der Moldau.",
+      "expected_days": ["2024-05-17"],
+      "items": [
+        {
+          "filename": "kurztrip-01.svg",
+          "preview": "kurztrip-01.svg",
+          "taken_at": "2024-05-17T06:45:00+02:00",
+          "quality": 0.94,
+          "tags": ["zug", "frühstück", "reise"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Sonnenaufgang im Zug",
+          "roles": ["key", "highlight"]
+        },
+        {
+          "filename": "kurztrip-02.svg",
+          "preview": "kurztrip-02.svg",
+          "taken_at": "2024-05-17T11:10:00+02:00",
+          "quality": 0.88,
+          "tags": ["kaffee", "café", "kulinarik"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Erster Kaffee im Viertel",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "kurztrip-03.svg",
+          "preview": "kurztrip-03.svg",
+          "taken_at": "2024-05-17T21:15:00+02:00",
+          "quality": 0.9,
+          "tags": ["abend", "lichter", "altstadt"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Abendliche Lichter an der Moldau",
+          "roles": ["highlight"]
+        }
+      ]
+    },
+    {
+      "id": "kulturelle-hauptgaenge",
+      "title": "Kultur, Brücken & Streetfood",
+      "summary": "Museen, Karlsbrücke und Streetfood-Stopps.",
+      "expected_days": ["2024-05-18"],
+      "items": [
+        {
+          "filename": "kurztrip-02.svg",
+          "preview": "kurztrip-02.svg",
+          "taken_at": "2024-05-18T10:05:00+02:00",
+          "quality": 0.86,
+          "tags": ["museum", "kunst", "geschichte"],
+          "people": ["Alex"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Museum am Vormittag",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "kurztrip-03.svg",
+          "preview": "kurztrip-03.svg",
+          "taken_at": "2024-05-18T13:40:00+02:00",
+          "quality": 0.91,
+          "tags": ["brücke", "fluss", "spaziergang"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Karlsbrücke zur Mittagszeit",
+          "roles": ["key", "highlight"]
+        },
+        {
+          "filename": "kurztrip-04.svg",
+          "preview": "kurztrip-04.svg",
+          "taken_at": "2024-05-18T19:20:00+02:00",
+          "quality": 0.83,
+          "tags": ["streetfood", "abend", "kulinarik"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Streetfood am Abend",
+          "roles": ["highlight"]
+        }
+      ]
+    },
+    {
+      "id": "heimreise-und-abschluss",
+      "title": "Heimreise & Abschiedsklassiker",
+      "summary": "Letzter Blick auf die Stadt, Souvenirs und Heimfahrt.",
+      "expected_days": ["2024-05-19"],
+      "items": [
+        {
+          "filename": "kurztrip-04.svg",
+          "preview": "kurztrip-04.svg",
+          "taken_at": "2024-05-19T08:30:00+02:00",
+          "quality": 0.8,
+          "tags": ["kaffee", "abschied"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Café zum Abschied",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "kurztrip-01.svg",
+          "preview": "kurztrip-01.svg",
+          "taken_at": "2024-05-19T12:15:00+02:00",
+          "quality": 0.87,
+          "tags": ["souvenir", "markt"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Souvenirs am Markt",
+          "roles": []
+        },
+        {
+          "filename": "kurztrip-02.svg",
+          "preview": "kurztrip-02.svg",
+          "taken_at": "2024-05-19T16:50:00+02:00",
+          "quality": 0.89,
+          "tags": ["zug", "heimreise"],
+          "people": ["Alex", "Sam"],
+          "location": {"city": "Prag", "country": "CZ"},
+          "story_label": "Rückfahrt bei goldenem Licht",
+          "roles": ["key"]
+        }
+      ]
+    }
+  ]
+}

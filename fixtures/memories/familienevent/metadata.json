@@ -1,0 +1,116 @@
+{
+  "dataset": "familienevent",
+  "title": "Familienfeier zum 70. Geburtstag",
+  "themes": ["Familie", "Jubiläum", "Generationen"],
+  "primary_cluster": "feierabend",
+  "storyboard": {
+    "transitions": [
+      "Vorbereitung → Empfang",
+      "Anstoßen → Spiele",
+      "Tanzfläche → Feuerwerk"
+    ]
+  },
+  "clusters": [
+    {
+      "id": "vorbereitung",
+      "title": "Dekoration & Vorbereitung",
+      "summary": "Aufbau des Festsaals mit Hilfe aller Generationen.",
+      "expected_days": ["2024-03-08"],
+      "items": [
+        {
+          "filename": "familienevent-01.svg",
+          "preview": "familienevent-01.svg",
+          "taken_at": "2024-03-08T17:05:00+01:00",
+          "quality": 0.78,
+          "tags": ["dekoration", "aufbau", "liebevoll"],
+          "people": ["Lisa", "Oma Herta"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Girlanden werden aufgehängt",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "familienevent-02.svg",
+          "preview": "familienevent-02.svg",
+          "taken_at": "2024-03-08T19:45:00+01:00",
+          "quality": 0.82,
+          "tags": ["torte", "küche", "familie"],
+          "people": ["Lisa", "Tom", "Oma Herta"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Torte wird verziert",
+          "roles": ["key", "highlight"]
+        }
+      ]
+    },
+    {
+      "id": "feierabend",
+      "title": "Empfang, Reden & Tanz",
+      "summary": "Der große Abend mit emotionalen Reden und Tanzrunden.",
+      "expected_days": ["2024-03-09"],
+      "items": [
+        {
+          "filename": "familienevent-02.svg",
+          "preview": "familienevent-02.svg",
+          "taken_at": "2024-03-09T17:10:00+01:00",
+          "quality": 0.9,
+          "tags": ["empfang", "familie", "porträt"],
+          "people": ["Oma Herta", "Enkel Paul", "Lisa"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Begrüßung mit Enkel",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "familienevent-03.svg",
+          "preview": "familienevent-03.svg",
+          "taken_at": "2024-03-09T19:00:00+01:00",
+          "quality": 0.95,
+          "tags": ["rede", "emotion", "jubilar"],
+          "people": ["Oma Herta", "Familie"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Ansprache der Jubilarin",
+          "roles": ["key", "highlight"]
+        },
+        {
+          "filename": "familienevent-04.svg",
+          "preview": "familienevent-04.svg",
+          "taken_at": "2024-03-09T22:30:00+01:00",
+          "quality": 0.88,
+          "tags": ["tanz", "feuerwerk", "abend"],
+          "people": ["Familie"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Tanzfläche & Feuerwerk",
+          "roles": ["highlight"]
+        }
+      ]
+    },
+    {
+      "id": "sonntag-ausklang",
+      "title": "Ausklang & Familienfrühstück",
+      "summary": "Gemütlicher Brunch mit Anekdoten und Familienfotos.",
+      "expected_days": ["2024-03-10"],
+      "items": [
+        {
+          "filename": "familienevent-01.svg",
+          "preview": "familienevent-01.svg",
+          "taken_at": "2024-03-10T09:30:00+01:00",
+          "quality": 0.81,
+          "tags": ["frühstück", "familie", "porzellan"],
+          "people": ["Oma Herta", "Lisa", "Tom"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Brunch mit Familienporzellan",
+          "roles": ["highlight"]
+        },
+        {
+          "filename": "familienevent-02.svg",
+          "preview": "familienevent-02.svg",
+          "taken_at": "2024-03-10T11:15:00+01:00",
+          "quality": 0.84,
+          "tags": ["geschenke", "erinnerungen"],
+          "people": ["Oma Herta", "Lisa"],
+          "location": {"city": "Leipzig", "country": "DE"},
+          "story_label": "Geschenke werden sortiert",
+          "roles": []
+        }
+      ]
+    }
+  ]
+}

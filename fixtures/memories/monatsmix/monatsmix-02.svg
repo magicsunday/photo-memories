@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="monatsmix02" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#monatsmix02)" rx="8" />
+  <g fill="#eef2ff" font-family="'Arial', sans-serif" font-size="10" font-weight="600">
+    <text x="8" y="20">Café</text>
+    <text x="8" y="38">Freunde</text>
+    <text x="8" y="54">Woche 2</text>
+  </g>
+</svg>

@@ -156,6 +156,18 @@ Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-O
 - Einzelne Schritte: `composer ci:test:php:lint`, `composer ci:test:php:phpstan`, `composer ci:test:php:unit` usw.
 - Frontend-E2E: `npm run test:e2e` bzw. `make web-test` startet Playwright.
 
+### Erinnerungs-Fixtures & Cluster-Integration
+
+- Unter `fixtures/memories/<dataset>/` liegen kuratierte Datensätze inklusive `metadata.json`, SVG-Vorschaubildern (`*.svg`, viewBox 64×64)
+  und einem YAML-Goldstandard (`expected.yaml`). Die Szenarien decken Wochenend-Kurztrips, Familienfeiern und Monatsmixe mit
+  zeitlichen Lücken ab.
+- `test/Integration/Clusterer/MemoryDatasetClusterPipelineTest.php` lädt die Metadaten, führt die Test-Pipeline
+  (`MemoryDatasetPipeline`) durch und vergleicht die Ausgabe mit dem Goldstandard. Der Test läuft automatisch mit
+  `composer ci:test:php:unit`.
+- Neue Szenarien lassen sich anlegen, indem ein zusätzlicher Ordner erzeugt, die Metadaten ergänzt und die Erwartungsdatei
+  via `php <<'PHP' …` (siehe [Testleitfaden](docs/testing-fixtures.md)) oder manuell aus den Pipeline-Ergebnissen aktualisiert wird. Achte darauf,
+  die Vorschaubilder klein zu halten (≤64×64 px) und `expected.yaml` nach Anpassungen im Repository zu versionieren.
+
 ## Build & Releases
 
 - `make init` richtet die Build-Umgebung ein, `make build` erstellt das distributable Binary über `.build/build`. Release-Versionen werden mittels `make version` bzw. `scripts/create-version` vorbereitet.
