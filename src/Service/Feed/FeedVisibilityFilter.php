@@ -137,6 +137,22 @@ final class FeedVisibilityFilter
         return array_key_exists($normalized, $this->hiddenPlaces);
     }
 
+    public function intersectsPlaces(iterable $places): bool
+    {
+        if ($this->hiddenPlaces === []) {
+            return false;
+        }
+
+        foreach ($places as $place) {
+            $normalized = $this->normaliseText($place);
+            if ($normalized !== null && array_key_exists($normalized, $this->hiddenPlaces)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function intersectsDates(iterable $dates): bool
     {
         if ($this->hiddenDates === []) {

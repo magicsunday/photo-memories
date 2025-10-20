@@ -570,6 +570,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             if ($place !== null && $filter->isPlaceHidden($place)) {
                 return true;
             }
+
+            $places = $params['places'] ?? null;
+            if (is_iterable($places) && $filter->intersectsPlaces($places)) {
+                return true;
+            }
         }
 
         if ($filter->hasHiddenDates()) {
