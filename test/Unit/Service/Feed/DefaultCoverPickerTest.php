@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Feed;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Feed\DefaultCoverPicker;
 use MagicSunday\Memories\Test\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
 
@@ -249,6 +250,106 @@ final class DefaultCoverPickerTest extends TestCase
         $result = $picker->pickCover([$original, $duplicate, $unique], $clusterParams);
 
         self::assertSame($unique, $result);
+    }
+
+    #[Test]
+    public function itPrefersMediaContainingThePrimaryPerson(): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        $sharedSetup = static function (Media $media): void {
+            $media->setWidth(4032);
+            $media->setHeight(3024);
+            $media->setHasFaces(true);
+            $media->setFacesCount(2);
+            $media->setFeatures([
+                'vision' => [
+                    'face_coverage'           => 0.45,
+                    'primary_pose'            => 'smiling',
+                    'primary_pose_confidence' => 0.9,
+                ],
+            ]);
+            $media->setThumbnails(['default' => '/thumbs/vision.jpg']);
+        };
+
+        $withoutPrimary = $this->makeMedia(
+            id: 601,
+            path: '/fixtures/feed/without-primary.jpg',
+            takenAt: '2024-09-15T11:30:00+00:00',
+            configure: static function (Media $media) use ($sharedSetup): void {
+                $sharedSetup($media);
+                $media->setPersons(['Alice', 'Charlie']);
+            },
+        );
+
+        $withPrimary = $this->makeMedia(
+            id: 602,
+            path: '/fixtures/feed/with-primary.jpg',
+            takenAt: '2024-09-15T11:30:00+00:00',
+            configure: static function (Media $media) use ($sharedSetup): void {
+                $sharedSetup($media);
+                $media->setPersons(['Alice', '  jane doe  ']);
+            },
+        );
+
+        $clusterParams = [
+            'people_primary_subject' => '  Jane DOE  ',
+            'people_face_coverage'   => 0.5,
+        ];
+
+        $result = $picker->pickCover([$withoutPrimary, $withPrimary], $clusterParams);
+
+        self::assertSame($withPrimary, $result);
+    }
+
+    #[Test]
+    #[DataProvider('providePrimarySubjectScenarios')]
+    public function itAppliesPrimaryPersonBonusWhenAvailable(?array $persons, ?string $primary, bool $expectsBonus): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        $media = $this->makeMedia(
+            id: 701,
+            path: '/fixtures/feed/primary-check.jpg',
+            configure: static function (Media $media) use ($persons): void {
+                $media->setHasFaces(true);
+                $media->setFacesCount($persons !== null ? count($persons) : 0);
+                $media->setPersons($persons);
+            },
+        );
+
+        $people = [
+            'emphasis'     => 0.6,
+            'coverage'     => null,
+            'faceCoverage' => null,
+            'ratio'        => null,
+            'primary'      => $primary,
+        ];
+
+        $method = new ReflectionMethod(DefaultCoverPicker::class, 'peopleScore');
+        $method->setAccessible(true);
+
+        $baseline = $people;
+        $baseline['primary'] = null;
+
+        $baselineScore = $method->invoke($picker, $media, $baseline);
+        $adjustedScore = $method->invoke($picker, $media, $people);
+
+        if ($expectsBonus) {
+            self::assertGreaterThan($baselineScore, $adjustedScore);
+        } else {
+            self::assertEqualsWithDelta($baselineScore, $adjustedScore, 1e-6);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{0: ?array, 1: ?string, 2: bool}>
+     */
+    public static function providePrimarySubjectScenarios(): iterable
+    {
+        yield 'no persons on media' => [null, 'Primary Person', false];
+        yield 'no primary identifier provided' => [['Alice', 'Bob'], null, false];
+        yield 'multiple persons including primary' => [['Alice', '  jane doe '], '  JANE DOE  ', true];
     }
 
     #[Test]

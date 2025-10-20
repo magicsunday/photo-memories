@@ -588,6 +588,33 @@ final class DefaultCoverPicker implements CoverPickerInterface
             $faceScore = $this->clamp01(($faceScore * 0.8) + (0.2 * $emphasis));
         }
 
+        $primary = $people['primary'] ?? null;
+        if (is_string($primary)) {
+            $primary = strtolower(trim($primary));
+
+            if ($primary !== '') {
+                $persons = $media->getPersons();
+
+                if (is_array($persons)) {
+                    foreach ($persons as $person) {
+                        if (!is_string($person)) {
+                            continue;
+                        }
+
+                        $personId = strtolower(trim($person));
+                        if ($personId === '') {
+                            continue;
+                        }
+
+                        if ($personId === $primary) {
+                            $faceScore = $this->clamp01($faceScore + 0.15);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         return $faceScore;
     }
 
