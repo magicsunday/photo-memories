@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 
 use function array_filter;
 use function array_key_exists;
@@ -31,10 +32,12 @@ use function floor;
 use function is_array;
 use function is_float;
 use function is_int;
+use function is_iterable;
 use function is_numeric;
 use function is_string;
 use function sprintf;
 use function usort;
+use function trim;
 
 /**
  * iOS-like feed selection:
@@ -91,9 +94,24 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
      *
      * @return list<MemoryFeedItem>
      */
-    public function build(array $clusters, ?FeedPersonalizationProfile $profile = null): array
-    {
+    public function build(
+        array $clusters,
+        ?FeedPersonalizationProfile $profile = null,
+        ?FeedVisibilityFilter $visibilityFilter = null,
+    ): array {
         $profile ??= $this->defaultProfile;
+
+        if ($visibilityFilter !== null && !$visibilityFilter->isEmpty()) {
+            $clusters = array_values(array_filter(
+                $clusters,
+                fn (ClusterDraft $cluster): bool => !$this->isClusterHidden($cluster, $visibilityFilter),
+            ));
+
+            if ($clusters === []) {
+                return [];
+            }
+        }
+
         $now = new DateTimeImmutable();
 
         // 1) filter
@@ -295,6 +313,169 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         return $result;
+    }
+
+    private function isClusterHidden(ClusterDraft $cluster, FeedVisibilityFilter $filter): bool
+    {
+        $params = $cluster->getParams();
+
+        if ($filter->hasHiddenPersons()) {
+            $persons = $this->normaliseIdList($params['persons'] ?? null);
+            if ($persons !== [] && $filter->intersectsPersons($persons)) {
+                return true;
+            }
+        }
+
+        if ($filter->hasHiddenPets()) {
+            $petIds = $this->normaliseIdList($params['pet_ids'] ?? null);
+            if ($petIds !== [] && $filter->intersectsPets($petIds)) {
+                return true;
+            }
+        }
+
+        if ($filter->hasHiddenPlaces()) {
+            $place = $this->normaliseScalarString($params['place'] ?? null);
+            if ($place !== null && $filter->isPlaceHidden($place)) {
+                return true;
+            }
+        }
+
+        if ($filter->hasHiddenDates()) {
+            $dates = $this->extractTimeRangeDates($params['time_range'] ?? null);
+            if ($dates !== [] && $filter->intersectsDates($dates)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normaliseIdList(mixed $values): array
+    {
+        if (!is_iterable($values)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($values as $value) {
+            $normalized = $this->normaliseScalarString($value);
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (!in_array($normalized, $result, true)) {
+                $result[] = $normalized;
+            }
+        }
+
+        return $result;
+    }
+
+    private function normaliseScalarString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+        } elseif ($value instanceof \Stringable) {
+            $trimmed = trim((string) $value);
+        } elseif (is_int($value) || is_float($value)) {
+            $trimmed = trim((string) $value);
+        } else {
+            return null;
+        }
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractTimeRangeDates(mixed $range): array
+    {
+        if (!is_array($range)) {
+            return [];
+        }
+
+        $dates = [];
+
+        $days = $range['days'] ?? null;
+        if (is_iterable($days)) {
+            foreach ($days as $day) {
+                $normalized = $this->normaliseDateString($day);
+                if ($normalized === null) {
+                    continue;
+                }
+
+                if (!in_array($normalized, $dates, true)) {
+                    $dates[] = $normalized;
+                }
+            }
+        }
+
+        $singleDate = $this->normaliseDateString($range['date'] ?? null);
+        if ($singleDate !== null && !in_array($singleDate, $dates, true)) {
+            $dates[] = $singleDate;
+        }
+
+        $from = $this->normaliseTimestamp($range['from'] ?? null);
+        $to   = $this->normaliseTimestamp($range['to'] ?? null);
+
+        if ($from !== null && $to !== null && $to >= $from) {
+            $current = (new DateTimeImmutable('@' . $from))->setTimezone(new DateTimeZone('UTC'));
+            $end     = (new DateTimeImmutable('@' . $to))->setTimezone(new DateTimeZone('UTC'));
+
+            while ($current <= $end) {
+                $formatted = $current->format('Y-m-d');
+                if (!in_array($formatted, $dates, true)) {
+                    $dates[] = $formatted;
+                }
+
+                $current = $current->modify('+1 day');
+            }
+        }
+
+        return $dates;
+    }
+
+    private function normaliseDateString(mixed $value): ?string
+    {
+        $text = $this->normaliseScalarString($value);
+        if ($text === null) {
+            return null;
+        }
+
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', $text);
+        if ($date === false) {
+            return null;
+        }
+
+        return $date->format('Y-m-d');
+    }
+
+    private function normaliseTimestamp(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_float($value) || is_string($value)) {
+            if (!is_numeric($value)) {
+                return null;
+            }
+
+            $candidate = (int) $value;
+
+            return $candidate > 0 ? $candidate : null;
+        }
+
+        return null;
     }
 
     private function dayKey(ClusterDraft $c): ?string

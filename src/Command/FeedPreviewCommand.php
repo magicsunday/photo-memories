@@ -253,7 +253,7 @@ final class FeedPreviewCommand extends Command
         }
 
         $io->section($this->formatStageTitle(self::STAGE_CURATED));
-        $items = $this->feedBuilder->build($consolidated, $profileOverride);
+        $items = $this->feedBuilder->build($consolidated, $profileOverride, null);
 
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');

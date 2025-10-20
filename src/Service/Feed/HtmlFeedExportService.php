@@ -105,7 +105,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             $io->warning('Keine Cluster nach der Konsolidierung.');
         }
 
-        $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts);
+        $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts, null, null);
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
         }
