@@ -35,9 +35,13 @@ final class SelectionPolicy
      * @param int|null      $maxPerStaypoint    optional staypoint cap
      * @param int|null      $relaxedMaxPerStaypoint optional staypoint cap used for policy relaxations
      * @param float         $qualityFloor       minimum quality score accepted
-     * @param float         $videoBonus         additive score boost for videos
-     * @param float         $faceBonus          additive score boost for media with faces
-     * @param float         $selfiePenalty      subtractive score for selfie-like scenes
+ * @param float         $videoBonus         additive score boost for videos
+ * @param float         $faceBonus          additive score boost for media with faces
+ * @param float         $selfiePenalty      subtractive score for selfie-like scenes
+ * @param float         $mmrLambda          weighting factor used for maximal marginal relevance
+ * @param float         $mmrSimilarityFloor lower bound for applying similarity penalties
+ * @param float         $mmrSimilarityCap   upper bound for capping similarity penalties
+ * @param int           $mmrMaxConsideration maximum number of candidates considered during MMR re-ranking
      * @param int|null      $maxPerYear         per-year cap for over-years memories
      * @param int|null      $maxPerBucket       optional generic bucket cap
      * @param float|null    $videoHeavyBonus    optional bonus applied when cluster is video heavy
@@ -67,6 +71,10 @@ final class SelectionPolicy
         private readonly float $videoBonus,
         private readonly float $faceBonus,
         private readonly float $selfiePenalty,
+        private readonly float $mmrLambda = 0.75,
+        private readonly float $mmrSimilarityFloor = 0.35,
+        private readonly float $mmrSimilarityCap = 0.9,
+        private readonly int $mmrMaxConsideration = 120,
         private readonly ?int $maxPerYear = null,
         private readonly ?int $maxPerBucket = null,
         private readonly ?float $videoHeavyBonus = null,
@@ -104,6 +112,26 @@ final class SelectionPolicy
 
         if ($relaxedMaxPerStaypoint !== null && $relaxedMaxPerStaypoint < 0) {
             throw new InvalidArgumentException('relaxedMaxPerStaypoint must not be negative.');
+        }
+
+        if ($mmrLambda < 0.0 || $mmrLambda > 1.0) {
+            throw new InvalidArgumentException('mmrLambda must be within [0,1].');
+        }
+
+        if ($mmrSimilarityFloor < 0.0 || $mmrSimilarityFloor > 1.0) {
+            throw new InvalidArgumentException('mmrSimilarityFloor must be within [0,1].');
+        }
+
+        if ($mmrSimilarityCap < 0.0 || $mmrSimilarityCap > 1.0) {
+            throw new InvalidArgumentException('mmrSimilarityCap must be within [0,1].');
+        }
+
+        if ($mmrSimilarityFloor > $mmrSimilarityCap) {
+            throw new InvalidArgumentException('mmrSimilarityFloor must not exceed mmrSimilarityCap.');
+        }
+
+        if ($mmrMaxConsideration <= 0) {
+            throw new InvalidArgumentException('mmrMaxConsideration must be positive.');
         }
 
         if ($sceneBucketWeights !== null) {
@@ -206,6 +234,26 @@ final class SelectionPolicy
     public function getSelfiePenalty(): float
     {
         return $this->selfiePenalty;
+    }
+
+    public function getMmrLambda(): float
+    {
+        return $this->mmrLambda;
+    }
+
+    public function getMmrSimilarityFloor(): float
+    {
+        return $this->mmrSimilarityFloor;
+    }
+
+    public function getMmrSimilarityCap(): float
+    {
+        return $this->mmrSimilarityCap;
+    }
+
+    public function getMmrMaxConsideration(): int
+    {
+        return $this->mmrMaxConsideration;
     }
 
     public function getMaxPerYear(): ?int
@@ -315,6 +363,10 @@ final class SelectionPolicy
             videoBonus: $this->videoBonus,
             faceBonus: $this->faceBonus,
             selfiePenalty: $this->selfiePenalty,
+            mmrLambda: $this->mmrLambda,
+            mmrSimilarityFloor: $this->mmrSimilarityFloor,
+            mmrSimilarityCap: $this->mmrSimilarityCap,
+            mmrMaxConsideration: $this->mmrMaxConsideration,
             maxPerYear: $this->maxPerYear,
             maxPerBucket: $this->maxPerBucket,
             videoHeavyBonus: $this->videoHeavyBonus,
@@ -348,6 +400,10 @@ final class SelectionPolicy
             videoBonus: $this->videoBonus,
             faceBonus: $this->faceBonus,
             selfiePenalty: $this->selfiePenalty,
+            mmrLambda: $this->mmrLambda,
+            mmrSimilarityFloor: $this->mmrSimilarityFloor,
+            mmrSimilarityCap: $this->mmrSimilarityCap,
+            mmrMaxConsideration: $this->mmrMaxConsideration,
             maxPerYear: $this->maxPerYear,
             maxPerBucket: $this->maxPerBucket,
             videoHeavyBonus: $this->videoHeavyBonus,
@@ -381,6 +437,10 @@ final class SelectionPolicy
             videoBonus: $this->videoBonus,
             faceBonus: $this->faceBonus,
             selfiePenalty: $this->selfiePenalty,
+            mmrLambda: $this->mmrLambda,
+            mmrSimilarityFloor: $this->mmrSimilarityFloor,
+            mmrSimilarityCap: $this->mmrSimilarityCap,
+            mmrMaxConsideration: $this->mmrMaxConsideration,
             maxPerYear: $this->maxPerYear,
             maxPerBucket: $this->maxPerBucket,
             videoHeavyBonus: $this->videoHeavyBonus,
@@ -456,6 +516,10 @@ final class SelectionPolicy
             videoBonus: $this->videoBonus,
             faceBonus: $this->faceBonus,
             selfiePenalty: $this->selfiePenalty,
+            mmrLambda: $this->mmrLambda,
+            mmrSimilarityFloor: $this->mmrSimilarityFloor,
+            mmrSimilarityCap: $this->mmrSimilarityCap,
+            mmrMaxConsideration: $this->mmrMaxConsideration,
             maxPerYear: $this->maxPerYear,
             maxPerBucket: $this->maxPerBucket,
             videoHeavyBonus: $this->videoHeavyBonus,

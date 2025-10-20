@@ -48,6 +48,11 @@ final class SelectionTelemetry
      */
     private array $reasonCounters = [];
 
+    /**
+     * @var array<string, mixed>|null
+     */
+    private ?array $mmrSummary = null;
+
     public function __construct()
     {
         foreach (self::REASONS as $reason) {
@@ -72,5 +77,39 @@ final class SelectionTelemetry
     public function reasonCounts(): array
     {
         return $this->reasonCounters;
+    }
+
+    /**
+     * Records the outcome of the maximal marginal relevance re-ranking step.
+     *
+     * @param list<array<string, mixed>> $iterations
+     * @param list<int>                  $selectedIds
+     */
+    public function recordMmrStep(
+        float $lambda,
+        float $similarityFloor,
+        float $similarityCap,
+        int $maxConsideration,
+        int $poolSize,
+        array $iterations,
+        array $selectedIds,
+    ): void {
+        $this->mmrSummary = [
+            'lambda' => $lambda,
+            'similarity_floor' => $similarityFloor,
+            'similarity_cap' => $similarityCap,
+            'max_considered' => $maxConsideration,
+            'pool_size' => $poolSize,
+            'selected' => $selectedIds,
+            'iterations' => $iterations,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function mmrSummary(): ?array
+    {
+        return $this->mmrSummary;
     }
 }

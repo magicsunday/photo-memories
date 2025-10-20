@@ -228,6 +228,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $telemetry['rejections'][$reason] = $count;
         }
 
+        $mmrSummary = $finalCollector->mmrSummary();
+        if ($mmrSummary !== null) {
+            $telemetry['mmr'] = $mmrSummary;
+        }
+
         $minimumRequired = max(0, $policy->getMinimumTotal());
         $paddingAdded    = 0;
 
@@ -444,6 +449,29 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         return $distance;
+    }
+
+    /**
+     * @param array<string, mixed> $a
+     * @param array<string, mixed> $b
+     */
+    private function calculateSimilarityScore(array $a, array $b): ?float
+    {
+        $hashA = $a['hash_bits'] ?? null;
+        $hashB = $b['hash_bits'] ?? null;
+
+        if (!is_array($hashA) || !is_array($hashB)) {
+            return null;
+        }
+
+        $distance = $this->calculateHammingDistance($hashA, $hashB);
+        if ($distance === null) {
+            return null;
+        }
+
+        $clamped = max(0, min(64, $distance));
+
+        return 1.0 - ($clamped / 64.0);
     }
 
     /**
@@ -704,6 +732,16 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     private function runPipeline(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
     {
         if ($candidates === []) {
+            $telemetry->recordMmrStep(
+                $policy->getMmrLambda(),
+                $policy->getMmrSimilarityFloor(),
+                $policy->getMmrSimilarityCap(),
+                $policy->getMmrMaxConsideration(),
+                0,
+                [],
+                [],
+            );
+
             return [];
         }
 
@@ -728,16 +766,28 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         );
 
         if ($limit <= 0) {
+            $telemetry->recordMmrStep(
+                $policy->getMmrLambda(),
+                $policy->getMmrSimilarityFloor(),
+                $policy->getMmrSimilarityCap(),
+                $policy->getMmrMaxConsideration(),
+                0,
+                [],
+                [],
+            );
+
             return [];
         }
 
-        $current = array_slice($current, 0, $limit);
+        $poolSize = min($policy->getMmrMaxConsideration(), count($current));
+        $pool     = array_slice($current, 0, $poolSize);
 
-        if ($current === []) {
+        $selected = $this->applyMaximalMarginalRelevance($pool, $limit, $policy, $telemetry);
+        if ($selected === []) {
             return [];
         }
 
-        usort($current, static function (array $a, array $b): int {
+        usort($selected, static function (array $a, array $b): int {
             if ($a['timestamp'] === $b['timestamp']) {
                 return $a['id'] <=> $b['id'];
             }
@@ -745,7 +795,150 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return $a['timestamp'] <=> $b['timestamp'];
         });
 
-        return $current;
+        return $selected;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $candidates
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function applyMaximalMarginalRelevance(
+        array $candidates,
+        int $limit,
+        SelectionPolicy $policy,
+        SelectionTelemetry $telemetry,
+    ): array {
+        $lambda          = $policy->getMmrLambda();
+        $similarityFloor = $policy->getMmrSimilarityFloor();
+        $similarityCap   = $policy->getMmrSimilarityCap();
+
+        if ($candidates === []) {
+            $telemetry->recordMmrStep(
+                $lambda,
+                $similarityFloor,
+                $similarityCap,
+                $policy->getMmrMaxConsideration(),
+                0,
+                [],
+                [],
+            );
+
+            return [];
+        }
+
+        $selected   = [];
+        $remaining  = $candidates;
+        $iterations = [];
+        $step       = 1;
+
+        while ($remaining !== [] && count($selected) < $limit) {
+            $evaluations    = [];
+            $bestIndex      = null;
+            $bestScore      = null;
+            $bestEvaluation = null;
+
+            foreach ($remaining as $index => $candidate) {
+                $rawScore   = (float) ($candidate['score'] ?? 0.0);
+                $rawMaxSim  = 0.0;
+                $referenceId = null;
+
+                if ($selected !== []) {
+                    foreach ($selected as $chosen) {
+                        $similarity = $this->calculateSimilarityScore($candidate, $chosen);
+                        if ($similarity === null) {
+                            continue;
+                        }
+
+                        if ($similarity > $rawMaxSim) {
+                            $rawMaxSim  = $similarity;
+                            $referenceId = $chosen['id'] ?? null;
+                        }
+                    }
+                }
+
+                $effectiveSim        = $rawMaxSim;
+                $referenceForPenalty = $referenceId;
+
+                if ($effectiveSim < $similarityFloor) {
+                    $effectiveSim        = 0.0;
+                    $referenceForPenalty = null;
+                } elseif ($effectiveSim > $similarityCap) {
+                    $effectiveSim = $similarityCap;
+                }
+
+                $penalty  = (1.0 - $lambda) * $effectiveSim;
+                $mmrScore = ($lambda * $rawScore) - $penalty;
+
+                $evaluation = [
+                    'id' => $candidate['id'],
+                    'score' => $rawScore,
+                    'raw_similarity' => $rawMaxSim,
+                    'penalised_similarity' => $effectiveSim,
+                    'penalty' => $penalty,
+                    'mmr_score' => $mmrScore,
+                    'reference' => $referenceForPenalty,
+                ];
+
+                $evaluations[] = $evaluation;
+
+                $isBetter = false;
+                if ($bestScore === null || $bestEvaluation === null) {
+                    $isBetter = true;
+                } elseif ($mmrScore > $bestScore) {
+                    $isBetter = true;
+                } elseif ($mmrScore === $bestScore) {
+                    $bestRawScore = $bestEvaluation['score'];
+                    if ($rawScore > $bestRawScore) {
+                        $isBetter = true;
+                    } elseif ($rawScore === $bestRawScore) {
+                        $bestId      = $bestEvaluation['id'];
+                        $candidateId = $candidate['id'];
+                        if (is_int($bestId) && is_int($candidateId) && $candidateId < $bestId) {
+                            $isBetter = true;
+                        }
+                    }
+                }
+
+                if ($isBetter) {
+                    $bestScore      = $mmrScore;
+                    $bestIndex      = $index;
+                    $bestEvaluation = $evaluation;
+                }
+            }
+
+            if ($bestIndex === null || $bestEvaluation === null) {
+                break;
+            }
+
+            foreach ($evaluations as &$evaluation) {
+                $evaluation['selected'] = $evaluation['id'] === $bestEvaluation['id'];
+            }
+            unset($evaluation);
+
+            $iterations[] = [
+                'step' => $step,
+                'selected' => $bestEvaluation['id'],
+                'evaluations' => $evaluations,
+            ];
+
+            $selected[] = $remaining[$bestIndex];
+            unset($remaining[$bestIndex]);
+            $remaining = array_values($remaining);
+            ++$step;
+        }
+
+        $telemetry->recordMmrStep(
+            $lambda,
+            $similarityFloor,
+            $similarityCap,
+            $policy->getMmrMaxConsideration(),
+            count($candidates),
+            $iterations,
+            array_map(static fn (array $candidate): int => $candidate['id'], $selected),
+        );
+
+        return $selected;
     }
 
     /**
