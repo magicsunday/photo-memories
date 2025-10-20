@@ -2,6 +2,52 @@
 # Feature toggle configuration
 ########################################
 parameters:
+    # Maximum allowed gap in hours before time-based continuity heuristics split a storyline.
+    memories.thresholds.time_gap_hours_default: 2.0
+    # Runtime override for the time continuity guard, sourced from MEMORIES_THRESHOLDS_TIME_GAP_HOURS.
+    memories.thresholds.time_gap_hours: '%env(default:memories.thresholds.time_gap_hours_default:float:MEMORIES_THRESHOLDS_TIME_GAP_HOURS)%'
+
+    # Maximum spatial separation in metres tolerated before clusters are considered disconnected.
+    memories.thresholds.space_gap_meters_default: 250.0
+    # Runtime override for the spatial continuity guard, sourced from MEMORIES_THRESHOLDS_SPACE_GAP_METERS.
+    memories.thresholds.space_gap_meters: '%env(default:memories.thresholds.space_gap_meters_default:float:MEMORIES_THRESHOLDS_SPACE_GAP_METERS)%'
+
+    # Minimum number of away days required before a vacation draft is persisted.
+    memories.vacation.min_days_default: '%memories.cluster.vacation.min_away_days_default%'
+    # Runtime override for the minimum vacation duration, sourced from MEMORIES_VACATION_MIN_DAYS.
+    memories.vacation.min_days: '%env(default:memories.vacation.min_days_default:int:MEMORIES_VACATION_MIN_DAYS)%'
+
+    # Maximum perceptual hash distance that still stacks media into the duplicate queue.
+    memories.dupstack.hamming_max_default: 9
+    # Runtime override for duplicate stack grouping, sourced from MEMORIES_DUPSTACK_HAMMING_MAX.
+    memories.dupstack.hamming_max: '%env(default:memories.dupstack.hamming_max_default:int:MEMORIES_DUPSTACK_HAMMING_MAX)%'
+
+    # Weight applied to the quality component when aggregating final cluster scores.
+    memories.scoring.weights.quality_default: 0.22
+    memories.scoring.weights.quality: '%env(default:memories.scoring.weights.quality_default:float:MEMORIES_SCORING_WEIGHT_QUALITY)%'
+    # Weight applied to relevance-centric heuristics (recency, novelty, context).
+    memories.scoring.weights.relevance_default: 0.45
+    memories.scoring.weights.relevance: '%env(default:memories.scoring.weights.relevance_default:float:MEMORIES_SCORING_WEIGHT_RELEVANCE)%'
+    # Weight applied to liveliness signals (motion, live photos, video share).
+    memories.scoring.weights.liveliness_default: 0.08
+    memories.scoring.weights.liveliness: '%env(default:memories.scoring.weights.liveliness_default:float:MEMORIES_SCORING_WEIGHT_LIVELINESS)%'
+    # Weight applied to diversity balancing (scene, device, and location variety safeguards).
+    memories.scoring.weights.diversity_default: 0.25
+    memories.scoring.weights.diversity: '%env(default:memories.scoring.weights.diversity_default:float:MEMORIES_SCORING_WEIGHT_DIVERSITY)%'
+
+    # Baseline slideshow exposure per media item before jitter randomisation.
+    memories.slideshow.duration_per_image_default: '%memories.slideshow.image_duration_s%'
+    memories.slideshow.duration_per_image: '%env(default:memories.slideshow.duration_per_image_default:float:MEMORIES_SLIDESHOW_DURATION_PER_IMAGE)%'
+    # Transition crossfade length in seconds used for slideshow rendering.
+    memories.slideshow.transition_duration_default: '%memories.slideshow.transition_duration_s%'
+    memories.slideshow.transition_duration: '%env(default:memories.slideshow.transition_duration_default:float:MEMORIES_SLIDESHOW_TRANSITION_DURATION)%'
+    # Minimum Ken Burns zoom factor applied when animating slideshow slides.
+    memories.slideshow.zoom_min_default: '%memories.slideshow.zoom_start_default%'
+    memories.slideshow.zoom_min: '%env(default:memories.slideshow.zoom_min_default:float:MEMORIES_SLIDESHOW_ZOOM_MIN)%'
+    # Maximum Ken Burns zoom factor applied when animating slideshow slides.
+    memories.slideshow.zoom_max_default: '%memories.slideshow.zoom_end_default%'
+    memories.slideshow.zoom_max: '%env(default:memories.slideshow.zoom_max_default:float:MEMORIES_SLIDESHOW_ZOOM_MAX)%'
+
     # Default saliency cropping behaviour (true keeps current pipeline active).
     memories.features.saliency_cropping.enabled_default: true
     # Runtime toggle reading MEMORIES_FEATURE_SALIENCY_CROPPING ("0"/"1", "false"/"true").
@@ -14,6 +60,25 @@ parameters:
 
     # Structured view used by documentation and diagnostics.
     memories:
+        thresholds:
+            time_gap_hours:
+                default: '%memories.thresholds.time_gap_hours_default%'
+                value: '%memories.thresholds.time_gap_hours%'
+                env: 'MEMORIES_THRESHOLDS_TIME_GAP_HOURS'
+            space_gap_meters:
+                default: '%memories.thresholds.space_gap_meters_default%'
+                value: '%memories.thresholds.space_gap_meters%'
+                env: 'MEMORIES_THRESHOLDS_SPACE_GAP_METERS'
+        vacation:
+            min_days:
+                default: '%memories.vacation.min_days_default%'
+                value: '%memories.vacation.min_days%'
+                env: 'MEMORIES_VACATION_MIN_DAYS'
+        dupstack:
+            hamming_max:
+                default: '%memories.dupstack.hamming_max_default%'
+                value: '%memories.dupstack.hamming_max%'
+                env: 'MEMORIES_DUPSTACK_HAMMING_MAX'
         features:
             saliency_cropping:
                 default: '%memories.features.saliency_cropping.enabled_default%'
@@ -23,3 +88,38 @@ parameters:
                 default: '%memories.features.storyline_generator.enabled_default%'
                 enabled: '%memories.features.storyline_generator.enabled%'
                 env: 'MEMORIES_FEATURE_STORYLINE_GENERATOR'
+        scoring:
+            weights:
+                quality:
+                    default: '%memories.scoring.weights.quality_default%'
+                    value: '%memories.scoring.weights.quality%'
+                    env: 'MEMORIES_SCORING_WEIGHT_QUALITY'
+                relevance:
+                    default: '%memories.scoring.weights.relevance_default%'
+                    value: '%memories.scoring.weights.relevance%'
+                    env: 'MEMORIES_SCORING_WEIGHT_RELEVANCE'
+                liveliness:
+                    default: '%memories.scoring.weights.liveliness_default%'
+                    value: '%memories.scoring.weights.liveliness%'
+                    env: 'MEMORIES_SCORING_WEIGHT_LIVELINESS'
+                diversity:
+                    default: '%memories.scoring.weights.diversity_default%'
+                    value: '%memories.scoring.weights.diversity%'
+                    env: 'MEMORIES_SCORING_WEIGHT_DIVERSITY'
+        slideshow:
+            duration_per_image:
+                default: '%memories.slideshow.duration_per_image_default%'
+                value: '%memories.slideshow.duration_per_image%'
+                env: 'MEMORIES_SLIDESHOW_DURATION_PER_IMAGE'
+            transition_duration:
+                default: '%memories.slideshow.transition_duration_default%'
+                value: '%memories.slideshow.transition_duration%'
+                env: 'MEMORIES_SLIDESHOW_TRANSITION_DURATION'
+            zoom_min:
+                default: '%memories.slideshow.zoom_min_default%'
+                value: '%memories.slideshow.zoom_min%'
+                env: 'MEMORIES_SLIDESHOW_ZOOM_MIN'
+            zoom_max:
+                default: '%memories.slideshow.zoom_max_default%'
+                value: '%memories.slideshow.zoom_max%'
+                env: 'MEMORIES_SLIDESHOW_ZOOM_MAX'
