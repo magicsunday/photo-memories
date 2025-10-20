@@ -24,16 +24,16 @@ parameters:
 
     # Weight applied to the quality component when aggregating final cluster scores.
     memories.scoring.weights.quality_default: 0.22
-    memories.scoring.weights.quality: '%env(default:memories.scoring.weights.quality_default:float:MEMORIES_SCORING_WEIGHT_QUALITY)%'
+    memories.scoring.weights.quality: '%env(default:memories.scoring.weights.quality_default:float:MEMORIES_SCORING_WEIGHTS_QUALITY)%'
     # Weight applied to relevance-centric heuristics (recency, novelty, context).
     memories.scoring.weights.relevance_default: 0.45
-    memories.scoring.weights.relevance: '%env(default:memories.scoring.weights.relevance_default:float:MEMORIES_SCORING_WEIGHT_RELEVANCE)%'
+    memories.scoring.weights.relevance: '%env(default:memories.scoring.weights.relevance_default:float:MEMORIES_SCORING_WEIGHTS_RELEVANCE)%'
     # Weight applied to liveliness signals (motion, live photos, video share).
     memories.scoring.weights.liveliness_default: 0.08
-    memories.scoring.weights.liveliness: '%env(default:memories.scoring.weights.liveliness_default:float:MEMORIES_SCORING_WEIGHT_LIVELINESS)%'
+    memories.scoring.weights.liveliness: '%env(default:memories.scoring.weights.liveliness_default:float:MEMORIES_SCORING_WEIGHTS_LIVELINESS)%'
     # Weight applied to diversity balancing (scene, device, and location variety safeguards).
     memories.scoring.weights.diversity_default: 0.25
-    memories.scoring.weights.diversity: '%env(default:memories.scoring.weights.diversity_default:float:MEMORIES_SCORING_WEIGHT_DIVERSITY)%'
+    memories.scoring.weights.diversity: '%env(default:memories.scoring.weights.diversity_default:float:MEMORIES_SCORING_WEIGHTS_DIVERSITY)%'
 
     # Baseline slideshow exposure per media item before jitter randomisation.
     memories.slideshow.duration_per_image_default: '%memories.slideshow.image_duration_s%'
@@ -93,19 +93,19 @@ parameters:
                 quality:
                     default: '%memories.scoring.weights.quality_default%'
                     value: '%memories.scoring.weights.quality%'
-                    env: 'MEMORIES_SCORING_WEIGHT_QUALITY'
+                    env: 'MEMORIES_SCORING_WEIGHTS_QUALITY'
                 relevance:
                     default: '%memories.scoring.weights.relevance_default%'
                     value: '%memories.scoring.weights.relevance%'
-                    env: 'MEMORIES_SCORING_WEIGHT_RELEVANCE'
+                    env: 'MEMORIES_SCORING_WEIGHTS_RELEVANCE'
                 liveliness:
                     default: '%memories.scoring.weights.liveliness_default%'
                     value: '%memories.scoring.weights.liveliness%'
-                    env: 'MEMORIES_SCORING_WEIGHT_LIVELINESS'
+                    env: 'MEMORIES_SCORING_WEIGHTS_LIVELINESS'
                 diversity:
                     default: '%memories.scoring.weights.diversity_default%'
                     value: '%memories.scoring.weights.diversity%'
-                    env: 'MEMORIES_SCORING_WEIGHT_DIVERSITY'
+                    env: 'MEMORIES_SCORING_WEIGHTS_DIVERSITY'
         slideshow:
             duration_per_image:
                 default: '%memories.slideshow.duration_per_image_default%'
