@@ -1225,6 +1225,20 @@ services:
 
     MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic: ~
 
+    MagicSunday\Memories\Service\Clusterer\Scoring\LivelinessClusterScoreHeuristic:
+        arguments:
+            $videoShareWeight: '%memories.score.liveliness.video_share_weight%'
+            $livePhotoShareWeight: '%memories.score.liveliness.live_photo_share_weight%'
+            $motionWeight: '%memories.score.liveliness.motion_weight%'
+            $videoShareTarget: '%memories.score.liveliness.video_share_target%'
+            $livePhotoShareTarget: '%memories.score.liveliness.live_photo_share_target%'
+            $motionShareTarget: '%memories.score.liveliness.motion_share_target%'
+            $motionBlurThreshold: '%memories.score.liveliness.motion_blur_threshold%'
+            $motionBlurTarget: '%memories.score.liveliness.motion_blur_target%'
+            $motionCoverageWeight: '%memories.score.liveliness.motion_coverage_weight%'
+            $motionVideoDurationThreshold: '%memories.score.liveliness.motion_video_duration_threshold%'
+            $motionVideoFpsThreshold: '%memories.score.liveliness.motion_video_fps_threshold%'
+
     MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic: ~
 
     MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic:
@@ -1259,6 +1273,7 @@ services:
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\QualityClusterScoreHeuristic'
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\PeopleClusterScoreHeuristic'
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic'
+                - '@MagicSunday\Memories\Service\Clusterer\Scoring\LivelinessClusterScoreHeuristic'
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\LocationClusterScoreHeuristic'
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\PoiClusterScoreHeuristic'
                 - '@MagicSunday\Memories\Service\Clusterer\Scoring\NoveltyHeuristic'
@@ -1277,6 +1292,7 @@ services:
                 location: 0.05
                 poi: 0.02
                 time_coverage: 0.10
+                liveliness: 0.08
             $algorithmBoosts:
                 vacation: 1.45
                 transit_travel_day: 0.95

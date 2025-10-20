@@ -29,6 +29,7 @@ Dieses Dokument fasst die Konfigurationsdateien unter `config/` zusammen und erk
   - `memories.score.poi.iconic_boost` addiert einen Bonus, sobald ein Cluster eine dominante Szene (z. B. Community-Motive) aufweist.
   - `memories.score.poi.iconic_similarity_threshold` legt den erforderlichen Dominanz-/Ähnlichkeitswert (0–1) für den Bonus fest.
   - `memories.score.poi.iconic_signatures` hinterlegt pHash-Signaturen bekannter Community-Szenen, die beim Boosting berücksichtigt werden.
+  - `memories.score.liveliness.*` bewertet, wie bewegungsstark ein Cluster wirkt. `video_share_weight`, `live_photo_share_weight` und `motion_weight` definieren die Gewichtung der Teilkomponenten, während `video_share_target`, `live_photo_share_target` und `motion_share_target` festlegen, ab welchem Anteil Videos, Live Photos oder Motion-Cues voll ausschlagen. `motion_blur_threshold`/`motion_blur_target` steuern die Fotoauswertung, `motion_video_duration_threshold` und `motion_video_fps_threshold` markieren bewegte Clips, `motion_coverage_weight` balanciert Deckung und Intensität.
 - **Slideshow** – Verzeichnisse, Laufzeiten, Übergänge sowie Schrifteinstellungen der Slideshow-Funktion (`memories.slideshow.*`).
 
   Die Übergänge aus `memories.slideshow.transitions` spiegeln die kuratierte Auswahl des `xfade`-Filters wider und enthalten

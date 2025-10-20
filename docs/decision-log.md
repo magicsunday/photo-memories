@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-28 – Capture motion-heavy clusters via liveliness heuristic
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Composite scoring treated video-heavy drafts identically to static photo sets, so stories with live photos, slow-motion clips, or high-motion bursts underperformed even when telemetry highlighted strong engagement with dynamic media.
+- **Decision:** Introduced `LivelinessClusterScoreHeuristic` that blends video share, live photo coverage, and motion cues (blur, fps, duration, stabilisation) with configurable `%memories.score.liveliness.*%` thresholds. Registered the heuristic in the DI container, added a weighted slot to the composite scorer, and covered the behaviour with PHPUnit tests favouring motion-rich clusters.
+- **Alternatives considered:** Reuse quality scoring (ignored motion metadata and overweighted sharp stills) or add post-score boosts in selection profiles (duplicated logic outside scoring, lacked persisted telemetry). Both were rejected because they hid the signal inside downstream heuristics instead of modelling liveliness directly.
+- **Follow-up actions:** Monitor scoring telemetry for `liveliness_*` params after the next clustering run to validate weight defaults, and adjust the default thresholds once production data confirms typical motion blur and fps ranges.
+
 ## 2025-10-27 – Boost iconic POI clusters via pHash dominance
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** POI scoring treated every labelled cluster equally, even when member photos clearly focused on a single community-recognised motif (e.g. Brandenburger Tor). Without a dominance signal, telemetry could not explain why iconic scenes failed to surface, and manual adjustments to category boosts distorted other locations.
