@@ -70,7 +70,7 @@ Photo Memories ist eine modulare PHP-8.4-Anwendung, die große Foto- und Videoar
      - `MEMORIES_THRESHOLDS_SPACE_GAP_METERS` beginnt bei 250 m, entscheidet über räumliche Trennung und bewegt sich typischerweise zwischen 150–500 m.
      - `MEMORIES_VACATION_MIN_DAYS` (Default 3 Tage) legt die minimale Urlaubsdauer fest; Werte zwischen 2–7 Tagen passen die Empfindlichkeit an.
      - `MEMORIES_DUPSTACK_HAMMING_MAX` (Start 9) steuert die pHash-Dublettenbildung und lässt sich für feinere bzw. lockerere Gruppen im Bereich 6–12 variieren.
-     - `MEMORIES_SCORING_WEIGHT_QUALITY`, `MEMORIES_SCORING_WEIGHT_RELEVANCE`, `MEMORIES_SCORING_WEIGHT_LIVELINESS` und `MEMORIES_SCORING_WEIGHT_DIVERSITY` balancieren Qualitäts-, Kontext-, Bewegungs- und Diversitätseinflüsse (Defaults 0.22/0.45/0.08/0.25; empfohlen 0.2–0.3 / 0.4–0.6 / 0.05–0.15 / 0.2–0.3).
+    - `MEMORIES_SCORING_WEIGHTS_QUALITY`, `MEMORIES_SCORING_WEIGHTS_RELEVANCE`, `MEMORIES_SCORING_WEIGHTS_LIVELINESS` und `MEMORIES_SCORING_WEIGHTS_DIVERSITY` balancieren Qualitäts-, Kontext-, Bewegungs- und Diversitätseinflüsse (Defaults 0.22/0.45/0.08/0.25; empfohlen 0.2–0.3 / 0.4–0.6 / 0.05–0.15 / 0.2–0.3).
      - `MEMORIES_SLIDESHOW_DURATION_PER_IMAGE` (Default 3.5 s), `MEMORIES_SLIDESHOW_TRANSITION_DURATION` (0.75 s) und `MEMORIES_SLIDESHOW_ZOOM_MIN/MAX` (1.03/1.08) bestimmen Tempo und Ken-Burns-Zoombereich; empfehlenswerte Bereiche liegen bei 3–6 s, 0.5–1.5 s sowie 1.0–1.1 / 1.05–1.2.
    - Weitere Laufzeitvariablen wie `MEMORIES_MEDIA_DIR`, `DATABASE_URL`, `NOMINATIM_BASE_URL`, `MEMORIES_THUMBNAIL_DIR`, `FFMPEG_PATH` oder `MEMORIES_CLUSTER_MAX_MEMBERS` sollten wie gewohnt projekt- bzw. umgebungsspezifisch gesetzt werden.
    - Heimat-Referenz zwingend setzen: `MEMORIES_HOME_LAT`, `MEMORIES_HOME_LON` und `MEMORIES_HOME_RADIUS_KM` müssen gültige Werte tragen. Bleiben die Defaults `0/0` aktiv, warnt `memories:cluster` im Telemetrie-Block und die Debug-Ausgabe weist auf die Fehlkonfiguration hin.
@@ -125,7 +125,7 @@ make web-dev
 
 - Passe `MEMORIES_THRESHOLDS_TIME_GAP_HOURS` und `MEMORIES_THRESHOLDS_SPACE_GAP_METERS` an, wenn Storylines zu häufig getrennt bzw. zusammengefasst werden – kleinere Werte verdichten Tagebücher, größere lassen Reisecluster länger bestehen.
 - `MEMORIES_VACATION_MIN_DAYS` und `MEMORIES_DUPSTACK_HAMMING_MAX` helfen, Urlaubserkennung und Dublettenbildung an Datenlage und Gerätevielfalt anzunähern.
-- Bei veränderten Qualitätsanforderungen oder lebhafteren Feeds lohnt ein Feintuning der Gewichte `MEMORIES_SCORING_WEIGHT_*`; ziehe dabei die Default-Matrix aus `config/packages/memories.yaml` und die Richtwerte in `.env.dist` heran, um Balanceverschiebungen gezielt zu testen.
+- Bei veränderten Qualitätsanforderungen oder lebhafteren Feeds lohnt ein Feintuning der Gewichte `MEMORIES_SCORING_WEIGHTS_*`; ziehe dabei die Default-Matrix aus `config/packages/memories.yaml` und die Richtwerte in `.env.dist` heran, um Balanceverschiebungen gezielt zu testen.
 - Für langsamere/kompaktere Slideshows `MEMORIES_SLIDESHOW_DURATION_PER_IMAGE`, `MEMORIES_SLIDESHOW_TRANSITION_DURATION` und `MEMORIES_SLIDESHOW_ZOOM_MIN/MAX` im Einklang mit Teampräferenzen und Playerlaufzeiten variieren.
 
 ### Kuratierungsprofile anpassen

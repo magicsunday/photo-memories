@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-30 – Mirror scoring weight ENV names to configuration keys
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Operators adopted the new scoring weight overrides but the environment variables still used the singular `MEMORIES_SCORING_WEIGHT_*` naming, diverging from the pluralised `memories.scoring.weights.*` path. Tooling that auto-generated dashboards from the structured `memories.*` tree therefore produced mismatched ENV hints and confused deployments.
+- **Decision:** Renamed the four scoring weight variables to `MEMORIES_SCORING_WEIGHTS_*` across `config/packages/memories.yaml`, `.env.dist`, and documentation, keeping defaults untouched so only the variable names change. Highlighted the updated identifiers in README and the configuration guide to steer operators through the migration.
+- **Alternatives considered:** Keep legacy names and add aliases inside Symfony (risking double definitions and hiding drift) or rely on documentation footnotes (still left automation outputs inconsistent). Both were rejected because mirroring the configuration path keeps naming deterministic and simplifies tooling.
+- **Follow-up actions:** Communicate the rename in the next release notes and monitor support channels for missed overrides; add compatibility shims only if multiple deployments struggle to update their environment definitions promptly.
+
 ## 2025-10-29 – Harmonise continuity, scoring, and slideshow ENV defaults
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators fine-tuning storyline continuity and slideshow pacing lacked a single source of truth: `.env.dist` recommended other values than the compiled defaults, docs still listed only legacy feature toggles, and support tools could not surface the new runtime keys.
