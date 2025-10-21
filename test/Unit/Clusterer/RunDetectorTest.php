@@ -170,6 +170,248 @@ final class RunDetectorTest extends TestCase
     }
 
     #[Test]
+    public function bridgesConsecutiveLeanDaysWithStaypointAndTransitSignals(): void
+    {
+        $transportExtender = new TransportDayExtender(
+            transitRatioThreshold: 0.65,
+            transitSpeedThreshold: 100.0,
+            leanPhotoThreshold: 2,
+            maxLeanBridgeDays: 0,
+            minLeanBridgeDistanceKm: 60.0,
+        );
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 4,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $leadMedia = $this->makeMediaFixture(
+            701,
+            'run-lead.jpg',
+            new DateTimeImmutable('2024-11-01 09:00:00', new DateTimeZone('Europe/Berlin')),
+            38.7223,
+            -9.1393,
+        );
+        $transitMedia = $this->makeMediaFixture(
+            702,
+            'run-transit.jpg',
+            new DateTimeImmutable('2024-11-03 09:15:00', new DateTimeZone('Europe/Berlin')),
+            48.8566,
+            2.3522,
+        );
+        $tailMedia = $this->makeMediaFixture(
+            703,
+            'run-tail.jpg',
+            new DateTimeImmutable('2024-11-04 18:45:00', new DateTimeZone('Europe/Berlin')),
+            41.3851,
+            2.1734,
+        );
+        $closingMedia = $this->makeMediaFixture(
+            704,
+            'run-closing.jpg',
+            new DateTimeImmutable('2024-11-05 12:30:00', new DateTimeZone('Europe/Berlin')),
+            45.4642,
+            9.1900,
+        );
+
+        $stayStart = new DateTimeImmutable('2024-11-02 07:15:00', new DateTimeZone('Europe/Berlin'));
+        $stayEnd   = new DateTimeImmutable('2024-11-02 23:10:00', new DateTimeZone('Europe/Berlin'));
+
+        $leanStaySummary = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
+        $leanStaySummary['members']            = [];
+        $leanStaySummary['gpsMembers']         = [];
+        $leanStaySummary['photoCount']         = 1;
+        $leanStaySummary['sufficientSamples']  = false;
+        $leanStaySummary['avgDistanceKm']      = 110.0;
+        $leanStaySummary['maxDistanceKm']      = 150.0;
+        $leanStaySummary['staypoints']         = [[
+            'lat'   => 43.7696,
+            'lon'   => 11.2558,
+            'start' => $stayStart->getTimestamp(),
+            'end'   => $stayEnd->getTimestamp(),
+            'dwell' => $stayEnd->getTimestamp() - $stayStart->getTimestamp(),
+        ]];
+        $leanStaySummary['staypointCounts']    = ['2024-11-02:stay' => 5];
+        $leanStaySummary['dominantStaypoints'] = [[
+            'key'          => 'stay-2024-11-02',
+            'lat'          => 43.7696,
+            'lon'          => 11.2558,
+            'start'        => $stayStart->getTimestamp(),
+            'end'          => $stayEnd->getTimestamp(),
+            'dwellSeconds' => $stayEnd->getTimestamp() - $stayStart->getTimestamp(),
+            'memberCount'  => 0,
+        ]];
+
+        $leanTransitSummary = $this->makeDaySummary(
+            '2024-11-03',
+            false,
+            [$transitMedia],
+            18.0,
+            30.0,
+            1,
+            hasAirport: false,
+            hasHighSpeedTransit: true,
+            overrides: [
+                'photoCount'        => 1,
+                'sufficientSamples' => false,
+                'transitRatio'      => 0.82,
+                'avgSpeedKmh'       => 130.0,
+                'maxSpeedKmh'       => 220.0,
+                'maxDistanceKm'     => 28.0,
+                'avgDistanceKm'     => 18.0,
+            ],
+        );
+
+        $days = [
+            '2024-11-01' => $this->makeDaySummary('2024-11-01', true, [$leadMedia], 145.0, 220.0, 6),
+            '2024-11-02' => $leanStaySummary,
+            '2024-11-03' => $leanTransitSummary,
+            '2024-11-04' => $this->makeDaySummary('2024-11-04', true, [$tailMedia], 150.0, 230.0, 5),
+            '2024-11-05' => $this->makeDaySummary('2024-11-05', true, [$closingMedia], 148.0, 225.0, 5),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertSame([
+            ['2024-11-01', '2024-11-02', '2024-11-03', '2024-11-04', '2024-11-05'],
+        ], $runs);
+    }
+
+    #[Test]
+    public function dropsGapDayWhenTransitSignalIsMissing(): void
+    {
+        $transportExtender = new TransportDayExtender(
+            transitRatioThreshold: 0.65,
+            transitSpeedThreshold: 100.0,
+            leanPhotoThreshold: 2,
+            maxLeanBridgeDays: 0,
+            minLeanBridgeDistanceKm: 60.0,
+        );
+        $detector          = new RunDetector(
+            transportDayExtender: $transportExtender,
+            minAwayDistanceKm: 60.0,
+            minItemsPerDay: 4,
+        );
+
+        $home = [
+            'lat'             => 52.5,
+            'lon'             => 13.4,
+            'radius_km'       => 15.0,
+            'country'         => 'de',
+            'timezone_offset' => 60,
+            'centers'         => [[
+                'lat'           => 52.5,
+                'lon'           => 13.4,
+                'radius_km'     => 15.0,
+                'member_count'  => 0,
+                'dwell_seconds' => 0,
+            ]],
+        ];
+
+        $leadMedia = $this->makeMediaFixture(
+            711,
+            'run-lead-alt.jpg',
+            new DateTimeImmutable('2024-11-01 09:00:00', new DateTimeZone('Europe/Berlin')),
+            38.7223,
+            -9.1393,
+        );
+        $tailMedia = $this->makeMediaFixture(
+            712,
+            'run-tail-alt.jpg',
+            new DateTimeImmutable('2024-11-04 18:45:00', new DateTimeZone('Europe/Berlin')),
+            41.3851,
+            2.1734,
+        );
+        $closingMedia = $this->makeMediaFixture(
+            713,
+            'run-closing-alt.jpg',
+            new DateTimeImmutable('2024-11-05 12:30:00', new DateTimeZone('Europe/Berlin')),
+            45.4642,
+            9.1900,
+        );
+
+        $stayStart = new DateTimeImmutable('2024-11-02 07:15:00', new DateTimeZone('Europe/Berlin'));
+        $stayEnd   = new DateTimeImmutable('2024-11-02 23:10:00', new DateTimeZone('Europe/Berlin'));
+
+        $leanStaySummary = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
+        $leanStaySummary['members']            = [];
+        $leanStaySummary['gpsMembers']         = [];
+        $leanStaySummary['photoCount']         = 1;
+        $leanStaySummary['sufficientSamples']  = false;
+        $leanStaySummary['avgDistanceKm']      = 110.0;
+        $leanStaySummary['maxDistanceKm']      = 150.0;
+        $leanStaySummary['staypoints']         = [[
+            'lat'   => 43.7696,
+            'lon'   => 11.2558,
+            'start' => $stayStart->getTimestamp(),
+            'end'   => $stayEnd->getTimestamp(),
+            'dwell' => $stayEnd->getTimestamp() - $stayStart->getTimestamp(),
+        ]];
+        $leanStaySummary['staypointCounts']    = ['2024-11-02:stay' => 5];
+        $leanStaySummary['dominantStaypoints'] = [[
+            'key'          => 'stay-2024-11-02',
+            'lat'          => 43.7696,
+            'lon'          => 11.2558,
+            'start'        => $stayStart->getTimestamp(),
+            'end'          => $stayEnd->getTimestamp(),
+            'dwellSeconds' => $stayEnd->getTimestamp() - $stayStart->getTimestamp(),
+            'memberCount'  => 0,
+        ]];
+
+        $leanTransitSummary = $this->makeDaySummary(
+            '2024-11-03',
+            false,
+            [],
+            18.0,
+            30.0,
+            1,
+            overrides: [
+                'members'           => [],
+                'gpsMembers'        => [],
+                'photoCount'        => 1,
+                'sufficientSamples' => false,
+                'transitRatio'      => 0.2,
+                'avgSpeedKmh'       => 40.0,
+                'maxSpeedKmh'       => 60.0,
+                'hasHighSpeedTransit' => false,
+                'hasAirportPoi'     => false,
+                'maxDistanceKm'     => 28.0,
+                'avgDistanceKm'     => 18.0,
+            ],
+        );
+
+        $days = [
+            '2024-11-01' => $this->makeDaySummary('2024-11-01', true, [$leadMedia], 145.0, 220.0, 6),
+            '2024-11-02' => $leanStaySummary,
+            '2024-11-03' => $leanTransitSummary,
+            '2024-11-04' => $this->makeDaySummary('2024-11-04', true, [$tailMedia], 150.0, 230.0, 5),
+            '2024-11-05' => $this->makeDaySummary('2024-11-05', true, [$closingMedia], 148.0, 225.0, 5),
+        ];
+
+        $runs = $detector->detectVacationRuns($days, $home);
+
+        self::assertSame([
+            ['2024-11-01', '2024-11-02'],
+            ['2024-11-04', '2024-11-05'],
+        ], $runs);
+    }
+
+    #[Test]
     public function respectsSecondaryHomeCenterWhenEvaluatingCandidates(): void
     {
         $transportExtender = new TransportDayExtender();
