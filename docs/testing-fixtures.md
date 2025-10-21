@@ -52,6 +52,14 @@ PHP
 
 The script iterates over all available datasets, replays the pipeline, and rewrites their gold-standard files.
 
+### Feed storyboard snapshot
+
+`test/Integration/Http/FeedStoryboardIntegrationTest.php` exercises the HTTP feed controller with the curated
+`familienevent` dataset. The test instantiates real feed helpers (text generator, notification planner, storyboard
+transitions) and asserts that the storyboard payload rendered for each feed item matches the JSON snapshot stored under
+`test/Integration/Http/__snapshots__/feed_storyboard.json`. When metadata or slideshow settings change intentionally,
+re-run the test, inspect the reported diff, and update the snapshot to keep it in sync.
+
 ### Adding a new scenario
 
 1. Create a new directory under `fixtures/memories/` and add a handful of preview images (follow the ≤64×64 px guideline).

@@ -1,0 +1,204 @@
+[
+    {
+        "dauerSekunden": 3.5,
+        "uebergangSekunden": 0.8,
+        "folien": [
+            {
+                "mediaId": 1,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/1/thumbnail?breite=320",
+                "uebergang": "Anstoßen → Spiele",
+                "beschreibung": "Leipzig (DE) • Mit Lisa, Oma Herta • Szenen: dekoration, aufbau, liebevoll • Tags: dekoration, aufbau, liebevoll",
+                "aufgenommenAmText": "08.03.2024 17:05",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Lisa",
+                    "Oma Herta"
+                ],
+                "szenen": [
+                    "dekoration",
+                    "aufbau",
+                    "liebevoll"
+                ],
+                "schlagwoerter": [
+                    "dekoration",
+                    "aufbau",
+                    "liebevoll"
+                ]
+            },
+            {
+                "mediaId": 2,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/2/thumbnail?breite=320",
+                "uebergang": "Tanzfläche → Feuerwerk",
+                "beschreibung": "Leipzig (DE) • Mit Lisa, Tom, Oma Herta • Szenen: torte, küche, familie • Tags: torte, küche, familie",
+                "aufgenommenAmText": "08.03.2024 19:45",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Lisa",
+                    "Tom",
+                    "Oma Herta"
+                ],
+                "szenen": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ],
+                "schlagwoerter": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ]
+            }
+        ],
+        "uebergaenge": [
+            "Vorbereitung → Empfang",
+            "Anstoßen → Spiele",
+            "Tanzfläche → Feuerwerk"
+        ],
+        "titel": "Mit Lisa, Oma Herta und Tom in Leipzig (DE)",
+        "beschreibung": "Gemeinsam mit Lisa, Oma Herta und Tom in Leipzig (DE). Szenen: dekoration, aufbau und liebevoll. Tags: dekoration, aufbau und liebevoll."
+    },
+    {
+        "dauerSekunden": 3.5,
+        "uebergangSekunden": 0.8,
+        "folien": [
+            {
+                "mediaId": 2,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/2/thumbnail?breite=320",
+                "uebergang": "Tanzfläche → Feuerwerk",
+                "beschreibung": "Leipzig (DE) • Mit Lisa, Tom, Oma Herta • Szenen: torte, küche, familie • Tags: torte, küche, familie",
+                "aufgenommenAmText": "08.03.2024 19:45",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Lisa",
+                    "Tom",
+                    "Oma Herta"
+                ],
+                "szenen": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ],
+                "schlagwoerter": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ]
+            },
+            {
+                "mediaId": 3,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/3/thumbnail?breite=320",
+                "uebergang": "Anstoßen → Spiele",
+                "beschreibung": "Leipzig (DE) • Mit Oma Herta, Familie • Szenen: rede, emotion, jubilar • Tags: rede, emotion, jubilar",
+                "aufgenommenAmText": "09.03.2024 19:00",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Oma Herta",
+                    "Familie"
+                ],
+                "szenen": [
+                    "rede",
+                    "emotion",
+                    "jubilar"
+                ],
+                "schlagwoerter": [
+                    "rede",
+                    "emotion",
+                    "jubilar"
+                ]
+            },
+            {
+                "mediaId": 4,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/4/thumbnail?breite=320",
+                "uebergang": "Vorbereitung → Empfang",
+                "beschreibung": "Leipzig (DE) • Mit Familie • Szenen: tanz, feuerwerk, abend • Tags: tanz, feuerwerk, abend",
+                "aufgenommenAmText": "09.03.2024 22:30",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Familie"
+                ],
+                "szenen": [
+                    "tanz",
+                    "feuerwerk",
+                    "abend"
+                ],
+                "schlagwoerter": [
+                    "tanz",
+                    "feuerwerk",
+                    "abend"
+                ]
+            }
+        ],
+        "uebergaenge": [
+            "Vorbereitung → Empfang",
+            "Anstoßen → Spiele",
+            "Tanzfläche → Feuerwerk"
+        ],
+        "titel": "Mit Oma Herta, Familie und Lisa in Leipzig (DE)",
+        "beschreibung": "Gemeinsam mit Oma Herta, Familie und Lisa in Leipzig (DE). Szenen: torte, küche und familie. Tags: torte, küche und familie."
+    },
+    {
+        "dauerSekunden": 3.5,
+        "uebergangSekunden": 0.8,
+        "folien": [
+            {
+                "mediaId": 1,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/1/thumbnail?breite=320",
+                "uebergang": "Anstoßen → Spiele",
+                "beschreibung": "Leipzig (DE) • Mit Lisa, Oma Herta • Szenen: dekoration, aufbau, liebevoll • Tags: dekoration, aufbau, liebevoll",
+                "aufgenommenAmText": "08.03.2024 17:05",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Lisa",
+                    "Oma Herta"
+                ],
+                "szenen": [
+                    "dekoration",
+                    "aufbau",
+                    "liebevoll"
+                ],
+                "schlagwoerter": [
+                    "dekoration",
+                    "aufbau",
+                    "liebevoll"
+                ]
+            },
+            {
+                "mediaId": 2,
+                "dauerSekunden": 3.5,
+                "thumbnail": "http://localhost/api/media/2/thumbnail?breite=320",
+                "uebergang": "Tanzfläche → Feuerwerk",
+                "beschreibung": "Leipzig (DE) • Mit Lisa, Tom, Oma Herta • Szenen: torte, küche, familie • Tags: torte, küche, familie",
+                "aufgenommenAmText": "08.03.2024 19:45",
+                "hinweis": "vor 2 Jahren",
+                "personen": [
+                    "Lisa",
+                    "Tom",
+                    "Oma Herta"
+                ],
+                "szenen": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ],
+                "schlagwoerter": [
+                    "torte",
+                    "küche",
+                    "familie"
+                ]
+            }
+        ],
+        "uebergaenge": [
+            "Vorbereitung → Empfang",
+            "Anstoßen → Spiele",
+            "Tanzfläche → Feuerwerk"
+        ],
+        "titel": "Mit Lisa, Oma Herta und Tom in Leipzig (DE)",
+        "beschreibung": "Gemeinsam mit Lisa, Oma Herta und Tom in Leipzig (DE). Szenen: dekoration, aufbau und liebevoll. Tags: dekoration, aufbau und liebevoll."
+    }
+]
