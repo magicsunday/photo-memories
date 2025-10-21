@@ -312,6 +312,142 @@ final class DefaultCoverPickerTest extends TestCase
     }
 
     #[Test]
+    public function itBalancesTravelAdvantageAgainstDuplicatePenalty(): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        $travelDuplicate = $this->makeMedia(
+            id: 951,
+            path: '/fixtures/feed/travel-duplicate.jpg',
+            takenAt: '2024-09-04T07:45:00+00:00',
+            lat: 47.5123,
+            lon: 11.2456,
+            size: 7_600_000,
+            configure: static function (Media $media): void {
+                $media->setWidth(5400);
+                $media->setHeight(3200);
+                $media->setOrientation(1);
+                $media->setNeedsRotation(false);
+                $media->setIsPanorama(true);
+                $media->setQualityScore(0.9);
+                $media->setContrast(0.74);
+                $media->setEntropy(0.7);
+                $media->setColorfulness(0.68);
+                $media->setHasFaces(true);
+                $media->setFacesCount(1);
+                $media->setPhash('abcdabcdabcdabcdabcdabcdabcdabcd');
+                $media->setDhash('face1234face1234');
+                $media->setThumbnails(['default' => '/thumbs/travel-duplicate.jpg']);
+                $media->setFeatures([
+                    'vision' => [
+                        'face_coverage'             => 0.14,
+                        'primary_pose'              => 'profile-looking-away',
+                        'primary_pose_confidence'   => 0.55,
+                    ],
+                    'saliency' => [
+                        'center'                 => ['x' => 0.52, 'y' => 0.48],
+                        'rule_of_thirds_score'   => 0.76,
+                        'confidence'             => 0.78,
+                    ],
+                ]);
+            },
+        );
+
+        $peopleChampion = $this->makeMedia(
+            id: 952,
+            path: '/fixtures/feed/people-champion.jpg',
+            takenAt: '2024-09-04T07:50:00+00:00',
+            size: 5_900_000,
+            configure: static function (Media $media): void {
+                $media->setWidth(3600);
+                $media->setHeight(4800);
+                $media->setOrientation(1);
+                $media->setNeedsRotation(false);
+                $media->setQualityScore(0.88);
+                $media->setContrast(0.8);
+                $media->setEntropy(0.76);
+                $media->setColorfulness(0.73);
+                $media->setHasFaces(true);
+                $media->setFacesCount(4);
+                $media->setPersons(['friend-alex', 'friend-jamie', 'friend-lisa']);
+                $media->setFeatures([
+                    'vision' => [
+                        'face_coverage'             => 0.46,
+                        'primary_pose'              => 'front-facing group',
+                        'primary_pose_confidence'   => 0.88,
+                    ],
+                    'saliency' => [
+                        'center'                 => ['x' => 0.36, 'y' => 0.38],
+                        'rule_of_thirds_score'   => 0.74,
+                        'confidence'             => 0.72,
+                    ],
+                ]);
+                $media->setThumbnails(['default' => '/thumbs/people-champion.jpg']);
+            },
+        );
+
+        $clusterParams = [
+            'total_travel_km'      => 185.0,
+            'travel_waypoints'     => [
+                ['lat' => 47.05, 'lon' => 10.23],
+                ['lat' => 47.68, 'lon' => 11.02],
+                ['lat' => 48.14, 'lon' => 11.58],
+                ['lat' => 48.35, 'lon' => 12.01],
+            ],
+            'people_coverage'      => 0.86,
+            'people_face_coverage' => 0.92,
+            'people_ratio'         => 0.84,
+            'people_primary_subject'=> 'friend-lisa',
+            'member_quality'       => [
+                'summary' => [
+                    'quality_avg'    => 0.88,
+                    'aesthetics_avg' => 0.84,
+                ],
+                'weights' => [
+                    'quality'    => 0.55,
+                    'aesthetics' => 0.45,
+                    'duplicates' => [
+                        'phash' => 0.48,
+                        'dhash' => 0.36,
+                    ],
+                ],
+                'members' => [
+                    (string) $travelDuplicate->getId() => [
+                        'quality'    => 0.91,
+                        'aesthetics' => 0.89,
+                        'penalty'    => 0.58,
+                    ],
+                    (string) $peopleChampion->getId() => [
+                        'quality'    => 0.87,
+                        'aesthetics' => 0.9,
+                    ],
+                ],
+            ],
+        ];
+
+        $context = $this->buildPickerContext($picker, [$travelDuplicate, $peopleChampion], $clusterParams);
+
+        self::assertGreaterThan(
+            $this->resolveTravelScore($picker, $peopleChampion, $context),
+            $this->resolveTravelScore($picker, $travelDuplicate, $context),
+        );
+
+        self::assertGreaterThan(
+            $this->resolvePeopleScore($picker, $travelDuplicate, $context),
+            $this->resolvePeopleScore($picker, $peopleChampion, $context),
+        );
+
+        $travelScore = $this->resolveScore($picker, $travelDuplicate, $context);
+        $peopleScore = $this->resolveScore($picker, $peopleChampion, $context);
+
+        self::assertGreaterThan($travelScore, $peopleScore);
+
+        $result = $picker->pickCover([$travelDuplicate, $peopleChampion], $clusterParams);
+
+        self::assertSame($peopleChampion, $result);
+    }
+
+    #[Test]
     #[DataProvider('provideQualityTieScenarios')]
     public function itBreaksQualityTiesUsingDomainSpecificSignals(string $expected, array $clusterOverrides): void
     {
