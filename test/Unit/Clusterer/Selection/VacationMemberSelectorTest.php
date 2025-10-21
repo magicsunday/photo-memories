@@ -49,6 +49,154 @@ final class VacationMemberSelectorTest extends TestCase
         );
     }
 
+    public function testNoShowMediaAreSkippedAndCounted(): void
+    {
+        $visible = $this->createMedia('no-show-visible.jpg', '2024-04-01T10:00:00+00:00', 0.8);
+        $hidden  = $this->createMedia('no-show-hidden.jpg', '2024-04-01T11:00:00+00:00', 0.9);
+        $hidden->setNoShow(true);
+
+        $summary = $this->createDaySummary('2024-04-01', [$visible, $hidden]);
+
+        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, qualityFloor: 0.1, minimumTotal: 1);
+        $result  = $this->selector->select(['2024-04-01' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(1, $members);
+        self::assertSame($visible, $members[0]);
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(2, $telemetry['prefilter_total']);
+        self::assertSame(1, $telemetry['prefilter_no_show']);
+        self::assertSame(0, $telemetry['prefilter_low_quality']);
+    }
+
+    public function testLowQualityMediaAreSkippedAndCounted(): void
+    {
+        $primary   = $this->createMedia('low-quality-primary.jpg', '2024-04-02T10:00:00+00:00', 0.75);
+        $rejected  = $this->createMedia('low-quality-rejected.jpg', '2024-04-02T12:00:00+00:00', 0.85);
+        $rejected->setLowQuality(true);
+
+        $summary = $this->createDaySummary('2024-04-02', [$primary, $rejected]);
+
+        $options = new VacationSelectionOptions(targetTotal: 2, maxPerDay: 2, qualityFloor: 0.1, minimumTotal: 1);
+        $result  = $this->selector->select(['2024-04-02' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(1, $members);
+        self::assertSame($primary, $members[0]);
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(2, $telemetry['prefilter_total']);
+        self::assertSame(0, $telemetry['prefilter_no_show']);
+        self::assertSame(1, $telemetry['prefilter_low_quality']);
+    }
+
+    public function testMissingQualityScoreIsAggregatedBeforeFiltering(): void
+    {
+        $aggregated = $this->createMedia('aggregate-score.jpg', '2024-04-03T09:00:00+00:00', 0.0);
+        $aggregated->setQualityScore(null);
+        $aggregated->setSharpness(0.9);
+        $aggregated->setMotionBlurScore(0.85);
+        $aggregated->setBrightness(0.55);
+        $aggregated->setContrast(0.6);
+        $aggregated->setIso(200);
+        $aggregated->setQualityClipping(0.0);
+
+        $summary = $this->createDaySummary('2024-04-03', [$aggregated]);
+
+        $options = new VacationSelectionOptions(targetTotal: 1, maxPerDay: 1, qualityFloor: 0.3, minimumTotal: 1);
+        $result  = $this->selector->select(['2024-04-03' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(1, $members);
+        self::assertSame($aggregated, $members[0]);
+
+        self::assertNotNull($aggregated->getQualityScore());
+        self::assertGreaterThanOrEqual($options->qualityFloor, $aggregated->getQualityScore());
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(1, $telemetry['prefilter_total']);
+        self::assertSame(0, $telemetry['prefilter_no_show']);
+        self::assertSame(0, $telemetry['prefilter_low_quality']);
+    }
+
+    public function testMixedBurstAndSyntheticGroupsPopulateFallbackAndTelemetry(): void
+    {
+        $burstPrimary = $this->createMedia('burst-primary.jpg', '2024-06-10T10:00:00+00:00', 0.9);
+        $burstPrimary->setBurstUuid('burst-42');
+        $burstPrimary->setCameraBodySerial('Device-Burst');
+        $burstPrimary->setBurstRepresentative(true);
+
+        $burstSecondary = $this->createMedia('burst-secondary.jpg', '2024-06-10T10:00:05+00:00', 0.87);
+        $burstSecondary->setBurstUuid('burst-42');
+        $burstSecondary->setCameraBodySerial('Device-Burst');
+
+        $syntheticPrimary = $this->createMedia('synthetic-primary.jpg', '2024-06-10T10:01:00+00:00', 0.83);
+        $syntheticPrimary->setCameraBodySerial('Device-Synth');
+        $syntheticExtra   = $this->createMedia('synthetic-extra.jpg', '2024-06-10T10:01:20+00:00', 0.78);
+        $syntheticExtra->setCameraBodySerial('Device-Synth');
+
+        $slotPrimary = $this->createMedia('slot-primary.jpg', '2024-06-10T12:00:00+00:00', 0.81);
+        $slotPrimary->setCameraBodySerial('Device-X');
+
+        $slotSecondary = $this->createMedia('slot-secondary.jpg', '2024-06-10T13:00:00+00:00', 0.79);
+        $slotSecondary->setCameraBodySerial('Device-Y');
+
+        $members = [
+            $burstPrimary,
+            $burstSecondary,
+            $syntheticPrimary,
+            $syntheticExtra,
+            $slotPrimary,
+            $slotSecondary,
+        ];
+
+        $staypoints = array_map(
+            static function (Media $media): array {
+                $timestamp = $media->getTakenAt()?->getTimestamp() ?? 0;
+
+                return [
+                    'lat'   => 0.0,
+                    'lon'   => 0.0,
+                    'start' => $timestamp - 1,
+                    'end'   => $timestamp + 1,
+                    'dwell' => 2,
+                ];
+            },
+            $members,
+        );
+
+        $summary = $this->createDaySummary('2024-06-10', $members, ['staypoints' => $staypoints]);
+
+        $options = new VacationSelectionOptions(
+            targetTotal: 4,
+            maxPerDay: 6,
+            timeSlotHours: 6,
+            minSpacingSeconds: 0,
+            maxPerStaypoint: 4,
+            qualityFloor: 0.1,
+            minimumTotal: 4,
+        );
+
+        $result = $this->selector->select(['2024-06-10' => $summary], $this->createHome(), $options);
+
+        $members = $result->getMembers();
+        self::assertCount(4, $members);
+        self::assertContains($burstPrimary, $members);
+        self::assertContains($syntheticPrimary, $members);
+        self::assertContains($slotPrimary, $members);
+        self::assertContains($slotSecondary, $members);
+        self::assertNotContains($burstSecondary, $members);
+        self::assertNotContains($syntheticExtra, $members);
+
+        $telemetry = $result->getTelemetry();
+        self::assertSame(6, $telemetry['prefilter_total']);
+        self::assertSame(0, $telemetry['prefilter_no_show']);
+        self::assertSame(0, $telemetry['prefilter_low_quality']);
+        self::assertSame(2, $telemetry['burst_collapsed']);
+        self::assertSame(2, $telemetry['fallback_used']);
+    }
+
     public function testQualityFloorFiltersLowScoringItems(): void
     {
         $high = $this->createMedia('high.jpg', '2024-05-01T10:00:00+00:00', 0.8);
