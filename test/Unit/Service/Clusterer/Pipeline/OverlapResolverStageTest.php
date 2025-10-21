@@ -523,6 +523,13 @@ final class OverlapResolverStageTest extends TestCase
             true,
         ];
 
+        yield 'score_gap_at_threshold_with_subunit_winner' => [
+            0.8,
+            0.45,
+            0.35,
+            true,
+        ];
+
         yield 'score_gap_just_above_threshold' => [
             1.0,
             0.649,
