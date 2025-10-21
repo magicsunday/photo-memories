@@ -213,6 +213,164 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     }
 
     #[Test]
+    public function maximalMarginalRelevanceClampsSimilarityPenaltiesAtFloorAndCap(): void
+    {
+        $stage = new class implements SelectionStageInterface {
+            public function getName(): string
+            {
+                return 'noop';
+            }
+
+            public function apply(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
+            {
+                return $candidates;
+            }
+        };
+
+        $selector = new PolicyDrivenMemberSelector([$stage], []);
+
+        $policy = new SelectionPolicy(
+            profileKey: 'mmr-floor-cap',
+            targetTotal: 3,
+            minimumTotal: 3,
+            maxPerDay: null,
+            timeSlotHours: null,
+            minSpacingSeconds: 0,
+            phashMinHamming: 0,
+            maxPerStaypoint: null,
+            relaxedMaxPerStaypoint: null,
+            qualityFloor: 0.0,
+            videoBonus: 0.0,
+            faceBonus: 0.0,
+            selfiePenalty: 0.0,
+            maxPerYear: null,
+            maxPerBucket: null,
+            videoHeavyBonus: null,
+            sceneBucketWeights: null,
+            coreDayBonus: 1,
+            peripheralDayPenalty: 1,
+            phashPercentile: 0.0,
+            spacingProgressFactor: 0.0,
+            cohortPenalty: 0.0,
+            mmrLambda: 0.5,
+            mmrSimilarityFloor: 0.71875,
+            mmrSimilarityCap: 0.75,
+            mmrMaxConsideration: 6,
+        );
+
+        $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
+        $method->setAccessible(true);
+
+        $candidates = [
+            [
+                'id' => 100,
+                'score' => 0.95,
+                'hash_bits' => $this->bitsFromHex('0000000000000000'),
+                'timestamp' => 10,
+            ],
+            [
+                'id' => 101,
+                'score' => 0.9,
+                'hash_bits' => $this->bitsFromHex('ffffe00000000000'),
+                'timestamp' => 20,
+            ],
+            [
+                'id' => 102,
+                'score' => 0.89,
+                'hash_bits' => $this->bitsFromHex('ffff600000000000'),
+                'timestamp' => 30,
+            ],
+            [
+                'id' => 103,
+                'score' => 0.88,
+                'hash_bits' => $this->bitsFromHex('ffff800000000000'),
+                'timestamp' => 40,
+            ],
+            [
+                'id' => 104,
+                'score' => 0.87,
+                'hash_bits' => $this->bitsFromHex('ffff000000000000'),
+                'timestamp' => 50,
+            ],
+            [
+                'id' => 105,
+                'score' => 0.86,
+                'hash_bits' => $this->bitsFromHex('fffe000000000000'),
+                'timestamp' => 60,
+            ],
+            [
+                'id' => 106,
+                'score' => 0.2,
+                'hash_bits' => $this->bitsFromHex('0000000000000000'),
+                'timestamp' => 70,
+            ],
+        ];
+
+        $telemetry = new SelectionTelemetry();
+
+        /** @var list<array<string, mixed>> $firstRun */
+        $firstRun = $method->invoke($selector, $candidates, $policy, $telemetry);
+
+        $summary = $telemetry->mmrSummary();
+        self::assertNotNull($summary);
+        self::assertSame(6, $summary['max_considered']);
+        self::assertSame(6, $summary['pool_size']);
+        self::assertGreaterThanOrEqual(2, count($summary['iterations']));
+
+        $secondIteration = $summary['iterations'][1];
+        self::assertSame(2, $secondIteration['step']);
+
+        $evaluations = [];
+        foreach ($secondIteration['evaluations'] as $evaluation) {
+            $evaluations[$evaluation['id']] = $evaluation;
+        }
+
+        self::assertArrayHasKey(101, $evaluations);
+        self::assertArrayHasKey(102, $evaluations);
+        self::assertArrayHasKey(103, $evaluations);
+        self::assertArrayHasKey(104, $evaluations);
+        self::assertArrayHasKey(105, $evaluations);
+
+        $belowFloor = $evaluations[101];
+        self::assertSame(0.703125, $belowFloor['raw_similarity']);
+        self::assertSame(0.0, $belowFloor['penalised_similarity']);
+        self::assertSame(0.0, $belowFloor['penalty']);
+        self::assertNull($belowFloor['reference']);
+
+        $atFloor = $evaluations[102];
+        self::assertSame(0.71875, $atFloor['raw_similarity']);
+        self::assertSame(0.71875, $atFloor['penalised_similarity']);
+        self::assertSame(0.359375, $atFloor['penalty']);
+        self::assertSame(100, $atFloor['reference']);
+
+        $aboveFloor = $evaluations[103];
+        self::assertSame(0.734375, $aboveFloor['raw_similarity']);
+        self::assertSame(0.734375, $aboveFloor['penalised_similarity']);
+        self::assertSame(0.3671875, $aboveFloor['penalty']);
+        self::assertSame(100, $aboveFloor['reference']);
+
+        $atCap = $evaluations[104];
+        self::assertSame(0.75, $atCap['raw_similarity']);
+        self::assertSame(0.75, $atCap['penalised_similarity']);
+        self::assertSame(0.375, $atCap['penalty']);
+        self::assertSame(100, $atCap['reference']);
+
+        $aboveCap = $evaluations[105];
+        self::assertSame(0.765625, $aboveCap['raw_similarity']);
+        self::assertSame(0.75, $aboveCap['penalised_similarity']);
+        self::assertSame(0.375, $aboveCap['penalty']);
+        self::assertSame(100, $aboveCap['reference']);
+
+        /** @var list<array<string, mixed>> $secondRun */
+        $secondRun = $method->invoke($selector, $candidates, $policy, new SelectionTelemetry());
+
+        self::assertSame(
+            array_column($firstRun, 'id'),
+            array_column($secondRun, 'id'),
+        );
+    }
+
+    #[Test]
     public function maximalMarginalRelevancePrefersLowerIdWhenScoresTie(): void
     {
         $selector = new PolicyDrivenMemberSelector(
