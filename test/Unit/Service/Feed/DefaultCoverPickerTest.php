@@ -186,6 +186,294 @@ final class DefaultCoverPickerTest extends TestCase
     }
 
     #[Test]
+    public function itPrefersTravelCandidateWhenTravelSignalsDominate(): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        [$travelHero, $peopleHero] = $this->createTravelAndPeopleCandidates();
+
+        $clusterParams = [
+            'total_travel_km'      => 220.0,
+            'travel_waypoints'     => [
+                ['lat' => 47.05, 'lon' => 10.23],
+                ['lat' => 47.68, 'lon' => 11.02],
+                ['lat' => 48.14, 'lon' => 11.58],
+            ],
+            'people_coverage'      => 0.1,
+            'people_face_coverage' => 0.12,
+            'people_ratio'         => 0.1,
+            'member_quality'       => [
+                'summary' => [
+                    'quality_avg'    => 0.83,
+                    'aesthetics_avg' => 0.79,
+                ],
+                'weights' => [
+                    'quality'    => 0.6,
+                    'aesthetics' => 0.4,
+                    'duplicates' => [
+                        'phash' => 0.45,
+                        'dhash' => 0.3,
+                    ],
+                ],
+                'members' => [
+                    (string) $travelHero->getId() => [
+                        'quality'    => 0.86,
+                        'aesthetics' => 0.82,
+                    ],
+                    (string) $peopleHero->getId() => [
+                        'quality'    => 0.92,
+                        'aesthetics' => 0.9,
+                    ],
+                ],
+            ],
+        ];
+
+        $context = $this->buildPickerContext($picker, [$travelHero, $peopleHero], $clusterParams);
+
+        self::assertGreaterThan(
+            $this->resolveTravelScore($picker, $peopleHero, $context),
+            $this->resolveTravelScore($picker, $travelHero, $context),
+        );
+
+        self::assertGreaterThan(
+            $this->resolvePeopleScore($picker, $travelHero, $context),
+            $this->resolvePeopleScore($picker, $peopleHero, $context),
+        );
+
+        $result = $picker->pickCover([$travelHero, $peopleHero], $clusterParams);
+
+        self::assertSame($travelHero, $result);
+
+        $travelScore = $this->resolveScore($picker, $travelHero, $context);
+        $peopleScore = $this->resolveScore($picker, $peopleHero, $context);
+
+        self::assertGreaterThan($peopleScore, $travelScore);
+    }
+
+    #[Test]
+    public function itPrefersPeopleCandidateWhenPeopleSignalsDominate(): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        [$travelHero, $peopleHero] = $this->createTravelAndPeopleCandidates();
+
+        $clusterParams = [
+            'total_travel_km'       => 0.0,
+            'people_coverage'       => 0.94,
+            'people_face_coverage'  => 0.96,
+            'people_ratio'          => 0.92,
+            'people_primary_subject'=> 'friend-alex',
+            'member_quality'        => [
+                'summary' => [
+                    'quality_avg'    => 0.83,
+                    'aesthetics_avg' => 0.79,
+                ],
+                'weights' => [
+                    'quality'    => 0.6,
+                    'aesthetics' => 0.4,
+                    'duplicates' => [
+                        'phash' => 0.45,
+                        'dhash' => 0.3,
+                    ],
+                ],
+                'members' => [
+                    (string) $travelHero->getId() => [
+                        'quality'    => 0.86,
+                        'aesthetics' => 0.82,
+                    ],
+                    (string) $peopleHero->getId() => [
+                        'quality'    => 0.92,
+                        'aesthetics' => 0.9,
+                    ],
+                ],
+            ],
+        ];
+
+        $context = $this->buildPickerContext($picker, [$travelHero, $peopleHero], $clusterParams);
+
+        self::assertGreaterThan(
+            $this->resolveTravelScore($picker, $peopleHero, $context),
+            $this->resolveTravelScore($picker, $travelHero, $context),
+        );
+
+        self::assertGreaterThan(
+            $this->resolvePeopleScore($picker, $travelHero, $context),
+            $this->resolvePeopleScore($picker, $peopleHero, $context),
+        );
+
+        $result = $picker->pickCover([$travelHero, $peopleHero], $clusterParams);
+
+        $travelScore = $this->resolveScore($picker, $travelHero, $context);
+        $peopleScore = $this->resolveScore($picker, $peopleHero, $context);
+
+        self::assertSame($peopleHero, $result);
+
+        self::assertGreaterThan($travelScore, $peopleScore);
+    }
+
+    #[Test]
+    #[DataProvider('provideQualityTieScenarios')]
+    public function itBreaksQualityTiesUsingDomainSpecificSignals(string $expected, array $clusterOverrides): void
+    {
+        $picker = new DefaultCoverPicker();
+
+        if ($expected === 'travel') {
+            $travelHero = $this->makeMedia(
+                id: 903,
+                path: '/fixtures/feed/tie-travel.jpg',
+                takenAt: '2024-09-02T12:00:00+00:00',
+                lat: 46.5123,
+                lon: 11.3567,
+                size: 6_300_000,
+                configure: static function (Media $media): void {
+                    $media->setWidth(4000);
+                    $media->setHeight(2666);
+                    $media->setOrientation(1);
+                    $media->setNeedsRotation(false);
+                    $media->setQualityScore(0.82);
+                    $media->setContrast(0.6);
+                    $media->setEntropy(0.58);
+                },
+            );
+
+            $peopleHero = $this->makeMedia(
+                id: 904,
+                path: '/fixtures/feed/tie-people.jpg',
+                takenAt: '2024-09-02T12:00:00+00:00',
+                size: 6_300_000,
+                configure: static function (Media $media): void {
+                    $media->setWidth(4000);
+                    $media->setHeight(2666);
+                    $media->setOrientation(1);
+                    $media->setNeedsRotation(false);
+                    $media->setQualityScore(0.82);
+                },
+            );
+        } else {
+            $travelHero = $this->makeMedia(
+                id: 903,
+                path: '/fixtures/feed/tie-travel.jpg',
+                takenAt: '2024-09-02T12:00:00+00:00',
+                size: 6_200_000,
+                configure: static function (Media $media): void {
+                    $media->setWidth(4000);
+                    $media->setHeight(2666);
+                    $media->setOrientation(1);
+                    $media->setNeedsRotation(false);
+                    $media->setQualityScore(0.82);
+                },
+            );
+
+            $peopleHero = $this->makeMedia(
+                id: 904,
+                path: '/fixtures/feed/tie-people.jpg',
+                takenAt: '2024-09-02T12:00:00+00:00',
+                size: 6_200_000,
+                configure: static function (Media $media): void {
+                    $media->setWidth(4000);
+                    $media->setHeight(2666);
+                    $media->setOrientation(1);
+                    $media->setNeedsRotation(false);
+                    $media->setQualityScore(0.82);
+                    $media->setHasFaces(true);
+                    $media->setFacesCount(2);
+                    $media->setPersons(['friend-alex']);
+                    $media->setFeatures([
+                        'vision' => [
+                            'face_coverage'             => 0.52,
+                            'primary_pose'              => 'smiling',
+                            'primary_pose_confidence'   => 0.9,
+                        ],
+                    ]);
+                },
+            );
+        }
+
+        $clusterParams = [
+            'member_quality' => [
+                'summary' => [
+                    'quality_avg'    => 0.82,
+                    'aesthetics_avg' => 0.8,
+                ],
+                'weights' => [
+                    'quality'    => 0.5,
+                    'aesthetics' => 0.5,
+                    'duplicates' => [
+                        'phash' => 0.4,
+                        'dhash' => 0.3,
+                    ],
+                ],
+                'members' => [
+                    (string) $travelHero->getId() => [
+                        'quality'    => 0.82,
+                        'aesthetics' => 0.8,
+                    ],
+                    (string) $peopleHero->getId() => [
+                        'quality'    => 0.82,
+                        'aesthetics' => 0.8,
+                    ],
+                ],
+            ],
+            'people_ratio' => 0.2,
+        ];
+
+        foreach ($clusterOverrides as $key => $value) {
+            $clusterParams[$key] = $value;
+        }
+
+        $context = $this->buildPickerContext($picker, [$travelHero, $peopleHero], $clusterParams);
+
+        $result = $picker->pickCover([$travelHero, $peopleHero], $clusterParams);
+
+        if ($expected === 'travel') {
+            self::assertSame($travelHero, $result);
+            self::assertGreaterThan(
+                $this->resolveScore($picker, $peopleHero, $context),
+                $this->resolveScore($picker, $travelHero, $context),
+            );
+        } else {
+            self::assertSame($peopleHero, $result);
+            self::assertGreaterThan(
+                $this->resolveScore($picker, $travelHero, $context),
+                $this->resolveScore($picker, $peopleHero, $context),
+            );
+        }
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: array<string, mixed>}>
+     */
+    public static function provideQualityTieScenarios(): iterable
+    {
+        yield 'travel weight dominates tie' => [
+            'travel',
+            [
+                'total_travel_km'      => 180.0,
+                'people_face_coverage' => 0.0,
+                'people_coverage'      => 0.0,
+                'people_ratio'         => 0.0,
+                'people_primary_subject'=> 'nobody',
+                'travel_waypoints'     => [
+                    ['lat' => 47.05, 'lon' => 10.23],
+                    ['lat' => 47.68, 'lon' => 11.02],
+                    ['lat' => 48.14, 'lon' => 11.58],
+                ],
+            ],
+        ];
+
+        yield 'people emphasis dominates tie' => [
+            'people',
+            [
+                'total_travel_km'       => 0.0,
+                'people_face_coverage'  => 0.95,
+                'people_coverage'       => 0.92,
+                'people_ratio'          => 1.0,
+                'people_primary_subject'=> 'friend-alex',
+            ],
+        ];
+    }
+
+    #[Test]
     public function itPenalisesNearDuplicateFingerprints(): void
     {
         $picker = new DefaultCoverPicker();
@@ -409,5 +697,137 @@ final class DefaultCoverPickerTest extends TestCase
         $result = $picker->pickCover([$centered, $ruleOfThirds], $clusterParams);
 
         self::assertSame($ruleOfThirds, $result);
+    }
+
+    /**
+     * @return array{0: Media, 1: Media}
+     */
+    private function createTravelAndPeopleCandidates(): array
+    {
+        $travelHero = $this->makeMedia(
+            id: 901,
+            path: '/fixtures/feed/travel-hero.jpg',
+            takenAt: '2024-09-01T08:00:00+00:00',
+            lat: 47.0500,
+            lon: 10.2330,
+            size: 7_800_000,
+            configure: static function (Media $media): void {
+                $media->setWidth(5200);
+                $media->setHeight(3000);
+                $media->setOrientation(1);
+                $media->setNeedsRotation(false);
+                $media->setIsPanorama(true);
+                $media->setQualityScore(0.86);
+                $media->setContrast(0.7);
+                $media->setEntropy(0.66);
+                $media->setColorfulness(0.64);
+                $media->setHasFaces(true);
+                $media->setFacesCount(1);
+                $media->setThumbnails(['default' => '/thumbs/travel-hero.jpg']);
+                $media->setFeatures([
+                    'saliency' => [
+                        'center'                 => ['x' => 0.48, 'y' => 0.52],
+                        'rule_of_thirds_score'   => 0.78,
+                        'confidence'             => 0.82,
+                    ],
+                    'vision' => [
+                        'face_coverage' => 0.16,
+                    ],
+                ]);
+            },
+        );
+
+        $peopleHero = $this->makeMedia(
+            id: 902,
+            path: '/fixtures/feed/people-hero.jpg',
+            takenAt: '2024-09-01T08:05:00+00:00',
+            size: 5_600_000,
+            configure: static function (Media $media): void {
+                $media->setWidth(3000);
+                $media->setHeight(4200);
+                $media->setOrientation(1);
+                $media->setNeedsRotation(false);
+                $media->setQualityScore(0.92);
+                $media->setContrast(0.78);
+                $media->setEntropy(0.74);
+                $media->setColorfulness(0.72);
+                $media->setHasFaces(true);
+                $media->setFacesCount(3);
+                $media->setPersons(['friend-alex', 'friend-jamie']);
+                $media->setFeatures([
+                    'vision' => [
+                        'face_coverage'             => 0.4,
+                        'primary_pose'              => 'front-facing group',
+                        'primary_pose_confidence'   => 0.85,
+                    ],
+                    'saliency' => [
+                        'center'                 => ['x' => 0.34, 'y' => 0.36],
+                        'rule_of_thirds_score'   => 0.72,
+                        'confidence'             => 0.7,
+                    ],
+                ]);
+                $media->setThumbnails(['default' => '/thumbs/people-hero.jpg']);
+            },
+        );
+
+        return [$travelHero, $peopleHero];
+    }
+
+    /**
+     * @param list<Media> $members
+     * @param array<string, mixed> $clusterParams
+     *
+     * @return array<string, mixed>
+     */
+    private function buildPickerContext(DefaultCoverPicker $picker, array $members, array $clusterParams): array
+    {
+        $method = new ReflectionMethod(DefaultCoverPicker::class, 'buildContext');
+        $method->setAccessible(true);
+
+        /** @var array<string, mixed> $context */
+        $context = $method->invoke($picker, $members, $clusterParams);
+
+        return $context;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function resolveScore(DefaultCoverPicker $picker, Media $media, array $context): float
+    {
+        $method = new ReflectionMethod(DefaultCoverPicker::class, 'score');
+        $method->setAccessible(true);
+
+        return $method->invoke($picker, $media, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function resolvePeopleScore(DefaultCoverPicker $picker, Media $media, array $context): float
+    {
+        $method = new ReflectionMethod(DefaultCoverPicker::class, 'peopleScore');
+        $method->setAccessible(true);
+
+        return $method->invoke($picker, $media, $context['people']);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function resolveTravelScore(DefaultCoverPicker $picker, Media $media, array $context): float
+    {
+        $normalise = new ReflectionMethod(DefaultCoverPicker::class, 'normalizeDimensions');
+        $normalise->setAccessible(true);
+
+        [$width, $height] = $normalise->invoke($picker, $media->getWidth() ?? 0, $media->getHeight() ?? 0, $media);
+
+        $landscape = ($width >= $height) ? 1.0 : 0.0;
+        $areaMp    = ($width > 0 && $height > 0) ? (($width * $height) / 1_000_000.0) : 0.0;
+
+        $method = new ReflectionMethod(DefaultCoverPicker::class, 'travelScore');
+        $method->setAccessible(true);
+
+        return $method->invoke($picker, $media, $context['travel'], $landscape, $areaMp);
     }
 }
