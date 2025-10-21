@@ -44,5 +44,27 @@ final class PhashTest extends TestCase
         yield 'maximum distance' => ['ffffffffffffffff', '0000000000000000', 64];
         yield 'different byte lengths' => ['00', '0000', 8];
         yield 'length and bit difference' => ['ff', '0000', 16];
+        yield from self::provideLongHexPairs();
+    }
+
+    public static function provideLongHexPairs(): iterable
+    {
+        yield 'long maximum distance' => [
+            'ffffffffffffffffffffffffffffffff',
+            '00000000000000000000000000000000',
+            128,
+        ];
+        yield 'long single bit difference' => [
+            'ffffffffffffffffffffffffffffffff',
+            'fffffffffffffffffffffffffffffffe',
+            1,
+        ];
+    }
+
+    #[DataProvider('provideLongHexPairs')]
+    public function testHammingFromHexIsCommutativeForLongHexStrings(string $a, string $b, int $expectedDistance): void
+    {
+        self::assertSame($expectedDistance, Phash::hammingFromHex($a, $b));
+        self::assertSame($expectedDistance, Phash::hammingFromHex($b, $a));
     }
 }
