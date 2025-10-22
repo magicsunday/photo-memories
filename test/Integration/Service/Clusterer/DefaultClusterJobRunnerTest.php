@@ -28,16 +28,20 @@ use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
-use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\Yaml\Yaml;
 use RuntimeException;
 
 final class DefaultClusterJobRunnerTest extends TestCase
@@ -119,12 +123,13 @@ final class DefaultClusterJobRunnerTest extends TestCase
         );
 
         $mediaLookup   = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect  = new FailingAfterFirstClusterMemberSelectionService();
+        $memberSelect  = new FailingAfterFirstClusterMemberSelector();
         $coverPicker   = new FirstCoverPicker();
         $persistence   = new ClusterPersistenceService(
             em: $clusterEntityManager,
             mediaLookup: $mediaLookup,
-            memberSelection: $memberSelect,
+            memberSelector: $memberSelect,
+            policyProvider: $this->createPolicyProvider(),
             coverPicker: $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 50,
@@ -183,12 +188,13 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $consolidator = new PassthroughClusterConsolidator();
 
         $memberLookup  = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect  = new IdentityClusterMemberSelectionService();
+        $memberSelect  = new IdentityClusterMemberSelector();
         $coverPicker   = new NullCoverPicker();
         $persistence   = new ClusterPersistenceService(
             em: $entityManager,
             mediaLookup: $memberLookup,
-            memberSelection: $memberSelect,
+            memberSelector: $memberSelect,
+            policyProvider: $this->createPolicyProvider(),
             coverPicker: $coverPicker,
             defaultBatchSize: 1,
             maxMembers: 50,
@@ -258,13 +264,14 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $consolidator = new PassthroughClusterConsolidator();
 
         $memberLookup = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect = new IdentityClusterMemberSelectionService();
+        $memberSelect = new IdentityClusterMemberSelector();
         $coverPicker  = new NullCoverPicker();
 
         $persistence = new ClusterPersistenceService(
             em: $entityManager,
             mediaLookup: $memberLookup,
-            memberSelection: $memberSelect,
+            memberSelector: $memberSelect,
+            policyProvider: $this->createPolicyProvider(),
             coverPicker: $coverPicker,
             defaultBatchSize: 1,
             maxMembers: 50,
@@ -351,13 +358,14 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
         $consolidator = new PassthroughClusterConsolidator();
         $memberLookup = new InMemoryMemberMediaLookup([$mediaA, $mediaB]);
-        $memberSelect = new IdentityClusterMemberSelectionService();
+        $memberSelect = new IdentityClusterMemberSelector();
         $coverPicker  = new NullCoverPicker();
 
         $persistence = new ClusterPersistenceService(
             em: $entityManager,
             mediaLookup: $memberLookup,
-            memberSelection: $memberSelect,
+            memberSelector: $memberSelect,
+            policyProvider: $this->createPolicyProvider(),
             coverPicker: $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 50,
@@ -398,6 +406,19 @@ final class DefaultClusterJobRunnerTest extends TestCase
         ]);
 
         return EntityManager::create($connection, $config);
+    }
+
+    private function createPolicyProvider(): SelectionPolicyProvider
+    {
+        $config = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
+        $parameters = $config['parameters'] ?? [];
+
+        return new SelectionPolicyProvider(
+            $parameters['memories.selection.profiles'] ?? [],
+            $parameters['memories.selection.default_profile'] ?? 'default',
+            $parameters['memories.selection.algorithm_profiles'] ?? [],
+            $parameters['memories.selection.profile_constraints'] ?? [],
+        );
     }
 
     private function createClusterSchema(EntityManagerInterface $entityManager): void
@@ -536,11 +557,11 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
     }
 }
 
-final class FailingAfterFirstClusterMemberSelectionService implements ClusterMemberSelectionServiceInterface
+final class FailingAfterFirstClusterMemberSelector implements ClusterMemberSelectorInterface
 {
     private int $calls = 0;
 
-    public function curate(ClusterDraft $draft): ClusterDraft
+    public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
     {
         ++$this->calls;
 
@@ -548,15 +569,15 @@ final class FailingAfterFirstClusterMemberSelectionService implements ClusterMem
             throw new RuntimeException('Simulated abort while curating');
         }
 
-        return $draft;
+        return new MemberSelectionResult($memberIds, ['selector' => 'fail-after-first']);
     }
 }
 
-final class IdentityClusterMemberSelectionService implements ClusterMemberSelectionServiceInterface
+final class IdentityClusterMemberSelector implements ClusterMemberSelectorInterface
 {
-    public function curate(ClusterDraft $draft): ClusterDraft
+    public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
     {
-        return $draft;
+        return new MemberSelectionResult($memberIds, ['selector' => 'identity']);
     }
 }
 
