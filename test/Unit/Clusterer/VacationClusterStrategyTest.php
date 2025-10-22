@@ -42,10 +42,13 @@ use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
-use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberQualityRankingStage;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
@@ -58,6 +61,7 @@ use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
+use Symfony\Component\Yaml\Yaml;
 
 final class VacationClusterStrategyTest extends TestCase
 {
@@ -2026,13 +2030,34 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
+            {
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
+            }
+        };
+
         return new ClusterPersistenceService(
             $this->createStub(EntityManagerInterface::class),
             $lookup,
-            $this->createStub(ClusterMemberSelectionServiceInterface::class),
+            $selector,
+            $this->createPolicyProvider(),
             $this->createStub(CoverPickerInterface::class),
             250,
             $maxMembers,
+        );
+    }
+
+    private function createPolicyProvider(): SelectionPolicyProvider
+    {
+        $config = Yaml::parseFile(dirname(__DIR__, 3) . '/config/parameters/selection.yaml');
+        $parameters = $config['parameters'] ?? [];
+
+        return new SelectionPolicyProvider(
+            $parameters['memories.selection.profiles'] ?? [],
+            $parameters['memories.selection.default_profile'] ?? 'default',
+            $parameters['memories.selection.algorithm_profiles'] ?? [],
+            $parameters['memories.selection.profile_constraints'] ?? [],
         );
     }
 }

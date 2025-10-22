@@ -22,9 +22,11 @@ use MagicSunday\Memories\Entity\ClusterMember;
 use MagicSunday\Memories\Entity\Enum\ClusterMemberRole;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
+use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberCurationStage;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Clusterer\TravelWaypointAnnotator;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
@@ -67,7 +69,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     public function __construct(
         private EntityManagerInterface $em,
         private MemberMediaLookupInterface $mediaLookup,
-        private ClusterMemberSelectionServiceInterface $memberSelection,
+        private ClusterMemberSelectorInterface $memberSelector,
+        private SelectionPolicyProvider $policyProvider,
         private CoverPickerInterface $coverPicker,
         private int $defaultBatchSize = 10,
         #[Autowire('%memories.cluster.persistence.max_members%')]
@@ -101,11 +104,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $batchSize = $batchSize > 0 ? $batchSize : $this->defaultBatchSize;
 
-        $drafts = $this->curateDrafts($drafts);
-
-        foreach ($drafts as $draft) {
+        foreach ($drafts as &$draft) {
+            $draft = $this->ensureCuratedDraft($draft);
             $this->persistSelectionTelemetryOnDraft($draft);
         }
+        unset($draft);
 
         $pairs = $this->computePairs($drafts);
 
@@ -157,7 +160,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $persisted   = 0;
 
         foreach ($drafts as $draft) {
-            $curated = $this->memberSelection->curate($draft);
+            $curated = $this->ensureCuratedDraft($draft);
             $this->persistSelectionTelemetryOnDraft($curated);
 
             $context = $this->resolveDraftContext($curated);
@@ -1155,25 +1158,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         return array_slice($members, 0, $this->maxMembers);
     }
 
-    /**
-     * @param list<ClusterDraft> $drafts
-     *
-     * @return list<ClusterDraft>
-     */
-    private function curateDrafts(array $drafts): array
-    {
-        if ($drafts === []) {
-            return [];
-        }
-
-        $curated = [];
-        foreach ($drafts as $draft) {
-            $curated[] = $this->memberSelection->curate($draft);
-        }
-
-        return $curated;
-    }
-
     private function persistSelectionTelemetryOnDraft(ClusterDraft $draft): void
     {
         $params     = $draft->getParams();
@@ -1239,6 +1223,69 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         return $draft->getMembers();
     }
 
+    private function ensureCuratedDraft(ClusterDraft $draft): ClusterDraft
+    {
+        if ($this->hasSelectionTelemetry($draft)) {
+            return $draft;
+        }
+
+        $stage  = $this->getMemberCurationStage();
+        $result = $stage->process([$draft]);
+
+        return $result[0] ?? $draft;
+    }
+
+    private function hasSelectionTelemetry(ClusterDraft $draft): bool
+    {
+        $params = $draft->getParams();
+
+        $memberSelection = $params['member_selection'] ?? null;
+        if (is_array($memberSelection)) {
+            $policy = $memberSelection['policy'] ?? null;
+            if (is_array($policy) && $policy !== []) {
+                return true;
+            }
+        }
+
+        $memberQuality = $params['member_quality'] ?? null;
+        if (!is_array($memberQuality)) {
+            return false;
+        }
+
+        if (isset($memberQuality['ordered']) && is_array($memberQuality['ordered'])) {
+            return true;
+        }
+
+        $summary = $memberQuality['summary'] ?? null;
+        if (!is_array($summary)) {
+            return false;
+        }
+
+        if (isset($summary['selection_policy']) && is_string($summary['selection_policy']) && $summary['selection_policy'] !== '') {
+            return true;
+        }
+
+        if (isset($summary['selection_policy_details']) && is_array($summary['selection_policy_details']) && $summary['selection_policy_details'] !== []) {
+            return true;
+        }
+
+        if (isset($summary['selection_telemetry']) && is_array($summary['selection_telemetry']) && $summary['selection_telemetry'] !== []) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function getMemberCurationStage(): MemberCurationStage
+    {
+        return new MemberCurationStage(
+            $this->mediaLookup,
+            $this->policyProvider,
+            $this->memberSelector,
+            $this->monitoringEmitter,
+        );
+    }
+
     private function emitPersistenceMetrics(ClusterDraft $draft, int $persistedCount, int $overlayCount): void
     {
         if ($this->monitoringEmitter === null) {
@@ -1273,7 +1320,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     {
         $draft = $this->mapClusterToDraft($cluster);
 
-        $curated = $this->memberSelection->curate($draft);
+        $curated = $this->ensureCuratedDraft($draft);
         $this->persistSelectionTelemetryOnDraft($curated);
 
         $context = $this->resolveDraftContext($curated);

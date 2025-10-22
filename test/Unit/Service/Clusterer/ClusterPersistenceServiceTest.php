@@ -20,14 +20,18 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\ClusterPersistenceService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
+use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\Yaml\Yaml;
 use ReflectionClass;
 
 final class ClusterPersistenceServiceTest extends TestCase
@@ -59,10 +63,14 @@ final class ClusterPersistenceServiceTest extends TestCase
         $coverPicker = $this->createMock(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn(null);
 
-        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
-            public function curate(ClusterDraft $draft): ClusterDraft
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public int $calls = 0;
+
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
             {
-                return $draft;
+                ++$this->calls;
+
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
             }
         };
 
@@ -74,6 +82,10 @@ final class ClusterPersistenceServiceTest extends TestCase
             new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [9, 10]),
             new ClusterDraft('massive', [], ['lat' => 48.1, 'lon' => 11.5], [11, 12]),
         ];
+
+        foreach ($drafts as $draft) {
+            $this->addSelectionTelemetry($draft, $draft->getMembers());
+        }
 
         $fingerprints = array_map(static fn (ClusterDraft $draft): string => Cluster::computeFingerprint($draft->getMembers()), $drafts);
 
@@ -128,7 +140,8 @@ final class ClusterPersistenceServiceTest extends TestCase
         $service = new ClusterPersistenceService(
             $em,
             $lookup,
-            $selectionService,
+            $selector,
+            $this->createPolicyProvider(),
             $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 20,
@@ -156,6 +169,7 @@ final class ClusterPersistenceServiceTest extends TestCase
 
         self::assertSame(4, $persistedCount);
         self::assertSame($expectedPersisted, $actualPersisted);
+        self::assertSame(0, $selector->calls);
     }
 
     #[Test]
@@ -212,46 +226,22 @@ final class ClusterPersistenceServiceTest extends TestCase
         $em->method('flush');
         $em->method('clear');
 
-        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
-            public function curate(ClusterDraft $draft): ClusterDraft
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public int $calls = 0;
+
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
             {
-                $reversed = array_reverse($draft->getMembers());
-                $params   = $draft->getParams();
-                $quality  = $params['member_quality'] ?? [];
-                if (!is_array($quality)) {
-                    $quality = [];
-                }
+                ++$this->calls;
 
-                $quality['ordered'] = $reversed;
-                $quality['summary'] = [
-                    'selection_counts' => [
-                        'raw'     => count($draft->getMembers()),
-                        'curated' => count($reversed),
-                        'dropped' => 0,
-                    ],
-                ];
-
-                $params['member_quality'] = $quality;
-                $params['member_selection'] = [
-                    'storyline' => $draft->getStoryline(),
-                    'counts'    => [
-                        'raw'     => count($draft->getMembers()),
-                        'curated' => count($reversed),
-                        'dropped' => 0,
-                    ],
-                    'near_duplicates' => ['blocked' => 0, 'replacements' => 0],
-                    'spacing'         => ['average_seconds' => 0.0, 'rejections' => 0],
-                    'options'         => ['selector' => 'demo'],
-                ];
-
-                return $draft->withParams($params);
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
             }
         };
 
         $service = new ClusterPersistenceService(
             $em,
             $lookup,
-            $selectionService,
+            $selector,
+            $this->createPolicyProvider(),
             $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 20
@@ -283,6 +273,11 @@ final class ClusterPersistenceServiceTest extends TestCase
             members: [1, 2, 3],
         );
 
+        $this->addSelectionTelemetry($draft, [2, 1, 3]);
+        $params = $draft->getParams();
+        $params['member_quality']['ordered'] = [2, 1, 3];
+        $draft = $draft->withParams($params);
+
         $persistedCount = $service->persistStreaming([$draft], null);
 
         self::assertSame(1, $persistedCount);
@@ -307,6 +302,8 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame(3, $persistedSummary['curated_overlay_count']);
         self::assertSame(3, $persistedSummary['selection_counts']['raw']);
         self::assertSame(3, $persistedSummary['selection_counts']['curated']);
+        self::assertSame([2, 1, 3], $persistedParams['member_quality']['ordered']);
+        self::assertArrayHasKey('policy', $persistedParams['member_selection']);
         self::assertArrayHasKey('quality_avg', $persistedParams);
         self::assertArrayHasKey('quality_resolution', $persistedParams);
         self::assertArrayHasKey('people', $persistedParams);
@@ -340,6 +337,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertArrayHasKey('people', $roundtripParams);
         self::assertArrayHasKey('people_count', $roundtripParams);
         self::assertArrayHasKey('movement', $roundtripParams);
+        self::assertSame([2, 1, 3], $roundtripParams['member_quality']['ordered']);
         self::assertSame([
             'segment_count'                               => 4,
             'fast_segment_count'                          => 2,
@@ -356,6 +354,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             'max_heading_change_threshold_deg'            => 90.0,
             'min_consistent_heading_segments_threshold'   => 1,
         ], $roundtripParams['movement']);
+        self::assertSame(0, $selector->calls);
     }
 
     #[Test]
@@ -415,17 +414,22 @@ final class ClusterPersistenceServiceTest extends TestCase
         $em->expects(self::exactly(2))->method('flush');
         $em->expects(self::exactly(2))->method('clear');
 
-        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
-            public function curate(ClusterDraft $draft): ClusterDraft
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public int $calls = 0;
+
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
             {
-                return $draft;
+                ++$this->calls;
+
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
             }
         };
 
         $service = new ClusterPersistenceService(
             $em,
             $lookup,
-            $selectionService,
+            $selector,
+            $this->createPolicyProvider(),
             $coverPicker,
             defaultBatchSize: 10,
             maxMembers: 20
@@ -435,6 +439,10 @@ final class ClusterPersistenceServiceTest extends TestCase
             new ClusterDraft('stream-a', [], ['lat' => 0.0, 'lon' => 0.0], [1, 2]),
             new ClusterDraft('stream-b', [], ['lat' => 1.0, 'lon' => 1.0], [3]),
         ];
+
+        foreach ($drafts as $draft) {
+            $this->addSelectionTelemetry($draft, $draft->getMembers());
+        }
 
         $callbackCount = 0;
         $persistedCount = $service->persistStreaming(
@@ -449,6 +457,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertCount(2, $persistedMembers);
         self::assertSame([1, 2], $persistedMembers[0]);
         self::assertSame([3], $persistedMembers[1]);
+        self::assertSame(0, $selector->calls);
     }
 
     #[Test]
@@ -478,21 +487,14 @@ final class ClusterPersistenceServiceTest extends TestCase
         $coverPicker = $this->createMock(CoverPickerInterface::class);
         $coverPicker->method('pickCover')->willReturn($media[1]);
 
-        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
-            public function curate(ClusterDraft $draft): ClusterDraft
-            {
-                $params = $draft->getParams();
-                $params['member_quality'] = [
-                    'ordered' => [2, 1],
-                    'summary' => [
-                        'selection_counts' => [
-                            'raw'     => count($draft->getMembers()),
-                            'curated' => 2,
-                        ],
-                    ],
-                ];
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public int $calls = 0;
 
-                return $draft->withParams($params);
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
+            {
+                ++$this->calls;
+
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
             }
         };
 
@@ -501,7 +503,8 @@ final class ClusterPersistenceServiceTest extends TestCase
         $service = new ClusterPersistenceService(
             $em,
             $lookup,
-            $selectionService,
+            $selector,
+            $this->createPolicyProvider(),
             $coverPicker,
         );
 
@@ -512,6 +515,32 @@ final class ClusterPersistenceServiceTest extends TestCase
             ['lat' => 48.123456, 'lon' => 11.654321],
             [1, 2],
         );
+
+        $cluster->setParams([
+            'storyline' => 'default',
+            'member_selection' => [
+                'policy' => [
+                    'profile' => 'default',
+                ],
+                'counts' => [
+                    'raw' => 2,
+                    'curated' => 2,
+                ],
+            ],
+            'member_quality' => [
+                'ordered' => [2, 1],
+                'summary' => [
+                    'selection_policy' => 'default',
+                    'selection_counts' => [
+                        'raw' => 2,
+                        'curated' => 2,
+                    ],
+                    'selection_telemetry' => [
+                        'selector' => 'policy',
+                    ],
+                ],
+            ],
+        ]);
 
         $cluster->setStartAt(new DateTimeImmutable('2024-05-20T08:00:00+00:00'));
         $cluster->setEndAt(new DateTimeImmutable('2024-05-20T09:00:00+00:00'));
@@ -541,6 +570,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertNotNull($cluster->getConfigHash());
         self::assertSame(48.123456, $cluster->getCentroidLat());
         self::assertSame(11.654321, $cluster->getCentroidLon());
+        self::assertSame(0, $selector->calls);
     }
 
     #[Test]
@@ -567,10 +597,10 @@ final class ClusterPersistenceServiceTest extends TestCase
             }
         };
 
-        $selectionService = new class implements ClusterMemberSelectionServiceInterface {
-            public function curate(ClusterDraft $draft): ClusterDraft
+        $selector = new class implements ClusterMemberSelectorInterface {
+            public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
             {
-                return $draft;
+                return new MemberSelectionResult($memberIds, ['selector' => 'spy']);
             }
         };
 
@@ -580,7 +610,8 @@ final class ClusterPersistenceServiceTest extends TestCase
         $service = new ClusterPersistenceService(
             $this->createMock(EntityManagerInterface::class),
             $lookup,
-            $selectionService,
+            $selector,
+            $this->createPolicyProvider(),
             $coverPicker,
         );
 
@@ -609,6 +640,53 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame([
             ['decision' => 'merge', 'winner' => 'abc', 'role' => 'winner'],
         ], $metadata['meta']['merges']);
+    }
+
+    private function createPolicyProvider(): SelectionPolicyProvider
+    {
+        $config = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
+        $parameters = $config['parameters'] ?? [];
+
+        return new SelectionPolicyProvider(
+            $parameters['memories.selection.profiles'] ?? [],
+            $parameters['memories.selection.default_profile'] ?? 'default',
+            $parameters['memories.selection.algorithm_profiles'] ?? [],
+            $parameters['memories.selection.profile_constraints'] ?? [],
+        );
+    }
+
+    /**
+     * @param list<int> $ordered
+     */
+    private function addSelectionTelemetry(ClusterDraft $draft, array $ordered): void
+    {
+        $rawCount = count($draft->getMembers());
+        $curated  = count($ordered);
+
+        $draft->setParam('member_selection', [
+            'policy' => [
+                'profile' => 'default',
+            ],
+            'counts' => [
+                'raw'     => $rawCount,
+                'curated' => $curated,
+                'dropped' => max(0, $rawCount - $curated),
+            ],
+        ]);
+
+        $draft->setParam('member_quality', [
+            'ordered' => $ordered,
+            'summary' => [
+                'selection_policy' => 'default',
+                'selection_counts' => [
+                    'raw'     => $rawCount,
+                    'curated' => $curated,
+                ],
+                'selection_telemetry' => [
+                    'selector' => 'policy',
+                ],
+            ],
+        ]);
     }
 
     /**
