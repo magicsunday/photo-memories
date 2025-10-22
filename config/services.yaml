@@ -65,6 +65,9 @@ services:
     MagicSunday\Memories\Support\FeatureFlagProviderInterface:
         alias: MagicSunday\Memories\Support\FeatureFlagProvider
 
+    Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface:
+        factory: ['@service_container', 'getParameterBag']
+
     MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface:
         alias: MagicSunday\Memories\Service\Hash\Xxhash64FileHasher
 
