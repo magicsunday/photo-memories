@@ -19,6 +19,7 @@ services:
         exclude:
             - '../src/{Memories,Dependencies}.php'
             - '../src/Entity/'
+            - '../src/Service/Feed/FeedUserPreferences.php'
 
     _instanceof:
         Symfony\Component\Console\Command\Command:
