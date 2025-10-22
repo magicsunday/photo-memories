@@ -32,6 +32,10 @@ memories
 memories.md5
 .env
 images/
+!fixtures/
+!fixtures/memories/
+!fixtures/memories/**
+!fixtures/memories/**/expected.json
 
 # Coverage reports
 .coverage/

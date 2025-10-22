@@ -1,0 +1,180 @@
+{
+    "dataset": "kurztrip",
+    "title": "Kurztrip nach Prag",
+    "clusters": [
+        {
+            "id": "anreise-altstadt",
+            "title": "Anreise & Altstadtspaziergang",
+            "summary": "Früher Zug, Kaffeehaus und Abendstimmung an der Moldau.",
+            "member_count": 3,
+            "timeline": {
+                "start": "2024-05-17T06:45:00+02:00",
+                "end": "2024-05-17T21:15:00+02:00",
+                "coverage_hours": 14.5,
+                "days_present": [
+                    "2024-05-17"
+                ]
+            },
+            "missing_dates": [],
+            "key_photo": "kurztrip-01.svg",
+            "highlight_photos": [
+                "kurztrip-01.svg",
+                "kurztrip-02.svg",
+                "kurztrip-03.svg"
+            ],
+            "locations": [
+                "Prag (CZ)"
+            ],
+            "tags": [
+                "abend",
+                "altstadt",
+                "café",
+                "frühstück",
+                "kaffee",
+                "kulinarik",
+                "lichter",
+                "reise",
+                "zug"
+            ],
+            "people": [
+                "Alex",
+                "Sam"
+            ],
+            "story_beats": [
+                "Sonnenaufgang im Zug",
+                "Erster Kaffee im Viertel",
+                "Abendliche Lichter an der Moldau"
+            ]
+        },
+        {
+            "id": "kulturelle-hauptgaenge",
+            "title": "Kultur, Brücken & Streetfood",
+            "summary": "Museen, Karlsbrücke und Streetfood-Stopps.",
+            "member_count": 3,
+            "timeline": {
+                "start": "2024-05-18T10:05:00+02:00",
+                "end": "2024-05-18T19:20:00+02:00",
+                "coverage_hours": 9.25,
+                "days_present": [
+                    "2024-05-18"
+                ]
+            },
+            "missing_dates": [],
+            "key_photo": "kurztrip-03.svg",
+            "highlight_photos": [
+                "kurztrip-02.svg",
+                "kurztrip-03.svg",
+                "kurztrip-04.svg"
+            ],
+            "locations": [
+                "Prag (CZ)"
+            ],
+            "tags": [
+                "abend",
+                "brücke",
+                "fluss",
+                "geschichte",
+                "kulinarik",
+                "kunst",
+                "museum",
+                "spaziergang",
+                "streetfood"
+            ],
+            "people": [
+                "Alex",
+                "Sam"
+            ],
+            "story_beats": [
+                "Museum am Vormittag",
+                "Karlsbrücke zur Mittagszeit",
+                "Streetfood am Abend"
+            ]
+        },
+        {
+            "id": "heimreise-und-abschluss",
+            "title": "Heimreise & Abschiedsklassiker",
+            "summary": "Letzter Blick auf die Stadt, Souvenirs und Heimfahrt.",
+            "member_count": 3,
+            "timeline": {
+                "start": "2024-05-19T08:30:00+02:00",
+                "end": "2024-05-19T16:50:00+02:00",
+                "coverage_hours": 8.33,
+                "days_present": [
+                    "2024-05-19"
+                ]
+            },
+            "missing_dates": [],
+            "key_photo": "kurztrip-02.svg",
+            "highlight_photos": [
+                "kurztrip-04.svg"
+            ],
+            "locations": [
+                "Prag (CZ)"
+            ],
+            "tags": [
+                "abschied",
+                "heimreise",
+                "kaffee",
+                "markt",
+                "souvenir",
+                "zug"
+            ],
+            "people": [
+                "Alex",
+                "Sam"
+            ],
+            "story_beats": [
+                "Café zum Abschied",
+                "Souvenirs am Markt",
+                "Rückfahrt bei goldenem Licht"
+            ]
+        }
+    ],
+    "storyboard": {
+        "cover_photo": "kurztrip-01.svg",
+        "themes": [
+            "Kurztrip",
+            "Urban",
+            "Kulinarik"
+        ],
+        "transitions": [
+            "Frühstart → Check-in",
+            "Altstadt → Abendlichter",
+            "Kaffeehaus → Heimfahrt"
+        ],
+        "key_photos": [
+            "kurztrip-01.svg",
+            "kurztrip-03.svg",
+            "kurztrip-02.svg"
+        ],
+        "sequences": [
+            {
+                "cluster": "anreise-altstadt",
+                "title": "Anreise & Altstadtspaziergang",
+                "story_beats": [
+                    "Sonnenaufgang im Zug",
+                    "Erster Kaffee im Viertel",
+                    "Abendliche Lichter an der Moldau"
+                ]
+            },
+            {
+                "cluster": "kulturelle-hauptgaenge",
+                "title": "Kultur, Brücken & Streetfood",
+                "story_beats": [
+                    "Museum am Vormittag",
+                    "Karlsbrücke zur Mittagszeit",
+                    "Streetfood am Abend"
+                ]
+            },
+            {
+                "cluster": "heimreise-und-abschluss",
+                "title": "Heimreise & Abschiedsklassiker",
+                "story_beats": [
+                    "Café zum Abschied",
+                    "Souvenirs am Markt",
+                    "Rückfahrt bei goldenem Licht"
+                ]
+            }
+        ]
+    }
+}
