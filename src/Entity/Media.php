@@ -59,7 +59,7 @@ class Media
     #[ORM\Id]
     #[ORM\Column(type: Types::BIGINT)]
     #[ORM\GeneratedValue]
-    private int $id;
+    private ?int $id = null;
 
     /**
      * Absolute path to the media asset within the library.
@@ -664,8 +664,10 @@ class Media
 
     /**
      * Returns the unique identifier assigned by Doctrine.
+     *
+     * Null is returned until the entity has been persisted and flushed.
      */
-    public function getId(): int
+    public function getId(): ?int
     {
         return $this->id;
     }
