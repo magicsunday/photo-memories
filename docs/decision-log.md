@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-10-31 – Deprecate vacation-specific curate alias
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Operators still relied on `memories:curate-vacation`, a legacy shortcut that bypassed new pipeline options and hid the recommended `memories:curate --types=vacation` workflow from release notes. The alias stayed undocumented and silently missed QA coverage for deprecation messaging.
+- **Decision:** Added an explicit Symfony Console alias `memories:curate-vacation` that emits a German deprecation warning and internally dispatches `memories:curate --types=vacation`, ensuring users see guidance while the pipeline paths remain unified. Covered the behaviour with PHPUnit command tests so the warning and delegation stay enforced.
+- **Alternatives considered:** Remove the alias outright (risked breaking scheduled jobs without warning) or keep the alias without telemetry (continued to hide the recommended command and lacked regression coverage). Both were rejected to maintain backwards compatibility while nudging operators toward the supported interface.
+- **Follow-up actions:** Announce the deprecation in the next CLI release notes and remove the alias after operators confirm migrations; monitor support channels for scripts that still call the legacy command.
+
 ## 2025-10-30 – Mirror scoring weight ENV names to configuration keys
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators adopted the new scoring weight overrides but the environment variables still used the singular `MEMORIES_SCORING_WEIGHT_*` naming, diverging from the pluralised `memories.scoring.weights.*` path. Tooling that auto-generated dashboards from the structured `memories.*` tree therefore produced mismatched ENV hints and confused deployments.
