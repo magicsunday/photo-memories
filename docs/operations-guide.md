@@ -23,9 +23,11 @@
   Chains indexing, clustering, and feed export in simulation mode while writing HTML model cards for consolidated clusters. Inspect the dry-run output, then rerun without `--dry-run` (keeping `--explain` if you want explainability artefacts persisted).
 - **Export an HTML preview**
   ```bash
-  php src/Memories.php memories:feed:export-html var/preview --stage=curated --max-items=48
+  for stage in raw merged curated; do
+    php src/Memories.php memories:feed:export-html "var/preview/${stage}" --stage="${stage}" --max-items=48
+  done
   ```
-  Produces a static preview at `var/preview/index.html`, copying (or `--symlink`-ing) thumbnails and enforcing feed-stage limits. Serve the folder locally via `php -S localhost:8080 -t var/preview` when validating with stakeholders.
+  The command defaults to `--stage=curated`, so the loop ensures exports cover `raw` and `merged` feeds as well. Each invocation writes its own `index.html` under `var/preview/<stage>/index.html` (with thumbnails copied or `--symlink`-ed), enabling review of every pipeline stage. Serve any stage locally via `php -S localhost:8080 -t var/preview/<stage>` when validating with stakeholders.
 - **Discover automation helpers**
   ```bash
   make help
@@ -62,9 +64,11 @@
    php src/Memories.php memories:curate --reindex=auto --explain
    ```
    Ensure clustering completes, feed export succeeds, and telemetry shows healthy rejection ratios.
-4. Publish an updated HTML preview for stakeholders:
+4. Publish updated HTML previews for stakeholders across all pipeline stages:
    ```bash
-   php src/Memories.php memories:feed:export-html var/preview --stage=curated --max-items=48
+   for stage in raw merged curated; do
+     php src/Memories.php memories:feed:export-html "var/preview/${stage}" --stage="${stage}" --max-items=48
+   done
    ```
-   Verify `var/preview/index.html` renders locally and bundles the expected thumbnails.
+   The console defaults to `--stage=curated`; running each stage explicitly produces `var/preview/<stage>/index.html` artefacts so reviewers can diff raw, merged, and curated feeds. Spot-check the generated previews locally before sharing.
 5. Archive logs (`var/log/memories/`), JSONL telemetry, and explain artefacts alongside the release notes. Attach anomalies or follow-up tasks to the decision log.
