@@ -23,16 +23,16 @@ use function trim;
  */
 final class PlaceId
 {
-    private string $provider;
+    public readonly string $provider;
 
-    private string $identifier;
+    public readonly string $identifier;
 
-    private ?float $confidence;
+    public readonly ?float $confidence;
 
     /**
      * @var array<string, mixed>
      */
-    private array $meta;
+    public readonly array $meta;
 
     /**
      * @param array<string, mixed> $meta
@@ -61,29 +61,6 @@ final class PlaceId
         $this->identifier = $identifier;
         $this->confidence = $confidence;
         $this->meta       = $meta;
-    }
-
-    public function getProvider(): string
-    {
-        return $this->provider;
-    }
-
-    public function getIdentifier(): string
-    {
-        return $this->identifier;
-    }
-
-    public function getConfidence(): ?float
-    {
-        return $this->confidence;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function getMeta(): array
-    {
-        return $this->meta;
     }
 
     /**

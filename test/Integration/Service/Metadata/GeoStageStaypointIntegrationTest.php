@@ -76,10 +76,10 @@ final class GeoStageStaypointIntegrationTest extends TestCase
 
         $placeId = $updated->getPlaceId();
         self::assertInstanceOf(PlaceId::class, $placeId);
-        self::assertSame('staypoint:s2', $placeId->getProvider());
-        self::assertSame(S2CellId::tokenFromDegrees(48.1901, 11.6304, 12), $placeId->getIdentifier());
+        self::assertSame('staypoint:s2', $placeId->provider);
+        self::assertSame(S2CellId::tokenFromDegrees(48.1901, 11.6304, 12), $placeId->identifier);
 
-        $meta = $placeId->getMeta();
+        $meta = $placeId->meta;
         self::assertSame(3, $meta['samples']);
         self::assertSame(65, $meta['durationMinutes']);
     }
