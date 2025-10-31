@@ -114,10 +114,10 @@ final class StaypointPlaceHeuristicTest extends TestCase
 
         $placeId = $result->getPlaceId();
         self::assertInstanceOf(PlaceId::class, $placeId);
-        self::assertSame('staypoint:s2', $placeId->getProvider());
-        self::assertSame(S2CellId::tokenFromDegrees(48.1505, 11.5810, 12), $placeId->getIdentifier());
+        self::assertSame('staypoint:s2', $placeId->provider);
+        self::assertSame(S2CellId::tokenFromDegrees(48.1505, 11.5810, 12), $placeId->identifier);
 
-        $meta = $placeId->getMeta();
+        $meta = $placeId->meta;
         self::assertSame(4, $meta['samples']);
         self::assertSame(65, $meta['durationMinutes']);
     }
@@ -150,8 +150,8 @@ final class StaypointPlaceHeuristicTest extends TestCase
 
         $placeId = $seed->getPlaceId();
         self::assertInstanceOf(PlaceId::class, $placeId);
-        self::assertSame('manual', $placeId->getProvider());
-        self::assertSame('user-defined', $placeId->getIdentifier());
+        self::assertSame('manual', $placeId->provider);
+        self::assertSame('user-defined', $placeId->identifier);
     }
 }
 
