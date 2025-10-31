@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use function array_key_exists;
 use function is_array;
 use function is_bool;
 use function is_float;
@@ -65,9 +66,14 @@ final readonly class StructuredMetadataSection
     /**
      * @return SectionValue|null
      */
-    public function get(string $key): array|bool|float|int|string|null
+    public function __get(string $key): array|bool|float|int|string|null
     {
         return $this->values[$key] ?? null;
+    }
+
+    public function __isset(string $key): bool
+    {
+        return array_key_exists($key, $this->values);
     }
 
     /**

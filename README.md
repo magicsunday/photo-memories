@@ -156,6 +156,20 @@ Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-O
 - Einzelne Schritte: `composer ci:test:php:lint`, `composer ci:test:php:phpstan`, `composer ci:test:php:unit` usw.
 - Frontend-E2E: `npm run test:e2e` bzw. `make web-test` startet Playwright.
 
+### Strukturierte Metadaten per Property-Chain
+
+- PHPUnit 12 verzichtet auf Getter-Aufrufe in Assertions. Strukturierte EXIF-Metadaten (Versionen 1.0–3.0) werden direkt über Property-Chains geprüft.
+- Tests und Snapshots behalten ihre bestehenden Fixtures bei; nur die Zugriffe wechseln auf `\$meta->…->…`.
+
+```php
+\$factory = new StructuredMetadataFactory();
+\$meta = \$factory->create(\$media);
+
+self::assertSame('Canon EOS R6', \$meta->camera->summary);
+self::assertSame('1/100 s', \$meta->exposure->exposure_text);
+self::assertSame('2024-10-05T12:34:56+00:00', \$meta->derived->taken_at);
+```
+
 ### Erinnerungs-Fixtures & Cluster-Integration
 
 - Unter `fixtures/memories/<dataset>/` liegen kuratierte Datensätze inklusive `metadata.json`, SVG-Vorschaubildern (`*.svg`, viewBox 64×64)

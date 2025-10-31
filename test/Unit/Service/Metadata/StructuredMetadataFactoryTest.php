@@ -69,19 +69,19 @@ final class StructuredMetadataFactoryTest extends TestCase
         $factory = new StructuredMetadataFactory();
         $metadata = $factory->create($media);
 
-        self::assertSame('Canon RF 24-70mm 24-70mm f/2.8L', $metadata->lens->get('summary'));
-        self::assertSame('Canon EOS R6', $metadata->camera->get('summary'));
-        self::assertSame('4000 × 3000', $metadata->image->get('dimensions'));
-        self::assertSame('90° gedreht', $metadata->image->get('orientation_label'));
-        self::assertSame('35 mm', $metadata->exposure->get('focal_length_text'));
-        self::assertSame('f/2.8', $metadata->exposure->get('aperture_text'));
-        self::assertSame('1/100 s', $metadata->exposure->get('exposure_text'));
-        self::assertSame('Blitz ausgelöst', $metadata->exposure->get('flash_text'));
-        self::assertSame('48.137154, 11.576124', $metadata->gps->get('coordinates'));
-        self::assertSame('abcdef1234567890abcdef1234567890', $metadata->preview->get('phash'));
-        self::assertSame('2024-10-05T12:34:56+00:00', $metadata->derived->get('taken_at'));
-        self::assertSame('Europe/Berlin', $metadata->derived->get('timezone'));
-        self::assertSame('photo', $metadata->derived->get('content_kind'));
-        self::assertSame(12.5, $metadata->derived->get('distance_km_from_home'));
+        self::assertSame('Canon RF 24-70mm 24-70mm f/2.8L', $metadata->lens->summary);
+        self::assertSame('Canon EOS R6', $metadata->camera->summary);
+        self::assertSame('4000 × 3000', $metadata->image->dimensions);
+        self::assertSame('90° gedreht', $metadata->image->orientation_label);
+        self::assertSame('35 mm', $metadata->exposure->focal_length_text);
+        self::assertSame('f/2.8', $metadata->exposure->aperture_text);
+        self::assertSame('1/100 s', $metadata->exposure->exposure_text);
+        self::assertSame('Blitz ausgelöst', $metadata->exposure->flash_text);
+        self::assertSame('48.137154, 11.576124', $metadata->gps->coordinates);
+        self::assertSame('abcdef1234567890abcdef1234567890', $metadata->preview->phash);
+        self::assertSame('2024-10-05T12:34:56+00:00', $metadata->derived->taken_at);
+        self::assertSame('Europe/Berlin', $metadata->derived->timezone);
+        self::assertSame('photo', $metadata->derived->content_kind);
+        self::assertSame(12.5, $metadata->derived->distance_km_from_home);
     }
 }

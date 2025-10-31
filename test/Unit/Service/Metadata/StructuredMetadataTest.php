@@ -35,10 +35,10 @@ final class StructuredMetadataTest extends TestCase
             'image' => 'not-an-array',
         ]);
 
-        self::assertSame('Canon', $metadata->lens->get('make'));
-        self::assertSame(123456, $metadata->lens->get('serial'));
-        self::assertSame([true, false, 42, 'value', null], $metadata->lens->get('flags'));
-        self::assertNull($metadata->lens->get('ignored'));
+        self::assertSame('Canon', $metadata->lens->make);
+        self::assertSame(123456, $metadata->lens->serial);
+        self::assertSame([true, false, 42, 'value', null], $metadata->lens->flags);
+        self::assertNull($metadata->lens->ignored);
 
         self::assertFalse($metadata->camera->isEmpty());
         self::assertSame(['owner' => null], $metadata->camera->toArray());
