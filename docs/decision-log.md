@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2025-11-01 – Include structured EXIF metadata in meta exports
+- **Author:** ChatGPT (gpt-5-codex)
+- **Context:** Downstream consumers lacked a normalised view of camera, lens, exposure, and GPS details once the `Curate\Exif\Structured` wrappers were deprecated. The media index export only exposed primitive fields, forcing clients to recompute display strings and coordinate formats.
+- **Decision:** Added `StructuredMetadataFactory` to assemble EXIF sections and extended `MetaExportStage` to embed a `structured_metadata` block in `media_index.meta`. The export now surfaces formatted summaries (e.g. `f/2.8`, `Canon EOS R6`) and decimal coordinates without duplicating extraction logic.【F:src/Service/Metadata/StructuredMetadataFactory.php†L1-L220】【F:src/Service/Indexing/Stage/MetaExportStage.php†L20-L210】【F:docs/media-index-meta-schema.md†L26-L60】
+- **Alternatives considered:** Keep the meta export unchanged and let clients derive strings (duplicated logic, inconsistent formatting) or keep the legacy wrapper classes in parallel (increased maintenance burden). Both were rejected to keep the API cohesive and avoid regressions while retiring the wrappers.
+- **Follow-up actions:** Update consumer integrations to rely on the new `structured_metadata` node and remove any remaining references to the deprecated wrapper classes in downstream services.
+
 ## 2025-10-31 – Deprecate vacation-specific curate alias
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators still relied on `memories:curate-vacation`, a legacy shortcut that bypassed new pipeline options and hid the recommended `memories:curate --types=vacation` workflow from release notes. The alias stayed undocumented and silently missed QA coverage for deprecation messaging.

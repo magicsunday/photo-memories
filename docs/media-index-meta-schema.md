@@ -31,6 +31,7 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
 | `relationships`   | object                                    | Burst grouping metadata and live-photo partner references. |
 | `thumbnails`      | object or null                            | Map of generated thumbnails keyed by label. |
 | `qa_findings`     | array of objects (may be empty)           | QA findings containing missing feature lists and remediation hints. |
+| `structured_metadata` | object                                | Normalised EXIF-derived sections (camera, lens, exposure, GPS, preview, derived signals). |
 
 ### Field semantics
 
@@ -41,6 +42,12 @@ The `MetaExportStage` consolidates all signals collected during media indexing a
 - **QA findings** are only emitted when `MetadataQaInspectionResult::hasIssues()` returns true. Each entry contains:
   - `missing_features`: list of missing feature keys
   - `suggestions`: list of human-readable remediation hints
+- **Structured metadata** mirrors grouped EXIF data for convenience:
+  - `camera` and `lens` provide make/model/serial summaries.
+  - `exposure` exposes focal length, aperture, exposure time, ISO, and flash details alongside formatted strings (`f/2.8`, `1/125 s`).
+  - `image` and `gps` capture dimensions, orientation labels, and decimal coordinates (`lat, lon`).
+  - `preview` stores perceptual hashes (`phash`, `dhash`, `ahash`).
+  - `derived` contains capture timestamps, timezone metadata, video durations, and distance-from-home hints.
 - **Video metadata** provides detailed playback characteristics:
   - `video_duration_s`: duration of the primary video stream in seconds (float, may be `null`).
   - `video_fps`: frames per second for the primary stream (float, may be `null`).

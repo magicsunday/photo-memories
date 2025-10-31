@@ -40,6 +40,7 @@ use MagicSunday\Memories\Service\Indexing\Stage\ThumbnailGenerationStage;
 use MagicSunday\Memories\Service\Indexing\Stage\TimeStage;
 use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use MagicSunday\Memories\Service\Metadata\DaypartEnricher;
+use MagicSunday\Memories\Service\Metadata\StructuredMetadataFactory;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
@@ -530,7 +531,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             new FacesStage($extractors['faces']['detector']),
             new SceneStage($extractors['scene']['clip']),
             new ThumbnailGenerationStage($thumbnailService),
-            new MetaExportStage(),
+                    new MetaExportStage(new StructuredMetadataFactory()),
             new PersistenceBatchStage($entityManager, 10, $tracker),
             $postFlushStage,
         ], $videoExtensions ?? []);
