@@ -51,39 +51,44 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         $dayQuotas      = $policy->getDayQuotas();
         $maxPerDay      = $policy->getMaxPerDay();
 
-        $uniqueDays = [];
-        foreach ($candidates as $candidate) {
-            $day = $candidate['day'] ?? null;
-            if (is_string($day) && $day !== '') {
-                $uniqueDays[$day] = true;
-            }
-        }
-
-        if ($uniqueDays === [] && $dayQuotas !== []) {
-            foreach ($dayQuotas as $day => $quota) {
-                if (is_string($day) && $day !== '') {
-                    $uniqueDays[$day] = true;
-                }
-            }
-        }
-
-        if ($uniqueDays === [] && $dayContext !== []) {
-            foreach ($dayContext as $day => $_) {
-                if (is_string($day) && $day !== '') {
-                    $uniqueDays[$day] = true;
-                }
-            }
-        }
-
-        $runDays = count($uniqueDays);
-        if ($runDays <= 0) {
-            $runDays = 1;
-        }
+        $derived           = $policy->getDerived();
+        $quotaSpacingCache = $derived?->quotaSpacingSeconds ?? [];
 
         $defaultPerDayCap = null;
         if (is_int($maxPerDay) && $maxPerDay > 0) {
             $defaultPerDayCap = $maxPerDay;
+        } elseif ($derived !== null) {
+            $defaultPerDayCap = max(1, $derived->defaultPerDayCap);
         } else {
+            $uniqueDays = [];
+            foreach ($candidates as $candidate) {
+                $day = $candidate['day'] ?? null;
+                if (is_string($day) && $day !== '') {
+                    $uniqueDays[$day] = true;
+                }
+            }
+
+            if ($uniqueDays === [] && $dayQuotas !== []) {
+                foreach ($dayQuotas as $day => $_quota) {
+                    if (is_string($day) && $day !== '') {
+                        $uniqueDays[$day] = true;
+                    }
+                }
+            }
+
+            if ($uniqueDays === [] && $dayContext !== []) {
+                foreach ($dayContext as $day => $_) {
+                    if (is_string($day) && $day !== '') {
+                        $uniqueDays[$day] = true;
+                    }
+                }
+            }
+
+            $runDays = count($uniqueDays);
+            if ($runDays <= 0) {
+                $runDays = 1;
+            }
+
             $defaultPerDayCap = (int) ceil($targetTotal / $runDays);
             if ($defaultPerDayCap <= 0) {
                 $defaultPerDayCap = 1;
@@ -123,10 +128,15 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
                 $perDayCap = $defaultPerDayCap;
             }
 
-            $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
-            if (is_int($dayDuration) && $dayDuration > 0) {
-                $quotaSpacing = (int) ceil($dayDuration / max(3, $perDayCap + 1));
+            $quotaSpacing = $quotaSpacingCache[$day] ?? null;
+            if ($quotaSpacing !== null) {
                 $requiredSpacing = max($requiredSpacing, $quotaSpacing);
+            } else {
+                $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
+                if (is_int($dayDuration) && $dayDuration > 0) {
+                    $quotaSpacing = (int) ceil($dayDuration / max(3, $perDayCap + 1));
+                    $requiredSpacing = max($requiredSpacing, $quotaSpacing);
+                }
             }
 
             if ($baseSpacing > 0 && $progressFactor > 0.0) {
