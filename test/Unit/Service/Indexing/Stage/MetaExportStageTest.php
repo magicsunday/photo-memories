@@ -20,6 +20,7 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Stage\MetaExportStage;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
+use MagicSunday\Memories\Service\Metadata\StructuredMetadataFactory;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\NullOutput;
@@ -187,7 +188,7 @@ final class MetaExportStageTest extends TestCase
                 MetadataQaInspectionResult::withIssues(['calendar.daypart'], ['Check timezone votes'])
             );
 
-            $stage = new MetaExportStage();
+            $stage = new MetaExportStage(new StructuredMetadataFactory());
             $stage->process($context);
 
             $metaPath = $baseDir . '/media_index.meta';
@@ -238,6 +239,10 @@ final class MetaExportStageTest extends TestCase
                 ],
                 $payload['quality_proxies']
             );
+            self::assertArrayHasKey('structured_metadata', $payload);
+            self::assertSame('Canon EOS R6', $payload['structured_metadata']['camera']['summary'] ?? null);
+            self::assertSame('f/2.8', $payload['structured_metadata']['exposure']['aperture_text'] ?? null);
+            self::assertSame('48.137154, 11.576124', $payload['structured_metadata']['gps']['coordinates'] ?? null);
             self::assertSame(
                 [
                     [
@@ -269,7 +274,7 @@ final class MetaExportStageTest extends TestCase
             $context = MediaIngestionContext::create($filePath, false, true, false, false, new NullOutput());
             $context = $context->withMedia($media);
 
-            $stage = new MetaExportStage();
+            $stage = new MetaExportStage(new StructuredMetadataFactory());
             $stage->process($context);
 
             self::assertFileDoesNotExist($baseDir . '/media_index.meta');

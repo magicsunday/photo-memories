@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
+use MagicSunday\Memories\Service\Metadata\StructuredMetadataFactory;
 use RuntimeException;
 
 use function dirname;
@@ -44,6 +45,10 @@ final class MetaExportStage implements MediaIngestionStageInterface
     private const string OUTPUT_FILENAME = 'media_index.meta';
 
     private const int JSON_FLAGS = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION;
+
+    public function __construct(private readonly StructuredMetadataFactory $structuredMetadataFactory)
+    {
+    }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
@@ -213,6 +218,7 @@ final class MetaExportStage implements MediaIngestionStageInterface
             ],
             'thumbnails' => $media->getThumbnails(),
             'qa_findings' => $this->serialiseQaFindings($qaFindings),
+            'structured_metadata' => $this->structuredMetadataFactory->create($media)->toArray(),
         ];
     }
 
