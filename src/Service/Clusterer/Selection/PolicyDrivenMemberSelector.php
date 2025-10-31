@@ -18,6 +18,8 @@ use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\Support\FaceMetricHelper;
+use MagicSunday\Memories\Service\Clusterer\Selection\Value\Derived;
+use MagicSunday\Memories\Service\Clusterer\Selection\ValueFactory;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function abs;
@@ -80,6 +82,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     private readonly PersonSignatureHelper $personHelper;
 
+    private readonly ValueFactory $valueFactory;
+
     /**
      * @param iterable<SelectionStageInterface> $hardStages
      * @param iterable<SelectionStageInterface> $softStages
@@ -87,10 +91,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     public function __construct(
         iterable $hardStages,
         iterable $softStages,
+        ?ValueFactory $valueFactory = null,
     ) {
         $this->hardStages   = array_values(is_iterable($hardStages) ? [...$hardStages] : []);
         $this->softStages   = array_values(is_iterable($softStages) ? [...$softStages] : []);
         $this->personHelper = new PersonSignatureHelper();
+        $this->valueFactory = $valueFactory ?? new ValueFactory();
 
         if ($this->hardStages === []) {
             throw new InvalidArgumentException('At least one hard selection stage must be configured.');
@@ -133,6 +139,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $context->getDaySegments(),
         );
 
+        $derived = $candidates['derived'];
+        $policyWithDerived = $policy->withDerived($derived);
+
         $telemetry = [
             'storyline' => $draft->getStoryline(),
             'counts' => [
@@ -153,7 +162,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 SelectionTelemetry::REASON_ORIENTATION    => 0,
                 SelectionTelemetry::REASON_PEOPLE         => 0,
             ],
-            'policy' => $this->policySnapshot($policy, $draft->getStoryline()),
+            'policy' => $this->policySnapshot($policyWithDerived, $draft->getStoryline()),
             'stages' => [
                 'hard' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->hardStages),
                 'soft' => array_map(static fn (SelectionStageInterface $stage): string => $stage->getName(), $this->softStages),
@@ -193,10 +202,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         $attempts[] = static fn (SelectionPolicy $p): SelectionPolicy => $p->withoutCaps();
 
         $selected        = [];
-        $appliedPolicy   = $policy;
+        $appliedPolicy   = $policyWithDerived;
         $relaxations     = [];
         $finalCollector  = new SelectionTelemetry();
-        $candidatePolicy = $policy;
+        $candidatePolicy = $policyWithDerived;
 
         foreach ($attempts as $index => $mutator) {
             $candidatePolicy = $mutator($candidatePolicy);
@@ -564,7 +573,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
      * @param array<int, Media>      $mediaMap
      * @param array<int, float|null> $qualityScores
      *
-     * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
+     * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>, derived: Derived}
      */
     private function buildCandidates(
         array $memberIds,
@@ -719,10 +728,13 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $eligible = $this->collapseBursts($eligible, $drops);
 
+        $derived = $this->valueFactory->create($policy, $eligible, $daySegments);
+
         return [
             'eligible' => $eligible,
             'drops'    => $drops,
             'all'      => $all,
+            'derived'  => $derived,
         ];
     }
 

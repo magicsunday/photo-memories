@@ -26,6 +26,7 @@ use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SceneDiversityStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\StaypointQuotaStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage;
+use MagicSunday\Memories\Service\Clusterer\Selection\Value\Derived;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -1414,7 +1415,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
      * @param array<int, Media> $mediaMap
      * @param array<int, float|null> $qualityScores
      *
-     * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
+     * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>, derived: Derived}
      */
     private function invokeBuildCandidates(
         PolicyDrivenMemberSelector $selector,
@@ -1428,7 +1429,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'buildCandidates');
         $method->setAccessible(true);
 
-        /** @var array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>} $result */
+        /** @var array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>, derived: Derived} $result */
         $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft, $daySegments);
 
         return $result;

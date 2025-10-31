@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Clusterer\Selection;
 
 use InvalidArgumentException;
+use MagicSunday\Memories\Service\Clusterer\Selection\Value\Derived;
 
 use function is_array;
 use function is_float;
@@ -54,8 +55,9 @@ final class SelectionPolicy
  * @param int|null      $peripheralDayMaxTotal optional cap for the sum of periphery day quotas
  * @param int|null      $peripheralDayHardCap  optional hard cap applied to individual periphery days
  * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
- * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
  * @param array<string, mixed> $metadata    supplementary metadata describing policy derivation
+ * @param Derived|null $derived precomputed runtime values shared across stages
  */
     public function __construct(
         private readonly string $profileKey,
@@ -89,6 +91,7 @@ final class SelectionPolicy
         private readonly array $dayQuotas = [],
         private readonly array $dayContext = [],
         private readonly array $metadata = [],
+        private readonly ?Derived $derived = null,
     ) {
         if ($targetTotal <= 0) {
             throw new InvalidArgumentException('targetTotal must be positive.');
@@ -347,6 +350,49 @@ final class SelectionPolicy
         return $this->metadata;
     }
 
+    public function getDerived(): ?Derived
+    {
+        return $this->derived;
+    }
+
+    public function withDerived(Derived $derived): self
+    {
+        return new self(
+            profileKey: $this->profileKey,
+            targetTotal: $this->targetTotal,
+            minimumTotal: $this->minimumTotal,
+            maxPerDay: $this->maxPerDay,
+            timeSlotHours: $this->timeSlotHours,
+            minSpacingSeconds: $this->minSpacingSeconds,
+            phashMinHamming: $this->phashMinHamming,
+            maxPerStaypoint: $this->maxPerStaypoint,
+            relaxedMaxPerStaypoint: $this->relaxedMaxPerStaypoint,
+            qualityFloor: $this->qualityFloor,
+            videoBonus: $this->videoBonus,
+            faceBonus: $this->faceBonus,
+            selfiePenalty: $this->selfiePenalty,
+            mmrLambda: $this->mmrLambda,
+            mmrSimilarityFloor: $this->mmrSimilarityFloor,
+            mmrSimilarityCap: $this->mmrSimilarityCap,
+            mmrMaxConsideration: $this->mmrMaxConsideration,
+            maxPerYear: $this->maxPerYear,
+            maxPerBucket: $this->maxPerBucket,
+            videoHeavyBonus: $this->videoHeavyBonus,
+            sceneBucketWeights: $this->sceneBucketWeights,
+            coreDayBonus: $this->coreDayBonus,
+            peripheralDayPenalty: $this->peripheralDayPenalty,
+            phashPercentile: $this->phashPercentile,
+            spacingProgressFactor: $this->spacingProgressFactor,
+            cohortPenalty: $this->cohortPenalty,
+            peripheralDayMaxTotal: $this->peripheralDayMaxTotal,
+            peripheralDayHardCap: $this->peripheralDayHardCap,
+            dayQuotas: $this->dayQuotas,
+            dayContext: $this->dayContext,
+            metadata: $this->metadata,
+            derived: $derived,
+        );
+    }
+
     public function withRelaxedSpacing(int $spacing): self
     {
         return new self(
@@ -381,6 +427,7 @@ final class SelectionPolicy
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
             metadata: $this->metadata,
+            derived: $this->derived,
         );
     }
 
@@ -418,6 +465,7 @@ final class SelectionPolicy
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
             metadata: $this->metadata,
+            derived: $this->derived,
         );
     }
 
@@ -455,6 +503,7 @@ final class SelectionPolicy
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
             metadata: $this->metadata,
+            derived: $this->derived,
         );
     }
 
@@ -488,6 +537,7 @@ final class SelectionPolicy
             dayQuotas: $this->dayQuotas,
             dayContext: $this->dayContext,
             metadata: $this->metadata,
+            derived: $this->derived,
         );
     }
 
@@ -534,6 +584,7 @@ final class SelectionPolicy
             dayQuotas: $dayQuotas,
             dayContext: $dayContext,
             metadata: $this->metadata,
+            derived: null,
         );
     }
 }
