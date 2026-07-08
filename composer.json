@@ -106,7 +106,17 @@
             "@ci:test:php:rector",
             "@ci:test:php:fractor",
             "@ci:test:php:cgl",
-            "@ci:test:php:unit"
+            "@ci:test:php:unit",
+            "@ci:test:php:cpd"
+        ],
+        "ci:test:php:cpd": [
+            "npx jscpd --config .jscpd.json --skip-comments --no-tips"
+        ],
+        "post-install-cmd": [
+            "npm install jscpd@^5.0.11"
+        ],
+        "post-update-cmd": [
+            "npm install jscpd@^5.0.11"
         ]
     }
 }
