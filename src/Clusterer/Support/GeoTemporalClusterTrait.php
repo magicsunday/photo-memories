@@ -17,7 +17,6 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_key_last;
 use function array_merge;
-use function array_values;
 use function count;
 use function max;
 use function usort;
@@ -106,7 +105,7 @@ trait GeoTemporalClusterTrait
             }
         );
 
-        return array_values($buckets);
+        return $buckets;
     }
 
     /**

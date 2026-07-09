@@ -84,7 +84,6 @@ final class SeriesHighlightService
             return [];
         }
 
-        /** @var list<int> $unique */
         $unique = array_values(array_unique($years, SORT_NUMERIC));
         sort($unique, SORT_NUMERIC);
 

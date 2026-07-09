@@ -30,8 +30,6 @@ use function array_values;
 use function assert;
 use function count;
 use function is_array;
-use function is_float;
-use function is_int;
 use function is_string;
 use function str_contains;
 use function strtolower;
@@ -110,7 +108,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         foreach ($night as $m) {
             $ts = $m->getTakenAt()->getTimestamp();
-            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds && $buf !== []) {
+            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];
             }
@@ -119,9 +117,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             $lastTs = $ts;
         }
 
-        if ($buf !== []) {
-            $runs[] = $buf;
-        }
+        $runs[] = $buf;
 
         $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
 
@@ -178,12 +174,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
 
             if ($sceneTags !== []) {
-                $existingSceneTags = [];
-                if (isset($params['scene_tags']) && is_array($params['scene_tags'])) {
-                    $existingSceneTags = $this->sanitizeSceneTagList($params['scene_tags']);
-                }
-
-                $params['scene_tags'] = $this->mergeSceneTagEntries($existingSceneTags, $sceneTags);
+                $params['scene_tags'] = $this->mergeSceneTagEntries([], $sceneTags);
             }
 
             if ($poi !== null) {
@@ -262,8 +253,8 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
 
             foreach ($tags as $tag) {
-                $label = $tag['label'] ?? null;
-                $score = $tag['score'] ?? null;
+                $label = $tag['label'];
+                $score = $tag['score'];
 
                 $normalized = strtolower($label);
                 $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));
@@ -295,7 +286,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         $nightKeywords = ['night', 'club', 'bar', 'pub', 'biergarten', 'lounge', 'casino'];
 
-        $label           = $poi['label'] ?? null;
+        $label           = $poi['label'];
         $normalizedLabel = strtolower($label);
         foreach ($nightKeywords as $keyword) {
             if (str_contains($normalizedLabel, $keyword)) {
@@ -324,7 +315,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
         }
 
-        $tags = $poi['tags'] ?? [];
+        $tags = $poi['tags'];
         foreach ($tags as $tagValue) {
             $normalizedValue = strtolower($tagValue);
             foreach ($nightKeywords as $keyword) {
@@ -372,40 +363,6 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         }
 
         return array_values($normalized);
-    }
-
-    /**
-     * @param array<mixed> $raw
-     *
-     * @return list<array{label: string, score: float}>
-     */
-    private function sanitizeSceneTagList(array $raw): array
-    {
-        $result = [];
-
-        foreach ($raw as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
-
-            $label = $entry['label'] ?? null;
-            if (!is_string($label)) {
-                continue;
-            }
-
-            $score = $entry['score'] ?? null;
-            $value = 0.0;
-            if (is_float($score) || is_int($score)) {
-                $value = (float) $score;
-            }
-
-            $result[] = [
-                'label' => $label,
-                'score' => $value,
-            ];
-        }
-
-        return $result;
     }
 
     /**

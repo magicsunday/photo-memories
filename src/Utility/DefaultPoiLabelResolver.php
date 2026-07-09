@@ -130,9 +130,6 @@ final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterfac
             $filtered[$trimmed] = true;
         }
 
-        /** @var list<string> $keys */
-        $keys = array_keys($filtered);
-
-        return $keys;
+        return array_keys($filtered);
     }
 }

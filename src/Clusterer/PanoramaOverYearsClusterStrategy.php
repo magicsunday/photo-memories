@@ -22,7 +22,6 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_keys;
 use function array_map;
-use function array_values;
 use function assert;
 use function count;
 use function usort;
@@ -140,7 +139,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => array_values(array_keys($years)),
+                    'years'      => array_keys($years),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],

@@ -94,7 +94,8 @@ final readonly class ClusterQualityAggregator
      *     quality_video_bonus: float|null,
      *     quality_video_penalty: float|null,
      *     quality_clipping: float|null,
-     *     quality_iso: float|null
+     *     quality_iso: float|null,
+     *     quality_members: list<array<string, float|null>>
      * }
      */
     public function buildParams(array $mediaItems): array

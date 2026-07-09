@@ -334,7 +334,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $peripheralCount = 0;
         foreach ($daySegments as $day => $info) {
-            if (($info['category'] ?? 'peripheral') === 'peripheral') {
+            if ($info['category'] === 'peripheral') {
                 ++$peripheralCount;
             }
         }
@@ -481,7 +481,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             return $dayQuotas;
         }
 
-        $peripheralDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'peripheral'));
+        $peripheralDays = array_keys(array_filter($daySegments, static fn (array $info): bool => $info['category'] === 'peripheral'));
         usort($peripheralDays, static function (string $a, string $b) use ($daySegments): int {
             $scoreA = ($daySegments[$a]['score'] ?? 0.0);
             $scoreB = ($daySegments[$b]['score'] ?? 0.0);
@@ -514,7 +514,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             return $dayQuotas;
         }
 
-        $coreDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'core'));
+        $coreDays = array_keys(array_filter($daySegments, static fn (array $info): bool => $info['category'] === 'core'));
         usort($coreDays, static function (string $a, string $b) use ($daySegments): int {
             $scoreA = ($daySegments[$a]['score'] ?? 0.0);
             $scoreB = ($daySegments[$b]['score'] ?? 0.0);

@@ -142,11 +142,12 @@ trait MediaFilterTrait
      * Filters associative media groups via a custom predicate while preserving keys.
      *
      * @template TKey of array-key
+     * @template TValue
      *
-     * @param array<TKey, list<Media>>   $groups
-     * @param callable(list<Media>):bool $predicate
+     * @param array<TKey, TValue>   $groups
+     * @param callable(TValue):bool $predicate
      *
-     * @return array<TKey, list<Media>>
+     * @return array<TKey, TValue>
      */
     private function filterGroups(array $groups, callable $predicate): array
     {

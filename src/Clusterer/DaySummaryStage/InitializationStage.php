@@ -105,7 +105,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, DaySummary>                                                       $days
+     * @param list<Media>                                                                     $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return array<string, DaySummary>
@@ -116,9 +116,9 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             return [];
         }
 
-        /** @var list<Media> $items */
         $items = $days;
 
+        /** @var array<string, DaySummary> $summaries */
         $summaries = [];
 
         foreach ($items as $media) {

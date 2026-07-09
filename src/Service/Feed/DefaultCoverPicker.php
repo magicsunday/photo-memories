@@ -411,8 +411,8 @@ final class DefaultCoverPicker implements CoverPickerInterface
         return [
             'phashCounts'   => $phashCounts,
             'dhashCounts'   => $dhashCounts,
-            'phashDistinct' => array_values(array_keys($phashCounts)),
-            'dhashDistinct' => array_values(array_keys($dhashCounts)),
+            'phashDistinct' => array_keys($phashCounts),
+            'dhashDistinct' => array_keys($dhashCounts),
             'centroid'      => [
                 'phash' => $this->fingerprintCentroid($phashCounts),
                 'dhash' => $this->fingerprintCentroid($dhashCounts),

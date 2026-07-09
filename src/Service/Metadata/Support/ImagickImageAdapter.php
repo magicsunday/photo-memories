@@ -83,7 +83,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
 
     public function getLuma(int $x, int $y): float
     {
-        /** @var array{r:float,g:float,b:float} $c */
+        /** @var array{r:float,g:float,b:float,a:float} $c */
         $c = $this->image->getImagePixelColor($x, $y)->getColor(1); // normalized [0..1]
         $r = $c['r'] * 255.0;
         $g = $c['g'] * 255.0;
@@ -130,7 +130,6 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
         $clone->transformImageColorspace(Imagick::COLORSPACE_RGB);
         $clone->thumbnailImage($w, $h, true, true); // bestfit + crop
 
-        /** @var array<int,int|float> $buf */
         $buf = $clone->exportImagePixels(
             0,
             0,

@@ -27,7 +27,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_keys;
-use function array_values;
 use function assert;
 use function count;
 use function sprintf;
@@ -128,7 +127,7 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
 
         $params = [
             'time_range' => $time,
-            'years'      => array_values(array_keys($years)),
+            'years'      => array_keys($years),
         ];
 
         $tags = $this->collectDominantTags($picked);

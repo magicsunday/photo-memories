@@ -450,7 +450,7 @@ final class MediaFeatureBag
             }
         }
 
-        $this->set(self::NAMESPACE_FILE, 'pathTokens', array_values($tokens));
+        $this->set(self::NAMESPACE_FILE, 'pathTokens', $tokens);
     }
 
     public function fileNameHint(): ?string

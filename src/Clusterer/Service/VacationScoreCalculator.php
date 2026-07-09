@@ -1022,11 +1022,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'decision'          => $selectionDecision,
         ];
 
-        $memberQuality = $params['member_quality'] ?? [];
+        $memberQuality = [];
 
         $memberQuality['ordered'] = $memberIds;
 
-        $summary = $memberQuality['summary'] ?? [];
+        $summary = [];
 
         $summary['selection_counts'] = [
             'raw'           => $preSelectionCount,
@@ -1213,7 +1213,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $category = 'peripheral';
 
             if (is_array($context)) {
-                $candidate = $context['category'] ?? 'peripheral';
+                $candidate = $context['category'];
                 if ($candidate !== '') {
                     $category = $candidate;
                 }
@@ -1450,7 +1450,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 $category = 'peripheral';
                 $context  = $dayContext[$key] ?? null;
                 if (is_array($context)) {
-                    $candidate = $context['category'] ?? 'peripheral';
+                    $candidate = $context['category'];
                     if ($candidate !== '') {
                         $category = $candidate;
                     }
@@ -2453,10 +2453,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         foreach ($fallbacks[$classification] as $candidate) {
-            $threshold = $thresholds[$candidate] ?? null;
-            if ($threshold === null) {
-                continue;
-            }
+            $threshold = $thresholds[$candidate];
 
             if ($score >= $threshold) {
                 return $candidate;
@@ -2499,8 +2496,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 continue;
             }
 
-            $score    = $context['score'] ?? 0.0;
-            $category = $context['category'] ?? 'peripheral';
+            $score    = $context['score'];
+            $category = $context['category'];
             $duration = $context['duration'] ?? null;
             $metrics  = $context['metrics'] ?? [];
 

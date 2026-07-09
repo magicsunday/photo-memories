@@ -31,7 +31,6 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function abs;
 use function array_map;
 use function array_sum;
-use function array_values;
 use function assert;
 use function count;
 use function krsort;
@@ -434,7 +433,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             static fn (array $left, array $right): int => $right['time_range']['from'] <=> $left['time_range']['from']
         );
 
-        return array_values($selected);
+        return $selected;
     }
 
     /**
@@ -459,7 +458,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         $qualityAvg   = (float) ($quality['quality_avg'] ?? 0.0);
         $qualityShare = max(0.0, min(1.0, $qualityAvg));
 
-        $peopleScore = ($people['people'] ?? 0.0);
+        $peopleScore = $people['people'];
         $peopleShare = max(0.0, min(1.0, $peopleScore));
 
         $startTs      = $monthStart->getTimestamp();

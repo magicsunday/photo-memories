@@ -601,12 +601,12 @@ final class FeedController
     private function applyCursor(array $items, ?string $cursor): array
     {
         if ($cursor === null) {
-            return array_values($items);
+            return $items;
         }
 
         $parts = explode(':', $cursor, 2);
         if (count($parts) !== 2) {
-            return array_values($items);
+            return $items;
         }
 
         [$type, $rawValue] = $parts;
@@ -648,10 +648,10 @@ final class FeedController
                 $result[] = $item;
             }
 
-            return array_values($result);
+            return $result;
         }
 
-        return array_values($items);
+        return $items;
     }
 
     /**
@@ -780,7 +780,7 @@ final class FeedController
                 }
 
                 $parts    = explode(';', $trimmed);
-                $language = $this->normalizeScalarString($parts[0] ?? null);
+                $language = $this->normalizeScalarString($parts[0]);
                 if ($language === null) {
                     continue;
                 }
@@ -1061,8 +1061,8 @@ final class FeedController
         }
 
         $texts       = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
-        $title       = $this->normalizeStoryboardText($texts['title'] ?? null);
-        $description = $this->normalizeStoryboardText($texts['description'] ?? null);
+        $title       = $this->normalizeStoryboardText($texts['title']);
+        $description = $this->normalizeStoryboardText($texts['description']);
 
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->slideshowTransitions,

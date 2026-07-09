@@ -289,7 +289,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             new ClusterDraft(
                 algorithm: $this->name(),
                 params: [
-                    'years'      => array_values(array_keys($yearsPicked)),
+                    'years'      => array_keys($yearsPicked),
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],

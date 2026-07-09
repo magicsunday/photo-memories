@@ -140,11 +140,11 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
             ], 0.0);
         }
 
-        $cluster->setParam('liveliness', $score ?? 0.0);
-        $cluster->setParam('liveliness_video_share', $videoShare ?? 0.0);
-        $cluster->setParam('liveliness_live_share', $liveShare ?? 0.0);
-        $cluster->setParam('liveliness_motion_share', $motionShare ?? 0.0);
-        $cluster->setParam('liveliness_motion_score', $motionScore ?? 0.0);
+        $cluster->setParam('liveliness', $score);
+        $cluster->setParam('liveliness_video_share', $videoShare);
+        $cluster->setParam('liveliness_live_share', $liveShare);
+        $cluster->setParam('liveliness_motion_share', $motionShare);
+        $cluster->setParam('liveliness_motion_score', $motionScore);
 
         if ($motionBlurAvg !== null) {
             $cluster->setParam('liveliness_motion_blur_avg', $motionBlurAvg);

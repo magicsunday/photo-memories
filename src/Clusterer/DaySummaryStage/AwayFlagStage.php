@@ -230,8 +230,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $requiredCover = (int) ($windowSeconds * 0.75);
 
         foreach ($staypoints as $staypoint) {
-            $stayStart = ($staypoint['start'] ?? 0);
-            $stayEnd   = ($staypoint['end'] ?? 0);
+            $stayStart = $staypoint['start'];
+            $stayEnd   = $staypoint['end'];
             if ($stayStart === 0) {
                 continue;
             }

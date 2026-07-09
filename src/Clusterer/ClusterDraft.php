@@ -75,8 +75,8 @@ final class ClusterDraft
 
         // Calculate basic cluster statistics that are derived from the constructor arguments.
         $this->membersCount = count($members);
-        $this->centroidLat  = $centroid['lat'] ?? null;
-        $this->centroidLon  = $centroid['lon'] ?? null;
+        $this->centroidLat  = $centroid['lat'];
+        $this->centroidLon  = $centroid['lon'];
     }
 
     /**

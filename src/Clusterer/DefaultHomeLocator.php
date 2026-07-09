@@ -124,7 +124,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             $country      = null;
             $locationInfo = $tz->getLocation();
             if (is_array($locationInfo)) {
-                $countryCode = $locationInfo['country_code'] ?? null;
+                $countryCode = $locationInfo['country_code'];
                 if ($countryCode !== '') {
                     $country = strtolower($countryCode);
                 }

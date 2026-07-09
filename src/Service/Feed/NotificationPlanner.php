@@ -188,7 +188,7 @@ final readonly class NotificationPlanner
     {
         $parsed = $this->parseSendTime($value);
 
-        return $parsed['spec'] ?? null;
+        return $parsed['spec'];
     }
 
     /**

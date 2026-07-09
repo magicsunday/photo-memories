@@ -132,7 +132,6 @@ final readonly class DependencyContainerFactory
 
         require_once $this->cacheFile;
 
-        /** @var class-string $className */
         $className = sprintf('%s\\%s', self::CONTAINER_NAMESPACE, self::CONTAINER_CLASS);
 
         if (!class_exists($className)) {

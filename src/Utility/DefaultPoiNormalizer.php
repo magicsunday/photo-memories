@@ -142,7 +142,6 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             ksort($localized, SORT_STRING);
         }
 
-        /** @var list<string> $alternateList */
         $alternateList = array_keys($alternates);
 
         return [

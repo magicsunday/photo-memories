@@ -51,8 +51,8 @@ final class HybridClusterer implements HybridClustererInterface
      * New API: lifecycle + per-strategy progress.
      *
      * @param list<Media>                                                                       $items
-     * @param callable(string $strategy, int $index, int $total)|null                           $onStart
-     * @param callable(string $strategy, int $index, int $total)|null                           $onDone
+     * @param callable(string $strategy, int $index, int $total): void|null                     $onStart
+     * @param callable(string $strategy, int $index, int $total): void|null                     $onDone
      * @param callable(string $strategy, int $index, int $total): ?ProgressHandleInterface|null $makeProgressHandle
      *
      * @return list<ClusterDraft>

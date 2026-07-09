@@ -25,7 +25,6 @@ use MagicSunday\Memories\Utility\CalendarFeatureHelper;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_keys;
-use function array_values;
 use function assert;
 use function count;
 use function intdiv;
@@ -261,7 +260,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
 
             $params = [
                 'label'      => $season . ' im Laufe der Jahre',
-                'years'      => array_values(array_keys($years)),
+                'years'      => array_keys($years),
                 'time_range' => $time,
             ];
 

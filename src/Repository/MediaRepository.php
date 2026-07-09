@@ -17,7 +17,6 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
-use Doctrine\Persistence\ObjectRepository;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
@@ -269,7 +268,6 @@ SQL;
             return null;
         }
 
-        /** @var ObjectRepository<Media> $repo */
         $repo       = $this->em->getRepository(Media::class);
         $candidates = $repo->findBy(['livePairChecksum' => $checksum], ['id' => 'ASC'], 8);
 

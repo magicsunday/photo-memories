@@ -183,9 +183,6 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $yearPart = substr($holidayId, $pos + 1);
-        if ($yearPart === false) {
-            return null;
-        }
 
         if (!ctype_digit($yearPart)) {
             return null;

@@ -88,7 +88,7 @@ HTML;
 
         foreach (FeedExportStage::cases() as $stage) {
             $payload = $stages[$stage->value] ?? ['summary' => '0'];
-            $summary = htmlspecialchars($payload['summary'] ?? '0', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $summary = htmlspecialchars($payload['summary'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $label   = htmlspecialchars($stage->label(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $anchor  = htmlspecialchars($stage->anchor(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $classes = ['stage-nav__item'];
@@ -121,8 +121,8 @@ HTML;
 
         foreach (FeedExportStage::cases() as $stage) {
             $payload      = $stages[$stage->value] ?? ['cards' => [], 'emptyMessage' => 'Keine Inhalte für diese Stufe.'];
-            $cards        = $payload['cards'] ?? [];
-            $emptyMessage = ($payload['emptyMessage'] ?? 'Keine Inhalte für diese Stufe.');
+            $cards        = $payload['cards'];
+            $emptyMessage = $payload['emptyMessage'];
 
             $content = $cards !== []
                 ? $this->renderCards($cards)
@@ -201,7 +201,7 @@ CARD;
 
         foreach ($chips as $chip) {
             $label   = htmlspecialchars($chip['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $variant = $chip['variant'] ?? 'default';
+            $variant = $chip['variant'];
 
             $classes = ['chip'];
             if ($variant === 'curated') {

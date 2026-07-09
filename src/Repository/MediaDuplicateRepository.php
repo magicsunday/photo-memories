@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ObjectRepository;
 use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\MediaDuplicate;
@@ -45,7 +44,6 @@ readonly class MediaDuplicateRepository
 
         [$left, $right] = $this->normalisePair($first, $second);
 
-        /** @var ObjectRepository<MediaDuplicate> $repository */
         $repository = $this->entityManager->getRepository(MediaDuplicate::class);
 
         $existing = $repository->findOneBy([

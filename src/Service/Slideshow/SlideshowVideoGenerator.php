@@ -807,7 +807,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      * Builds deterministic transition durations for every slide overlap.
      *
      * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param float                                                                                                $defaultTransitionDuration
+     * @param float|null                                                                                           $configuredTransitionDuration
      * @param list<float>                                                                                          $requestedDurations
      *
      * @return list<float>
@@ -939,8 +939,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param list<string>                                                                                         $transitions
+     * @param list<string> $transitions
      *
      * @return list<string>
      */
@@ -1139,7 +1138,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         if ($filtered === []) {
-            $filtered = [$allowedTransitions[0] ?? 'fade'];
+            $filtered = [$allowedTransitions[0]];
         }
 
         $cache->whitelists[$cacheKey] = $filtered;
@@ -1219,7 +1218,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function parseXfadeHelpOutput(string $output): array
     {
-        $lines      = preg_split('/\r\n|\r|\n/', $output) ?: [];
+        $split      = preg_split('/\r\n|\r|\n/', $output);
+        $lines      = $split !== false ? $split : [];
         $collecting = false;
         $names      = [];
 
@@ -1303,7 +1303,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         if (preg_match('/[,|]/', $clean) === 1) {
-            $parts = preg_split('/[,|]/', $clean) ?: [];
+            $split = preg_split('/[,|]/', $clean);
+            $parts = $split !== false ? $split : [];
             $names = [];
             foreach ($parts as $part) {
                 $name = $this->sanitizeTransitionToken($part);
@@ -1315,7 +1316,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             return $names;
         }
 
-        $tokens = preg_split('/\s+/', $clean) ?: [];
+        $split  = preg_split('/\s+/', $clean);
+        $tokens = $split !== false ? $split : [];
         if ($tokens === []) {
             return [];
         }

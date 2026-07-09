@@ -111,11 +111,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
             'members_count' => count($bucket),
         ];
 
-        $lat = $centroid['lat'] ?? null;
-        $lon = $centroid['lon'] ?? null;
-        if ($lat !== null && $lon !== null) {
-            $params['centroid_cell7'] = GeoCell::fromPoint($lat, $lon, 7);
-        }
+        $params['centroid_cell7'] = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
 
         $params = $this->appendLocationMetadata($bucket, $params);
 

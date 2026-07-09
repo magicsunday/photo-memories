@@ -93,7 +93,7 @@ final class DefaultExifValueAccessor implements ExifValueAccessorInterface
 
             $sign    = $matches[1] === '-' ? -1 : 1;
             $hours   = (int) $matches[2];
-            $minutes = isset($matches[3]) ? (int) $matches[3] : 0;
+            $minutes = (int) $matches[3];
 
             if (isset($matches[4]) && $matches[4] !== '00') {
                 continue;

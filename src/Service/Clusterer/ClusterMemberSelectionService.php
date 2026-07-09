@@ -743,11 +743,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         ];
 
         $fallbacks = [
-            SelectionTelemetry::REASON_TIME_GAP    => $drops['selection']['spacing_rejections'] ?? 0,
-            SelectionTelemetry::REASON_DAY_QUOTA   => $drops['selection']['day_limit_rejections'] ?? 0,
-            SelectionTelemetry::REASON_TIME_SLOT   => $drops['selection']['time_slot_rejections'] ?? 0,
-            SelectionTelemetry::REASON_PHASH       => $drops['selection']['near_duplicate_blocked'] ?? 0,
-            SelectionTelemetry::REASON_STAYPOINT   => $drops['selection']['staypoint_rejections'] ?? 0,
+            SelectionTelemetry::REASON_TIME_GAP    => $drops['selection']['spacing_rejections'],
+            SelectionTelemetry::REASON_DAY_QUOTA   => $drops['selection']['day_limit_rejections'],
+            SelectionTelemetry::REASON_TIME_SLOT   => $drops['selection']['time_slot_rejections'],
+            SelectionTelemetry::REASON_PHASH       => $drops['selection']['near_duplicate_blocked'],
+            SelectionTelemetry::REASON_STAYPOINT   => $drops['selection']['staypoint_rejections'],
             SelectionTelemetry::REASON_SCENE       => 0,
             SelectionTelemetry::REASON_ORIENTATION => 0,
             SelectionTelemetry::REASON_PEOPLE      => 0,

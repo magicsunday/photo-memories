@@ -142,7 +142,6 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             $drafts,
         );
 
-        /** @var list<bool> $keep */
         $keep = array_fill(0, $total, true);
 
         for ($i = 0; $i < $total; ++$i) {
@@ -252,8 +251,6 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     }
 
     /**
-     * @param list<int> $winnerMembers
-     * @param list<int> $loserMembers
      * @param list<int> $winnerNormalized
      * @param list<int> $loserNormalized
      *

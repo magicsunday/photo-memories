@@ -791,8 +791,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             foreach ($tags as $tag) {
-                $label = $tag['label'] ?? null;
-                $score = $tag['score'] ?? null;
+                $label = $tag['label'];
+                $score = $tag['score'];
 
                 $value = $score;
                 if ($value < 0.0) {

@@ -139,8 +139,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
         /** @var list<string> $order */
         $order = $this->keepOrder;
-        /** @var array<string,bool> $seen */
-        $seen = array_fill_keys($order, true);
+        $seen  = array_fill_keys($order, true);
 
         foreach (array_keys($byAlgorithm) as $algorithm) {
             if (isset($seen[$algorithm])) {

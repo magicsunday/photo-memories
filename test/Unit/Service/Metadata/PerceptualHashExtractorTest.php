@@ -274,7 +274,7 @@ final class PerceptualHashExtractorTest extends TestCase
     private function embedExifOrientation(string $path, int $orientation): void
     {
         $data = file_get_contents($path);
-        if ($data === false || substr($data, 0, 2) !== "\xFF\xD8") {
+        if ($data === false || !str_starts_with($data, "\xFF\xD8")) {
             self::fail('Unable to read JPEG for EXIF injection.');
         }
 

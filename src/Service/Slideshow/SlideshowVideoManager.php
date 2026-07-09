@@ -654,7 +654,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
                 proc_close($handle);
 
-                return $status['running'] ?? false;
+                return $status['running'];
             }
         }
 

@@ -271,15 +271,11 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $centroid = $cluster->getCentroid();
-        if (isset($centroid['lat'], $centroid['lon'])) {
-            $cell = $this->gridCell($centroid['lat'], $centroid['lon']);
-            $cnt  = (int) ($stats['grid'][$cell] ?? 0);
-            $max  = (int) ($stats['max']['grid'] ?? 0);
+        $cell     = $this->gridCell($centroid['lat'], $centroid['lon']);
+        $cnt      = (int) ($stats['grid'][$cell] ?? 0);
+        $max      = (int) ($stats['max']['grid'] ?? 0);
 
-            return $this->rarityFromCounts($cnt, $max);
-        }
-
-        return 0.5;
+        return $this->rarityFromCounts($cnt, $max);
     }
 
     /**

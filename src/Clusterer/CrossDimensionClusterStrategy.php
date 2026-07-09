@@ -89,7 +89,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         foreach ($withTime as $m) {
             $ts = $m->getTakenAt()->getTimestamp();
 
-            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds && $buf !== []) {
+            if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];
             }
@@ -98,9 +98,7 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
             $lastTs = $ts;
         }
 
-        if ($buf !== []) {
-            $runs[] = $buf;
-        }
+        $runs[] = $buf;
 
         $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
 

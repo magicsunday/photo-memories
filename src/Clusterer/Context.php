@@ -225,7 +225,7 @@ final readonly class Context
         }
 
         $summary  = $aggregator->summarize($scope);
-        $variants = ($summary['device_variants'] ?? 0);
+        $variants = $summary['device_variants'];
         $share    = $summary['device_primary_share'] ?? null;
 
         if ($variants <= 1 || $share === null) {

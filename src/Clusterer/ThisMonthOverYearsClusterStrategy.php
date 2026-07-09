@@ -27,7 +27,6 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
 use function array_keys;
-use function array_values;
 use function assert;
 use function count;
 use function usort;
@@ -125,7 +124,7 @@ final readonly class ThisMonthOverYearsClusterStrategy implements ClusterStrateg
 
         $params = [
             'month'      => $mon,
-            'years'      => array_values(array_keys($years)),
+            'years'      => array_keys($years),
             'time_range' => $time,
         ];
 

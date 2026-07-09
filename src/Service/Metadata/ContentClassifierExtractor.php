@@ -398,10 +398,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
             }
         }
 
-        /** @var list<string> $filtered */
-        $filtered = array_values(array_unique(array_filter($tokens, static fn (string $token): bool => $token !== '')));
-
-        return $filtered;
+        return array_values(array_unique(array_filter($tokens, static fn (string $token): bool => $token !== '')));
     }
 
     /**
@@ -482,8 +479,8 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
 
         $maxScore = 0.0;
         foreach ($tags as $tag) {
-            $label = $tag['label'] ?? null;
-            $score = $tag['score'] ?? null;
+            $label = $tag['label'];
+            $score = $tag['score'];
 
             $labelLower = strtolower($label);
             foreach ($keywords as $keyword) {

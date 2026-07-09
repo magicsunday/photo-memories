@@ -199,16 +199,13 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 foreach ($result['changes'] as $change) {
                     $relaxations[] = $change;
 
-                    // Extract the relaxed target into a local so the "=== 0" comparison is not
-                    // written adjacent to the ?? coalesce (=== binds tighter than ??, which
-                    // otherwise silently parses as $change['to'] ?? (-1 === 0)).
-                    $relaxedTo = $change['to'] ?? -1;
+                    $relaxedTo = $change['to'];
 
-                    if (($change['rule'] ?? null) === 'min_spacing_seconds' && $relaxedTo === 0) {
+                    if ($change['rule'] === 'min_spacing_seconds' && $relaxedTo === 0) {
                         $spacingRelaxedToZero = true;
                     }
 
-                    if (($change['rule'] ?? null) === 'phash_min_hamming' && $relaxedTo === 0) {
+                    if ($change['rule'] === 'phash_min_hamming' && $relaxedTo === 0) {
                         $phashRelaxedToZero = true;
                     }
                 }

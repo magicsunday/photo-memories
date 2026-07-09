@@ -256,8 +256,8 @@ class Cluster
      */
     private function synchroniseCentroid(array $centroid): void
     {
-        $this->centroidLat      = $centroid['lat'] ?? null;
-        $this->centroidLon      = $centroid['lon'] ?? null;
+        $this->centroidLat      = $centroid['lat'];
+        $this->centroidLon      = $centroid['lon'];
         $this->meta['centroid'] = [
             'lat' => $this->centroidLat,
             'lon' => $this->centroidLon,
@@ -777,7 +777,7 @@ class Cluster
      */
     public function setMembers(array $members): void
     {
-        $normalized               = array_values(array_map(static fn (mixed $value): int => $value, $members));
+        $normalized               = array_map(static fn (mixed $value): int => $value, $members);
         $this->meta['member_ids'] = $normalized;
         $this->membersCount       = count($normalized);
         $this->fingerprint        = self::computeFingerprint($normalized);

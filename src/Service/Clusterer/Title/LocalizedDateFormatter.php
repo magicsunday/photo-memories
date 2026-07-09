@@ -130,7 +130,7 @@ final readonly class LocalizedDateFormatter
     {
         $index = (int) $date->format('n');
 
-        return self::DE_SHORT_MONTHS[$index] ?? $date->format('M');
+        return self::DE_SHORT_MONTHS[$index];
     }
 
     private function formatIntlRange(DateTimeImmutable $from, DateTimeImmutable $to, string $locale): string

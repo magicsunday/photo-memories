@@ -127,7 +127,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
         foreach ($cand as $m) {
             $ts = $m->getTakenAt()->getTimestamp();
-            if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds && $buf !== []) {
+            if ($lastTs !== null && ($ts - $lastTs) > $this->sessionGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];
             }
@@ -136,9 +136,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             $lastTs = $ts;
         }
 
-        if ($buf !== []) {
-            $runs[] = $buf;
-        }
+        $runs[] = $buf;
 
         $eligibleRuns = $this->filterListsByMinItems($runs, $this->minItemsPerRun);
 
@@ -204,8 +202,8 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             }
 
             foreach ($tags as $tag) {
-                $label = $tag['label'] ?? null;
-                $score = $tag['score'] ?? null;
+                $label = $tag['label'];
+                $score = $tag['score'];
 
                 $normalized = strtolower($label);
                 $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));

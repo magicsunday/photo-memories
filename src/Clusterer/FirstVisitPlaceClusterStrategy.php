@@ -244,7 +244,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 $prev      = $d;
             }
 
-            if ($haveFirst === false && $runDays !== []) {
+            if ($haveFirst === false) {
                 $nights = max(0, count($runDays) - 1);
                 if ($nights >= $this->minNights && $nights <= $this->maxNights) {
                     $flush();

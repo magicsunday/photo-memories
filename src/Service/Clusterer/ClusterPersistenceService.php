@@ -89,9 +89,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     /**
      * Persist drafts in batches while skipping already existing (algorithm,fingerprint) pairs.
      *
-     * @param list<ClusterDraft>                   $drafts
-     * @param int                                  $batchSize
-     * @param callable(int $persistedInBatch)|null $onBatchPersisted
+     * @param list<ClusterDraft>                         $drafts
+     * @param int                                        $batchSize
+     * @param callable(int $persistedInBatch): void|null $onBatchPersisted
      *
      * @return int Number of newly persisted clusters
      */
@@ -213,7 +213,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $memberIds = $metadata['meta']['member_ids'] ?? $cluster->getMembers();
 
         /** @var list<int> $memberIds */
-        $memberIds = array_values(array_map(static fn (mixed $value): int => $value, $memberIds));
+        $memberIds = array_map(static fn (mixed $value): int => $value, $memberIds);
 
         $media = $this->hydrateMembers($memberIds);
 
@@ -575,12 +575,25 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      *     photoCount: ?int,
      *     videoCount: ?int,
      *     cover: ?Media,
+     *     keyMedia: ?Media,
      *     location: ?Location,
      *     algorithmVersion: ?string,
      *     configHash: ?string,
      *     centroidLat: ?float,
      *     centroidLon: ?float,
-     *     centroidCell7: ?string
+     *     centroidCell7: ?string,
+     *     boundingBox: array<string, mixed>|null,
+     *     score: ?float,
+     *     scorePreNorm: ?float,
+     *     scorePostNorm: ?float,
+     *     scoreBoosted: ?float,
+     *     qualityScore: ?float,
+     *     peopleScore: ?float,
+     *     params: array<string, mixed>,
+     *     meta: array<string, mixed>,
+     *     type: string,
+     *     overlay: list<int>,
+     *     memberScores: array<int, float>
      * }
      *
      * @throws JsonException
@@ -636,8 +649,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $configHash       = $this->computeConfigHash($params);
 
         $centroid     = $draft->getCentroid();
-        $centroidLat  = $this->numericOrNull($centroid['lat'] ?? null);
-        $centroidLon  = $this->numericOrNull($centroid['lon'] ?? null);
+        $centroidLat  = $this->numericOrNull($centroid['lat']);
+        $centroidLon  = $this->numericOrNull($centroid['lon']);
         $centroidCell = null;
         if ($centroidLat !== null && $centroidLon !== null) {
             $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
@@ -1299,12 +1312,25 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
      *     photoCount:?int,
      *     videoCount:?int,
      *     cover:?Media,
+     *     keyMedia:?Media,
      *     location:?Location,
      *     algorithmVersion:?string,
      *     configHash:?string,
      *     centroidLat:?float,
      *     centroidLon:?float,
-     *     centroidCell7:?string
+     *     centroidCell7:?string,
+     *     boundingBox: array<string, mixed>|null,
+     *     score:?float,
+     *     scorePreNorm:?float,
+     *     scorePostNorm:?float,
+     *     scoreBoosted:?float,
+     *     qualityScore:?float,
+     *     peopleScore:?float,
+     *     params: array<string, mixed>,
+     *     meta: array<string, mixed>,
+     *     type: string,
+     *     overlay: list<int>,
+     *     memberScores: array<int, float>
      * }}
      */
     private function rebuildDraftFromEntity(Cluster $cluster): array

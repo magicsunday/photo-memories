@@ -102,7 +102,7 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
 
         $metrics = $this->telemetry->metrics();
 
-        if (($metrics['ffprobe_missing'] ?? 0) > 0) {
+        if ($metrics['ffprobe_missing'] > 0) {
             $this->logger->warning('media_ingestion.ffprobe_missing', [
                 'missing_count' => $metrics['ffprobe_missing'],
                 'message'       => 'FFprobe metadata unavailable for one or more processed videos.',

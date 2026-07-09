@@ -728,8 +728,8 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         if (is_array($tags)) {
             $parts = [];
             foreach (array_slice($tags, 0, 3) as $tag) {
-                $label = $tag['label'] ?? null;
-                $score = $tag['score'] ?? null;
+                $label = $tag['label'];
+                $score = $tag['score'];
 
                 $text      = $label;
                 $formatted = number_format($score, 2, ',', '');

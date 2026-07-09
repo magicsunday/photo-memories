@@ -74,10 +74,6 @@ final readonly class StoryboardTextGenerator
             $locales[] = $normalizedDefault;
         }
 
-        if ($locales === []) {
-            $locales[] = $normalizedDefault;
-        }
-
         $this->defaultLocale    = $normalizedDefault;
         $this->supportedLocales = $locales;
     }

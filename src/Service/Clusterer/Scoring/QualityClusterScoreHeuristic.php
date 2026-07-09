@@ -67,7 +67,7 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
                 $metrics = $this->qualityAggregator->aggregateFromMembers($qualityMembers);
             } else {
                 $metrics        = $this->qualityAggregator->buildParams($mediaList);
-                $qualityMembers = $metrics['quality_members'] ?? null;
+                $qualityMembers = $metrics['quality_members'];
                 unset($metrics['quality_members']);
             }
 

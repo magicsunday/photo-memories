@@ -1463,7 +1463,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
     public function testDiscoveredTransitionsAreFilteredAgainstWhitelist(): void
     {
-        $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
+        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
         $this->resetTransitionCache();
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
@@ -1522,7 +1522,7 @@ BASH;
 
     public function testExperimentalTransitionsRequireExplicitOptIn(): void
     {
-        $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
+        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
         $this->resetTransitionCache();
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));

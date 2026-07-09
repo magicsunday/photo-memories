@@ -131,7 +131,7 @@ final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorI
         $seedTakenAt = $seed->getTakenAt();
         if ($seedTakenAt instanceof DateTimeImmutable) {
             $timestamps[]                                   = $seedTakenAt;
-            $seen[$seed->getId() ?: spl_object_hash($seed)] = true;
+            $seen[$seed->getId() ?? spl_object_hash($seed)] = true;
         }
 
         foreach ($candidates as $candidate) {
@@ -140,7 +140,7 @@ final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorI
                 continue;
             }
 
-            $key = $candidate->getId() ?: spl_object_hash($candidate);
+            $key = $candidate->getId() ?? spl_object_hash($candidate);
             if (isset($seen[$key])) {
                 continue;
             }

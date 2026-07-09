@@ -192,7 +192,6 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             sprintf('%d Signaturen ermittelt', count($buckets))
         );
 
-        /** @var array<string, array<string, list<Media>>> $eligibleBuckets */
         $eligibleBuckets = $this->filterGroups(
             $buckets,
             function (array $byDay): bool {
