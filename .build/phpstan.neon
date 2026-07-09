@@ -6,6 +6,11 @@ parameters:
     # You can currently choose from 11 levels (0 is the loosest and 10 is the strictest).
     level: 6
 
+    # Analyse against the project's supported PHP version (composer requires
+    # ">=8.4.0 <8.5.0"), not the newer runtime the buildbox happens to ship, so
+    # deprecations that only apply to a later PHP release are not reported.
+    phpVersion: 80400
+
     tmpDir: %currentWorkingDirectory%/.build/cache/.phpstan.cache
 
     paths:
@@ -50,3 +55,17 @@ parameters:
             identifier: deadCode.unreachable
             message: '#^Unreachable statement - code above always terminates\.$#'
             path: %currentWorkingDirectory%/src/Clusterer/Support/VacationTimezoneTrait.php
+
+        # Doctrine assigns the auto-generated entity identifier via ORM reflection
+        # after persist, which PHPStan does not model. The $id properties are
+        # genuinely written by the ORM (not by application code) and are int|null
+        # (null before persist, int after), so neither the "never assigned int"
+        # nor the "never written" report reflects the real runtime behaviour.
+        -
+            identifier: property.unusedType
+            message: '#^Property MagicSunday\\Memories\\Entity\\[A-Za-z]+::\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+            path: %currentWorkingDirectory%/src/Entity/
+        -
+            identifier: property.onlyRead
+            message: '#^Property MagicSunday\\Memories\\Entity\\[A-Za-z]+::\$id is never written, only read\.$#'
+            path: %currentWorkingDirectory%/src/Entity/
