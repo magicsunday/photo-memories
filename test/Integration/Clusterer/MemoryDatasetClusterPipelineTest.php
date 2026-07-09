@@ -42,7 +42,7 @@ final class MemoryDatasetClusterPipelineTest extends TestCase
     {
         parent::setUp();
 
-        $this->loader = new MemoryDatasetLoader(__DIR__ . '/../../../fixtures/memories');
+        $this->loader   = new MemoryDatasetLoader(__DIR__ . '/../../../fixtures/memories');
         $this->pipeline = new MemoryDatasetPipeline();
     }
 
@@ -63,7 +63,7 @@ final class MemoryDatasetClusterPipelineTest extends TestCase
     public function itMatchesExpectedGoldStandard(string $datasetName): void
     {
         $dataset = $this->loader->load($datasetName);
-        $result = $this->pipeline->run($dataset);
+        $result  = $this->pipeline->run($dataset);
 
         $expectedFixture = sprintf('%s/expected.json', $dataset->getDatasetPath());
 

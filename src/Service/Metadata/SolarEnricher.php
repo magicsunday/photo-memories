@@ -67,7 +67,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $lon = $media->getGpsLon();
         assert($lat !== null && $lon !== null);
 
-        $cacheKey = $this->buildCacheKey($local, $lat, $lon);
+        $cacheKey  = $this->buildCacheKey($local, $lat, $lon);
         $sunEvents = $this->cache->get($cacheKey);
         if (!$sunEvents instanceof SolarEventResult) {
             $sunEvents = $this->sunTimesUtc($local, $lat, $lon);
@@ -101,6 +101,7 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
         $bag->setSolarIsGoldenHour($isGolden);
         $bag->setSolarIsPolarDay(false);
         $bag->setSolarIsPolarNight(false);
+
         $media->setFeatureBag($bag);
 
         return $media;

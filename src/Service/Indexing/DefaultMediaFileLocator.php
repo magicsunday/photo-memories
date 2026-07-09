@@ -29,12 +29,12 @@ final readonly class DefaultMediaFileLocator implements MediaFileLocatorInterfac
     /**
      * @var list<string>
      */
-    private readonly array $imageExtensions;
+    private array $imageExtensions;
 
     /**
      * @var list<string>
      */
-    private readonly array $videoExtensions;
+    private array $videoExtensions;
 
     private const array DEFAULT_IMAGE_EXT = [
         'jpg', 'jpeg', 'jpe', 'jxl', 'avif', 'heic', 'heif', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif',

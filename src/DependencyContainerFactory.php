@@ -34,7 +34,7 @@ use function sprintf;
 /**
  * Factory responsible for compiling and loading the dependency container.
  */
-final class DependencyContainerFactory
+final readonly class DependencyContainerFactory
 {
     private const string CONTAINER_CLASS = 'DependencyContainer';
 

@@ -14,27 +14,28 @@ namespace MagicSunday\Memories\DependencyInjection\Compiler;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+
 use function array_map;
 use function array_unique;
 use function array_values;
-use function file;
 use function count;
+use function file;
 use function implode;
 use function is_array;
 use function is_string;
 use function ltrim;
 use function preg_split;
+use function rtrim;
 use function sort;
+use function sprintf;
 use function str_contains;
 use function str_ends_with;
 use function str_replace;
 use function str_starts_with;
 use function strlen;
-use function sprintf;
 use function strrpos;
 use function substr;
 use function trim;
-use function rtrim;
 
 /**
  * Logs a warning when parameters are declared multiple times across imported YAML files.
@@ -111,7 +112,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
                 continue;
             }
 
-            $path = $resource->getResource();
+            $path           = $resource->getResource();
             $normalisedPath = str_replace('\\', '/', $path);
 
             if (!str_ends_with($normalisedPath, '.yaml') && !str_ends_with($normalisedPath, '.yml')) {
@@ -142,7 +143,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
             ];
         }
 
-        $inParametersSection = false;
+        $inParametersSection   = false;
         $parametersIndentation = 0;
 
         /** @var array<string, int> $firstSeen */
@@ -156,9 +157,12 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
 
         foreach ($lines as $index => $line) {
             $lineNumber = $index + 1;
-            $trimmed = ltrim($line);
+            $trimmed    = ltrim($line);
+            if ($trimmed === '') {
+                continue;
+            }
 
-            if ($trimmed === '' || str_starts_with($trimmed, '#')) {
+            if (str_starts_with($trimmed, '#')) {
                 continue;
             }
 
@@ -166,7 +170,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
 
             if (!$inParametersSection) {
                 if (str_starts_with($trimmed, 'parameters:')) {
-                    $inParametersSection = true;
+                    $inParametersSection   = true;
                     $parametersIndentation = $indentation;
                 }
 
@@ -203,7 +207,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
 
             if (!isset($firstSeen[$parameterName])) {
                 $firstSeen[$parameterName] = $lineNumber;
-                $parameterNames[] = $parameterName;
+                $parameterNames[]          = $parameterName;
 
                 continue;
             }
@@ -251,9 +255,9 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
 
         if ($length >= 2) {
             $firstCharacter = $normalized[0];
-            $lastCharacter = $normalized[$length - 1];
+            $lastCharacter  = $normalized[$length - 1];
 
-            if (($firstCharacter === '\'' && $lastCharacter === '\'') || ($firstCharacter === '"' && $lastCharacter === '"')) {
+            if (($firstCharacter === "'" && $lastCharacter === "'") || ($firstCharacter === '"' && $lastCharacter === '"')) {
                 return substr($normalized, 1, -1);
             }
         }
@@ -269,7 +273,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
     private function uniqueFiles(array $files): array
     {
         $unique = [];
-        $seen = [];
+        $seen   = [];
 
         foreach ($files as $file) {
             if (isset($seen[$file])) {
@@ -277,7 +281,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
             }
 
             $seen[$file] = true;
-            $unique[] = $file;
+            $unique[]    = $file;
         }
 
         return $unique;
@@ -310,7 +314,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
             return $normalisedPath;
         }
 
-        $prefix = $normalisedProjectDir.'/';
+        $prefix = $normalisedProjectDir . '/';
 
         if (str_starts_with($normalisedPath, $prefix)) {
             return substr($normalisedPath, strlen($prefix));

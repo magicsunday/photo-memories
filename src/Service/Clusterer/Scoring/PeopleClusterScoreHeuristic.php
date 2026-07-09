@@ -84,19 +84,19 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic im
         $cachedPeopleScore = $this->floatOrNull($params['people'] ?? null);
 
         if (($score = $cachedPeopleScore) !== null) {
-            $score    = $this->clamp01($score);
-            $mentions = (int) ($params['people_count'] ?? 0);
-            $unique   = (int) ($params['people_unique'] ?? 0);
-            $coverage = $this->clamp01($this->floatOrNull($params['people_coverage'] ?? null));
-            $face     = $this->clamp01($this->floatOrNull($params['people_face_coverage'] ?? null));
+            $score     = $this->clamp01($score);
+            $mentions  = (int) ($params['people_count'] ?? 0);
+            $unique    = (int) ($params['people_unique'] ?? 0);
+            $coverage  = $this->clamp01($this->floatOrNull($params['people_coverage'] ?? null));
+            $face      = $this->clamp01($this->floatOrNull($params['people_face_coverage'] ?? null));
             $favourite = $this->clamp01($this->floatOrNull($params['people_favourite_coverage'] ?? null));
 
             return [
-                'score'    => $score,
-                'unique'   => $unique,
-                'mentions' => $mentions,
-                'coverage' => $coverage,
-                'faceCoverage' => $face,
+                'score'             => $score,
+                'unique'            => $unique,
+                'mentions'          => $mentions,
+                'coverage'          => $coverage,
+                'faceCoverage'      => $face,
                 'favouriteCoverage' => $favourite,
             ];
         }
@@ -105,11 +105,11 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic im
         $peopleParams = $aggregator->buildParams($mediaItems);
 
         return [
-            'score'    => $peopleParams['people'],
-            'unique'   => $peopleParams['people_unique'],
-            'mentions' => $peopleParams['people_count'],
-            'coverage' => $peopleParams['people_coverage'],
-            'faceCoverage' => $peopleParams['people_face_coverage'],
+            'score'             => $peopleParams['people'],
+            'unique'            => $peopleParams['people_unique'],
+            'mentions'          => $peopleParams['people_count'],
+            'coverage'          => $peopleParams['people_coverage'],
+            'faceCoverage'      => $peopleParams['people_face_coverage'],
             'favouriteCoverage' => $peopleParams['people_favourite_coverage'],
         ];
     }
@@ -119,7 +119,7 @@ final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic im
      */
     private function resolveFavouritePersonIds(): array
     {
-        if ($this->preferences !== null) {
+        if ($this->preferences instanceof FeedUserPreferences) {
             return $this->preferences->getFavouritePersons();
         }
 

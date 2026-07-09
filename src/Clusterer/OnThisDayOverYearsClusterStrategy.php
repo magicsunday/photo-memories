@@ -11,17 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -180,8 +179,9 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
 
         return $days;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -195,5 +195,4 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

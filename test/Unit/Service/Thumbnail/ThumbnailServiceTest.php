@@ -24,7 +24,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     }
 
     if (!function_exists(__NAMESPACE__ . '\\imagecreatefromjpeg')) {
-        function imagecreatefromjpeg(string $filename)
+        function imagecreatefromjpeg(string $filename): false|\GdImage
         {
             ThumbnailServiceTest::recordGdLoader('imagecreatefromjpeg');
 
@@ -37,7 +37,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     }
 
     if (!function_exists(__NAMESPACE__ . '\\imagecreatefrompng')) {
-        function imagecreatefrompng(string $filename)
+        function imagecreatefrompng(string $filename): false|\GdImage
         {
             ThumbnailServiceTest::recordGdLoader('imagecreatefrompng');
 
@@ -50,7 +50,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     }
 
     if (!function_exists(__NAMESPACE__ . '\\imagecreatefromgif')) {
-        function imagecreatefromgif(string $filename)
+        function imagecreatefromgif(string $filename): false|\GdImage
         {
             ThumbnailServiceTest::recordGdLoader('imagecreatefromgif');
 
@@ -63,7 +63,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     }
 
     if (!function_exists(__NAMESPACE__ . '\\imagecreatefromwebp')) {
-        function imagecreatefromwebp(string $filename)
+        function imagecreatefromwebp(string $filename): false|\GdImage
         {
             ThumbnailServiceTest::recordGdLoader('imagecreatefromwebp');
 
@@ -76,7 +76,7 @@ namespace MagicSunday\Memories\Service\Thumbnail {
     }
 
     if (!function_exists(__NAMESPACE__ . '\\imagecreatefromstring')) {
-        function imagecreatefromstring(string $string)
+        function imagecreatefromstring(string $string): \GdImage|false
         {
             ThumbnailServiceTest::recordGdLoader('imagecreatefromstring');
 
@@ -102,7 +102,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
     final class ThumbnailServiceTest extends TestCase
     {
         private static bool $forceGdResampleFailure = false;
-        private static ?string $lastGdLoader        = null;
+
+        private static ?string $lastGdLoader = null;
 
         public static function isGdResampleFailureForced(): bool
         {
@@ -286,13 +287,9 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
             $media = new Media($sourcePath, hash('sha256', 'imagick-fallback'), 1024);
             $media->setMime('image/jpeg');
+
             $sizes   = [100];
             $service = new class($thumbnailDir, $sizes) extends ThumbnailService {
-                public function __construct(string $thumbnailDir, array $sizes)
-                {
-                    parent::__construct($thumbnailDir, $sizes);
-                }
-
                 /**
                  * @throws ImagickException
                  */
@@ -529,7 +526,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $checksum = $media->getChecksum();
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage('Unable to resample image for thumbnail.');
@@ -587,7 +583,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, [60]);
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             self::resetLastGdLoader();
 
@@ -654,7 +649,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, [60]);
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             self::resetLastGdLoader();
 
@@ -792,6 +786,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $draw = new ImagickDraw();
             $draw->setFillColor('red');
             $draw->circle(30, 30, 30, 15);
+
             $image->drawImage($draw);
             $image->writeImage($sourcePath);
             $image->clear();
@@ -952,7 +947,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $missingPath = $thumbnailDir . DIRECTORY_SEPARATOR . 'missing.jpg';
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage(sprintf('Unable to read image data from "%s" for thumbnail generation.', $missingPath));
@@ -986,7 +980,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, [200]);
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage(sprintf('Unable to create GD image from "%s".', $sourcePath));
@@ -1097,7 +1090,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             }
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessageMatches('/Unable to create thumbnail/');
@@ -1169,7 +1161,6 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $service = new ThumbnailService($thumbnailDir, [50]);
 
             $method = new ReflectionMethod(ThumbnailService::class, 'generateThumbnailsWithGd');
-            $method->setAccessible(true);
 
             $thumbnails = [];
 
@@ -1296,9 +1287,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
                 $this->assertLayoutEquals($expectedLayout, $actual, 'GD');
             } finally {
-                if ($oriented instanceof GdImage) {
-                    imagedestroy($oriented);
-                }
+                imagedestroy($oriented);
             }
         }
 
@@ -1631,12 +1620,13 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
 
     final class OrientationThumbnailServiceStub extends ThumbnailService
     {
-        private string $orientationDir;
-        private bool $supportsAutoOrient;
+        private readonly string $orientationDir;
+
+        private readonly bool $supportsAutoOrient;
 
         public function __construct(bool $supportsAutoOrient = true)
         {
-            $this->orientationDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-orientation-' . uniqid('', true);
+            $this->orientationDir     = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'memories-orientation-' . uniqid('', true);
             $this->supportsAutoOrient = $supportsAutoOrient;
 
             parent::__construct($this->orientationDir, [1], true);
@@ -1659,6 +1649,7 @@ namespace MagicSunday\Memories\Test\Unit\Service\Thumbnail {
             $this->applyOrientationWithImagick($imagick, $orientation);
         }
 
+        #[\Override]
         protected function canAutoOrientImagick(Imagick $imagick): bool
         {
             return $this->supportsAutoOrient && parent::canAutoOrientImagick($imagick);

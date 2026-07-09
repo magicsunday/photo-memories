@@ -36,7 +36,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 colorfulness: 0.75,
                 phash: 'p-high',
                 dhash: 'd-high',
-                burstUuid: null,
             ),
             102 => $this->buildMedia(
                 id: 102,
@@ -50,7 +49,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 colorfulness: 0.62,
                 phash: 'p-mid',
                 dhash: 'd-mid',
-                burstUuid: null,
             ),
             103 => $this->buildMedia(
                 id: 103,
@@ -64,7 +62,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 colorfulness: 0.40,
                 phash: 'p-low',
                 dhash: 'd-low',
-                burstUuid: null,
             ),
         ]);
 
@@ -119,7 +116,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 phash: 'unique-phash',
                 phash64: '1001',
                 dhash: 'unique-dhash',
-                burstUuid: null,
             ),
             202 => $this->buildMedia(
                 id: 202,
@@ -195,8 +191,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.0,
                 colorfulness: 0.0,
                 phash: null,
-                dhash: null,
-                burstUuid: null,
                 qualityScore: 0.9,
                 qualityExposure: 0.8,
                 qualityNoise: 0.7,
@@ -212,8 +206,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.0,
                 colorfulness: 0.0,
                 phash: null,
-                dhash: null,
-                burstUuid: null,
                 qualityScore: 0.6,
                 qualityExposure: 0.6,
                 qualityNoise: 0.5,
@@ -229,8 +221,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 entropy: 0.0,
                 colorfulness: 0.0,
                 phash: null,
-                dhash: null,
-                burstUuid: null,
                 qualityScore: 0.2,
                 qualityExposure: 0.4,
                 qualityNoise: 0.3,
@@ -274,7 +264,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 colorfulness: 0.60,
                 phash: 'visible-phash',
                 dhash: 'visible-dhash',
-                burstUuid: null,
             ),
             402 => $this->buildMedia(
                 id: 402,
@@ -288,7 +277,6 @@ final class MemberQualityRankingStageTest extends TestCase
                 colorfulness: 0.52,
                 phash: 'hidden-phash',
                 dhash: 'hidden-dhash',
-                burstUuid: null,
                 noShow: true,
             ),
         ]);
@@ -349,6 +337,7 @@ final class MemberQualityRankingStageTest extends TestCase
         if ($phash64 !== null) {
             $media->setPhash64($phash64);
         }
+
         $media->setDhash($dhash);
         $media->setBurstUuid($burstUuid);
 
@@ -365,12 +354,12 @@ final class MemberQualityRankingStageTest extends TestCase
 /**
  * @internal
  */
-final class InMemoryMediaLookup implements MemberMediaLookupInterface
+final readonly class InMemoryMediaLookup implements MemberMediaLookupInterface
 {
     /**
      * @param array<int, Media> $map
      */
-    public function __construct(private readonly array $map)
+    public function __construct(private array $map)
     {
     }
 

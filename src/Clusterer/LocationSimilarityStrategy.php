@@ -11,12 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\GeoTemporalClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -40,9 +39,9 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
 
-    private const MAX_WINDOW_SECONDS = 10800;
+    private const int MAX_WINDOW_SECONDS = 10800;
 
-    private const MAX_RADIUS_METERS = 250.0;
+    private const float MAX_RADIUS_METERS = 250.0;
 
     private GeoDbscanHelper $dbscanHelper;
 
@@ -172,8 +171,9 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
             members: $this->toMemberIds($bucket)
         );
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -190,7 +190,7 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
 
     private function resolveWindowSeconds(): int
     {
-        $seconds = (int) ($this->maxSpanHours * 3600);
+        $seconds = $this->maxSpanHours * 3600;
 
         return min($seconds, self::MAX_WINDOW_SECONDS);
     }
@@ -199,5 +199,4 @@ final readonly class LocationSimilarityStrategy implements ClusterStrategyInterf
     {
         return min($this->radiusMeters, self::MAX_RADIUS_METERS);
     }
-
 }

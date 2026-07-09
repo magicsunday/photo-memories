@@ -14,14 +14,14 @@ namespace MagicSunday\Memories\Service\Clusterer\Quality;
 /**
  * Captures the raw, unnormalised observations used to derive image quality scores.
  */
-final class ImageQualityRawMetrics
+final readonly class ImageQualityRawMetrics
 {
     public function __construct(
-        public readonly float $laplacianVariance,
-        public readonly float $clippingShare,
-        public readonly float $contrastStandardDeviation,
-        public readonly float $noiseEstimate,
-        public readonly float $blockinessEstimate,
+        public float $laplacianVariance,
+        public float $clippingShare,
+        public float $contrastStandardDeviation,
+        public float $noiseEstimate,
+        public float $blockinessEstimate,
     ) {
     }
 }

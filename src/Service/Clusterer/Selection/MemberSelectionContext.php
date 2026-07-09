@@ -17,21 +17,21 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Provides contextual data required by the policy-driven selector.
  */
-final class MemberSelectionContext
+final readonly class MemberSelectionContext
 {
     /**
-     * @param ClusterDraft            $draft         originating cluster draft
-     * @param SelectionPolicy         $policy        resolved selection policy for the algorithm
-     * @param array<int, Media>       $mediaMap      keyed map of media entities used during curation
-     * @param array<int, float|null>  $qualityScores per-member quality scores supplied by the ranking stage
-     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments per-day classification context
+     * @param ClusterDraft                                                                                    $draft         originating cluster draft
+     * @param SelectionPolicy                                                                                 $policy        resolved selection policy for the algorithm
+     * @param array<int, Media>                                                                               $mediaMap      keyed map of media entities used during curation
+     * @param array<int, float|null>                                                                          $qualityScores per-member quality scores supplied by the ranking stage
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments   per-day classification context
      */
     public function __construct(
-        private readonly ClusterDraft $draft,
-        private readonly SelectionPolicy $policy,
-        private readonly array $mediaMap,
-        private readonly array $qualityScores,
-        private readonly array $daySegments = [],
+        private ClusterDraft $draft,
+        private SelectionPolicy $policy,
+        private array $mediaMap,
+        private array $qualityScores,
+        private array $daySegments = [],
     ) {
     }
 

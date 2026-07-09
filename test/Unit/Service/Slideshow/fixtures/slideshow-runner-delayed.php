@@ -13,17 +13,17 @@
 
 declare(strict_types=1);
 
-use const JSON_THROW_ON_ERROR;
-use const LOCK_EX;
-
 use function file_get_contents;
 use function file_put_contents;
 use function fwrite;
 use function is_file;
 use function is_string;
 use function json_decode;
-use function usleep;
 use function unlink;
+use function usleep;
+
+use const JSON_THROW_ON_ERROR;
+use const LOCK_EX;
 
 $jobFile = $argv[2] ?? null;
 

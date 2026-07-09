@@ -27,7 +27,7 @@ use function trim;
  */
 final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic implements PreferenceAwareClusterScoreHeuristicInterface
 {
-    public function __construct(private float $favouritePlaceMultiplier = 1.0)
+    public function __construct(private readonly float $favouritePlaceMultiplier = 1.0)
     {
     }
 
@@ -92,7 +92,11 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         foreach ($mediaItems as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
-            if ($lat === null || $lon === null) {
+            if ($lat === null) {
+                continue;
+            }
+
+            if ($lon === null) {
                 continue;
             }
 
@@ -153,7 +157,7 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
 
     private function isFavouritePlace(array $params): bool
     {
-        if ($this->preferences === null) {
+        if (!$this->preferences instanceof FeedUserPreferences) {
             return false;
         }
 

@@ -17,8 +17,8 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\SmartTitleGenerator;
 use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
-use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
+use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -28,9 +28,9 @@ use function hash;
 use function intval;
 use function is_file;
 use function mb_strtolower;
+use function substr;
 use function sys_get_temp_dir;
 use function tempnam;
-use function substr;
 use function trim;
 use function unlink;
 
@@ -169,7 +169,7 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'vacation',
             params: [
-                'place_region' => 'Lombardei',
+                'place_region'  => 'Lombardei',
                 'place_country' => 'Italien',
                 'time_range'    => [
                     'from' => (new DateTimeImmutable('2024-10-10 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
@@ -195,12 +195,12 @@ YAML
         $cluster = $this->createCluster(
             algorithm: 'location_similarity',
             params: [
-                'place'           => 'monterosso al mare',
-                'place_city'      => 'monterosso al mare',
-                'place_region'    => 'ligurien',
-                'place_country'   => 'italien',
-                'place_location'  => 'monterosso al mare, ligurien, italien',
-                'time_range'      => [
+                'place'          => 'monterosso al mare',
+                'place_city'     => 'monterosso al mare',
+                'place_region'   => 'ligurien',
+                'place_country'  => 'italien',
+                'place_location' => 'monterosso al mare, ligurien, italien',
+                'time_range'     => [
                     'from' => (new DateTimeImmutable('2024-07-06 10:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-07-06 18:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                 ],
@@ -226,13 +226,13 @@ YAML
             algorithm: 'vacation',
             params: [
                 'classification_label' => 'Urlaub',
-                'place_country'       => 'Deutschland',
-                'people_ratio'        => 0.67,
-                'time_range'          => [
+                'place_country'        => 'Deutschland',
+                'people_ratio'         => 0.67,
+                'time_range'           => [
                     'from' => (new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-06-03 20:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                 ],
-                'travel_waypoints'    => [
+                'travel_waypoints' => [
                     [
                         'label'         => 'Alpha',
                         'city'          => 'Alpha',
@@ -289,13 +289,13 @@ YAML
             algorithm: 'vacation',
             params: [
                 'classification_label' => 'Urlaub',
-                'place_city'          => 'Barcelona',
-                'people_ratio'        => 0.8,
-                'time_range'          => [
+                'place_city'           => 'Barcelona',
+                'people_ratio'         => 0.8,
+                'time_range'           => [
                     'from' => (new DateTimeImmutable('2024-05-10 09:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                     'to'   => (new DateTimeImmutable('2024-05-13 21:00:00', new DateTimeZone('UTC')))->getTimestamp(),
                 ],
-                'travel_waypoints'    => [
+                'travel_waypoints' => [
                     [
                         'label'         => 'Alpha',
                         'lat'           => 0.0,
@@ -318,13 +318,13 @@ YAML
                         'first_seen_at' => 300,
                     ],
                 ],
-                'member_quality'      => [
+                'member_quality' => [
                     'summary' => [
                         'selection_telemetry' => [
                             'people_balance_counts' => [
-                                'Anna' => 5,
-                                'Ben'  => 3,
-                                'Chris'=> 2,
+                                'Anna'  => 5,
+                                'Ben'   => 3,
+                                'Chris' => 2,
                             ],
                         ],
                     ],
@@ -395,9 +395,9 @@ YAML
 
         $this->tempFiles[] = $path;
 
-        $provider        = new TitleTemplateProvider($path, $defaultLocale);
-        $routeSummarizer = new RouteSummarizer();
-        $dateFormatter   = new LocalizedDateFormatter();
+        $provider          = new TitleTemplateProvider($path, $defaultLocale);
+        $routeSummarizer   = new RouteSummarizer();
+        $dateFormatter     = new LocalizedDateFormatter();
         $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter, $defaultLocale);
 
         return new SmartTitleGenerator($provider, $routeSummarizer, $dateFormatter, $storyTitleBuilder);
@@ -410,10 +410,10 @@ YAML
             return 1;
         }
 
-        $hash = substr(hash('sha256', $normalized), 0, 15);
+        $hash  = substr(hash('sha256', $normalized), 0, 15);
         $value = intval($hash, 16);
 
-        return $value < 1 ? 1 : $value;
+        return max(1, $value);
     }
 
     /**

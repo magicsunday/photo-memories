@@ -29,10 +29,9 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use MagicSunday\Memories\Test\TestCase;
-use MagicSunday\Memories\Utility\GeoCell;
 use PHPUnit\Framework\Attributes\Test;
-use Symfony\Component\Yaml\Yaml;
 use ReflectionClass;
+use Symfony\Component\Yaml\Yaml;
 
 final class ClusterPersistenceServiceTest extends TestCase
 {
@@ -41,9 +40,9 @@ final class ClusterPersistenceServiceTest extends TestCase
     {
         $media = $this->buildMediaRange(12);
 
-        $lookup = new class($media) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -176,9 +175,9 @@ final class ClusterPersistenceServiceTest extends TestCase
     public function persistStreamingComputesMetadata(): void
     {
         $media  = $this->buildMediaSet();
-        $lookup = new class($media) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -251,22 +250,22 @@ final class ClusterPersistenceServiceTest extends TestCase
             algorithm: 'demo',
             params: [
                 'algorithmVersion' => '2024.1',
-                'member_quality' => ['ordered' => [2, 1, 3]],
-                'movement'       => [
-                    'segment_count'                               => 4,
-                    'fast_segment_count'                          => 2,
-                    'fast_segment_ratio'                          => 0.5,
-                    'speed_sample_count'                          => 3,
-                    'avg_speed_mps'                               => 12.3,
-                    'max_speed_mps'                               => 18.5,
-                    'heading_sample_count'                        => 2,
-                    'avg_heading_change_deg'                      => 45.0,
-                    'consistent_heading_segment_count'            => 2,
-                    'heading_consistency_ratio'                   => 1.0,
-                    'fast_segment_speed_threshold_mps'            => 5.0,
-                    'min_fast_segment_count_threshold'            => 2,
-                    'max_heading_change_threshold_deg'            => 90.0,
-                    'min_consistent_heading_segments_threshold'   => 1,
+                'member_quality'   => ['ordered' => [2, 1, 3]],
+                'movement'         => [
+                    'segment_count'                             => 4,
+                    'fast_segment_count'                        => 2,
+                    'fast_segment_ratio'                        => 0.5,
+                    'speed_sample_count'                        => 3,
+                    'avg_speed_mps'                             => 12.3,
+                    'max_speed_mps'                             => 18.5,
+                    'heading_sample_count'                      => 2,
+                    'avg_heading_change_deg'                    => 45.0,
+                    'consistent_heading_segment_count'          => 2,
+                    'heading_consistency_ratio'                 => 1.0,
+                    'fast_segment_speed_threshold_mps'          => 5.0,
+                    'min_fast_segment_count_threshold'          => 2,
+                    'max_heading_change_threshold_deg'          => 90.0,
+                    'min_consistent_heading_segments_threshold' => 1,
                 ],
             ],
             centroid: ['lat' => 48.123456, 'lon' => 11.654321],
@@ -274,9 +273,9 @@ final class ClusterPersistenceServiceTest extends TestCase
         );
 
         $this->addSelectionTelemetry($draft, [2, 1, 3]);
-        $params = $draft->getParams();
+        $params                              = $draft->getParams();
         $params['member_quality']['ordered'] = [2, 1, 3];
-        $draft = $draft->withParams($params);
+        $draft                               = $draft->withParams($params);
 
         $persistedCount = $service->persistStreaming([$draft], null);
 
@@ -295,7 +294,7 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertSame(2, $persisted->getCover()?->getId());
         self::assertSame($media[1]->getLocation(), $persisted->getLocation());
         self::assertSame('2024.1', $persisted->getAlgorithmVersion());
-        $persistedParams = $persisted->getParams();
+        $persistedParams  = $persisted->getParams();
         $persistedSummary = $persistedParams['member_quality']['summary'] ?? [];
         self::assertIsArray($persistedSummary);
         self::assertSame(3, $persistedSummary['members_persisted']);
@@ -310,20 +309,20 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertArrayHasKey('people_count', $persistedParams);
         self::assertArrayHasKey('movement', $persistedParams);
         self::assertSame([
-            'segment_count'                               => 4,
-            'fast_segment_count'                          => 2,
-            'fast_segment_ratio'                          => 0.5,
-            'speed_sample_count'                          => 3,
-            'avg_speed_mps'                               => 12.3,
-            'max_speed_mps'                               => 18.5,
-            'heading_sample_count'                        => 2,
-            'avg_heading_change_deg'                      => 45.0,
-            'consistent_heading_segment_count'            => 2,
-            'heading_consistency_ratio'                   => 1.0,
-            'fast_segment_speed_threshold_mps'            => 5.0,
-            'min_fast_segment_count_threshold'            => 2,
-            'max_heading_change_threshold_deg'            => 90.0,
-            'min_consistent_heading_segments_threshold'   => 1,
+            'segment_count'                             => 4,
+            'fast_segment_count'                        => 2,
+            'fast_segment_ratio'                        => 0.5,
+            'speed_sample_count'                        => 3,
+            'avg_speed_mps'                             => 12.3,
+            'max_speed_mps'                             => 18.5,
+            'heading_sample_count'                      => 2,
+            'avg_heading_change_deg'                    => 45.0,
+            'consistent_heading_segment_count'          => 2,
+            'heading_consistency_ratio'                 => 1.0,
+            'fast_segment_speed_threshold_mps'          => 5.0,
+            'min_fast_segment_count_threshold'          => 2,
+            'max_heading_change_threshold_deg'          => 90.0,
+            'min_consistent_heading_segments_threshold' => 1,
         ], $persistedParams['movement']);
 
         $mapper    = new ClusterEntityToDraftMapper(['demo' => 'default']);
@@ -339,20 +338,20 @@ final class ClusterPersistenceServiceTest extends TestCase
         self::assertArrayHasKey('movement', $roundtripParams);
         self::assertSame([2, 1, 3], $roundtripParams['member_quality']['ordered']);
         self::assertSame([
-            'segment_count'                               => 4,
-            'fast_segment_count'                          => 2,
-            'fast_segment_ratio'                          => 0.5,
-            'speed_sample_count'                          => 3,
-            'avg_speed_mps'                               => 12.3,
-            'max_speed_mps'                               => 18.5,
-            'heading_sample_count'                        => 2,
-            'avg_heading_change_deg'                      => 45.0,
-            'consistent_heading_segment_count'            => 2,
-            'heading_consistency_ratio'                   => 1.0,
-            'fast_segment_speed_threshold_mps'            => 5.0,
-            'min_fast_segment_count_threshold'            => 2,
-            'max_heading_change_threshold_deg'            => 90.0,
-            'min_consistent_heading_segments_threshold'   => 1,
+            'segment_count'                             => 4,
+            'fast_segment_count'                        => 2,
+            'fast_segment_ratio'                        => 0.5,
+            'speed_sample_count'                        => 3,
+            'avg_speed_mps'                             => 12.3,
+            'max_speed_mps'                             => 18.5,
+            'heading_sample_count'                      => 2,
+            'avg_heading_change_deg'                    => 45.0,
+            'consistent_heading_segment_count'          => 2,
+            'heading_consistency_ratio'                 => 1.0,
+            'fast_segment_speed_threshold_mps'          => 5.0,
+            'min_fast_segment_count_threshold'          => 2,
+            'max_heading_change_threshold_deg'          => 90.0,
+            'min_consistent_heading_segments_threshold' => 1,
         ], $roundtripParams['movement']);
         self::assertSame(0, $selector->calls);
     }
@@ -361,9 +360,9 @@ final class ClusterPersistenceServiceTest extends TestCase
     public function persistStreamingFlushesAfterEveryDraft(): void
     {
         $media  = $this->buildMediaSet();
-        $lookup = new class($media) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -444,7 +443,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             $this->addSelectionTelemetry($draft, $draft->getMembers());
         }
 
-        $callbackCount = 0;
+        $callbackCount  = 0;
         $persistedCount = $service->persistStreaming(
             $drafts,
             function (int $count) use (&$callbackCount): void {
@@ -465,9 +464,9 @@ final class ClusterPersistenceServiceTest extends TestCase
     {
         $media = $this->buildMediaSet();
 
-        $lookup = new class($media) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -512,18 +511,18 @@ final class ClusterPersistenceServiceTest extends TestCase
             'story',
             'demo',
             ['storyline' => 'default'],
-            ['lat' => 48.123456, 'lon' => 11.654321],
+            ['lat'       => 48.123456, 'lon' => 11.654321],
             [1, 2],
         );
 
         $cluster->setParams([
-            'storyline' => 'default',
+            'storyline'        => 'default',
             'member_selection' => [
                 'policy' => [
                     'profile' => 'default',
                 ],
                 'counts' => [
-                    'raw' => 2,
+                    'raw'     => 2,
                     'curated' => 2,
                 ],
             ],
@@ -532,7 +531,7 @@ final class ClusterPersistenceServiceTest extends TestCase
                 'summary' => [
                     'selection_policy' => 'default',
                     'selection_counts' => [
-                        'raw' => 2,
+                        'raw'     => 2,
                         'curated' => 2,
                     ],
                     'selection_telemetry' => [
@@ -578,9 +577,9 @@ final class ClusterPersistenceServiceTest extends TestCase
     {
         $media = $this->buildMediaSet();
 
-        $lookup = new class($media) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($media) implements MemberMediaLookupInterface {
             /** @param array<int, Media> $media */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -631,7 +630,6 @@ final class ClusterPersistenceServiceTest extends TestCase
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $method     = $reflection->getMethod('buildMetadata');
-        $method->setAccessible(true);
 
         $metadata = $method->invoke($service, $draft, [1, 2], [$media[1], $media[2]]);
 
@@ -644,7 +642,7 @@ final class ClusterPersistenceServiceTest extends TestCase
 
     private function createPolicyProvider(): SelectionPolicyProvider
     {
-        $config = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
+        $config     = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
         $parameters = $config['parameters'] ?? [];
 
         return new SelectionPolicyProvider(

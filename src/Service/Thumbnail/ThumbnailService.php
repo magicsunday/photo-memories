@@ -31,15 +31,21 @@ use function sprintf;
  */
 class ThumbnailService implements ThumbnailServiceInterface
 {
-    private const int ORIENTATION_UNDEFINED   = 0;
-    private const int ORIENTATION_TOPLEFT     = 1;
-    private const int ORIENTATION_TOPRIGHT    = 2;
+    private const int ORIENTATION_TOPLEFT = 1;
+
+    private const int ORIENTATION_TOPRIGHT = 2;
+
     private const int ORIENTATION_BOTTOMRIGHT = 3;
-    private const int ORIENTATION_BOTTOMLEFT  = 4;
-    private const int ORIENTATION_LEFTTOP     = 5;
-    private const int ORIENTATION_RIGHTTOP    = 6;
+
+    private const int ORIENTATION_BOTTOMLEFT = 4;
+
+    private const int ORIENTATION_LEFTTOP = 5;
+
+    private const int ORIENTATION_RIGHTTOP = 6;
+
     private const int ORIENTATION_RIGHTBOTTOM = 7;
-    private const int ORIENTATION_LEFTBOTTOM  = 8;
+
+    private const int ORIENTATION_LEFTBOTTOM = 8;
 
     private const int JPEG_QUALITY = 85;
 
@@ -132,7 +138,7 @@ class ThumbnailService implements ThumbnailServiceInterface
             }
         }
 
-        if ($hasGd && !$requiresImagick) {
+        if (!$requiresImagick) {
             return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
         }
 
@@ -352,7 +358,7 @@ class ThumbnailService implements ThumbnailServiceInterface
         $width  = imagesx($src);
         $height = imagesy($src);
 
-        if ($width <= 0 || $height <= 0) {
+        if ($height <= 0) {
             imagedestroy($src);
 
             return [];

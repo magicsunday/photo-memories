@@ -49,8 +49,8 @@ final class GeoStageStaypointIntegrationTest extends TestCase
             $output,
         )->withMedia($media);
 
-        $geo         = new GeoFeatureEnricher(48.137154, 11.576124, 1.0, 'v1', 0.01, 12);
-        $candidates   = new IntegrationStaypointProvider([
+        $geo        = new GeoFeatureEnricher(48.137154, 11.576124, 1.0, 'v1', 0.01, 12);
+        $candidates = new IntegrationStaypointProvider([
             $this->makeMedia(
                 id: 102,
                 path: '/library/stage-stay-1.jpg',
@@ -66,8 +66,8 @@ final class GeoStageStaypointIntegrationTest extends TestCase
                 lon: 11.6306,
             ),
         ]);
-        $staypoint    = new StaypointPlaceHeuristic($candidates, minSamples: 3, minDurationMinutes: 60, maxSamples: 50, s2Level: 12);
-        $stage        = new GeoStage($geo, $staypoint);
+        $staypoint = new StaypointPlaceHeuristic($candidates, minSamples: 3, minDurationMinutes: 60, maxSamples: 50, s2Level: 12);
+        $stage     = new GeoStage($geo, $staypoint);
 
         $result = $stage->process($context);
 
@@ -88,7 +88,7 @@ final class GeoStageStaypointIntegrationTest extends TestCase
 /**
  * @internal
  */
-final class IntegrationStaypointProvider implements StaypointCandidateProviderInterface
+final readonly class IntegrationStaypointProvider implements StaypointCandidateProviderInterface
 {
     /**
      * @param list<Media> $items

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Selection;
 
 use InvalidArgumentException;
+
 use function is_finite;
 use function max;
 use function round;

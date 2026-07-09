@@ -44,11 +44,11 @@ final class NestingResolverStageTest extends TestCase
 
         $expectedChapters = [
             [
-                'algorithm'    => 'vacation',
-                'priority'     => 2,
-                'score'        => 0.65,
-                'member_count' => 2,
-                'fingerprint'  => sha1('2,3'),
+                'algorithm'      => 'vacation',
+                'priority'       => 2,
+                'score'          => 0.65,
+                'member_count'   => 2,
+                'fingerprint'    => sha1('2,3'),
                 'classification' => 'day_trip',
             ],
             [

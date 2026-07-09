@@ -45,11 +45,11 @@ final readonly class StaypointStage implements DaySummaryStageInterface
 
             $index = StaypointIndex::build($summary['date'], $staypoints, $summary['members']);
 
-            $summary['staypointIndex']     = $index;
-            $summary['staypointCounts']    = $index->getCounts();
-            $summary['staypointCount']     = count($staypoints);
+            $summary['staypointIndex']        = $index;
+            $summary['staypointCounts']       = $index->getCounts();
+            $summary['staypointCount']        = count($staypoints);
             $summary['staypointDwellSeconds'] = $this->calculateStaypointDwellSeconds($staypoints);
-            $dominantStaypoints            = $this->determineDominantStaypoints(
+            $dominantStaypoints               = $this->determineDominantStaypoints(
                 $summary['date'],
                 $staypoints,
                 $summary['staypointCounts'],
@@ -60,7 +60,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
                 $summary,
                 $summary['staypointDwellSeconds'],
             );
-            $summary['poiDensity']   = $this->calculatePoiDensity(
+            $summary['poiDensity'] = $this->calculatePoiDensity(
                 (int) $summary['poiSamples'],
                 (int) $summary['photoCount'],
                 $summary['staypointCount'],
@@ -114,7 +114,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         });
 
         if ($this->dominantStaypointLimit > 0 && count($dominant) > $this->dominantStaypointLimit) {
-            $dominant = array_slice($dominant, 0, $this->dominantStaypointLimit);
+            return array_slice($dominant, 0, $this->dominantStaypointLimit);
         }
 
         return $dominant;

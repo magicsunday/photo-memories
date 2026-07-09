@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
-use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Contract\StaypointCandidateProviderInterface;
 use MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic;
@@ -135,7 +134,7 @@ final class StaypointPlaceHeuristicTest extends TestCase
         $seed->setGeoCell8('48.2000,11.6500');
         $seed->setPlaceId(new PlaceId('manual', 'user-defined'));
 
-        $provider  = new InMemoryStaypointCandidateProvider([
+        $provider = new InMemoryStaypointCandidateProvider([
             $this->makeMedia(
                 id: 41,
                 path: '/library/existing-place-1.jpg',
@@ -158,7 +157,7 @@ final class StaypointPlaceHeuristicTest extends TestCase
 /**
  * @internal
  */
-final class InMemoryStaypointCandidateProvider implements StaypointCandidateProviderInterface
+final readonly class InMemoryStaypointCandidateProvider implements StaypointCandidateProviderInterface
 {
     /**
      * @param list<Media> $candidates

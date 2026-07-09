@@ -19,7 +19,7 @@ interface MediaFileLocatorInterface
     /**
      * Locate supported files under the given base directory.
      *
-     * @param bool           $includeVideos whether video files should be included
+     * @param bool $includeVideos whether video files should be included
      *
      * @return iterable<array-key, string>
      */

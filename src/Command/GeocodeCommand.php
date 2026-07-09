@@ -63,12 +63,12 @@ final class GeocodeCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io          = new SymfonyStyle($input, $output);
-        $dryRun      = (bool) $input->getOption('dry-run');
+        $io               = new SymfonyStyle($input, $output);
+        $dryRun           = (bool) $input->getOption('dry-run');
         $refreshLocations = (bool) $input->getOption('refresh-locations');
-        $city        = $input->getOption('city');
-        $missingPois = (bool) $input->getOption('missing-pois');
-        $refreshPois = (bool) $input->getOption('refresh-pois');
+        $city             = $input->getOption('city');
+        $missingPois      = (bool) $input->getOption('missing-pois');
+        $refreshPois      = (bool) $input->getOption('refresh-pois');
 
         $options = new GeocodeCommandOptions(
             $dryRun,

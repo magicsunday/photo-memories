@@ -56,8 +56,8 @@ final class DefaultDaySummaryBuilderTest extends TestCase
             'New York, USA',
             40.7128,
             -74.0060,
-            country: 'United States',
             city: 'New York',
+            country: 'United States',
         );
 
         $tokyo = $this->makeLocation(
@@ -65,8 +65,8 @@ final class DefaultDaySummaryBuilderTest extends TestCase
             'Tokyo, Japan',
             35.6762,
             139.6503,
-            country: 'Japan',
             city: 'Tokyo',
+            country: 'Japan',
         );
 
         $items = [];

@@ -88,7 +88,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
     private function scoreContentKind(array &$scores, Media $media): void
     {
         $kind = $media->getContentKind();
-        if ($kind === null) {
+        if (!$kind instanceof ContentKind) {
             return;
         }
 
@@ -220,7 +220,11 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         }
 
         foreach ($keywords as $keyword) {
-            if (!is_string($keyword) || $keyword === '') {
+            if (!is_string($keyword)) {
+                continue;
+            }
+
+            if ($keyword === '') {
                 continue;
             }
 

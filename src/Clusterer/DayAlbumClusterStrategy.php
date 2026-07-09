@@ -11,10 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
@@ -176,11 +175,7 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
             return true;
         }
 
-        if (isset($locationParams['poi_tags']) && is_array($locationParams['poi_tags']) && $locationParams['poi_tags'] !== []) {
-            return true;
-        }
-
-        return false;
+        return isset($locationParams['poi_tags']) && is_array($locationParams['poi_tags']) && $locationParams['poi_tags'] !== [];
     }
 
     /**
@@ -193,7 +188,11 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
 
         foreach ($members as $media) {
             $key = $this->locationHelper->localityKeyForMedia($media);
-            if (!is_string($key) || $key === '') {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($key === '') {
                 continue;
             }
 
@@ -217,14 +216,12 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
         }
 
         $aesthetics = $qualityParams['aesthetics_score'];
-        if ($aesthetics !== null && $aesthetics >= 0.6) {
-            return true;
-        }
 
-        return false;
+        return $aesthetics !== null && $aesthetics >= 0.6;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -238,5 +235,4 @@ final readonly class DayAlbumClusterStrategy implements ClusterStrategyInterface
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

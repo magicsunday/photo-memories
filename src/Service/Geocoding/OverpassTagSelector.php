@@ -42,7 +42,7 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
         'wikidata',
     ];
 
-    public function __construct(private readonly OverpassTagConfiguration $configuration)
+    public function __construct(private OverpassTagConfiguration $configuration)
     {
     }
 
@@ -117,7 +117,7 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
         $alternates = [];
         $altName    = $this->stringOrNull($tags['alt_name'] ?? null);
         if ($altName !== null) {
-            $parts = array_map(static fn (string $part): string => trim($part), explode(';', $altName));
+            $parts = array_map(trim(...), explode(';', $altName));
             $parts = array_filter($parts, static fn (string $part): bool => $part !== '');
             if ($parts !== []) {
                 /** @var non-empty-list<non-empty-string> $unique */

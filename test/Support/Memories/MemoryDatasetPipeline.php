@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Support\Memories;
 
 use DateTimeImmutable;
+use Exception;
 use InvalidArgumentException;
 
 use function array_diff;
@@ -38,12 +39,12 @@ final class MemoryDatasetPipeline
      */
     public function run(MemoryDataset $dataset): array
     {
-        $clusters = [];
+        $clusters         = [];
         $clusterKeyPhotos = [];
 
         foreach ($dataset->getClusters() as $clusterIndex => $cluster) {
-            $clusterId = $this->requireString($cluster, 'id', sprintf('Cluster %d is missing an id', $clusterIndex));
-            $clusterTitle = $this->requireString($cluster, 'title', sprintf('Cluster "%s" requires a title.', $clusterId));
+            $clusterId      = $this->requireString($cluster, 'id', sprintf('Cluster %d is missing an id', $clusterIndex));
+            $clusterTitle   = $this->requireString($cluster, 'title', sprintf('Cluster "%s" requires a title.', $clusterId));
             $clusterSummary = $this->requireString($cluster, 'summary', sprintf('Cluster "%s" requires a summary.', $clusterId));
 
             $itemsRaw = $cluster['items'] ?? null;
@@ -58,28 +59,30 @@ final class MemoryDatasetPipeline
                 }
 
                 $filename = $this->requireString($item, 'filename', sprintf('Cluster "%s" item %d requires a filename.', $clusterId, $itemIndex));
-                $takenAt = $this->requireString($item, 'taken_at', sprintf('Cluster "%s" item %d requires a timestamp.', $clusterId, $itemIndex));
+                $takenAt  = $this->requireString($item, 'taken_at', sprintf('Cluster "%s" item %d requires a timestamp.', $clusterId, $itemIndex));
 
                 try {
                     $takenAtValue = new DateTimeImmutable($takenAt);
-                } catch (\Exception $exception) {
-                    throw new InvalidArgumentException(sprintf('Cluster "%s" item %s has invalid timestamp "%s" (%s).', $clusterId, $filename, $takenAt, $exception->getMessage()));
+                } catch (Exception $exception) {
+                    throw new InvalidArgumentException(sprintf('Cluster "%s" item %s has invalid timestamp "%s" (%s).', $clusterId, $filename, $takenAt, $exception->getMessage()), $exception->getCode(), $exception);
                 }
 
                 $qualityRaw = $item['quality'] ?? 0;
                 if (!is_numeric($qualityRaw)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s has invalid quality value.', $clusterId, $filename));
                 }
+
                 $quality = (float) $qualityRaw;
 
                 $roles = $item['roles'] ?? [];
                 if (!is_array($roles)) {
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s roles must be an array.', $clusterId, $filename));
                 }
+
                 $roles = array_map(static fn ($value): string => strtolower(trim((string) $value)), $roles);
 
-                $tags = $this->normaliseStringList($item['tags'] ?? [], sprintf('Cluster "%s" item %s tags must be strings.', $clusterId, $filename));
-                $people = $this->normaliseStringList($item['people'] ?? [], sprintf('Cluster "%s" item %s people must be strings.', $clusterId, $filename));
+                $tags       = $this->normaliseStringList($item['tags'] ?? [], sprintf('Cluster "%s" item %s tags must be strings.', $clusterId, $filename));
+                $people     = $this->normaliseStringList($item['people'] ?? [], sprintf('Cluster "%s" item %s people must be strings.', $clusterId, $filename));
                 $storyLabel = $this->requireString($item, 'story_label', sprintf('Cluster "%s" item %s requires a story_label.', $clusterId, $filename));
 
                 $locationRaw = $item['location'] ?? [];
@@ -87,35 +90,35 @@ final class MemoryDatasetPipeline
                     throw new InvalidArgumentException(sprintf('Cluster "%s" item %s location must be an array.', $clusterId, $filename));
                 }
 
-                $city = $this->requireString($locationRaw, 'city', sprintf('Cluster "%s" item %s location requires a city.', $clusterId, $filename));
+                $city    = $this->requireString($locationRaw, 'city', sprintf('Cluster "%s" item %s location requires a city.', $clusterId, $filename));
                 $country = $this->requireString($locationRaw, 'country', sprintf('Cluster "%s" item %s location requires a country.', $clusterId, $filename));
 
                 $items[] = [
-                    'filename' => $filename,
-                    'taken_at' => $takenAtValue,
-                    'quality' => $quality,
-                    'roles' => $roles,
-                    'tags' => $tags,
-                    'people' => $people,
-                    'story' => $storyLabel,
+                    'filename'       => $filename,
+                    'taken_at'       => $takenAtValue,
+                    'quality'        => $quality,
+                    'roles'          => $roles,
+                    'tags'           => $tags,
+                    'people'         => $people,
+                    'story'          => $storyLabel,
                     'location_label' => sprintf('%s (%s)', $city, $country),
                 ];
             }
 
             usort($items, static fn (array $left, array $right): int => $left['taken_at'] <=> $right['taken_at']);
 
-            $memberCount = count($items);
-            $start = $items[0]['taken_at'];
-            $end = $items[$memberCount - 1]['taken_at'];
+            $memberCount     = count($items);
+            $start           = $items[0]['taken_at'];
+            $end             = $items[$memberCount - 1]['taken_at'];
             $coverageSeconds = max(0, $end->getTimestamp() - $start->getTimestamp());
-            $coverageHours = $memberCount === 1 ? 0.0 : round($coverageSeconds / 3600, 2);
+            $coverageHours   = $memberCount === 1 ? 0.0 : round($coverageSeconds / 3600, 2);
 
             $daysPresent = [];
-            $storyBeats = [];
-            $tags = [];
-            $people = [];
-            $locations = [];
-            $highlights = [];
+            $storyBeats  = [];
+            $tags        = [];
+            $people      = [];
+            $locations   = [];
+            $highlights  = [];
 
             $keyCandidate = null;
             foreach ($items as $item) {
@@ -128,8 +131,8 @@ final class MemoryDatasetPipeline
                     $storyBeats[] = $item['story'];
                 }
 
-                $tags = array_merge($tags, $item['tags']);
-                $people = array_merge($people, $item['people']);
+                $tags        = array_merge($tags, $item['tags']);
+                $people      = array_merge($people, $item['people']);
                 $locations[] = $item['location_label'];
 
                 if (in_array('highlight', $item['roles'], true)) {
@@ -140,9 +143,9 @@ final class MemoryDatasetPipeline
                 if ($keyCandidate === null || ($isKey && !$keyCandidate['is_key']) || ($item['quality'] > $keyCandidate['quality'] && ($isKey || !$keyCandidate['is_key']))) {
                     $keyCandidate = [
                         'filename' => $item['filename'],
-                        'quality' => $item['quality'],
+                        'quality'  => $item['quality'],
                         'taken_at' => $item['taken_at'],
-                        'is_key' => $isKey,
+                        'is_key'   => $isKey,
                     ];
                 }
             }
@@ -177,44 +180,42 @@ final class MemoryDatasetPipeline
             $clusterKeyPhotos[$clusterId] = $keyCandidate['filename'] ?? ($highlights[0] ?? $items[0]['filename']);
 
             $clusters[] = [
-                'id' => $clusterId,
-                'title' => $clusterTitle,
-                'summary' => $clusterSummary,
+                'id'           => $clusterId,
+                'title'        => $clusterTitle,
+                'summary'      => $clusterSummary,
                 'member_count' => $memberCount,
-                'timeline' => [
-                    'start' => $start->format(DateTimeImmutable::ATOM),
-                    'end' => $end->format(DateTimeImmutable::ATOM),
+                'timeline'     => [
+                    'start'          => $start->format(DateTimeImmutable::ATOM),
+                    'end'            => $end->format(DateTimeImmutable::ATOM),
                     'coverage_hours' => $coverageHours,
-                    'days_present' => $daysPresent,
+                    'days_present'   => $daysPresent,
                 ],
-                'missing_dates' => $missingDates,
-                'key_photo' => $clusterKeyPhotos[$clusterId],
+                'missing_dates'    => $missingDates,
+                'key_photo'        => $clusterKeyPhotos[$clusterId],
                 'highlight_photos' => $highlights,
-                'locations' => $locations,
-                'tags' => $tags,
-                'people' => $people,
-                'story_beats' => $storyBeats,
+                'locations'        => $locations,
+                'tags'             => $tags,
+                'people'           => $people,
+                'story_beats'      => $storyBeats,
             ];
         }
 
         $storyboard = [
             'cover_photo' => $clusterKeyPhotos[$dataset->getPrimaryClusterId()] ?? ($clusters[0]['key_photo'] ?? null),
-            'themes' => $dataset->getThemes(),
+            'themes'      => $dataset->getThemes(),
             'transitions' => $dataset->getStoryboardTransitions(),
-            'key_photos' => array_values($clusterKeyPhotos),
-            'sequences' => array_map(static function (array $cluster): array {
-                return [
-                    'cluster' => $cluster['id'],
-                    'title' => $cluster['title'],
-                    'story_beats' => $cluster['story_beats'],
-                ];
-            }, $clusters),
+            'key_photos'  => array_values($clusterKeyPhotos),
+            'sequences'   => array_map(static fn (array $cluster): array => [
+                'cluster'     => $cluster['id'],
+                'title'       => $cluster['title'],
+                'story_beats' => $cluster['story_beats'],
+            ], $clusters),
         ];
 
         return [
-            'dataset' => $dataset->getName(),
-            'title' => $dataset->getTitle(),
-            'clusters' => $clusters,
+            'dataset'    => $dataset->getName(),
+            'title'      => $dataset->getTitle(),
+            'clusters'   => $clusters,
             'storyboard' => $storyboard,
         ];
     }

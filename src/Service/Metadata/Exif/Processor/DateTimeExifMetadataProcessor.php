@@ -41,7 +41,7 @@ final readonly class DateTimeExifMetadataProcessor implements ExifMetadataProces
 
         $timezone = null;
 
-        if ($takenAt !== null) {
+        if ($takenAt instanceof DateTimeImmutable) {
             if ($offset !== null) {
                 $absOffset = abs($offset);
                 $timezone  = new DateTimeZone(sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv($absOffset, 60), $absOffset % 60));

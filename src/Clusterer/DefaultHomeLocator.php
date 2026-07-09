@@ -23,16 +23,16 @@ use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_slice;
 use function assert;
-use function count;
 use function ceil;
+use function count;
 use function intdiv;
 use function is_array;
 use function is_string;
 use function max;
 use function min;
 use function round;
-use function strtolower;
 use function sort;
+use function strtolower;
 use function usort;
 
 use const SORT_NUMERIC;
@@ -53,13 +53,13 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     private const float MAX_NIGHT_RADIUS_KM = 25.0;
 
     public function __construct(
-        private readonly string $timezone = 'Europe/Berlin',
-        private readonly float $defaultHomeRadiusKm = 15.0,
-        private readonly ?float $homeLat = null,
-        private readonly ?float $homeLon = null,
-        private readonly ?float $homeRadiusKm = null,
-        private readonly int $maxHomeCenters = 3,
-        private readonly float $fallbackRadiusScale = 1.5,
+        private string $timezone = 'Europe/Berlin',
+        private float $defaultHomeRadiusKm = 15.0,
+        private ?float $homeLat = null,
+        private ?float $homeLon = null,
+        private ?float $homeRadiusKm = null,
+        private int $maxHomeCenters = 3,
+        private float $fallbackRadiusScale = 1.5,
     ) {
         if ($this->timezone === '') {
             throw new InvalidArgumentException('timezone must not be empty.');
@@ -101,8 +101,8 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         }
 
         return [
-            'lat' => $this->homeLat,
-            'lon' => $this->homeLon,
+            'lat'       => $this->homeLat,
+            'lon'       => $this->homeLon,
             'radius_km' => $this->homeRadiusKm ?? $this->defaultHomeRadiusKm,
         ];
     }
@@ -177,17 +177,21 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
-            if ($lat === null || $lon === null) {
+            if ($lat === null) {
+                continue;
+            }
+
+            if ($lon === null) {
                 continue;
             }
 
             $key = $this->homeClusterKey($media, $lat, $lon);
             if (!isset($clusters[$key])) {
                 $clusters[$key] = [
-                    'members'       => [],
-                    'nightSamples'  => [],
-                    'countryCounts' => [],
-                    'offsets'       => [],
+                    'members'        => [],
+                    'nightSamples'   => [],
+                    'countryCounts'  => [],
+                    'offsets'        => [],
                     'firstTimestamp' => null,
                     'lastTimestamp'  => null,
                 ];
@@ -320,7 +324,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         $summaries = [];
 
         foreach ($clusters as $data) {
-            $members = $data['members'];
+            $members      = $data['members'];
             $nightSamples = $data['nightSamples'];
 
             if ($members === [] && $nightSamples === []) {
@@ -351,11 +355,11 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                 }
             }
 
-            $country         = $this->majorityCountry($data['countryCounts']);
-            $timezoneOffset  = $this->majorityOffset($data['offsets']);
-            $memberCount     = count($members);
-            $dwellSeconds    = $this->dwellSeconds($data['firstTimestamp'], $data['lastTimestamp']);
-            $radius          = $this->radiusForCluster(
+            $country        = $this->majorityCountry($data['countryCounts']);
+            $timezoneOffset = $this->majorityOffset($data['offsets']);
+            $memberCount    = count($members);
+            $dwellSeconds   = $this->dwellSeconds($data['firstTimestamp'], $data['lastTimestamp']);
+            $radius         = $this->radiusForCluster(
                 $centroid,
                 $nightSamples,
                 $memberCount,
@@ -436,7 +440,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         $hasHighDensity   = $densityPerHour >= 2.0;
 
         if ($hasExtendedDwell || $hasHighDensity) {
-            $radius = max($radius, $this->defaultHomeRadiusKm * $this->fallbackRadiusScale);
+            return max($radius, $this->defaultHomeRadiusKm * $this->fallbackRadiusScale);
         }
 
         return $radius;

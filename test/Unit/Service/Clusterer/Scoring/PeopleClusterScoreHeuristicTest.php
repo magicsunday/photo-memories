@@ -73,11 +73,11 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [
-                'people'               => 0.75,
-                'people_count'         => 12,
-                'people_unique'        => 5,
-                'people_coverage'      => 0.8,
-                'people_face_coverage' => 0.6,
+                'people'                    => 0.75,
+                'people_count'              => 12,
+                'people_unique'             => 5,
+                'people_coverage'           => 0.8,
+                'people_face_coverage'      => 0.6,
                 'people_favourite_coverage' => 0.4,
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],

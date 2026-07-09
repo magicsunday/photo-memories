@@ -102,8 +102,8 @@ final class TransportSpeedStageTest extends TestCase
             'timezone_offset' => 0,
         ];
 
-        $base   = new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC'));
-        $items  = [
+        $base  = new DateTimeImmutable('2024-06-01 08:00:00', new DateTimeZone('UTC'));
+        $items = [
             $this->makeMediaFixture(10, 'travel-a.jpg', $base, 0.0, 0.0),
         ];
 
@@ -131,11 +131,11 @@ final class TransportSpeedStageTest extends TestCase
         $currLat = $current->getGpsLat();
         $currLon = $current->getGpsLon();
 
-        if ($prevTakenAt === null || $currTakenAt === null || $prevLat === null || $prevLon === null || $currLat === null || $currLon === null) {
+        if (!$prevTakenAt instanceof DateTimeImmutable || !$currTakenAt instanceof DateTimeImmutable || $prevLat === null || $prevLon === null || $currLat === null || $currLon === null) {
             return 0.0;
         }
 
-        $seconds   = $currTakenAt->getTimestamp() - $prevTakenAt->getTimestamp();
+        $seconds    = $currTakenAt->getTimestamp() - $prevTakenAt->getTimestamp();
         $distanceKm = MediaMath::haversineDistanceInMeters($prevLat, $prevLon, $currLat, $currLon) / 1000.0;
 
         return $seconds > 0 ? ($distanceKm / $seconds) * 3600.0 : 0.0;

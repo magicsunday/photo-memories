@@ -35,11 +35,19 @@ final class AlgorithmLabelProvider
     public function __construct(array $labels = [])
     {
         foreach ($labels as $algorithm => $label) {
-            if (!is_string($algorithm) || $algorithm === '') {
+            if (!is_string($algorithm)) {
                 continue;
             }
 
-            if (!is_string($label) || $label === '') {
+            if ($algorithm === '') {
+                continue;
+            }
+
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if ($label === '') {
                 continue;
             }
 

@@ -11,8 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\SeasonOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -148,7 +148,7 @@ final class SeasonOverYearsClusterStrategyTest extends TestCase
 
         $groupingUpdates = array_values(array_filter(
             $updates,
-            static fn (array $update): bool => str_starts_with($update['stage'], 'Gruppiere'),
+            static fn (array $update): bool => str_starts_with((string) $update['stage'], 'Gruppiere'),
         ));
 
         self::assertNotEmpty($groupingUpdates);

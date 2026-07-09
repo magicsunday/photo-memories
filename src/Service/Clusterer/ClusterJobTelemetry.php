@@ -22,9 +22,9 @@ use function is_string;
  */
 final readonly class ClusterJobTelemetry
 {
-    public const STAGE_DRAFTS = 'drafts';
+    public const string STAGE_DRAFTS = 'drafts';
 
-    public const STAGE_CONSOLIDATED = 'consolidated';
+    public const string STAGE_CONSOLIDATED = 'consolidated';
 
     /**
      * @param array<string, array{clusters:int,members_pre:int,members_post:int}> $stageStats
@@ -76,12 +76,20 @@ final readonly class ClusterJobTelemetry
     {
         $normalized = [];
         foreach ($stageStats as $stage => $values) {
-            if (!is_string($stage) || $stage === '' || !is_array($values)) {
+            if (!is_string($stage)) {
                 continue;
             }
 
-            $clusters = $values['clusters'] ?? 0;
-            $membersPre = $values['members_pre'] ?? 0;
+            if ($stage === '') {
+                continue;
+            }
+
+            if (!is_array($values)) {
+                continue;
+            }
+
+            $clusters    = $values['clusters'] ?? 0;
+            $membersPre  = $values['members_pre'] ?? 0;
             $membersPost = $values['members_post'] ?? 0;
 
             $normalized[$stage] = [

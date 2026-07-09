@@ -13,11 +13,13 @@ namespace MagicSunday\Memories\Clusterer\Selection;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Throwable;
 
 use function array_key_exists;
 use function array_keys;
@@ -42,8 +44,9 @@ use function usort;
 /**
  * Greedy vacation selector that balances quality, diversity and telemetry transparency.
  *
- * @phpstan-import-type DaySummary from \MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage
+ * @phpstan-import-type DaySummary from InitializationStage
  * @phpstan-import-type HomeDescriptor from MemberSelectorInterface
+ *
  * @phpstan-type Candidate array{
  *     media: Media,
  *     day: string,
@@ -105,10 +108,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         [$members, $telemetry] = $this->attemptSelection($daySummaries, $options);
 
-        $finalMembers   = $members;
-        $finalTelemetry = $telemetry;
-        $relaxations    = [];
-        $attemptOptions = $options;
+        $finalMembers         = $members;
+        $finalTelemetry       = $telemetry;
+        $relaxations          = [];
+        $attemptOptions       = $options;
         $spacingRelaxedToZero = false;
         $phashRelaxedToZero   = false;
 
@@ -152,7 +155,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
                     if ($current->maxPerDay < $current->targetTotal) {
                         $overrides['maxPerDay'] = $current->targetTotal;
-                        $changes[] = [
+                        $changes[]              = [
                             'rule' => 'max_per_day',
                             'from' => $current->maxPerDay,
                             'to'   => $current->targetTotal,
@@ -161,7 +164,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
                     if ($current->maxPerStaypoint < $current->targetTotal) {
                         $overrides['maxPerStaypoint'] = $current->targetTotal;
-                        $changes[] = [
+                        $changes[]                    = [
                             'rule' => 'max_per_staypoint',
                             'from' => $current->maxPerStaypoint,
                             'to'   => $current->targetTotal,
@@ -195,11 +198,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
                 foreach ($result['changes'] as $change) {
                     $relaxations[] = $change;
 
-                    if (($change['rule'] ?? null) === 'min_spacing_seconds' && (int) ($change['to'] ?? -1) === 0) {
+                    if (($change['rule'] ?? null) === 'min_spacing_seconds' && $change['to'] ?? -1 === 0) {
                         $spacingRelaxedToZero = true;
                     }
 
-                    if (($change['rule'] ?? null) === 'phash_min_hamming' && (int) ($change['to'] ?? -1) === 0) {
+                    if (($change['rule'] ?? null) === 'phash_min_hamming' && $change['to'] ?? -1 === 0) {
                         $phashRelaxedToZero = true;
                     }
                 }
@@ -208,9 +211,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         }
 
-        $finalTelemetry['relaxations']        = $relaxations;
-        $finalTelemetry['minimum_total']      = $minimumTotal;
-        $finalTelemetry['minimum_total_met']  = count($finalMembers) >= $minimumTotal;
+        $finalTelemetry['relaxations']       = $relaxations;
+        $finalTelemetry['minimum_total']     = $minimumTotal;
+        $finalTelemetry['minimum_total_met'] = count($finalMembers) >= $minimumTotal;
 
         $thresholds = $finalTelemetry['thresholds'] ?? null;
         if (is_array($thresholds)) {
@@ -251,9 +254,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
         [$runId, $runTag, $selectionTag] = $this->extractRunContext($telemetry);
 
         $context = [
-            'run_id'    => $runId,
-            'run_tag'   => $runTag,
-            'tag'       => $selectionTag,
+            'run_id'     => $runId,
+            'run_tag'    => $runTag,
+            'tag'        => $selectionTag,
             'thresholds' => [
                 'spacing_relaxed_to_zero' => $spacingRelaxed,
                 'phash_relaxed_to_zero'   => $phashRelaxed,
@@ -325,50 +328,50 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $this->basePerDayCap            = $options->maxPerDay;
 
         $this->telemetry = [
-            'prefilter_total'             => 0,
-            'prefilter_no_show'           => 0,
-            'prefilter_low_quality'       => 0,
-            'prefilter_quality_floor'     => 0,
-            'burst_collapsed'             => 0,
-            'day_limit_rejections'        => 0,
-            'staypoint_rejections'        => 0,
-            'spacing_rejections'          => 0,
-            'near_duplicate_blocked'      => 0,
-            'near_duplicate_replacements' => 0,
-            'fallback_used'               => 0,
-            'face_detection_available'          => $options->faceDetectionAvailable,
+            'prefilter_total'                       => 0,
+            'prefilter_no_show'                     => 0,
+            'prefilter_low_quality'                 => 0,
+            'prefilter_quality_floor'               => 0,
+            'burst_collapsed'                       => 0,
+            'day_limit_rejections'                  => 0,
+            'staypoint_rejections'                  => 0,
+            'spacing_rejections'                    => 0,
+            'near_duplicate_blocked'                => 0,
+            'near_duplicate_replacements'           => 0,
+            'fallback_used'                         => 0,
+            'face_detection_available'              => $options->faceDetectionAvailable,
             'face_detection_people_weight_adjusted' => !$options->faceDetectionAvailable,
-            'face_bonus'                        => $options->faceBonus,
-            'video_bonus'                       => $options->videoBonus,
-            'people_balance_enabled'        => $options->enablePeopleBalance,
-            'people_balance_weight'         => $options->peopleBalanceWeight,
-            'people_balance_repeat_penalty' => $options->repeatPenalty,
-            'people_balance_considered'     => 0,
-            'people_balance_penalized'      => 0,
-            'people_balance_bonuses'        => 0,
-            'people_balance_rejected'       => 0,
-            'people_balance_accepted'       => 0,
-            'people_balance_counts'         => [],
-            'people_balance_target_cap'     => $options->enablePeopleBalance
+            'face_bonus'                            => $options->faceBonus,
+            'video_bonus'                           => $options->videoBonus,
+            'people_balance_enabled'                => $options->enablePeopleBalance,
+            'people_balance_weight'                 => $options->peopleBalanceWeight,
+            'people_balance_repeat_penalty'         => $options->repeatPenalty,
+            'people_balance_considered'             => 0,
+            'people_balance_penalized'              => 0,
+            'people_balance_bonuses'                => 0,
+            'people_balance_rejected'               => 0,
+            'people_balance_accepted'               => 0,
+            'people_balance_counts'                 => [],
+            'people_balance_target_cap'             => $options->enablePeopleBalance
                 ? max(1, (int) ceil($options->targetTotal * $options->peopleBalanceWeight))
                 : null,
-            'relaxations'                 => [],
-            'thresholds'                  => [
-                'run_day_count'           => count($daySummaries),
-                'raw_per_day_cap'         => null,
-                'base_per_day_cap'        => null,
-                'day_caps'                => [],
-                'day_categories'          => [],
-                'day_spacing_seconds'     => [],
+            'relaxations' => [],
+            'thresholds'  => [
+                'run_day_count'              => count($daySummaries),
+                'raw_per_day_cap'            => null,
+                'base_per_day_cap'           => null,
+                'day_caps'                   => [],
+                'day_categories'             => [],
+                'day_spacing_seconds'        => [],
                 'max_per_staypoint'          => $options->maxPerStaypoint,
                 'phash_min_effective'        => $options->phashMinHamming,
                 'phash_percentile_ratio'     => $options->phashPercentile,
                 'phash_percentile_threshold' => null,
                 'phash_sample_count'         => 0,
-                'spacing_relaxed_to_zero' => false,
-                'phash_relaxed_to_zero'   => false,
+                'spacing_relaxed_to_zero'    => false,
+                'phash_relaxed_to_zero'      => false,
             ],
-            'metrics'                     => [
+            'metrics' => [
                 'phash_distances' => [],
             ],
         ];
@@ -403,8 +406,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $this->dayCaps                  = $this->buildDayCaps($daySummaries, $dayOrder, $options, $basePerDayCap);
         $this->effectiveMaxPerStaypoint = $this->resolveStaypointCap($options, $basePerDayCap);
 
-        $samples              = $this->samplePhashDistances($primaryByDay, $fallbackByDay, $options);
-        $samplesForTelemetry  = $samples;
+        $samples             = $this->samplePhashDistances($primaryByDay, $fallbackByDay, $options);
+        $samplesForTelemetry = $samples;
         sort($samplesForTelemetry);
         if (count($samplesForTelemetry) > 50) {
             $samplesForTelemetry = array_slice($samplesForTelemetry, 0, 50);
@@ -412,17 +415,17 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $this->telemetry['metrics']['phash_distances'] = $samplesForTelemetry;
 
-        $adaptivePercentile   = $this->resolvePhashPercentile($samples, $options->phashPercentile);
+        $adaptivePercentile      = $this->resolvePhashPercentile($samples, $options->phashPercentile);
         $this->effectivePhashMin = max($options->phashMinHamming, $adaptivePercentile);
 
-        $this->telemetry['thresholds']['run_day_count']       = $runDays;
-        $this->telemetry['thresholds']['raw_per_day_cap']     = $rawPerDayCap;
-        $this->telemetry['thresholds']['base_per_day_cap']    = $basePerDayCap;
-        $this->telemetry['thresholds']['day_caps']            = $this->dayCaps;
-        $this->telemetry['thresholds']['day_categories']      = $this->collectDayCategories($daySummaries, $dayOrder);
-        $this->telemetry['thresholds']['day_spacing_seconds'] = $this->daySpacingThresholds;
-        $this->telemetry['thresholds']['max_per_staypoint']   = $this->effectiveMaxPerStaypoint;
-        $this->telemetry['thresholds']['phash_min_effective'] = $this->effectivePhashMin;
+        $this->telemetry['thresholds']['run_day_count']              = $runDays;
+        $this->telemetry['thresholds']['raw_per_day_cap']            = $rawPerDayCap;
+        $this->telemetry['thresholds']['base_per_day_cap']           = $basePerDayCap;
+        $this->telemetry['thresholds']['day_caps']                   = $this->dayCaps;
+        $this->telemetry['thresholds']['day_categories']             = $this->collectDayCategories($daySummaries, $dayOrder);
+        $this->telemetry['thresholds']['day_spacing_seconds']        = $this->daySpacingThresholds;
+        $this->telemetry['thresholds']['max_per_staypoint']          = $this->effectiveMaxPerStaypoint;
+        $this->telemetry['thresholds']['phash_min_effective']        = $this->effectivePhashMin;
         $this->telemetry['thresholds']['phash_percentile_ratio']     = $options->phashPercentile;
         $this->telemetry['thresholds']['phash_percentile_threshold'] = $adaptivePercentile;
         $this->telemetry['thresholds']['phash_sample_count']         = count($samples);
@@ -444,24 +447,32 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $personCounts    = [];
 
         foreach ($primaryOrder as $candidate) {
-            if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options)) {
-                if (count($selected) >= $options->targetTotal) {
-                    break;
-                }
+            if (!$this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options)) {
+                continue;
             }
+
+            if (count($selected) < $options->targetTotal) {
+                continue;
+            }
+
+            break;
         }
 
         if (count($selected) < $options->targetTotal) {
             foreach ($fallbackOrder as $candidate) {
-                if ($this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options, true)) {
-                    if (count($selected) >= $options->targetTotal) {
-                        break;
-                    }
+                if (!$this->considerCandidate($candidate, $selected, $dayCounts, $staypointCounts, $personCounts, $options, true)) {
+                    continue;
                 }
+
+                if (count($selected) < $options->targetTotal) {
+                    continue;
+                }
+
+                break;
             }
         }
 
-        usort($selected, [$this, 'compareCandidates']);
+        usort($selected, $this->compareCandidates(...));
 
         $members = [];
         foreach ($selected as $item) {
@@ -492,8 +503,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
             qualityFloor: $overrides['qualityFloor'] ?? $source->qualityFloor,
             enablePeopleBalance: $overrides['enablePeopleBalance'] ?? $source->enablePeopleBalance,
             peopleBalanceWeight: $overrides['peopleBalanceWeight'] ?? $source->peopleBalanceWeight,
-            repeatPenalty: $overrides['repeatPenalty'] ?? $source->repeatPenalty,
             faceDetectionAvailable: $overrides['faceDetectionAvailable'] ?? $source->faceDetectionAvailable,
+            repeatPenalty: $overrides['repeatPenalty'] ?? $source->repeatPenalty,
             coreDayBonus: $overrides['coreDayBonus'] ?? $source->coreDayBonus,
             peripheralDayPenalty: $overrides['peripheralDayPenalty'] ?? $source->peripheralDayPenalty,
             phashPercentile: $overrides['phashPercentile'] ?? $source->phashPercentile,
@@ -549,7 +560,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
                     continue;
                 }
 
-                $burstUuid = $media->getBurstUuid();
+                $burstUuid  = $media->getBurstUuid();
                 $accepted[] = [
                     'media'     => $media,
                     'timestamp' => $this->resolveTimestamp($media),
@@ -638,7 +649,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
                 $delta = $entry['timestamp'] - $currentSynthetic['lastTimestamp'];
                 if ($delta <= 30) {
-                    $currentSynthetic['members'][] = $entry['media'];
+                    $currentSynthetic['members'][]     = $entry['media'];
                     $currentSynthetic['lastTimestamp'] = $entry['timestamp'];
 
                     continue;
@@ -674,7 +685,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
 
             foreach ($syntheticGroups as $group) {
-                $members = $group['members'];
+                $members  = $group['members'];
                 $groups[] = [
                     'id'        => count($members) > 1 ? sprintf('synthetic:%s:%d', $date, $group['index']) : null,
                     'members'   => $members,
@@ -706,8 +717,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
                     continue;
                 }
 
-                $burstId        = $group['id'];
-                $representative = $this->selectBurstRepresentative($members);
+                $burstId         = $group['id'];
+                $representative  = $this->selectBurstRepresentative($members);
                 $unique[$date][] = $this->createCandidate($representative, $date, $summary, $options, 'slot', $burstId);
 
                 foreach ($members as $member) {
@@ -809,7 +820,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
     /**
      * @param array<string, list<Candidate>> $candidatesByDay
-     * @param list<string>                    $dayOrder
+     * @param list<string>                   $dayOrder
      *
      * @return list<Candidate>
      */
@@ -987,9 +998,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         usort(
             $pool,
-            static function (array $left, array $right): int {
-                return $left['timestamp'] <=> $right['timestamp'];
-            }
+            static fn (array $left, array $right): int => $left['timestamp'] <=> $right['timestamp']
         );
 
         $samples = [];
@@ -1032,10 +1041,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
-     * @param list<Candidate>            $selected
-     * @param array<string, int>         $dayCounts
-     * @param array<string, int>         $staypointCounts
-     * @param array<string, int>         $personCounts
+     * @param list<Candidate>    $selected
+     * @param array<string, int> $dayCounts
+     * @param array<string, int> $staypointCounts
+     * @param array<string, int> $personCounts
      */
     private function considerCandidate(
         array $candidate,
@@ -1086,9 +1095,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $candidateSpacing = $this->daySpacingThresholds[$day] ?? $options->minSpacingSeconds;
 
         foreach ($selected as $existing) {
-            $seconds          = $this->metrics->secondsBetween($candidate['media'], $existing['media']);
-            $existingSpacing  = $this->daySpacingThresholds[$existing['day']] ?? $options->minSpacingSeconds;
-            $pairSpacing      = max($options->minSpacingSeconds, $candidateSpacing, $existingSpacing);
+            $seconds         = $this->metrics->secondsBetween($candidate['media'], $existing['media']);
+            $existingSpacing = $this->daySpacingThresholds[$existing['day']] ?? $options->minSpacingSeconds;
+            $pairSpacing     = max($options->minSpacingSeconds, $candidateSpacing, $existingSpacing);
 
             if ($seconds < $pairSpacing) {
                 ++$this->telemetry['spacing_rejections'];
@@ -1104,7 +1113,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $candidate = $balanced;
 
-        $selected[] = $candidate;
+        $selected[]      = $candidate;
         $dayCounts[$day] = $dayCount + 1;
         if ($staypointKey !== null) {
             $staypointCounts[$staypointKey] = ($staypointCounts[$staypointKey] ?? 0) + 1;
@@ -1120,7 +1129,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
-     * @param list<Candidate>    $selected
+     * @param list<Candidate> $selected
      */
     private function replaceSelection(
         int $index,
@@ -1130,20 +1139,20 @@ final class VacationMemberSelector implements MemberSelectorInterface
         array &$staypointCounts,
         array &$personCounts,
     ): void {
-        $removed = $selected[$index];
-        $removedDay = $removed['day'];
+        $removed                = $selected[$index];
+        $removedDay             = $removed['day'];
         $dayCounts[$removedDay] = max(0, ($dayCounts[$removedDay] ?? 1) - 1);
         if ($removed['staypointKey'] !== null) {
-            $key = $removed['staypointKey'];
+            $key                   = $removed['staypointKey'];
             $staypointCounts[$key] = max(0, ($staypointCounts[$key] ?? 1) - 1);
         }
 
         $this->decrementPersonCounts($removed, $personCounts);
 
-        $selected[$index] = $candidate;
+        $selected[$index]             = $candidate;
         $dayCounts[$candidate['day']] = ($dayCounts[$candidate['day']] ?? 0) + 1;
         if ($candidate['staypointKey'] !== null) {
-            $key = $candidate['staypointKey'];
+            $key                   = $candidate['staypointKey'];
             $staypointCounts[$key] = ($staypointCounts[$key] ?? 0) + 1;
         }
 
@@ -1151,8 +1160,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
-     * @param list<Candidate>          $selected
-     * @param array<string, int>       $personCounts
+     * @param list<Candidate>    $selected
+     * @param array<string, int> $personCounts
      */
     private function applyPeopleBalancing(
         array $candidate,
@@ -1208,12 +1217,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         }
 
-        $shareRatio = 0.0;
-        if ($limit > 0) {
-            $shareRatio = $dominantCount / (float) $limit;
-            if ($shareRatio > 1.0) {
-                $shareRatio = 1.0;
-            }
+        $shareRatio = $dominantCount / (float) $limit;
+        if ($shareRatio > 1.0) {
+            $shareRatio = 1.0;
         }
 
         $overlapFactor = max($maxOverlap, $shareRatio);
@@ -1342,11 +1348,19 @@ final class VacationMemberSelector implements MemberSelectorInterface
         }
 
         foreach ($members as $member) {
-            if ($member->getQualityScore() !== null && $best->getQualityScore() !== null) {
-                if ($member->getQualityScore() > $best->getQualityScore()) {
-                    $best = $member;
-                }
+            if ($member->getQualityScore() === null) {
+                continue;
             }
+
+            if ($best->getQualityScore() === null) {
+                continue;
+            }
+
+            if ($member->getQualityScore() <= $best->getQualityScore()) {
+                continue;
+            }
+
+            $best = $member;
         }
 
         return $best;
@@ -1371,21 +1385,22 @@ final class VacationMemberSelector implements MemberSelectorInterface
         } else {
             $staypoint = $this->staypointKey($timestamp, $summary, $date);
         }
-        $persons   = $media->getPersons();
+
+        $persons           = $media->getPersons();
         $normalizedPersons = $persons !== null ? array_values(array_unique($persons)) : [];
 
         return [
-            'media'       => $media,
-            'day'         => $date,
-            'summary'     => $summary,
-            'timestamp'   => $timestamp,
-            'slot'        => $slot,
-            'score'       => $score,
-            'quality'     => $quality,
-            'staypointKey'=> $staypoint,
-            'burstId'     => $burstId,
-            'origin'      => $origin,
-            'persons'     => $normalizedPersons,
+            'media'        => $media,
+            'day'          => $date,
+            'summary'      => $summary,
+            'timestamp'    => $timestamp,
+            'slot'         => $slot,
+            'score'        => $score,
+            'quality'      => $quality,
+            'staypointKey' => $staypoint,
+            'burstId'      => $burstId,
+            'origin'       => $origin,
+            'persons'      => $normalizedPersons,
         ];
     }
 
@@ -1394,7 +1409,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         $timezoneIdentifier = $summary['localTimezoneIdentifier'] ?? 'UTC';
         try {
             $timezone = new DateTimeZone($timezoneIdentifier);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $timezone = new DateTimeZone('UTC');
         }
 
@@ -1411,8 +1426,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
         VacationSelectionOptions $options,
         float $quality,
         float $peopleAdjustment = 0.0,
-    ): float
-    {
+    ): float {
         $score = $quality;
 
         if ($media->isVideo()) {

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Service\Feed;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use Stringable;
 
 use function array_key_exists;
 use function is_float;
@@ -23,7 +24,7 @@ use function trim;
 /**
  * Describes hidden persons, pets, places and dates that should be excluded from the feed.
  */
-final class FeedVisibilityFilter
+final readonly class FeedVisibilityFilter
 {
     /**
      * @var array<string, true>
@@ -192,7 +193,7 @@ final class FeedVisibilityFilter
 
     private function normaliseScalar(mixed $value): ?string
     {
-        if (is_string($value) || $value instanceof \Stringable) {
+        if (is_string($value) || $value instanceof Stringable) {
             return $this->normaliseText((string) $value);
         }
 

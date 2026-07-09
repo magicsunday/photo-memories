@@ -32,13 +32,13 @@ final class DefaultLocationLabelResolverTest extends TestCase
                 return null;
             }
 
-            public function majorityPoiContext(array $members): ?array
+            public function majorityPoiContext(array $members): array
             {
                 return [
-                    'label' => 123,
-                    'categoryKey' => null,
+                    'label'         => 123,
+                    'categoryKey'   => null,
                     'categoryValue' => null,
-                    'tags' => [],
+                    'tags'          => [],
                 ];
             }
         };
@@ -68,13 +68,13 @@ final class DefaultLocationLabelResolverTest extends TestCase
                 return null;
             }
 
-            public function majorityPoiContext(array $members): ?array
+            public function majorityPoiContext(array $members): array
             {
                 return [
-                    'label' => '  Stadtpark  ',
-                    'categoryKey' => null,
+                    'label'         => '  Stadtpark  ',
+                    'categoryKey'   => null,
                     'categoryValue' => 456,
-                    'tags' => [],
+                    'tags'          => [],
                 ];
             }
         };

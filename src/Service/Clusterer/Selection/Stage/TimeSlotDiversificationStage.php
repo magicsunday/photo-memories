@@ -28,7 +28,7 @@ use function min;
  */
 final class TimeSlotDiversificationStage implements SelectionStageInterface
 {
-    private const SLOT_CAP = 2;
+    private const int SLOT_CAP = 2;
 
     public function getName(): string
     {
@@ -60,7 +60,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         }
 
         if ($uniqueDays === [] && $dayQuotas !== []) {
-            foreach ($dayQuotas as $day => $quota) {
+            foreach (array_keys($dayQuotas) as $day) {
                 if (is_string($day) && $day !== '') {
                     $uniqueDays[$day] = true;
                 }
@@ -68,7 +68,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
         }
 
         if ($uniqueDays === [] && $dayContext !== []) {
-            foreach ($dayContext as $day => $_) {
+            foreach (array_keys($dayContext) as $day) {
                 if (is_string($day) && $day !== '') {
                     $uniqueDays[$day] = true;
                 }
@@ -125,7 +125,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
 
             $dayDuration = $candidate['day_duration'] ?? ($dayContext[$day]['duration'] ?? null);
             if (is_int($dayDuration) && $dayDuration > 0) {
-                $quotaSpacing = (int) ceil($dayDuration / max(3, $perDayCap + 1));
+                $quotaSpacing    = (int) ceil($dayDuration / max(3, $perDayCap + 1));
                 $requiredSpacing = max($requiredSpacing, $quotaSpacing);
             }
 
@@ -141,11 +141,11 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
                 continue;
             }
 
-            $selected[]        = $candidate;
+            $selected[]          = $candidate;
             $lastTimestamp[$day] = $timestamp;
 
             if ($slot !== null) {
-                $slotKey = $day . '#' . $slot;
+                $slotKey               = $day . '#' . $slot;
                 $countBySlot[$slotKey] = ($countBySlot[$slotKey] ?? 0) + 1;
             }
         }

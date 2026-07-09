@@ -13,6 +13,8 @@ namespace MagicSunday\Memories\Clusterer\DaySummaryStage;
 
 use DateInterval;
 use DateTimeImmutable;
+use DateTimeZone;
+use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
@@ -39,15 +41,15 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         private int $nightWindowEndHour = 6,
     ) {
         if ($this->nextDayDominantDistanceFactor <= 1.0) {
-            throw new \InvalidArgumentException('nextDayDominantDistanceFactor must be greater than 1.0.');
+            throw new InvalidArgumentException('nextDayDominantDistanceFactor must be greater than 1.0.');
         }
 
         if ($this->nightWindowStartHour < 0 || $this->nightWindowStartHour > 23) {
-            throw new \InvalidArgumentException('nightWindowStartHour must be between 0 and 23.');
+            throw new InvalidArgumentException('nightWindowStartHour must be between 0 and 23.');
         }
 
         if ($this->nightWindowEndHour < 0 || $this->nightWindowEndHour > 23) {
-            throw new \InvalidArgumentException('nightWindowEndHour must be between 0 and 23.');
+            throw new InvalidArgumentException('nightWindowEndHour must be between 0 and 23.');
         }
 
         $duration = $this->nightWindowEndHour - $this->nightWindowStartHour;
@@ -56,7 +58,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         }
 
         if ($duration <= 0) {
-            throw new \InvalidArgumentException('night window duration must be positive.');
+            throw new InvalidArgumentException('night window duration must be positive.');
         }
 
         $this->nightWindowDurationHours = $duration;
@@ -68,7 +70,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             return [];
         }
 
-        $keys = array_keys($days);
+        $keys           = array_keys($days);
         $nightAwayFlags = [];
         foreach ($keys as $index => $key) {
             $nextKey     = $keys[$index + 1] ?? null;
@@ -129,10 +131,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $combinedFlags = $this->applyMorphologicalClosing($combinedFlags);
         $combinedFlags = $this->inheritSyntheticAwayFlags($combinedFlags, $keys, $days);
 
-        foreach ($nightAwayFlags as $key => $flag) {
-            if ($flag === true) {
-                $combinedFlags[$key] = true;
-            }
+        foreach (array_keys($nightAwayFlags) as $key) {
+            $combinedFlags[$key] = true;
         }
 
         foreach ($keys as $key) {
@@ -142,7 +142,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         return $days;
     }
 
-    private function shouldFlagByNextDominantStaypoint(array $summary, ?array $nextSummary, array $home, \DateTimeZone $timezone): bool
+    private function shouldFlagByNextDominantStaypoint(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): bool
     {
         if ($nextSummary === null) {
             return false;
@@ -187,14 +187,10 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             return false;
         }
 
-        if ($this->hasHomeStaypointInWindow($nextSummary['staypoints'] ?? [], $window['start'], $window['end'], $home)) {
-            return false;
-        }
-
-        return true;
+        return !$this->hasHomeStaypointInWindow($nextSummary['staypoints'] ?? [], $window['start'], $window['end'], $home);
     }
 
-    private function createNightWindow(string $date, \DateTimeZone $timezone): ?array
+    private function createNightWindow(string $date, DateTimeZone $timezone): ?array
     {
         $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', sprintf('%s %02d:00:00', $date, $this->nightWindowStartHour), $timezone);
         if ($start === false) {
@@ -226,8 +222,11 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         foreach ($staypoints as $staypoint) {
             $stayStart = (int) ($staypoint['start'] ?? 0);
             $stayEnd   = (int) ($staypoint['end'] ?? 0);
+            if ($stayStart === 0) {
+                continue;
+            }
 
-            if ($stayStart === 0 || $stayEnd === 0) {
+            if ($stayEnd === 0) {
                 continue;
             }
 
@@ -261,8 +260,11 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         foreach ($staypoints as $staypoint) {
             $stayStart = (int) ($staypoint['start'] ?? 0);
             $stayEnd   = (int) ($staypoint['end'] ?? 0);
+            if ($stayEnd < $startTs) {
+                continue;
+            }
 
-            if ($stayEnd < $startTs || $stayStart > $endTs) {
+            if ($stayStart > $endTs) {
                 continue;
             }
 
@@ -284,8 +286,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
             $nearest = HomeBoundaryHelper::nearestCenter(
                 $home,
-                (float) $staypoint['lat'],
-                (float) $staypoint['lon'],
+                $staypoint['lat'],
+                $staypoint['lon'],
                 $timestamp,
             );
             if ($nearest['distance_km'] <= $nearest['radius_km']) {
@@ -330,8 +332,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
      */
     private function propagateDistanceRuns(array $flags): array
     {
-        $keys  = array_keys($flags);
-        $count = count($keys);
+        $keys = array_keys($flags);
 
         $first = null;
         $last  = null;

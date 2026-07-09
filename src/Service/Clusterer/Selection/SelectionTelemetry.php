@@ -18,21 +18,28 @@ use InvalidArgumentException;
  */
 final class SelectionTelemetry
 {
-    public const REASON_TIME_GAP = 'time_gap';
-    public const REASON_PHASH = 'phash_similarity';
-    public const REASON_STAYPOINT = 'staypoint_quota';
-    public const REASON_ORIENTATION = 'orientation_balance';
-    public const REASON_SCENE = 'scene_balance';
-    public const REASON_PEOPLE = 'people_balance';
-    public const REASON_DAY_QUOTA = 'day_quota';
-    public const REASON_TIME_SLOT = 'time_slot';
+    public const string REASON_TIME_GAP = 'time_gap';
+
+    public const string REASON_PHASH = 'phash_similarity';
+
+    public const string REASON_STAYPOINT = 'staypoint_quota';
+
+    public const string REASON_ORIENTATION = 'orientation_balance';
+
+    public const string REASON_SCENE = 'scene_balance';
+
+    public const string REASON_PEOPLE = 'people_balance';
+
+    public const string REASON_DAY_QUOTA = 'day_quota';
+
+    public const string REASON_TIME_SLOT = 'time_slot';
 
     /**
      * Ordered rejection reasons tracked by the telemetry collector.
      *
      * @var list<string>
      */
-    private const REASONS = [
+    private const array REASONS = [
         self::REASON_TIME_GAP,
         self::REASON_DAY_QUOTA,
         self::REASON_TIME_SLOT,
@@ -95,13 +102,13 @@ final class SelectionTelemetry
         array $selectedIds,
     ): void {
         $this->mmrSummary = [
-            'lambda' => $lambda,
+            'lambda'           => $lambda,
             'similarity_floor' => $similarityFloor,
-            'similarity_cap' => $similarityCap,
-            'max_considered' => $maxConsideration,
-            'pool_size' => $poolSize,
-            'selected' => $selectedIds,
-            'iterations' => $iterations,
+            'similarity_cap'   => $similarityCap,
+            'max_considered'   => $maxConsideration,
+            'pool_size'        => $poolSize,
+            'selected'         => $selectedIds,
+            'iterations'       => $iterations,
         ];
     }
 

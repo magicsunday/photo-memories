@@ -11,21 +11,19 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
-use function array_key_exists;
 use function array_values;
 use function assert;
 use function count;
@@ -100,10 +98,10 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
         $cand = $this->filterTimestampedItemsBy(
             $items,
             function (Media $m): bool {
-                $bag = $m->getFeatureBag();
+                $bag          = $m->getFeatureBag();
                 $isGoldenHour = $bag->solarIsGoldenHour();
                 if ($isGoldenHour !== null) {
-                    return $isGoldenHour === true;
+                    return $isGoldenHour;
                 }
 
                 $local = $this->localTimeHelper->resolve($m);
@@ -222,13 +220,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
                 }
 
                 $normalized = strtolower($label);
-                $matches    = false;
-                foreach ($keywords as $keyword) {
-                    if (str_contains($normalized, $keyword)) {
-                        $matches = true;
-                        break;
-                    }
-                }
+                $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));
 
                 if ($matches === false) {
                     continue;
@@ -242,8 +234,9 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
         return array_values($collected);
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -257,5 +250,4 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

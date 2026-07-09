@@ -19,8 +19,8 @@ use function is_finite;
 use function max;
 use function min;
 use function sin;
-use function sqrt;
 use function sprintf;
+use function sqrt;
 use function strtoupper;
 
 /**
@@ -62,7 +62,7 @@ final class S2CellId
 
         $hilbert = self::xyToHilbert(1 << self::MAX_LEVEL, $i, $j);
 
-        $id = ((($face << self::POS_BITS) | ($hilbert << 1) | 1));
+        $id = (($face << self::POS_BITS) | ($hilbert << 1) | 1);
 
         $shift = 2 * (self::MAX_LEVEL - $level);
         if ($shift > 0) {

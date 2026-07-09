@@ -18,22 +18,21 @@ use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterfa
 
 use function abs;
 use function array_diff;
-use function array_filter;
 use function array_fill;
+use function array_filter;
 use function array_intersect;
 use function array_map;
 use function array_merge;
 use function array_slice;
 use function array_unique;
 use function array_values;
-use function count;
 use function cos;
+use function count;
 use function deg2rad;
 use function floor;
 use function hexdec;
 use function in_array;
 use function is_array;
-use function is_numeric;
 use function is_string;
 use function max;
 use function min;
@@ -53,11 +52,15 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     use StageSupportTrait;
     use ClusterPriorityResolverTrait;
 
-    private const MERGE_MIN_TEMPORAL_IOU         = 0.55;
-    private const MERGE_MAX_SPATIAL_DISTANCE_M   = 25_000.0;
-    private const MERGE_MIN_CORE_SIMILARITY      = 0.5;
-    private const MERGE_MAX_PHASH_DELTA          = 0.18;
-    private const MERGE_MAX_SCORE_GAP_RATIO      = 0.35;
+    private const float MERGE_MIN_TEMPORAL_IOU = 0.55;
+
+    private const float MERGE_MAX_SPATIAL_DISTANCE_M = 25_000.0;
+
+    private const float MERGE_MIN_CORE_SIMILARITY = 0.5;
+
+    private const float MERGE_MAX_PHASH_DELTA = 0.18;
+
+    private const float MERGE_MAX_SCORE_GAP_RATIO = 0.35;
 
     /** @var array<string, int> */
     private array $priorityMap = [];
@@ -97,8 +100,8 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
      */
     public function process(array $drafts, ?callable $progress = null): array
     {
-        $total              = count($drafts);
-        $resolvedDrops      = 0;
+        $total         = count($drafts);
+        $resolvedDrops = 0;
 
         $this->emitMonitoring('selection_start', [
             'pre_count'       => $total,
@@ -113,10 +116,10 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             }
 
             $this->emitMonitoring('selection_completed', [
-                'pre_count'        => $total,
-                'post_count'       => $total,
-                'dropped_count'    => 0,
-                'resolved_drops'   => 0,
+                'pre_count'      => $total,
+                'post_count'     => $total,
+                'dropped_count'  => 0,
+                'resolved_drops' => 0,
             ]);
 
             return $drafts;
@@ -187,9 +190,9 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
                 $winner = $decision['winner'];
                 $loser  = $decision['loser'];
 
-                $drafts[$winnerIndex]    = $winner['draft'];
+                $drafts[$winnerIndex]     = $winner['draft'];
                 $normalized[$winnerIndex] = $winner['normalized'];
-                $drafts[$loserIndex]     = $loser['draft'];
+                $drafts[$loserIndex]      = $loser['draft'];
 
                 if ($keep[$loserIndex]) {
                     $keep[$loserIndex] = false;
@@ -220,10 +223,10 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $postCount = count($result);
 
         $this->emitMonitoring('selection_completed', [
-            'pre_count'       => $total,
-            'post_count'      => $postCount,
-            'dropped_count'   => max(0, $total - $postCount),
-            'resolved_drops'  => $resolvedDrops,
+            'pre_count'      => $total,
+            'post_count'     => $postCount,
+            'dropped_count'  => max(0, $total - $postCount),
+            'resolved_drops' => $resolvedDrops,
         ]);
 
         return $result;
@@ -234,7 +237,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 
@@ -357,11 +360,8 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $winnerScore = (float) $metrics['score_winner'];
         $scoreGap    = (float) $metrics['score_gap'];
         $maxGap      = max(1.0, $winnerScore) * self::MERGE_MAX_SCORE_GAP_RATIO;
-        if ($scoreGap > $maxGap) {
-            return false;
-        }
 
-        return true;
+        return $scoreGap <= $maxGap;
     }
 
     private function computeTemporalIou(ClusterDraft $a, ClusterDraft $b): float
@@ -415,10 +415,10 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         if (isset($centroidA['lat'], $centroidA['lon'], $centroidB['lat'], $centroidB['lon'])) {
             return $this->haversineDistance(
-                (float) $centroidA['lat'],
-                (float) $centroidA['lon'],
-                (float) $centroidB['lat'],
-                (float) $centroidB['lon'],
+                $centroidA['lat'],
+                $centroidA['lon'],
+                $centroidB['lat'],
+                $centroidB['lon'],
             );
         }
 
@@ -498,7 +498,11 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            if (!is_string($value) || $value === '') {
+            if (!is_string($value)) {
+                continue;
+            }
+
+            if ($value === '') {
                 continue;
             }
 
@@ -543,7 +547,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
     private function extractPhashMedian(ClusterDraft $draft): ?int
     {
-        $params = $draft->getParams();
+        $params    = $draft->getParams();
         $selection = $params['member_selection'] ?? null;
         if (!is_array($selection)) {
             return null;
@@ -556,7 +560,11 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         $values = [];
         foreach ($hashSamples as $hash) {
-            if (!is_string($hash) || $hash === '') {
+            if (!is_string($hash)) {
+                continue;
+            }
+
+            if ($hash === '') {
                 continue;
             }
 
@@ -570,7 +578,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         sort($values);
 
-        $count = count($values);
+        $count  = count($values);
         $middle = (int) floor($count / 2);
 
         if (($count % 2) === 1) {
@@ -590,7 +598,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         $merged = $winnerParams;
 
-        $loserTime = $loserParams['time_range'] ?? null;
+        $loserTime  = $loserParams['time_range'] ?? null;
         $winnerTime = $winnerParams['time_range'] ?? null;
         if (
             is_array($loserTime)
@@ -653,9 +661,9 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         }
 
         $meta['last_merge'] = [
-            'temporal_iou' => $metrics['temporal_iou'],
+            'temporal_iou'    => $metrics['temporal_iou'],
             'core_similarity' => $metrics['core_similarity'],
-            'phash_delta' => $metrics['phash_delta'],
+            'phash_delta'     => $metrics['phash_delta'],
         ];
 
         return $meta;
@@ -672,7 +680,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         if (!isset($primary['hash_samples'])) {
             $primary['hash_samples'] = $secondary['hash_samples'] ?? [];
         } else {
-            $primaryHashes = is_array($primary['hash_samples']) ? $primary['hash_samples'] : [];
+            $primaryHashes   = is_array($primary['hash_samples']) ? $primary['hash_samples'] : [];
             $secondaryHashes = is_array($secondary['hash_samples'] ?? null) ? $secondary['hash_samples'] : [];
             if ($secondaryHashes !== []) {
                 $primary['hash_samples'] = $this->mergeHashSamples($primaryHashes, $secondaryHashes);
@@ -692,14 +700,14 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     {
         $result = $primary;
 
-        foreach ($secondary as $key => $value) {
+        foreach ($secondary as $value) {
             if (is_string($value) && $value !== '' && !in_array($value, $result, true)) {
                 $result[] = $value;
             }
         }
 
         if (count($result) > 12) {
-            $result = array_slice($result, 0, 12);
+            return array_slice($result, 0, 12);
         }
 
         return $result;
@@ -750,18 +758,18 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $fingerprintLoser  = $this->fingerprint($this->normalizeMembers($loser->getMembers()));
 
         return [
-            'role'       => $role,
-            'winner'     => [
+            'role'   => $role,
+            'winner' => [
                 'algorithm'   => $winner->getAlgorithm(),
                 'fingerprint' => $fingerprintWinner,
                 'score'       => $metrics['score_winner'],
             ],
-            'contender'  => [
+            'contender' => [
                 'algorithm'   => $loser->getAlgorithm(),
                 'fingerprint' => $fingerprintLoser,
                 'score'       => $metrics['score_loser'],
             ],
-            'metrics'    => [
+            'metrics' => [
                 'member_iou'         => $metrics['member_iou'],
                 'temporal_iou'       => $metrics['temporal_iou'],
                 'spatial_distance_m' => $metrics['spatial_distance_m'],
@@ -785,7 +793,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             $merges = [];
         }
 
-        $merges[]    = $entry;
+        $merges[]       = $entry;
         $meta['merges'] = $merges;
         $params['meta'] = $meta;
 

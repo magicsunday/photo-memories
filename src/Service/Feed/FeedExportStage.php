@@ -13,15 +13,15 @@ namespace MagicSunday\Memories\Service\Feed;
 
 enum FeedExportStage: string
 {
-    case Raw = 'raw';
-    case Merged = 'merged';
+    case Raw     = 'raw';
+    case Merged  = 'merged';
     case Curated = 'curated';
 
     public function label(): string
     {
         return match ($this) {
-            self::Raw => 'Roh-Cluster',
-            self::Merged => 'Konsolidierte Drafts',
+            self::Raw     => 'Roh-Cluster',
+            self::Merged  => 'Konsolidierte Drafts',
             self::Curated => 'Kuratiertes Feed',
         };
     }
@@ -29,8 +29,8 @@ enum FeedExportStage: string
     public function description(): string
     {
         return match ($this) {
-            self::Raw => 'Direkt aus der Datenbank geladene Cluster ohne weitere Verarbeitung.',
-            self::Merged => 'Nach dem Merge/Consolidation-Schritt bereinigte Drafts.',
+            self::Raw     => 'Direkt aus der Datenbank geladene Cluster ohne weitere Verarbeitung.',
+            self::Merged  => 'Nach dem Merge/Consolidation-Schritt bereinigte Drafts.',
             self::Curated => 'Endgültige Feed-Items nach Ranking, Kuratierung und Limits.',
         };
     }

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Integration\Http;
 
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Http\Controller\FeedController;
@@ -40,6 +41,7 @@ use function array_map;
 use function array_merge;
 use function array_unique;
 use function array_values;
+use function file_exists;
 use function in_array;
 use function is_array;
 use function is_string;
@@ -48,9 +50,8 @@ use function json_encode;
 use function sprintf;
 use function sys_get_temp_dir;
 use function tempnam;
-use function file_exists;
-use function unlink;
 use function trim;
+use function unlink;
 
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
@@ -80,17 +81,17 @@ final class FeedStoryboardIntegrationTest extends TestCase
 
         $profileProvider = new FeedPersonalizationProfileProvider([
             'default' => [
-                'min_score'            => 0.0,
-                'min_members'          => 1,
-                'max_per_day'          => 12,
-                'max_total'            => 60,
-                'max_per_algorithm'    => 12,
-                'quality_floor'        => 0.0,
-                'people_coverage_min'  => 0.0,
-                'recent_days'          => 0,
-                'stale_days'           => 0,
-                'recent_score_bonus'   => 0.0,
-                'stale_score_penalty'  => 0.0,
+                'min_score'           => 0.0,
+                'min_members'         => 1,
+                'max_per_day'         => 12,
+                'max_total'           => 60,
+                'max_per_algorithm'   => 12,
+                'quality_floor'       => 0.0,
+                'people_coverage_min' => 0.0,
+                'recent_days'         => 0,
+                'stale_days'          => 0,
+                'recent_score_bonus'  => 0.0,
+                'stale_score_penalty' => 0.0,
             ],
         ]);
 
@@ -142,7 +143,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
             ->method('getStatusForItem')
             ->willReturn(SlideshowVideoStatus::unavailable(3.5));
 
-        $entityManager = $this->createMock(\Doctrine\ORM\EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
         $controller = new FeedController(
@@ -187,11 +188,11 @@ final class FeedStoryboardIntegrationTest extends TestCase
             );
 
             $snapshotPath = __DIR__ . '/__snapshots__/feed_storyboard.json';
-            $encoded = json_encode($storyboards, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $encoded      = json_encode($storyboards, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
             self::assertJsonStringEqualsJsonFile($snapshotPath, $encoded);
         } finally {
-            if (is_string($preferencesPath) && file_exists($preferencesPath)) {
+            if (file_exists($preferencesPath)) {
                 @unlink($preferencesPath);
             }
         }
@@ -212,12 +213,12 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 continue;
             }
 
-            $memberIds      = [];
-            $clusterTags    = [];
-            $fromTimestamp  = null;
-            $toTimestamp    = null;
-            $clusterPlace   = null;
-            $coverMediaId   = null;
+            $memberIds     = [];
+            $clusterTags   = [];
+            $fromTimestamp = null;
+            $toTimestamp   = null;
+            $clusterPlace  = null;
+            $coverMediaId  = null;
 
             foreach ($cluster['items'] as $item) {
                 if (!is_array($item)) {
@@ -262,7 +263,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                     ++$nextMediaId;
                 }
 
-                $mediaId = $mediaByFilename[$filename];
+                $mediaId     = $mediaByFilename[$filename];
                 $memberIds[] = $mediaId;
 
                 $tags = $this->normaliseStringList($item['tags'] ?? []);
@@ -275,8 +276,8 @@ final class FeedStoryboardIntegrationTest extends TestCase
                     $coverMediaId = $mediaId;
                 }
 
-                $takenAt = new DateTimeImmutable((string) $item['taken_at']);
-                $timestamp = $takenAt->getTimestamp();
+                $takenAt       = new DateTimeImmutable((string) $item['taken_at']);
+                $timestamp     = $takenAt->getTimestamp();
                 $fromTimestamp = $fromTimestamp === null ? $timestamp : min($fromTimestamp, $timestamp);
                 $toTimestamp   = $toTimestamp === null ? $timestamp : max($toTimestamp, $timestamp);
 
@@ -334,8 +335,6 @@ final class FeedStoryboardIntegrationTest extends TestCase
     }
 
     /**
-     * @param mixed $values
-     *
      * @return list<string>
      */
     private function normaliseStringList(mixed $values): array

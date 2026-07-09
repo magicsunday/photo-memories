@@ -18,6 +18,7 @@ use MagicSunday\Memories\Entity\Cluster;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterCuratedOverlayRefresherInterface;
 use MagicSunday\Memories\Test\TestCase;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -81,9 +82,9 @@ final class ClusterCurationMigrationCommandTest extends TestCase
         $tester  = new CommandTester($command);
 
         $status = $tester->execute([
-            '--algorithm' => ['demo'],
+            '--algorithm'  => ['demo'],
             '--batch-size' => '10',
-            '--dry-run' => true,
+            '--dry-run'    => true,
         ], ['decorated' => false]);
 
         self::assertSame(Command::SUCCESS, $status);
@@ -100,7 +101,7 @@ final class ClusterCurationMigrationCommandTest extends TestCase
     /**
      * @param list<Cluster> $clusters
      */
-    private function createRepository(array $clusters): ClusterRepository
+    private function createRepository(array $clusters): TestClusterRepository
     {
         $em = $this->createMock(EntityManagerInterface::class);
 
@@ -121,11 +122,13 @@ readonly class TestClusterRepository extends ClusterRepository
         parent::__construct($em);
     }
 
+    #[Override]
     public function countByAlgorithms(?array $algorithms = null): int
     {
         return count($this->filter($algorithms));
     }
 
+    #[Override]
     public function iterateByAlgorithms(?array $algorithms = null): iterable
     {
         foreach ($this->filter($algorithms) as $cluster) {

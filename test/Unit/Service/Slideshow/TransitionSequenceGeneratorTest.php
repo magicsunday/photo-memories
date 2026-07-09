@@ -43,7 +43,7 @@ final class TransitionSequenceGeneratorTest extends TestCase
         self::assertCount(24, $sequence);
 
         $sequenceCount = count($sequence);
-        for ($index = 1; $index < $sequenceCount; $index++) {
+        for ($index = 1; $index < $sequenceCount; ++$index) {
             self::assertNotSame($sequence[$index - 1], $sequence[$index]);
         }
     }
@@ -114,7 +114,7 @@ final class TransitionSequenceGeneratorTest extends TestCase
     {
         $transitions = ['fade', 'wipe', 'zoom', 'slide', 'cube'];
 
-        $mediaIds = [21, 22, 23, 24, 25];
+        $mediaIds   = [21, 22, 23, 24, 25];
         $imagePaths = [
             '/slides/base-1.jpg',
             '/slides/base-2.jpg',

@@ -20,15 +20,16 @@ use function is_bool;
 use function is_int;
 use function is_numeric;
 use function is_string;
+
 use const FILTER_NULL_ON_FAILURE;
 use const FILTER_VALIDATE_BOOLEAN;
 
 /**
  * Resolves the active selection profile and options for a cluster draft.
  */
-final class ClusterMemberSelectionProfileProvider
+final readonly class ClusterMemberSelectionProfileProvider
 {
-    public function __construct(private readonly SelectionProfileProvider $profiles)
+    public function __construct(private SelectionProfileProvider $profiles)
     {
     }
 
@@ -42,14 +43,12 @@ final class ClusterMemberSelectionProfileProvider
         $profileKey       = $this->profiles->determineProfileKey($draft->getAlgorithm(), $requestedProfile, $context);
         $overrides        = $this->extractOverrides($selectionConfig['overrides'] ?? null);
         $options          = $this->profiles->createOptions($profileKey, $overrides);
-        $home    = $this->resolveHomeDescriptor($selectionConfig['home'] ?? null);
+        $home             = $this->resolveHomeDescriptor($selectionConfig['home'] ?? null);
 
         return new ClusterMemberSelectionProfile($profileKey, $options, $home);
     }
 
     /**
-     * @param mixed $config
-     *
      * @return array<string, mixed>
      */
     private function extractSelectionConfig(mixed $config): array
@@ -129,8 +128,6 @@ final class ClusterMemberSelectionProfileProvider
     }
 
     /**
-     * @param mixed $overrides
-     *
      * @return array<string, mixed>
      */
     private function extractOverrides(mixed $overrides): array
@@ -143,8 +140,6 @@ final class ClusterMemberSelectionProfileProvider
     }
 
     /**
-     * @param mixed $value
-     *
      * @return array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}
      */
     private function resolveHomeDescriptor(mixed $value): array

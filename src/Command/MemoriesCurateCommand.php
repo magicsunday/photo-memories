@@ -60,14 +60,16 @@ use function trim;
 )]
 final class MemoriesCurateCommand extends Command
 {
-    private const REINDEX_AUTO = 'auto';
-    private const REINDEX_FORCE = 'force';
-    private const REINDEX_SKIP = 'skip';
+    private const string REINDEX_AUTO = 'auto';
+
+    private const string REINDEX_FORCE = 'force';
+
+    private const string REINDEX_SKIP = 'skip';
 
     /**
      * @var list<string>
      */
-    private array $allowedGroups;
+    private readonly array $allowedGroups;
 
     /**
      * @var array<string,string>
@@ -77,7 +79,7 @@ final class MemoriesCurateCommand extends Command
     /**
      * @var list<string>
      */
-    private array $friendlyNames;
+    private readonly array $friendlyNames;
 
     /**
      * @param array<string,string> $clusterGroupMap
@@ -101,23 +103,32 @@ final class MemoriesCurateCommand extends Command
 
         $groups = array_values($this->clusterGroupMap);
         $groups = array_map(static fn (mixed $value): ?string => is_string($value) ? $value : null, $groups);
+
         $this->allowedGroups = array_values(array_unique(array_filter($groups))); // keep deterministic order
 
         $aliases = [];
         foreach ($this->clusterGroupAliasMap as $alias => $group) {
-            if (!is_string($alias) || !is_string($group)) {
+            if (!is_string($alias)) {
+                continue;
+            }
+
+            if (!is_string($group)) {
                 continue;
             }
 
             $aliasKey = strtolower(trim($alias));
-            if ($aliasKey === '' || !in_array($group, $this->allowedGroups, true)) {
+            if ($aliasKey === '') {
+                continue;
+            }
+
+            if (!in_array($group, $this->allowedGroups, true)) {
                 continue;
             }
 
             $aliases[$aliasKey] = $group;
         }
 
-        $this->groupAliases = $aliases;
+        $this->groupAliases  = $aliases;
         $this->friendlyNames = array_keys($aliases);
     }
 
@@ -172,7 +183,7 @@ final class MemoriesCurateCommand extends Command
         $dryRun  = (bool) $input->getOption('dry-run');
         $explain = (bool) $input->getOption('explain');
 
-        $reindexOption = $input->getOption('reindex');
+        $reindexOption   = $input->getOption('reindex');
         $reindexStrategy = $this->normaliseReindexStrategy($reindexOption);
         if ($reindexStrategy === null) {
             $io->error('Ungültige Reindex-Strategie. Erlaubt sind auto, force oder skip.');
@@ -266,7 +277,7 @@ final class MemoriesCurateCommand extends Command
                 }
 
                 $normalised[] = [
-                    'raw' => $trimmed,
+                    'raw'        => $trimmed,
                     'normalised' => strtolower($trimmed),
                 ];
             }
@@ -278,7 +289,7 @@ final class MemoriesCurateCommand extends Command
 
         $resolved = [];
         foreach ($normalised as $entry) {
-            $candidate = $entry['normalised'];
+            $candidate     = $entry['normalised'];
             $resolvedGroup = $this->groupAliases[$candidate] ?? null;
 
             if ($resolvedGroup === null && in_array($candidate, $this->allowedGroups, true)) {
@@ -336,7 +347,7 @@ final class MemoriesCurateCommand extends Command
 
         return match ($value) {
             self::REINDEX_AUTO, self::REINDEX_FORCE, self::REINDEX_SKIP => $value,
-            default => null,
+            default                                                     => null,
         };
     }
 
@@ -410,10 +421,8 @@ final class MemoriesCurateCommand extends Command
                 $progress->advance();
             }
 
-            if (!$finalized) {
-                $this->pipeline->finalize($dryRun);
-                $finalized = true;
-            }
+            $this->pipeline->finalize($dryRun);
+            $finalized = true;
 
             $io->success(sprintf('%d Dateien verarbeitet.', $processed));
             $this->qaReportCollector->render($output);
@@ -534,4 +543,3 @@ final class MemoriesCurateCommand extends Command
         return Command::SUCCESS;
     }
 }
-

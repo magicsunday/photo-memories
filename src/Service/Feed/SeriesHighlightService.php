@@ -21,8 +21,8 @@ use function implode;
 use function is_array;
 use function is_int;
 use function is_numeric;
-use function sprintf;
 use function sort;
+use function sprintf;
 
 use const SORT_NUMERIC;
 

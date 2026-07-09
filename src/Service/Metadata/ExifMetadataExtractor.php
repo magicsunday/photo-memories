@@ -140,7 +140,7 @@ final readonly class ExifMetadataExtractor implements SingleMetadataExtractorInt
         }
 
         if ($preserveOriginal === false) {
-            foreach (self::OFFSET_ALIASES as $ugly => $nice) {
+            foreach (array_keys(self::OFFSET_ALIASES) as $ugly) {
                 if (array_key_exists($ugly, $node)) {
                     unset($node[$ugly]);
                 }

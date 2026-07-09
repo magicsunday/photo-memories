@@ -27,7 +27,7 @@ use function spl_object_hash;
 /**
  * Derives staypoint-based place identifiers from dense GPS observations.
  */
-final class StaypointPlaceHeuristic implements SingleMetadataExtractorInterface
+final readonly class StaypointPlaceHeuristic implements SingleMetadataExtractorInterface
 {
     private StaypointCandidateProviderInterface $candidateProvider;
 
@@ -105,11 +105,11 @@ final class StaypointPlaceHeuristic implements SingleMetadataExtractorInterface
         $confidence         = max($confidenceSamples, $confidenceDuration);
 
         $meta = [
-            'samples'          => $samples,
-            'durationMinutes'  => $durationMinutes,
-            'cellLevel'        => $this->s2Level,
-            'geoCell8'         => $media->getGeoCell8(),
-            'source'           => 'staypoint',
+            'samples'         => $samples,
+            'durationMinutes' => $durationMinutes,
+            'cellLevel'       => $this->s2Level,
+            'geoCell8'        => $media->getGeoCell8(),
+            'source'          => 'staypoint',
         ];
 
         $media->setPlaceId(new PlaceId($this->provider, $identifier, $confidence, $meta));
@@ -130,7 +130,7 @@ final class StaypointPlaceHeuristic implements SingleMetadataExtractorInterface
 
         $seedTakenAt = $seed->getTakenAt();
         if ($seedTakenAt instanceof DateTimeImmutable) {
-            $timestamps[]                 = $seedTakenAt;
+            $timestamps[]                                   = $seedTakenAt;
             $seen[$seed->getId() ?: spl_object_hash($seed)] = true;
         }
 

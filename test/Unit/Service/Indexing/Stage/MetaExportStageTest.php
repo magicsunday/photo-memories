@@ -30,11 +30,11 @@ use function hash;
 use function is_dir;
 use function json_decode;
 use function mkdir;
+use function rmdir;
 use function scandir;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
-use function rmdir;
 
 use const JSON_THROW_ON_ERROR;
 
@@ -51,7 +51,7 @@ final class MetaExportStageTest extends TestCase
             $filePath = $baseDir . '/sample.jpg';
             file_put_contents($filePath, 'sample-binary');
 
-            $checksum = (string) hash('sha256', 'sample-binary');
+            $checksum = hash('sha256', 'sample-binary');
             $media    = new Media($filePath, $checksum, 13);
             $media->setFastChecksumXxhash64('feedfacecafebeef');
             $media->setMime('image/jpeg');
@@ -69,9 +69,9 @@ final class MetaExportStageTest extends TestCase
             $media->setVideoCodec('h264');
             $media->setVideoStreams([
                 [
-                    'index' => 0,
-                    'codec_type' => 'video',
-                    'codec_name' => 'h264',
+                    'index'          => 0,
+                    'codec_type'     => 'video',
+                    'codec_name'     => 'h264',
                     'avg_frame_rate' => '30000/1001',
                 ],
             ]);
@@ -119,7 +119,7 @@ final class MetaExportStageTest extends TestCase
             $media->setCompositeImageExposureTimes('1/200,1/400');
             $media->setContentKind(ContentKind::PHOTO);
             $media->setFeatures([
-                'calendar' => ['daypart' => 'evening', 'dow' => 6],
+                'calendar'       => ['daypart' => 'evening', 'dow' => 6],
                 'classification' => ['kind' => 'photo', 'confidence' => 0.91],
             ]);
             $media->setSceneTags([
@@ -175,10 +175,10 @@ final class MetaExportStageTest extends TestCase
 
             $media->setLocation($location);
             $media->setPlaceIdPayload([
-                'provider' => 'staypoint',
-                'id' => 'stay-42',
+                'provider'   => 'staypoint',
+                'id'         => 'stay-42',
                 'confidence' => 0.76,
-                'meta' => ['label' => 'Innenstadt'],
+                'meta'       => ['label' => 'Innenstadt'],
             ]);
 
             $context = MediaIngestionContext::create($filePath, false, false, false, false, new NullOutput());
@@ -211,30 +211,30 @@ final class MetaExportStageTest extends TestCase
             self::assertSame(
                 [
                     'video_duration_s' => 12.34,
-                    'video_fps' => 29.97,
-                    'video_codec' => 'h264',
-                    'video_streams' => [
+                    'video_fps'        => 29.97,
+                    'video_codec'      => 'h264',
+                    'video_streams'    => [
                         [
-                            'index' => 0,
-                            'codec_type' => 'video',
-                            'codec_name' => 'h264',
+                            'index'          => 0,
+                            'codec_type'     => 'video',
+                            'codec_name'     => 'h264',
                             'avg_frame_rate' => '30000/1001',
                         ],
                     ],
-                    'video_rotation_deg' => 90.0,
+                    'video_rotation_deg'      => 90.0,
                     'video_has_stabilization' => true,
-                    'is_slow_mo' => false,
+                    'is_slow_mo'              => false,
                 ],
                 $payload['video']
             );
             self::assertSame(
                 [
-                    'sharpness' => 0.78,
-                    'brightness' => 0.62,
-                    'contrast' => 0.55,
-                    'entropy' => 0.68,
+                    'sharpness'         => 0.78,
+                    'brightness'        => 0.62,
+                    'contrast'          => 0.55,
+                    'entropy'           => 0.68,
                     'motion_blur_score' => 0.81,
-                    'colorfulness' => 0.73,
+                    'colorfulness'      => 0.73,
                 ],
                 $payload['quality_proxies']
             );
@@ -242,7 +242,7 @@ final class MetaExportStageTest extends TestCase
                 [
                     [
                         'missing_features' => ['calendar.daypart'],
-                        'suggestions' => ['Check timezone votes'],
+                        'suggestions'      => ['Check timezone votes'],
                     ],
                 ],
                 $payload['qa_findings']
@@ -263,7 +263,7 @@ final class MetaExportStageTest extends TestCase
             $filePath = $baseDir . '/sample.jpg';
             file_put_contents($filePath, 'sample-binary');
 
-            $checksum = (string) hash('sha256', 'sample-binary');
+            $checksum = hash('sha256', 'sample-binary');
             $media    = new Media($filePath, $checksum, 13);
 
             $context = MediaIngestionContext::create($filePath, false, true, false, false, new NullOutput());
@@ -290,7 +290,11 @@ final class MetaExportStageTest extends TestCase
         }
 
         foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
+            if ($entry === '.') {
+                continue;
+            }
+
+            if ($entry === '..') {
                 continue;
             }
 

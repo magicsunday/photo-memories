@@ -20,12 +20,12 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
-use function arsort;
-use function array_key_exists;
 use function array_filter;
-use function array_merge;
+use function array_key_exists;
 use function array_keys;
+use function array_merge;
 use function array_sum;
+use function arsort;
 use function ceil;
 use function count;
 use function floor;
@@ -42,15 +42,15 @@ use function usort;
 /**
  * Stage that curates cluster member lists using the policy driven selector.
  */
-final class MemberCurationStage implements ClusterConsolidationStageInterface
+final readonly class MemberCurationStage implements ClusterConsolidationStageInterface
 {
     use StageSupportTrait;
 
     public function __construct(
-        private readonly MemberMediaLookupInterface $mediaLookup,
-        private readonly SelectionPolicyProvider $policyProvider,
-        private readonly ClusterMemberSelectorInterface $selector,
-        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private MemberMediaLookupInterface $mediaLookup,
+        private SelectionPolicyProvider $policyProvider,
+        private ClusterMemberSelectorInterface $selector,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -87,9 +87,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $daySegments    = $this->extractDaySegments($draft);
-            $runLengthDays  = $daySegments === [] ? null : count($daySegments);
-            $policy         = $runLengthDays === null
+            $daySegments   = $this->extractDaySegments($draft);
+            $runLengthDays = $daySegments === [] ? null : count($daySegments);
+            $policy        = $runLengthDays === null
                 ? $this->policyProvider->forAlgorithm($draft->getAlgorithm(), $draft->getStoryline())
                 : $this->policyProvider->forAlgorithmWithRunLength(
                     $draft->getAlgorithm(),
@@ -100,7 +100,8 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             if ($daySegments !== []) {
                 $policy = $this->applyDayContext($policy, $daySegments);
             }
-            $media  = $this->mediaLookup->findByIds($members);
+
+            $media = $this->mediaLookup->findByIds($members);
 
             $mediaMap = [];
             foreach ($media as $entity) {
@@ -112,15 +113,15 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
             $preCount = count($members);
             $this->emitMonitoring('selection_start', [
-                'algorithm'        => $draft->getAlgorithm(),
-                'storyline'        => $draft->getStoryline(),
-                'pre_count'        => $preCount,
-                'members_pre'      => $preCount,
-                'policy'           => $policy->getProfileKey(),
-                'policy_key'       => $policy->getProfileKey(),
-                'target_total'     => $policy->getTargetTotal(),
-                'minimum_total'    => $policy->getMinimumTotal(),
-                'policy_profile'   => $policy->getProfileKey(),
+                'algorithm'            => $draft->getAlgorithm(),
+                'storyline'            => $draft->getStoryline(),
+                'pre_count'            => $preCount,
+                'members_pre'          => $preCount,
+                'policy'               => $policy->getProfileKey(),
+                'policy_key'           => $policy->getProfileKey(),
+                'target_total'         => $policy->getTargetTotal(),
+                'minimum_total'        => $policy->getMinimumTotal(),
+                'policy_profile'       => $policy->getProfileKey(),
                 'policy_minimum_total' => $policy->getMinimumTotal(),
             ]);
 
@@ -137,23 +138,23 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             }
 
             $presentation = [
-                'storyline'     => $draft->getStoryline(),
-                'policy'        => $policyDetails,
+                'storyline' => $draft->getStoryline(),
+                'policy'    => $policyDetails,
                 'counts'    => [
                     'raw'     => $preCount,
                     'curated' => $postCount,
                     'dropped' => $dropped,
                 ],
-                'spacing'   => [
+                'spacing' => [
                     'average_seconds' => (float) ($telemetry['avg_time_gap_s'] ?? 0.0),
                     'rejections'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_TIME_GAP] ?? 0),
                 ],
-                'hash_distance' => (float) ($telemetry['avg_phash_distance'] ?? 0.0),
+                'hash_distance'    => (float) ($telemetry['avg_phash_distance'] ?? 0.0),
                 'rejection_counts' => $telemetry['rejection_counts'] ?? [],
-                'curated_count' => $postCount,
+                'curated_count'    => $postCount,
             ];
 
-            $params = $draft->getParams();
+            $params                     = $draft->getParams();
             $params['member_selection'] = $presentation;
 
             $memberQuality = $params['member_quality'] ?? [];
@@ -176,7 +177,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 ],
                 'selection_per_day_distribution'    => $telemetry['per_day_distribution'] ?? [],
                 'selection_per_bucket_distribution' => $telemetry['per_bucket_distribution'] ?? [],
-                'selection_spacing' => [
+                'selection_spacing'                 => [
                     'average_seconds' => (float) ($telemetry['avg_time_gap_s'] ?? 0.0),
                     'rejections'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_TIME_GAP] ?? 0),
                 ],
@@ -184,15 +185,15 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                     'blocked'      => (int) ($telemetry['rejection_counts'][SelectionTelemetry::REASON_PHASH] ?? 0),
                     'replacements' => 0,
                 ],
-                'selection_storyline' => $draft->getStoryline(),
-                'selection_policy'    => $policy->getProfileKey(),
-                'selection_telemetry' => $telemetry,
-                'curated_count'       => $postCount,
+                'selection_storyline'      => $draft->getStoryline(),
+                'selection_policy'         => $policy->getProfileKey(),
+                'selection_telemetry'      => $telemetry,
+                'curated_count'            => $postCount,
                 'selection_policy_details' => $policyDetails,
             ]);
 
             $memberQuality['summary'] = $summary;
-            $params['member_quality']  = $memberQuality;
+            $params['member_quality'] = $memberQuality;
 
             $result[] = $draft->withParams($params);
 
@@ -240,7 +241,15 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
         $result = [];
         foreach ($segments as $day => $info) {
-            if (!is_string($day) || $day === '' || !is_array($info)) {
+            if (!is_string($day)) {
+                continue;
+            }
+
+            if ($day === '') {
+                continue;
+            }
+
+            if (!is_array($info)) {
                 continue;
             }
 
@@ -273,7 +282,11 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $metrics    = [];
             if (is_array($metricsRaw)) {
                 foreach ($metricsRaw as $key => $value) {
-                    if (!is_string($key) || $key === '') {
+                    if (!is_string($key)) {
+                        continue;
+                    }
+
+                    if ($key === '') {
                         continue;
                     }
 
@@ -350,9 +363,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 $peripheralQuotaLimit = $targetTotal;
             }
 
-            if ($peripheralCount > 0) {
-                $peripheralHardCap = $targetTotal >= ($peripheralCount * 2) ? 2 : 1;
-            }
+            $peripheralHardCap = $targetTotal >= ($peripheralCount * 2) ? 2 : 1;
         }
 
         $dayQuotas        = [];
@@ -412,8 +423,8 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                         }
 
                         $peripheralQuotas[$day] = $newQuota;
-                        $overflow               -= ($quota - $newQuota);
-                        $reduced                 = true;
+                        $overflow -= ($quota - $newQuota);
+                        $reduced = true;
                     }
 
                     if ($reduced === false) {
@@ -461,9 +472,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
     }
 
     /**
-     * @param array<string, int> $dayQuotas
+     * @param array<string, int>                                                                              $dayQuotas
      * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $daySegments
-     * @param array<string, int> $minimumPerDay
+     * @param array<string, int>                                                                              $minimumPerDay
      *
      * @return array<string, int>
      */
@@ -498,9 +509,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $reduction        = min($room, $excess);
+            $reduction = min($room, $excess);
             $dayQuotas[$day] -= $reduction;
-            $excess          -= $reduction;
+            $excess -= $reduction;
         }
 
         if ($excess <= 0) {
@@ -531,9 +542,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
                 continue;
             }
 
-            $reduction        = min($room, $excess);
+            $reduction = min($room, $excess);
             $dayQuotas[$day] -= $reduction;
-            $excess          -= $reduction;
+            $excess -= $reduction;
         }
 
         return $dayQuotas;
@@ -544,7 +555,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
      */
     private function extractQualityScores(ClusterDraft $draft): array
     {
-        $params = $draft->getParams();
+        $params  = $draft->getParams();
         $details = $params['member_quality']['members'] ?? null;
         $scores  = [];
 
@@ -591,9 +602,9 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
             $telemetry['policy'] = [];
         }
 
-        $telemetry['policy']['profile']      = $policy->getProfileKey();
-        $telemetry['policy']['storyline']    = $draft->getStoryline();
-        $telemetry['policy']['target_total'] = $policy->getTargetTotal();
+        $telemetry['policy']['profile']       = $policy->getProfileKey();
+        $telemetry['policy']['storyline']     = $draft->getStoryline();
+        $telemetry['policy']['target_total']  = $policy->getTargetTotal();
         $telemetry['policy']['minimum_total'] = $policy->getMinimumTotal();
 
         $maxPerDay = $policy->getMaxPerDay();
@@ -616,7 +627,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
 
         $telemetry['storyline'] = $draft->getStoryline();
 
-        $metrics = $telemetry['metrics'] ?? [];
+        $metrics     = $telemetry['metrics'] ?? [];
         $timeSamples = [];
         $hashSamples = [];
 
@@ -635,11 +646,11 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
         $telemetry['avg_time_gap_s']     = $this->calculateAverage($timeSamples);
         $telemetry['avg_phash_distance'] = $this->calculateAverage($hashSamples);
 
-        $telemetry['per_day_distribution'] = $telemetry['distribution']['per_day'] ?? [];
-        $telemetry['per_year_distribution'] = $telemetry['distribution']['per_year'] ?? [];
+        $telemetry['per_day_distribution']    = $telemetry['distribution']['per_day'] ?? [];
+        $telemetry['per_year_distribution']   = $telemetry['distribution']['per_year'] ?? [];
         $telemetry['per_bucket_distribution'] = $telemetry['distribution']['per_bucket'] ?? [];
-        $telemetry['algorithm'] = $draft->getAlgorithm();
-        $telemetry['storyline'] = $draft->getStoryline();
+        $telemetry['algorithm']               = $draft->getAlgorithm();
+        $telemetry['storyline']               = $draft->getStoryline();
 
         if (isset($telemetry['rejections']) && is_array($telemetry['rejections'])) {
             $telemetry['exclusion_reasons'] = $telemetry['rejections'];
@@ -687,7 +698,7 @@ final class MemberCurationStage implements ClusterConsolidationStageInterface
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

@@ -29,8 +29,8 @@ use MagicSunday\Memories\Service\Clusterer\Selection\Stage\TimeGapStage;
 use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
-use ReflectionProperty;
 use ReflectionMethod;
+use ReflectionProperty;
 use Symfony\Component\Yaml\Yaml;
 
 final class PolicyDrivenMemberSelectorTest extends TestCase
@@ -44,8 +44,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         $hardProperty = new ReflectionProperty(PolicyDrivenMemberSelector::class, 'hardStages');
         $softProperty = new ReflectionProperty(PolicyDrivenMemberSelector::class, 'softStages');
-        $hardProperty->setAccessible(true);
-        $softProperty->setAccessible(true);
 
         $hard = $hardProperty->getValue($selector);
         $soft = $softProperty->getValue($selector);
@@ -66,9 +64,9 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     #[Test]
     public function telemetryCollectsRejectionsForVacationPolicy(): void
     {
-        $selector = $this->createSelector();
-        $policy   = $this->createVacationPolicy();
-        $mediaMap = $this->mediaFixtures();
+        $selector  = $this->createSelector();
+        $policy    = $this->createVacationPolicy();
+        $mediaMap  = $this->mediaFixtures();
         $memberIds = array_keys($mediaMap);
 
         $context = new MemberSelectionContext(
@@ -79,7 +77,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             [],
         );
 
-        $result = $selector->select('vacation', $memberIds, $context);
+        $result    = $selector->select('vacation', $memberIds, $context);
         $telemetry = $result->getTelemetry();
 
         self::assertSame($policy->getProfileKey(), $telemetry['policy']['profile']);
@@ -145,41 +143,36 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
+            mmrLambda: 0.45,
+            mmrSimilarityFloor: 0.3,
+            mmrSimilarityCap: 0.95,
+            mmrMaxConsideration: 3,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.0,
             cohortPenalty: 0.0,
-            mmrLambda: 0.45,
-            mmrSimilarityFloor: 0.3,
-            mmrSimilarityCap: 0.95,
-            mmrMaxConsideration: 3,
         );
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         $candidates = [
             [
-                'id' => 1,
-                'score' => 0.96,
+                'id'        => 1,
+                'score'     => 0.96,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 10,
             ],
             [
-                'id' => 2,
-                'score' => 0.95,
+                'id'        => 2,
+                'score'     => 0.95,
                 'hash_bits' => $this->bitsFromHex('fffffffffffffffe'),
                 'timestamp' => 20,
             ],
             [
-                'id' => 3,
-                'score' => 0.7,
+                'id'        => 3,
+                'score'     => 0.7,
                 'hash_bits' => $this->bitsFromHex('0000000000000000'),
                 'timestamp' => 30,
             ],
@@ -243,64 +236,59 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
+            mmrLambda: 0.5,
+            mmrSimilarityFloor: 0.71875,
+            mmrSimilarityCap: 0.75,
+            mmrMaxConsideration: 6,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.0,
             cohortPenalty: 0.0,
-            mmrLambda: 0.5,
-            mmrSimilarityFloor: 0.71875,
-            mmrSimilarityCap: 0.75,
-            mmrMaxConsideration: 6,
         );
 
         $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         $candidates = [
             [
-                'id' => 100,
-                'score' => 0.95,
+                'id'        => 100,
+                'score'     => 0.95,
                 'hash_bits' => $this->bitsFromHex('0000000000000000'),
                 'timestamp' => 10,
             ],
             [
-                'id' => 101,
-                'score' => 0.9,
+                'id'        => 101,
+                'score'     => 0.9,
                 'hash_bits' => $this->bitsFromHex('ffffe00000000000'),
                 'timestamp' => 20,
             ],
             [
-                'id' => 102,
-                'score' => 0.89,
+                'id'        => 102,
+                'score'     => 0.89,
                 'hash_bits' => $this->bitsFromHex('ffff600000000000'),
                 'timestamp' => 30,
             ],
             [
-                'id' => 103,
-                'score' => 0.88,
+                'id'        => 103,
+                'score'     => 0.88,
                 'hash_bits' => $this->bitsFromHex('ffff800000000000'),
                 'timestamp' => 40,
             ],
             [
-                'id' => 104,
-                'score' => 0.87,
+                'id'        => 104,
+                'score'     => 0.87,
                 'hash_bits' => $this->bitsFromHex('ffff000000000000'),
                 'timestamp' => 50,
             ],
             [
-                'id' => 105,
-                'score' => 0.86,
+                'id'        => 105,
+                'score'     => 0.86,
                 'hash_bits' => $this->bitsFromHex('fffe000000000000'),
                 'timestamp' => 60,
             ],
             [
-                'id' => 106,
-                'score' => 0.2,
+                'id'        => 106,
+                'score'     => 0.2,
                 'hash_bits' => $this->bitsFromHex('0000000000000000'),
                 'timestamp' => 70,
             ],
@@ -404,35 +392,30 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
+            mmrLambda: 1.0,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 5,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.0,
             cohortPenalty: 0.0,
-            mmrLambda: 1.0,
-            mmrSimilarityFloor: 0.0,
-            mmrSimilarityCap: 1.0,
-            mmrMaxConsideration: 5,
         );
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         $candidates = [
             [
-                'id' => 99,
-                'score' => 0.75,
+                'id'        => 99,
+                'score'     => 0.75,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 1_700_000_100,
             ],
             [
-                'id' => 42,
-                'score' => 0.75,
+                'id'        => 42,
+                'score'     => 0.75,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 1_700_000_100,
             ],
@@ -501,35 +484,30 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
+            mmrLambda: 1.0,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 4,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.0,
             cohortPenalty: 0.0,
-            mmrLambda: 1.0,
-            mmrSimilarityFloor: 0.0,
-            mmrSimilarityCap: 1.0,
-            mmrMaxConsideration: 4,
         );
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         $candidates = [
             [
-                'id' => 7,
-                'score' => 0.8,
+                'id'        => 7,
+                'score'     => 0.8,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 1_700_000_500,
             ],
             [
-                'id' => 8,
-                'score' => 0.8,
+                'id'        => 8,
+                'score'     => 0.8,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 1_700_000_100,
             ],
@@ -596,41 +574,36 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
+            mmrLambda: 0.9,
+            mmrSimilarityFloor: 0.0,
+            mmrSimilarityCap: 1.0,
+            mmrMaxConsideration: 10,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.0,
             cohortPenalty: 0.0,
-            mmrLambda: 0.9,
-            mmrSimilarityFloor: 0.0,
-            mmrSimilarityCap: 1.0,
-            mmrMaxConsideration: 10,
         );
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         $candidates = [
             [
-                'id' => 3,
-                'score' => 0.9,
+                'id'        => 3,
+                'score'     => 0.9,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 100,
             ],
             [
-                'id' => 1,
-                'score' => 0.85,
+                'id'        => 1,
+                'score'     => 0.85,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 50,
             ],
             [
-                'id' => 2,
-                'score' => 0.8,
+                'id'        => 2,
+                'score'     => 0.8,
                 'hash_bits' => $this->bitsFromHex('ffffffffffffffff'),
                 'timestamp' => 75,
             ],
@@ -658,14 +631,14 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     {
         $selector = $this->createSelector();
 
-        $raw         = Yaml::parseFile(__DIR__ . '/../../../../../config/parameters/selection.yaml');
-        $parameters  = $raw['parameters'];
-        $provider    = new SelectionPolicyProvider(
+        $raw        = Yaml::parseFile(__DIR__ . '/../../../../../config/parameters/selection.yaml');
+        $parameters = $raw['parameters'];
+        $provider   = new SelectionPolicyProvider(
             profiles: $parameters['memories.selection.profiles'],
-            algorithmProfiles: $parameters['memories.selection.algorithm_profiles'],
             defaultProfile: $parameters['memories.selection.default_profile'],
+            algorithmProfiles: $parameters['memories.selection.algorithm_profiles'],
         );
-        $policy      = $provider->forAlgorithm('vacation');
+        $policy = $provider->forAlgorithm('vacation');
 
         self::assertSame(6, $policy->getMaxPerDay());
         self::assertSame(1800, $policy->getMinSpacingSeconds());
@@ -743,6 +716,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
                 $media->setHeight(4000);
                 $media->setOrientation(6);
             }
+
             $mediaMap[$id]      = $media;
             $qualityScores[$id] = 0.55;
         }
@@ -776,9 +750,9 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     #[Test]
     public function telemetryCollectsRejectionsForHighlightsPolicy(): void
     {
-        $selector = $this->createSelector();
-        $policy   = $this->createHighlightsPolicy();
-        $mediaMap = $this->mediaFixtures();
+        $selector  = $this->createSelector();
+        $policy    = $this->createHighlightsPolicy();
+        $mediaMap  = $this->mediaFixtures();
         $memberIds = array_keys($mediaMap);
 
         $context = new MemberSelectionContext(
@@ -845,17 +819,11 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 1,
             peripheralDayPenalty: 1,
             phashPercentile: 0.0,
             spacingProgressFactor: 0.5,
             cohortPenalty: 0.0,
-            peripheralDayMaxTotal: null,
-            peripheralDayHardCap: null,
             dayQuotas: [],
             dayContext: [],
             metadata: [],
@@ -923,11 +891,11 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         ]);
         $single->setBurstUuid('burst-group');
 
-        $memberIds   = [101, 102];
-        $mediaMap    = [101 => $groupShot, 102 => $single];
-        $quality     = [101 => 0.7, 102 => 0.7];
-        $draft       = $this->createDraft('vacation', $memberIds);
-        $candidates  = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
+        $memberIds  = [101, 102];
+        $mediaMap   = [101 => $groupShot, 102 => $single];
+        $quality    = [101 => 0.7, 102 => 0.7];
+        $draft      = $this->createDraft('vacation', $memberIds);
+        $candidates = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
 
         self::assertSame(1, $candidates['drops']['burst']);
         self::assertCount(1, $candidates['eligible']);
@@ -956,11 +924,11 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         ]);
         $closeUp->setBurstUuid('burst-close');
 
-        $memberIds   = [201, 202];
-        $mediaMap    = [201 => $balanced, 202 => $closeUp];
-        $quality     = [201 => 0.7, 202 => 0.7];
-        $draft       = $this->createDraft('vacation', $memberIds);
-        $candidates  = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
+        $memberIds  = [201, 202];
+        $mediaMap   = [201 => $balanced, 202 => $closeUp];
+        $quality    = [201 => 0.7, 202 => 0.7];
+        $draft      = $this->createDraft('vacation', $memberIds);
+        $candidates = $this->invokeBuildCandidates($selector, $memberIds, $mediaMap, $quality, $policy, $draft);
 
         self::assertSame(1, $candidates['drops']['burst']);
         self::assertCount(1, $candidates['eligible']);
@@ -1018,7 +986,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     #[Test]
     public function sceneDiversityStageHonoursTargetShare(): void
     {
-        $stage = new SceneDiversityStage();
+        $stage  = new SceneDiversityStage();
         $policy = new SelectionPolicy(
             profileKey: 'test',
             targetTotal: 8,
@@ -1033,9 +1001,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
             sceneBucketWeights: [
                 'person_group' => 0.25,
                 'outdoor'      => 0.75,
@@ -1069,7 +1034,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     {
         $selector = new PolicyDrivenMemberSelector(
             hardStages: [
-                new class() implements SelectionStageInterface {
+                new class implements SelectionStageInterface {
                     public function getName(): string
                     {
                         return 'passthrough';
@@ -1098,10 +1063,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 1,
             peripheralDayPenalty: 0,
             phashPercentile: 0.35,
@@ -1121,7 +1082,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         /** @var list<array<string, mixed>> $result */
         $result = $method->invoke($selector, $candidates, $policy, $telemetry);
@@ -1142,7 +1102,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     {
         $selector = new PolicyDrivenMemberSelector(
             hardStages: [
-                new class() implements SelectionStageInterface {
+                new class implements SelectionStageInterface {
                     public function getName(): string
                     {
                         return 'score-ordered';
@@ -1176,10 +1136,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
         );
 
         $candidates = [
@@ -1191,7 +1147,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
 
         $telemetry = new SelectionTelemetry();
         $method    = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'runPipeline');
-        $method->setAccessible(true);
 
         /** @var list<array<string, mixed>> $result */
         $result = $method->invoke($selector, $candidates, $policy, $telemetry);
@@ -1212,7 +1167,7 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     {
         $selector = new PolicyDrivenMemberSelector(
             hardStages: [
-                new class() implements SelectionStageInterface {
+                new class implements SelectionStageInterface {
                     public function getName(): string
                     {
                         return 'limit-one';
@@ -1283,9 +1238,9 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         $draft   = $this->createDraft('pad-test', $memberIds);
         $context = new MemberSelectionContext($draft, $policy, $mediaMap, $quality, []);
 
-        $result       = $selector->select('pad-test', $memberIds, $context);
-        $selectedIds  = $result->getMemberIds();
-        $telemetry    = $result->getTelemetry();
+        $result      = $selector->select('pad-test', $memberIds, $context);
+        $selectedIds = $result->getMemberIds();
+        $telemetry   = $result->getTelemetry();
 
         self::assertSame([101, 102, 103], $selectedIds);
         self::assertSame(3, $telemetry['counts']['selected']);
@@ -1320,15 +1275,15 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     private function qualityScores(): array
     {
         return [
-            1 => 0.7,
-            2 => 0.7,
-            3 => 0.7,
-            4 => 0.7,
-            5 => 0.7,
-            6 => 0.7,
-            7 => 0.7,
-            8 => 0.7,
-            9 => 0.7,
+            1  => 0.7,
+            2  => 0.7,
+            3  => 0.7,
+            4  => 0.7,
+            5  => 0.7,
+            6  => 0.7,
+            7  => 0.7,
+            8  => 0.7,
+            9  => 0.7,
             10 => 0.7,
         ];
     }
@@ -1365,8 +1320,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.28,
             faceBonus: 0.36,
             selfiePenalty: 0.22,
-            maxPerYear: null,
-            maxPerBucket: null,
             videoHeavyBonus: 0.34,
         );
     }
@@ -1387,8 +1340,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
             videoBonus: 0.38,
             faceBonus: 0.36,
             selfiePenalty: 0.24,
-            maxPerYear: null,
-            maxPerBucket: null,
             videoHeavyBonus: 0.32,
         );
     }
@@ -1410,8 +1361,8 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
     }
 
     /**
-     * @param list<int> $memberIds
-     * @param array<int, Media> $mediaMap
+     * @param list<int>              $memberIds
+     * @param array<int, Media>      $mediaMap
      * @param array<int, float|null> $qualityScores
      *
      * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
@@ -1426,7 +1377,6 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
         array $daySegments = [],
     ): array {
         $method = new ReflectionMethod(PolicyDrivenMemberSelector::class, 'buildCandidates');
-        $method->setAccessible(true);
 
         /** @var array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>} $result */
         $result = $method->invoke($selector, $memberIds, $mediaMap, $qualityScores, $policy, $draft, $daySegments);
@@ -1439,9 +1389,9 @@ final class PolicyDrivenMemberSelectorTest extends TestCase
      */
     private function bitsFromHex(string $hash): array
     {
-        $bits      = [];
+        $bits       = [];
         $normalised = strtolower($hash);
-        $length    = strlen($normalised);
+        $length     = strlen($normalised);
 
         for ($i = 0; $i < $length && $i < 16; ++$i) {
             $nibble = hexdec($normalised[$i]);

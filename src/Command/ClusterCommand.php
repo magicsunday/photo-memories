@@ -17,10 +17,10 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
+use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
-use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -47,8 +47,7 @@ final class ClusterCommand extends Command
         private readonly ClusterJobRunnerInterface $runner,
         private readonly SelectionProfileProvider $selectionProfiles,
         private readonly ?VacationDebugContext $vacationDebugContext = null,
-    )
-    {
+    ) {
         parent::__construct();
     }
 
@@ -66,15 +65,15 @@ final class ClusterCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io      = new SymfonyStyle($input, $output);
-        $dryRun  = (bool) $input->getOption('dry-run');
-        $limit   = $input->getOption('limit');
-        $since   = $input->getOption('since');
-        $replace = (bool) $input->getOption('replace');
+        $io            = new SymfonyStyle($input, $output);
+        $dryRun        = (bool) $input->getOption('dry-run');
+        $limit         = $input->getOption('limit');
+        $since         = $input->getOption('since');
+        $replace       = (bool) $input->getOption('replace');
         $debugVacation = (bool) $input->getOption('debug-vacation');
 
         $debugContextActive = false;
-        if ($this->vacationDebugContext !== null) {
+        if ($this->vacationDebugContext instanceof VacationDebugContext) {
             if ($debugVacation) {
                 $this->vacationDebugContext->enable();
                 $this->vacationDebugContext->reset();
@@ -166,7 +165,7 @@ final class ClusterCommand extends Command
 
     private function renderTelemetry(SymfonyStyle $io, ClusterJobTelemetry $telemetry): void
     {
-        $stageStats = $telemetry->getStageStats();
+        $stageStats  = $telemetry->getStageStats();
         $topClusters = $telemetry->getTopClusters();
         $warnings    = $telemetry->getWarnings();
 
@@ -176,16 +175,14 @@ final class ClusterCommand extends Command
 
         $io->section('📊 Telemetrie');
 
-        if ($warnings !== []) {
-            foreach ($warnings as $warning) {
-                $io->warning($warning);
-            }
+        foreach ($warnings as $warning) {
+            $io->warning($warning);
         }
 
         if ($stageStats !== []) {
-            $rows = [];
+            $rows   = [];
             $labels = [
-                ClusterJobTelemetry::STAGE_DRAFTS => 'Entwürfe',
+                ClusterJobTelemetry::STAGE_DRAFTS       => 'Entwürfe',
                 ClusterJobTelemetry::STAGE_CONSOLIDATED => 'Konsolidiert',
             ];
 

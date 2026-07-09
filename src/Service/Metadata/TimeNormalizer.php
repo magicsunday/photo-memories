@@ -35,8 +35,9 @@ use function strtolower;
  */
 final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
 {
-    private const FALLBACK_FILENAME   = 'filename';
-    private const FALLBACK_FILE_MTIME = 'file_mtime';
+    private const string FALLBACK_FILENAME = 'filename';
+
+    private const string FALLBACK_FILE_MTIME = 'file_mtime';
 
     /**
      * @var list<string>
@@ -77,7 +78,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             return;
         }
 
-        if ($takenAt instanceof DateTimeImmutable && $source !== null && $source !== TimeSource::FILE_MTIME) {
+        if ($takenAt instanceof DateTimeImmutable && $source instanceof TimeSource && $source !== TimeSource::FILE_MTIME) {
             return;
         }
 
@@ -114,7 +115,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             return;
         }
 
-        if ($takenAt instanceof DateTimeImmutable && $source !== null && $source !== TimeSource::FILE_MTIME) {
+        if ($takenAt instanceof DateTimeImmutable && $source instanceof TimeSource && $source !== TimeSource::FILE_MTIME) {
             return;
         }
 
@@ -138,7 +139,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             return;
         }
 
-        if ($media->getTakenAt() instanceof DateTimeImmutable && $source !== null && $source !== TimeSource::FILE_MTIME) {
+        if ($media->getTakenAt() instanceof DateTimeImmutable && $source instanceof TimeSource && $source !== TimeSource::FILE_MTIME) {
             return;
         }
 
@@ -183,6 +184,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
             if ($media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
             }
+
             $this->promoteTzConfidence($media, 0.2);
         }
 
@@ -199,7 +201,7 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
 
         $context = [
             'timeSource' => $source instanceof TimeSource ? $source->value : 'none',
-            'timezone' => $tzId,
+            'timezone'   => $tzId,
         ];
 
         if ($offset !== null) {
@@ -267,9 +269,9 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
         $value = strtolower($value);
 
         return match ($value) {
-            'filename', strtolower(TimeSource::FILENAME->value) => self::FALLBACK_FILENAME,
+            'filename', strtolower(TimeSource::FILENAME->value)                  => self::FALLBACK_FILENAME,
             'file_mtime', 'filemtime', strtolower(TimeSource::FILE_MTIME->value) => self::FALLBACK_FILE_MTIME,
-            default => null,
+            default                                                              => null,
         };
     }
 
@@ -317,9 +319,9 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
     private function candidateToTimeSource(string $candidate): ?TimeSource
     {
         return match ($candidate) {
-            self::FALLBACK_FILENAME => TimeSource::FILENAME,
+            self::FALLBACK_FILENAME   => TimeSource::FILENAME,
             self::FALLBACK_FILE_MTIME => TimeSource::FILE_MTIME,
-            default => null,
+            default                   => null,
         };
     }
 }

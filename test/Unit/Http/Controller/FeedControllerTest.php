@@ -22,15 +22,15 @@ use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
-use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
+use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
-use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
-use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
+use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
 use MagicSunday\Memories\Service\Metadata\Exif\DefaultExifValueAccessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DateTimeExifMetadataProcessor;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
@@ -215,17 +215,17 @@ final class FeedControllerTest extends TestCase
                 memberIds: [1, 2],
                 score: 0.68,
                 params: [
-                    'group'      => 'city_and_events',
-                    'time_range' => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
-                    'place'      => 123,
-                    'place_city' => 456,
+                    'group'        => 'city_and_events',
+                    'time_range'   => ['from' => 1_700_000_000, 'to' => 1_700_000_800],
+                    'place'        => 123,
+                    'place_city'   => 456,
                     'place_region' => 789,
-                    'poi_label'  => 101112,
-                    'scene_tags' => [
+                    'poi_label'    => 101112,
+                    'scene_tags'   => [
                         ['label' => 'Lichterfest'],
                         ['label' => 131415],
                     ],
-                    'keywords'   => ['Winter', 161718],
+                    'keywords' => ['Winter', 161718],
                 ],
             ),
         ];
@@ -241,7 +241,7 @@ final class FeedControllerTest extends TestCase
         $thumbnailService  = $this->createMock(ThumbnailServiceInterface::class);
         $slideshowManager  = $this->createMock(SlideshowVideoManagerInterface::class);
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
-        $entityManager     = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
 
         $mediaOne = new Media('/media/1.jpg', 'checksum-1', 100);
         $mediaTwo = new Media('/media/2.jpg', 'checksum-2', 110);
@@ -253,6 +253,7 @@ final class FeedControllerTest extends TestCase
         $mediaOne->setCapturedLocal($timestampOne);
         $mediaOne->setTimeSource(TimeSource::EXIF);
         $mediaOne->setTzId('UTC');
+
         $mediaTwo->setTakenAt($timestampTwo);
         $mediaTwo->setCapturedLocal($timestampTwo);
         $mediaTwo->setTimeSource(TimeSource::EXIF);
@@ -288,9 +289,8 @@ final class FeedControllerTest extends TestCase
         $controller = $reflection->newInstanceWithoutConstructor();
 
         $method = new ReflectionMethod(FeedController::class, 'normalizeStoryboardText');
-        $method->setAccessible(true);
 
-        $stringable = new class() implements Stringable {
+        $stringable = new class implements Stringable {
             public function __toString(): string
             {
                 return '  stringable value  ';
@@ -585,7 +585,7 @@ final class FeedControllerTest extends TestCase
             'runtime'        => [
                 ['pattern' => '^/api/media/', 'strategy' => 'stale-while-revalidate'],
             ],
-            'fallback'       => '/offline',
+            'fallback' => '/offline',
         ];
 
         $spaAnimations = [
@@ -719,7 +719,7 @@ final class FeedControllerTest extends TestCase
         self::assertArrayHasKey('coverAltText', $item);
         self::assertStringContainsString('Foto', $item['coverAltText']);
         self::assertArrayHasKey('altText', $item['galerie'][0]);
-        self::assertNotSame('', trim($item['galerie'][0]['altText']));
+        self::assertNotSame('', trim((string) $item['galerie'][0]['altText']));
 
         self::assertSame(90, $media->getTimezoneOffsetMin());
 
@@ -822,7 +822,7 @@ final class FeedControllerTest extends TestCase
             ->willReturn([]);
 
         $members = range(1, 10);
-        $item     = new MemoryFeedItem(
+        $item    = new MemoryFeedItem(
             algorithm: 'holiday_event',
             title: 'Winter in Berlin',
             subtitle: 'Lichterzauber an der Spree',
@@ -1021,9 +1021,7 @@ final class FeedControllerTest extends TestCase
             ->with(
                 self::identicalTo($itemId),
                 self::equalTo([1, 2]),
-                self::callback(static function (array $map) use ($expectedMap): bool {
-                    return $map === $expectedMap;
-                }),
+                self::callback(static fn (array $map): bool => $map === $expectedMap),
                 self::identicalTo('Winter in Berlin'),
                 self::identicalTo('Lichterzauber an der Spree'),
                 self::identicalTo(false),
@@ -1113,8 +1111,8 @@ final class FeedControllerTest extends TestCase
             $this->createMock(EntityManagerInterface::class),
         );
 
-        $itemId  = hash('sha1', 'holiday_event|1,2');
-        $request = Request::create('/api/feed/' . $itemId . '/video', 'POST', ['dry-run' => '1']);
+        $itemId   = hash('sha1', 'holiday_event|1,2');
+        $request  = Request::create('/api/feed/' . $itemId . '/video', 'POST', ['dry-run' => '1']);
         $response = $controller->triggerSlideshow($request, $itemId);
 
         self::assertSame(200, $response->getStatusCode());
@@ -1174,15 +1172,15 @@ final class FeedControllerTest extends TestCase
                 'standard' => [
                     'profiles' => [
                         'default' => [
-                            'favourites'          => [],
-                            'hidden_algorithms'   => [],
-                            'blocked_algorithms'  => [],
-                            'hidden_persons'      => ['person-42'],
-                            'hidden_pets'         => ['pet-7'],
-                            'hidden_places'       => ['Berlin'],
-                            'hidden_dates'        => ['2024-01-05'],
-                            'favourite_persons'   => [],
-                            'favourite_places'    => [],
+                            'favourites'         => [],
+                            'hidden_algorithms'  => [],
+                            'blocked_algorithms' => [],
+                            'hidden_persons'     => ['person-42'],
+                            'hidden_pets'        => ['pet-7'],
+                            'hidden_places'      => ['Berlin'],
+                            'hidden_dates'       => ['2024-01-05'],
+                            'favourite_persons'  => [],
+                            'favourite_places'   => [],
                         ],
                     ],
                 ],
@@ -1260,15 +1258,15 @@ final class FeedControllerTest extends TestCase
                 'standard' => [
                     'profiles' => [
                         'default' => [
-                            'favourites'          => [],
-                            'hidden_algorithms'   => ['holiday_event'],
-                            'blocked_algorithms'  => [],
-                            'hidden_persons'      => [],
-                            'hidden_pets'         => [],
-                            'hidden_places'       => [],
-                            'hidden_dates'        => [],
-                            'favourite_persons'   => [],
-                            'favourite_places'    => [],
+                            'favourites'         => [],
+                            'hidden_algorithms'  => ['holiday_event'],
+                            'blocked_algorithms' => [],
+                            'hidden_persons'     => [],
+                            'hidden_pets'        => [],
+                            'hidden_places'      => [],
+                            'hidden_dates'       => [],
+                            'favourite_persons'  => [],
+                            'favourite_places'   => [],
                         ],
                     ],
                 ],
@@ -1390,15 +1388,15 @@ final class FeedControllerTest extends TestCase
                 'standard' => [
                     'profiles' => [
                         'default' => [
-                            'favourites'          => [],
-                            'hidden_algorithms'   => ['holiday_event'],
-                            'blocked_algorithms'  => [],
-                            'hidden_persons'      => [],
-                            'hidden_pets'         => [],
-                            'hidden_places'       => [],
-                            'hidden_dates'        => [],
-                            'favourite_persons'   => [],
-                            'favourite_places'    => [],
+                            'favourites'         => [],
+                            'hidden_algorithms'  => ['holiday_event'],
+                            'blocked_algorithms' => [],
+                            'hidden_persons'     => [],
+                            'hidden_pets'        => [],
+                            'hidden_places'      => [],
+                            'hidden_dates'       => [],
+                            'favourite_persons'  => [],
+                            'favourite_places'   => [],
                         ],
                     ],
                 ],
@@ -1475,15 +1473,15 @@ final class FeedControllerTest extends TestCase
                 'standard' => [
                     'profiles' => [
                         'default' => [
-                            'favourites'          => [],
-                            'hidden_algorithms'   => [],
-                            'blocked_algorithms'  => ['holiday_event'],
-                            'hidden_persons'      => [],
-                            'hidden_pets'         => [],
-                            'hidden_places'       => [],
-                            'hidden_dates'        => [],
-                            'favourite_persons'   => [],
-                            'favourite_places'    => [],
+                            'favourites'         => [],
+                            'hidden_algorithms'  => [],
+                            'blocked_algorithms' => ['holiday_event'],
+                            'hidden_persons'     => [],
+                            'hidden_pets'        => [],
+                            'hidden_places'      => [],
+                            'hidden_dates'       => [],
+                            'favourite_persons'  => [],
+                            'favourite_places'   => [],
                         ],
                     ],
                 ],
@@ -1732,7 +1730,7 @@ final class FeedControllerTest extends TestCase
         $slideshowManager->method('getStatusForItem')->willReturn(SlideshowVideoStatus::unavailable(4.0));
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $original = tempnam(sys_get_temp_dir(), 'orig');
+        $original  = tempnam(sys_get_temp_dir(), 'orig');
         $generated = tempnam(sys_get_temp_dir(), 'regen');
         self::assertIsString($original);
         self::assertIsString($generated);
@@ -1798,17 +1796,17 @@ final class FeedControllerTest extends TestCase
     ): array {
         $profileProvider = new FeedPersonalizationProfileProvider([
             'default' => [
-                'min_score'             => 0.0,
-                'min_members'           => 3,
-                'max_per_day'           => 24,
-                'max_total'             => 120,
-                'max_per_algorithm'     => 24,
-                'quality_floor'         => 0.0,
-                'people_coverage_min'   => 0.0,
-                'recent_days'           => 0,
-                'stale_days'            => 0,
-                'recent_score_bonus'    => 0.0,
-                'stale_score_penalty'   => 0.0,
+                'min_score'           => 0.0,
+                'min_members'         => 3,
+                'max_per_day'         => 24,
+                'max_total'           => 120,
+                'max_per_algorithm'   => 24,
+                'quality_floor'       => 0.0,
+                'people_coverage_min' => 0.0,
+                'recent_days'         => 0,
+                'stale_days'          => 0,
+                'recent_score_bonus'  => 0.0,
+                'stale_score_penalty' => 0.0,
             ],
         ]);
 
@@ -1816,7 +1814,7 @@ final class FeedControllerTest extends TestCase
         self::assertIsString($storagePath);
         file_put_contents($storagePath, '[]');
 
-        $preferenceStorage = new FeedUserPreferenceStorage($storagePath);
+        $preferenceStorage   = new FeedUserPreferenceStorage($storagePath);
         $storyboardGenerator = new StoryboardTextGenerator();
         $notificationPlanner = new NotificationPlanner([
             'push' => [

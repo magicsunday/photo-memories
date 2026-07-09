@@ -20,17 +20,17 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Repository\MediaDuplicateRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Hash\Contract\FastHashGeneratorInterface;
-use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
 use MagicSunday\Memories\Service\Indexing\Contract\FinalizableMediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
+use MagicSunday\Memories\Service\Indexing\DefaultMediaIngestionPipeline;
 use MagicSunday\Memories\Service\Indexing\Stage\BurstLiveStage;
 use MagicSunday\Memories\Service\Indexing\Stage\ContentKindStage;
 use MagicSunday\Memories\Service\Indexing\Stage\DuplicateHandlingStage;
 use MagicSunday\Memories\Service\Indexing\Stage\FacesStage;
 use MagicSunday\Memories\Service\Indexing\Stage\GeoStage;
 use MagicSunday\Memories\Service\Indexing\Stage\HashStage;
-use MagicSunday\Memories\Service\Indexing\Stage\MetaExportStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MetadataStage;
+use MagicSunday\Memories\Service\Indexing\Stage\MetaExportStage;
 use MagicSunday\Memories\Service\Indexing\Stage\MimeDetectionStage;
 use MagicSunday\Memories\Service\Indexing\Stage\NearDuplicateStage;
 use MagicSunday\Memories\Service\Indexing\Stage\PersistenceBatchStage;
@@ -97,6 +97,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $media    = new Media($path, $checksum, (int) filesize($path));
         $media->setFeatureVersion(MetadataFeatureVersion::PIPELINE_VERSION);
         $media->setIndexedAt(new DateTimeImmutable('-1 minute'));
+
         $output = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);
 
         $fastHash = 'feedfacecafe1234';
@@ -468,12 +469,12 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         ?MediaDuplicateRepository $duplicateRepository = null,
     ): DefaultMediaIngestionPipeline {
         $fastHashGenerator ??= $this->createMock(FastHashGeneratorInterface::class);
-        if ($mediaRepository === null) {
+        if (!$mediaRepository instanceof MediaRepository) {
             $mediaRepository = $this->createMock(MediaRepository::class);
             $mediaRepository->expects(self::never())->method('findNearestByPhash');
         }
 
-        if ($duplicateRepository === null) {
+        if (!$duplicateRepository instanceof MediaDuplicateRepository) {
             $duplicateRepository = $this->createMock(MediaDuplicateRepository::class);
             $duplicateRepository->expects(self::never())->method('recordDistance');
         }
@@ -482,7 +483,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
         $nearDuplicateStage = new NearDuplicateStage($entityManager, $mediaRepository, $duplicateRepository);
         $burstDetector      = $extractors['burst']['detector'];
         $livePairLinker     = $extractors['burst']['livePair'];
-        $postFlushStage     = new class($tracker) implements FinalizableMediaIngestionStageInterface {
+        $postFlushStage     = new readonly class($tracker) implements FinalizableMediaIngestionStageInterface {
             public function __construct(private PersistedMediaTracker $tracker)
             {
             }
@@ -589,7 +590,7 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
                 return new DateTimeZone('UTC');
             }
 
-            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
             {
                 return 0;
             }

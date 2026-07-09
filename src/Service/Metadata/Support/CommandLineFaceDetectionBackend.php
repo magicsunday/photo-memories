@@ -27,12 +27,12 @@ use function trim;
 /**
  * Face-detection backend delegating to a command line utility (for example OpenCV).
  */
-final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInterface
+final readonly class CommandLineFaceDetectionBackend implements FaceDetectionBackendInterface
 {
     private string $binary;
 
     public function __construct(
-        private readonly FaceDetectionAvailability $availability,
+        private FaceDetectionAvailability $availability,
         string $binary,
         ?string $cascadePath = null,
         float $scaleFactor = 1.1,
@@ -40,7 +40,7 @@ final class CommandLineFaceDetectionBackend implements FaceDetectionBackendInter
         int $minSize = 72,
         float $timeout = 10.0,
     ) {
-        $this->binary       = $binary !== '' ? $binary : '';
+        $this->binary       = $binary;
         $this->cascadePath  = $cascadePath !== null && $cascadePath !== '' ? $cascadePath : null;
         $this->scaleFactor  = $scaleFactor;
         $this->minNeighbors = $minNeighbors;

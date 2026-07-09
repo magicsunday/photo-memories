@@ -33,8 +33,9 @@ final class FilenameKeywordExtractor implements SingleMetadataExtractorInterface
     {
         $tokens = $this->tokenizePath($filepath);
 
-        $bag  = $media->getFeatureBag();
+        $bag = $media->getFeatureBag();
         $bag->setFilePathTokens($tokens);
+
         $hint = $this->hintFromTokens($tokens);
         $bag->setFileNameHint($hint);
 

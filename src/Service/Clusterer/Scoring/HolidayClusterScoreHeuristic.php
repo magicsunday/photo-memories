@@ -20,7 +20,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 final class HolidayClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHeuristic
 {
     public function __construct(
-        private HolidayResolverInterface $holidayResolver,
+        private readonly HolidayResolverInterface $holidayResolver,
         int $timeRangeMinSamples,
         float $timeRangeMinCoverage,
         int $minValidYear,

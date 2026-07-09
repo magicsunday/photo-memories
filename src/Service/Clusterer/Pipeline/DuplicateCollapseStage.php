@@ -76,10 +76,10 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
             }
 
             $this->emitMonitoring('selection_completed', [
-                'pre_count'         => $total,
-                'post_count'        => $total,
-                'dropped_duplicates'=> 0,
-                'dropped_count'     => 0,
+                'pre_count'          => $total,
+                'post_count'         => $total,
+                'dropped_duplicates' => 0,
+                'dropped_count'      => 0,
             ]);
 
             return $drafts;
@@ -136,11 +136,11 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         $postCount = count($result);
 
         $this->emitMonitoring('selection_completed', [
-            'pre_count'          => $total,
-            'post_count'         => $postCount,
-            'dropped_duplicates' => max(0, $total - $postCount),
-            'dropped_count'      => max(0, $total - $postCount),
-            'unique_fingerprints'=> $postCount,
+            'pre_count'           => $total,
+            'post_count'          => $postCount,
+            'dropped_duplicates'  => max(0, $total - $postCount),
+            'dropped_count'       => max(0, $total - $postCount),
+            'unique_fingerprints' => $postCount,
         ]);
 
         return $result;
@@ -355,7 +355,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
     private function resolvePhashBucket(ClusterDraft $draft): ?array
     {
-        $params = $draft->getParams();
+        $params    = $draft->getParams();
         $selection = $params['member_selection'] ?? null;
         if (!is_array($selection)) {
             return null;
@@ -368,7 +368,11 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
         $values = [];
         foreach ($hashSamples as $hash) {
-            if (!is_string($hash) || $hash === '') {
+            if (!is_string($hash)) {
+                continue;
+            }
+
+            if ($hash === '') {
                 continue;
             }
 
@@ -415,7 +419,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
 
     private function resolveAverageQuality(ClusterDraft $draft): ?float
     {
-        $params = $draft->getParams();
+        $params  = $draft->getParams();
         $quality = $params['quality_avg'] ?? null;
         if (is_numeric($quality)) {
             return (float) $quality;
@@ -450,10 +454,8 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         }
 
         $coverage = $params['people_face_coverage'] ?? null;
-        if (!is_numeric($coverage)) {
-            if (is_array($summary)) {
-                $coverage = $summary['people_face_coverage'] ?? null;
-            }
+        if (!is_numeric($coverage) && is_array($summary)) {
+            $coverage = $summary['people_face_coverage'] ?? null;
         }
 
         if (is_numeric($coverage)) {
@@ -470,7 +472,7 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

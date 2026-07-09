@@ -33,10 +33,10 @@ final class TimeSlotDiversificationStageTest extends TestCase
             dayQuotas: ['2024-03-01' => 2],
             dayContext: [
                 '2024-03-01' => [
-                    'score' => 1.0,
+                    'score'    => 1.0,
                     'category' => 'core',
                     'duration' => 7200,
-                    'metrics' => [],
+                    'metrics'  => [],
                 ],
             ],
         );
@@ -129,4 +129,3 @@ final class TimeSlotDiversificationStageTest extends TestCase
         );
     }
 }
-

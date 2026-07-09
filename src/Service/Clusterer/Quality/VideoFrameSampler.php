@@ -33,13 +33,13 @@ use function unlink;
  */
 final class VideoFrameSampler implements VideoFrameSamplerInterface
 {
-    private string $ffmpegBinary;
+    private readonly string $ffmpegBinary;
 
-    private string $ffprobeBinary;
+    private readonly string $ffprobeBinary;
 
-    private float $posterFrameSecond;
+    private readonly float $posterFrameSecond;
 
-    private float $processTimeout;
+    private readonly float $processTimeout;
 
     /**
      * @var callable|null
@@ -172,7 +172,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
 
         $target = max(0.0, min(2.0, $this->posterFrameSecond));
         if ($target < 0.5) {
-            $target = 0.5;
+            return 0.5;
         }
 
         return $target;
@@ -232,15 +232,15 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
             if (is_array($result)) {
                 return [
                     'exitCode' => $result['exitCode'] ?? null,
-                    'stdout' => $result['stdout'] ?? null,
-                    'stderr' => $result['stderr'] ?? null,
+                    'stdout'   => $result['stdout'] ?? null,
+                    'stderr'   => $result['stderr'] ?? null,
                 ];
             }
 
             return [
                 'exitCode' => null,
-                'stdout' => null,
-                'stderr' => null,
+                'stdout'   => null,
+                'stderr'   => null,
             ];
         }
 
@@ -252,15 +252,15 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
         } catch (Throwable) {
             return [
                 'exitCode' => null,
-                'stdout' => null,
-                'stderr' => null,
+                'stdout'   => null,
+                'stderr'   => null,
             ];
         }
 
         return [
             'exitCode' => $process->getExitCode(),
-            'stdout' => $process->getOutput(),
-            'stderr' => $process->getErrorOutput(),
+            'stdout'   => $process->getOutput(),
+            'stderr'   => $process->getErrorOutput(),
         ];
     }
 }

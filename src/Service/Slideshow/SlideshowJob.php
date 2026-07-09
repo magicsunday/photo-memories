@@ -217,7 +217,11 @@ final readonly class SlideshowJob
 
         $images = [];
         foreach ($imagesRaw as $image) {
-            if (!is_string($image) || $image === '') {
+            if (!is_string($image)) {
+                continue;
+            }
+
+            if ($image === '') {
                 continue;
             }
 
@@ -272,7 +276,11 @@ final readonly class SlideshowJob
                 }
 
                 $image = $slide['image'] ?? ($images[$index] ?? null);
-                if (!is_string($image) || $image === '') {
+                if (!is_string($image)) {
+                    continue;
+                }
+
+                if ($image === '') {
                     continue;
                 }
 
@@ -362,10 +370,10 @@ final readonly class SlideshowJob
         }
 
         return [
-            'slides'             => $slides,
+            'slides'              => $slides,
             'transitionDurations' => $transitionDurations,
-            'transitionDuration' => $transitionDuration,
-            'music'              => $music,
+            'transitionDuration'  => $transitionDuration,
+            'music'               => $music,
         ];
     }
 

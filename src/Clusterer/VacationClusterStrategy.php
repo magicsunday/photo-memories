@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
+use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
@@ -23,6 +23,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 
+use function abs;
 use function sprintf;
 use function strcmp;
 use function usort;
@@ -42,12 +43,12 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
 
-    private const MONITORING_JOB = 'cluster.vacation';
+    private const string MONITORING_JOB = 'cluster.vacation';
 
     /**
-     * @param HomeLocatorInterface            $homeLocator       Identifies the home location used as a reference point.
-     * @param DaySummaryBuilderInterface      $daySummaryBuilder Builds daily summaries that feed the segment assembler.
-     * @param VacationSegmentAssemblerInterface $segmentAssembler Detects high level vacation segments from day summaries.
+     * @param HomeLocatorInterface              $homeLocator       identifies the home location used as a reference point
+     * @param DaySummaryBuilderInterface        $daySummaryBuilder builds daily summaries that feed the segment assembler
+     * @param VacationSegmentAssemblerInterface $segmentAssembler  detects high level vacation segments from day summaries
      */
     public function __construct(
         private HomeLocatorInterface $homeLocator,
@@ -77,8 +78,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param list<Media>                                 $items
-     * @param Context                                     $ctx
+     * @param list<Media>                                       $items
+     * @param Context                                           $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -89,8 +90,8 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param list<Media>                                 $items
-     * @param Context|null                                $ctx
+     * @param list<Media>                                            $items
+     * @param Context|null                                           $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
@@ -106,15 +107,15 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $totalSteps = 6;
 
         // Cluster processing requires reliable timestamps to establish the chronology of the trip.
-        $timestamped = $this->filterTimestampedItems($items);
+        $timestamped      = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, sprintf('Zeitstempel prüfen (%d Medien)', $timestampedCount));
 
         if ($timestampedCount === 0) {
             $this->emitMonitoring('skipped', [
-                'reason' => 'no_timestamped_media',
+                'reason'      => 'no_timestamped_media',
                 'total_count' => $totalCount,
             ]);
 
@@ -124,14 +125,14 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         }
 
         $this->emitMonitoring('filtered', [
-            'total_count' => $totalCount,
+            'total_count'       => $totalCount,
             'timestamped_count' => $timestampedCount,
-            'filtered_count' => $totalCount - $timestampedCount,
+            'filtered_count'    => $totalCount - $timestampedCount,
         ]);
 
         // Ensure chronological ordering so day summaries receive a consistent sequence.
         $ordered = $this->sortChronologically($timestamped);
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, 'Chronologie herstellen');
 
         $configuredHome = $this->homeLocator->getConfiguredHome();
@@ -143,7 +144,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $home = $this->homeLocator->determineHome($ordered);
         if ($home === null) {
             $this->emitMonitoring('skipped', [
-                'reason' => 'no_home_location',
+                'reason'            => 'no_home_location',
                 'timestamped_count' => $timestampedCount,
             ]);
 
@@ -152,28 +153,28 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
             return [];
         }
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, 'Zuhause bestimmen');
 
         $this->emitMonitoring('home_determined', [
-            'timestamped_count' => $timestampedCount,
-            'home_lat' => $home['lat'],
-            'home_lon' => $home['lon'],
-            'home_radius_km' => $home['radius_km'],
-            'home_country' => $home['country'],
+            'timestamped_count'    => $timestampedCount,
+            'home_lat'             => $home['lat'],
+            'home_lon'             => $home['lon'],
+            'home_radius_km'       => $home['radius_km'],
+            'home_country'         => $home['country'],
             'home_timezone_offset' => $home['timezone_offset'],
         ]);
 
         // Build per-day statistics (distances, stay points, etc.) required to evaluate candidate vacation runs.
-        $days = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
+        $days     = $this->daySummaryBuilder->buildDaySummaries($ordered, $home);
         $dayCount = count($days);
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, sprintf('Tagesübersichten erstellen (%d Tage)', $dayCount));
 
         if ($dayCount === 0) {
             $this->emitMonitoring('skipped', [
-                'reason' => 'no_day_summaries',
+                'reason'            => 'no_day_summaries',
                 'timestamped_count' => $timestampedCount,
             ]);
 
@@ -192,22 +193,22 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         );
 
         $this->emitMonitoring('days_aggregated', [
-            'day_count' => $dayCount,
-            'away_day_count' => $metrics['away_day_count'],
+            'day_count'            => $dayCount,
+            'away_day_count'       => $metrics['away_day_count'],
             'away_candidate_count' => $metrics['away_candidate_count'],
-            'total_travel_km' => $metrics['total_travel_km'],
-            'max_distance_km' => $metrics['max_distance_km'],
-            'avg_travel_km' => $metrics['avg_travel_km'],
+            'total_travel_km'      => $metrics['total_travel_km'],
+            'max_distance_km'      => $metrics['max_distance_km'],
+            'avg_travel_km'        => $metrics['avg_travel_km'],
         ]);
 
         // Translate day summaries into scored vacation segments ready for persistence.
-        $segments = $this->segmentAssembler->detectSegments($days, $home);
+        $segments     = $this->segmentAssembler->detectSegments($days, $home);
         $segmentCount = count($segments);
 
         if ($segmentCount === 0) {
             $this->emitMonitoring('skipped', [
-                'reason' => 'no_segments_detected',
-                'day_count' => $dayCount,
+                'reason'            => 'no_segments_detected',
+                'day_count'         => $dayCount,
                 'timestamped_count' => $timestampedCount,
             ]);
 
@@ -220,13 +221,13 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $this->notifyProgress($update, $progress, $totalSteps, sprintf('Segmente erkennen (%d)', $segmentCount));
 
         $this->emitMonitoring('completed', [
-            'segment_count' => $segmentCount,
-            'day_count' => $dayCount,
-            'away_day_count' => $metrics['away_day_count'],
+            'segment_count'     => $segmentCount,
+            'day_count'         => $dayCount,
+            'away_day_count'    => $metrics['away_day_count'],
             'timestamped_count' => $timestampedCount,
         ]);
 
-        if ($ctx !== null) {
+        if ($ctx instanceof Context) {
             foreach ($segments as $segment) {
                 $ctx->applyToDraft($segment);
             }
@@ -250,7 +251,7 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
                 $leftTakenAt  = $left->getTakenAt();
                 $rightTakenAt = $right->getTakenAt();
 
-                if ($leftTakenAt === null || $rightTakenAt === null) {
+                if (!$leftTakenAt instanceof DateTimeImmutable || !$rightTakenAt instanceof DateTimeImmutable) {
                     return $leftTakenAt <=> $rightTakenAt;
                 }
 
@@ -284,11 +285,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
      */
     private function summariseDays(array $days): array
     {
-        $awayDayCount        = 0;
-        $awayCandidateCount  = 0;
-        $totalTravelKm       = 0.0;
-        $maxDistanceKm       = 0.0;
-        $dayCount            = count($days);
+        $awayDayCount       = 0;
+        $awayCandidateCount = 0;
+        $totalTravelKm      = 0.0;
+        $maxDistanceKm      = 0.0;
+        $dayCount           = count($days);
 
         foreach ($days as $day) {
             if ($day['baseAway'] === true) {
@@ -309,11 +310,11 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
         $avgTravelKm = $dayCount > 0 ? $totalTravelKm / $dayCount : 0.0;
 
         return [
-            'away_day_count' => $awayDayCount,
+            'away_day_count'       => $awayDayCount,
             'away_candidate_count' => $awayCandidateCount,
-            'total_travel_km' => $totalTravelKm,
-            'max_distance_km' => $maxDistanceKm,
-            'avg_travel_km' => $avgTravelKm,
+            'total_travel_km'      => $totalTravelKm,
+            'max_distance_km'      => $maxDistanceKm,
+            'avg_travel_km'        => $avgTravelKm,
         ];
     }
 
@@ -335,10 +336,10 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
             $this->vacationDebugContext?->recordWarning($message);
             $this->emitMonitoring('home_warning', [
-                'code' => 'home_coordinates_default_zero',
-                'message' => $message,
-                'home_lat' => $configuredHome['lat'],
-                'home_lon' => $configuredHome['lon'],
+                'code'           => 'home_coordinates_default_zero',
+                'message'        => $message,
+                'home_lat'       => $configuredHome['lat'],
+                'home_lon'       => $configuredHome['lon'],
                 'home_radius_km' => $configuredHome['radius_km'],
             ]);
         }
@@ -346,6 +347,6 @@ final readonly class VacationClusterStrategy implements ClusterStrategyInterface
 
     private function isZeroCoordinate(float $value): bool
     {
-        return \abs($value) < 0.000001;
+        return abs($value) < 0.000001;
     }
 }

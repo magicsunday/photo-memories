@@ -11,11 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\WeekendGetawaysOverYearsClusterStrategy;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -246,11 +246,11 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
     ): void {
         $features = [
             'day_summary' => [
-                'base_away'              => true,
-                'distance_from_home_km'  => $withDistance ? 150.0 : null,
-                'max_speed_kmh'          => $withDistance ? 110.0 : null,
-                'avg_speed_kmh'          => $withDistance ? 80.0 : null,
-                'category'               => $isWeekend === true ? 'weekend' : null,
+                'base_away'             => true,
+                'distance_from_home_km' => $withDistance ? 150.0 : null,
+                'max_speed_kmh'         => $withDistance ? 110.0 : null,
+                'avg_speed_kmh'         => $withDistance ? 80.0 : null,
+                'category'              => $isWeekend === true ? 'weekend' : null,
             ],
         ];
 
@@ -264,7 +264,7 @@ final class WeekendGetawaysOverYearsClusterStrategyTest extends TestCase
         if ($withCoreDayContext) {
             $takenAt = $media->getTakenAt();
             if ($takenAt instanceof DateTimeImmutable) {
-                $dayKey = $takenAt->setTimezone(new DateTimeZone('Europe/Berlin'))->format('Y-m-d');
+                $dayKey                  = $takenAt->setTimezone(new DateTimeZone('Europe/Berlin'))->format('Y-m-d');
                 $vacation['day_context'] = [
                     $dayKey => [
                         'score'    => 0.8,

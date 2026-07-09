@@ -11,10 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Integration\Service\Indexing;
 
+use ArrayObject;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Entity\MediaDuplicate;
+use MagicSunday\Memories\Repository\MediaDuplicateRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
@@ -26,10 +28,10 @@ use MagicSunday\Memories\Service\Indexing\Support\PersistedMediaTracker;
 use MagicSunday\Memories\Service\Metadata\BurstDetector;
 use MagicSunday\Memories\Service\Metadata\LivePairLinker;
 use MagicSunday\Memories\Test\TestCase;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Output\NullOutput;
-use MagicSunday\Memories\Repository\MediaDuplicateRepository;
-use ArrayObject;
+
 use function array_unique;
 use function array_values;
 use function iterator_to_array;
@@ -266,6 +268,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
      *
      * @return list<Media>
      */
+    #[Override]
     public function findByIds(array $ids, bool $onlyVideos = false): array
     {
         $result = [];
@@ -285,6 +288,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
         return $result;
     }
 
+    #[Override]
     public function findNearestByPhash(string $phashHex, int $maxHamming, int $limit = 20): array
     {
         $phashHex = strtolower(trim($phashHex));
@@ -295,7 +299,11 @@ final readonly class InMemoryMediaRepository extends MediaRepository
         $candidates = [];
         foreach ($this->storage as $media) {
             $otherPhash = $media->getPhash();
-            if ($otherPhash === null || $otherPhash === '') {
+            if ($otherPhash === null) {
+                continue;
+            }
+
+            if ($otherPhash === '') {
                 continue;
             }
 
@@ -319,7 +327,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
                 }
 
                 /** @var Media $leftMedia */
-                $leftMedia  = $left['media'];
+                $leftMedia = $left['media'];
                 /** @var Media $rightMedia */
                 $rightMedia = $right['media'];
 
@@ -333,6 +341,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     /**
      * @return list<Media>
      */
+    #[Override]
     public function findBurstMembers(string $burstUuid, ?string $excludePath = null): array
     {
         $burstUuid = trim($burstUuid);
@@ -380,6 +389,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
         return $items;
     }
 
+    #[Override]
     public function findLivePairCandidate(string $checksum, string $path): ?Media
     {
         $checksum = trim($checksum);
@@ -418,7 +428,7 @@ final readonly class InMemoryMediaRepository extends MediaRepository
         for ($index = 0; $index < $length; ++$index) {
             $leftNibble  = (int) base_convert($left[$index], 16, 10);
             $rightNibble = (int) base_convert($right[$index], 16, 10);
-            $distance   += $this->bitCount($leftNibble ^ $rightNibble);
+            $distance += $this->bitCount($leftNibble ^ $rightNibble);
         }
 
         return $distance;
@@ -436,12 +446,12 @@ final readonly class InMemoryMediaRepository extends MediaRepository
     }
 }
 
-final class FixtureSeedStage implements MediaIngestionStageInterface
+final readonly class FixtureSeedStage implements MediaIngestionStageInterface
 {
     /**
      * @param array<string, callable(): Media> $factories
      */
-    public function __construct(private readonly array $factories)
+    public function __construct(private array $factories)
     {
     }
 
@@ -470,6 +480,7 @@ final readonly class RecordingMediaDuplicateRepository extends MediaDuplicateRep
         $this->records = new ArrayObject();
     }
 
+    #[Override]
     public function recordDistance(Media $first, Media $second, int $distance): MediaDuplicate
     {
         $this->records[] = [$first, $second, $distance];

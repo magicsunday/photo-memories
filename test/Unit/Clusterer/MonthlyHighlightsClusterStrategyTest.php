@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
 use DateInterval;
 use DateTimeImmutable;
-use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\MonthlyHighlightsClusterStrategy;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
@@ -154,7 +154,7 @@ final class MonthlyHighlightsClusterStrategyTest extends TestCase
 
         foreach (range(0, 5) as $offset) {
             $mediaItems = [...$mediaItems, ...$this->createEvent($startId, $day->modify(sprintf('+%d days', $offset))->format('Y-m-d H:i:s'), 3)];
-            $startId   += 3;
+            $startId += 3;
         }
 
         $clusters = $strategy->draft($mediaItems, Context::fromScope($mediaItems));

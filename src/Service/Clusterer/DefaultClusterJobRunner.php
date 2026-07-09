@@ -16,7 +16,6 @@ use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterJobRunnerInterface;
@@ -24,11 +23,8 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterPersistenceInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
-use MagicSunday\Memories\Service\Clusterer\ConsoleProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
-use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;
-use MagicSunday\Memories\Service\Clusterer\ClusterSummary;
-use MagicSunday\Memories\Service\Clusterer\ClusterSummaryTimeRange;
+use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use Throwable;
 
 use function array_slice;
@@ -49,7 +45,7 @@ use function usort;
  */
 final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterface
 {
-    private const TOP_CLUSTER_SUMMARY_LIMIT = 5;
+    private const int TOP_CLUSTER_SUMMARY_LIMIT = 5;
 
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -116,6 +112,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $loadHandle->setRate($this->formatRate($processed, $loadStart, 'Medien'));
             $loadHandle->advance();
         }
+
         $loadHandle->finish();
 
         $loadedCount = count($items);
@@ -173,7 +170,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $clusterHandle = $progressReporter->create('Clustere', '🧩 Strategien', $strategyCount);
         $clusterHandle->setMax(max(1, $strategyCount));
         $clusterHandle->setDetail('Vorbereitung');
-        $clusterStart  = microtime(true);
+
+        $clusterStart = microtime(true);
 
         $postProcessingProgress = new ProgressReporterClusterBuildListener($progressReporter);
 
@@ -340,7 +338,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $persistStart = microtime(true);
 
         $persisted = 0;
-        $stream = (static function (array $consolidated): iterable {
+        $stream    = (static function (array $consolidated): iterable {
             foreach ($consolidated as $draft) {
                 yield $draft;
             }
@@ -364,7 +362,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $this->entityManager->beginTransaction();
 
                 try {
-                    $deleted = $this->persistence->deleteAll();
+                    $deleted   = $this->persistence->deleteAll();
                     $persisted = $this->persistence->persistStreaming($stream, $onPersisted);
                     $this->entityManager->commit();
                 } catch (Throwable $exception) {
@@ -378,6 +376,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
                 $persisted = $this->persistence->persistStreaming($stream, $onPersisted);
             }
         }
+
         $persistHandle->finish();
 
         return new ClusterJobResult(
@@ -399,11 +398,11 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
      */
     private function createTelemetry(array $generatedDrafts, array $consolidatedDrafts): ClusterJobTelemetry
     {
-        $warnings = $this->vacationDebugContext?->getWarnings() ?? [];
-        $draftCount = count($generatedDrafts);
+        $warnings          = $this->vacationDebugContext?->getWarnings() ?? [];
+        $draftCount        = count($generatedDrafts);
         $consolidatedCount = count($consolidatedDrafts);
 
-        $draftMembers = $this->aggregateRawMemberCount($generatedDrafts);
+        $draftMembers        = $this->aggregateRawMemberCount($generatedDrafts);
         $consolidatedMembers = $this->aggregateRawMemberCount($consolidatedDrafts);
 
         return ClusterJobTelemetry::fromStageStats(
@@ -484,7 +483,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
             $score = (float) $params['score'];
         }
 
-        $timeRange = null;
+        $timeRange       = null;
         $timeRangeParams = $params['time_range'] ?? null;
         if (
             is_array($timeRangeParams)
@@ -592,7 +591,7 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         int $consolidatedCount,
     ): void {
         if (
-            $this->vacationDebugContext === null
+            !$this->vacationDebugContext instanceof VacationDebugContext
             || !$this->vacationDebugContext->isEnabled()
             || !$options->isVacationDebugEnabled()
         ) {
@@ -609,10 +608,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
         $io->section('🏖️ Urlaub Debug');
 
         $warnings = $this->vacationDebugContext->getWarnings();
-        if ($warnings !== []) {
-            foreach ($warnings as $warning) {
-                $io->warning($warning);
-            }
+        foreach ($warnings as $warning) {
+            $io->warning($warning);
         }
 
         if ($segments === []) {
@@ -644,8 +641,8 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
 
         $clusterRows = [];
         foreach ($this->createTopClusterSummaries($drafts, self::TOP_CLUSTER_SUMMARY_LIMIT) as $summary) {
-            $score = $summary->getScore();
-            $range = '–';
+            $score     = $summary->getScore();
+            $range     = '–';
             $timeRange = $summary->getTimeRange();
             if ($timeRange instanceof ClusterSummaryTimeRange) {
                 $range = $this->formatTimeRange(
@@ -711,16 +708,12 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
         $this->stageStartedAt = microtime(true);
         $this->maxTotal       = max($this->maxTotal, max(1, $total));
 
-        if ($this->handle === null) {
+        if (!$this->handle instanceof ProgressHandleInterface) {
             $this->handle = $this->progressReporter->create('Bewerten', '🏅 Score & Titel', $this->maxTotal);
             $this->handle->setProgress(0);
             $this->handle->setRate('–');
         } else {
             $this->handle->setMax($this->maxTotal);
-        }
-
-        if ($this->handle === null) {
-            return;
         }
 
         switch ($stage) {
@@ -750,7 +743,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
 
     public function onStageProgress(string $stage, int $processed, int $total, ?string $detail = null): void
     {
-        if ($this->handle === null || $stage !== $this->currentStage) {
+        if (!$this->handle instanceof ProgressHandleInterface || $stage !== $this->currentStage) {
             return;
         }
 
@@ -773,7 +766,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
 
     public function onStageFinish(string $stage, int $total): void
     {
-        if ($this->handle === null) {
+        if (!$this->handle instanceof ProgressHandleInterface) {
             return;
         }
 
@@ -797,7 +790,7 @@ final class ProgressReporterClusterBuildListener implements ClusterBuildProgress
 
     public function finalize(): void
     {
-        if ($this->handle !== null && !$this->finished) {
+        if ($this->handle instanceof ProgressHandleInterface && !$this->finished) {
             $this->handle->finish();
             $this->finished = true;
         }

@@ -31,7 +31,7 @@ use function usort;
 /**
  * Generates notification schedules for feed items based on channel lead times.
  */
-final class NotificationPlanner
+final readonly class NotificationPlanner
 {
     /**
      * @var array<string, array{lead_times: list<string>, send_time: ?string}>
@@ -215,9 +215,9 @@ final class NotificationPlanner
         }
 
         return [
-            'hour' => $hour,
+            'hour'   => $hour,
             'minute' => $minute,
-            'spec' => sprintf('%02d:%02d', $hour, $minute),
+            'spec'   => sprintf('%02d:%02d', $hour, $minute),
         ];
     }
 

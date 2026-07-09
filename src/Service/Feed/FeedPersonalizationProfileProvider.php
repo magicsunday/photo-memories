@@ -31,7 +31,15 @@ final class FeedPersonalizationProfileProvider
         private readonly string $defaultProfile = 'default',
     ) {
         foreach ($profiles as $key => $config) {
-            if (!is_string($key) || $key === '' || !is_array($config)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($key === '') {
+                continue;
+            }
+
+            if (!is_array($config)) {
                 continue;
             }
 
@@ -66,17 +74,17 @@ final class FeedPersonalizationProfileProvider
      */
     private function createProfile(string $key, array $config): FeedPersonalizationProfile
     {
-        $minScore            = $this->floatValue($config, 'min_score', 0.0);
-        $minMembers          = $this->intValue($config, 'min_members', 1);
-        $maxPerDay           = $this->intValue($config, 'max_per_day', 6);
-        $maxTotal            = $this->intValue($config, 'max_total', 60);
-        $maxPerAlgorithm     = $this->intValue($config, 'max_per_algorithm', 12);
-        $qualityFloor        = $this->floatValue($config, 'quality_floor', 0.0);
-        $peopleCoverage      = $this->floatValue($config, 'people_coverage_min', 0.0);
-        $recentDays          = $this->intValue($config, 'recent_days', 0);
-        $staleDays           = $this->intValue($config, 'stale_days', 0);
-        $recentScoreBonus    = $this->floatValue($config, 'recent_score_bonus', 0.0);
-        $staleScorePenalty   = $this->floatValue($config, 'stale_score_penalty', 0.0);
+        $minScore          = $this->floatValue($config, 'min_score', 0.0);
+        $minMembers        = $this->intValue($config, 'min_members', 1);
+        $maxPerDay         = $this->intValue($config, 'max_per_day', 6);
+        $maxTotal          = $this->intValue($config, 'max_total', 60);
+        $maxPerAlgorithm   = $this->intValue($config, 'max_per_algorithm', 12);
+        $qualityFloor      = $this->floatValue($config, 'quality_floor', 0.0);
+        $peopleCoverage    = $this->floatValue($config, 'people_coverage_min', 0.0);
+        $recentDays        = $this->intValue($config, 'recent_days', 0);
+        $staleDays         = $this->intValue($config, 'stale_days', 0);
+        $recentScoreBonus  = $this->floatValue($config, 'recent_score_bonus', 0.0);
+        $staleScorePenalty = $this->floatValue($config, 'stale_score_penalty', 0.0);
 
         return new FeedPersonalizationProfile(
             $key,

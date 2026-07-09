@@ -33,13 +33,13 @@ final class CohortPresenceStageTest extends TestCase
         $dayKey = '2024-05-01';
         $days   = [
             $dayKey => [
-                'members'              => [
+                'members' => [
                     $this->makeTaggedMedia([11]),
                     $this->makeTaggedMedia([220]),
                     $this->makeTaggedMedia([999]),
                 ],
-                'cohortPresenceRatio'  => 0.0,
-                'cohortMembers'        => [],
+                'cohortPresenceRatio' => 0.0,
+                'cohortMembers'       => [],
             ],
         ];
 
@@ -69,9 +69,9 @@ final class CohortPresenceStageTest extends TestCase
         $dayKey = '2024-05-02';
         $days   = [
             $dayKey => [
-                'members'              => [$this->makeTaggedMedia([42, 43])],
-                'cohortPresenceRatio'  => 0.25,
-                'cohortMembers'        => [7 => 3],
+                'members'             => [$this->makeTaggedMedia([42, 43])],
+                'cohortPresenceRatio' => 0.25,
+                'cohortMembers'       => [7 => 3],
             ],
         ];
 
@@ -100,7 +100,7 @@ final class CohortPresenceStageTest extends TestCase
             /**
              * @param list<int> $personIds
              */
-            public function __construct(private array $personIds, int $sequence)
+            public function __construct(private readonly array $personIds, int $sequence)
             {
                 parent::__construct(
                     path: sprintf('/tmp/media-%d.jpg', $sequence),

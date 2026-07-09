@@ -33,9 +33,9 @@ final class TimeGapStage implements SelectionStageInterface
             return [];
         }
 
-        $selected           = [];
+        $selected            = [];
         $lastTimestampGlobal = null;
-        $minSpacing         = max(0, $policy->getMinSpacingSeconds());
+        $minSpacing          = max(0, $policy->getMinSpacingSeconds());
 
         foreach ($candidates as $candidate) {
             $timestamp = $candidate['timestamp'] ?? null;
@@ -51,7 +51,7 @@ final class TimeGapStage implements SelectionStageInterface
                 continue;
             }
 
-            $selected[]         = $candidate;
+            $selected[]          = $candidate;
             $lastTimestampGlobal = $timestamp;
         }
 

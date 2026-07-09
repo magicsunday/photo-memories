@@ -29,7 +29,7 @@ final class SelectionProfileProviderTest extends TestCase
         $defaultOptions = new VacationSelectionOptions();
         $profiles       = [
             'vacation_weekend_transit' => [
-                'face_bonus' => 0.32,
+                'face_bonus'  => 0.32,
                 'video_bonus' => 0.27,
             ],
         ];
@@ -57,7 +57,7 @@ final class SelectionProfileProviderTest extends TestCase
         $defaultOptions = new VacationSelectionOptions();
         $profiles       = [
             'vacation_weekend_transit' => [
-                'face_bonus' => 0.05,
+                'face_bonus'  => 0.05,
                 'video_bonus' => 0.18,
             ],
         ];
@@ -83,7 +83,7 @@ final class SelectionProfileProviderTest extends TestCase
             'default',
             [
                 'vacation_weekend_transit' => [],
-                'vacation_long_run' => [],
+                'vacation_long_run'        => [],
             ],
             ['vacation' => 'vacation_weekend_transit'],
         );

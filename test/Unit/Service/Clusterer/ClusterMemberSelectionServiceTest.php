@@ -16,16 +16,16 @@ use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
-use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfileProvider;
 use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionService;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 
@@ -40,11 +40,11 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $media2 = $this->createMedia(2, $base->add(new DateInterval('PT1H')), false, '0b0b');
         $media3 = $this->createMedia(3, $base->add(new DateInterval('P1D')), true, '0c0c');
 
-        $lookup = new class([$media1, $media2, $media3]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$media1, $media2, $media3]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -74,7 +74,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
                     $media3,
                 ], [
                     'near_duplicate_blocked' => 1,
-                    'storyline' => 'demo.getaway',
+                    'storyline'              => 'demo.getaway',
                 ]);
             });
 
@@ -140,11 +140,11 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $media1 = $this->createMedia(1, $base, false, '1a1a');
         $media2 = $this->createMedia(2, $base->add(new DateInterval('PT2H')), false, '2b2b');
 
-        $lookup = new class([$media1, $media2]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$media1, $media2]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -223,11 +223,11 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $media2 = $this->createMedia(2, $base->add(new DateInterval('PT45M')), true, 'bb22');
         $media3 = $this->createMedia(3, $base->add(new DateInterval('PT2H')), false, 'cc33');
 
-        $lookup = new class([$media1, $media2, $media3]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$media1, $media2, $media3]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -292,11 +292,11 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         $second = $this->createMedia(2, $base, false, '2b2b', 48.1372, 11.5754);
         $third  = $this->createMedia(3, $base->add(new DateInterval('P1D')), true, '3c3c');
 
-        $lookup = new class([$first, $second, $third]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$first, $second, $third]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -349,11 +349,11 @@ final class ClusterMemberSelectionServiceTest extends TestCase
 
         $service = new ClusterMemberSelectionService($selector, $lookup, $provider, $detector);
 
-        $draft   = new ClusterDraft('staypoint-demo', [], ['lat' => 48.137, 'lon' => 11.575], [2, 1, 3]);
+        $draft = new ClusterDraft('staypoint-demo', [], ['lat' => 48.137, 'lon' => 11.575], [2, 1, 3]);
         $service->curate($draft);
 
         $reflection = new ReflectionProperty($service, 'daySummaries');
-        $reflection->setAccessible(true);
+
         $daySummaries = $reflection->getValue($service);
 
         self::assertIsArray($daySummaries);
@@ -367,8 +367,7 @@ final class ClusterMemberSelectionServiceTest extends TestCase
         string $phash,
         ?float $lat = null,
         ?float $lon = null,
-    ): Media
-    {
+    ): Media {
         $media = new Media('path-' . $id . '.jpg', 'checksum-' . $id, 1024);
         $this->assignEntityId($media, $id);
         $media->setTakenAt($takenAt);

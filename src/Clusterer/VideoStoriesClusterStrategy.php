@@ -11,15 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterDeviceMetadataAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
@@ -44,6 +43,7 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
     use ProgressAwareClusterTrait;
 
     private ClusterQualityAggregator $qualityAggregator;
+
     private ClusterDeviceMetadataAggregator $deviceAggregator;
 
     public function __construct(
@@ -80,11 +80,11 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
         $videoItems = $this->filterTimestampedItemsBy(
             $items,
             static function (Media $m): bool {
-                if ($m->isVideo() === true) {
+                if ($m->isVideo()) {
                     return true;
                 }
 
-                if ($m->isVideo() === false && $m->getIndexedAt() === null) {
+                if (!$m->getIndexedAt() instanceof DateTimeImmutable) {
                     $mime = $m->getMime();
 
                     return is_string($mime) && str_starts_with($mime, 'video/');
@@ -221,8 +221,9 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
 
         return $out;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -236,5 +237,4 @@ final readonly class VideoStoriesClusterStrategy implements ClusterStrategyInter
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

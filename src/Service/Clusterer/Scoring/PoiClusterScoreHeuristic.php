@@ -169,28 +169,28 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
         if ($hashCounts === []) {
             return [
-                'hash' => null,
-                'count' => 0,
-                'total' => 0,
-                'ratio' => 0.0,
-                'signature' => null,
+                'hash'                => null,
+                'count'               => 0,
+                'total'               => 0,
+                'ratio'               => 0.0,
+                'signature'           => null,
                 'signatureSimilarity' => null,
-                'shouldBoost' => false,
-                'trigger' => null,
-                'isDominant' => false,
+                'shouldBoost'         => false,
+                'trigger'             => null,
+                'isDominant'          => false,
             ];
         }
 
         arsort($hashCounts);
         $dominantHash  = array_key_first($hashCounts);
-        $dominantCount = (int) ($dominantHash !== null ? $hashCounts[$dominantHash] : 0);
-        $totalSamples  = (int) array_sum($hashCounts);
+        $dominantCount = $dominantHash !== null ? $hashCounts[$dominantHash] : 0;
+        $totalSamples  = array_sum($hashCounts);
         $ratio         = $totalSamples > 0 ? $dominantCount / $totalSamples : 0.0;
 
         $signatureMatch = $dominantHash !== null ? $this->matchIconicSignature($dominantHash) : null;
 
-        $isDominant = $dominantCount >= 2 && $ratio >= 0.5;
-        $trigger    = null;
+        $isDominant  = $dominantCount >= 2 && $ratio >= 0.5;
+        $trigger     = null;
         $shouldBoost = false;
 
         if ($isDominant) {
@@ -204,15 +204,15 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         }
 
         return [
-            'hash' => $dominantHash,
-            'count' => $dominantCount,
-            'total' => $totalSamples,
-            'ratio' => $this->clamp01((float) $ratio),
-            'signature' => $signatureMatch['label'] ?? null,
+            'hash'                => $dominantHash,
+            'count'               => $dominantCount,
+            'total'               => $totalSamples,
+            'ratio'               => $this->clamp01((float) $ratio),
+            'signature'           => $signatureMatch['label'] ?? null,
             'signatureSimilarity' => $signatureMatch['similarity'] ?? null,
-            'shouldBoost' => $shouldBoost,
-            'trigger' => $trigger,
-            'isDominant' => $isDominant,
+            'shouldBoost'         => $shouldBoost,
+            'trigger'             => $trigger,
+            'isDominant'          => $isDominant,
         ];
     }
 
@@ -235,7 +235,7 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             $similarity = $this->phashSimilarity($hash, $signatureHash);
             if ($bestMatch === null || $similarity > $bestMatch['similarity']) {
                 $bestMatch = [
-                    'label' => $label,
+                    'label'      => $label,
                     'similarity' => $similarity,
                 ];
             }

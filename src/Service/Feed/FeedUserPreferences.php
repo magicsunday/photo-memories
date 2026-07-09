@@ -16,7 +16,7 @@ use function in_array;
 /**
  * Immutable snapshot of the stored user feed preferences.
  */
-final class FeedUserPreferences
+final readonly class FeedUserPreferences
 {
     /**
      * @param list<string> $favourites
@@ -30,17 +30,17 @@ final class FeedUserPreferences
      * @param list<string> $favouritePlaces
      */
     public function __construct(
-        private readonly string $userId,
-        private readonly string $profileKey,
-        private readonly array $favourites,
-        private readonly array $hiddenAlgorithms,
-        private readonly array $blockedAlgorithms = [],
-        private readonly array $hiddenPersons = [],
-        private readonly array $hiddenPets = [],
-        private readonly array $hiddenPlaces = [],
-        private readonly array $hiddenDates = [],
-        private readonly array $favouritePersons = [],
-        private readonly array $favouritePlaces = [],
+        private string $userId,
+        private string $profileKey,
+        private array $favourites,
+        private array $hiddenAlgorithms,
+        private array $blockedAlgorithms = [],
+        private array $hiddenPersons = [],
+        private array $hiddenPets = [],
+        private array $hiddenPlaces = [],
+        private array $hiddenDates = [],
+        private array $favouritePersons = [],
+        private array $favouritePlaces = [],
     ) {
     }
 

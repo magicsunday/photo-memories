@@ -39,10 +39,10 @@ use const SORT_STRING;
 /**
  * Adds canonical titles/subtitles for consolidated vacation clusters.
  */
-final class CanonicalTitleStage implements ClusterConsolidationStageInterface
+final readonly class CanonicalTitleStage implements ClusterConsolidationStageInterface
 {
     public function __construct(
-        private readonly RouteSummarizer $routeSummarizer,
+        private RouteSummarizer $routeSummarizer,
     ) {
     }
 
@@ -71,7 +71,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $summary = $this->routeSummarizer->summarize($draft);
 
             $params = $draft->getParams();
-            $title = $this->buildTitle($params, $summary);
+            $title  = $this->buildTitle($params, $summary);
             if ($title !== '') {
                 $draft->setParam('canonical_title', $title);
             }
@@ -98,7 +98,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
      */
     private function buildTitle(array $params, ?RouteSummary $summary): string
     {
-        if ($summary !== null) {
+        if ($summary instanceof RouteSummary) {
             $label = trim($summary->routeLabel);
             if ($label !== '') {
                 return $label;
@@ -140,7 +140,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $parts[] = $range;
         }
 
-        if ($summary !== null) {
+        if ($summary instanceof RouteSummary) {
             $summaryMetrics = $this->resolveSummaryMetrics($summary);
             if ($summaryMetrics === []) {
                 $travelMetrics = $this->resolveTravelMetrics($params);
@@ -184,10 +184,6 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $metrics[] = $stopLabel;
         }
 
-        if ($metrics === []) {
-            return [];
-        }
-
         return $metrics;
     }
 
@@ -223,7 +219,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             $location = $params['place_location'] ?? null;
             if (is_string($location) && $location !== '') {
                 $candidates = array_map(
-                    static fn (string $segment): string => trim($segment),
+                    trim(...),
                     explode(',', $location),
                 );
                 $candidates = array_filter(
@@ -250,9 +246,7 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
             return [];
         }
 
-        $unique = array_values(array_unique($parts, SORT_STRING));
-
-        return $unique;
+        return array_values(array_unique($parts, SORT_STRING));
     }
 
     /**
@@ -487,13 +481,13 @@ final class CanonicalTitleStage implements ClusterConsolidationStageInterface
         return null;
     }
 
-    private function extractDistanceFromSegments(mixed $segments): float|int|null
+    private function extractDistanceFromSegments(mixed $segments): ?float
     {
         if (!is_array($segments)) {
             return null;
         }
 
-        $total = 0.0;
+        $total       = 0.0;
         $hasDistance = false;
 
         foreach ($segments as $segment) {

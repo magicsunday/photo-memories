@@ -42,11 +42,9 @@ final class MediaDuplicateRepositoryTest extends TestCase
             ->willReturn($entityRepository);
         $entityManager->expects(self::once())
             ->method('persist')
-            ->with(self::callback(static function (MediaDuplicate $duplicate) use ($mediaA, $mediaB): bool {
-                return $duplicate->getLeftMedia() === $mediaA
-                    && $duplicate->getRightMedia() === $mediaB
-                    && $duplicate->getDistance() === 5;
-            }));
+            ->with(self::callback(static fn (MediaDuplicate $duplicate): bool => $duplicate->getLeftMedia() === $mediaA
+                && $duplicate->getRightMedia() === $mediaB
+                && $duplicate->getDistance() === 5));
 
         $repository = new MediaDuplicateRepository($entityManager);
         $result     = $repository->recordDistance($mediaA, $mediaB, 5);

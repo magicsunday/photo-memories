@@ -16,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterNotFoundException;
+use UnitEnum;
 
 use function array_key_exists;
 
@@ -34,7 +35,7 @@ final class FeatureFlagProviderTest extends TestCase
     public function testItResolvesBooleanValuesFromParameters(): void
     {
         $bag = new ParameterBag([
-            'memories.features.saliency_cropping.enabled'     => true,
+            'memories.features.saliency_cropping.enabled'   => true,
             'memories.features.storyline_generator.enabled' => '0',
         ]);
 
@@ -87,7 +88,7 @@ final class FeatureFlagProviderTest extends TestCase
                 return $this->parameters;
             }
 
-            public function get(string $name): array|bool|string|int|float|\UnitEnum|null
+            public function get(string $name): array|bool|string|int|float|UnitEnum|null
             {
                 ++$this->getCalls;
 
@@ -103,7 +104,7 @@ final class FeatureFlagProviderTest extends TestCase
                 unset($this->parameters[$name]);
             }
 
-            public function set(string $name, array|bool|string|int|float|\UnitEnum|null $value): void
+            public function set(string $name, array|bool|string|int|float|UnitEnum|null $value): void
             {
                 $this->parameters[$name] = $value;
             }

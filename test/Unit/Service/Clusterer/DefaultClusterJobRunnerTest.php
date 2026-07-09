@@ -91,11 +91,13 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('2');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
-        $mediaOne  = new Media('one.jpg', 'checksum-one', 1);
+        $listQb   = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $mediaOne = new Media('one.jpg', 'checksum-one', 1);
         $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
-        $mediaTwo  = new Media('two.jpg', 'checksum-two', 1);
+
+        $mediaTwo = new Media('two.jpg', 'checksum-two', 1);
         $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -207,11 +209,13 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('2');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
-        $mediaOne  = new Media('dry-one.jpg', 'checksum-dry-one', 1);
+        $listQb   = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $mediaOne = new Media('dry-one.jpg', 'checksum-dry-one', 1);
         $mediaOne->setFeatureVersion(MetadataFeatureVersion::CURRENT);
-        $mediaTwo  = new Media('dry-two.jpg', 'checksum-dry-two', 1);
+
+        $mediaTwo = new Media('dry-two.jpg', 'checksum-dry-two', 1);
         $mediaTwo->setFeatureVersion(MetadataFeatureVersion::CURRENT);
+
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -286,8 +290,8 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('1');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb   = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
-        $media    = new Media('outdated.jpg', 'checksum-outdated', 1);
+        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $media     = new Media('outdated.jpg', 'checksum-outdated', 1);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])

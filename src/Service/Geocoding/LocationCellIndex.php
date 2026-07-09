@@ -15,7 +15,6 @@ use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Location;
 
-
 /**
  * Lightweight cell -> Location index backed by the DB.
  * Speeds up reverse-geocoding by reusing known Locations for a cell.
@@ -52,8 +51,11 @@ final class LocationCellIndex
         foreach ($it as $row) {
             $cell = $row['cell'];
             $id   = $row['id'];
+            if ($cell === '') {
+                continue;
+            }
 
-            if ($cell === '' || isset($this->cellToId[$cell])) {
+            if (isset($this->cellToId[$cell])) {
                 continue;
             }
 

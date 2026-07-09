@@ -29,7 +29,6 @@ final class DefaultCoverPickerTest extends TestCase
             id: 101,
             path: '/fixtures/feed/upright.jpg',
             takenAt: '2024-08-01T12:00:00+00:00',
-            size: 5_000_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3024);
                 $media->setHeight(4032);
@@ -37,13 +36,13 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setNeedsRotation(false);
                 $media->setThumbnails(['default' => '/thumbs/upright.jpg']);
             },
+            size: 5_000_000,
         );
 
         $rotatedPortrait = $this->makeMedia(
             id: 102,
             path: '/fixtures/feed/rotated.jpg',
             takenAt: '2024-08-01T12:00:00+00:00',
-            size: 5_000_000,
             configure: static function (Media $media): void {
                 $media->setWidth(4032);
                 $media->setHeight(3024);
@@ -51,15 +50,14 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setNeedsRotation(true);
                 $media->setThumbnails(['default' => '/thumbs/rotated.jpg']);
             },
+            size: 5_000_000,
         );
 
         $buildContext = new ReflectionMethod(DefaultCoverPicker::class, 'buildContext');
-        $buildContext->setAccessible(true);
 
         $context = $buildContext->invoke($picker, [$uprightPortrait, $rotatedPortrait], []);
 
         $score = new ReflectionMethod(DefaultCoverPicker::class, 'score');
-        $score->setAccessible(true);
 
         $uprightScore = $score->invoke($picker, $uprightPortrait, $context);
         $rotatedScore = $score->invoke($picker, $rotatedPortrait, $context);
@@ -76,19 +74,18 @@ final class DefaultCoverPickerTest extends TestCase
             id: 201,
             path: '/fixtures/feed/low-quality.jpg',
             takenAt: '2024-05-12T09:00:00+00:00',
-            size: 3_000_000,
             configure: static function (Media $media): void {
                 $media->setWidth(2000);
                 $media->setHeight(1500);
                 $media->setQualityScore(0.35);
             },
+            size: 3_000_000,
         );
 
         $highQuality = $this->makeMedia(
             id: 202,
             path: '/fixtures/feed/high-quality.jpg',
             takenAt: '2024-05-12T09:05:00+00:00',
-            size: 6_500_000,
             configure: static function (Media $media): void {
                 $media->setWidth(4032);
                 $media->setHeight(3024);
@@ -96,6 +93,7 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setContrast(0.7);
                 $media->setEntropy(0.65);
             },
+            size: 6_500_000,
         );
 
         $clusterParams = [
@@ -113,7 +111,7 @@ final class DefaultCoverPickerTest extends TestCase
                     ],
                 ],
                 'members' => [
-                    (string) $lowQuality->getId()  => [
+                    (string) $lowQuality->getId() => [
                         'quality'    => 0.35,
                         'aesthetics' => 0.32,
                     ],
@@ -139,7 +137,6 @@ final class DefaultCoverPickerTest extends TestCase
             id: 301,
             path: '/fixtures/feed/group.jpg',
             takenAt: '2024-06-18T18:00:00+00:00',
-            size: 5_200_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3840);
                 $media->setHeight(2560);
@@ -147,23 +144,24 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setFacesCount(3);
                 $media->setFeatures([
                     'vision' => [
-                        'face_coverage'             => 0.68,
-                        'primary_pose'              => 'smiling',
-                        'primary_pose_confidence'   => 0.9,
+                        'face_coverage'           => 0.68,
+                        'primary_pose'            => 'smiling',
+                        'primary_pose_confidence' => 0.9,
                     ],
                 ]);
             },
+            size: 5_200_000,
         );
 
         $landscape = $this->makeMedia(
             id: 302,
             path: '/fixtures/feed/landscape.jpg',
             takenAt: '2024-06-18T18:05:00+00:00',
-            size: 5_200_000,
             configure: static function (Media $media): void {
                 $media->setWidth(5120);
                 $media->setHeight(2880);
             },
+            size: 5_200_000,
         );
 
         $clusterParams = [
@@ -193,8 +191,8 @@ final class DefaultCoverPickerTest extends TestCase
         [$travelHero, $peopleHero] = $this->createTravelAndPeopleCandidates();
 
         $clusterParams = [
-            'total_travel_km'      => 220.0,
-            'travel_waypoints'     => [
+            'total_travel_km'  => 220.0,
+            'travel_waypoints' => [
                 ['lat' => 47.05, 'lon' => 10.23],
                 ['lat' => 47.68, 'lon' => 11.02],
                 ['lat' => 48.14, 'lon' => 11.58],
@@ -258,12 +256,12 @@ final class DefaultCoverPickerTest extends TestCase
         [$travelHero, $peopleHero] = $this->createTravelAndPeopleCandidates();
 
         $clusterParams = [
-            'total_travel_km'       => 0.0,
-            'people_coverage'       => 0.94,
-            'people_face_coverage'  => 0.96,
-            'people_ratio'          => 0.92,
-            'people_primary_subject'=> 'friend-alex',
-            'member_quality'        => [
+            'total_travel_km'        => 0.0,
+            'people_coverage'        => 0.94,
+            'people_face_coverage'   => 0.96,
+            'people_ratio'           => 0.92,
+            'people_primary_subject' => 'friend-alex',
+            'member_quality'         => [
                 'summary' => [
                     'quality_avg'    => 0.83,
                     'aesthetics_avg' => 0.79,
@@ -322,7 +320,6 @@ final class DefaultCoverPickerTest extends TestCase
             takenAt: '2024-09-04T07:45:00+00:00',
             lat: 47.5123,
             lon: 11.2456,
-            size: 7_600_000,
             configure: static function (Media $media): void {
                 $media->setWidth(5400);
                 $media->setHeight(3200);
@@ -340,24 +337,24 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setThumbnails(['default' => '/thumbs/travel-duplicate.jpg']);
                 $media->setFeatures([
                     'vision' => [
-                        'face_coverage'             => 0.14,
-                        'primary_pose'              => 'profile-looking-away',
-                        'primary_pose_confidence'   => 0.55,
+                        'face_coverage'           => 0.14,
+                        'primary_pose'            => 'profile-looking-away',
+                        'primary_pose_confidence' => 0.55,
                     ],
                     'saliency' => [
-                        'center'                 => ['x' => 0.52, 'y' => 0.48],
-                        'rule_of_thirds_score'   => 0.76,
-                        'confidence'             => 0.78,
+                        'center'               => ['x' => 0.52, 'y' => 0.48],
+                        'rule_of_thirds_score' => 0.76,
+                        'confidence'           => 0.78,
                     ],
                 ]);
             },
+            size: 7_600_000,
         );
 
         $peopleChampion = $this->makeMedia(
             id: 952,
             path: '/fixtures/feed/people-champion.jpg',
             takenAt: '2024-09-04T07:50:00+00:00',
-            size: 5_900_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3600);
                 $media->setHeight(4800);
@@ -372,33 +369,34 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setPersons(['friend-alex', 'friend-jamie', 'friend-lisa']);
                 $media->setFeatures([
                     'vision' => [
-                        'face_coverage'             => 0.46,
-                        'primary_pose'              => 'front-facing group',
-                        'primary_pose_confidence'   => 0.88,
+                        'face_coverage'           => 0.46,
+                        'primary_pose'            => 'front-facing group',
+                        'primary_pose_confidence' => 0.88,
                     ],
                     'saliency' => [
-                        'center'                 => ['x' => 0.36, 'y' => 0.38],
-                        'rule_of_thirds_score'   => 0.74,
-                        'confidence'             => 0.72,
+                        'center'               => ['x' => 0.36, 'y' => 0.38],
+                        'rule_of_thirds_score' => 0.74,
+                        'confidence'           => 0.72,
                     ],
                 ]);
                 $media->setThumbnails(['default' => '/thumbs/people-champion.jpg']);
             },
+            size: 5_900_000,
         );
 
         $clusterParams = [
-            'total_travel_km'      => 185.0,
-            'travel_waypoints'     => [
+            'total_travel_km'  => 185.0,
+            'travel_waypoints' => [
                 ['lat' => 47.05, 'lon' => 10.23],
                 ['lat' => 47.68, 'lon' => 11.02],
                 ['lat' => 48.14, 'lon' => 11.58],
                 ['lat' => 48.35, 'lon' => 12.01],
             ],
-            'people_coverage'      => 0.86,
-            'people_face_coverage' => 0.92,
-            'people_ratio'         => 0.84,
-            'people_primary_subject'=> 'friend-lisa',
-            'member_quality'       => [
+            'people_coverage'        => 0.86,
+            'people_face_coverage'   => 0.92,
+            'people_ratio'           => 0.84,
+            'people_primary_subject' => 'friend-lisa',
+            'member_quality'         => [
                 'summary' => [
                     'quality_avg'    => 0.88,
                     'aesthetics_avg' => 0.84,
@@ -460,7 +458,6 @@ final class DefaultCoverPickerTest extends TestCase
                 takenAt: '2024-09-02T12:00:00+00:00',
                 lat: 46.5123,
                 lon: 11.3567,
-                size: 6_300_000,
                 configure: static function (Media $media): void {
                     $media->setWidth(4000);
                     $media->setHeight(2666);
@@ -470,13 +467,13 @@ final class DefaultCoverPickerTest extends TestCase
                     $media->setContrast(0.6);
                     $media->setEntropy(0.58);
                 },
+                size: 6_300_000,
             );
 
             $peopleHero = $this->makeMedia(
                 id: 904,
                 path: '/fixtures/feed/tie-people.jpg',
                 takenAt: '2024-09-02T12:00:00+00:00',
-                size: 6_300_000,
                 configure: static function (Media $media): void {
                     $media->setWidth(4000);
                     $media->setHeight(2666);
@@ -484,13 +481,13 @@ final class DefaultCoverPickerTest extends TestCase
                     $media->setNeedsRotation(false);
                     $media->setQualityScore(0.82);
                 },
+                size: 6_300_000,
             );
         } else {
             $travelHero = $this->makeMedia(
                 id: 903,
                 path: '/fixtures/feed/tie-travel.jpg',
                 takenAt: '2024-09-02T12:00:00+00:00',
-                size: 6_200_000,
                 configure: static function (Media $media): void {
                     $media->setWidth(4000);
                     $media->setHeight(2666);
@@ -498,13 +495,13 @@ final class DefaultCoverPickerTest extends TestCase
                     $media->setNeedsRotation(false);
                     $media->setQualityScore(0.82);
                 },
+                size: 6_200_000,
             );
 
             $peopleHero = $this->makeMedia(
                 id: 904,
                 path: '/fixtures/feed/tie-people.jpg',
                 takenAt: '2024-09-02T12:00:00+00:00',
-                size: 6_200_000,
                 configure: static function (Media $media): void {
                     $media->setWidth(4000);
                     $media->setHeight(2666);
@@ -516,12 +513,13 @@ final class DefaultCoverPickerTest extends TestCase
                     $media->setPersons(['friend-alex']);
                     $media->setFeatures([
                         'vision' => [
-                            'face_coverage'             => 0.52,
-                            'primary_pose'              => 'smiling',
-                            'primary_pose_confidence'   => 0.9,
+                            'face_coverage'           => 0.52,
+                            'primary_pose'            => 'smiling',
+                            'primary_pose_confidence' => 0.9,
                         ],
                     ]);
                 },
+                size: 6_200_000,
             );
         }
 
@@ -584,12 +582,12 @@ final class DefaultCoverPickerTest extends TestCase
         yield 'travel weight dominates tie' => [
             'travel',
             [
-                'total_travel_km'      => 180.0,
-                'people_face_coverage' => 0.0,
-                'people_coverage'      => 0.0,
-                'people_ratio'         => 0.0,
-                'people_primary_subject'=> 'nobody',
-                'travel_waypoints'     => [
+                'total_travel_km'        => 180.0,
+                'people_face_coverage'   => 0.0,
+                'people_coverage'        => 0.0,
+                'people_ratio'           => 0.0,
+                'people_primary_subject' => 'nobody',
+                'travel_waypoints'       => [
                     ['lat' => 47.05, 'lon' => 10.23],
                     ['lat' => 47.68, 'lon' => 11.02],
                     ['lat' => 48.14, 'lon' => 11.58],
@@ -600,11 +598,11 @@ final class DefaultCoverPickerTest extends TestCase
         yield 'people emphasis dominates tie' => [
             'people',
             [
-                'total_travel_km'       => 0.0,
-                'people_face_coverage'  => 0.95,
-                'people_coverage'       => 0.92,
-                'people_ratio'          => 1.0,
-                'people_primary_subject'=> 'friend-alex',
+                'total_travel_km'        => 0.0,
+                'people_face_coverage'   => 0.95,
+                'people_coverage'        => 0.92,
+                'people_ratio'           => 1.0,
+                'people_primary_subject' => 'friend-alex',
             ],
         ];
     }
@@ -618,39 +616,39 @@ final class DefaultCoverPickerTest extends TestCase
             id: 401,
             path: '/fixtures/feed/original.jpg',
             takenAt: '2024-07-01T10:00:00+00:00',
-            size: 4_500_000,
             configure: static function (Media $media): void {
                 $media->setWidth(4000);
                 $media->setHeight(3000);
                 $media->setPhash('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
                 $media->setDhash('bbbbbbbbbbbbbbbb');
             },
+            size: 4_500_000,
         );
 
         $duplicate = $this->makeMedia(
             id: 402,
             path: '/fixtures/feed/duplicate.jpg',
             takenAt: '2024-07-01T10:02:00+00:00',
-            size: 4_400_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3980);
                 $media->setHeight(2980);
                 $media->setPhash('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
                 $media->setDhash('bbbbbbbbbbbbbbbb');
             },
+            size: 4_400_000,
         );
 
         $unique = $this->makeMedia(
             id: 403,
             path: '/fixtures/feed/unique.jpg',
             takenAt: '2024-07-01T10:04:00+00:00',
-            size: 4_800_000,
             configure: static function (Media $media): void {
                 $media->setWidth(4200);
                 $media->setHeight(2800);
                 $media->setPhash('cccccccccccccccccccccccccccccccc');
                 $media->setDhash('dddddddddddddddd');
             },
+            size: 4_800_000,
         );
 
         $clusterParams = [
@@ -751,9 +749,8 @@ final class DefaultCoverPickerTest extends TestCase
         ];
 
         $method = new ReflectionMethod(DefaultCoverPicker::class, 'peopleScore');
-        $method->setAccessible(true);
 
-        $baseline = $people;
+        $baseline            = $people;
         $baseline['primary'] = null;
 
         $baselineScore = $method->invoke($picker, $media, $baseline);
@@ -785,25 +782,24 @@ final class DefaultCoverPickerTest extends TestCase
             id: 501,
             path: '/fixtures/feed/thirds.jpg',
             takenAt: '2024-08-10T15:00:00+00:00',
-            size: 4_000_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3600);
                 $media->setHeight(2400);
                 $media->setFeatures([
                     'saliency' => [
-                        'center'                 => ['x' => 0.33, 'y' => 0.33],
-                        'rule_of_thirds_score'   => 0.85,
-                        'confidence'             => 0.9,
+                        'center'               => ['x' => 0.33, 'y' => 0.33],
+                        'rule_of_thirds_score' => 0.85,
+                        'confidence'           => 0.9,
                     ],
                 ]);
             },
+            size: 4_000_000,
         );
 
         $centered = $this->makeMedia(
             id: 502,
             path: '/fixtures/feed/centered.jpg',
             takenAt: '2024-08-10T15:02:00+00:00',
-            size: 4_050_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3600);
                 $media->setHeight(2400);
@@ -815,6 +811,7 @@ final class DefaultCoverPickerTest extends TestCase
                     ],
                 ]);
             },
+            size: 4_050_000,
         );
 
         $clusterParams = [
@@ -846,7 +843,6 @@ final class DefaultCoverPickerTest extends TestCase
             takenAt: '2024-09-01T08:00:00+00:00',
             lat: 47.0500,
             lon: 10.2330,
-            size: 7_800_000,
             configure: static function (Media $media): void {
                 $media->setWidth(5200);
                 $media->setHeight(3000);
@@ -862,22 +858,22 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setThumbnails(['default' => '/thumbs/travel-hero.jpg']);
                 $media->setFeatures([
                     'saliency' => [
-                        'center'                 => ['x' => 0.48, 'y' => 0.52],
-                        'rule_of_thirds_score'   => 0.78,
-                        'confidence'             => 0.82,
+                        'center'               => ['x' => 0.48, 'y' => 0.52],
+                        'rule_of_thirds_score' => 0.78,
+                        'confidence'           => 0.82,
                     ],
                     'vision' => [
                         'face_coverage' => 0.16,
                     ],
                 ]);
             },
+            size: 7_800_000,
         );
 
         $peopleHero = $this->makeMedia(
             id: 902,
             path: '/fixtures/feed/people-hero.jpg',
             takenAt: '2024-09-01T08:05:00+00:00',
-            size: 5_600_000,
             configure: static function (Media $media): void {
                 $media->setWidth(3000);
                 $media->setHeight(4200);
@@ -892,25 +888,26 @@ final class DefaultCoverPickerTest extends TestCase
                 $media->setPersons(['friend-alex', 'friend-jamie']);
                 $media->setFeatures([
                     'vision' => [
-                        'face_coverage'             => 0.4,
-                        'primary_pose'              => 'front-facing group',
-                        'primary_pose_confidence'   => 0.85,
+                        'face_coverage'           => 0.4,
+                        'primary_pose'            => 'front-facing group',
+                        'primary_pose_confidence' => 0.85,
                     ],
                     'saliency' => [
-                        'center'                 => ['x' => 0.34, 'y' => 0.36],
-                        'rule_of_thirds_score'   => 0.72,
-                        'confidence'             => 0.7,
+                        'center'               => ['x' => 0.34, 'y' => 0.36],
+                        'rule_of_thirds_score' => 0.72,
+                        'confidence'           => 0.7,
                     ],
                 ]);
                 $media->setThumbnails(['default' => '/thumbs/people-hero.jpg']);
             },
+            size: 5_600_000,
         );
 
         return [$travelHero, $peopleHero];
     }
 
     /**
-     * @param list<Media> $members
+     * @param list<Media>          $members
      * @param array<string, mixed> $clusterParams
      *
      * @return array<string, mixed>
@@ -918,7 +915,6 @@ final class DefaultCoverPickerTest extends TestCase
     private function buildPickerContext(DefaultCoverPicker $picker, array $members, array $clusterParams): array
     {
         $method = new ReflectionMethod(DefaultCoverPicker::class, 'buildContext');
-        $method->setAccessible(true);
 
         /** @var array<string, mixed> $context */
         $context = $method->invoke($picker, $members, $clusterParams);
@@ -932,7 +928,6 @@ final class DefaultCoverPickerTest extends TestCase
     private function resolveScore(DefaultCoverPicker $picker, Media $media, array $context): float
     {
         $method = new ReflectionMethod(DefaultCoverPicker::class, 'score');
-        $method->setAccessible(true);
 
         return $method->invoke($picker, $media, $context);
     }
@@ -943,7 +938,6 @@ final class DefaultCoverPickerTest extends TestCase
     private function resolvePeopleScore(DefaultCoverPicker $picker, Media $media, array $context): float
     {
         $method = new ReflectionMethod(DefaultCoverPicker::class, 'peopleScore');
-        $method->setAccessible(true);
 
         return $method->invoke($picker, $media, $context['people']);
     }
@@ -954,7 +948,6 @@ final class DefaultCoverPickerTest extends TestCase
     private function resolveTravelScore(DefaultCoverPicker $picker, Media $media, array $context): float
     {
         $normalise = new ReflectionMethod(DefaultCoverPicker::class, 'normalizeDimensions');
-        $normalise->setAccessible(true);
 
         [$width, $height] = $normalise->invoke($picker, $media->getWidth() ?? 0, $media->getHeight() ?? 0, $media);
 
@@ -962,7 +955,6 @@ final class DefaultCoverPickerTest extends TestCase
         $areaMp    = ($width > 0 && $height > 0) ? (($width * $height) / 1_000_000.0) : 0.0;
 
         $method = new ReflectionMethod(DefaultCoverPicker::class, 'travelScore');
-        $method->setAccessible(true);
 
         return $method->invoke($picker, $media, $context['travel'], $landscape, $areaMp);
     }

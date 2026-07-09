@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Integration\Service\Metadata;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\CompositeMetadataExtractor;
@@ -24,6 +26,7 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Utility\S2CellId;
 use PHPUnit\Framework\Attributes\Test;
+
 use function file_put_contents;
 use function is_file;
 use function rename;
@@ -167,17 +170,17 @@ final class CompositeMetadataExtractorClusterFieldsTest extends TestCase
 
 final class FakeTimezoneResolver implements TimezoneResolverInterface
 {
-    public function resolveMediaTimezone(Media $media, \DateTimeImmutable $takenAt, array $home): \DateTimeZone
+    public function resolveMediaTimezone(Media $media, DateTimeImmutable $takenAt, array $home): DateTimeZone
     {
-        return new \DateTimeZone('Europe/Berlin');
+        return new DateTimeZone('Europe/Berlin');
     }
 
-    public function resolveSummaryTimezone(array $summary, array $home): \DateTimeZone
+    public function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
     {
-        return new \DateTimeZone('Europe/Berlin');
+        return new DateTimeZone('Europe/Berlin');
     }
 
-    public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+    public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
     {
         return 120;
     }

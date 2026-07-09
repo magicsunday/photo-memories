@@ -11,13 +11,12 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\GeoTemporalClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -29,7 +28,6 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function array_map;
 use function count;
 use function min;
-use function usort;
 
 /**
  * Class TimeSimilarityStrategy.
@@ -49,9 +47,9 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
 
     private GeoDbscanHelper $dbscanHelper;
 
-    private const MAX_WINDOW_SECONDS = 10800;
+    private const int MAX_WINDOW_SECONDS = 10800;
 
-    private const CLUSTER_RADIUS_METERS = 250.0;
+    private const float CLUSTER_RADIUS_METERS = 250.0;
 
     public function __construct(
         LocationHelper $locHelper,
@@ -96,7 +94,7 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
         );
 
         return array_map(
-            fn (array $bucket): ClusterDraft => $this->makeDraft($bucket),
+            $this->makeDraft(...),
             $buckets
         );
     }
@@ -108,9 +106,9 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
         $range    = $this->computeTimeRange($bucket);
 
         $params = [
-            'time_range'     => $range,
-            'window_bounds'  => $range,
-            'members_count'  => count($bucket),
+            'time_range'    => $range,
+            'window_bounds' => $range,
+            'members_count' => count($bucket),
         ];
 
         $lat = $centroid['lat'] ?? null;
@@ -143,8 +141,9 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
             members: $this->toMemberIds($bucket)
         );
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -163,5 +162,4 @@ final readonly class TimeSimilarityStrategy implements ClusterStrategyInterface,
     {
         return min($this->maxGapSeconds, self::MAX_WINDOW_SECONDS);
     }
-
 }

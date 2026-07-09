@@ -30,23 +30,23 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
     public function enrich(ClusterDraft $cluster, array $mediaMap): void
     {
-        $params    = $cluster->getParams();
-        $mediaList = $this->collectMediaItems($cluster, $mediaMap);
+        $params         = $cluster->getParams();
+        $mediaList      = $this->collectMediaItems($cluster, $mediaMap);
         $qualityMembers = $params['quality_members'] ?? null;
 
-        $quality     = $this->floatOrNull($params['quality_avg'] ?? null);
-        $aesthetics  = $this->floatOrNull($params['aesthetics_score'] ?? null);
-        $resolution  = $this->floatOrNull($params['quality_resolution'] ?? null);
-        $sharpness   = $this->floatOrNull($params['quality_sharpness'] ?? null);
-        $exposure    = $this->floatOrNull($params['quality_exposure'] ?? null);
-        $contrast    = $this->floatOrNull($params['quality_contrast'] ?? null);
-        $noise       = $this->floatOrNull($params['quality_noise'] ?? null);
-        $blockiness  = $this->floatOrNull($params['quality_blockiness'] ?? null);
-        $keyframe    = $this->floatOrNull($params['quality_video_keyframe'] ?? null);
-        $videoBonus  = $this->floatOrNull($params['quality_video_bonus'] ?? null);
+        $quality      = $this->floatOrNull($params['quality_avg'] ?? null);
+        $aesthetics   = $this->floatOrNull($params['aesthetics_score'] ?? null);
+        $resolution   = $this->floatOrNull($params['quality_resolution'] ?? null);
+        $sharpness    = $this->floatOrNull($params['quality_sharpness'] ?? null);
+        $exposure     = $this->floatOrNull($params['quality_exposure'] ?? null);
+        $contrast     = $this->floatOrNull($params['quality_contrast'] ?? null);
+        $noise        = $this->floatOrNull($params['quality_noise'] ?? null);
+        $blockiness   = $this->floatOrNull($params['quality_blockiness'] ?? null);
+        $keyframe     = $this->floatOrNull($params['quality_video_keyframe'] ?? null);
+        $videoBonus   = $this->floatOrNull($params['quality_video_bonus'] ?? null);
         $videoPenalty = $this->floatOrNull($params['quality_video_penalty'] ?? null);
-        $clipping    = $this->floatOrNull($params['quality_clipping'] ?? null);
-        $iso         = $this->floatOrNull($params['quality_iso'] ?? null);
+        $clipping     = $this->floatOrNull($params['quality_clipping'] ?? null);
+        $iso          = $this->floatOrNull($params['quality_iso'] ?? null);
 
         if (
             $quality === null

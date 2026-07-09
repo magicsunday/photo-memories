@@ -145,14 +145,14 @@ final class QualityClusterScoreHeuristicTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [
-                'quality_avg'        => 0.67,
-                'aesthetics_score'   => 0.7,
-                'quality_resolution' => 0.8,
-                'quality_sharpness'  => 0.6,
-                'quality_exposure'   => 0.62,
-                'quality_contrast'   => 0.64,
-                'quality_noise'      => 0.52,
-                'quality_blockiness' => 0.68,
+                'quality_avg'            => 0.67,
+                'aesthetics_score'       => 0.7,
+                'quality_resolution'     => 0.8,
+                'quality_sharpness'      => 0.6,
+                'quality_exposure'       => 0.62,
+                'quality_contrast'       => 0.64,
+                'quality_noise'          => 0.52,
+                'quality_blockiness'     => 0.68,
                 'quality_video_keyframe' => 0.7,
                 'quality_video_bonus'    => 0.25,
                 'quality_video_penalty'  => 0.12,
@@ -279,11 +279,11 @@ final class QualityClusterScoreHeuristicTest extends TestCase
      */
     private function createEstimator(array $scores): ImageQualityEstimatorInterface
     {
-        return new class($scores) implements ImageQualityEstimatorInterface {
+        return new readonly class($scores) implements ImageQualityEstimatorInterface {
             /**
              * @param array<int, ImageQualityScore> $scores
              */
-            public function __construct(private readonly array $scores)
+            public function __construct(private array $scores)
             {
             }
 

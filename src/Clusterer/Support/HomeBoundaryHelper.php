@@ -153,12 +153,6 @@ final class HomeBoundaryHelper
      */
     public static function hasCoordinateSamples(array $members): bool
     {
-        foreach ($members as $media) {
-            if ($media->getGpsLat() !== null && $media->getGpsLon() !== null) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($members, fn (Media $media): bool => $media->getGpsLat() !== null && $media->getGpsLon() !== null);
     }
 }

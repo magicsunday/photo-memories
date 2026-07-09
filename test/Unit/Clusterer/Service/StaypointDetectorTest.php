@@ -157,14 +157,14 @@ final class StaypointDetectorTest extends TestCase
             'spotDensity' => 0.02,
         ];
 
-        $short = [];
+        $short   = [];
         $short[] = $this->makeMediaFixture(50, 'rural-short-1.jpg', $start, 60.0000, 10.0000);
         $short[] = $this->makeMediaFixture(51, 'rural-short-2.jpg', $start->add(new DateInterval('PT8M')), 60.0025, 10.0025);
         $short[] = $this->makeMediaFixture(52, 'rural-short-3.jpg', $start->add(new DateInterval('PT16M')), 60.0027, 10.0027);
 
         self::assertSame([], $detector->detect($short, $context));
 
-        $long = [];
+        $long   = [];
         $long[] = $this->makeMediaFixture(60, 'rural-long-1.jpg', $start, 60.0000, 10.0000);
         $long[] = $this->makeMediaFixture(61, 'rural-long-2.jpg', $start->add(new DateInterval('PT18M')), 60.0025, 10.0025);
         $long[] = $this->makeMediaFixture(62, 'rural-long-3.jpg', $start->add(new DateInterval('PT35M')), 60.0027, 10.0027);

@@ -49,7 +49,7 @@ final class PhaseMetricsCollector
             return;
         }
 
-        $elapsedMs = (microtime(true) - $startedAt) * 1000.0;
+        $elapsedMs                 = (microtime(true) - $startedAt) * 1000.0;
         $this->durationsMs[$phase] = ($this->durationsMs[$phase] ?? 0.0) + $elapsedMs;
 
         unset($this->phaseStart[$phase]);
@@ -75,7 +75,7 @@ final class PhaseMetricsCollector
                 $value = (float) $value;
             }
 
-            $this->counts[$phase][$group][$key] = is_float($value) ? $value : (int) $value;
+            $this->counts[$phase][$group][$key] = is_float($value) ? $value : $value;
         }
     }
 
@@ -122,7 +122,7 @@ final class PhaseMetricsCollector
                 }
 
                 sort($values);
-                $medians[$phase][$metric] = $this->median($values);
+                $medians[$phase][$metric]     = $this->median($values);
                 $percentiles[$phase][$metric] = [
                     'p90' => $this->percentile($values, 0.90),
                     'p99' => $this->percentile($values, 0.99),

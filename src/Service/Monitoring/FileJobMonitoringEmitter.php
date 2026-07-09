@@ -20,14 +20,14 @@ use Stringable;
 use function array_key_exists;
 use function array_merge;
 use function dirname;
-use function is_dir;
 use function is_array;
+use function is_dir;
 use function is_string;
 use function json_encode;
 use function mkdir;
+use function rtrim;
 use function str_contains;
 use function str_starts_with;
-use function rtrim;
 use function trim;
 
 use const DIRECTORY_SEPARATOR;
@@ -39,13 +39,13 @@ use const PHP_EOL;
 /**
  * Writes monitoring events as JSON lines to a log file.
  */
-final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
+final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
 {
     public function __construct(
-        private readonly string $logPath,
-        private readonly bool $enabled = true,
-        private readonly ?ClockInterface $clock = null,
-        private readonly string $schemaVersion = '1.0',
+        private string $logPath,
+        private bool $enabled = true,
+        private ?ClockInterface $clock = null,
+        private string $schemaVersion = '1.0',
     ) {
     }
 
@@ -63,7 +63,7 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
         }
 
         $payload = $this->buildPayload($jobName, $statusName, $context);
-        $json = $this->encodePayload($payload);
+        $json    = $this->encodePayload($payload);
 
         if ($json === null) {
             return;
@@ -162,17 +162,21 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
         }
 
         $metaKeys = [
-            'job' => true,
-            'status' => true,
-            'timestamp' => true,
-            'schema_version' => true,
+            'job'               => true,
+            'status'            => true,
+            'timestamp'         => true,
+            'schema_version'    => true,
             'decision_features' => true,
-            'thresholds' => true,
-            'final_decisions' => true,
+            'thresholds'        => true,
+            'final_decisions'   => true,
         ];
 
         foreach ($payload as $key => $value) {
-            if (!is_string($key) || isset($metaKeys[$key])) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (isset($metaKeys[$key])) {
                 continue;
             }
 
@@ -194,8 +198,8 @@ final class FileJobMonitoringEmitter implements JobMonitoringEmitterInterface
         }
 
         $payload['decision_features'] = $decisionFeatures;
-        $payload['thresholds']       = $thresholds;
-        $payload['final_decisions']  = $finalDecisions;
+        $payload['thresholds']        = $thresholds;
+        $payload['final_decisions']   = $finalDecisions;
 
         return $payload;
     }

@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Geocoding;
@@ -17,7 +24,6 @@ final class MediaLocationLinkerTest extends TestCase
         $linker   = $refClass->newInstanceWithoutConstructor();
 
         $method = new ReflectionMethod(MediaLocationLinker::class, 'normalizeAcceptLanguage');
-        $method->setAccessible(true);
 
         self::assertSame('de-DE', $method->invoke($linker, 'de_DE'));
         self::assertSame('de', $method->invoke($linker, ''));

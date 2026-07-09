@@ -15,10 +15,7 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Support\FeatureFlagProviderInterface;
 
 use function array_key_exists;
-use function array_map;
 use function array_slice;
-use function array_unique;
-use function array_values;
 use function arsort;
 use function count;
 use function hash;
@@ -43,13 +40,13 @@ use const PHP_INT_MAX;
 /**
  * Builds human readable story titles and subtitles for vacation clusters.
  */
-final class StoryTitleBuilder
+final readonly class StoryTitleBuilder
 {
     public function __construct(
-        private readonly RouteSummarizer $routeSummarizer,
-        private readonly LocalizedDateFormatter $dateFormatter,
-        private readonly string $preferredLocale = 'de',
-        private readonly ?FeatureFlagProviderInterface $featureFlags = null,
+        private RouteSummarizer $routeSummarizer,
+        private LocalizedDateFormatter $dateFormatter,
+        private string $preferredLocale = 'de',
+        private ?FeatureFlagProviderInterface $featureFlags = null,
     ) {
     }
 
@@ -60,7 +57,7 @@ final class StoryTitleBuilder
      */
     public function build(ClusterDraft $cluster, ?string $locale = null, ?RouteSummary $summary = null): array
     {
-        if ($this->featureFlags !== null && !$this->featureFlags->isEnabled('storyline_generator')) {
+        if ($this->featureFlags instanceof FeatureFlagProviderInterface && !$this->featureFlags->isEnabled('storyline_generator')) {
             return $this->buildDisabledStorylineResponse($cluster, $locale);
         }
 
@@ -69,11 +66,11 @@ final class StoryTitleBuilder
 
         $params = $cluster->getParams();
 
-        $title = $this->buildTitle($params, $summary);
+        $title    = $this->buildTitle($params, $summary);
         $subtitle = $this->buildSubtitle($params, $summary, $resolvedLocale);
 
         return [
-            'title' => $title,
+            'title'    => $title,
             'subtitle' => $subtitle,
         ];
     }
@@ -112,20 +109,12 @@ final class StoryTitleBuilder
             }
 
             $location = $this->resolvePrimaryLocationLabel($params);
-            if ($location !== '') {
-                $base = $classification . ' – ' . $location;
-            } else {
-                $base = $classification;
-            }
+            $base     = $location !== '' ? $classification . ' – ' . $location : $classification;
         }
 
         $companions = $this->formatCompanionNames($params);
         if ($companions !== '') {
-            if ($base !== '') {
-                return $base . ' mit ' . $companions;
-            }
-
-            return 'Mit ' . $companions;
+            return $base . ' mit ' . $companions;
         }
 
         if ($base === '') {
@@ -241,9 +230,9 @@ final class StoryTitleBuilder
 
         $maxNames = 3;
         if (count($displayNames) > $maxNames) {
-            $visible  = array_slice($displayNames, 0, $maxNames - 1);
-            $remaining = count($displayNames) - ($maxNames - 1);
-            $visible[] = sprintf('%d weitere', $remaining);
+            $visible      = array_slice($displayNames, 0, $maxNames - 1);
+            $remaining    = count($displayNames) - ($maxNames - 1);
+            $visible[]    = sprintf('%d weitere', $remaining);
             $displayNames = $visible;
         }
 
@@ -270,7 +259,7 @@ final class StoryTitleBuilder
         $cohortMembers = $this->sanitizeCohortMembers($params['cohort_members'] ?? null);
 
         $telemetryCounts = null;
-        $memberQuality = $params['member_quality'] ?? null;
+        $memberQuality   = $params['member_quality'] ?? null;
         if (is_array($memberQuality)) {
             $summary = $memberQuality['summary'] ?? null;
             if (is_array($summary)) {
@@ -358,12 +347,20 @@ final class StoryTitleBuilder
 
         $result = [];
         foreach ($value as $personId => $count) {
-            if (!is_int($personId) || $personId <= 0) {
+            if (!is_int($personId)) {
+                continue;
+            }
+
+            if ($personId <= 0) {
                 continue;
             }
 
             $normalized = $this->intOrNull($count);
-            if ($normalized === null || $normalized <= 0) {
+            if ($normalized === null) {
+                continue;
+            }
+
+            if ($normalized <= 0) {
                 continue;
             }
 
@@ -394,7 +391,11 @@ final class StoryTitleBuilder
             }
 
             $normalized = $this->intOrNull($count);
-            if ($normalized === null || $normalized <= 0) {
+            if ($normalized === null) {
+                continue;
+            }
+
+            if ($normalized <= 0) {
                 continue;
             }
 
@@ -524,7 +525,7 @@ final class StoryTitleBuilder
             return null;
         }
 
-        $hash = substr(hash('sha256', $normalized), 0, 15);
+        $hash  = substr(hash('sha256', $normalized), 0, 15);
         $value = intval($hash, 16);
         if ($value < 1) {
             return 1;

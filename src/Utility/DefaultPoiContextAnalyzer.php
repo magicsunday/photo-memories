@@ -143,7 +143,11 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             }
 
             $label = $this->poiLabelResolver->preferredLabel($poi) ?? $poi['categoryValue'];
-            if (!is_string($label) || $label === '') {
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if ($label === '') {
                 continue;
             }
 
@@ -164,7 +168,11 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             ++$counts[$key]['count'];
 
             foreach ($poi['tags'] as $tagKey => $tagValue) {
-                if ($tagKey === '' || $tagValue === '') {
+                if ($tagKey === '') {
+                    continue;
+                }
+
+                if ($tagValue === '') {
                     continue;
                 }
 

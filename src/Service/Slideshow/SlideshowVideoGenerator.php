@@ -20,26 +20,22 @@ use Symfony\Component\Process\Process;
 use Throwable;
 
 use function abs;
-use function array_filter;
 use function array_fill_keys;
 use function array_intersect;
 use function array_key_exists;
 use function array_keys;
-use function array_map;
 use function array_merge;
 use function array_search;
 use function array_values;
-use function ceil;
 use function count;
 use function dirname;
 use function hash;
 use function implode;
-use function in_array;
 use function is_dir;
 use function is_file;
+use function is_finite;
 use function is_float;
 use function is_int;
-use function is_finite;
 use function is_readable;
 use function is_string;
 use function ltrim;
@@ -127,39 +123,39 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private const array DEFAULT_TRANSITIONS = self::TRANSITION_WHITELIST;
 
     private const array TRANSITION_WEIGHT_PRESETS = [
-        'fade'      => 6,
-        'dissolve'  => 5,
-        'fadeblack' => 4,
-        'fadewhite' => 4,
-        'pushleft'  => 3,
-        'pushright' => 3,
-        'pushup'    => 3,
-        'pushdown'  => 3,
-        'wipeleft'  => 2,
-        'wiperight' => 2,
-        'wipeup'    => 2,
-        'wipedown'  => 2,
-        'slideleft' => 2,
-        'slideright' => 2,
-        'slideup'   => 2,
-        'slidedown' => 2,
-        'zoom'      => 2,
-        'smoothleft' => 2,
+        'fade'        => 6,
+        'dissolve'    => 5,
+        'fadeblack'   => 4,
+        'fadewhite'   => 4,
+        'pushleft'    => 3,
+        'pushright'   => 3,
+        'pushup'      => 3,
+        'pushdown'    => 3,
+        'wipeleft'    => 2,
+        'wiperight'   => 2,
+        'wipeup'      => 2,
+        'wipedown'    => 2,
+        'slideleft'   => 2,
+        'slideright'  => 2,
+        'slideup'     => 2,
+        'slidedown'   => 2,
+        'zoom'        => 2,
+        'smoothleft'  => 2,
         'smoothright' => 2,
-        'smoothup'  => 2,
-        'smoothdown' => 2,
-        'circleopen' => 1,
+        'smoothup'    => 2,
+        'smoothdown'  => 2,
+        'circleopen'  => 1,
         'circleclose' => 1,
-        'radial'    => 1,
-        'rectcrop'  => 1,
-        'pixelize'  => 1,
-        'diagtl'    => 1,
-        'diagtr'    => 1,
-        'diagbl'    => 1,
-        'diagbr'    => 1,
-        'hlslice'   => 1,
-        'vuslice'   => 1,
-        'distance'  => 1,
+        'radial'      => 1,
+        'rectcrop'    => 1,
+        'pixelize'    => 1,
+        'diagtl'      => 1,
+        'diagtr'      => 1,
+        'diagbl'      => 1,
+        'diagbr'      => 1,
+        'hlslice'     => 1,
+        'vuslice'     => 1,
+        'distance'    => 1,
     ];
 
     private const float PAN_OFFSET_LIMIT = 0.05;
@@ -174,36 +170,36 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      * @param list<string> $transitions
      */
     public function __construct(
-        private readonly string $ffmpegBinary = 'ffmpeg',
-        private readonly float $slideDuration = 3.0,
-        private readonly float $transitionDuration = 0.75,
-        private readonly int $width = 1920,
-        private readonly int $height = 1080,
-        private readonly array $transitions = self::DEFAULT_TRANSITIONS,
-        private readonly ?string $audioTrack = null,
-        private readonly ?string $fontFile = null,
-        private readonly string $fontFamily = 'DejaVu Sans',
-        private readonly bool $textBoxEnabled = true,
-        private readonly float $backgroundBlurSigma = 20.0,
-        private readonly string $backgroundBlurFilter = 'gblur',
-        private readonly bool $backgroundBoxBlurEnabled = false,
-        private readonly bool $backgroundVignetteEnabled = true,
-        private readonly float $backgroundVignetteStrength = 0.35,
-        private readonly float $backgroundEqBrightness = -0.03,
-        private readonly float $backgroundEqContrast = 1.02,
-        private readonly float $backgroundEqSaturation = 1.05,
-        private readonly bool $kenBurnsEnabled = true,
-        private readonly string $kenBurnsEasing = 'cosine',
-        private readonly float $zoomStart = 1.03,
-        private readonly float $zoomEnd = 1.08,
-        private readonly float $frameRate = 30.0,
-        private readonly float $introFadeDuration = 1.0,
-        private readonly float $outroFadeDuration = 1.0,
-        private readonly float $beatGridStep = 0.0,
-        private readonly float $audioTargetLoudness = -14.0,
-        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
-        private readonly bool $allowUnstableTransitions = false,
-        private readonly string $deterministicSeed = '',
+        private string $ffmpegBinary = 'ffmpeg',
+        private float $slideDuration = 3.0,
+        private float $transitionDuration = 0.75,
+        private int $width = 1920,
+        private int $height = 1080,
+        private array $transitions = self::DEFAULT_TRANSITIONS,
+        private ?string $audioTrack = null,
+        private ?string $fontFile = null,
+        private string $fontFamily = 'DejaVu Sans',
+        private bool $textBoxEnabled = true,
+        private float $backgroundBlurSigma = 20.0,
+        private string $backgroundBlurFilter = 'gblur',
+        private bool $backgroundBoxBlurEnabled = false,
+        private bool $backgroundVignetteEnabled = true,
+        private float $backgroundVignetteStrength = 0.35,
+        private float $backgroundEqBrightness = -0.03,
+        private float $backgroundEqContrast = 1.02,
+        private float $backgroundEqSaturation = 1.05,
+        private bool $kenBurnsEnabled = true,
+        private string $kenBurnsEasing = 'cosine',
+        private float $zoomStart = 1.03,
+        private float $zoomEnd = 1.08,
+        private float $frameRate = 30.0,
+        private float $introFadeDuration = 1.0,
+        private float $outroFadeDuration = 1.0,
+        private float $beatGridStep = 0.0,
+        private float $audioTargetLoudness = -14.0,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private bool $allowUnstableTransitions = false,
+        private string $deterministicSeed = '',
     ) {
     }
 
@@ -290,15 +286,14 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
-    ): array
-    {
+    ): array {
         $duration     = $this->resolveCoverDuration($slide);
         $clipDuration = max(self::MINIMUM_SLIDE_DURATION, $duration);
 
         [$clipDuration] = $this->applyBeatGrid($clipDuration, 0.0);
         $clipDuration   = max(self::MINIMUM_SLIDE_DURATION, $clipDuration);
         $duration       = $clipDuration;
-        $filter       = $this->buildBlurredSlideFilter(
+        $filter         = $this->buildBlurredSlideFilter(
             0,
             $clipDuration,
             $duration,
@@ -338,8 +333,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param list<string>                                                                      $imagePaths
-     * @param list<float>                                                                       $transitionDurations
+     * @param list<string>                                                                                         $imagePaths
+     * @param list<float>                                                                                          $transitionDurations
      *
      * @return list<string>
      */
@@ -352,13 +347,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $audioTrack,
         ?string $title,
         ?string $subtitle,
-    ): array
-    {
+    ): array {
         $command    = [$this->ffmpegBinary, '-y', '-loglevel', 'error'];
         $slideCount = count($slides);
 
-        $transitionWhitelist   = $this->getTransitionWhitelist();
-        $transitionCandidates  = $this->transitions;
+        $transitionWhitelist  = $this->getTransitionWhitelist();
+        $transitionCandidates = $this->transitions;
         if ($transitionCandidates === self::DEFAULT_TRANSITIONS) {
             $transitionCandidates = $transitionWhitelist;
         }
@@ -381,15 +375,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $coverDuration = $this->resolveCoverDuration($slides[0]);
 
-        $visibleDurations  = [];
-        $overlapDurations  = [];
+        $visibleDurations = [];
+        $overlapDurations = [];
 
         foreach ($slides as $index => $slide) {
-            if ($index === 0) {
-                $duration = $coverDuration;
-            } else {
-                $duration = $this->resolveSlideDuration($slide['duration']);
-            }
+            $duration = $index === 0 ? $coverDuration : $this->resolveSlideDuration($slide['duration']);
 
             $nextTransition  = max(0.0, $transitionDurations[$index] ?? 0.0);
             $visibleDuration = max(self::MINIMUM_SLIDE_DURATION, $duration);
@@ -400,10 +390,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
             [$visibleDuration, $nextTransition] = $this->applyBeatGrid($visibleDuration, $nextTransition);
 
-            if ($index < $slideCount - 1 && $nextTransition >= 0.0) {
-                if (array_key_exists($index, $transitionDurations) || $nextTransition > 0.0) {
-                    $transitionDurations[$index] = $nextTransition;
-                }
+            if ($index < $slideCount - 1 && $nextTransition >= 0.0 && (array_key_exists($index, $transitionDurations) || $nextTransition > 0.0)) {
+                $transitionDurations[$index] = $nextTransition;
             }
 
             $overlapDuration          = min($visibleDuration, $nextTransition);
@@ -422,8 +410,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             ]);
         }
 
-        $filters             = [];
-        $introOverlayFilter  = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
+        $filters            = [];
+        $introOverlayFilter = $this->buildIntroTextOverlayFilterChain($title, $subtitle);
 
         foreach ($slides as $index => $slide) {
             $visibleDuration     = $visibleDurations[$index];
@@ -455,7 +443,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         for ($index = 1; $index < $slideCount; ++$index) {
             $preferred = $this->normaliseTransitionName($slides[$index - 1]['transition'] ?? null);
             if ($preferred === null) {
-                $transition = 'fade';
+                $transition    = 'fade';
                 $fallbackCount = count($fallbackTransitions);
                 while ($fallbackIndex < $fallbackCount) {
                     $candidate = $fallbackTransitions[$fallbackIndex];
@@ -484,8 +472,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 $transitionOffset,
                 $targetLabel
             );
-            $current        = $targetLabel;
-            $timeline      += $effectiveSlideDuration - $effectiveTransitionDuration;
+            $current = $targetLabel;
+            $timeline += $effectiveSlideDuration - $effectiveTransitionDuration;
             $previousChoice = $transition;
         }
 
@@ -499,6 +487,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $command[] = '-filter_complex';
         $command[] = $filterComplex;
+
         return $this->appendAudioOptions(
             $command,
             count($slides),
@@ -517,8 +506,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         array $slide,
         ?string $title,
         ?string $subtitle,
-    ): string
-    {
+    ): string {
         $background = sprintf('[%1$d:v]split=2[bg%1$d][fg%1$d];', $index);
         $background .= sprintf(
             '[bg%1$d]scale=%2$d:%3$d:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int',
@@ -539,12 +527,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         if ($this->backgroundBoxBlurEnabled && strtolower($this->backgroundBlurFilter) !== 'boxblur') {
-            $radius = max(1, (int) round(max(1.0, $this->backgroundBlurSigma) / 2.0));
+            $radius              = max(1, (int) round(max(1.0, $this->backgroundBlurSigma) / 2.0));
             $backgroundFilters[] = sprintf('boxblur=luma_radius=%d:luma_power=1', $radius);
         }
 
         if ($this->backgroundVignetteEnabled && $this->backgroundVignetteStrength > 0.0) {
-            $strength = max(0.05, min(4.0, $this->backgroundVignetteStrength));
+            $strength            = max(0.05, min(4.0, $this->backgroundVignetteStrength));
             $backgroundFilters[] = sprintf('vignette=%s', $this->formatFloat($strength));
         }
 
@@ -555,9 +543,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $this->formatFloat($this->backgroundEqSaturation),
         );
 
-        if ($backgroundFilters !== []) {
-            $background .= sprintf(',%s', implode(',', $backgroundFilters));
-        }
+        $background .= sprintf(',%s', implode(',', $backgroundFilters));
 
         $background .= sprintf('[bg%1$dout];', $index);
 
@@ -565,10 +551,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $visibleDuration  = max(self::MINIMUM_SLIDE_DURATION, min($visibleDuration, $clipSecondsValue));
         $frameRate        = max(1.0, is_finite($this->frameRate) ? $this->frameRate : 30.0);
         $frameCount       = max(2, (int) round($visibleDuration * $frameRate));
-        $kenBurns = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
+        $kenBurns         = $this->resolveKenBurnsParameters($index, $slide, $title, $subtitle);
 
         if ($this->kenBurnsEnabled && $kenBurns['enabled']) {
-            $easePrelude      = $this->buildEasingPrelude($frameCount);
+            $easePrelude       = $this->buildEasingPrelude($frameCount);
             $targetAspectRatio = $this->formatFloat($this->width / $this->height);
             $isPortraitExpr    = sprintf('lt(iw/ih,%s)', $targetAspectRatio);
 
@@ -596,16 +582,16 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             );
             $zoomExpr = $this->escapeFilterExpression($animatedZoomExpr);
 
-            $panMagnitude      = $kenBurns['panMagnitude'];
-            $horizontalAmount  = $kenBurns['panAxis'] === 'horizontal'
+            $panMagnitude     = $kenBurns['panMagnitude'];
+            $horizontalAmount = $kenBurns['panAxis'] === 'horizontal'
                 ? $panMagnitude
                 : $panMagnitude * 0.4;
-            $verticalBase      = min($panMagnitude, self::PAN_OFFSET_LIMIT * 0.7);
-            $verticalAmount    = $kenBurns['panAxis'] === 'vertical'
+            $verticalBase   = min($panMagnitude, self::PAN_OFFSET_LIMIT * 0.7);
+            $verticalAmount = $kenBurns['panAxis'] === 'vertical'
                 ? $verticalBase
                 : $verticalBase * 0.5;
-            $horizontalValue   = $this->formatFloat($horizontalAmount * $kenBurns['panDirection']);
-            $verticalValue     = $this->formatFloat($verticalAmount * $kenBurns['panDirection']);
+            $horizontalValue = $this->formatFloat($horizontalAmount * $kenBurns['panDirection']);
+            $verticalValue   = $this->formatFloat($verticalAmount * $kenBurns['panDirection']);
 
             $horizontalPanExpr = sprintf(
                 '%sclip((iw-(iw/zoom))/2 + %s*(iw-(iw/zoom))/2*ease,0,max(iw-(iw/zoom),0))',
@@ -683,11 +669,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $mode = strtolower(trim($this->kenBurnsEasing));
 
         return match ($mode) {
-            'linear' => 'progress',
+            'linear'              => 'progress',
             'smoothstep', 'cubic' => 'progress*progress*(3-2*progress)',
-            'sine', 'sin' => 'sin(progress*PI/2)',
-            'quadratic', 'quad' => 'if(lt(progress,0.5),2*progress*progress,1-pow(-2*progress+2,2)/2)',
-            default => '0.5-0.5*cos(PI*progress)',
+            'sine', 'sin'         => 'sin(progress*PI/2)',
+            'quadratic', 'quad'   => 'if(lt(progress,0.5),2*progress*progress,1-pow(-2*progress+2,2)/2)',
+            default               => '0.5-0.5*cos(PI*progress)',
         };
     }
 
@@ -711,12 +697,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     ): array {
         if ($index === 0 || !$this->kenBurnsEnabled) {
             return [
-                'enabled'       => false,
-                'zoomStart'     => 1.0,
-                'zoomEnd'       => 1.0,
-                'panAxis'       => 'horizontal',
-                'panDirection'  => 1,
-                'panMagnitude'  => 0.0,
+                'enabled'      => false,
+                'zoomStart'    => 1.0,
+                'zoomEnd'      => 1.0,
+                'panAxis'      => 'horizontal',
+                'panDirection' => 1,
+                'panMagnitude' => 0.0,
             ];
         }
 
@@ -731,12 +717,12 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $panMagnitude = $decisions['panMagnitude'];
 
         return [
-            'enabled'       => true,
-            'zoomStart'     => $zoomStart,
-            'zoomEnd'       => $zoomEnd,
-            'panAxis'       => $decisions['panAxis'],
-            'panDirection'  => $decisions['panDirection'],
-            'panMagnitude'  => $panMagnitude,
+            'enabled'      => true,
+            'zoomStart'    => $zoomStart,
+            'zoomEnd'      => $zoomEnd,
+            'panAxis'      => $decisions['panAxis'],
+            'panDirection' => $decisions['panDirection'],
+            'panMagnitude' => $panMagnitude,
         ];
     }
 
@@ -748,7 +734,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     private function resolveKenBurnsDecisions(array $slide): array
     {
         $mediaId   = $slide['mediaId'] ?? null;
-        $clusterId = array_key_exists('clusterId', $slide) ? $slide['clusterId'] : null;
+        $clusterId = $slide['clusterId'] ?? null;
 
         $seedParts = [];
         if (is_int($mediaId)) {
@@ -763,13 +749,13 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $seedBase = implode('|', $seedParts);
 
-        $zoomRandomizer       = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|zoom')));
-        $axisRandomizer       = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|axis')));
-        $directionRandomizer  = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|direction')));
-        $magnitudeRandomizer  = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|magnitude')));
+        $zoomRandomizer      = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|zoom')));
+        $axisRandomizer      = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|axis')));
+        $directionRandomizer = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|direction')));
+        $magnitudeRandomizer = new Randomizer(new Xoshiro256StarStar($this->hashSeed($seedBase . '|magnitude')));
 
-        $zoomIn      = $zoomRandomizer->getInt(0, 1) === 1;
-        $panAxis     = $axisRandomizer->getInt(0, 1) === 0 ? 'horizontal' : 'vertical';
+        $zoomIn       = $zoomRandomizer->getInt(0, 1) === 1;
+        $panAxis      = $axisRandomizer->getInt(0, 1) === 0 ? 'horizontal' : 'vertical';
         $panDirection = $directionRandomizer->getInt(0, 1) === 0 ? -1 : 1;
         $panMagnitude = $magnitudeRandomizer->getFloat(self::PAN_OFFSET_LIMIT * 0.4, self::PAN_OFFSET_LIMIT);
 
@@ -793,7 +779,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function resolveCoverDuration(array $slide): float
     {
-        if (!array_key_exists('duration', $slide) || $slide['duration'] <= 0.0) {
+        if ($slide['duration'] <= 0.0) {
             return max(2.5, 4.0);
         }
 
@@ -819,8 +805,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      * Builds deterministic transition durations for every slide overlap.
      *
      * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param float                                                                                                 $defaultTransitionDuration
-     * @param list<float>                                                                       $requestedDurations
+     * @param float                                                                                                $defaultTransitionDuration
+     * @param list<float>                                                                                          $requestedDurations
      *
      * @return list<float>
      */
@@ -847,10 +833,10 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $durations = [];
         for ($index = 0; $index < $count - 1; ++$index) {
-            $currentDuration  = $this->resolveSlideDuration($slides[$index]['duration']);
-            $nextDuration     = $this->resolveSlideDuration($slides[$index + 1]['duration']);
-            $maxOverlap       = min($currentDuration, $nextDuration);
-            $candidate        = $overrides[$index] ?? $resolvedDefault;
+            $currentDuration = $this->resolveSlideDuration($slides[$index]['duration']);
+            $nextDuration    = $this->resolveSlideDuration($slides[$index + 1]['duration']);
+            $maxOverlap      = min($currentDuration, $nextDuration);
+            $candidate       = $overrides[$index] ?? $resolvedDefault;
 
             if ($maxOverlap < self::MIN_TRANSITION_DURATION) {
                 $durations[$index] = $maxOverlap;
@@ -922,7 +908,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             if ($visibleReductionCapacity > 0.0) {
                 $visibleReduction = max($remaining, -$visibleReductionCapacity);
                 $adjustedVisible += $visibleReduction;
-                $remaining       -= $visibleReduction;
+                $remaining -= $visibleReduction;
             }
 
             if ($remaining < 0.0 && $adjustedTransition > 0.0) {
@@ -931,7 +917,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 if ($transitionReductionCapacity > 0.0) {
                     $transitionReduction = max($remaining, -$transitionReductionCapacity);
                     $adjustedTransition += $transitionReduction;
-                    $remaining          -= $transitionReduction;
+                    $remaining -= $transitionReduction;
                 }
             }
 
@@ -956,7 +942,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param list<string>                                                                                        $transitions
+     * @param list<string>                                                                                         $transitions
      *
      * @return list<string>
      */
@@ -983,8 +969,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         if ($filtered === []) {
-            $whitelist = $this->getTransitionWhitelist();
-            $fallback  = $whitelist[0] ?? 'fade';
+            $whitelist           = $this->getTransitionWhitelist();
+            $fallback            = $whitelist[0] ?? 'fade';
             $filtered[$fallback] = true;
         }
 
@@ -1055,7 +1041,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     /**
      * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
-     * @param list<string>                                                                                        $transitions
+     * @param list<string>                                                                                         $transitions
      */
     private function buildTransitionSeed(array $slides, ?string $title, ?string $subtitle, array $transitions): string
     {
@@ -1074,8 +1060,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             }
         }
 
-        $payloadParts[] = trim((string) ($title ?? ''));
-        $payloadParts[] = trim((string) ($subtitle ?? ''));
+        $payloadParts[] = trim($title ?? '');
+        $payloadParts[] = trim($subtitle ?? '');
         $payloadParts[] = implode('|', $transitions);
 
         $payload = implode('|', $payloadParts);
@@ -1139,7 +1125,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function getTransitionWhitelist(): array
     {
-        $cache = self::transitionCache();
+        $cache    = $this->transitionCache();
         $cacheKey = $this->getTransitionCacheKey();
 
         if (array_key_exists($cacheKey, $cache->whitelists)) {
@@ -1172,7 +1158,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
      */
     private function getTransitionLookup(): array
     {
-        $cache = self::transitionCache();
+        $cache    = $this->transitionCache();
         $cacheKey = $this->getTransitionCacheKey();
 
         if (array_key_exists($cacheKey, $cache->lookups)) {
@@ -1186,7 +1172,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return $cache->lookups[$cacheKey];
     }
 
-    private static function transitionCache(): SlideshowTransitionCache
+    private function transitionCache(): SlideshowTransitionCache
     {
         static $cache = null;
 
@@ -1195,14 +1181,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return $cache;
-    }
-
-    private static function resetTransitionCache(): void
-    {
-        $cache = self::transitionCache();
-
-        $cache->whitelists = [];
-        $cache->lookups    = [];
     }
 
     private function getTransitionCacheKey(): string
@@ -1323,7 +1301,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             return [];
         }
 
-        $clean = ltrim($clean, "-•*");
+        $clean = ltrim($clean, '-•*');
         $clean = trim($clean);
         if ($clean === '') {
             return [];
@@ -1396,8 +1374,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         ?string $title,
         ?string $subtitle,
         float $totalDuration,
-    ): array
-    {
+    ): array {
         $hasAudio = is_string($audioTrack) && $audioTrack !== '';
 
         if ($hasAudio) {
@@ -1445,11 +1422,11 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $filterIndex = array_search('-filter_complex', $command, true);
             if ($filterIndex !== false) {
                 $filterComplexIndex = $filterIndex + 1;
-                $audioInputLabel = sprintf('[%d:a:0]', $videoInputs);
-                $targetLoudness  = $this->formatFloat(max(-60.0, min(0.0, $this->audioTargetLoudness)));
-                $limiterLimit    = $this->formatFloat(self::AUDIO_LIMITER_LIMIT_DB);
-                $fadeDuration    = $this->formatFloat(self::AUDIO_FADE_DURATION);
-                $audioFilter     = sprintf(
+                $audioInputLabel    = sprintf('[%d:a:0]', $videoInputs);
+                $targetLoudness     = $this->formatFloat(max(-60.0, min(0.0, $this->audioTargetLoudness)));
+                $limiterLimit       = $this->formatFloat(self::AUDIO_LIMITER_LIMIT_DB);
+                $fadeDuration       = $this->formatFloat(self::AUDIO_FADE_DURATION);
+                $audioFilter        = sprintf(
                     '%sdynaudnorm=f=250,alimiter=level_in=0:level_out=%s:limit=%s:attack=5:release=50,aformat=sample_rates=48000:sample_fmts=fltp:channel_layouts=stereo,afade=in:st=0:d=%s,afade=out:st=duration-%s:d=%s[aout]',
                     $audioInputLabel,
                     $targetLoudness,
@@ -1523,41 +1500,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return sprintf('%s,%s', $filter, $overlay);
     }
 
-    private function appendTextOverlayFilter(string $filter, ?string $title, ?string $subtitle): string
-    {
-        $overlay = $this->buildTextOverlayFilterChain($title, $subtitle);
-        if ($overlay === '') {
-            return $filter;
-        }
-
-        return sprintf('%s,%s', $filter, $overlay);
-    }
-
     private function hasTextOverlay(?string $title, ?string $subtitle): bool
     {
         return (is_string($title) && $title !== '') || (is_string($subtitle) && $subtitle !== '');
-    }
-
-    private function buildTextOverlayFilterChain(?string $title, ?string $subtitle): string
-    {
-        if (!$this->hasTextOverlay($title, $subtitle)) {
-            return '';
-        }
-
-        $filters = [];
-
-        $subtitleText = $this->normaliseDrawText($subtitle);
-        $titleText    = $this->normaliseDrawText($title);
-
-        if ($subtitleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($subtitleText, 48, '0', 'line_h+40');
-        }
-
-        if ($titleText !== null) {
-            $filters[] = $this->buildDrawTextFilter($titleText, 64, '0', '0');
-        }
-
-        return implode(',', array_filter($filters));
     }
 
     private function buildIntroTextOverlayFilterChain(?string $title, ?string $subtitle): string
@@ -1602,31 +1547,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         }
 
         return trim($this->escapeDrawTextValue($value));
-    }
-
-    private function buildDrawTextFilter(string $text, int $fontSize, string $positionXOffset, string $positionYOffset): string
-    {
-        $fontDirective = $this->resolveFontDirective();
-        $fontSegment   = $fontDirective !== '' ? sprintf('%s:', $fontDirective) : '';
-
-        $xExpression = trim($positionXOffset) === '0'
-            ? 'w*0.05'
-            : sprintf('w*0.05+(%s)', $positionXOffset);
-
-        $yExpression = trim($positionYOffset) === '0'
-            ? 'h-80'
-            : sprintf('h-80-(%s)', $positionYOffset);
-
-        return sprintf(
-            "drawtext=text='%s':%sfontcolor=white:fontsize=%d:shadowcolor=black@0.25:shadowx=0:shadowy=6:" .
-            'borderw=2:bordercolor=black@0.20:%s:x=%s:y=%s',
-            $text,
-            $fontSegment,
-            $fontSize,
-            $this->buildTextBoxOptions(),
-            $xExpression,
-            $yExpression,
-        );
     }
 
     private function buildTextBoxOptions(): string
@@ -1674,7 +1594,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
     private function emitMonitoring(string $status, array $context = []): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

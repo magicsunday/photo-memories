@@ -80,10 +80,10 @@ trait ClusterPriorityResolverTrait
         }
 
         return match ($classification) {
-            'vacation' => 30,
+            'vacation'   => 30,
             'short_trip' => 20,
-            'day_trip' => 10,
-            default => 0,
+            'day_trip'   => 10,
+            default      => 0,
         };
     }
 

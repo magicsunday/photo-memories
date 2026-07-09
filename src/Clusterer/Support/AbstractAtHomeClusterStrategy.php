@@ -17,14 +17,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\ClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
-use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
-use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
-use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
-use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\CalendarFeatureHelper;
-use MagicSunday\Memories\Utility\MediaMath;
 use MagicSunday\Memories\Utility\LocationHelper;
+use MagicSunday\Memories\Utility\MediaMath;
 
 use function assert;
 use function count;
@@ -103,6 +99,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
         if ($lookup === []) {
             throw new InvalidArgumentException('allowedWeekdays must contain at least one weekday between 1 and 7.');
         }
+
         $this->allowedWeekdayLookup = $lookup;
 
         $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
@@ -215,7 +212,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
                 return;
             }
 
-            $centroid = $this->computeCentroid($members);
+            $centroid  = $this->computeCentroid($members);
             $timeRange = $this->computeTimeRange($members);
 
             $params = ['time_range' => $timeRange];
@@ -290,8 +287,8 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
     }
 
     /**
-     * @param list<Media>                                 $items
-     * @param Context                                     $ctx
+     * @param list<Media>                                       $items
+     * @param Context                                           $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>

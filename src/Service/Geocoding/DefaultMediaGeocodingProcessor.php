@@ -46,8 +46,7 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
         bool $forceRefreshLocations,
         bool $dryRun,
         OutputInterface $output,
-    ): GeocodingResultSummary
-    {
+    ): GeocodingResultSummary {
         $medias = $this->normalizeIterable($media);
         $count  = count($medias);
 

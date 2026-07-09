@@ -42,7 +42,11 @@ final class ThumbnailPathResolver
         $fallbackPaths = [];
 
         foreach ($thumbs as $key => $path) {
-            if (!is_string($path) || $path === '') {
+            if (!is_string($path)) {
+                continue;
+            }
+
+            if ($path === '') {
                 continue;
             }
 
@@ -52,7 +56,7 @@ final class ThumbnailPathResolver
                 continue;
             }
 
-            $keyString = (string) $key;
+            $keyString = $key;
             if (ctype_digit($keyString)) {
                 $bySize[(int) $keyString] = $path;
 

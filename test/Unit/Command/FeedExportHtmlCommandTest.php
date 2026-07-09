@@ -63,7 +63,7 @@ final class FeedExportHtmlCommandTest extends TestCase
 
         $service->expects(self::once())
             ->method('export')
-            ->willReturnCallback(function (FeedExportRequest $request, SymfonyStyle $io) use (&$capturedRequest, $result) {
+            ->willReturnCallback(function (FeedExportRequest $request, SymfonyStyle $io) use (&$capturedRequest, $result): FeedExportResult {
                 $capturedRequest = $request;
 
                 return $result;

@@ -18,6 +18,7 @@ use MagicSunday\Memories\Service\Metadata\MetadataExtractorTelemetry;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 
 use function array_key_last;
 use function chmod;
@@ -46,8 +47,8 @@ final class CompositeMetadataExtractorTest extends TestCase
         $media = $this->makeMedia(
             id: 101,
             path: $tmp,
-            checksum: str_repeat('0', 64),
             size: 512,
+            checksum: str_repeat('0', 64),
         );
 
         $composite = $this->makeComposite([]);
@@ -78,8 +79,8 @@ final class CompositeMetadataExtractorTest extends TestCase
         $media = $this->makeMedia(
             id: 102,
             path: $tmp,
-            checksum: str_repeat('1', 64),
             size: 512,
+            checksum: str_repeat('1', 64),
         );
 
         $composite = $this->makeComposite([]);
@@ -122,8 +123,8 @@ final class CompositeMetadataExtractorTest extends TestCase
         $media = $this->makeMedia(
             id: 103,
             path: $tmp,
-            checksum: str_repeat('2', 64),
             size: 512,
+            checksum: str_repeat('2', 64),
         );
 
         $composite = $this->makeComposite([]);
@@ -155,7 +156,7 @@ final class CompositeMetadataExtractorTest extends TestCase
     #[Test]
     public function disabledExtractorIsLoggedAndSkipped(): void
     {
-        $extractor = new class() implements SingleMetadataExtractorInterface {
+        $extractor = new class implements SingleMetadataExtractorInterface {
             public bool $supportsCalled = false;
 
             public function supports(string $filepath, Media $media): bool
@@ -174,7 +175,7 @@ final class CompositeMetadataExtractorTest extends TestCase
         $configuration = new MetadataExtractorPipelineConfiguration([
             $extractor::class => [
                 'enabled' => false,
-                'reason' => 'Testabschaltung',
+                'reason'  => 'Testabschaltung',
             ],
         ], false);
 
@@ -206,7 +207,7 @@ final class CompositeMetadataExtractorTest extends TestCase
     #[Test]
     public function extractorFailuresAreLoggedAndMeasured(): void
     {
-        $extractor = new class() implements SingleMetadataExtractorInterface {
+        $extractor = new class implements SingleMetadataExtractorInterface {
             public function supports(string $filepath, Media $media): bool
             {
                 return true;
@@ -214,13 +215,13 @@ final class CompositeMetadataExtractorTest extends TestCase
 
             public function extract(string $filepath, Media $media): Media
             {
-                throw new \RuntimeException('broken for test');
+                throw new RuntimeException('broken for test');
             }
         };
 
         $configuration = new MetadataExtractorPipelineConfiguration([], true);
-        $telemetry = new MetadataExtractorTelemetry();
-        $composite = $this->makeComposite([$extractor], $configuration, $telemetry);
+        $telemetry     = new MetadataExtractorTelemetry();
+        $composite     = $this->makeComposite([$extractor], $configuration, $telemetry);
 
         $media = $this->makeMedia(
             id: 302,
@@ -247,12 +248,12 @@ final class CompositeMetadataExtractorTest extends TestCase
     #[Test]
     public function telemetryCapturesSuccessfulRunsWhenEnabled(): void
     {
-        $extractor = new class() implements SingleMetadataExtractorInterface {
+        $extractor = new class implements SingleMetadataExtractorInterface {
             public int $calls = 0;
 
             public function supports(string $filepath, Media $media): bool
             {
-                $this->calls++;
+                ++$this->calls;
 
                 return true;
             }
@@ -264,8 +265,8 @@ final class CompositeMetadataExtractorTest extends TestCase
         };
 
         $configuration = new MetadataExtractorPipelineConfiguration([], true);
-        $telemetry = new MetadataExtractorTelemetry();
-        $composite = $this->makeComposite([$extractor], $configuration, $telemetry);
+        $telemetry     = new MetadataExtractorTelemetry();
+        $composite     = $this->makeComposite([$extractor], $configuration, $telemetry);
 
         $media = $this->makeMedia(
             id: 303,

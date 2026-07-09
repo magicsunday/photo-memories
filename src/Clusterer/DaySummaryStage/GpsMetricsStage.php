@@ -33,11 +33,11 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
     use MediaFilterTrait;
 
     public function __construct(
-        private readonly GeoDbscanHelper $dbscanHelper,
-        private readonly StaypointDetectorInterface $staypointDetector,
-        private readonly float $gpsOutlierRadiusKm = 1.0,
-        private readonly int $gpsOutlierMinSamples = 3,
-        private readonly int $minItemsPerDay = 3,
+        private GeoDbscanHelper $dbscanHelper,
+        private StaypointDetectorInterface $staypointDetector,
+        private float $gpsOutlierRadiusKm = 1.0,
+        private int $gpsOutlierMinSamples = 3,
+        private int $minItemsPerDay = 3,
     ) {
         if ($this->gpsOutlierRadiusKm <= 0.0) {
             throw new InvalidArgumentException('gpsOutlierRadiusKm must be > 0.');

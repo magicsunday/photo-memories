@@ -24,7 +24,6 @@ final class DuplicateParameterGuardCompilerPassTest extends TestCase
     {
         $fixtureDir = realpath(__DIR__ . '/../../../Support/Fixtures/DependencyInjection/DuplicateParameters/single');
         self::assertNotFalse($fixtureDir);
-        $fixtureDir = (string) $fixtureDir;
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', $fixtureDir);
         $container->addCompilerPass(new DuplicateParameterGuardCompilerPass());
@@ -42,7 +41,6 @@ final class DuplicateParameterGuardCompilerPassTest extends TestCase
     {
         $fixtureDir = realpath(__DIR__ . '/../../../Support/Fixtures/DependencyInjection/DuplicateParameters/cross-file');
         self::assertNotFalse($fixtureDir);
-        $fixtureDir = (string) $fixtureDir;
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', $fixtureDir);
         $container->addCompilerPass(new DuplicateParameterGuardCompilerPass());

@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Feed;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Service\Feed\FeedExportStage;
 
 use function htmlspecialchars;
 use function implode;
@@ -41,8 +40,8 @@ final class HtmlFeedRenderer
      */
     public function render(FeedExportStage $activeStage, array $stages, string $pageTitle, DateTimeImmutable $generatedAt): string
     {
-        $title     = htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $generated = htmlspecialchars($generatedAt->format('d.m.Y H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $title        = htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $generated    = htmlspecialchars($generatedAt->format('d.m.Y H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $generatedIso = htmlspecialchars($generatedAt->format(DateTimeImmutable::ATOM), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $nav      = $this->renderNavigation($stages, $activeStage);
@@ -55,8 +54,8 @@ final class HtmlFeedRenderer
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>$title</title>
-<style>$css</style>
+<title>{$title}</title>
+<style>{$css}</style>
 </head>
 <body>
 <header class="header">
@@ -64,16 +63,16 @@ final class HtmlFeedRenderer
     <h1>Rückblick – Für dich</h1>
     <p class="sub">Statische Vorschau – lokal erzeugt</p>
   </div>
-  <div class="generated" data-generated="$generatedIso">Stand: $generated</div>
+  <div class="generated" data-generated="{$generatedIso}">Stand: {$generated}</div>
 </header>
 <nav class="stage-nav">
-$nav
+{$nav}
 </nav>
 <main class="stage-content">
-$sections
+{$sections}
 </main>
 <footer class="footer">
-  <p>Erzeugt mit Rückblick – Stand: $generated</p>
+  <p>Erzeugt mit Rückblick – Stand: {$generated}</p>
 </footer>
 </body>
 </html>
@@ -97,7 +96,7 @@ HTML;
 
             if ($stage === $activeStage) {
                 $classes[] = 'is-active';
-                $aria       = ' aria-current="page"';
+                $aria      = ' aria-current="page"';
             }
 
             $items[] = sprintf(
@@ -171,17 +170,17 @@ HTML;
 <div class="card">
   <div class="card-head">
     <div class="titles">
-      <h3>$title</h3>
-      <p class="muted">$subtitle</p>
+      <h3>{$title}</h3>
+      <p class="muted">{$subtitle}</p>
     </div>
     <div class="meta">
-      $chips
+      {$chips}
     </div>
   </div>
   <div class="thumbs">
-    $images
+    {$images}
   </div>
-  $details
+  {$details}
 </div>
 CARD;
         }
@@ -231,7 +230,7 @@ CARD;
 
             $out[] = <<<IMG
 <figure class="ph">
-  <img loading="lazy" decoding="async" src="$href" alt="$alt">
+  <img loading="lazy" decoding="async" src="{$href}" alt="{$alt}">
 </figure>
 IMG;
         }

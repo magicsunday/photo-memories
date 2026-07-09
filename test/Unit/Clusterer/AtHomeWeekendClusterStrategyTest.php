@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\AtHomeWeekendClusterStrategy;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class AtHomeWeekendClusterStrategyTest extends TestCase
 {
-    private const HOME_VERSION_HASH = 'test-home-version';
+    private const string HOME_VERSION_HASH = 'test-home-version';
 
     #[Test]
     public function clustersWeekendSessionsWithinHomeRadius(): void

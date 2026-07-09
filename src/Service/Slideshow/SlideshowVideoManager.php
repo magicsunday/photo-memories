@@ -20,14 +20,14 @@ use Throwable;
 
 use function array_map;
 use function count;
-use function hash;
-use function implode;
+use function fclose;
 use function file_get_contents;
 use function file_put_contents;
 use function filemtime;
-use function fclose;
 use function function_exists;
 use function getmypid;
+use function hash;
+use function implode;
 use function is_dir;
 use function is_file;
 use function is_numeric;
@@ -101,23 +101,24 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         float $transitionDurationJitterUpper = 0.0,
         string $deterministicSeed = '',
     ) {
-        $this->videoDirectory     = $videoDirectory;
-        $this->generator           = $generator;
-        $this->storyboardWriter    = $storyboardWriter;
-        $this->monitoringEmitter  = $monitoringEmitter;
+        $this->videoDirectory    = $videoDirectory;
+        $this->generator         = $generator;
+        $this->storyboardWriter  = $storyboardWriter;
+        $this->monitoringEmitter = $monitoringEmitter;
 
-        $this->slideDuration = $slideDuration > 0.0 ? $slideDuration : 3.5;
+        $this->slideDuration      = $slideDuration > 0.0 ? $slideDuration : 3.5;
         $this->transitionDuration = $transitionDuration >= 0.0 ? $transitionDuration : 0.75;
 
-        $this->slideDurationJitterLower       = $this->normaliseJitter($slideDurationJitterLower);
-        $this->slideDurationJitterUpper       = $this->normaliseJitter($slideDurationJitterUpper);
-        $this->transitionDurationJitterLower  = $this->normaliseJitter($transitionDurationJitterLower);
-        $this->transitionDurationJitterUpper  = $this->normaliseJitter($transitionDurationJitterUpper);
+        $this->slideDurationJitterLower      = $this->normaliseJitter($slideDurationJitterLower);
+        $this->slideDurationJitterUpper      = $this->normaliseJitter($slideDurationJitterUpper);
+        $this->transitionDurationJitterLower = $this->normaliseJitter($transitionDurationJitterLower);
+        $this->transitionDurationJitterUpper = $this->normaliseJitter($transitionDurationJitterUpper);
 
         $this->transitions = $this->sanitizeTransitions($transitions);
 
         $musicTrack       = $musicTrack !== null ? trim($musicTrack) : '';
         $this->musicTrack = $musicTrack === '' ? null : $musicTrack;
+
         $this->deterministicSeed = trim($deterministicSeed);
     }
 
@@ -156,8 +157,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         ?string $title = null,
         ?string $subtitle = null,
         bool $dryRun = false,
-    ): SlideshowVideoStatus
-    {
+    ): SlideshowVideoStatus {
         $slides = $this->collectSlides($memberIds, $mediaMap);
         if ($slides === []) {
             $this->emitMonitoring('skipped', [
@@ -189,7 +189,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             if ($this->shouldResetStalledJob($lockPath, $jobPath)) {
                 $this->cleanupStalledJob($itemId, $lockPath, $jobPath, $errorPath);
 
-                // fall through to schedule a fresh job immediately
+            // fall through to schedule a fresh job immediately
             } else {
                 $this->emitMonitoring('generating', [
                     'itemId' => $itemId,
@@ -398,16 +398,15 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         array $imagePaths,
         ?string $title,
         ?string $subtitle,
-    ): array
-    {
+    ): array {
         $storySlides = [];
 
         $mediaIds = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
-        $seed      = $this->hashSeed($itemId . '|' . implode(',', $mediaIds));
+        $seed     = $this->hashSeed($itemId . '|' . implode(',', $mediaIds));
 
         $randomizer = new Randomizer(new Xoshiro256StarStar($seed));
 
-        $slideCount        = count($slides);
+        $slideCount         = count($slides);
         $transitionSequence = TransitionSequenceGenerator::generate(
             $this->transitions,
             $mediaIds,
@@ -417,14 +416,14 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             $subtitle,
             $this->deterministicSeed,
         );
-        $sequenceIndex = 0;
+        $sequenceIndex       = 0;
         $transitionDurations = [];
 
         foreach ($slides as $index => $slide) {
             $storySlide = [
-                'mediaId'    => $slide['mediaId'],
-                'image'      => $slide['path'],
-                'duration'   => $this->randomizeDuration(
+                'mediaId'  => $slide['mediaId'],
+                'image'    => $slide['path'],
+                'duration' => $this->randomizeDuration(
                     $randomizer,
                     $this->slideDuration,
                     $this->slideDurationJitterLower,
@@ -452,14 +451,12 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             }
         }
 
-        $payload = [
-            'slides'             => $storySlides,
-            'transitionDuration' => $this->transitionDuration,
+        return [
+            'slides'              => $storySlides,
+            'transitionDuration'  => $this->transitionDuration,
             'transitionDurations' => $transitionDurations,
-            'music'              => $this->musicTrack,
+            'music'               => $this->musicTrack,
         ];
-
-        return $payload;
     }
 
     private function randomizeDuration(
@@ -552,7 +549,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
     private function emitMonitoring(string $status, array $context = []): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 
@@ -573,11 +570,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
 
         $lockAge = time() - max(filemtime($lockPath), filemtime($jobPath));
-        if ($lockAge < self::STALE_LOCK_THRESHOLD_SECONDS) {
-            return false;
-        }
 
-        return true;
+        return $lockAge >= self::STALE_LOCK_THRESHOLD_SECONDS;
     }
 
     private function cleanupStalledJob(string $itemId, string $lockPath, string $jobPath, string $errorPath): void
@@ -596,10 +590,10 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
 
         $this->emitMonitoring('reset', [
             'itemId' => $itemId,
-            'reason'  => 'stale_lock',
-            'lock'    => $lockPath,
-            'job'     => $jobPath,
-            'error'   => $errorPath,
+            'reason' => 'stale_lock',
+            'lock'   => $lockPath,
+            'job'    => $jobPath,
+            'error'  => $errorPath,
         ]);
     }
 
@@ -652,6 +646,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
                         fclose($pipe);
                     }
                 }
+
                 proc_close($handle);
 
                 return $status['running'] ?? false;

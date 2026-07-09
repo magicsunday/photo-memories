@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Support;
 
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use UnitEnum;
 
 use function array_key_exists;
 use function is_bool;
@@ -61,13 +62,13 @@ final class FeatureFlagProvider implements FeatureFlagProviderInterface
         return $this->cache[$normalized] = $enabled;
     }
 
-    private function normaliseToBool(array|bool|string|int|float|\UnitEnum|null $value): bool
+    private function normaliseToBool(array|bool|string|int|float|UnitEnum|null $value): bool
     {
         if (is_bool($value)) {
             return $value;
         }
 
-        if ($value instanceof \UnitEnum) {
+        if ($value instanceof UnitEnum) {
             return true;
         }
 
@@ -81,11 +82,8 @@ final class FeatureFlagProvider implements FeatureFlagProviderInterface
 
         if (is_string($value)) {
             $normalized = strtolower(trim($value));
-            if ($normalized === '' || $normalized === '0' || $normalized === 'false' || $normalized === 'off' || $normalized === 'no') {
-                return false;
-            }
 
-            return true;
+            return !in_array($normalized, ['', '0', 'false', 'off', 'no'], true);
         }
 
         return $value !== null;

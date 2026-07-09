@@ -133,9 +133,9 @@ final class MediaIngestionTelemetryIntegrationTest extends TestCase
     }
 }
 
-final class TelemetryFixtureStage implements MediaIngestionStageInterface
+final readonly class TelemetryFixtureStage implements MediaIngestionStageInterface
 {
-    public function __construct(private readonly MediaIngestionTelemetryCollector $telemetry)
+    public function __construct(private MediaIngestionTelemetryCollector $telemetry)
     {
     }
 

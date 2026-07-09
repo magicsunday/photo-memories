@@ -55,10 +55,10 @@ final readonly class GdImageAdapter implements ImageAdapterInterface
         try {
             $im = match ($ext) {
                 'jpg', 'jpeg', 'jpe' => @imagecreatefromjpeg($path),
-                'png'   => @imagecreatefrompng($path),
-                'webp'  => @imagecreatefromwebp($path),
-                'gif'   => @imagecreatefromgif($path),
-                default => null,
+                'png'                => @imagecreatefrompng($path),
+                'webp'               => @imagecreatefromwebp($path),
+                'gif'                => @imagecreatefromgif($path),
+                default              => null,
             };
 
             if (!$im instanceof GdImage) {

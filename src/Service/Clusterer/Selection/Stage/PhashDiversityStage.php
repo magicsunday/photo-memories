@@ -19,12 +19,10 @@ use function array_key_exists;
 use function count;
 use function floor;
 use function is_array;
-use function is_float;
-use function is_int;
-use function is_numeric;
 use function max;
 use function min;
 use function sort;
+
 use const SORT_NUMERIC;
 
 /**
@@ -32,7 +30,7 @@ use const SORT_NUMERIC;
  */
 final class PhashDiversityStage implements SelectionStageInterface
 {
-    private const GLOBAL_MIN_DISTANCE = 9;
+    private const int GLOBAL_MIN_DISTANCE = 9;
 
     /**
      * @var array<string, int>
@@ -61,7 +59,7 @@ final class PhashDiversityStage implements SelectionStageInterface
         }
 
         $this->distanceCache = [];
-        $selected = [];
+        $selected            = [];
 
         foreach ($candidates as $candidate) {
             $isDuplicate = false;
@@ -131,7 +129,7 @@ final class PhashDiversityStage implements SelectionStageInterface
                     continue;
                 }
 
-                $distance = $this->distanceFromBits($hashA, $hashB);
+                $distance    = $this->distanceFromBits($hashA, $hashB);
                 $distances[] = $distance;
             }
         }

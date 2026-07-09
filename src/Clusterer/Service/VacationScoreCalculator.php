@@ -20,8 +20,8 @@ use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
-use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
+use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayResolverInterface;
@@ -35,13 +35,15 @@ use function abs;
 use function array_flip;
 use function array_key_exists;
 use function array_keys;
-use function array_merge;
-use function array_unique;
 use function array_map;
+use function array_merge;
 use function array_sum;
+use function array_unique;
 use function ceil;
 use function count;
+use function exp;
 use function explode;
+use function floor;
 use function implode;
 use function in_array;
 use function is_array;
@@ -49,20 +51,18 @@ use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
-use function exp;
-use function floor;
-use function max;
-use function min;
 use function ksort;
-use function preg_replace;
-use function round;
-use function sort;
-use function str_replace;
-use function trim;
+use function max;
 use function mb_strtolower;
 use function mb_strtoupper;
 use function mb_substr;
+use function min;
+use function preg_replace;
+use function round;
+use function sort;
 use function spl_object_id;
+use function str_replace;
+use function trim;
 
 use const SORT_NUMERIC;
 use const SORT_STRING;
@@ -75,11 +75,6 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     use VacationTimezoneTrait;
 
     private const float WEEKEND_OR_HOLIDAY_BONUS = 0.35;
-
-    /**
-     * @var list<string>
-     */
-    private const MISSING_CORE_CATEGORY_EXCEPTIONS = [];
 
     private SelectionProfileProvider $selectionProfiles;
 
@@ -95,11 +90,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private ?string $weekendSelectionProfile;
 
     /**
-     * @param float $movementThresholdKm minimum travel distance to count as move day
-     * @param int   $minAwayDays         minimum number of away days required to accept a vacation
-     * @param int   $minItemsPerDay      expected minimum number of items captured per away day
-     * @param int   $minimumMemberFloor  base floor applied to the adaptive member threshold
-     * @param int   $minMembers          minimum number of media required to accept a vacation
+     * @param float $movementThresholdKm   minimum travel distance to count as move day
+     * @param int   $minAwayDays           minimum number of away days required to accept a vacation
+     * @param int   $minItemsPerDay        expected minimum number of items captured per away day
+     * @param int   $minimumMemberFloor    base floor applied to the adaptive member threshold
+     * @param int   $minMembers            minimum number of media required to accept a vacation
      * @param bool  $enforceDynamicMinimum whether to enforce the dynamic minimum member floor
      */
     public function __construct(
@@ -120,7 +115,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ?DateTimeImmutable $referenceDate = null,
         private bool $enforceDynamicMinimum = true,
     ) {
-        $this->selectionProfiles = $selectionProfiles;
+        $this->selectionProfiles          = $selectionProfiles;
         $this->defaultSelectionProfileKey = $this->selectionProfiles->determineProfileKey(
             'vacation',
             null,
@@ -129,9 +124,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($this->defaultSelectionProfileKey === 'vacation') {
             $this->defaultSelectionProfileKey = 'vacation_weekend_transit';
         }
-        $this->weekendExceptionConfig     = $this->sanitizeWeekendExceptionConfig($weekendExceptionConfig);
 
-        $profileOverride = $weekendSelectionProfile !== null ? trim($weekendSelectionProfile) : '';
+        $this->weekendExceptionConfig = $this->sanitizeWeekendExceptionConfig($weekendExceptionConfig);
+
+        $profileOverride               = $weekendSelectionProfile !== null ? trim($weekendSelectionProfile) : '';
         $this->weekendSelectionProfile = $profileOverride !== '' ? $profileOverride : null;
 
         if ($this->timezone === '') {
@@ -158,15 +154,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             throw new InvalidArgumentException('minMembers must be >= 0.');
         }
 
-        $timezone = new DateTimeZone($this->timezone);
-        $this->referenceNow = $referenceDate !== null
+        $timezone           = new DateTimeZone($this->timezone);
+        $this->referenceNow = $referenceDate instanceof DateTimeImmutable
             ? $referenceDate->setTimezone($timezone)
             : new DateTimeImmutable('now', $timezone);
     }
 
     /**
      * @param array<string, array{members:list<Media>,gpsMembers:list<Media>}> $days
-     * @param array{lat:float,lon:float,start:int,end:int,dwell:int}            $staypoint
+     * @param array{lat:float,lon:float,start:int,end:int,dwell:int}           $staypoint
      *
      * @return list<Media>
      */
@@ -232,7 +228,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        $rawMembers              = [];
+        $rawMembers = [];
         /** @var array<int, string> $memberDayIndex */
         $memberDayIndex          = [];
         $gpsMembers              = [];
@@ -277,9 +273,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $poiPresence[$key]   = ($summary['tourismHits'] > 0) || ($summary['poiSamples'] > 0);
 
             foreach ($summary['members'] as $media) {
-                $rawMembers[] = $media;
+                $rawMembers[]                          = $media;
                 $memberDayIndex[spl_object_id($media)] = $key;
-                $location = $media->getLocation();
+                $location                              = $media->getLocation();
                 if ($location instanceof Location) {
                     $poiType = $this->resolvePoiType($location->getType(), $location->getCategory());
                     if ($poiType !== null) {
@@ -376,7 +372,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 ++$awayDays;
             }
 
-            $isWeekendOrHoliday         = $this->isWeekendOrHoliday($summary, $home);
+            $isWeekendOrHoliday        = $this->isWeekendOrHoliday($summary, $home);
             $weekendHolidayFlags[$key] = $isWeekendOrHoliday;
 
             if ($summary['baseAway'] && $isWeekendOrHoliday) {
@@ -416,7 +412,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $minimumMemberFloor = $this->resolveMinimumMemberFloor(max(1, $awayDays));
 
         if ($rawMemberCount < $minimumMemberFloor) {
-            if ($this->monitoringEmitter !== null) {
+            if ($this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
                 $this->monitoringEmitter->emit(
                     'vacation_curation',
                     'insufficient_members',
@@ -502,7 +498,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 if ($staypointCity !== null) {
                     $cityLabel = $this->formatLocationComponent($staypointCity);
                     if ($cityLabel !== '') {
-                        $primaryStaypointCity          = $cityLabel;
+                        $primaryStaypointCity            = $cityLabel;
                         $primaryStaypointLocationParts[] = $cityLabel;
                     }
                 }
@@ -572,10 +568,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ];
         $quality = $this->average($qualityComponents);
 
-        $awayDaysNorm    = $this->clamp01($effectiveAwayDays / 5.0);
+        $awayDaysNorm     = $this->clamp01($effectiveAwayDays / 5.0);
         $maxDistanceValue = max($centroidDistanceKm, $maxDistance);
-        $maxDistanceNorm = $this->normalizeDistance($maxDistanceValue);
-        $recencyScore    = $this->computeRecencyScore($rawMembers);
+        $maxDistanceNorm  = $this->normalizeDistance($maxDistanceValue);
+        $recencyScore     = $this->computeRecencyScore($rawMembers);
 
         $scoreComponents = [
             'quality'           => $quality,
@@ -602,8 +598,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $weightedScore -= $transitPenalty;
-        $weightedScore  = $this->clamp01($weightedScore);
-        $score          = $weightedScore * 10.0;
+        $weightedScore = $this->clamp01($weightedScore);
+        $score         = $weightedScore * 10.0;
 
         $classification = $this->classifyTrip($effectiveAwayDays, $awayDays, $nights, $maxDistanceValue, $isWeekendGetaway);
         if ($classification === 'none') {
@@ -619,7 +615,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $baseClassification = $classification;
-        $classification      = $this->applyScoreThresholds($classification, $score);
+        $classification     = $this->applyScoreThresholds($classification, $score);
         if ($classification === null) {
             return null;
         }
@@ -656,6 +652,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             unset($summary);
         }
+
         $preSelectionCount = $rawMemberCount;
         $storyline         = $this->resolveStoryline(
             $classification,
@@ -694,43 +691,43 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'context'   => $selectionContext,
         ];
 
-        if ($this->monitoringEmitter !== null) {
+        if ($this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             $startPayload = [
-                'pre_count'                        => $preSelectionCount,
-                'day_count'                        => $dayCount,
-                'away_days'                        => $effectiveAwayDays,
-                'raw_away_days'                    => $awayDays,
-                'bridged_days'                     => $bridgedAwayDays,
-                'gap_days'                         => $weekendGapDays,
-                'staypoint_detected'               => $primaryStaypoint !== null,
-                'storyline'                        => $storyline,
-                'weekend_getaway'                  => $isWeekendGetaway,
-                'weekend_exception'                => $weekendExceptionApplied,
-                'weekend_gap_days'                 => $weekendGapDays,
-                'selection_profile'                => $selectionProfileKey,
-                'selection_target_total'           => $selectionOptions->targetTotal,
-                'selection_minimum_total'          => $selectionOptions->minimumTotal,
-                'selection_max_per_day'            => $selectionOptions->maxPerDay,
-                'selection_max_per_staypoint'      => $selectionOptions->maxPerStaypoint,
-                'selection_min_spacing_seconds'    => $selectionOptions->minSpacingSeconds,
-                'selection_time_slot_hours'        => $selectionOptions->timeSlotHours,
-                'selection_phash_min_hamming'      => $selectionOptions->phashMinHamming,
-                'selection_phash_percentile'       => $selectionOptions->phashPercentile,
-                'selection_core_day_bonus'         => $selectionOptions->coreDayBonus,
-                'selection_peripheral_day_penalty' => $selectionOptions->peripheralDayPenalty,
-                'selection_people_balance_weight'  => $selectionOptions->peopleBalanceWeight,
-                'selection_people_balance_enabled' => $selectionOptions->enablePeopleBalance,
-                'selection_spacing_progress_factor'=> $selectionOptions->spacingProgressFactor,
-                'selection_cohort_repeat_penalty'  => $selectionOptions->cohortRepeatPenalty,
-                'selection_video_bonus'            => $selectionOptions->videoBonus,
-                'selection_face_bonus'             => $selectionOptions->faceBonus,
-                'selection_selfie_penalty'         => $selectionOptions->selfiePenalty,
-                'selection_quality_floor'          => $selectionOptions->qualityFloor,
-                'selection_repeat_penalty'         => $selectionOptions->repeatPenalty,
-                'selection_profile_decision'       => $selectionDecision,
-                'raw_member_count'                 => $rawMemberCount,
-                'minimum_member_floor'             => $minimumMemberFloor,
-                'min_items_per_day'                => $this->minItemsPerDay,
+                'pre_count'                         => $preSelectionCount,
+                'day_count'                         => $dayCount,
+                'away_days'                         => $effectiveAwayDays,
+                'raw_away_days'                     => $awayDays,
+                'bridged_days'                      => $bridgedAwayDays,
+                'gap_days'                          => $weekendGapDays,
+                'staypoint_detected'                => $primaryStaypoint !== null,
+                'storyline'                         => $storyline,
+                'weekend_getaway'                   => $isWeekendGetaway,
+                'weekend_exception'                 => $weekendExceptionApplied,
+                'weekend_gap_days'                  => $weekendGapDays,
+                'selection_profile'                 => $selectionProfileKey,
+                'selection_target_total'            => $selectionOptions->targetTotal,
+                'selection_minimum_total'           => $selectionOptions->minimumTotal,
+                'selection_max_per_day'             => $selectionOptions->maxPerDay,
+                'selection_max_per_staypoint'       => $selectionOptions->maxPerStaypoint,
+                'selection_min_spacing_seconds'     => $selectionOptions->minSpacingSeconds,
+                'selection_time_slot_hours'         => $selectionOptions->timeSlotHours,
+                'selection_phash_min_hamming'       => $selectionOptions->phashMinHamming,
+                'selection_phash_percentile'        => $selectionOptions->phashPercentile,
+                'selection_core_day_bonus'          => $selectionOptions->coreDayBonus,
+                'selection_peripheral_day_penalty'  => $selectionOptions->peripheralDayPenalty,
+                'selection_people_balance_weight'   => $selectionOptions->peopleBalanceWeight,
+                'selection_people_balance_enabled'  => $selectionOptions->enablePeopleBalance,
+                'selection_spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
+                'selection_cohort_repeat_penalty'   => $selectionOptions->cohortRepeatPenalty,
+                'selection_video_bonus'             => $selectionOptions->videoBonus,
+                'selection_face_bonus'              => $selectionOptions->faceBonus,
+                'selection_selfie_penalty'          => $selectionOptions->selfiePenalty,
+                'selection_quality_floor'           => $selectionOptions->qualityFloor,
+                'selection_repeat_penalty'          => $selectionOptions->repeatPenalty,
+                'selection_profile_decision'        => $selectionDecision,
+                'raw_member_count'                  => $rawMemberCount,
+                'minimum_member_floor'              => $minimumMemberFloor,
+                'min_items_per_day'                 => $this->minItemsPerDay,
             ];
 
             if ($primaryStaypoint !== null) {
@@ -754,7 +751,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $selectionTelemetry['relaxation_hints'] = [];
         }
 
-        $spacingSamples   = [];
+        $spacingSamples    = [];
         $previousTimestamp = null;
         foreach ($curatedMembers as $media) {
             $takenAt = $media->getTakenAt();
@@ -785,7 +782,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $missingCoreAllowed = $this->isMissingCoreAllowed($dayContext);
 
         if ($dayContext !== [] && $dayCategorySummary['core'] === 0 && $missingCoreAllowed === false) {
-            if ($this->monitoringEmitter !== null) {
+            if ($this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
                 $this->monitoringEmitter->emit(
                     'vacation_curation',
                     'selection_completed',
@@ -830,20 +827,20 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             : 0.0;
 
         $runMetrics = [
-            'storyline'                   => $storyline,
-            'run_length_days'             => $dayCount,
-            'run_length_effective_days'   => $effectiveAwayDays,
-            'run_length_nights'           => $nights,
-            'core_day_count'              => $dayCategorySummary['core'],
-            'peripheral_day_count'        => $dayCategorySummary['peripheral'],
-            'core_day_ratio'              => $dayCount > 0 ? $dayCategorySummary['core'] / $dayCount : 0.0,
-            'peripheral_day_ratio'        => $dayCount > 0 ? $dayCategorySummary['peripheral'] / $dayCount : 0.0,
-            'phash_distribution'          => $phashSummary,
-            'people_balance'              => $peopleSummary,
-            'poi_coverage'                => $poiSummary,
-            'selection_profile'           => $profileSummary,
-            'selection_pre_count'         => $preSelectionCount,
-            'selection_post_count'        => $selectedCount,
+            'storyline'                         => $storyline,
+            'run_length_days'                   => $dayCount,
+            'run_length_effective_days'         => $effectiveAwayDays,
+            'run_length_nights'                 => $nights,
+            'core_day_count'                    => $dayCategorySummary['core'],
+            'peripheral_day_count'              => $dayCategorySummary['peripheral'],
+            'core_day_ratio'                    => $dayCount > 0 ? $dayCategorySummary['core'] / $dayCount : 0.0,
+            'peripheral_day_ratio'              => $dayCount > 0 ? $dayCategorySummary['peripheral'] / $dayCount : 0.0,
+            'phash_distribution'                => $phashSummary,
+            'people_balance'                    => $peopleSummary,
+            'poi_coverage'                      => $poiSummary,
+            'selection_profile'                 => $profileSummary,
+            'selection_pre_count'               => $preSelectionCount,
+            'selection_post_count'              => $selectedCount,
             'selection_average_spacing_seconds' => $averageSpacingSeconds,
             'selection_dedupe_rate'             => $dedupeRate,
             'selection_relaxations_applied'     => $relaxationsApplied,
@@ -857,7 +854,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $this->emitRunMetrics($runMetrics);
 
-        if ($this->monitoringEmitter !== null) {
+        if ($this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             $this->monitoringEmitter->emit(
                 'vacation_curation',
                 'selection_completed',
@@ -924,58 +921,58 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ];
 
         $params = [
-            'classification'           => $classification,
-            'classification_label'     => $classificationLabels[$classification] ?? 'Reise',
-            'score'                    => round($score, 2),
-            'score_components'         => $scoreComponentOutput,
-            'nights'                   => $nights,
-            'away_days'                => $effectiveAwayDays,
-            'raw_away_days'            => $awayDays,
-            'bridged_away_days'        => $bridgedAwayDays,
-            'away_days_norm'           => round($awayDaysNorm, 3),
-            'total_days'               => $dayCount,
-            'raw_member_count'         => $rawMemberCount,
-            'minimum_member_floor'     => $minimumMemberFloor,
-            'min_items_per_day'        => $this->minItemsPerDay,
-            'time_range'               => $timeRange,
-            'max_distance_km'          => $centroidDistanceKm,
-            'max_observed_distance_km' => $maxDistance,
-            'avg_distance_km'          => $avgDistance,
-            'country_change'           => $countryChange,
-            'timezone_change'          => $timezoneChange,
-            'tourism_ratio'            => $tourismRatio,
-            'poi_diversity'            => round($poiDiversity, 3),
-            'move_days'                => $moveDays,
-            'photo_density_z'          => $photoDensityZ,
-            'airport_transfer'         => $airportFlag,
-            'max_speed_kmh'            => $maxSpeedKmh,
-            'avg_speed_kmh'            => $avgSpeedKmh,
-            'high_speed_transit'       => $highSpeedTransit,
-            'transit_days'             => $transitDays,
-            'transit_ratio'            => round($transitRatio, 3),
-            'transit_penalty'          => round($transitPenalty, 3),
-            'transit_penalty_score'    => round($transitPenalty * 10.0, 2),
-            'weekend_getaway'          => $isWeekendGetaway,
+            'classification'            => $classification,
+            'classification_label'      => $classificationLabels[$classification] ?? 'Reise',
+            'score'                     => round($score, 2),
+            'score_components'          => $scoreComponentOutput,
+            'nights'                    => $nights,
+            'away_days'                 => $effectiveAwayDays,
+            'raw_away_days'             => $awayDays,
+            'bridged_away_days'         => $bridgedAwayDays,
+            'away_days_norm'            => round($awayDaysNorm, 3),
+            'total_days'                => $dayCount,
+            'raw_member_count'          => $rawMemberCount,
+            'minimum_member_floor'      => $minimumMemberFloor,
+            'min_items_per_day'         => $this->minItemsPerDay,
+            'time_range'                => $timeRange,
+            'max_distance_km'           => $centroidDistanceKm,
+            'max_observed_distance_km'  => $maxDistance,
+            'avg_distance_km'           => $avgDistance,
+            'country_change'            => $countryChange,
+            'timezone_change'           => $timezoneChange,
+            'tourism_ratio'             => $tourismRatio,
+            'poi_diversity'             => round($poiDiversity, 3),
+            'move_days'                 => $moveDays,
+            'photo_density_z'           => $photoDensityZ,
+            'airport_transfer'          => $airportFlag,
+            'max_speed_kmh'             => $maxSpeedKmh,
+            'avg_speed_kmh'             => $avgSpeedKmh,
+            'high_speed_transit'        => $highSpeedTransit,
+            'transit_days'              => $transitDays,
+            'transit_ratio'             => round($transitRatio, 3),
+            'transit_penalty'           => round($transitPenalty, 3),
+            'transit_penalty_score'     => round($transitPenalty * 10.0, 2),
+            'weekend_getaway'           => $isWeekendGetaway,
             'weekend_exception_applied' => $weekendExceptionApplied,
-            'weekend_flagged_days'     => $weekendFlaggedDays,
-            'weekend_gap_days'         => $weekendGapDays,
-            'selection_profile'        => $selectionProfileKey,
-            'spot_count'               => $spotClusterCount,
-            'spot_cluster_days'        => $multiSpotDays,
-            'spot_dwell_hours'         => round($spotDwellHours, 2),
-            'spot_exploration_bonus'   => round($explorationBonus, 2),
-            'weekend_holiday_days'     => $weekendHolidayDays,
-            'weekend_holiday_bonus'    => round($weekendHolidayBonus, 2),
+            'weekend_flagged_days'      => $weekendFlaggedDays,
+            'weekend_gap_days'          => $weekendGapDays,
+            'selection_profile'         => $selectionProfileKey,
+            'spot_count'                => $spotClusterCount,
+            'spot_cluster_days'         => $multiSpotDays,
+            'spot_dwell_hours'          => round($spotDwellHours, 2),
+            'spot_exploration_bonus'    => round($explorationBonus, 2),
+            'weekend_holiday_days'      => $weekendHolidayDays,
+            'weekend_holiday_bonus'     => round($weekendHolidayBonus, 2),
             'cohort_bonus'              => round($cohortBonus, 2),
             'cohort_presence_ratio'     => round($avgCohortRatio, 3),
             'cohort_members'            => $cohortMemberAggregate,
-            'work_day_penalty_days'    => $workDayPenalty,
-            'work_day_penalty_score'   => round($workDayPenaltyScore, 2),
-            'people_ratio'             => round($peopleShare, 3),
-            'max_distance_norm'        => round($maxDistanceNorm, 3),
-            'recency_score'            => round($recencyScore, 3),
-            'timezones'                => $timezones,
-            'countries'                => $countries,
+            'work_day_penalty_days'     => $workDayPenalty,
+            'work_day_penalty_score'    => round($workDayPenaltyScore, 2),
+            'people_ratio'              => round($peopleShare, 3),
+            'max_distance_norm'         => round($maxDistanceNorm, 3),
+            'recency_score'             => round($recencyScore, 3),
+            'timezones'                 => $timezones,
+            'countries'                 => $countries,
         ];
 
         if ($dayContext !== []) {
@@ -986,12 +983,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $params['member_selection'] = [
             'storyline' => $storyline,
-            'counts' => [
-                'raw'     => $preSelectionCount,
-                'curated' => $selectedCount,
-                'pre'     => $preSelectionCount,
-                'post'    => $selectedCount,
-                'dropped' => $droppedCount,
+            'counts'    => [
+                'raw'           => $preSelectionCount,
+                'curated'       => $selectedCount,
+                'pre'           => $preSelectionCount,
+                'post'          => $selectedCount,
+                'dropped'       => $droppedCount,
                 'minimum_floor' => $minimumMemberFloor,
             ],
             'near_duplicates' => [
@@ -1003,25 +1000,25 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 'rejections'      => $spacingRejections,
             ],
             'options' => [
-                'selector'            => $this->memberSelector::class,
-                'target_total'        => $selectionOptions->targetTotal,
-                'max_per_day'         => $selectionOptions->maxPerDay,
-                'time_slot_hours'     => $selectionOptions->timeSlotHours,
-                'min_spacing_seconds' => $selectionOptions->minSpacingSeconds,
-                'phash_min_hamming'   => $selectionOptions->phashMinHamming,
-                'max_per_staypoint'   => $selectionOptions->maxPerStaypoint,
-                'video_bonus'         => $selectionOptions->videoBonus,
-                'face_bonus'          => $selectionOptions->faceBonus,
-                'selfie_penalty'      => $selectionOptions->selfiePenalty,
-                'quality_floor'       => $selectionOptions->qualityFloor,
-                'core_day_bonus'      => $selectionOptions->coreDayBonus,
-                'peripheral_day_penalty' => $selectionOptions->peripheralDayPenalty,
-                'phash_percentile'    => $selectionOptions->phashPercentile,
+                'selector'                => $this->memberSelector::class,
+                'target_total'            => $selectionOptions->targetTotal,
+                'max_per_day'             => $selectionOptions->maxPerDay,
+                'time_slot_hours'         => $selectionOptions->timeSlotHours,
+                'min_spacing_seconds'     => $selectionOptions->minSpacingSeconds,
+                'phash_min_hamming'       => $selectionOptions->phashMinHamming,
+                'max_per_staypoint'       => $selectionOptions->maxPerStaypoint,
+                'video_bonus'             => $selectionOptions->videoBonus,
+                'face_bonus'              => $selectionOptions->faceBonus,
+                'selfie_penalty'          => $selectionOptions->selfiePenalty,
+                'quality_floor'           => $selectionOptions->qualityFloor,
+                'core_day_bonus'          => $selectionOptions->coreDayBonus,
+                'peripheral_day_penalty'  => $selectionOptions->peripheralDayPenalty,
+                'phash_percentile'        => $selectionOptions->phashPercentile,
                 'spacing_progress_factor' => $selectionOptions->spacingProgressFactor,
-                'cohort_repeat_penalty'    => $selectionOptions->cohortRepeatPenalty,
+                'cohort_repeat_penalty'   => $selectionOptions->cohortRepeatPenalty,
             ],
             'selection_profile' => $selectionProfileKey,
-            'decision' => $selectionDecision,
+            'decision'          => $selectionDecision,
         ];
 
         $memberQuality = $params['member_quality'] ?? [];
@@ -1037,14 +1034,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $summary['selection_counts'] = [
-            'raw'     => $preSelectionCount,
-            'curated' => $selectedCount,
-            'dropped' => $droppedCount,
+            'raw'           => $preSelectionCount,
+            'curated'       => $selectedCount,
+            'dropped'       => $droppedCount,
             'minimum_floor' => $minimumMemberFloor,
         ];
-        $summary['selection_per_day_distribution'] = $orderedDistribution;
+        $summary['selection_per_day_distribution']    = $orderedDistribution;
         $summary['selection_per_bucket_distribution'] = $selectionTelemetry['per_bucket_distribution'] ?? [];
-        $summary['selection_spacing'] = [
+        $summary['selection_spacing']                 = [
             'average_seconds' => $averageSpacingSeconds,
             'rejections'      => $spacingRejections,
         ];
@@ -1052,11 +1049,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             'blocked'      => $nearDupBlocked,
             'replacements' => $nearDupReplaced,
         ];
-        $summary['selection_run_metrics'] = $runMetrics;
-        $summary['selection_storyline'] = $storyline;
-        $summary['selection_profile'] = $selectionProfileKey;
+        $summary['selection_run_metrics']      = $runMetrics;
+        $summary['selection_storyline']        = $storyline;
+        $summary['selection_profile']          = $selectionProfileKey;
         $summary['selection_profile_decision'] = $selectionDecision;
-        $summary['selection_telemetry'] = $selectionTelemetry;
+        $summary['selection_telemetry']        = $selectionTelemetry;
 
         $memberQuality['summary'] = $summary;
         $params['member_quality'] = $memberQuality;
@@ -1152,7 +1149,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $placeLocationMissing = !isset($params['place_location']) || $params['place_location'] === '';
 
         $resolvedLocationParts = [];
-        $resolvedCity           = $params['place_city'] ?? null;
+        $resolvedCity          = $params['place_city'] ?? null;
         if (is_string($resolvedCity) && $resolvedCity !== '') {
             $resolvedLocationParts[] = $resolvedCity;
         }
@@ -1202,31 +1199,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      */
     private function isMissingCoreAllowed(array $dayContext): bool
     {
-        if (self::MISSING_CORE_CATEGORY_EXCEPTIONS === []) {
-            return false;
-        }
-
-        foreach ($dayContext as $context) {
-            if (!is_array($context)) {
-                continue;
-            }
-
-            $category = $context['category'] ?? null;
-            if (!is_string($category)) {
-                continue;
-            }
-
-            if (in_array($category, self::MISSING_CORE_CATEGORY_EXCEPTIONS, true)) {
-                return true;
-            }
-        }
-
         return false;
     }
 
     /**
-     * @param list<string>                                               $dayKeys
-     * @param array<string, array{category:string}>                      $dayContext
+     * @param list<string>                          $dayKeys
+     * @param array<string, array{category:string}> $dayContext
      *
      * @return array{core:int,peripheral:int}
      */
@@ -1375,7 +1353,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         if (is_array($countsRaw)) {
             foreach ($countsRaw as $person => $value) {
-                if (!is_string($person) || $person === '') {
+                if (!is_string($person)) {
+                    continue;
+                }
+
+                if ($person === '') {
                     continue;
                 }
 
@@ -1435,11 +1417,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string>                      $dayKeys
-     * @param array<string, bool>               $baseAwayMap
-     * @param array<string, bool>               $poiPresence
+     * @param list<string>                          $dayKeys
+     * @param array<string, bool>                   $baseAwayMap
+     * @param array<string, bool>                   $poiPresence
      * @param array<string, array{category:string}> $dayContext
-     * @param array<string, bool>               $poiTypeSamples
+     * @param array<string, bool>                   $poiTypeSamples
      *
      * @return array<string, float|int>
      */
@@ -1505,26 +1487,26 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private function summariseSelectionProfile(string $profileKey, VacationSelectionOptions $options): array
     {
         return [
-            'profile_key'                => $profileKey,
-            'target_total'               => $options->targetTotal,
-            'minimum_total'              => $options->minimumTotal,
-            'max_per_day'                => $options->maxPerDay,
-            'max_per_staypoint'          => $options->maxPerStaypoint,
-            'min_spacing_seconds'        => $options->minSpacingSeconds,
-            'time_slot_hours'            => $options->timeSlotHours,
-            'phash_min_hamming'          => $options->phashMinHamming,
-            'phash_percentile'           => $options->phashPercentile,
-            'core_day_bonus'             => $options->coreDayBonus,
-            'peripheral_day_penalty'     => $options->peripheralDayPenalty,
-            'people_balance_weight'      => $options->peopleBalanceWeight,
-            'people_balance_enabled'     => $options->enablePeopleBalance,
-            'spacing_progress_factor'    => $options->spacingProgressFactor,
-            'cohort_repeat_penalty'      => $options->cohortRepeatPenalty,
-            'video_bonus'                => $options->videoBonus,
-            'face_bonus'                 => $options->faceBonus,
-            'selfie_penalty'             => $options->selfiePenalty,
-            'quality_floor'              => $options->qualityFloor,
-            'repeat_penalty'             => $options->repeatPenalty,
+            'profile_key'             => $profileKey,
+            'target_total'            => $options->targetTotal,
+            'minimum_total'           => $options->minimumTotal,
+            'max_per_day'             => $options->maxPerDay,
+            'max_per_staypoint'       => $options->maxPerStaypoint,
+            'min_spacing_seconds'     => $options->minSpacingSeconds,
+            'time_slot_hours'         => $options->timeSlotHours,
+            'phash_min_hamming'       => $options->phashMinHamming,
+            'phash_percentile'        => $options->phashPercentile,
+            'core_day_bonus'          => $options->coreDayBonus,
+            'peripheral_day_penalty'  => $options->peripheralDayPenalty,
+            'people_balance_weight'   => $options->peopleBalanceWeight,
+            'people_balance_enabled'  => $options->enablePeopleBalance,
+            'spacing_progress_factor' => $options->spacingProgressFactor,
+            'cohort_repeat_penalty'   => $options->cohortRepeatPenalty,
+            'video_bonus'             => $options->videoBonus,
+            'face_bonus'              => $options->faceBonus,
+            'selfie_penalty'          => $options->selfiePenalty,
+            'quality_floor'           => $options->qualityFloor,
+            'repeat_penalty'          => $options->repeatPenalty,
         ];
     }
 
@@ -1533,7 +1515,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      */
     private function emitRunMetrics(array $runMetrics): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 
@@ -1543,70 +1525,70 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $profile = $runMetrics['selection_profile'];
 
         $context = [
-            'storyline'                        => $runMetrics['storyline'],
-            'run_length_days'                  => $runMetrics['run_length_days'],
-            'run_length_effective_days'        => $runMetrics['run_length_effective_days'],
-            'run_length_nights'                => $runMetrics['run_length_nights'],
-            'core_day_count'                   => $runMetrics['core_day_count'],
-            'peripheral_day_count'             => $runMetrics['peripheral_day_count'],
-            'core_day_ratio'                   => round((float) $runMetrics['core_day_ratio'], 3),
-            'peripheral_day_ratio'             => round((float) $runMetrics['peripheral_day_ratio'], 3),
-            'phash_sample_count'               => $phash['count'],
-            'phash_avg_distance'               => round((float) $phash['average'], 3),
-            'phash_median_distance'            => round((float) $phash['median'], 3),
-            'phash_p90_distance'               => round((float) $phash['p90'], 3),
-            'phash_p99_distance'               => round((float) $phash['p99'], 3),
-            'phash_min_distance'               => round((float) $phash['min'], 3),
-            'phash_max_distance'               => round((float) $phash['max'], 3),
-            'people_unique_count'              => $people['unique_people'],
-            'people_total_samples'             => $people['total_samples'],
-            'people_dominant_share'            => round((float) $people['dominant_share'], 3),
-            'people_penalized'                 => $people['penalized'],
-            'people_bonuses'                   => $people['bonuses'],
-            'people_rejected'                  => $people['rejected'],
-            'people_accepted'                  => $people['accepted'],
-            'people_considered'                => $people['considered'],
-            'people_enabled'                   => $people['enabled'],
-            'people_weight'                    => round((float) $people['weight'], 3),
-            'people_repeat_penalty'            => round((float) $people['repeat_penalty'], 3),
-            'people_cohort_tracked'            => $people['cohort_tracked'],
-            'poi_day_count'                    => $poi['poi_day_count'],
-            'poi_day_ratio'                    => round((float) $poi['poi_day_ratio'], 3),
-            'poi_core_days'                    => $poi['poi_core_days'],
-            'poi_peripheral_days'              => $poi['poi_peripheral_days'],
-            'poi_type_count'                   => $poi['poi_type_count'],
-            'poi_tourism_hits'                 => $poi['tourism_hits'],
-            'poi_samples'                      => $poi['poi_samples'],
-            'poi_tourism_ratio'                => round((float) $poi['tourism_ratio'], 3),
-            'selection_profile'                => $profile['profile_key'],
-            'selection_target_total'           => $profile['target_total'],
-            'selection_minimum_total'          => $profile['minimum_total'],
-            'selection_max_per_day'            => $profile['max_per_day'],
-            'selection_max_per_staypoint'      => $profile['max_per_staypoint'],
-            'selection_min_spacing_seconds'    => $profile['min_spacing_seconds'],
-            'selection_time_slot_hours'        => $profile['time_slot_hours'],
-            'selection_phash_min_hamming'      => $profile['phash_min_hamming'],
-            'selection_phash_percentile'       => $profile['phash_percentile'],
-            'selection_core_day_bonus'         => $profile['core_day_bonus'],
-            'selection_peripheral_day_penalty' => $profile['peripheral_day_penalty'],
-            'selection_people_balance_weight'  => $profile['people_balance_weight'],
-            'selection_people_balance_enabled' => $profile['people_balance_enabled'],
-            'selection_spacing_progress_factor'=> $profile['spacing_progress_factor'],
-            'selection_cohort_repeat_penalty'  => $profile['cohort_repeat_penalty'],
-            'selection_video_bonus'            => round((float) $profile['video_bonus'], 3),
-            'selection_face_bonus'             => round((float) $profile['face_bonus'], 3),
-            'selection_selfie_penalty'         => round((float) $profile['selfie_penalty'], 3),
-            'selection_quality_floor'          => round((float) $profile['quality_floor'], 3),
-            'selection_repeat_penalty'         => round((float) $profile['repeat_penalty'], 3),
-            'selection_pre_count'              => $runMetrics['selection_pre_count'],
-            'selection_post_count'             => $runMetrics['selection_post_count'],
-            'selection_average_spacing_seconds'=> round((float) $runMetrics['selection_average_spacing_seconds'], 3),
-            'selection_dedupe_rate'            => round((float) $runMetrics['selection_dedupe_rate'], 3),
-            'selection_relaxations_applied'    => $runMetrics['selection_relaxations_applied'],
-            'selection_profile_decision'       => $runMetrics['selection_profile_decision'],
-            'raw_member_count'                 => $runMetrics['raw_member_count'],
-            'minimum_member_floor'             => $runMetrics['minimum_member_floor'],
-            'min_items_per_day'                => $runMetrics['min_items_per_day'],
+            'storyline'                         => $runMetrics['storyline'],
+            'run_length_days'                   => $runMetrics['run_length_days'],
+            'run_length_effective_days'         => $runMetrics['run_length_effective_days'],
+            'run_length_nights'                 => $runMetrics['run_length_nights'],
+            'core_day_count'                    => $runMetrics['core_day_count'],
+            'peripheral_day_count'              => $runMetrics['peripheral_day_count'],
+            'core_day_ratio'                    => round((float) $runMetrics['core_day_ratio'], 3),
+            'peripheral_day_ratio'              => round((float) $runMetrics['peripheral_day_ratio'], 3),
+            'phash_sample_count'                => $phash['count'],
+            'phash_avg_distance'                => round((float) $phash['average'], 3),
+            'phash_median_distance'             => round((float) $phash['median'], 3),
+            'phash_p90_distance'                => round((float) $phash['p90'], 3),
+            'phash_p99_distance'                => round((float) $phash['p99'], 3),
+            'phash_min_distance'                => round((float) $phash['min'], 3),
+            'phash_max_distance'                => round((float) $phash['max'], 3),
+            'people_unique_count'               => $people['unique_people'],
+            'people_total_samples'              => $people['total_samples'],
+            'people_dominant_share'             => round((float) $people['dominant_share'], 3),
+            'people_penalized'                  => $people['penalized'],
+            'people_bonuses'                    => $people['bonuses'],
+            'people_rejected'                   => $people['rejected'],
+            'people_accepted'                   => $people['accepted'],
+            'people_considered'                 => $people['considered'],
+            'people_enabled'                    => $people['enabled'],
+            'people_weight'                     => round((float) $people['weight'], 3),
+            'people_repeat_penalty'             => round((float) $people['repeat_penalty'], 3),
+            'people_cohort_tracked'             => $people['cohort_tracked'],
+            'poi_day_count'                     => $poi['poi_day_count'],
+            'poi_day_ratio'                     => round((float) $poi['poi_day_ratio'], 3),
+            'poi_core_days'                     => $poi['poi_core_days'],
+            'poi_peripheral_days'               => $poi['poi_peripheral_days'],
+            'poi_type_count'                    => $poi['poi_type_count'],
+            'poi_tourism_hits'                  => $poi['tourism_hits'],
+            'poi_samples'                       => $poi['poi_samples'],
+            'poi_tourism_ratio'                 => round((float) $poi['tourism_ratio'], 3),
+            'selection_profile'                 => $profile['profile_key'],
+            'selection_target_total'            => $profile['target_total'],
+            'selection_minimum_total'           => $profile['minimum_total'],
+            'selection_max_per_day'             => $profile['max_per_day'],
+            'selection_max_per_staypoint'       => $profile['max_per_staypoint'],
+            'selection_min_spacing_seconds'     => $profile['min_spacing_seconds'],
+            'selection_time_slot_hours'         => $profile['time_slot_hours'],
+            'selection_phash_min_hamming'       => $profile['phash_min_hamming'],
+            'selection_phash_percentile'        => $profile['phash_percentile'],
+            'selection_core_day_bonus'          => $profile['core_day_bonus'],
+            'selection_peripheral_day_penalty'  => $profile['peripheral_day_penalty'],
+            'selection_people_balance_weight'   => $profile['people_balance_weight'],
+            'selection_people_balance_enabled'  => $profile['people_balance_enabled'],
+            'selection_spacing_progress_factor' => $profile['spacing_progress_factor'],
+            'selection_cohort_repeat_penalty'   => $profile['cohort_repeat_penalty'],
+            'selection_video_bonus'             => round((float) $profile['video_bonus'], 3),
+            'selection_face_bonus'              => round((float) $profile['face_bonus'], 3),
+            'selection_selfie_penalty'          => round((float) $profile['selfie_penalty'], 3),
+            'selection_quality_floor'           => round((float) $profile['quality_floor'], 3),
+            'selection_repeat_penalty'          => round((float) $profile['repeat_penalty'], 3),
+            'selection_pre_count'               => $runMetrics['selection_pre_count'],
+            'selection_post_count'              => $runMetrics['selection_post_count'],
+            'selection_average_spacing_seconds' => round((float) $runMetrics['selection_average_spacing_seconds'], 3),
+            'selection_dedupe_rate'             => round((float) $runMetrics['selection_dedupe_rate'], 3),
+            'selection_relaxations_applied'     => $runMetrics['selection_relaxations_applied'],
+            'selection_profile_decision'        => $runMetrics['selection_profile_decision'],
+            'raw_member_count'                  => $runMetrics['raw_member_count'],
+            'minimum_member_floor'              => $runMetrics['minimum_member_floor'],
+            'min_items_per_day'                 => $runMetrics['min_items_per_day'],
         ];
 
         if ($people['target_cap'] !== null) {
@@ -1617,9 +1599,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string> $dayKeys
+     * @param list<string>                                                                                                                       $dayKeys
      * @param array<string, array{staypointIndex?:StaypointIndex,staypointCounts?:array<string,int>,members:list<Media>,gpsMembers:list<Media>}> $days
-     * @param list<Media>  $members
+     * @param list<Media>                                                                                                                        $members
      *
      * @return array{keys: array<int,string>, counts: array<string,int>}
      */
@@ -1656,7 +1638,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                         continue;
                     }
 
-                    $indexMap[(int) $id] = $key;
+                    $indexMap[$id] = $key;
                 }
 
                 foreach ($summary['gpsMembers'] as $media) {
@@ -1674,7 +1656,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                         continue;
                     }
 
-                    $indexMap[(int) $id] = $key;
+                    $indexMap[$id] = $key;
                 }
 
                 $staypointCounts = $summary['staypointCounts'] ?? [];
@@ -1720,7 +1702,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 continue;
             }
 
-            $intId = (int) $id;
+            $intId = $id;
             if (isset($indexMap[$intId])) {
                 $filtered[$intId] = $indexMap[$intId];
             }
@@ -1739,7 +1721,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      */
     private function sanitizeWeekendExceptionConfig(array $config): array
     {
-        $enabled = isset($config['enabled']) ? (bool) $config['enabled'] : true;
+        $enabled   = isset($config['enabled']) ? (bool) $config['enabled'] : true;
         $minNights = isset($config['min_nights']) ? (int) $config['min_nights'] : 1;
         if ($minNights < 1) {
             $minNights = 1;
@@ -1769,22 +1751,22 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         return [
-            'enabled'             => $enabled,
-            'min_nights'          => $minNights,
-            'max_nights'          => $maxNights,
-            'min_flagged_days'    => $minFlaggedDays,
-            'require_saturday'    => $requireSaturday,
-            'require_sunday'      => $requireSunday,
+            'enabled'              => $enabled,
+            'min_nights'           => $minNights,
+            'max_nights'           => $maxNights,
+            'min_flagged_days'     => $minFlaggedDays,
+            'require_saturday'     => $requireSaturday,
+            'require_sunday'       => $requireSunday,
             'require_weekend_flag' => $requireWeekendFlag,
-            'max_gap_days'        => $maxGapDays,
+            'max_gap_days'         => $maxGapDays,
         ];
     }
 
     /**
-     * @param list<string>                 $dayKeys
+     * @param list<string>                       $dayKeys
      * @param array<string, array<string,mixed>> $days
-     * @param array<string, bool>          $baseAwayMap
-     * @param array<string, bool>          $weekendHolidayFlags
+     * @param array<string, bool>                $baseAwayMap
+     * @param array<string, bool>                $weekendHolidayFlags
      *
      * @return array{isWeekend:bool,exceptionApplies:bool,flaggedDays:int,gapDays:int}
      */
@@ -1842,13 +1824,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
         }
 
-        if ($flaggedDays < $config['min_flagged_days']) {
-            if ($config['require_weekend_flag'] || $config['min_flagged_days'] > 0) {
-                return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
-            }
+        if ($flaggedDays < $config['min_flagged_days'] && ($config['require_weekend_flag'] || $config['min_flagged_days'] > 0)) {
+            return ['isWeekend' => false, 'exceptionApplies' => false, 'flaggedDays' => $flaggedDays, 'gapDays' => 0];
         }
 
-        $gapDays = max(0, $bridgedAwayDays);
+        $gapDays          = max(0, $bridgedAwayDays);
         $exceptionApplies = $effectiveAwayDays < $this->minAwayDays && $gapDays <= $config['max_gap_days'];
 
         return [
@@ -1860,10 +1840,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string>                                               $dayKeys
-     * @param array<string, array{date:string}>                          $days
+     * @param list<string>                                                                            $dayKeys
+     * @param array<string, array{date:string}>                                                       $days
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
-     * @param array<string, bool>                                        $weekendHolidayFlags
+     * @param array<string, bool>                                                                     $weekendHolidayFlags
      */
     private function countAdjacentWeekendHolidayDays(array $dayKeys, array $days, array $home, array $weekendHolidayFlags): int
     {
@@ -1871,16 +1851,20 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return 0;
         }
 
-        $extra      = 0;
-        $firstKey   = $dayKeys[0];
-        $lastKey    = $dayKeys[count($dayKeys) - 1];
-        $neighbors  = [
+        $extra     = 0;
+        $firstKey  = $dayKeys[0];
+        $lastKey   = $dayKeys[count($dayKeys) - 1];
+        $neighbors = [
             $this->neighborDayKey($firstKey, -1, $days),
             $this->neighborDayKey($lastKey, 1, $days),
         ];
 
         foreach ($neighbors as $neighborKey) {
-            if ($neighborKey === null || in_array($neighborKey, $dayKeys, true)) {
+            if ($neighborKey === null) {
+                continue;
+            }
+
+            if (in_array($neighborKey, $dayKeys, true)) {
                 continue;
             }
 
@@ -1908,7 +1892,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return null;
         }
 
-        $modifier = $offset > 0 ? '+' . $offset . ' day' : $offset . ' day';
+        $modifier  = $offset > 0 ? '+' . $offset . ' day' : $offset . ' day';
         $candidate = $date->modify($modifier);
         if ($candidate === false) {
             return null;
@@ -1920,7 +1904,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param array{weekday:int,date:string} $summary
+     * @param array{weekday:int,date:string}                                                          $summary
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     private function isWeekendOrHoliday(array $summary, array $home): bool
@@ -1961,7 +1945,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                     continue;
                 }
 
-                $remainder = mb_substr($word, 1);
+                $remainder         = mb_substr($word, 1);
                 $words[$wordIndex] = mb_strtoupper($firstCharacter) . ($remainder === false ? '' : $remainder);
             }
 
@@ -1972,15 +1956,15 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string> $dayKeys
+     * @param list<string>                        $dayKeys
      * @param array<string, array<string, mixed>> $days
-     * @param list<Media> $rawMembers
+     * @param list<Media>                         $rawMembers
      *
      * @return array{from:int,to:int}|null
      */
     private function determineRunTimeRange(array $dayKeys, array $days, array $rawMembers): ?array
     {
-        $memberRange = $rawMembers !== [] ? MediaMath::timeRange($rawMembers) : null;
+        $memberRange  = $rawMembers !== [] ? MediaMath::timeRange($rawMembers) : null;
         $summaryRange = $this->timeRangeFromSummaries($dayKeys, $days);
 
         if ($memberRange === null) {
@@ -1998,7 +1982,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string> $dayKeys
+     * @param list<string>                        $dayKeys
      * @param array<string, array<string, mixed>> $days
      *
      * @return array{from:int,to:int}|null
@@ -2224,9 +2208,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string>     $dayKeys
+     * @param list<string>       $dayKeys
      * @param array<string,bool> $baseAwayMap
-     * @param array<string,int> $photoCountMap
+     * @param array<string,int>  $photoCountMap
      * @param array<string,bool> $syntheticMap
      */
     private function countBridgedAwayDays(array $dayKeys, array $baseAwayMap, array $photoCountMap, array $syntheticMap): int
@@ -2235,24 +2219,31 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $total   = count($dayKeys);
 
         for ($index = 0; $index < $total; ++$index) {
-            $key       = $dayKeys[$index];
-            $isAway    = $baseAwayMap[$key] ?? false;
-            $photoCount = $photoCountMap[$key] ?? 0;
+            $key         = $dayKeys[$index];
+            $isAway      = $baseAwayMap[$key] ?? false;
+            $photoCount  = $photoCountMap[$key] ?? 0;
             $isSynthetic = $syntheticMap[$key] ?? false;
+            if ($isAway) {
+                continue;
+            }
 
-            if ($isAway || $isSynthetic || $photoCount > 2) {
+            if ($isSynthetic) {
+                continue;
+            }
+
+            if ($photoCount > 2) {
                 continue;
             }
 
             $previousAway = false;
             if ($index > 0) {
-                $previousKey = $dayKeys[$index - 1];
+                $previousKey  = $dayKeys[$index - 1];
                 $previousAway = $baseAwayMap[$previousKey] ?? false;
             }
 
             $nextAway = false;
             if ($index + 1 < $total) {
-                $nextKey = $dayKeys[$index + 1];
+                $nextKey  = $dayKeys[$index + 1];
                 $nextAway = $baseAwayMap[$nextKey] ?? false;
             }
 
@@ -2288,8 +2279,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
      */
     private function computePeopleShare(array $members): float
     {
-        $faceMedia   = 0;
-        $nonSelfie   = 0;
+        $faceMedia = 0;
+        $nonSelfie = 0;
 
         foreach ($members as $media) {
             if ($media->hasFaces() !== true) {
@@ -2321,7 +2312,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return false;
         }
 
-        return $media->hasFaces() === true;
+        return $media->hasFaces();
     }
 
     /**
@@ -2444,11 +2435,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return 'vacation';
         }
 
-        if ($nights <= 3) {
-            return 'short_trip';
-        }
-
-        return 'vacation';
+        return 'short_trip';
     }
 
     private function resolveStoryline(
@@ -2523,17 +2510,18 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         if ($this->enforceDynamicMinimum) {
             $adaptiveFloor = max(60, $adaptiveFloor);
         }
-        $adaptiveFloor      = max($this->minimumMemberFloor, $adaptiveFloor);
+
+        $adaptiveFloor = max($this->minimumMemberFloor, $adaptiveFloor);
 
         if ($this->minMembers > 0) {
-            $adaptiveFloor = max($adaptiveFloor, $this->minMembers);
+            return max($adaptiveFloor, $this->minMembers);
         }
 
         return $adaptiveFloor;
     }
 
     /**
-     * @param list<string> $dayKeys
+     * @param list<string>                                                                                                                      $dayKeys
      * @param array<string, array{score:float|int|string,category:string,duration:int|string|null,metrics:array<string,float|int|string>|null}> $dayContext
      *
      * @return array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
@@ -2574,7 +2562,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return (float) $value;
         }
 
-        if (is_string($value) && is_numeric($value)) {
+        if (is_numeric($value)) {
             return (float) $value;
         }
 
@@ -2591,7 +2579,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             return $value >= 0 ? $value : null;
         }
 
-        if (is_string($value) && is_numeric($value)) {
+        if (is_numeric($value)) {
             $duration = (int) $value;
 
             return $duration >= 0 ? $duration : null;
@@ -2613,7 +2601,11 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $result = [];
         foreach ($metrics as $key => $value) {
-            if (!is_string($key) || $key === '') {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($key === '') {
                 continue;
             }
 

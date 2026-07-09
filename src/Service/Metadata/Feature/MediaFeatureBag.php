@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * This file is part of the package magicsunday/photo-memories.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata\Feature;
@@ -33,21 +40,24 @@ use function str_contains;
  */
 final class MediaFeatureBag
 {
-    public const NAMESPACE_CALENDAR = 'calendar';
-    public const NAMESPACE_SOLAR = 'solar';
-    public const NAMESPACE_FILE = 'file';
-    public const NAMESPACE_CLASSIFICATION = 'classification';
+    public const string NAMESPACE_CALENDAR = 'calendar';
 
-    private const CALENDAR_DAYPART_VALUES = ['morning', 'noon', 'evening', 'night'];
+    public const string NAMESPACE_SOLAR = 'solar';
 
-    private const CALENDAR_SEASON_VALUES = ['winter', 'spring', 'summer', 'autumn'];
+    public const string NAMESPACE_FILE = 'file';
 
-    private const FILENAME_HINT_VALUES = ['normal', 'pano', 'edited', 'timelapse', 'slowmo'];
+    public const string NAMESPACE_CLASSIFICATION = 'classification';
+
+    private const array CALENDAR_DAYPART_VALUES = ['morning', 'noon', 'evening', 'night'];
+
+    private const array CALENDAR_SEASON_VALUES = ['winter', 'spring', 'summer', 'autumn'];
+
+    private const array FILENAME_HINT_VALUES = ['normal', 'pano', 'edited', 'timelapse', 'slowmo'];
 
     /**
      * @var array<string, string>
      */
-    private const LEGACY_NAMESPACE_FALLBACKS = [
+    private const array LEGACY_NAMESPACE_FALLBACKS = [
         'daypart'      => self::NAMESPACE_CALENDAR,
         'dow'          => self::NAMESPACE_CALENDAR,
         'isWeekend'    => self::NAMESPACE_CALENDAR,
@@ -63,6 +73,7 @@ final class MediaFeatureBag
         'confidence'   => self::NAMESPACE_CLASSIFICATION,
         'shouldHide'   => self::NAMESPACE_CLASSIFICATION,
     ];
+
     /** @var array<string, array<string, FeatureValue>> */
     private array $values;
 
@@ -100,7 +111,7 @@ final class MediaFeatureBag
         $typed = [];
         foreach ($features as $namespace => $payload) {
             /** @var array<string, FeatureValue> $typedPayload */
-            $typedPayload            = $payload;
+            $typedPayload               = $payload;
             $typed[(string) $namespace] = $typedPayload;
         }
 
@@ -482,7 +493,7 @@ final class MediaFeatureBag
 
             unset($this->values[$namespace][$key]);
 
-            if (array_key_exists($namespace, $this->values) && count($this->values[$namespace]) === 0) {
+            if (array_key_exists($namespace, $this->values) && $this->values[$namespace] === []) {
                 unset($this->values[$namespace]);
             }
 

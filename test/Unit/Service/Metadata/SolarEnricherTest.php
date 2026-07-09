@@ -37,7 +37,7 @@ final class SolarEnricherTest extends TestCase
         );
         $media->setTimezoneOffsetMin(0);
 
-        $result = $enricher->extract($media->getPath(), $media);
+        $result   = $enricher->extract($media->getPath(), $media);
         $features = $result->getFeatures();
 
         self::assertFalse($features['solar']['isGoldenHour'] ?? true);
@@ -60,7 +60,7 @@ final class SolarEnricherTest extends TestCase
         );
         $media->setTimezoneOffsetMin(120);
 
-        $result = $enricher->extract($media->getPath(), $media);
+        $result   = $enricher->extract($media->getPath(), $media);
         $features = $result->getFeatures();
 
         self::assertTrue($features['solar']['isGoldenHour'] ?? false);
@@ -70,8 +70,8 @@ final class SolarEnricherTest extends TestCase
 
     private function createResolver(string $timezone): CaptureTimeResolver
     {
-        return new CaptureTimeResolver(new class($timezone) implements TimezoneResolverInterface {
-            public function __construct(private readonly string $timezone)
+        return new CaptureTimeResolver(new readonly class($timezone) implements TimezoneResolverInterface {
+            public function __construct(private string $timezone)
             {
             }
 

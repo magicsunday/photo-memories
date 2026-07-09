@@ -73,6 +73,7 @@ final class NearDuplicateStageTest extends TestCase
     {
         $primary = $this->makeMedia(20, '/library/dry-run.jpg');
         $primary->setPhash('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+
         $secondary = $this->makeMedia(21, '/library/dry-run-2.jpg');
 
         $mediaRepository = $this->createMock(MediaRepository::class);

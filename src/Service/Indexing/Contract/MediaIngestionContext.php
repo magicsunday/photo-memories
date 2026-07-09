@@ -268,7 +268,7 @@ final readonly class MediaIngestionContext
 
     public function withQaFinding(MetadataQaInspectionResult $finding): self
     {
-        $qaFindings = $this->qaFindings;
+        $qaFindings   = $this->qaFindings;
         $qaFindings[] = $finding;
 
         return new self(

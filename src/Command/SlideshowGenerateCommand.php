@@ -41,8 +41,7 @@ final class SlideshowGenerateCommand extends Command
     public function __construct(
         private readonly SlideshowVideoGeneratorInterface $generator,
         private readonly SlideshowStoryboardWriter $storyboardWriter,
-    )
-    {
+    ) {
         parent::__construct();
     }
 

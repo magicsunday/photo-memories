@@ -83,7 +83,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
                 'tags',
                 $this->formatSceneSummary($tags),
                 [
-                    'count' => count($tags),
+                    'count'   => count($tags),
                     'topTags' => array_map(
                         static fn (array $tag): string => $tag['label'],
                         $tags,
@@ -110,7 +110,11 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         $filtered = [];
 
         foreach ($predictions as $label => $score) {
-            if (!is_string($label) || $label === '') {
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if ($label === '') {
                 continue;
             }
 

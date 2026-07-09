@@ -13,82 +13,80 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection;
 
 use InvalidArgumentException;
 
-use function is_array;
 use function is_float;
 use function is_int;
-use function is_numeric;
 use function is_string;
 
 /**
  * Immutable value object describing the tunable knobs of the selector.
  */
-final class SelectionPolicy
+final readonly class SelectionPolicy
 {
     /**
-     * @param string        $profileKey         semantic key used for telemetry
-     * @param int           $targetTotal        desired number of curated members
-     * @param int           $minimumTotal       lower bound after relaxations
-     * @param int|null      $maxPerDay          optional per-day cap
-     * @param float|null    $timeSlotHours      optional slot size per day
-     * @param int           $minSpacingSeconds  minimum spacing in seconds between picks
-     * @param int           $phashMinHamming    minimum perceptual hash distance
-     * @param int|null      $maxPerStaypoint    optional staypoint cap
-     * @param int|null      $relaxedMaxPerStaypoint optional staypoint cap used for policy relaxations
-     * @param float         $qualityFloor       minimum quality score accepted
- * @param float         $videoBonus         additive score boost for videos
- * @param float         $faceBonus          additive score boost for media with faces
- * @param float         $selfiePenalty      subtractive score for selfie-like scenes
- * @param float         $mmrLambda          weighting factor used for maximal marginal relevance
- * @param float         $mmrSimilarityFloor lower bound for applying similarity penalties
- * @param float         $mmrSimilarityCap   upper bound for capping similarity penalties
- * @param int           $mmrMaxConsideration maximum number of candidates considered during MMR re-ranking
-     * @param int|null      $maxPerYear         per-year cap for over-years memories
-     * @param int|null      $maxPerBucket       optional generic bucket cap
-     * @param float|null    $videoHeavyBonus    optional bonus applied when cluster is video heavy
-     * @param array<string, float>|null $sceneBucketWeights optional target share weights per motif bucket
-     * @param int           $coreDayBonus       additional quota points assigned to core days
-     * @param int           $peripheralDayPenalty quota reduction applied to peripheral days
-     * @param float         $phashPercentile    percentile used for adaptive perceptual hash thresholding
- * @param float         $spacingProgressFactor scaling factor for progressive spacing relaxations
- * @param float         $cohortPenalty      penalty applied for repeating person signatures
- * @param int|null      $peripheralDayMaxTotal optional cap for the sum of periphery day quotas
- * @param int|null      $peripheralDayHardCap  optional hard cap applied to individual periphery days
- * @param array<string, int> $dayQuotas     runtime day quota overrides keyed by ISO date
- * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext runtime day classification metadata
- * @param array<string, mixed> $metadata    supplementary metadata describing policy derivation
- */
+     * @param string                                                                                          $profileKey             semantic key used for telemetry
+     * @param int                                                                                             $targetTotal            desired number of curated members
+     * @param int                                                                                             $minimumTotal           lower bound after relaxations
+     * @param int|null                                                                                        $maxPerDay              optional per-day cap
+     * @param float|null                                                                                      $timeSlotHours          optional slot size per day
+     * @param int                                                                                             $minSpacingSeconds      minimum spacing in seconds between picks
+     * @param int                                                                                             $phashMinHamming        minimum perceptual hash distance
+     * @param int|null                                                                                        $maxPerStaypoint        optional staypoint cap
+     * @param int|null                                                                                        $relaxedMaxPerStaypoint optional staypoint cap used for policy relaxations
+     * @param float                                                                                           $qualityFloor           minimum quality score accepted
+     * @param float                                                                                           $videoBonus             additive score boost for videos
+     * @param float                                                                                           $faceBonus              additive score boost for media with faces
+     * @param float                                                                                           $selfiePenalty          subtractive score for selfie-like scenes
+     * @param float                                                                                           $mmrLambda              weighting factor used for maximal marginal relevance
+     * @param float                                                                                           $mmrSimilarityFloor     lower bound for applying similarity penalties
+     * @param float                                                                                           $mmrSimilarityCap       upper bound for capping similarity penalties
+     * @param int                                                                                             $mmrMaxConsideration    maximum number of candidates considered during MMR re-ranking
+     * @param int|null                                                                                        $maxPerYear             per-year cap for over-years memories
+     * @param int|null                                                                                        $maxPerBucket           optional generic bucket cap
+     * @param float|null                                                                                      $videoHeavyBonus        optional bonus applied when cluster is video heavy
+     * @param array<string, float>|null                                                                       $sceneBucketWeights     optional target share weights per motif bucket
+     * @param int                                                                                             $coreDayBonus           additional quota points assigned to core days
+     * @param int                                                                                             $peripheralDayPenalty   quota reduction applied to peripheral days
+     * @param float                                                                                           $phashPercentile        percentile used for adaptive perceptual hash thresholding
+     * @param float                                                                                           $spacingProgressFactor  scaling factor for progressive spacing relaxations
+     * @param float                                                                                           $cohortPenalty          penalty applied for repeating person signatures
+     * @param int|null                                                                                        $peripheralDayMaxTotal  optional cap for the sum of periphery day quotas
+     * @param int|null                                                                                        $peripheralDayHardCap   optional hard cap applied to individual periphery days
+     * @param array<string, int>                                                                              $dayQuotas              runtime day quota overrides keyed by ISO date
+     * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext             runtime day classification metadata
+     * @param array<string, mixed>                                                                            $metadata               supplementary metadata describing policy derivation
+     */
     public function __construct(
-        private readonly string $profileKey,
-        private readonly int $targetTotal,
-        private readonly int $minimumTotal,
-        private readonly ?int $maxPerDay,
-        private readonly ?float $timeSlotHours,
-        private readonly int $minSpacingSeconds,
-        private readonly int $phashMinHamming,
-        private readonly ?int $maxPerStaypoint,
-        private readonly ?int $relaxedMaxPerStaypoint,
-        private readonly float $qualityFloor,
-        private readonly float $videoBonus,
-        private readonly float $faceBonus,
-        private readonly float $selfiePenalty,
-        private readonly float $mmrLambda = 0.75,
-        private readonly float $mmrSimilarityFloor = 0.35,
-        private readonly float $mmrSimilarityCap = 0.9,
-        private readonly int $mmrMaxConsideration = 120,
-        private readonly ?int $maxPerYear = null,
-        private readonly ?int $maxPerBucket = null,
-        private readonly ?float $videoHeavyBonus = null,
-        private readonly ?array $sceneBucketWeights = null,
-        private readonly int $coreDayBonus = 1,
-        private readonly int $peripheralDayPenalty = 1,
-        private readonly float $phashPercentile = 0.35,
-        private readonly float $spacingProgressFactor = 0.5,
-        private readonly float $cohortPenalty = 0.05,
-        private readonly ?int $peripheralDayMaxTotal = null,
-        private readonly ?int $peripheralDayHardCap = null,
-        private readonly array $dayQuotas = [],
-        private readonly array $dayContext = [],
-        private readonly array $metadata = [],
+        private string $profileKey,
+        private int $targetTotal,
+        private int $minimumTotal,
+        private ?int $maxPerDay,
+        private ?float $timeSlotHours,
+        private int $minSpacingSeconds,
+        private int $phashMinHamming,
+        private ?int $maxPerStaypoint,
+        private ?int $relaxedMaxPerStaypoint,
+        private float $qualityFloor,
+        private float $videoBonus,
+        private float $faceBonus,
+        private float $selfiePenalty,
+        private float $mmrLambda = 0.75,
+        private float $mmrSimilarityFloor = 0.35,
+        private float $mmrSimilarityCap = 0.9,
+        private int $mmrMaxConsideration = 120,
+        private ?int $maxPerYear = null,
+        private ?int $maxPerBucket = null,
+        private ?float $videoHeavyBonus = null,
+        private ?array $sceneBucketWeights = null,
+        private int $coreDayBonus = 1,
+        private int $peripheralDayPenalty = 1,
+        private float $phashPercentile = 0.35,
+        private float $spacingProgressFactor = 0.5,
+        private float $cohortPenalty = 0.05,
+        private ?int $peripheralDayMaxTotal = null,
+        private ?int $peripheralDayHardCap = null,
+        private array $dayQuotas = [],
+        private array $dayContext = [],
+        private array $metadata = [],
     ) {
         if ($targetTotal <= 0) {
             throw new InvalidArgumentException('targetTotal must be positive.');
@@ -474,8 +472,6 @@ final class SelectionPolicy
             videoBonus: $this->videoBonus,
             faceBonus: $this->faceBonus,
             selfiePenalty: $this->selfiePenalty,
-            maxPerYear: null,
-            maxPerBucket: null,
             videoHeavyBonus: $this->videoHeavyBonus,
             sceneBucketWeights: $this->sceneBucketWeights,
             coreDayBonus: $this->coreDayBonus,
@@ -492,7 +488,7 @@ final class SelectionPolicy
     }
 
     /**
-     * @param array<string, int> $dayQuotas
+     * @param array<string, int>                                                                              $dayQuotas
      * @param array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}> $dayContext
      */
     public function withDayContext(
@@ -500,8 +496,7 @@ final class SelectionPolicy
         array $dayContext,
         ?int $peripheralDayMaxTotal = null,
         ?int $peripheralDayHardCap = null,
-    ): self
-    {
+    ): self {
         return new self(
             profileKey: $this->profileKey,
             targetTotal: $this->targetTotal,

@@ -48,9 +48,9 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         $bag->setCalendarIsWeekend($dow >= 6);
         $bag->setCalendarSeason(match ($m) {
             12, 1, 2 => 'winter',
-            3, 4, 5 => 'spring',
-            6, 7, 8 => 'summer',
-            default => 'autumn',
+            3, 4, 5  => 'spring',
+            6, 7, 8  => 'summer',
+            default  => 'autumn',
         });
 
         [$isHoliday, $id] = $this->isGermanHoliday($y, $m, $d);

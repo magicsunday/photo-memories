@@ -52,27 +52,27 @@ final class BaseLocationResolverTest extends TestCase
         $index = StaypointIndex::build('2024-07-01', $staypoints, [$startMedia, $endMedia]);
 
         $summary = [
-            'date'       => '2024-07-01',
-            'staypoints' => $staypoints,
-            'staypointIndex' => $index,
-            'staypointCounts' => $index->getCounts(),
-            'dominantStaypoints' => [],
-            'transitRatio' => 0.0,
-            'poiDensity' => 0.0,
-            'firstGpsMedia' => $startMedia,
-            'lastGpsMedia'  => $endMedia,
-            'gpsMembers'    => [$startMedia, $endMedia],
-        ];
-
-        $nextSummary = [
-            'date'          => '2024-07-02',
-            'staypoints'    => [],
-            'staypointIndex'=> StaypointIndex::empty(),
-            'staypointCounts'=> [],
+            'date'               => '2024-07-01',
+            'staypoints'         => $staypoints,
+            'staypointIndex'     => $index,
+            'staypointCounts'    => $index->getCounts(),
             'dominantStaypoints' => [],
             'transitRatio'       => 0.0,
             'poiDensity'         => 0.0,
-            'firstGpsMedia' => null,
+            'firstGpsMedia'      => $startMedia,
+            'lastGpsMedia'       => $endMedia,
+            'gpsMembers'         => [$startMedia, $endMedia],
+        ];
+
+        $nextSummary = [
+            'date'               => '2024-07-02',
+            'staypoints'         => [],
+            'staypointIndex'     => StaypointIndex::empty(),
+            'staypointCounts'    => [],
+            'dominantStaypoints' => [],
+            'transitRatio'       => 0.0,
+            'poiDensity'         => 0.0,
+            'firstGpsMedia'      => null,
         ];
 
         $home = [
@@ -114,27 +114,27 @@ final class BaseLocationResolverTest extends TestCase
         );
 
         $summary = [
-            'date'          => '2024-08-05',
-            'staypoints'    => [],
-            'staypointIndex'=> StaypointIndex::empty(),
-            'staypointCounts'=> [],
+            'date'               => '2024-08-05',
+            'staypoints'         => [],
+            'staypointIndex'     => StaypointIndex::empty(),
+            'staypointCounts'    => [],
             'dominantStaypoints' => [],
             'transitRatio'       => 0.0,
             'poiDensity'         => 0.0,
-            'firstGpsMedia' => $lastMedia,
-            'lastGpsMedia'  => $lastMedia,
-            'gpsMembers'    => [$lastMedia],
+            'firstGpsMedia'      => $lastMedia,
+            'lastGpsMedia'       => $lastMedia,
+            'gpsMembers'         => [$lastMedia],
         ];
 
         $nextSummary = [
-            'date'          => '2024-08-06',
-            'staypoints'    => [],
-            'staypointIndex'=> StaypointIndex::empty(),
-            'staypointCounts'=> [],
+            'date'               => '2024-08-06',
+            'staypoints'         => [],
+            'staypointIndex'     => StaypointIndex::empty(),
+            'staypointCounts'    => [],
             'dominantStaypoints' => [],
             'transitRatio'       => 0.0,
             'poiDensity'         => 0.0,
-            'firstGpsMedia' => $nextFirst,
+            'firstGpsMedia'      => $nextFirst,
         ];
 
         $home = [

@@ -83,7 +83,7 @@ final readonly class MetadataQaInspectionResult
             'time_features',
             $message,
             [
-                'missing' => $this->missingFeatures,
+                'missing'     => $this->missingFeatures,
                 'suggestions' => $this->suggestions,
             ],
         );

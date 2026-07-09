@@ -22,8 +22,8 @@ use function is_object;
 use function is_string;
 use function max;
 use function min;
-use function sprintf;
 use function spl_object_id;
+use function sprintf;
 
 /**
  * Provides and exports a consistent progress notification helper for cluster strategies.
@@ -33,10 +33,10 @@ trait ProgressAwareClusterTrait
     /**
      * Notifies a progress listener while guarding against division-by-zero scenarios.
      *
-     * @param callable|null $update The optional listener receiving progress updates.
-     * @param int           $done   The number of completed items.
-     * @param int           $max    The total number of items to process.
-     * @param string        $stage  A label describing the current processing stage.
+     * @param callable|null $update the optional listener receiving progress updates
+     * @param int           $done   the number of completed items
+     * @param int           $max    the total number of items to process
+     * @param string        $stage  a label describing the current processing stage
      */
     protected function notifyProgress(?callable $update, int $done, int $max, string $stage): void
     {
@@ -65,7 +65,7 @@ trait ProgressAwareClusterTrait
             $done = $state['done'];
         }
 
-        $state['done'] = $done;
+        $state['done']             = $done;
         $progressStates[$stateKey] = $state;
 
         $update($state['done'], max(1, $state['max']), $stage);
@@ -86,13 +86,13 @@ trait ProgressAwareClusterTrait
 
         if (is_array($update)) {
             $target = $update[0];
-            $method = (string) $update[1];
+            $method = $update[1];
 
             if (is_object($target)) {
                 return 'array:' . spl_object_id($target) . '->' . $method;
             }
 
-            return 'array:' . (string) $target . '::' . $method;
+            return 'array:' . $target . '::' . $method;
         }
 
         if (is_string($update)) {
@@ -109,10 +109,10 @@ trait ProgressAwareClusterTrait
     /**
      * Wraps a clustering run with coarse progress notifications.
      *
-     * @param list<Media>                                 $items
-     * @param Context                                     $ctx
-     * @param callable(int $done, int $max, string $stage):void $update
-     * @param callable(array<Media>, Context):array<ClusterDraft>  $cluster
+     * @param list<Media>                                         $items
+     * @param Context                                             $ctx
+     * @param callable(int $done, int $max, string $stage):void   $update
+     * @param callable(array<Media>, Context):array<ClusterDraft> $cluster
      *
      * @return list<ClusterDraft>
      */

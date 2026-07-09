@@ -22,7 +22,7 @@ use function max;
  */
 final class OrientationBalanceStage implements SelectionStageInterface
 {
-    private const MAX_SHARE = 0.6;
+    private const float MAX_SHARE = 0.6;
 
     public function getName(): string
     {
@@ -35,8 +35,8 @@ final class OrientationBalanceStage implements SelectionStageInterface
             return [];
         }
 
-        $selected        = [];
-        $countByType     = [];
+        $selected    = [];
+        $countByType = [];
 
         foreach ($candidates as $candidate) {
             $type = $candidate['orientation'];
@@ -55,7 +55,7 @@ final class OrientationBalanceStage implements SelectionStageInterface
                 continue;
             }
 
-            $selected[] = $candidate;
+            $selected[]         = $candidate;
             $countByType[$type] = ($countByType[$type] ?? 0) + 1;
         }
 

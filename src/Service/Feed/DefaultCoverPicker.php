@@ -11,30 +11,31 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Feed;
 
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\Phash;
 
 use function abs;
 use function array_filter;
 use function array_key_exists;
-use function array_map;
 use function array_keys;
+use function array_map;
+use function array_sum;
 use function array_values;
 use function count;
 use function floor;
-use function max;
-use function min;
-use function sort;
-use function strtolower;
-use function str_contains;
-use function trim;
-use function sqrt;
-use function array_sum;
 use function is_array;
 use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
+use function max;
+use function min;
+use function sort;
+use function sqrt;
+use function str_contains;
+use function strtolower;
+use function trim;
 
 use const SORT_NUMERIC;
 
@@ -138,8 +139,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $travel      = $this->travelScore($m, $context['travel'], $landscape, $areaMp);
         $pose        = $this->poseScore($m, $context['people']);
 
-        $base =
-            0.20 * $composition +
+        $base = 0.20 * $composition +
             0.24 * $quality +
             0.16 * $aesthetic +
             0.14 * $peopleScore +
@@ -175,12 +175,12 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         return match ($orientation) {
             5, 6, 7, 8 => [$height, $width],
-            default => [$width, $height],
+            default    => [$width, $height],
         };
     }
 
     /**
-     * @param list<Media> $members
+     * @param list<Media>         $members
      * @param array<string,mixed> $clusterParams
      *
      * @return array{
@@ -278,11 +278,11 @@ final class DefaultCoverPicker implements CoverPickerInterface
         }
 
         return [
-            'summary'   => [
+            'summary' => [
                 'quality_avg'    => isset($summary['quality_avg']) ? $this->clamp01((float) $summary['quality_avg']) : null,
                 'aesthetics_avg' => isset($summary['aesthetics_avg']) ? $this->clamp01((float) $summary['aesthetics_avg']) : null,
             ],
-            'weights'   => [
+            'weights' => [
                 'quality'    => isset($weightsRaw['quality']) ? max(0.0, (float) $weightsRaw['quality']) : 0.7,
                 'aesthetics' => isset($weightsRaw['aesthetics']) ? max(0.0, (float) $weightsRaw['aesthetics']) : 0.3,
             ],
@@ -290,7 +290,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
                 'phash' => isset($weightsRaw['duplicates']['phash']) ? max(0.0, (float) $weightsRaw['duplicates']['phash']) : 0.35,
                 'dhash' => isset($weightsRaw['duplicates']['dhash']) ? max(0.0, (float) $weightsRaw['duplicates']['dhash']) : 0.25,
             ],
-            'members'   => $members,
+            'members' => $members,
         ];
     }
 
@@ -313,13 +313,13 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         $people = $clusterParams['people'] ?? null;
         if (is_array($people)) {
-            $coverage     ??= $this->floatOrNull($people['people_coverage'] ?? $people['coverage'] ?? null);
+            $coverage ??= $this->floatOrNull($people['people_coverage'] ?? $people['coverage'] ?? null);
             $faceCoverage ??= $this->floatOrNull($people['people_face_coverage'] ?? $people['faceCoverage'] ?? null);
         }
 
         $primary = null;
         if (is_string($clusterParams['people_primary_subject'] ?? null)) {
-            $primary = (string) $clusterParams['people_primary_subject'];
+            $primary = $clusterParams['people_primary_subject'];
         }
 
         $emphasis = max(
@@ -357,7 +357,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
             }
         }
 
-        $segments = $clusterParams['travel_segments'] ?? null;
+        $segments  = $clusterParams['travel_segments'] ?? null;
         $waypoints = $clusterParams['travel_waypoints'] ?? null;
         $events    = $clusterParams['travel_events'] ?? null;
 
@@ -373,10 +373,10 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $weight = min(1.0, $weightBase + 0.15 * (float) ($waypointCount > 2 ? 1 : 0) + 0.1 * (float) ($segmentCount > 1 ? 1 : 0));
 
         return [
-            'distance'     => $distance,
-            'waypointCount'=> $waypointCount,
-            'eventCount'   => $eventCount,
-            'weight'       => $weight,
+            'distance'      => $distance,
+            'waypointCount' => $waypointCount,
+            'eventCount'    => $eventCount,
+            'weight'        => $weight,
         ];
     }
 
@@ -468,9 +468,9 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         $score = $media->getQualityScore();
         if ($detail !== null && isset($detail['quality'])) {
-            $score = max($score ?? 0.0, (float) $detail['quality']);
+            $score = max($score ?? 0.0, $detail['quality']);
         } elseif ($detail !== null && isset($detail['score'])) {
-            $score = max($score ?? 0.0, (float) $detail['score']);
+            $score = max($score ?? 0.0, $detail['score']);
         }
 
         if ($score === null) {
@@ -504,13 +504,12 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $score  = null;
 
         if ($detail !== null && isset($detail['aesthetics'])) {
-            $score = (float) $detail['aesthetics'];
+            $score = $detail['aesthetics'];
         }
 
         if ($score === null) {
             $components = [];
-
-            $exposure = $media->getQualityExposure();
+            $exposure   = $media->getQualityExposure();
             if ($exposure !== null) {
                 $components[] = $this->clamp01($exposure);
             } else {
@@ -535,11 +534,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
                 $components[] = $this->clamp01($color);
             }
 
-            if ($components !== []) {
-                $score = array_sum($components) / count($components);
-            } else {
-                $score = 0.5;
-            }
+            $score = $components !== [] ? array_sum($components) / count($components) : 0.5;
         }
 
         $aestheticAvg = $meta['summary']['aesthetics_avg'];
@@ -620,9 +615,9 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
     private function saliencyScore(Media $media): float
     {
-        $bag       = $media->getFeatureBag();
-        $saliency  = $bag->namespaceValues('saliency');
-        $ruleScore = $this->floatOrNull($saliency['rule_of_thirds_score'] ?? $saliency['ruleOfThirdsScore'] ?? null);
+        $bag        = $media->getFeatureBag();
+        $saliency   = $bag->namespaceValues('saliency');
+        $ruleScore  = $this->floatOrNull($saliency['rule_of_thirds_score'] ?? $saliency['ruleOfThirdsScore'] ?? null);
         $confidence = $this->floatOrNull($saliency['confidence'] ?? null);
 
         $center = null;
@@ -676,7 +671,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
             $base += 0.15;
         }
 
-        if ($media->getLocation() !== null) {
+        if ($media->getLocation() instanceof Location) {
             $base += 0.1;
         }
 
@@ -707,19 +702,19 @@ final class DefaultCoverPicker implements CoverPickerInterface
         $vision   = $bag->namespaceValues('vision');
         $peopleNs = $bag->namespaceValues('people');
 
-        $poseRaw = $vision['primary_pose'] ?? $peopleNs['primary_pose'] ?? $peopleNs['pose'] ?? null;
-        $pose    = is_string($poseRaw) ? strtolower($poseRaw) : null;
+        $poseRaw    = $vision['primary_pose'] ?? $peopleNs['primary_pose'] ?? $peopleNs['pose'] ?? null;
+        $pose       = is_string($poseRaw) ? strtolower($poseRaw) : null;
         $confidence = $this->floatOrNull($vision['primary_pose_confidence'] ?? $peopleNs['pose_confidence'] ?? null);
 
         $score = 0.5;
         if ($pose !== null) {
             $score = match (true) {
-                str_contains($pose, 'smil') => 0.95,
-                str_contains($pose, 'front') => 0.85,
-                str_contains($pose, 'group') => 0.8,
+                str_contains($pose, 'smil')    => 0.95,
+                str_contains($pose, 'front')   => 0.85,
+                str_contains($pose, 'group')   => 0.8,
                 str_contains($pose, 'profile') => 0.55,
-                str_contains($pose, 'back') => 0.35,
-                default => 0.5,
+                str_contains($pose, 'back')    => 0.35,
+                default                        => 0.5,
             };
         }
 
@@ -756,7 +751,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
         $detail = $meta['members'][$media->getId()] ?? null;
         if ($detail !== null && isset($detail['penalty'])) {
-            $penalty = max($penalty, (float) $detail['penalty']);
+            $penalty = max($penalty, $detail['penalty']);
         }
 
         $phash = $this->fingerprintOrNull($media->getPhash64()) ?? $this->fingerprintOrNull($media->getPhash());
@@ -788,7 +783,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
     /**
      * @param array<string,int> $counts
-     * @param list<string> $distinct
+     * @param list<string>      $distinct
      */
     private function duplicateDistanceScore(string $value, array $counts, array $distinct, ?string $centroid): float
     {
@@ -839,10 +834,10 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
     private function extractFaceCoverage(Media $media): ?float
     {
-        $bag       = $media->getFeatureBag();
-        $vision    = $bag->namespaceValues('vision');
-        $faces     = $bag->namespaceValues('faces');
-        $people    = $bag->namespaceValues('people');
+        $bag    = $media->getFeatureBag();
+        $vision = $bag->namespaceValues('vision');
+        $faces  = $bag->namespaceValues('faces');
+        $people = $bag->namespaceValues('people');
 
         $coverage = $vision['face_coverage'] ?? $vision['faceCoverage']
             ?? $faces['coverage'] ?? $faces['face_coverage'] ?? $people['face_coverage'] ?? $people['faceCoverage'] ?? null;

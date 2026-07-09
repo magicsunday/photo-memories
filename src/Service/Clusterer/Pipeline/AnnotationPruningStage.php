@@ -180,7 +180,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

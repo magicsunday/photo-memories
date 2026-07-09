@@ -11,9 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
@@ -145,8 +144,9 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
 
         return $out;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -160,5 +160,4 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

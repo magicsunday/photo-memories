@@ -15,11 +15,9 @@ use MagicSunday\Memories\Entity\Media;
 
 use function array_intersect;
 use function array_key_exists;
-use function array_map;
 use function array_unique;
 use function array_values;
 use function count;
-use function intval;
 use function is_array;
 use function is_numeric;
 use function is_string;
@@ -31,7 +29,7 @@ use function trim;
  */
 final readonly class ClusterPeopleAggregator
 {
-    private const FAVOURITE_BOOST = 0.35;
+    private const float FAVOURITE_BOOST = 0.35;
 
     /**
      * @var list<int>
@@ -79,20 +77,20 @@ final readonly class ClusterPeopleAggregator
 
         if ($members === 0) {
             return [
-                'people'               => 0.0,
-                'people_count'         => 0,
-                'people_unique'        => 0,
-                'people_coverage'      => 0.0,
-                'people_face_coverage' => 0.0,
+                'people'                    => 0.0,
+                'people_count'              => 0,
+                'people_unique'             => 0,
+                'people_coverage'           => 0.0,
+                'people_face_coverage'      => 0.0,
                 'people_favourite_coverage' => 0.0,
             ];
         }
 
         /** @var array<string, bool> $uniqueNames */
-        $uniqueNames = [];
-        $mentions    = 0;
-        $withPeople  = 0;
-        $withFaces   = 0;
+        $uniqueNames       = [];
+        $mentions          = 0;
+        $withPeople        = 0;
+        $withFaces         = 0;
         $favouriteMembers  = 0;
         $favouriteMentions = 0;
 
@@ -115,7 +113,7 @@ final readonly class ClusterPeopleAggregator
                 $favouriteMentions += $favouriteMatches;
             }
 
-            $persons = $media->getPersons();
+            $persons    = $media->getPersons();
             $hasPersons = is_array($persons) && $persons !== [];
 
             if ($hasPersons || ($personIds !== [] && $favouriteMatches > 0)) {
@@ -144,17 +142,17 @@ final readonly class ClusterPeopleAggregator
             }
         }
 
-        $uniqueCount   = count($uniqueNames);
-        $coverage      = $withPeople > 0 ? $withPeople / $members : 0.0;
-        $faceCoverage  = $withFaces > 0 ? $withFaces / $members : 0.0;
-        $richness      = $uniqueCount > 0 ? min(1.0, $uniqueCount / 4.0) : 0.0;
-        $mentionScore  = $mentions > 0 ? min(1.0, $mentions / (float) $members) : 0.0;
-        $baseCoverage  = $this->clamp01($coverage);
-        $favouriteCoverage = $members > 0 ? $favouriteMembers / $members : 0.0;
+        $uniqueCount           = count($uniqueNames);
+        $coverage              = $withPeople > 0 ? $withPeople / $members : 0.0;
+        $faceCoverage          = $withFaces > 0 ? $withFaces / $members : 0.0;
+        $richness              = $uniqueCount > 0 ? min(1.0, $uniqueCount / 4.0) : 0.0;
+        $mentionScore          = $mentions > 0 ? min(1.0, $mentions / (float) $members) : 0.0;
+        $baseCoverage          = $this->clamp01($coverage);
+        $favouriteCoverage     = $members > 0 ? $favouriteMembers / $members : 0.0;
         $favouriteMentionShare = $members > 0 ? $favouriteMentions / $members : 0.0;
 
-        $coverageScore = $this->clamp01($baseCoverage + ($favouriteCoverage * self::FAVOURITE_BOOST));
-        $mentionScore  = $this->clamp01($mentionScore + ($favouriteMentionShare * self::FAVOURITE_BOOST));
+        $coverageScore     = $this->clamp01($baseCoverage + ($favouriteCoverage * self::FAVOURITE_BOOST));
+        $mentionScore      = $this->clamp01($mentionScore + ($favouriteMentionShare * self::FAVOURITE_BOOST));
         $favouriteCoverage = $this->clamp01($favouriteCoverage);
 
         $score = $this->combineScores([
@@ -164,11 +162,11 @@ final readonly class ClusterPeopleAggregator
         ]);
 
         return [
-            'people'               => $score,
-            'people_count'         => $mentions,
-            'people_unique'        => $uniqueCount,
-            'people_coverage'      => $baseCoverage,
-            'people_face_coverage' => $this->clamp01($faceCoverage),
+            'people'                    => $score,
+            'people_count'              => $mentions,
+            'people_unique'             => $uniqueCount,
+            'people_coverage'           => $baseCoverage,
+            'people_face_coverage'      => $this->clamp01($faceCoverage),
             'people_favourite_coverage' => $favouriteCoverage,
         ];
     }

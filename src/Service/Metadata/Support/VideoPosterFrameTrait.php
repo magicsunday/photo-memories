@@ -110,7 +110,7 @@ trait VideoPosterFrameTrait
 
         $duration = $this->probeVideoDuration($videoPath);
         if ($duration !== null && $duration > 0.0 && $targetTime > $duration) {
-            $targetTime = max(0.0, $duration - 0.1);
+            return max(0.0, $duration - 0.1);
         }
 
         return $targetTime;

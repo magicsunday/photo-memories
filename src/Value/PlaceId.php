@@ -21,7 +21,7 @@ use function trim;
 /**
  * Value object describing a place identifier including provider metadata.
  */
-final class PlaceId
+final readonly class PlaceId
 {
     private string $provider;
 
@@ -91,7 +91,7 @@ final class PlaceId
      */
     public static function fromArray(array $payload): self
     {
-        $provider = (string) ($payload['provider'] ?? '');
+        $provider   = (string) ($payload['provider'] ?? '');
         $identifier = (string) ($payload['id'] ?? ($payload['identifier'] ?? ''));
 
         $confidence = null;

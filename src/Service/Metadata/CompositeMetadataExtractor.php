@@ -58,9 +58,9 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
 
         foreach ($this->extractors as $extractor) {
             if ($this->configuration->isEnabled($extractor) === false) {
-                $reason = $this->configuration->disabledReason($extractor);
+                $reason      = $this->configuration->disabledReason($extractor);
                 $description = $this->configuration->describeExtractor($extractor);
-                $message = sprintf('Extractor %s deaktiviert.', $description);
+                $message     = sprintf('Extractor %s deaktiviert.', $description);
 
                 if ($reason !== null) {
                     $message = sprintf('%s Grund: %s', $message, $reason);
@@ -86,7 +86,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
             }
 
             $shouldCollectTelemetry = $this->configuration->shouldCollectTelemetry($extractor);
-            $startedAt = $shouldCollectTelemetry ? hrtime(true) : null;
+            $startedAt              = $shouldCollectTelemetry ? hrtime(true) : null;
 
             try {
                 if ($extractor->supports($filepath, $media) === false) {
@@ -105,7 +105,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
                 );
 
                 $description = $this->configuration->describeExtractor($extractor);
-                $message = sprintf('Extractor %s fehlgeschlagen: %s', $description, $exception->getMessage());
+                $message     = sprintf('Extractor %s fehlgeschlagen: %s', $description, $exception->getMessage());
                 IndexLogHelper::appendEntry(
                     $media,
                     IndexLogEntry::error(
@@ -200,7 +200,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
         }
 
         $finishedAt = hrtime(true);
-        $elapsedNs = $finishedAt - $startedAt;
+        $elapsedNs  = $finishedAt - $startedAt;
 
         if ($elapsedNs <= 0) {
             return 0.0;

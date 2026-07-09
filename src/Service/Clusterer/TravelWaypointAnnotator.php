@@ -25,7 +25,6 @@ use function is_string;
 use function mb_convert_case;
 use function mb_strtolower;
 use function mb_strtoupper;
-use function sprintf;
 use function trim;
 use function usort;
 
@@ -34,7 +33,7 @@ use const MB_CASE_TITLE;
 /**
  * Aggregates travel waypoints and event keywords for cluster drafts.
  */
-final class TravelWaypointAnnotator
+final readonly class TravelWaypointAnnotator
 {
     /**
      * Maximum number of waypoint entries returned for a cluster.
@@ -88,15 +87,15 @@ final class TravelWaypointAnnotator
 
             $timestamp = $media->getTakenAt()?->getTimestamp();
             $waypointCounters[$key] ??= [
-                'label'      => $this->resolveLabel($location),
-                'city'       => $this->normaliseComponent($location->getCity()),
-                'region'     => $this->resolveRegion($location),
-                'country'    => $this->normaliseComponent($location->getCountry()),
-                'countryCode'=> $this->normaliseCountryCode($location->getCountryCode()),
-                'count'      => 0,
-                'firstSeen'  => $timestamp ?? PHP_INT_MAX,
-                'lat'        => $location->getLat(),
-                'lon'        => $location->getLon(),
+                'label'       => $this->resolveLabel($location),
+                'city'        => $this->normaliseComponent($location->getCity()),
+                'region'      => $this->resolveRegion($location),
+                'country'     => $this->normaliseComponent($location->getCountry()),
+                'countryCode' => $this->normaliseCountryCode($location->getCountryCode()),
+                'count'       => 0,
+                'firstSeen'   => $timestamp ?? PHP_INT_MAX,
+                'lat'         => $location->getLat(),
+                'lon'         => $location->getLon(),
             ];
 
             ++$waypointCounters[$key]['count'];
@@ -109,19 +108,17 @@ final class TravelWaypointAnnotator
         }
 
         $waypoints = array_map(
-            static function (array $entry): array {
-                return [
-                    'label'         => $entry['label'],
-                    'city'          => $entry['city'],
-                    'region'        => $entry['region'],
-                    'country'       => $entry['country'],
-                    'countryCode'   => $entry['countryCode'],
-                    'count'         => $entry['count'],
-                    'first_seen_at' => $entry['firstSeen'],
-                    'lat'           => (float) $entry['lat'],
-                    'lon'           => (float) $entry['lon'],
-                ];
-            },
+            static fn (array $entry): array => [
+                'label'         => $entry['label'],
+                'city'          => $entry['city'],
+                'region'        => $entry['region'],
+                'country'       => $entry['country'],
+                'countryCode'   => $entry['countryCode'],
+                'count'         => $entry['count'],
+                'first_seen_at' => $entry['firstSeen'],
+                'lat'           => $entry['lat'],
+                'lon'           => $entry['lon'],
+            ],
             $waypointCounters
         );
 
@@ -138,7 +135,7 @@ final class TravelWaypointAnnotator
                     return $firstSeenComparison;
                 }
 
-                return strcmp($left['label'], $right['label']);
+                return strcmp((string) $left['label'], (string) $right['label']);
             }
         );
 
@@ -255,7 +252,11 @@ final class TravelWaypointAnnotator
             }
 
             foreach ($tags as $tagKey => $tagValue) {
-                if (!is_string($tagKey) || !is_string($tagValue)) {
+                if (!is_string($tagKey)) {
+                    continue;
+                }
+
+                if (!is_string($tagValue)) {
                     continue;
                 }
 
@@ -297,18 +298,14 @@ final class TravelWaypointAnnotator
 
         if ($keyLower === 'amenity') {
             $amenityMappings = [
-                'theatre'      => 'Theater',
-                'arts_centre'  => 'Kulturzentrum',
-                'cinema'       => 'Kino',
-                'stadium'      => 'Stadion',
+                'theatre'          => 'Theater',
+                'arts_centre'      => 'Kulturzentrum',
+                'cinema'           => 'Kino',
+                'stadium'          => 'Stadion',
                 'community_centre' => 'Treffpunkt',
             ];
 
-            if (isset($amenityMappings[$valueLower])) {
-                return $amenityMappings[$valueLower];
-            }
-
-            return $this->normaliseComponent($valueLower);
+            return $amenityMappings[$valueLower] ?? $this->normaliseComponent($valueLower);
         }
 
         if (in_array($keyLower, ['event:genre', 'event:category'], true)) {
@@ -331,7 +328,15 @@ final class TravelWaypointAnnotator
     {
         $events = [];
         foreach ($eventCounters as $label => $count) {
-            if (!is_string($label) || $label === '' || $count < 1) {
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if ($label === '') {
+                continue;
+            }
+
+            if ($count < 1) {
                 continue;
             }
 

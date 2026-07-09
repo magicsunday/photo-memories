@@ -52,8 +52,8 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
         ?array $imageExtensions = null,
         ?array $videoExtensions = null,
     ) {
-        $this->imageExtensions = $imageExtensions ?? self::defaultImageExtensions();
-        $this->videoExtensions = $videoExtensions ?? self::defaultVideoExtensions();
+        $this->imageExtensions = $imageExtensions ?? $this->defaultImageExtensions();
+        $this->videoExtensions = $videoExtensions ?? $this->defaultVideoExtensions();
         $this->finfo           = new finfo(FILEINFO_MIME_TYPE);
     }
 
@@ -150,7 +150,7 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
     /**
      * @return list<string>
      */
-    private static function defaultImageExtensions(): array
+    private function defaultImageExtensions(): array
     {
         return [
             'jpg', 'jpeg', 'jpe', 'jxl', 'avif', 'heic', 'heif', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif',
@@ -161,7 +161,7 @@ final readonly class MimeDetectionStage implements MediaIngestionStageInterface
     /**
      * @return list<string>
      */
-    private static function defaultVideoExtensions(): array
+    private function defaultVideoExtensions(): array
     {
         return [
             'mp4', 'm4v', 'mov', '3gp', '3g2', 'avi', 'mkv', 'webm',

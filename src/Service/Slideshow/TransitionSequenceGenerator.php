@@ -45,8 +45,7 @@ final class TransitionSequenceGenerator
         ?string $title,
         ?string $subtitle,
         ?string $seedOverride = null,
-    ): array
-    {
+    ): array {
         if ($slideCount === 0 || $transitions === []) {
             return [];
         }
@@ -72,34 +71,32 @@ final class TransitionSequenceGenerator
         $seedSource = self::buildSeedSource($mediaIds, $imagePaths, $slideCount, $title, $subtitle, $seedOverride);
         $randomizer = new Randomizer(new Xoshiro256StarStar($seedSource));
 
-        $uniqueTransitions = array_values(array_unique($pool));
+        $uniqueTransitions            = array_values(array_unique($pool));
         $hasMultipleUniqueTransitions = count($uniqueTransitions) > 1;
 
-        $sequence = [];
+        $sequence           = [];
         $previousTransition = null;
         while (count($sequence) < $slideCount) {
             $shuffled = $randomizer->shuffleArray($pool);
-            if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled !== []) {
-                if ($shuffled[0] === $previousTransition) {
-                    $swapIndex = null;
-                    $shuffledCount = count($shuffled);
-                    for ($index = 1; $index < $shuffledCount; $index++) {
-                        if ($shuffled[$index] !== $previousTransition) {
-                            $swapIndex = $index;
-                            break;
-                        }
+            if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled !== [] && $shuffled[0] === $previousTransition) {
+                $swapIndex     = null;
+                $shuffledCount = count($shuffled);
+                for ($index = 1; $index < $shuffledCount; ++$index) {
+                    if ($shuffled[$index] !== $previousTransition) {
+                        $swapIndex = $index;
+                        break;
                     }
+                }
 
-                    if ($swapIndex !== null) {
-                        $current = $shuffled[$swapIndex];
-                        $shuffled[$swapIndex] = $shuffled[0];
-                        $shuffled[0] = $current;
-                    }
+                if ($swapIndex !== null) {
+                    $current              = $shuffled[$swapIndex];
+                    $shuffled[$swapIndex] = $shuffled[0];
+                    $shuffled[0]          = $current;
                 }
             }
 
             foreach ($shuffled as $transition) {
-                $sequence[] = $transition;
+                $sequence[]         = $transition;
                 $previousTransition = $transition;
                 if (count($sequence) === $slideCount) {
                     break 2;
@@ -121,11 +118,10 @@ final class TransitionSequenceGenerator
         ?string $title,
         ?string $subtitle,
         ?string $seedOverride,
-    ): string
-    {
+    ): string {
         $filteredIds = array_values(array_filter(
             $mediaIds,
-            static fn (mixed $mediaId): bool => is_int($mediaId)
+            is_int(...)
         ));
 
         $normalisedIds = array_map(
@@ -139,11 +135,11 @@ final class TransitionSequenceGenerator
         ));
 
         $normalisedPaths = array_map(
-            static fn (string $path): string => trim($path),
+            trim(...),
             $filteredPaths
         );
 
-        $titlePart = $title !== null ? trim($title) : '';
+        $titlePart    = $title !== null ? trim($title) : '';
         $subtitlePart = $subtitle !== null ? trim($subtitle) : '';
 
         $payloadParts = [

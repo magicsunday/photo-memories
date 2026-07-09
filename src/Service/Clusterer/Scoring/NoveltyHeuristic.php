@@ -42,7 +42,7 @@ use const SORT_NUMERIC;
  *  - time rarity     : day-of-year frequency
  *  - device rarity   : camera model frequency
  *  - content rarity  : perceptual hash prefix frequency
- *  - history novelty : overlap with recent feed output
+ *  - history novelty : overlap with recent feed output.
  *
  * No external models; runs on fields already present on Media.
  */
@@ -52,9 +52,9 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     private ?array $stats = null;
 
     public function __construct(
-        private float $gridStepDeg = 0.3,
+        private readonly float $gridStepDeg = 0.3,
         private int $phashPrefixNibbles = 5,
-        private bool $applyHistoryPenalty = true,
+        private readonly bool $applyHistoryPenalty = true,
         private int $rareStaypointThreshold = 6,
         private int $historyWindowHours = 6,
         /**
@@ -127,7 +127,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     /**
      * Precompute corpus histograms from the media universe you consider (ideally all indexed media).
      *
-     * @param array<int, Media> $mediaMap id => Media
+     * @param array<int, Media>  $mediaMap id => Media
      * @param list<ClusterDraft> $clusters
      *
      * @return array{
@@ -191,11 +191,11 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $max = [
-            'device'     => $this->maxVal($device),
-            'grid'       => $this->maxVal($grid),
-            'staypoint'  => $this->maxVal($staypoints),
-            'doy'        => $this->maxVal($doy),
-            'phash'      => $this->maxVal($phash),
+            'device'    => $this->maxVal($device),
+            'grid'      => $this->maxVal($grid),
+            'staypoint' => $this->maxVal($staypoints),
+            'doy'       => $this->maxVal($doy),
+            'phash'     => $this->maxVal($phash),
         ];
 
         return [
@@ -223,20 +223,20 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
      */
     public function computeNovelty(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
-        $staypointScore      = $this->scoreStaypointRarity($cluster, $stats);
-        $rareStaypointScore  = $this->scoreRareStaypoints($cluster, $stats);
-        $timeScore           = $this->scoreTimeRarity($cluster, $mediaMap, $stats);
-        $deviceScore         = $this->scoreDeviceRarity($cluster, $mediaMap, $stats);
-        $contentScore        = $this->scoreContentRarity($cluster, $mediaMap, $stats);
-        $historyScore        = $this->computeHistoryScore($cluster, $mediaMap, $stats);
+        $staypointScore     = $this->scoreStaypointRarity($cluster, $stats);
+        $rareStaypointScore = $this->scoreRareStaypoints($cluster, $stats);
+        $timeScore          = $this->scoreTimeRarity($cluster, $mediaMap, $stats);
+        $deviceScore        = $this->scoreDeviceRarity($cluster, $mediaMap, $stats);
+        $contentScore       = $this->scoreContentRarity($cluster, $mediaMap, $stats);
+        $historyScore       = $this->computeHistoryScore($cluster, $mediaMap, $stats);
 
         return
-            $this->weights['staypoint']      * $staypointScore +
+            $this->weights['staypoint'] * $staypointScore +
             $this->weights['rare_staypoint'] * $rareStaypointScore +
-            $this->weights['time']           * $timeScore +
-            $this->weights['device']         * $deviceScore +
-            $this->weights['content']        * $contentScore +
-            $this->weights['history']        * $historyScore;
+            $this->weights['time'] * $timeScore +
+            $this->weights['device'] * $deviceScore +
+            $this->weights['content'] * $contentScore +
+            $this->weights['history'] * $historyScore;
     }
 
     private function scoreStaypointRarity(ClusterDraft $cluster, array $stats): float
@@ -267,9 +267,9 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
         $centroid = $cluster->getCentroid();
         if (isset($centroid['lat'], $centroid['lon']) && is_float($centroid['lat']) && is_float($centroid['lon'])) {
-            $cell  = $this->gridCell($centroid['lat'], $centroid['lon']);
-            $cnt   = (int) ($stats['grid'][$cell] ?? 0);
-            $max   = (int) ($stats['max']['grid'] ?? 0);
+            $cell = $this->gridCell($centroid['lat'], $centroid['lon']);
+            $cnt  = (int) ($stats['grid'][$cell] ?? 0);
+            $max  = (int) ($stats['max']['grid'] ?? 0);
 
             return $this->rarityFromCounts($cnt, $max);
         }
@@ -574,8 +574,8 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
                 continue;
             }
 
-            $hour     = (int) $takenAt->format('G');
-            $slot     = (int) floor($hour / $windowLen);
+            $hour      = (int) $takenAt->format('G');
+            $slot      = (int) floor($hour / $windowLen);
             $windowKey = $takenAt->format('md') . ':' . $slot;
 
             $windows[] = $windowKey;
@@ -624,11 +624,15 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             }
 
             $ph = $m->getPhash();
-            if (!is_string($ph) || $ph === '') {
+            if (!is_string($ph)) {
                 continue;
             }
 
-            $prefix = strtolower(substr($ph, 0, $nibbles));
+            if ($ph === '') {
+                continue;
+            }
+
+            $prefix            = strtolower(substr($ph, 0, $nibbles));
             $key               = 'h:' . $prefix;
             $cnt[$key]         = ($cnt[$key] ?? 0) + 1;
             $prefixByKey[$key] = $prefix;

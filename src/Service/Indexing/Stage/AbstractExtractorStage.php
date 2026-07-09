@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use DateTimeImmutable;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
@@ -33,18 +34,13 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
         }
 
         $media = $context->getMedia();
-        if ($media === null) {
+        if (!$media instanceof Media) {
             return true;
         }
 
-        if ($context->isForce() === false
+        return $context->isForce() === false
             && $context->requiresReindex() === false
-            && $media->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION
-        ) {
-            return true;
-        }
-
-        return false;
+            && $media->getFeatureVersion() === MetadataFeatureVersion::PIPELINE_VERSION;
     }
 
     /**
@@ -53,7 +49,7 @@ abstract class AbstractExtractorStage implements MediaIngestionStageInterface
     protected function runExtractors(MediaIngestionContext $context, iterable $extractors): MediaIngestionContext
     {
         $media = $context->getMedia();
-        if ($media === null) {
+        if (!$media instanceof Media) {
             return $context;
         }
 

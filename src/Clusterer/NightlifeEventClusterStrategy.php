@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
@@ -174,7 +173,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             $peopleParams = $this->buildPeopleParams($run);
             $params       = [...$params, ...$peopleParams];
 
-            if ($hasNight === true) {
+            if ($hasNight) {
                 $params['feature_daypart'] = 'night';
             }
 
@@ -279,13 +278,7 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                 }
 
                 $normalized = strtolower($label);
-                $matches    = false;
-                foreach ($keywords as $keyword) {
-                    if (str_contains($normalized, $keyword)) {
-                        $matches = true;
-                        break;
-                    }
-                }
+                $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));
 
                 if ($matches === false) {
                     continue;
@@ -434,8 +427,9 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         return $result;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -449,5 +443,4 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

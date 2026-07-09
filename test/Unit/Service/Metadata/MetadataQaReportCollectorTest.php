@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Service\Metadata;
 
-use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
@@ -44,7 +43,7 @@ final class MetadataQaReportCollectorTest extends TestCase
         $report = $collector->buildReport();
         self::assertSame(
             [
-                'daypart' => 1,
+                'daypart'      => 1,
                 'isGoldenHour' => 1,
                 'tzConfidence' => 1,
             ],
@@ -53,7 +52,7 @@ final class MetadataQaReportCollectorTest extends TestCase
         self::assertSame(
             [
                 'TimeNormalizer-Konfiguration prüfen' => 1,
-                'Zeitzonenquellen priorisieren' => 1,
+                'Zeitzonenquellen priorisieren'       => 1,
             ],
             $report->getSuggestionCounts(),
         );

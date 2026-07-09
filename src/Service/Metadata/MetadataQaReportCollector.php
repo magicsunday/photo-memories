@@ -45,7 +45,7 @@ final class MetadataQaReportCollector
      */
     private array $examples = [];
 
-    public function __construct(private int $maxExamplesPerFeature = 3)
+    public function __construct(private readonly int $maxExamplesPerFeature = 3)
     {
     }
 

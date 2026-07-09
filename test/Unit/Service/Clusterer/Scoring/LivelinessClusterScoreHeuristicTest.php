@@ -129,12 +129,12 @@ final class LivelinessClusterScoreHeuristicTest extends TestCase
         $cluster = new ClusterDraft(
             algorithm: 'test',
             params: [
-                'liveliness'                => 0.72,
-                'liveliness_video_share'    => 0.4,
-                'liveliness_live_share'     => 0.15,
-                'liveliness_motion_share'   => 0.6,
-                'liveliness_motion_score'   => 0.58,
-                'liveliness_motion_blur_avg'=> 0.52,
+                'liveliness'                 => 0.72,
+                'liveliness_video_share'     => 0.4,
+                'liveliness_live_share'      => 0.15,
+                'liveliness_motion_share'    => 0.6,
+                'liveliness_motion_score'    => 0.58,
+                'liveliness_motion_blur_avg' => 0.52,
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
             members: [1, 2, 3],

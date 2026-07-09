@@ -132,9 +132,9 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             return [];
         }
 
-        $staypoints        = [];
-        $minDwellSeconds   = max(1, $minDwellMinutes) * 60;
-        $currentIndex      = 0;
+        $staypoints      = [];
+        $minDwellSeconds = max(1, $minDwellMinutes) * 60;
+        $currentIndex    = 0;
 
         while ($currentIndex < $count - 1) {
             $startMedia = $gpsMembers[$currentIndex];
@@ -211,7 +211,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
     }
 
     /**
-     * @param list<Media> $gpsMembers
+     * @param list<Media>                                              $gpsMembers
      * @param array{travelKm?:float,spotCount?:int,spotDensity?:float} $context
      *
      * @return array{radiusKm:float,minDwellMinutes:int,fallbackRadiusKm:float,fallbackMinSamples:int,fallbackMinDwellMinutes:int}
@@ -221,7 +221,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
         $travelKm = $context['travelKm'] ?? $this->estimateTravelKm($gpsMembers);
         $travelKm = max(0.0, (float) $travelKm);
 
-        $spotCount   = isset($context['spotCount']) ? max(0, (int) $context['spotCount']) : null;
+        $spotCount   = isset($context['spotCount']) ? max(0, $context['spotCount']) : null;
         $spotDensity = $context['spotDensity'] ?? null;
 
         if ($spotDensity === null) {
@@ -247,12 +247,12 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             ? $this->minAdaptiveRadiusKm + $mix * $radiusRange
             : $this->staypointRadiusKm;
 
-        $dwellRange       = $this->maxAdaptiveDwellMinutes - $this->minAdaptiveDwellMinutes;
-        $minDwellMinutes  = $dwellRange > 0
+        $dwellRange      = $this->maxAdaptiveDwellMinutes - $this->minAdaptiveDwellMinutes;
+        $minDwellMinutes = $dwellRange > 0
             ? (int) round($this->minAdaptiveDwellMinutes + $mix * $dwellRange)
             : $this->minDwellMinutes;
-        $radiusKm         = max($this->minAdaptiveRadiusKm, min($radiusKm, $this->maxAdaptiveRadiusKm));
-        $minDwellMinutes  = max($this->minAdaptiveDwellMinutes, min($minDwellMinutes, $this->maxAdaptiveDwellMinutes));
+        $radiusKm        = max($this->minAdaptiveRadiusKm, min($radiusKm, $this->maxAdaptiveRadiusKm));
+        $minDwellMinutes = max($this->minAdaptiveDwellMinutes, min($minDwellMinutes, $this->maxAdaptiveDwellMinutes));
 
         return [
             'radiusKm'                => $radiusKm,
@@ -281,7 +281,11 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
         foreach ($sorted as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
-            if ($lat === null || $lon === null) {
+            if ($lat === null) {
+                continue;
+            }
+
+            if ($lon === null) {
                 continue;
             }
 
@@ -342,7 +346,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             }
 
             $first ??= $timestamp;
-            $last    = $timestamp;
+            $last = $timestamp;
         }
 
         if ($first === null || $last === null) {
@@ -380,7 +384,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
         int $minSamples,
         int $minDwellMinutes,
     ): array {
-        if ($this->dbscanHelper === null || $radiusKm <= 0.0) {
+        if (!$this->dbscanHelper instanceof GeoDbscanHelper || $radiusKm <= 0.0) {
             return [];
         }
 
@@ -421,8 +425,11 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
 
             $start = $first->getTakenAt();
             $end   = $last->getTakenAt();
+            if (!$start instanceof DateTimeImmutable) {
+                continue;
+            }
 
-            if (!$start instanceof DateTimeImmutable || !$end instanceof DateTimeImmutable) {
+            if (!$end instanceof DateTimeImmutable) {
                 continue;
             }
 
@@ -442,9 +449,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
             ];
         }
 
-        usort($staypoints, static function (array $a, array $b): int {
-            return $a['start'] <=> $b['start'];
-        });
+        usort($staypoints, static fn (array $a, array $b): int => $a['start'] <=> $b['start']);
 
         return $staypoints;
     }

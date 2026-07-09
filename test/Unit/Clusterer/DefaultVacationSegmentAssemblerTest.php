@@ -25,27 +25,27 @@ use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
-use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
-use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
-use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
-use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
-use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 
 final class DefaultVacationSegmentAssemblerTest extends TestCase
 {
@@ -76,11 +76,11 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             minAwayDistanceKm: 80.0,
             minItemsPerDay: 2,
         );
-        $selectionOptions   = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
-        $selectionProfiles  = new SelectionProfileProvider($selectionOptions, 'vacation');
-        $routeSummarizer    = new RouteSummarizer();
-        $dateFormatter      = new LocalizedDateFormatter();
-        $storyTitleBuilder  = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
+        $selectionOptions  = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
+        $selectionProfiles = new SelectionProfileProvider($selectionOptions, 'vacation');
+        $routeSummarizer   = new RouteSummarizer();
+        $dateFormatter     = new LocalizedDateFormatter();
+        $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
 
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
@@ -186,11 +186,11 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             minAwayDistanceKm: 80.0,
             minItemsPerDay: 2,
         );
-        $selectionOptions   = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
-        $selectionProfiles  = new SelectionProfileProvider($selectionOptions, 'vacation');
-        $routeSummarizer    = new RouteSummarizer();
-        $dateFormatter      = new LocalizedDateFormatter();
-        $storyTitleBuilder  = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
+        $selectionOptions  = new VacationSelectionOptions(targetTotal: 24, maxPerDay: 6);
+        $selectionProfiles = new SelectionProfileProvider($selectionOptions, 'vacation');
+        $routeSummarizer   = new RouteSummarizer();
+        $dateFormatter     = new LocalizedDateFormatter();
+        $storyTitleBuilder = new StoryTitleBuilder($routeSummarizer, $dateFormatter);
 
         $scoreCalculator = new VacationScoreCalculator(
             locationHelper: $locationHelper,
@@ -324,11 +324,11 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
                 'distance_km' => 190.0,
                 'source'      => 'staypoint',
             ],
-            'baseAway'                => true,
-            'awayByDistance'          => true,
-            'firstGpsMedia'           => null,
-            'lastGpsMedia'            => null,
-            'isSynthetic'             => true,
+            'baseAway'       => true,
+            'awayByDistance' => true,
+            'firstGpsMedia'  => null,
+            'lastGpsMedia'   => null,
+            'isSynthetic'    => true,
         ];
 
         ksort($days);
@@ -406,56 +406,56 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
 
         $days = [];
         foreach ($travelByDay as $day => $travelKm) {
-            $moment   = new DateTimeImmutable($day . 'T08:00:00+00:00');
-            $member   = $this->createConfiguredStub(Media::class, [
+            $moment = new DateTimeImmutable($day . 'T08:00:00+00:00');
+            $member = $this->createConfiguredStub(Media::class, [
                 'hasFaces'        => false,
                 'getQualityScore' => 0.7,
                 'getTakenAt'      => $moment,
             ]);
 
             $days[$day] = [
-                'date'                  => $day,
-                'members'               => [$member],
-                'gpsMembers'            => [$member],
-                'maxDistanceKm'         => 0.0,
-                'avgDistanceKm'         => 0.0,
-                'travelKm'              => $travelKm,
-                'maxSpeedKmh'           => 0.0,
-                'avgSpeedKmh'           => 0.0,
-                'hasHighSpeedTransit'   => false,
-                'countryCodes'          => [],
-                'timezoneOffsets'       => [],
+                'date'                    => $day,
+                'members'                 => [$member],
+                'gpsMembers'              => [$member],
+                'maxDistanceKm'           => 0.0,
+                'avgDistanceKm'           => 0.0,
+                'travelKm'                => $travelKm,
+                'maxSpeedKmh'             => 0.0,
+                'avgSpeedKmh'             => 0.0,
+                'hasHighSpeedTransit'     => false,
+                'countryCodes'            => [],
+                'timezoneOffsets'         => [],
                 'localTimezoneIdentifier' => 'Europe/Berlin',
-                'localTimezoneOffset'   => 0,
-                'tourismHits'           => 0,
-                'poiSamples'            => 0,
-                'tourismRatio'          => 0.3,
-                'hasAirportPoi'         => false,
-                'weekday'               => (int) $moment->format('N'),
-                'photoCount'            => 1,
-                'densityZ'              => 0.0,
-                'isAwayCandidate'       => true,
-                'sufficientSamples'     => true,
-                'spotClusters'          => [],
-                'spotNoise'             => [],
-                'spotCount'             => 1,
-                'spotNoiseSamples'      => 0,
-                'spotDensity'           => 0.0,
-                'spotDwellSeconds'      => 0,
-                'staypoints'            => [],
-                'staypointIndex'        => StaypointIndex::empty(),
-                'staypointCounts'       => [],
-                'dominantStaypoints'    => [],
-                'transitRatio'          => 0.0,
-                'poiDensity'            => 0.2,
-                'cohortPresenceRatio'   => 0.4,
-                'cohortMembers'         => [],
-                'baseLocation'          => null,
-                'baseAway'              => true,
-                'awayByDistance'        => true,
-                'firstGpsMedia'         => $member,
-                'lastGpsMedia'          => $member,
-                'isSynthetic'           => false,
+                'localTimezoneOffset'     => 0,
+                'tourismHits'             => 0,
+                'poiSamples'              => 0,
+                'tourismRatio'            => 0.3,
+                'hasAirportPoi'           => false,
+                'weekday'                 => (int) $moment->format('N'),
+                'photoCount'              => 1,
+                'densityZ'                => 0.0,
+                'isAwayCandidate'         => true,
+                'sufficientSamples'       => true,
+                'spotClusters'            => [],
+                'spotNoise'               => [],
+                'spotCount'               => 1,
+                'spotNoiseSamples'        => 0,
+                'spotDensity'             => 0.0,
+                'spotDwellSeconds'        => 0,
+                'staypoints'              => [],
+                'staypointIndex'          => StaypointIndex::empty(),
+                'staypointCounts'         => [],
+                'dominantStaypoints'      => [],
+                'transitRatio'            => 0.0,
+                'poiDensity'              => 0.2,
+                'cohortPresenceRatio'     => 0.4,
+                'cohortMembers'           => [],
+                'baseLocation'            => null,
+                'baseAway'                => true,
+                'awayByDistance'          => true,
+                'firstGpsMedia'           => $member,
+                'lastGpsMedia'            => $member,
+                'isSynthetic'             => false,
             ];
         }
 

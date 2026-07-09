@@ -17,8 +17,8 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionTelemetryInterf
 
 use function array_key_exists;
 use function is_string;
-use function strtolower;
 use function str_starts_with;
+use function strtolower;
 
 /**
  * Collects aggregated telemetry for media ingestion runs.
@@ -49,7 +49,7 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
 
     public function recordProcessedMedia(string $filepath, Media $media): void
     {
-        $mime = $media->getMime();
+        $mime           = $media->getMime();
         $normalisedMime = is_string($mime) ? strtolower($mime) : null;
 
         $isVideo = $media->isVideo()
@@ -58,13 +58,13 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
             && $normalisedMime !== null
             && str_starts_with($normalisedMime, 'image/');
 
-        $facesDetected = ($media->hasFaces() === true)
+        $facesDetected = $media->hasFaces()
             || ($media->getFacesCount() !== null && $media->getFacesCount() > 0);
 
         $this->mediaRecords[$filepath] = [
-            'isVideo'        => $isVideo,
-            'isImage'        => $isImage,
-            'facesDetected'  => $facesDetected,
+            'isVideo'       => $isVideo,
+            'isImage'       => $isImage,
+            'facesDetected' => $facesDetected,
         ];
 
         if ($isVideo && array_key_exists($filepath, $this->ffprobeAvailability) === false) {
@@ -157,10 +157,10 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
 
     public function reset(): void
     {
-        $this->mediaRecords       = [];
-        $this->ffprobeAvailability = [];
-        $this->quickTimeTimezone  = [];
-        $this->xmpTimezone        = [];
+        $this->mediaRecords         = [];
+        $this->ffprobeAvailability  = [];
+        $this->quickTimeTimezone    = [];
+        $this->xmpTimezone          = [];
         $this->ffprobeBinaryMissing = false;
     }
 }

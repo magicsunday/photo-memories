@@ -26,7 +26,6 @@ final class DuplicateParameterGuardCompilerPassIntegrationTest extends TestCase
     {
         $fixtureDir = realpath(__DIR__ . '/../../Support/Fixtures/DependencyInjection/DuplicateParameters/integration');
         self::assertNotFalse($fixtureDir);
-        $fixtureDir = (string) $fixtureDir;
 
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', $fixtureDir);

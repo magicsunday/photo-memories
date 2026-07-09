@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -125,7 +124,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     }
 
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                            $items
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
@@ -133,7 +132,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
     private function buildClusters(array $items, ?callable $update): array
     {
         /** @var list<Media> $timestamped */
-        $timestamped     = $this->filterTimestampedItems($items);
+        $timestamped      = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
 
         /** @var array<string, list<Media>> $byMonthDay */
@@ -162,7 +161,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             sprintf('Analysiere %d Medien mit Zeitstempel', $timestampedCount)
         );
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress(
             $update,
             $progress,
@@ -170,7 +169,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             sprintf('Gruppiere Aufnahmen in %d Tagesgruppen', $groupCount)
         );
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress(
             $update,
             $progress,
@@ -189,8 +188,8 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             return [];
         }
 
-        $candidateProgressBase      = $progress;
-        $candidateNotifyThreshold   = max(1, (int) ($candidateTotal / 10));
+        $candidateProgressBase    = $progress;
+        $candidateNotifyThreshold = max(1, (int) ($candidateTotal / 10));
         $this->notifyProgress(
             $update,
             $progress,
@@ -227,7 +226,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 continue;
             }
 
-            $total     = count($group);
+            $total = count($group);
             /** @var list<int> $yearKeys */
             $yearKeys  = array_keys($years);
             $spanYears = max($yearKeys) - min($yearKeys) + 1;
@@ -272,7 +271,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
         }
 
         $summaryTotal = count($scoredGroups);
-        $totalSteps  += $summaryTotal;
+        $totalSteps += $summaryTotal;
 
         $this->notifyProgress(
             $update,
@@ -283,14 +282,14 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
                 : sprintf('Berechne Metadaten für Jubiläen (0/%d)', $summaryTotal)
         );
 
-        $drafts                    = [];
-        $enriched                  = 0;
-        $metadataProgressBase      = $progress;
-        $metadataNotifyThreshold   = $summaryTotal > 0 ? max(1, (int) ($summaryTotal / 10)) : 1;
+        $drafts                  = [];
+        $enriched                = 0;
+        $metadataProgressBase    = $progress;
+        $metadataNotifyThreshold = $summaryTotal > 0 ? max(1, (int) ($summaryTotal / 10)) : 1;
 
         foreach ($scoredGroups as $entry) {
             /** @var list<Media> $group */
-            $group = $entry['group'];
+            $group  = $entry['group'];
             $params = [
                 'time_range' => $this->computeTimeRange($group),
             ];
@@ -339,7 +338,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
 
         $progress = $metadataProgressBase + $summaryTotal;
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress(
             $update,
             $progress,

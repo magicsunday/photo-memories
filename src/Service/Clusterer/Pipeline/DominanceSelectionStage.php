@@ -20,8 +20,8 @@ use function array_fill_keys;
 use function array_keys;
 use function array_map;
 use function count;
-use function max;
 use function is_string;
+use function max;
 use function usort;
 
 /**
@@ -40,8 +40,8 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
     private array $classificationPriorityMap = [];
 
     /**
-     * @param list<string>                   $keepOrder
-     * @param array<string,list<string>>     $classificationPriority
+     * @param list<string>               $keepOrder
+     * @param array<string,list<string>> $classificationPriority
      */
     public function __construct(
         private readonly float $overlapMergeThreshold,
@@ -67,14 +67,18 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
             $priorityMap = [];
             foreach ($classifications as $index => $classification) {
-                if (!is_string($classification) || $classification === '') {
+                if (!is_string($classification)) {
+                    continue;
+                }
+
+                if ($classification === '') {
                     continue;
                 }
 
                 $priorityMap[$classification] = $count - $index;
             }
 
-            if (count($priorityMap) > 0) {
+            if ($priorityMap !== []) {
                 $this->classificationPriorityMap[$algorithm] = $priorityMap;
             }
         }
@@ -97,10 +101,10 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
         $subStories         = 0;
 
         $this->emitMonitoring('selection_start', [
-            'pre_count'        => $total,
-            'merge_threshold'  => $this->overlapMergeThreshold,
-            'drop_threshold'   => $this->overlapDropThreshold,
-            'order_count'      => count($this->keepOrder),
+            'pre_count'       => $total,
+            'merge_threshold' => $this->overlapMergeThreshold,
+            'drop_threshold'  => $this->overlapDropThreshold,
+            'order_count'     => count($this->keepOrder),
         ]);
 
         if ($total <= 1) {
@@ -277,7 +281,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

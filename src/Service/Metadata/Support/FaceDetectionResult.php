@@ -16,7 +16,7 @@ use InvalidArgumentException;
 /**
  * Value object describing the outcome of a face-detection run.
  */
-final class FaceDetectionResult
+final readonly class FaceDetectionResult
 {
     private bool $available;
 

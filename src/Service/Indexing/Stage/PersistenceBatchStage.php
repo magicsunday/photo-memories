@@ -43,7 +43,7 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
-        if ($context->isSkipped() || $context->getMedia() === null) {
+        if ($context->isSkipped() || !$context->getMedia() instanceof Media) {
             return $context;
         }
 
@@ -54,9 +54,6 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
         }
 
         $media = $context->getMedia();
-        if (!$media instanceof Media) {
-            return $context;
-        }
 
         $this->entityManager->persist($media);
         ++$this->batchCount;
@@ -72,7 +69,7 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
     public function finalize(MediaIngestionContext $context): void
     {
         if ($context->isDryRun()) {
-            $this->batchCount = 0;
+            $this->batchCount   = 0;
             $this->pendingMedia = [];
             $this->persistedMediaTracker->clear();
 

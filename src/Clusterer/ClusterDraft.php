@@ -210,8 +210,6 @@ final class ClusterDraft
 
     /**
      * Returns the timestamp of the first media item.
-     *
-     * @return DateTimeImmutable|null
      */
     public function getStartAt(): ?DateTimeImmutable
     {
@@ -230,8 +228,6 @@ final class ClusterDraft
 
     /**
      * Returns the timestamp of the last media item.
-     *
-     * @return DateTimeImmutable|null
      */
     public function getEndAt(): ?DateTimeImmutable
     {
@@ -270,8 +266,6 @@ final class ClusterDraft
 
     /**
      * Returns how many photos belong to the cluster.
-     *
-     * @return int|null
      */
     public function getPhotoCount(): ?int
     {
@@ -290,8 +284,6 @@ final class ClusterDraft
 
     /**
      * Returns how many videos belong to the cluster.
-     *
-     * @return int|null
      */
     public function getVideoCount(): ?int
     {
@@ -310,8 +302,6 @@ final class ClusterDraft
 
     /**
      * Returns the identifier of the cover media item.
-     *
-     * @return int|null
      */
     public function getCoverMediaId(): ?int
     {
@@ -330,8 +320,6 @@ final class ClusterDraft
 
     /**
      * Returns the location associated with the cluster.
-     *
-     * @return Location|null
      */
     public function getLocation(): ?Location
     {
@@ -350,8 +338,6 @@ final class ClusterDraft
 
     /**
      * Returns the algorithm version that produced the cluster.
-     *
-     * @return string|null
      */
     public function getAlgorithmVersion(): ?string
     {
@@ -370,8 +356,6 @@ final class ClusterDraft
 
     /**
      * Returns the configuration hash used during clustering.
-     *
-     * @return string|null
      */
     public function getConfigHash(): ?string
     {
@@ -390,8 +374,6 @@ final class ClusterDraft
 
     /**
      * Returns the cached latitude of the centroid.
-     *
-     * @return float|null
      */
     public function getCentroidLat(): ?float
     {
@@ -410,8 +392,6 @@ final class ClusterDraft
 
     /**
      * Returns the cached longitude of the centroid.
-     *
-     * @return float|null
      */
     public function getCentroidLon(): ?float
     {
@@ -430,8 +410,6 @@ final class ClusterDraft
 
     /**
      * Returns the S2 cell identifier of the centroid.
-     *
-     * @return string|null
      */
     public function getCentroidCell7(): ?string
     {
@@ -451,7 +429,7 @@ final class ClusterDraft
     /**
      * Creates a copy of the draft with a different member list and optional parameter overrides.
      *
-     * @param list<int>                                 $members
+     * @param list<int>                                            $members
      * @param array<string, int|float|string|bool|array|null>|null $params
      */
     public function withMembers(array $members, ?array $params = null): self

@@ -28,8 +28,8 @@ namespace MagicSunday\Memories\Clusterer\Contract;
 interface DaySummaryStageInterface
 {
     /**
-     * @param array<string, mixed>|list<mixed>                                                        $days
-     * @param HomeDescriptor                                                                          $home
+     * @param array<string, mixed>|list<mixed> $days
+     * @param HomeDescriptor                   $home
      *
      * @return array<string, mixed>
      */

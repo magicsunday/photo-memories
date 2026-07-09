@@ -19,8 +19,8 @@ use MagicSunday\Memories\Service\Metadata\FfprobeMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-use function in_array;
 use function file_get_contents;
+use function in_array;
 use function str_repeat;
 use function sys_get_temp_dir;
 use function tempnam;
@@ -255,13 +255,11 @@ final class FfprobeMetadataExtractorTest extends TestCase
     #[Test]
     public function logsProcessFailuresAndSkipsMetadata(): void
     {
-        $runner = static function (array $command, float $timeout): array {
-            return [
-                'exitCode' => 1,
-                'stdout'   => '',
-                'stderr'   => 'failed',
-            ];
-        };
+        $runner = (static fn (array $command, float $timeout): array => [
+            'exitCode' => 1,
+            'stdout'   => '',
+            'stderr'   => 'failed',
+        ]);
 
         $videoPath = tempnam(sys_get_temp_dir(), 'vid');
         if ($videoPath === false) {

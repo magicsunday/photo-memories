@@ -14,21 +14,21 @@ namespace MagicSunday\Memories\Service\Feed;
 /**
  * Value object describing personalisation thresholds for feed selection.
  */
-final class FeedPersonalizationProfile
+final readonly class FeedPersonalizationProfile
 {
     public function __construct(
-        private readonly string $key,
-        private readonly float $minScore,
-        private readonly int $minMembers,
-        private readonly int $maxPerDay,
-        private readonly int $maxTotal,
-        private readonly int $maxPerAlgorithm,
-        private readonly float $qualityFloor,
-        private readonly float $peopleCoverageThreshold,
-        private readonly int $recentDays,
-        private readonly int $staleDays,
-        private readonly float $recentScoreBonus,
-        private readonly float $staleScorePenalty,
+        private string $key,
+        private float $minScore,
+        private int $minMembers,
+        private int $maxPerDay,
+        private int $maxTotal,
+        private int $maxPerAlgorithm,
+        private float $qualityFloor,
+        private float $peopleCoverageThreshold,
+        private int $recentDays,
+        private int $staleDays,
+        private float $recentScoreBonus,
+        private float $staleScorePenalty,
     ) {
     }
 
@@ -120,18 +120,18 @@ final class FeedPersonalizationProfile
     public function describe(): array
     {
         return [
-            'profil'                     => $this->key,
-            'scoreMinimum'               => $this->minScore,
-            'scoreBonusAktuell'          => $this->recentScoreBonus,
-            'scoreAbschlagAlt'           => $this->staleScorePenalty,
-            'tageAktuell'                => $this->recentDays,
-            'tageAlt'                    => $this->staleDays,
-            'minMitglieder'              => $this->minMembers,
-            'maxProTag'                  => $this->maxPerDay,
-            'maxGesamt'                  => $this->maxTotal,
-            'maxProAlgorithmus'          => $this->maxPerAlgorithm,
-            'qualitaetsMinimum'          => $this->qualityFloor,
-            'personenAbdeckungMinimum'   => $this->peopleCoverageThreshold,
+            'profil'                   => $this->key,
+            'scoreMinimum'             => $this->minScore,
+            'scoreBonusAktuell'        => $this->recentScoreBonus,
+            'scoreAbschlagAlt'         => $this->staleScorePenalty,
+            'tageAktuell'              => $this->recentDays,
+            'tageAlt'                  => $this->staleDays,
+            'minMitglieder'            => $this->minMembers,
+            'maxProTag'                => $this->maxPerDay,
+            'maxGesamt'                => $this->maxTotal,
+            'maxProAlgorithmus'        => $this->maxPerAlgorithm,
+            'qualitaetsMinimum'        => $this->qualityFloor,
+            'personenAbdeckungMinimum' => $this->peopleCoverageThreshold,
         ];
     }
 }

@@ -51,9 +51,9 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
         $history  = [];
 
         $total = count($candidates);
-        for ($index = 0; $index < $total; $index++) {
+        for ($index = 0; $index < $total; ++$index) {
             $candidate = $candidates[$index];
-            $day = $candidate['day'] ?? null;
+            $day       = $candidate['day'] ?? null;
             if (!is_string($day) || $day === '') {
                 $selected[] = $candidate;
 
@@ -80,16 +80,16 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
                 );
 
                 if ($replacementIndex !== null) {
-                    $replacement                = $candidates[$replacementIndex];
+                    $replacement                   = $candidates[$replacementIndex];
                     $candidates[$replacementIndex] = $candidate;
-                    $candidate                  = $replacement;
-                    $personIds                  = $this->extractPersonIds($candidate);
-                    $signature                  = $this->normalisePersonSignature($personIds);
+                    $candidate                     = $replacement;
+                    $personIds                     = $this->extractPersonIds($candidate);
+                    $signature                     = $this->normalisePersonSignature($personIds);
                 }
             }
 
-            $selected[]       = $candidate;
-            $counts[$day] = ($counts[$day] ?? 0) + 1;
+            $selected[]    = $candidate;
+            $counts[$day]  = ($counts[$day] ?? 0) + 1;
             $history[$day] = $this->recordHistory($history[$day] ?? [], $personIds);
         }
 
@@ -190,9 +190,17 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
     {
         $total = count($candidates);
 
-        for ($index = $startIndex; $index < $total; $index++) {
+        for ($index = $startIndex; $index < $total; ++$index) {
             $candidateDay = $candidates[$index]['day'] ?? null;
-            if (!is_string($candidateDay) || $candidateDay === '' || $candidateDay !== $day) {
+            if (!is_string($candidateDay)) {
+                continue;
+            }
+
+            if ($candidateDay === '') {
+                continue;
+            }
+
+            if ($candidateDay !== $day) {
                 continue;
             }
 

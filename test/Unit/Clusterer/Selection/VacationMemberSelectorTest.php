@@ -21,6 +21,7 @@ use MagicSunday\Memories\Service\Metadata\Quality\MediaQualityAggregator;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Stringable;
+
 use function array_filter;
 use function array_map;
 use function array_replace;
@@ -72,8 +73,8 @@ final class VacationMemberSelectorTest extends TestCase
 
     public function testLowQualityMediaAreSkippedAndCounted(): void
     {
-        $primary   = $this->createMedia('low-quality-primary.jpg', '2024-04-02T10:00:00+00:00', 0.75);
-        $rejected  = $this->createMedia('low-quality-rejected.jpg', '2024-04-02T12:00:00+00:00', 0.85);
+        $primary  = $this->createMedia('low-quality-primary.jpg', '2024-04-02T10:00:00+00:00', 0.75);
+        $rejected = $this->createMedia('low-quality-rejected.jpg', '2024-04-02T12:00:00+00:00', 0.85);
         $rejected->setLowQuality(true);
 
         $summary = $this->createDaySummary('2024-04-02', [$primary, $rejected]);
@@ -133,7 +134,8 @@ final class VacationMemberSelectorTest extends TestCase
 
         $syntheticPrimary = $this->createMedia('synthetic-primary.jpg', '2024-06-10T10:01:00+00:00', 0.83);
         $syntheticPrimary->setCameraBodySerial('Device-Synth');
-        $syntheticExtra   = $this->createMedia('synthetic-extra.jpg', '2024-06-10T10:01:20+00:00', 0.78);
+
+        $syntheticExtra = $this->createMedia('synthetic-extra.jpg', '2024-06-10T10:01:20+00:00', 0.78);
         $syntheticExtra->setCameraBodySerial('Device-Synth');
 
         $slotPrimary = $this->createMedia('slot-primary.jpg', '2024-06-10T12:00:00+00:00', 0.81);
@@ -204,7 +206,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary = $this->createDaySummary('2024-05-01', [$high, $low]);
 
-        $options = new VacationSelectionOptions(qualityFloor: 0.3, targetTotal: 5, maxPerDay: 5);
+        $options = new VacationSelectionOptions(targetTotal: 5, maxPerDay: 5, qualityFloor: 0.3);
         $result  = $this->selector->select(['2024-05-01' => $summary], $this->createHome(), $options);
 
         self::assertCount(1, $result->getMembers());
@@ -285,13 +287,14 @@ final class VacationMemberSelectorTest extends TestCase
             maxPerDay: 2,
             minSpacingSeconds: 60,
             phashMinHamming: 2,
-            qualityFloor: 0.1,
             selfiePenalty: 0.5,
+            qualityFloor: 0.1,
         );
 
         $original = $this->createMedia('duplicate-original.jpg', '2024-05-04T12:00:00+00:00', 0.6);
         $original->setIsVideo(true);
         $original->setPhash64('abcdef1234567890');
+
         $replacement = $this->createMedia('duplicate-replacement.jpg', '2024-05-04T12:02:00+00:00', 0.9);
         $replacement->setPhash64('abcdef1234567890');
         $replacement->setPersons(['person']);
@@ -323,7 +326,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary = $this->createDaySummary('2024-05-05', [$first, $second, $third], ['staypoints' => [$staypoint]]);
 
-        $options = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3, maxPerStaypoint: 1, qualityFloor: 0.1, minSpacingSeconds: 0, minimumTotal: 1);
+        $options = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3, minSpacingSeconds: 0, maxPerStaypoint: 1, qualityFloor: 0.1, minimumTotal: 1);
         $result  = $this->selector->select(['2024-05-05' => $summary], $this->createHome(), $options);
 
         self::assertCount(1, $result->getMembers());
@@ -335,6 +338,7 @@ final class VacationMemberSelectorTest extends TestCase
         $plain = $this->createMedia('bonus-plain.jpg', '2024-05-06T09:00:00+00:00', 0.7);
         $faces = $this->createMedia('bonus-face.jpg', '2024-05-06T09:10:00+00:00', 0.6);
         $faces->setPersons(['a', 'b']);
+
         $video = $this->createMedia('bonus-video.mp4', '2024-05-06T16:00:00+00:00', 0.55);
         $video->setIsVideo(true);
 
@@ -347,12 +351,12 @@ final class VacationMemberSelectorTest extends TestCase
         $options = new VacationSelectionOptions(
             targetTotal: 2,
             maxPerDay: 2,
+            timeSlotHours: 6,
+            minSpacingSeconds: 0,
             videoBonus: 0.3,
             faceBonus: 0.4,
             selfiePenalty: 0.0,
             qualityFloor: 0.1,
-            timeSlotHours: 6,
-            minSpacingSeconds: 0,
         );
 
         $result  = $this->selector->select(['2024-05-06' => $summary], $this->createHome(), $options);
@@ -373,10 +377,10 @@ final class VacationMemberSelectorTest extends TestCase
         $options = new VacationSelectionOptions(
             targetTotal: 1,
             maxPerDay: 1,
-            faceBonus: 0.12,
             videoBonus: 0.22,
-            faceDetectionAvailable: false,
+            faceBonus: 0.12,
             qualityFloor: 0.1,
+            faceDetectionAvailable: false,
         );
 
         $result = $this->selector->select(['2024-05-07' => $summary], $this->createHome(), $options);
@@ -402,8 +406,8 @@ final class VacationMemberSelectorTest extends TestCase
         $options = new VacationSelectionOptions(
             targetTotal: 4,
             maxPerDay: 5,
-            minSpacingSeconds: 0,
             timeSlotHours: 1,
+            minSpacingSeconds: 0,
             qualityFloor: 0.1,
             enablePeopleBalance: true,
             peopleBalanceWeight: 0.65,
@@ -447,8 +451,8 @@ final class VacationMemberSelectorTest extends TestCase
         $options = new VacationSelectionOptions(
             targetTotal: 4,
             maxPerDay: 5,
-            minSpacingSeconds: 0,
             timeSlotHours: 1,
+            minSpacingSeconds: 0,
             qualityFloor: 0.1,
             enablePeopleBalance: false,
             peopleBalanceWeight: 0.65,
@@ -491,7 +495,7 @@ final class VacationMemberSelectorTest extends TestCase
 
         $members = $result->getMembers();
         self::assertCount(3, $members);
-        $dates = array_map(static fn (Media $media): ?string => $media->getTakenAt()?->format('Y-m-d'), $members);
+        $dates             = array_map(static fn (Media $media): ?string => $media->getTakenAt()?->format('Y-m-d'), $members);
         $dayOneOccurrences = count(array_filter($dates, static fn (?string $day): bool => $day === '2024-05-07'));
         $dayTwoOccurrences = count(array_filter($dates, static fn (?string $day): bool => $day === '2024-05-08'));
         self::assertSame(2, $dayOneOccurrences);
@@ -523,8 +527,8 @@ final class VacationMemberSelectorTest extends TestCase
         $options = new VacationSelectionOptions(
             targetTotal: 6,
             maxPerDay: 4,
-            maxPerStaypoint: 3,
             minSpacingSeconds: 0,
+            maxPerStaypoint: 3,
             qualityFloor: 0.1,
             minimumTotal: 6,
         );
@@ -828,8 +832,8 @@ final class VacationMemberSelectorTest extends TestCase
             minSpacingSeconds: 0,
             phashMinHamming: 1,
             qualityFloor: 0.1,
-            minimumTotal: 2,
             phashPercentile: 0.75,
+            minimumTotal: 2,
         );
 
         $result = $this->selector->select(['2024-08-02' => $summary], $this->createHome(), $options);
@@ -847,8 +851,9 @@ final class VacationMemberSelectorTest extends TestCase
     }
 
     /**
-     * @param list<Media>              $members
-     * @param array<string, mixed>     $overrides
+     * @param list<Media>          $members
+     * @param array<string, mixed> $overrides
+     *
      * @return array<string, mixed>
      */
     private function createDaySummary(string $date, array $members, array $overrides = []): array
@@ -908,7 +913,7 @@ final class VacationMemberSelectorTest extends TestCase
             foreach ($summary['members'] as $member) {
                 $takenAt = $member->getTakenAt();
                 if ($takenAt instanceof DateTimeImmutable) {
-                    $timestamp = $takenAt->getTimestamp();
+                    $timestamp    = $takenAt->getTimestamp();
                     $staypoints[] = [
                         'lat'   => 0.0,
                         'lon'   => 0.0,
@@ -918,6 +923,7 @@ final class VacationMemberSelectorTest extends TestCase
                     ];
                 }
             }
+
             $summary['staypoints'] = $staypoints;
         }
 
@@ -954,7 +960,7 @@ final class VacationMemberSelectorTest extends TestCase
                 continue;
             }
 
-            $day = $takenAt->format('Y-m-d');
+            $day          = $takenAt->format('Y-m-d');
             $counts[$day] = ($counts[$day] ?? 0) + 1;
         }
 
@@ -994,11 +1000,11 @@ final class VacationMemberSelectorTest extends TestCase
     private function createHome(): array
     {
         return [
-            'lat'            => 0.0,
-            'lon'            => 0.0,
-            'radius_km'      => 0.0,
-            'country'        => null,
-            'timezone_offset'=> 0,
+            'lat'             => 0.0,
+            'lon'             => 0.0,
+            'radius_km'       => 0.0,
+            'country'         => null,
+            'timezone_offset' => 0,
         ];
     }
 
@@ -1023,26 +1029,26 @@ final class VacationMemberSelectorTest extends TestCase
 }
 
 /**
- * @internal test logger that keeps collected records in memory.
+ * @internal test logger that keeps collected records in memory
  */
 final class InMemoryLogger extends AbstractLogger
 {
     /**
-     * @var list<array{level: string, message: string, context: array<string, mixed>}> 
+     * @var list<array{level: string, message: string, context: array<string, mixed>}>
      */
     private array $records = [];
 
     public function log($level, $message, array $context = []): void
     {
         $this->records[] = [
-            'level' => (string) $level,
+            'level'   => (string) $level,
             'message' => $message instanceof Stringable ? (string) $message : (string) $message,
             'context' => $context,
         ];
     }
 
     /**
-     * @return list<array{level: string, message: string, context: array<string, mixed>}> 
+     * @return list<array{level: string, message: string, context: array<string, mixed>}>
      */
     public function recordsWithLevel(string $level): array
     {

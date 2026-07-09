@@ -24,12 +24,12 @@ use function array_slice;
 use function ceil;
 use function count;
 use function explode;
-use function max;
-use function min;
-use function sort;
 use function is_array;
 use function is_numeric;
 use function is_string;
+use function max;
+use function min;
+use function sort;
 use function sprintf;
 use function str_contains;
 use function trim;
@@ -40,10 +40,10 @@ use function usort;
  */
 final class CompositeClusterScorer
 {
-    private const DEFAULT_STORYLINE = 'default';
+    private const string DEFAULT_STORYLINE = 'default';
 
     /** @var list<ClusterScoreHeuristicInterface> */
-    private array $heuristics;
+    private array $heuristics = [];
 
     /** @var array<string,string> */
     private array $algorithmGroups = [];
@@ -58,9 +58,9 @@ final class CompositeClusterScorer
      * @param array<string,array<string,float|int>>    $algorithmWeightOverrides
      */
     public function __construct(
-        private EntityManagerInterface $em,
+        private readonly EntityManagerInterface $em,
         iterable $heuristics,
-        private array $weights = [
+        private readonly array $weights = [
             'quality'       => 0.22,
             'aesthetics'    => 0.08,
             'people'        => 0.16,
@@ -76,10 +76,9 @@ final class CompositeClusterScorer
         ],
         private array $algorithmBoosts = [],
         array $algorithmGroups = [],
-        private string $defaultAlgorithmGroup = 'default',
+        private readonly string $defaultAlgorithmGroup = 'default',
         array $algorithmWeightOverrides = [],
     ) {
-        $this->heuristics = [];
         foreach ($heuristics as $heuristic) {
             $this->heuristics[] = $heuristic;
         }
@@ -94,14 +93,17 @@ final class CompositeClusterScorer
         }
 
         foreach ($algorithmGroups as $algorithm => $group) {
-            if (!is_string($group) || $group === '') {
+            if (!is_string($group)) {
+                continue;
+            }
+
+            if ($group === '') {
                 continue;
             }
 
             $this->algorithmGroups[$algorithm] = $group;
         }
 
-        $this->algorithmWeightOverrides = [];
         $this->algorithmWeightOverrides = $this->sanitizeAlgorithmWeightOverrides($algorithmWeightOverrides);
     }
 
@@ -114,8 +116,7 @@ final class CompositeClusterScorer
         array $clusters,
         ?ClusterBuildProgressCallbackInterface $progressCallback = null,
         ?FeedUserPreferences $preferences = null,
-    ): array
-    {
+    ): array {
         if ($clusters === []) {
             return [];
         }
@@ -125,11 +126,12 @@ final class CompositeClusterScorer
             if ($heuristic instanceof PreferenceAwareClusterScoreHeuristicInterface) {
                 $heuristic->setFeedUserPreferences($preferences);
             }
+
             $heuristic->prepare($clusters, $mediaMap);
         }
 
         $clusterCount = count($clusters);
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_SCORING, $clusterCount);
         }
 
@@ -153,7 +155,7 @@ final class CompositeClusterScorer
                 'score'     => $score,
             ];
 
-            if ($progressCallback !== null) {
+            if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
                 $progressCallback->onStageProgress(
                     ClusterBuildProgressCallbackInterface::STAGE_SCORING,
                     $index + 1,
@@ -163,7 +165,7 @@ final class CompositeClusterScorer
             }
         }
 
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_SCORING, $clusterCount);
         }
 
@@ -196,7 +198,7 @@ final class CompositeClusterScorer
 
         usort($clusters, static fn (ClusterDraft $a, ClusterDraft $b): int => ($b->getParams()['score'] ?? 0.0) <=> ($a->getParams()['score'] ?? 0.0));
 
-        if ($preferences !== null) {
+        if ($preferences instanceof FeedUserPreferences) {
             foreach ($this->heuristics as $heuristic) {
                 if ($heuristic instanceof PreferenceAwareClusterScoreHeuristicInterface) {
                     $heuristic->setFeedUserPreferences(null);
@@ -226,11 +228,11 @@ final class CompositeClusterScorer
             return [];
         }
 
-        $map   = [];
-        $chunk = 1000;
+        $map      = [];
+        $chunk    = 1000;
         $totalIds = count($allIds);
 
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, $totalIds);
         }
 
@@ -247,7 +249,7 @@ final class CompositeClusterScorer
                 $map[$m->getId()] = $m;
             }
 
-            if ($progressCallback !== null) {
+            if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
                 $processed = min($totalIds, $i + count($slice));
                 $progressCallback->onStageProgress(
                     ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA,
@@ -258,7 +260,7 @@ final class CompositeClusterScorer
             }
         }
 
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_SCORING_MEDIA, $totalIds);
         }
 
@@ -312,7 +314,7 @@ final class CompositeClusterScorer
 
         $clusterOverrides = $cluster->getParams()['score_weight_overrides'] ?? null;
         if ($clusterOverrides !== null) {
-            $weights = $this->mergeWeights($weights, $clusterOverrides);
+            return $this->mergeWeights($weights, $clusterOverrides);
         }
 
         return $weights;
@@ -320,7 +322,6 @@ final class CompositeClusterScorer
 
     /**
      * @param array<string,float> $weights
-     * @param mixed               $overrides
      *
      * @return array<string,float>
      */
@@ -331,7 +332,11 @@ final class CompositeClusterScorer
         }
 
         foreach ($overrides as $key => $value) {
-            if (!is_string($key) || !is_numeric($value)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (!is_numeric($value)) {
                 continue;
             }
 
@@ -347,8 +352,6 @@ final class CompositeClusterScorer
     }
 
     /**
-     * @param mixed $overrides
-     *
      * @return array<string,float>
      */
     private function sanitizeWeightOverrides(mixed $overrides): array
@@ -359,7 +362,11 @@ final class CompositeClusterScorer
 
         $result = [];
         foreach ($overrides as $key => $value) {
-            if (!is_string($key) || !is_numeric($value)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (!is_numeric($value)) {
                 continue;
             }
 
@@ -384,7 +391,11 @@ final class CompositeClusterScorer
         $result = [];
 
         foreach ($overrides as $algorithm => $mapping) {
-            if (!is_string($algorithm) || $algorithm === '') {
+            if (!is_string($algorithm)) {
+                continue;
+            }
+
+            if ($algorithm === '') {
                 continue;
             }
 
@@ -405,7 +416,11 @@ final class CompositeClusterScorer
 
             $storylines = [];
             foreach ($mapping as $storyline => $storylineOverrides) {
-                if (!is_string($storyline) || $storyline === '') {
+                if (!is_string($storyline)) {
+                    continue;
+                }
+
+                if ($storyline === '') {
                     continue;
                 }
 
@@ -455,7 +470,7 @@ final class CompositeClusterScorer
      */
     private function resolveStorylineOverrides(string $storyline, array $overrides): array
     {
-        $candidates = $this->storylineCandidates($storyline);
+        $candidates   = $this->storylineCandidates($storyline);
         $candidates[] = self::DEFAULT_STORYLINE;
 
         foreach ($candidates as $candidate) {
@@ -481,7 +496,7 @@ final class CompositeClusterScorer
 
         $candidates = [$trimmed];
         if (str_contains($trimmed, '.')) {
-            $parts = explode('.', $trimmed);
+            $parts  = explode('.', $trimmed);
             $suffix = end($parts);
             if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;

@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Location;
@@ -199,11 +199,11 @@ final class DeviceSimilarityStrategyTest extends TestCase
         $ownersByDevice  = [];
         $serialByDevice  = [];
         foreach ($clusters as $cluster) {
-            $params                             = $cluster->getParams();
-            $deviceLabel                        = $params['device'];
-            $membersByDevice[$deviceLabel]      = $cluster->getMembers();
-            $ownersByDevice[$deviceLabel]       = $params['device_owner'] ?? null;
-            $serialByDevice[$deviceLabel]       = $params['device_serial'] ?? null;
+            $params                        = $cluster->getParams();
+            $deviceLabel                   = $params['device'];
+            $membersByDevice[$deviceLabel] = $cluster->getMembers();
+            $ownersByDevice[$deviceLabel]  = $params['device_owner'] ?? null;
+            $serialByDevice[$deviceLabel]  = $params['device_serial'] ?? null;
         }
 
         $aliceFirstBody  = 'Fujifilm X-T5 – Besitzer: Alice, Seriennummer: SN-123';

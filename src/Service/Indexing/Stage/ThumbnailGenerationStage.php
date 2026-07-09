@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
@@ -32,7 +33,7 @@ final readonly class ThumbnailGenerationStage implements MediaIngestionStageInte
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
     {
-        if ($context->isSkipped() || $context->getMedia() === null || $context->shouldGenerateThumbnails() === false) {
+        if ($context->isSkipped() || !$context->getMedia() instanceof Media || $context->shouldGenerateThumbnails() === false) {
             return $context;
         }
 
@@ -44,19 +45,17 @@ final readonly class ThumbnailGenerationStage implements MediaIngestionStageInte
 
             $context->getOutput()->writeln(sprintf('<error>%s</error>', $message));
             $media = $context->getMedia();
-            if ($media !== null) {
-                IndexLogHelper::appendEntry(
-                    $media,
-                    IndexLogEntry::error(
-                        'thumbnails.generate',
-                        'failure',
-                        $message,
-                        [
-                            'path' => $context->getFilePath(),
-                        ],
-                    ),
-                );
-            }
+            IndexLogHelper::appendEntry(
+                $media,
+                IndexLogEntry::error(
+                    'thumbnails.generate',
+                    'failure',
+                    $message,
+                    [
+                        'path' => $context->getFilePath(),
+                    ],
+                ),
+            );
         }
 
         return $context;

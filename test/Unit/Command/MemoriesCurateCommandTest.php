@@ -11,7 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Command;
 
+use ArrayIterator;
 use DateTimeImmutable;
+use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Command\MemoriesCurateCommand;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
@@ -28,22 +30,23 @@ use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Tester\CommandTester;
-
 
 final class MemoriesCurateCommandTest extends TestCase
 {
-    private const CLUSTER_GROUP_MAP = [
-        'vacation' => 'travel_and_places',
+    private const array CLUSTER_GROUP_MAP = [
+        'vacation'       => 'travel_and_places',
         'year_in_review' => 'time_and_basics',
-        'person_cohort' => 'people_and_moments',
-        'holiday_event' => 'city_and_events',
+        'person_cohort'  => 'people_and_moments',
+        'holiday_event'  => 'city_and_events',
     ];
 
-    private const CLUSTER_GROUP_ALIAS_MAP = [
+    private const array CLUSTER_GROUP_ALIAS_MAP = [
         'vacation' => 'travel_and_places',
-        'people' => 'people_and_moments',
-        'events' => 'city_and_events',
+        'people'   => 'people_and_moments',
+        'events'   => 'city_and_events',
     ];
 
     #[Test]
@@ -53,7 +56,7 @@ final class MemoriesCurateCommandTest extends TestCase
         $locator->expects(self::once())
             ->method('locate')
             ->with($this->getExistingMediaPath(), null, true)
-            ->willReturn(new \ArrayIterator(['/data/media/a.jpg', '/data/media/b.jpg']));
+            ->willReturn(new ArrayIterator(['/data/media/a.jpg', '/data/media/b.jpg']));
 
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
         $pipeline->expects(self::exactly(2))
@@ -64,7 +67,7 @@ final class MemoriesCurateCommandTest extends TestCase
                 false,
                 false,
                 false,
-                self::isInstanceOf(\Symfony\Component\Console\Output\OutputInterface::class),
+                self::isInstanceOf(OutputInterface::class),
             );
         $pipeline->expects(self::once())->method('finalize')->with(false);
 
@@ -100,7 +103,7 @@ final class MemoriesCurateCommandTest extends TestCase
 
                     return true;
                 }),
-                self::isInstanceOf(\Symfony\Component\Console\Style\SymfonyStyle::class),
+                self::isInstanceOf(SymfonyStyle::class),
             )
             ->willReturn(new FeedExportResult(
                 'out',
@@ -132,9 +135,9 @@ final class MemoriesCurateCommandTest extends TestCase
         $tester = new CommandTester($command);
 
         $status = $tester->execute([
-            '--types' => ['travel_and_places'],
-            '--since' => '2024-01-01',
-            '--until' => '2024-12-31',
+            '--types'   => ['travel_and_places'],
+            '--since'   => '2024-01-01',
+            '--until'   => '2024-12-31',
             '--reindex' => 'force',
         ]);
 
@@ -146,10 +149,10 @@ final class MemoriesCurateCommandTest extends TestCase
     #[Test]
     public function itSkipsIndexingWhenRequested(): void
     {
-        $locator   = $this->createMock(MediaFileLocatorInterface::class);
-        $pipeline  = $this->createMock(MediaIngestionPipelineInterface::class);
-        $qa        = new MetadataQaReportCollector();
-        $writer    = $this->createModelCardWriter();
+        $locator  = $this->createMock(MediaFileLocatorInterface::class);
+        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
+        $qa       = new MetadataQaReportCollector();
+        $writer   = $this->createModelCardWriter();
 
         $runner = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->expects(self::once())
@@ -198,37 +201,37 @@ final class MemoriesCurateCommandTest extends TestCase
     #[Test]
     public function explainOptionWritesModelCards(): void
     {
-        $locator = $this->createMock(MediaFileLocatorInterface::class);
-        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
-        $qa       = new MetadataQaReportCollector();
+        $locator   = $this->createMock(MediaFileLocatorInterface::class);
+        $pipeline  = $this->createMock(MediaIngestionPipelineInterface::class);
+        $qa        = new MetadataQaReportCollector();
         $outputDir = sys_get_temp_dir() . '/memories-modelcards-spec-' . uniqid('', true);
-        $writer   = new ClusterModelCardWriter($outputDir);
+        $writer    = new ClusterModelCardWriter($outputDir);
 
-        $draft = new \MagicSunday\Memories\Clusterer\ClusterDraft(
+        $draft = new ClusterDraft(
             algorithm: 'demo',
             params: [
-                'group' => 'demo',
-                'score' => 1.0,
+                'group'            => 'demo',
+                'score'            => 1.0,
                 'member_selection' => [
-                    'counts' => ['raw' => 2, 'curated' => 1],
-                    'policy' => ['profile' => 'demo_policy'],
+                    'counts'           => ['raw' => 2, 'curated' => 1],
+                    'policy'           => ['profile' => 'demo_policy'],
                     'rejection_counts' => ['time_gap' => 1],
                 ],
                 'member_quality' => [
                     'summary' => [
-                        'selection_counts' => ['raw' => 2, 'curated' => 1],
-                        'rejection_counts' => ['time_gap' => 1],
+                        'selection_counts'    => ['raw' => 2, 'curated' => 1],
+                        'rejection_counts'    => ['time_gap' => 1],
                         'selection_telemetry' => [
                             'rejection_counts' => ['time_gap' => 1],
-                            'counts' => ['selected' => 1],
-                            'mmr' => [
-                                'lambda' => 0.5,
+                            'counts'           => ['selected' => 1],
+                            'mmr'              => [
+                                'lambda'           => 0.5,
                                 'similarity_floor' => 0.1,
-                                'similarity_cap' => 0.9,
-                                'max_considered' => 3,
-                                'pool_size' => 3,
-                                'selected' => [1],
-                                'iterations' => [],
+                                'similarity_cap'   => 0.9,
+                                'max_considered'   => 3,
+                                'pool_size'        => 3,
+                                'selected'         => [1],
+                                'iterations'       => [],
                             ],
                         ],
                         'curated_count' => 1,
@@ -315,7 +318,7 @@ final class MemoriesCurateCommandTest extends TestCase
         $export = $this->createMock(FeedExportServiceInterface::class);
         $export->expects(self::once())
             ->method('export')
-            ->with(self::isInstanceOf(FeedExportRequest::class), self::isInstanceOf(\Symfony\Component\Console\Style\SymfonyStyle::class))
+            ->with(self::isInstanceOf(FeedExportRequest::class), self::isInstanceOf(SymfonyStyle::class))
             ->willReturn(new FeedExportResult(
                 'out',
                 'images',
@@ -345,7 +348,7 @@ final class MemoriesCurateCommandTest extends TestCase
 
         $tester = new CommandTester($command);
         $status = $tester->execute([
-            '--types' => ['vacation', 'people'],
+            '--types'   => ['vacation', 'people'],
             '--reindex' => 'skip',
         ]);
 
@@ -385,7 +388,7 @@ final class MemoriesCurateCommandTest extends TestCase
     public function itSkipsFeedExportDuringDryRun(): void
     {
         $locator = $this->createMock(MediaFileLocatorInterface::class);
-        $locator->method('locate')->willReturn(new \ArrayIterator(['/data/media/a.jpg']));
+        $locator->method('locate')->willReturn(new ArrayIterator(['/data/media/a.jpg']));
 
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
         $pipeline->expects(self::once())->method('process');
@@ -437,12 +440,12 @@ final class MemoriesCurateCommandTest extends TestCase
 
     private function createCommand(): MemoriesCurateCommand
     {
-        $locator = $this->createMock(MediaFileLocatorInterface::class);
+        $locator  = $this->createMock(MediaFileLocatorInterface::class);
         $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
         $qa       = new MetadataQaReportCollector();
         $runner   = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
-        $export   = $this->createMock(FeedExportServiceInterface::class);
+        $export = $this->createMock(FeedExportServiceInterface::class);
         $export->method('export')->willReturn(new FeedExportResult(
             'out',
             'images',
@@ -471,4 +474,3 @@ final class MemoriesCurateCommandTest extends TestCase
         );
     }
 }
-

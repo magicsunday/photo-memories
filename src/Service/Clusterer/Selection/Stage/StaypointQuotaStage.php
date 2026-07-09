@@ -31,8 +31,8 @@ final class StaypointQuotaStage implements SelectionStageInterface
             return $candidates;
         }
 
-        $selected      = [];
-        $countByStay   = [];
+        $selected    = [];
+        $countByStay = [];
 
         foreach ($candidates as $candidate) {
             $staypoint = $candidate['staypoint'];
@@ -48,7 +48,7 @@ final class StaypointQuotaStage implements SelectionStageInterface
                 continue;
             }
 
-            $selected[] = $candidate;
+            $selected[]              = $candidate;
             $countByStay[$staypoint] = ($countByStay[$staypoint] ?? 0) + 1;
         }
 

@@ -28,10 +28,10 @@ use function round;
 final readonly class Context
 {
     /**
-     * @param array{from:int,to:int}|null                $timeWindow
-     * @param string|null                                $locationCell
+     * @param array{from:int,to:int}|null                                                                                      $timeWindow
+     * @param string|null                                                                                                      $locationCell
      * @param array{people: float, people_count: int, people_unique: int, people_coverage: float, people_face_coverage: float} $people
-     * @param float|null                                 $deviceDiversity
+     * @param float|null                                                                                                       $deviceDiversity
      */
     public function __construct(
         private ?array $timeWindow,
@@ -95,12 +95,10 @@ final readonly class Context
             $params['context_location_cell'] = $this->locationCell;
         }
 
-        if ($this->people !== []) {
-            foreach ($this->people as $key => $value) {
-                $contextKey = 'context_' . (string) $key;
-                if (!array_key_exists($contextKey, $params)) {
-                    $params[$contextKey] = $value;
-                }
+        foreach ($this->people as $key => $value) {
+            $contextKey = 'context_' . $key;
+            if (!array_key_exists($contextKey, $params)) {
+                $params[$contextKey] = $value;
             }
         }
 
@@ -136,7 +134,7 @@ final readonly class Context
                 continue;
             }
 
-            $ts = $takenAt->getTimestamp();
+            $ts   = $takenAt->getTimestamp();
             $from = $from === null ? $ts : min($from, $ts);
             $to   = $to === null ? $ts : max($to, $ts);
         }
@@ -160,15 +158,18 @@ final readonly class Context
             if ($cell === null) {
                 $lat = $media->getGpsLat();
                 $lon = $media->getGpsLon();
+                if ($lat === null) {
+                    continue;
+                }
 
-                if ($lat === null || $lon === null) {
+                if ($lon === null) {
                     continue;
                 }
 
                 $cell = S2CellId::tokenFromDegrees((float) $lat, (float) $lon, 7);
             }
 
-            $token = (string) $cell;
+            $token          = (string) $cell;
             $counts[$token] = ($counts[$token] ?? 0) + 1;
         }
 
@@ -220,7 +221,7 @@ final readonly class Context
             $aggregator = new ClusterDeviceMetadataAggregator();
         }
 
-        $summary = $aggregator->summarize($scope);
+        $summary  = $aggregator->summarize($scope);
         $variants = (int) ($summary['device_variants'] ?? 0);
         $share    = $summary['device_primary_share'] ?? null;
 

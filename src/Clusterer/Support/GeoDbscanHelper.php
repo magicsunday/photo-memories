@@ -43,8 +43,11 @@ final class GeoDbscanHelper
         foreach ($items as $media) {
             $lat = $media->getGpsLat();
             $lon = $media->getGpsLon();
+            if ($lat === null) {
+                continue;
+            }
 
-            if ($lat === null || $lon === null) {
+            if ($lon === null) {
                 continue;
             }
 

@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -47,7 +46,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     use ClusterLocationMetadataTrait;
     use ProgressAwareClusterTrait;
 
-    private const PROGRESS_SEGMENTS = 25;
+    private const int PROGRESS_SEGMENTS = 25;
 
     private LocationHelper $locationHelper;
 
@@ -117,15 +116,16 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
         $normalized = mb_strtolower($value);
 
         return match ($normalized) {
-            'winter' => 'Winter',
-            'spring', 'frühling' => 'Frühling',
-            'summer', 'sommer' => 'Sommer',
+            'winter'                   => 'Winter',
+            'spring', 'frühling'       => 'Frühling',
+            'summer', 'sommer'         => 'Sommer',
             'autumn', 'fall', 'herbst' => 'Herbst',
-            default => null,
+            default                    => null,
         };
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -136,8 +136,8 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     }
 
     /**
-     * @param list<Media> $items
-     * @param Context $ctx
+     * @param list<Media>                                            $items
+     * @param Context                                                $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
@@ -145,7 +145,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     private function clusterInternal(array $items, ?Context $ctx, ?callable $update): array
     {
         /** @var list<Media> $timestamped */
-        $timestamped = $this->filterTimestampedItems($items);
+        $timestamped      = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
         $maxSteps         = max(1, $timestampedCount);
 
@@ -176,7 +176,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
 
         $drafts = $this->buildClustersFromEligibleSeasons($eligibleSeasons);
 
-        if ($ctx !== null) {
+        if ($ctx instanceof Context) {
             foreach ($drafts as $draft) {
                 $ctx->applyToDraft($draft);
             }
@@ -193,7 +193,7 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
     }
 
     /**
-     * @param list<Media>                                 $timestamped
+     * @param list<Media>                                            $timestamped
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return array{0: array<string, list<Media>>, 1: int}
@@ -292,5 +292,4 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
 
         return $out;
     }
-
 }

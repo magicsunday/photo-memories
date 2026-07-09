@@ -21,16 +21,16 @@ use function max;
 /**
  * Filters drafts by score, size and optional time validity.
  */
-final class FilterNormalizationStage implements ClusterConsolidationStageInterface
+final readonly class FilterNormalizationStage implements ClusterConsolidationStageInterface
 {
     use StageSupportTrait;
 
     public function __construct(
-        private readonly float $minScore,
-        private readonly int $minSize,
-        private readonly bool $requireValidTime,
-        private readonly int $minValidYear,
-        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private float $minScore,
+        private int $minSize,
+        private bool $requireValidTime,
+        private int $minValidYear,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
     }
 
@@ -65,11 +65,11 @@ final class FilterNormalizationStage implements ClusterConsolidationStageInterfa
 
         if ($total === 0) {
             $this->emitMonitoring('selection_completed', [
-                'pre_count'             => 0,
-                'post_count'            => 0,
-                'dropped_count'         => 0,
-                'dropped_invalid_time'  => 0,
-                'dropped_below_min_size'=> 0,
+                'pre_count'               => 0,
+                'post_count'              => 0,
+                'dropped_count'           => 0,
+                'dropped_invalid_time'    => 0,
+                'dropped_below_min_size'  => 0,
                 'dropped_below_min_score' => 0,
             ]);
 
@@ -127,7 +127,7 @@ final class FilterNormalizationStage implements ClusterConsolidationStageInterfa
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

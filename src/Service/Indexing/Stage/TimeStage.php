@@ -11,12 +11,14 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Stage;
 
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\CalendarFeatureEnricher;
 use MagicSunday\Memories\Service\Metadata\MetadataQaInspector;
 use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
 use MagicSunday\Memories\Service\Metadata\TimeNormalizer;
+use MagicSunday\Memories\Support\IndexLogEntry;
 use MagicSunday\Memories\Support\IndexLogHelper;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -51,8 +53,8 @@ final class TimeStage extends AbstractExtractorStage
             $solar,
         ];
 
-        $this->metadataQaInspector  = $metadataQaInspector;
-        $this->qaReportCollector    = $qaReportCollector;
+        $this->metadataQaInspector = $metadataQaInspector;
+        $this->qaReportCollector   = $qaReportCollector;
     }
 
     public function process(MediaIngestionContext $context): MediaIngestionContext
@@ -68,14 +70,14 @@ final class TimeStage extends AbstractExtractorStage
         $context = $this->runExtractors($context, $this->extractors);
 
         $media = $context->getMedia();
-        if ($media === null) {
+        if (!$media instanceof Media) {
             return $context;
         }
 
         $inspection = $this->metadataQaInspector->inspect($context->getFilePath(), $media);
         if ($inspection->hasIssues()) {
             $entry = $inspection->toIndexLogEntry();
-            if ($entry !== null) {
+            if ($entry instanceof IndexLogEntry) {
                 IndexLogHelper::appendEntry($media, $entry);
             }
 

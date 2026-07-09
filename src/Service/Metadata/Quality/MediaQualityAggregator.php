@@ -24,7 +24,7 @@ use function min;
 /**
  * Aggregates per-media quality metrics into reusable summary scores.
  */
-final class MediaQualityAggregator
+final readonly class MediaQualityAggregator
 {
     public function __construct(
         private float $minResolutionMegapixels = 2.0,
@@ -74,7 +74,7 @@ final class MediaQualityAggregator
         $media->setQualityExposure($exposureScore);
         $media->setQualityNoise($noiseScore);
 
-        $isLowQuality = false;
+        $isLowQuality   = false;
         $noiseThreshold = $this->noiseThresholdFor($media);
         if ($qualityScore !== null && $qualityScore < $this->lowScoreThreshold) {
             $isLowQuality = true;
@@ -232,7 +232,7 @@ final class MediaQualityAggregator
         float $noiseThreshold,
     ): void {
         $context = [
-            'status' => $isLowQuality ? 'low' : 'ok',
+            'status'         => $isLowQuality ? 'low' : 'ok',
             'noiseThreshold' => $noiseThreshold,
         ];
 

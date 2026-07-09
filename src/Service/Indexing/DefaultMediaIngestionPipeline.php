@@ -17,14 +17,13 @@ use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionTelemetryInterface;
 use MagicSunday\Memories\Service\Indexing\Support\MediaIngestionTelemetryCollector;
-use Symfony\Component\Console\Output\NullOutput;
-use Symfony\Component\Console\Output\OutputInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 
 use function is_array;
 use function iterator_to_array;
-use function count;
 
 /**
  * Class DefaultMediaIngestionPipeline.
@@ -40,7 +39,7 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
 
     /**
      * @param iterable<MediaIngestionStageInterface> $stages
-     * @param list<string>                            $videoExtensions
+     * @param list<string>                           $videoExtensions
      */
     public function __construct(
         iterable $stages,
@@ -52,7 +51,7 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
         $this->telemetry = $telemetry ?? new MediaIngestionTelemetryCollector();
         $this->logger    = $logger ?? new NullLogger();
 
-        if (count($videoExtensions) === 0) {
+        if ($videoExtensions === []) {
             $this->logger->warning('media_ingestion.video_extensions_unconfigured', [
                 'videoExtensions' => $videoExtensions,
                 'description'     => 'No video file extensions configured; video ingestion might skip video files.',

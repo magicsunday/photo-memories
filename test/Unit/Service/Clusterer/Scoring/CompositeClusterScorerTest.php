@@ -19,8 +19,8 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
-use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ClusterScoreHeuristicInterface;
+use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 use MagicSunday\Memories\Service\Clusterer\Scoring\ContentClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\DensityClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\HolidayClusterScoreHeuristic;
@@ -35,6 +35,7 @@ use MagicSunday\Memories\Service\Clusterer\Scoring\RecencyClusterScoreHeuristic;
 use MagicSunday\Memories\Service\Clusterer\Scoring\TemporalClusterScoreHeuristic;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+
 use function sprintf;
 
 final class CompositeClusterScorerTest extends TestCase
@@ -388,7 +389,7 @@ final class CompositeClusterScorerTest extends TestCase
             defaultAlgorithmGroup: 'default',
             algorithmWeightOverrides: [
                 'vacation' => [
-                    'default' => ['quality' => 0.6],
+                    'default'          => ['quality' => 0.6],
                     'vacation.transit' => ['quality' => 0.2, 'people' => 0.8],
                 ],
             ],
@@ -405,8 +406,8 @@ final class CompositeClusterScorerTest extends TestCase
             storyline: 'vacation.transit',
         );
 
-        $scored  = $scorer->score([$cluster]);
-        $params  = $scored[0]->getParams();
+        $scored   = $scorer->score([$cluster]);
+        $params   = $scored[0]->getParams();
         $expected = (0.2 * 0.4) + (0.8 * 0.5);
 
         self::assertEqualsWithDelta($expected, $params['pre_norm_score'], 1e-9);
@@ -478,7 +479,7 @@ final class CompositeClusterScorerTest extends TestCase
             $seedKey = sprintf('%.1f', $seed);
             self::assertEqualsWithDelta($expected[$algorithm][$seedKey], $postNorm, 1e-9);
 
-            $boost = $cluster->getParams()['boosted_score'];
+            $boost  = $cluster->getParams()['boosted_score'];
             $factor = $algorithm === 'vacation' ? 1.2 : 0.8;
 
             self::assertEqualsWithDelta($postNorm * $factor, $boost, 1e-9);

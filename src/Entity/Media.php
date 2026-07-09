@@ -14,9 +14,9 @@ namespace MagicSunday\Memories\Entity;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
+use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use MagicSunday\Memories\Value\PlaceId;
 
 use function count;

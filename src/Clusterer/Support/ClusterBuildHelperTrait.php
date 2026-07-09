@@ -30,7 +30,6 @@ use const PHP_INT_MAX;
  */
 trait ClusterBuildHelperTrait
 {
-
     /**
      * @param list<Media> $members
      *

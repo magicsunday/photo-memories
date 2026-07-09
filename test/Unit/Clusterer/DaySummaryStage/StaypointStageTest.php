@@ -64,7 +64,7 @@ final class StaypointStageTest extends TestCase
         $initial = $initialStage->process($items, $home);
         $gps     = $gpsStage->process($initial, $home);
 
-        $dayKey               = '2024-04-15';
+        $dayKey                     = '2024-04-15';
         $gps[$dayKey]['poiSamples'] = 1;
 
         $result  = $staypointStage->process($gps, $home);

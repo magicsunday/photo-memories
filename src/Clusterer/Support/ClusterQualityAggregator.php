@@ -26,9 +26,9 @@ use function usort;
 /**
  * Aggregates per-media quality metrics for cluster level annotations.
  */
-final class ClusterQualityAggregator
+final readonly class ClusterQualityAggregator
 {
-    public const DEFAULT_QUALITY_WEIGHTS = [
+    public const array DEFAULT_QUALITY_WEIGHTS = [
         'resolution' => 0.18,
         'sharpness'  => 0.24,
         'exposure'   => 0.18,
@@ -38,23 +38,24 @@ final class ClusterQualityAggregator
         'keyframe'   => 0.05,
     ];
 
-    public const DEFAULT_VIDEO_BONUS_WEIGHT   = 0.08;
-    public const DEFAULT_VIDEO_PENALTY_WEIGHT = 0.12;
+    public const float DEFAULT_VIDEO_BONUS_WEIGHT = 0.08;
 
-    private readonly float $qualityBaselineMegapixels;
+    public const float DEFAULT_VIDEO_PENALTY_WEIGHT = 0.12;
 
-    private readonly ImageQualityEstimatorInterface $estimator;
+    private float $qualityBaselineMegapixels;
+
+    private ImageQualityEstimatorInterface $estimator;
 
     /**
      * @var array<string,float>
      */
-    private readonly array $qualityWeights;
+    private array $qualityWeights;
 
-    private readonly float $videoBonusWeight;
+    private float $videoBonusWeight;
 
-    private readonly float $videoPenaltyWeight;
+    private float $videoPenaltyWeight;
 
-    private readonly int $topK;
+    private int $topK;
 
     public function __construct(
         float $qualityBaselineMegapixels = 12.0,
@@ -116,12 +117,12 @@ final class ClusterQualityAggregator
             $resolutionNorm = null;
 
             if ($width !== null && $height !== null && $width > 0 && $height > 0) {
-                $resolutionRaw  = ((float) $width * (float) $height) / 1_000_000.0;
-                $resolutionNorm = $this->clamp01($resolutionRaw / max(1e-6, $this->qualityBaselineMegapixels));
+                $resolutionRaw       = ((float) $width * (float) $height) / 1_000_000.0;
+                $resolutionNorm      = $this->clamp01($resolutionRaw / max(1e-6, $this->qualityBaselineMegapixels));
                 $resolutionSamples[] = $resolutionRaw;
             }
 
-            $score      = $media->isVideo()
+            $score = $media->isVideo()
                 ? $this->estimator->scoreVideo($media)
                 : $this->estimator->scoreStill($media);
             $rawMetrics = $score->rawMetrics;
@@ -146,10 +147,10 @@ final class ClusterQualityAggregator
                 $blockinessSamples[] = $blockinessRaw;
             }
 
-            $clippingRaw = $rawMetrics?->clippingShare ?? (float) $score->clipping;
+            $clippingRaw       = $rawMetrics?->clippingShare ?? $score->clipping;
             $clippingSamples[] = $clippingRaw;
 
-            $keyframeRaw = (float) $score->keyframeQuality;
+            $keyframeRaw       = $score->keyframeQuality;
             $keyframeSamples[] = $keyframeRaw;
 
             $videoBonusValue   = null;
@@ -161,22 +162,22 @@ final class ClusterQualityAggregator
             }
 
             $measurements[] = [
-                'resolution_raw'   => $resolutionRaw,
-                'resolution_norm'  => $resolutionNorm,
-                'sharpness_raw'    => $sharpnessRaw,
-                'sharpness_norm'   => $this->clamp01($score->sharpness),
-                'contrast_raw'     => $contrastRaw,
-                'contrast_norm'    => $this->clamp01($score->contrast),
-                'noise_raw'        => $noiseRaw,
-                'noise_norm'       => $this->clamp01($score->noise),
-                'blockiness_raw'   => $blockinessRaw,
-                'blockiness_norm'  => $this->clamp01($score->blockiness),
-                'clipping_raw'     => $clippingRaw,
-                'exposure_norm'    => $this->clamp01($score->exposure),
-                'keyframe_raw'     => $keyframeRaw,
-                'keyframe_norm'    => $this->clamp01($score->keyframeQuality),
-                'video_bonus'      => $videoBonusValue,
-                'video_penalty'    => $videoPenaltyValue,
+                'resolution_raw'  => $resolutionRaw,
+                'resolution_norm' => $resolutionNorm,
+                'sharpness_raw'   => $sharpnessRaw,
+                'sharpness_norm'  => $this->clamp01($score->sharpness),
+                'contrast_raw'    => $contrastRaw,
+                'contrast_norm'   => $this->clamp01($score->contrast),
+                'noise_raw'       => $noiseRaw,
+                'noise_norm'      => $this->clamp01($score->noise),
+                'blockiness_raw'  => $blockinessRaw,
+                'blockiness_norm' => $this->clamp01($score->blockiness),
+                'clipping_raw'    => $clippingRaw,
+                'exposure_norm'   => $this->clamp01($score->exposure),
+                'keyframe_raw'    => $keyframeRaw,
+                'keyframe_norm'   => $this->clamp01($score->keyframeQuality),
+                'video_bonus'     => $videoBonusValue,
+                'video_penalty'   => $videoPenaltyValue,
             ];
         }
 
@@ -244,7 +245,7 @@ final class ClusterQualityAggregator
                 'keyframe'   => $keyframe,
             ]);
 
-            $quality = $this->combineScores($components, null);
+            $quality    = $this->combineScores($components, null);
             $aesthetics = $this->combineScores([
                 [$exposure, 0.45],
                 [$contrast, 0.35],
@@ -307,14 +308,14 @@ final class ClusterQualityAggregator
         $overall    = $this->computeAggregateMetrics($memberMetrics);
 
         return [
-            'quality_avg'        => $top['quality'] ?? 0.0,
-            'aesthetics_score'   => $top['aesthetics'],
-            'quality_resolution' => $overall['resolution'],
-            'quality_sharpness'  => $overall['sharpness'],
-            'quality_exposure'   => $overall['exposure'],
-            'quality_contrast'   => $overall['contrast'],
-            'quality_noise'      => $overall['noise'],
-            'quality_blockiness' => $overall['blockiness'],
+            'quality_avg'            => $top['quality'] ?? 0.0,
+            'aesthetics_score'       => $top['aesthetics'],
+            'quality_resolution'     => $overall['resolution'],
+            'quality_sharpness'      => $overall['sharpness'],
+            'quality_exposure'       => $overall['exposure'],
+            'quality_contrast'       => $overall['contrast'],
+            'quality_noise'          => $overall['noise'],
+            'quality_blockiness'     => $overall['blockiness'],
             'quality_video_keyframe' => $overall['keyframe'],
             'quality_video_bonus'    => $overall['video_bonus'],
             'quality_video_penalty'  => $overall['video_penalty'],
@@ -336,7 +337,7 @@ final class ClusterQualityAggregator
                 continue;
             }
 
-            $value = $values[$key] ?? null;
+            $value        = $values[$key] ?? null;
             $components[] = [$value, $weight];
         }
 
@@ -423,9 +424,9 @@ final class ClusterQualityAggregator
             return $sorted[0];
         }
 
-        $index = ($count - 1) * $fraction;
-        $lower = (int) floor($index);
-        $upper = (int) ceil($index);
+        $index  = ($count - 1) * $fraction;
+        $lower  = (int) floor($index);
+        $upper  = (int) ceil($index);
         $weight = $index - $lower;
 
         if ($lower === $upper) {
@@ -442,7 +443,7 @@ final class ClusterQualityAggregator
      */
     private function percentileRange(array $samples): ?array
     {
-        if (count($samples) === 0) {
+        if ($samples === []) {
             return null;
         }
 

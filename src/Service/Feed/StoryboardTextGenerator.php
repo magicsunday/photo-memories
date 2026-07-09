@@ -18,14 +18,13 @@ use function array_key_first;
 use function array_keys;
 use function array_slice;
 use function arsort;
-use function explode;
 use function count;
 use function implode;
 use function in_array;
 use function is_array;
-use function is_scalar;
 use function is_float;
 use function is_int;
+use function is_scalar;
 use function is_string;
 use function sprintf;
 use function strtolower;
@@ -91,7 +90,7 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<array<string, mixed>> $entries
+     * @param list<array<string, mixed>>                                         $entries
      * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
      *
      * @return array{title: string, description: string}
@@ -175,13 +174,7 @@ final readonly class StoryboardTextGenerator
             return '';
         }
 
-        $normalized = substr(strtolower($trimmed), 0, 2);
-
-        if ($normalized === false || $normalized === '') {
-            return '';
-        }
-
-        return $normalized;
+        return substr(strtolower($trimmed), 0, 2);
     }
 
     /**
@@ -207,7 +200,7 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<array<string, mixed>> $entries
+     * @param list<array<string, mixed>>                                         $entries
      * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
      */
     private function resolveLocation(array $entries, array $clusterParams): ?string
@@ -246,7 +239,7 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param array<string, int> $scores
+     * @param array<string, int>                        $scores
      * @param array<array-key, scalar|null>|scalar|null $value
      */
     private function registerLocationCandidate(array &$scores, array|int|float|string|null $value, int $weight): void
@@ -403,28 +396,28 @@ final readonly class StoryboardTextGenerator
     {
         $catalogue = [
             'de' => [
-                'title_location_persons'      => 'Mit %s in %s',
-                'title_location'              => 'Momente in %s',
-                'title_persons'               => 'Mit %s',
-                'title_generic'               => 'Besondere Erinnerungen',
+                'title_location_persons'       => 'Mit %s in %s',
+                'title_location'               => 'Momente in %s',
+                'title_persons'                => 'Mit %s',
+                'title_generic'                => 'Besondere Erinnerungen',
                 'description_location_persons' => 'Gemeinsam mit %s in %s',
-                'description_location'        => 'Aufgenommen in %s',
-                'description_persons'         => 'Gemeinsam mit %s',
-                'description_scenes'          => 'Szenen: %s',
-                'description_keywords'        => 'Tags: %s',
-                'description_generic'         => 'Unvergessliche Augenblicke.',
+                'description_location'         => 'Aufgenommen in %s',
+                'description_persons'          => 'Gemeinsam mit %s',
+                'description_scenes'           => 'Szenen: %s',
+                'description_keywords'         => 'Tags: %s',
+                'description_generic'          => 'Unvergessliche Augenblicke.',
             ],
             'en' => [
-                'title_location_persons'      => 'With %s in %s',
-                'title_location'              => 'Moments in %s',
-                'title_persons'               => 'With %s',
-                'title_generic'               => 'Special memories',
+                'title_location_persons'       => 'With %s in %s',
+                'title_location'               => 'Moments in %s',
+                'title_persons'                => 'With %s',
+                'title_generic'                => 'Special memories',
                 'description_location_persons' => 'Together with %s in %s',
-                'description_location'        => 'Captured in %s',
-                'description_persons'         => 'Together with %s',
-                'description_scenes'          => 'Scenes: %s',
-                'description_keywords'        => 'Tags: %s',
-                'description_generic'         => 'Unforgettable moments.',
+                'description_location'         => 'Captured in %s',
+                'description_persons'          => 'Together with %s',
+                'description_scenes'           => 'Scenes: %s',
+                'description_keywords'         => 'Tags: %s',
+                'description_generic'          => 'Unforgettable moments.',
             ],
         ];
 

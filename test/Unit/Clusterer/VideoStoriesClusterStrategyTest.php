@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\VideoStoriesClusterStrategy;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
@@ -67,9 +67,7 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             }
 
             $hasStabilization = $stabilisation[$i];
-            if ($hasStabilization !== null) {
-                $video->setVideoHasStabilization($hasStabilization);
-            }
+            $video->setVideoHasStabilization($hasStabilization);
 
             $video->setCameraMake('Apple');
             $video->setCameraModel('Apple iPhone 14 Pro');
@@ -204,11 +202,11 @@ final class VideoStoriesClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: 48.1,
             lon: 11.6,
+            location: $location,
             configure: static function (Media $media): void {
                 $media->setMime('video/mp4');
             },
             size: 4096,
-            location: $location,
         );
     }
 

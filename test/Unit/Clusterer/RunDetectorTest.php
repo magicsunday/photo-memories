@@ -14,8 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Clusterer;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
-use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -130,12 +130,12 @@ final class RunDetectorTest extends TestCase
         $bridgeStart = new DateTimeImmutable('2024-08-11 06:30:00', new DateTimeZone('Europe/Berlin'));
         $bridgeEnd   = new DateTimeImmutable('2024-08-11 22:15:00', new DateTimeZone('Europe/Berlin'));
 
-        $bridgeSummary = $this->makeDaySummary('2024-08-11', false, [$startMedia], 5.0, 45.0, 1);
-        $bridgeSummary['members']            = [];
-        $bridgeSummary['gpsMembers']         = [];
-        $bridgeSummary['photoCount']         = 0;
-        $bridgeSummary['sufficientSamples']  = false;
-        $bridgeSummary['staypoints']         = [[
+        $bridgeSummary                      = $this->makeDaySummary('2024-08-11', false, [$startMedia], 5.0, 45.0, 1);
+        $bridgeSummary['members']           = [];
+        $bridgeSummary['gpsMembers']        = [];
+        $bridgeSummary['photoCount']        = 0;
+        $bridgeSummary['sufficientSamples'] = false;
+        $bridgeSummary['staypoints']        = [[
             'lat'   => 45.4642,
             'lon'   => 9.1900,
             'start' => $bridgeStart->getTimestamp(),
@@ -153,8 +153,8 @@ final class RunDetectorTest extends TestCase
             'dwellSeconds' => $bridgeEnd->getTimestamp() - $bridgeStart->getTimestamp(),
             'memberCount'  => 0,
         ]];
-        $bridgeSummary['baseAway']           = false;
-        $bridgeSummary['awayByDistance']     = false;
+        $bridgeSummary['baseAway']       = false;
+        $bridgeSummary['awayByDistance'] = false;
 
         $days = [
             '2024-08-10' => $this->makeDaySummary('2024-08-10', true, [$startMedia], 140.0, 220.0, 6),
@@ -179,7 +179,7 @@ final class RunDetectorTest extends TestCase
             maxLeanBridgeDays: 0,
             minLeanBridgeDistanceKm: 60.0,
         );
-        $detector          = new RunDetector(
+        $detector = new RunDetector(
             transportDayExtender: $transportExtender,
             minAwayDistanceKm: 60.0,
             minItemsPerDay: 4,
@@ -232,14 +232,14 @@ final class RunDetectorTest extends TestCase
         $stayStart = new DateTimeImmutable('2024-11-02 07:15:00', new DateTimeZone('Europe/Berlin'));
         $stayEnd   = new DateTimeImmutable('2024-11-02 23:10:00', new DateTimeZone('Europe/Berlin'));
 
-        $leanStaySummary = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
-        $leanStaySummary['members']            = [];
-        $leanStaySummary['gpsMembers']         = [];
-        $leanStaySummary['photoCount']         = 1;
-        $leanStaySummary['sufficientSamples']  = false;
-        $leanStaySummary['avgDistanceKm']      = 110.0;
-        $leanStaySummary['maxDistanceKm']      = 150.0;
-        $leanStaySummary['staypoints']         = [[
+        $leanStaySummary                      = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
+        $leanStaySummary['members']           = [];
+        $leanStaySummary['gpsMembers']        = [];
+        $leanStaySummary['photoCount']        = 1;
+        $leanStaySummary['sufficientSamples'] = false;
+        $leanStaySummary['avgDistanceKm']     = 110.0;
+        $leanStaySummary['maxDistanceKm']     = 150.0;
+        $leanStaySummary['staypoints']        = [[
             'lat'   => 43.7696,
             'lon'   => 11.2558,
             'start' => $stayStart->getTimestamp(),
@@ -302,7 +302,7 @@ final class RunDetectorTest extends TestCase
             maxLeanBridgeDays: 0,
             minLeanBridgeDistanceKm: 60.0,
         );
-        $detector          = new RunDetector(
+        $detector = new RunDetector(
             transportDayExtender: $transportExtender,
             minAwayDistanceKm: 60.0,
             minItemsPerDay: 4,
@@ -348,14 +348,14 @@ final class RunDetectorTest extends TestCase
         $stayStart = new DateTimeImmutable('2024-11-02 07:15:00', new DateTimeZone('Europe/Berlin'));
         $stayEnd   = new DateTimeImmutable('2024-11-02 23:10:00', new DateTimeZone('Europe/Berlin'));
 
-        $leanStaySummary = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
-        $leanStaySummary['members']            = [];
-        $leanStaySummary['gpsMembers']         = [];
-        $leanStaySummary['photoCount']         = 1;
-        $leanStaySummary['sufficientSamples']  = false;
-        $leanStaySummary['avgDistanceKm']      = 110.0;
-        $leanStaySummary['maxDistanceKm']      = 150.0;
-        $leanStaySummary['staypoints']         = [[
+        $leanStaySummary                      = $this->makeDaySummary('2024-11-02', true, [], 15.0, 45.0, 1);
+        $leanStaySummary['members']           = [];
+        $leanStaySummary['gpsMembers']        = [];
+        $leanStaySummary['photoCount']        = 1;
+        $leanStaySummary['sufficientSamples'] = false;
+        $leanStaySummary['avgDistanceKm']     = 110.0;
+        $leanStaySummary['maxDistanceKm']     = 150.0;
+        $leanStaySummary['staypoints']        = [[
             'lat'   => 43.7696,
             'lon'   => 11.2558,
             'start' => $stayStart->getTimestamp(),
@@ -381,17 +381,17 @@ final class RunDetectorTest extends TestCase
             30.0,
             1,
             overrides: [
-                'members'           => [],
-                'gpsMembers'        => [],
-                'photoCount'        => 1,
-                'sufficientSamples' => false,
-                'transitRatio'      => 0.2,
-                'avgSpeedKmh'       => 40.0,
-                'maxSpeedKmh'       => 60.0,
+                'members'             => [],
+                'gpsMembers'          => [],
+                'photoCount'          => 1,
+                'sufficientSamples'   => false,
+                'transitRatio'        => 0.2,
+                'avgSpeedKmh'         => 40.0,
+                'maxSpeedKmh'         => 60.0,
                 'hasHighSpeedTransit' => false,
-                'hasAirportPoi'     => false,
-                'maxDistanceKm'     => 28.0,
-                'avgDistanceKm'     => 18.0,
+                'hasAirportPoi'       => false,
+                'maxDistanceKm'       => 28.0,
+                'avgDistanceKm'       => 18.0,
             ],
         );
 
@@ -562,9 +562,9 @@ final class RunDetectorTest extends TestCase
                     'dominantStaypoints' => [
                         $this->makeDominantStaypoint('stay-2024-06-03', 48.8566, 2.3522),
                     ],
-                    'transitRatio'       => 0.25,
-                    'avgSpeedKmh'        => 70.0,
-                    'maxSpeedKmh'        => 120.0,
+                    'transitRatio' => 0.25,
+                    'avgSpeedKmh'  => 70.0,
+                    'maxSpeedKmh'  => 120.0,
                 ],
             ),
             '2024-06-04' => $this->makeDaySummary(
@@ -581,9 +581,9 @@ final class RunDetectorTest extends TestCase
                     'dominantStaypoints' => [
                         $this->makeDominantStaypoint('stay-2024-06-04', 52.5, 13.4),
                     ],
-                    'transitRatio'       => 0.1,
-                    'avgSpeedKmh'        => 35.0,
-                    'maxSpeedKmh'        => 60.0,
+                    'transitRatio' => 0.1,
+                    'avgSpeedKmh'  => 35.0,
+                    'maxSpeedKmh'  => 60.0,
                 ],
             ),
         ];
@@ -673,9 +673,9 @@ final class RunDetectorTest extends TestCase
                     'dominantStaypoints' => [
                         $this->makeDominantStaypoint('stay-2024-07-10', 48.8566, 2.3522),
                     ],
-                    'transitRatio'       => 0.82,
-                    'avgSpeedKmh'        => 115.0,
-                    'maxSpeedKmh'        => 210.0,
+                    'transitRatio' => 0.82,
+                    'avgSpeedKmh'  => 115.0,
+                    'maxSpeedKmh'  => 210.0,
                 ],
             ),
             '2024-07-11' => $this->makeDaySummary(
@@ -692,9 +692,9 @@ final class RunDetectorTest extends TestCase
                     'dominantStaypoints' => [
                         $this->makeDominantStaypoint('stay-2024-07-11', 52.5, 13.4),
                     ],
-                    'transitRatio'       => 0.05,
-                    'avgSpeedKmh'        => 30.0,
-                    'maxSpeedKmh'        => 55.0,
+                    'transitRatio' => 0.05,
+                    'avgSpeedKmh'  => 30.0,
+                    'maxSpeedKmh'  => 55.0,
                 ],
             ),
         ];
@@ -715,7 +715,7 @@ final class RunDetectorTest extends TestCase
             maxLeanBridgeDays: 3,
             minLeanBridgeDistanceKm: 10.0,
         );
-        $detector          = new RunDetector(
+        $detector = new RunDetector(
             transportDayExtender: $transportExtender,
             minAwayDistanceKm: 140.0,
             minItemsPerDay: 5,
@@ -745,9 +745,9 @@ final class RunDetectorTest extends TestCase
         $days   = [];
         $anchor = new DateTimeImmutable('2024-08-01 12:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 10; ++$i) {
-            $current   = $anchor->modify(sprintf('+%d days', $i));
-            $date      = $current->format('Y-m-d');
-            $media     = $this->makeMediaFixture(
+            $current = $anchor->modify(sprintf('+%d days', $i));
+            $date    = $current->format('Y-m-d');
+            $media   = $this->makeMediaFixture(
                 600 + $i,
                 sprintf('base-%02d.jpg', $i + 1),
                 $current,
@@ -757,19 +757,19 @@ final class RunDetectorTest extends TestCase
             $days[$date] = $this->makeDaySummary($date, true, [$media], 120.0, 180.0, 3);
         }
 
-        $softStart  = $anchor->modify('+10 days');
-        $softOne    = $this->makeMediaFixture(700, 'soft-a.jpg', $softStart, 45.4215, 11.8870);
-        $softOneKey = $softStart->format('Y-m-d');
+        $softStart         = $anchor->modify('+10 days');
+        $softOne           = $this->makeMediaFixture(700, 'soft-a.jpg', $softStart, 45.4215, 11.8870);
+        $softOneKey        = $softStart->format('Y-m-d');
         $days[$softOneKey] = $this->makeDaySummary($softOneKey, false, [$softOne], 45.0, 70.0, 2);
 
-        $bridgeDate  = $softStart->modify('+1 day');
-        $bridgeMedia = $this->makeMediaFixture(701, 'bridge.jpg', $bridgeDate, 45.5, 11.5);
-        $bridgeKey   = $bridgeDate->format('Y-m-d');
+        $bridgeDate       = $softStart->modify('+1 day');
+        $bridgeMedia      = $this->makeMediaFixture(701, 'bridge.jpg', $bridgeDate, 45.5, 11.5);
+        $bridgeKey        = $bridgeDate->format('Y-m-d');
         $days[$bridgeKey] = $this->makeDaySummary($bridgeKey, false, [$bridgeMedia], 18.0, 30.0, 1);
 
-        $softEnd    = $bridgeDate->modify('+1 day');
-        $softTwo    = $this->makeMediaFixture(702, 'soft-b.jpg', $softEnd, 45.7610, 12.2460);
-        $softTwoKey = $softEnd->format('Y-m-d');
+        $softEnd           = $bridgeDate->modify('+1 day');
+        $softTwo           = $this->makeMediaFixture(702, 'soft-b.jpg', $softEnd, 45.7610, 12.2460);
+        $softTwoKey        = $softEnd->format('Y-m-d');
         $days[$softTwoKey] = $this->makeDaySummary($softTwoKey, false, [$softTwo], 48.0, 75.0, 2);
 
         $runs = $detector->detectVacationRuns($days, $home);
@@ -828,9 +828,9 @@ final class RunDetectorTest extends TestCase
         $days   = [];
         $anchor = new DateTimeImmutable('2024-09-01 12:00:00', new DateTimeZone('Europe/Berlin'));
         for ($i = 0; $i < 5; ++$i) {
-            $current   = $anchor->modify(sprintf('+%d days', $i));
-            $date      = $current->format('Y-m-d');
-            $media     = $this->makeMediaFixture(
+            $current = $anchor->modify(sprintf('+%d days', $i));
+            $date    = $current->format('Y-m-d');
+            $media   = $this->makeMediaFixture(
                 800 + $i,
                 sprintf('short-%02d.jpg', $i + 1),
                 $current,
@@ -840,9 +840,9 @@ final class RunDetectorTest extends TestCase
             $days[$date] = $this->makeDaySummary($date, true, [$media], 115.0, 165.0, 3);
         }
 
-        $softDate    = $anchor->modify('+5 days');
-        $softMedia   = $this->makeMediaFixture(900, 'soft-short.jpg', $softDate, 45.4642, 9.1900);
-        $softKey     = $softDate->format('Y-m-d');
+        $softDate       = $anchor->modify('+5 days');
+        $softMedia      = $this->makeMediaFixture(900, 'soft-short.jpg', $softDate, 45.4642, 9.1900);
+        $softKey        = $softDate->format('Y-m-d');
         $days[$softKey] = $this->makeDaySummary($softKey, false, [$softMedia], 38.0, 70.0, 3);
 
         $runs = $detector->detectVacationRuns($days, $home);
@@ -961,10 +961,10 @@ final class RunDetectorTest extends TestCase
                 hasAirport: true,
                 hasHighSpeedTransit: true,
                 overrides: [
-                    'gpsMembers'      => [],
-                    'members'         => [$transitMedia],
-                    'tourismHits'     => 0,
-                    'poiSamples'      => 0,
+                    'gpsMembers'         => [],
+                    'members'            => [$transitMedia],
+                    'tourismHits'        => 0,
+                    'poiSamples'         => 0,
                     'dominantStaypoints' => [],
                 ],
             ),
@@ -1035,11 +1035,11 @@ final class RunDetectorTest extends TestCase
                 20.0,
                 5,
                 overrides: [
-                    'baseAway'        => false,
-                    'tourismHits'     => 0,
-                    'poiSamples'      => 0,
+                    'baseAway'            => false,
+                    'tourismHits'         => 0,
+                    'poiSamples'          => 0,
                     'hasHighSpeedTransit' => false,
-                    'hasAirportPoi'   => false,
+                    'hasAirportPoi'       => false,
                 ],
             ),
             '2024-10-12' => $this->makeDaySummary('2024-10-12', false, [$awayMediaB], 75.0, 170.0, 4),
@@ -1111,10 +1111,8 @@ final class RunDetectorTest extends TestCase
             'isSynthetic'             => $isSynthetic,
         ];
 
-        if ($overrides !== []) {
-            foreach ($overrides as $key => $value) {
-                $summary[$key] = $value;
-            }
+        foreach ($overrides as $key => $value) {
+            $summary[$key] = $value;
         }
 
         return $summary;

@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer\Debug;
 
+use function in_array;
+
 /**
  * Collects debug information for vacation clustering runs.
  */
@@ -43,7 +45,7 @@ final class VacationDebugContext
 
     public function disable(): void
     {
-        $this->enabled = false;
+        $this->enabled  = false;
         $this->segments = [];
         $this->warnings = [];
     }
@@ -101,7 +103,7 @@ final class VacationDebugContext
             return;
         }
 
-        if (!\in_array($message, $this->warnings, true)) {
+        if (!in_array($message, $this->warnings, true)) {
             $this->warnings[] = $message;
         }
     }

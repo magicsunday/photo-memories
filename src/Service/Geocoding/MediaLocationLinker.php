@@ -50,8 +50,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         string $acceptLanguage = 'de',
         bool $forceRefreshLocations = false,
         bool $forceRefreshPois = false,
-    ): ?Location
-    {
+    ): ?Location {
         $this->lastNetworkCalls = 0;
 
         if ($forceRefreshLocations) {
@@ -107,6 +106,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
         if (!$forceRefreshLocations) {
             $this->cellCache[$cell] = $loc;
         }
+
         $this->cellIndex->remember($cell, $loc);
         $this->lastNetworkCalls = $networkCalls;
 
@@ -155,6 +155,7 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
 
         $normalized = str_replace('_', '-', $trimmed);
         $normalized = explode('.', $normalized, 2)[0];
+
         $parts = array_values(array_filter(
             explode('-', $normalized),
             static fn (string $part): bool => $part !== ''
@@ -171,7 +172,6 @@ final class MediaLocationLinker implements MediaLocationLinkerInterface
             $parts[$i] = strtoupper($parts[$i]);
         }
 
-        $header = implode('-', $parts);
-        return $header;
+        return implode('-', $parts);
     }
 }

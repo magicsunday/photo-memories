@@ -11,12 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
@@ -88,13 +87,13 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             $activeProfile
         );
 
-        $this->minTravelKm                 = $resolved['min_travel_km'];
-        $this->minItemsPerDay              = $resolved['min_items_per_day'];
-        $this->minSegmentSpeedMps          = $resolved['min_segment_speed_mps'];
-        $this->minFastSegments             = $resolved['min_fast_segments'];
-        $this->maxHeadingChangeDeg         = $resolved['max_heading_change_deg'];
+        $this->minTravelKm                  = $resolved['min_travel_km'];
+        $this->minItemsPerDay               = $resolved['min_items_per_day'];
+        $this->minSegmentSpeedMps           = $resolved['min_segment_speed_mps'];
+        $this->minFastSegments              = $resolved['min_fast_segments'];
+        $this->maxHeadingChangeDeg          = $resolved['max_heading_change_deg'];
         $this->minConsistentHeadingSegments = $resolved['min_consistent_heading_segments'];
-        $this->activeProfile               = $resolved['profile'];
+        $this->activeProfile                = $resolved['profile'];
 
         if ($this->minTravelKm <= 0.0) {
             throw new InvalidArgumentException('minTravelKm must be > 0.');
@@ -156,21 +155,21 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         $dayDistanceKm = [];
         /** @var array<string, array<string, int|float|null>> $dayMovementMetrics */
         $dayMovementMetrics = [];
-        $travelDays    = $this->filterGroupsWithKeys(
+        $travelDays         = $this->filterGroupsWithKeys(
             $eligibleDays,
             function (array $list, string $day) use (&$dayDistanceKm, &$dayMovementMetrics): bool {
                 $sorted = $list;
                 usort($sorted, static fn (Media $a, Media $b): int => $a->getTakenAt() <=> $b->getTakenAt());
 
-                $distKm                      = 0.0;
-                $segmentCount                = 0;
-                $fastSegmentCount            = 0;
-                $speedSum                    = 0.0;
-                $speedSamples                = 0;
-                $maxSpeedMps                 = null;
-                $headingChangeSum            = 0.0;
-                $headingSamples              = 0;
-                $consistentHeadingSegments   = 0;
+                $distKm                    = 0.0;
+                $segmentCount              = 0;
+                $fastSegmentCount          = 0;
+                $speedSum                  = 0.0;
+                $speedSamples              = 0;
+                $maxSpeedMps               = null;
+                $headingChangeSum          = 0.0;
+                $headingSamples            = 0;
+                $consistentHeadingSegments = 0;
 
                 for ($i = 1, $n = count($sorted); $i < $n; ++$i) {
                     $p    = $sorted[$i - 1];
@@ -179,8 +178,19 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     $pLon = $p->getGpsLon();
                     $qLat = $q->getGpsLat();
                     $qLon = $q->getGpsLon();
+                    if ($pLat === null) {
+                        continue;
+                    }
 
-                    if ($pLat === null || $pLon === null || $qLat === null || $qLon === null) {
+                    if ($pLon === null) {
+                        continue;
+                    }
+
+                    if ($qLat === null) {
+                        continue;
+                    }
+
+                    if ($qLon === null) {
                         continue;
                     }
 
@@ -195,7 +205,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
                     ++$segmentCount;
 
-                    $segmentSpeedMps = self::resolveSegmentSpeed($p->getGpsSpeedMps(), $q->getGpsSpeedMps());
+                    $segmentSpeedMps = $this->resolveSegmentSpeed($p->getGpsSpeedMps(), $q->getGpsSpeedMps());
 
                     if ($segmentSpeedMps === null) {
                         $pTime = $p->getTakenAt();
@@ -211,7 +221,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     }
 
                     if ($segmentSpeedMps !== null) {
-                        $speedSum     += $segmentSpeedMps;
+                        $speedSum += $segmentSpeedMps;
                         ++$speedSamples;
                         if ($maxSpeedMps === null || $segmentSpeedMps > $maxSpeedMps) {
                             $maxSpeedMps = $segmentSpeedMps;
@@ -222,7 +232,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                         }
                     }
 
-                    $headingDelta = self::resolveHeadingDelta($p->getGpsHeadingDeg(), $q->getGpsHeadingDeg());
+                    $headingDelta = $this->resolveHeadingDelta($p->getGpsHeadingDeg(), $q->getGpsHeadingDeg());
 
                     if ($headingDelta !== null) {
                         $headingChangeSum += $headingDelta;
@@ -252,19 +262,19 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                 $dayDistanceKm[$day] = $distKm;
 
                 $dayMovementMetrics[$day] = [
-                    'segment_count'                    => $segmentCount,
-                    'fast_segment_count'               => $fastSegmentCount,
-                    'fast_segment_ratio'               => $segmentCount > 0 ? $fastSegmentCount / $segmentCount : null,
-                    'speed_sample_count'               => $speedSamples,
-                    'avg_speed_mps'                    => $speedSamples > 0 ? $speedSum / $speedSamples : null,
-                    'max_speed_mps'                    => $maxSpeedMps,
-                    'heading_sample_count'             => $headingSamples,
-                    'avg_heading_change_deg'           => $headingSamples > 0 ? $headingChangeSum / $headingSamples : null,
-                    'consistent_heading_segment_count' => $consistentHeadingSegments,
-                    'heading_consistency_ratio'        => $headingSamples > 0 ? $consistentHeadingSegments / $headingSamples : null,
-                    'fast_segment_speed_threshold_mps' => $this->minSegmentSpeedMps,
-                    'min_fast_segment_count_threshold' => $this->minFastSegments,
-                    'max_heading_change_threshold_deg' => $this->maxHeadingChangeDeg,
+                    'segment_count'                             => $segmentCount,
+                    'fast_segment_count'                        => $fastSegmentCount,
+                    'fast_segment_ratio'                        => $segmentCount > 0 ? $fastSegmentCount / $segmentCount : null,
+                    'speed_sample_count'                        => $speedSamples,
+                    'avg_speed_mps'                             => $speedSamples > 0 ? $speedSum / $speedSamples : null,
+                    'max_speed_mps'                             => $maxSpeedMps,
+                    'heading_sample_count'                      => $headingSamples,
+                    'avg_heading_change_deg'                    => $headingSamples > 0 ? $headingChangeSum / $headingSamples : null,
+                    'consistent_heading_segment_count'          => $consistentHeadingSegments,
+                    'heading_consistency_ratio'                 => $headingSamples > 0 ? $consistentHeadingSegments / $headingSamples : null,
+                    'fast_segment_speed_threshold_mps'          => $this->minSegmentSpeedMps,
+                    'min_fast_segment_count_threshold'          => $this->minFastSegments,
+                    'max_heading_change_threshold_deg'          => $this->maxHeadingChangeDeg,
                     'min_consistent_heading_segments_threshold' => $this->minConsistentHeadingSegments,
                 ];
 
@@ -289,7 +299,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                 'movement'    => $dayMovementMetrics[$day] ?? null,
             ]);
 
-            $params['travel_profile'] = $this->activeProfile;
+            $params['travel_profile']    = $this->activeProfile;
             $params['travel_thresholds'] = [
                 'min_travel_km'                   => $this->minTravelKm,
                 'min_items_per_day'               => $this->minItemsPerDay,
@@ -335,7 +345,15 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         if (is_array($profile)) {
             foreach ($profile as $key => $value) {
-                if (!is_string($key) || !array_key_exists($key, $base) || !is_numeric($value)) {
+                if (!is_string($key)) {
+                    continue;
+                }
+
+                if (!array_key_exists($key, $base)) {
+                    continue;
+                }
+
+                if (!is_numeric($value)) {
                     continue;
                 }
 
@@ -364,13 +382,25 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         $result = [];
 
         foreach ($profiles as $profileName => $values) {
-            if (!is_string($profileName) || $profileName === '' || !is_array($values)) {
+            if (!is_string($profileName)) {
+                continue;
+            }
+
+            if ($profileName === '') {
+                continue;
+            }
+
+            if (!is_array($values)) {
                 continue;
             }
 
             $sanitized = [];
             foreach ($values as $key => $value) {
-                if (!is_string($key) || !is_numeric($value)) {
+                if (!is_string($key)) {
+                    continue;
+                }
+
+                if (!is_numeric($value)) {
                     continue;
                 }
 
@@ -387,7 +417,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         return $result;
     }
 
-    private static function resolveSegmentSpeed(?float $pSpeedMps, ?float $qSpeedMps): ?float
+    private function resolveSegmentSpeed(?float $pSpeedMps, ?float $qSpeedMps): ?float
     {
         if ($pSpeedMps !== null && $qSpeedMps !== null) {
             return ($pSpeedMps + $qSpeedMps) / 2.0;
@@ -400,7 +430,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         return $qSpeedMps;
     }
 
-    private static function resolveHeadingDelta(?float $pHeadingDeg, ?float $qHeadingDeg): ?float
+    private function resolveHeadingDelta(?float $pHeadingDeg, ?float $qHeadingDeg): ?float
     {
         if ($pHeadingDeg === null || $qHeadingDeg === null) {
             return null;
@@ -414,8 +444,9 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         return $delta;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -429,5 +460,4 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

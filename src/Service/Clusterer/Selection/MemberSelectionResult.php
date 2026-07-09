@@ -14,15 +14,15 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection;
 /**
  * Encapsulates the curated member identifiers alongside diagnostic telemetry.
  */
-final class MemberSelectionResult
+final readonly class MemberSelectionResult
 {
     /**
-     * @param list<int>               $memberIds curated member identifiers in deterministic order
-     * @param array<string, mixed>    $telemetry diagnostic counters collected during curation
+     * @param list<int>            $memberIds curated member identifiers in deterministic order
+     * @param array<string, mixed> $telemetry diagnostic counters collected during curation
      */
     public function __construct(
-        private readonly array $memberIds,
-        private readonly array $telemetry,
+        private array $memberIds,
+        private array $telemetry,
     ) {
     }
 

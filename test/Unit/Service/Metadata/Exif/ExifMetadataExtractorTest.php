@@ -19,8 +19,8 @@ use MagicSunday\Memories\Service\Metadata\Exif\Processor\CameraExifMetadataProce
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\CompositeImageExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\DimensionsExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\FormatFlagExifMetadataProcessor;
-use MagicSunday\Memories\Service\Metadata\Exif\Processor\OrientationExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\Exif\Processor\GpsExifMetadataProcessor;
+use MagicSunday\Memories\Service\Metadata\Exif\Processor\OrientationExifMetadataProcessor;
 use MagicSunday\Memories\Service\Metadata\ExifMetadataExtractor;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -140,7 +140,6 @@ final class ExifMetadataExtractorTest extends TestCase
         $extractor = new ExifMetadataExtractor([]);
 
         $method = new ReflectionMethod($extractor, 'normalizeUndefinedTagOffsets');
-        $method->setAccessible(true);
 
         $exif = [
             'EXIF' => [
@@ -297,9 +296,7 @@ final class ExifMetadataExtractorTest extends TestCase
 
         usort(
             $processors,
-            function (ExifMetadataProcessorInterface $left, ExifMetadataProcessorInterface $right): int {
-                return $this->readPriority($right) <=> $this->readPriority($left);
-            }
+            fn (ExifMetadataProcessorInterface $left, ExifMetadataProcessorInterface $right): int => $this->readPriority($right) <=> $this->readPriority($left)
         );
 
         return $processors;
@@ -334,12 +331,10 @@ final class ExifMetadataExtractorTest extends TestCase
     private function runProcessors(ExifMetadataExtractor $extractor, array $exif, Media $media): void
     {
         $reflection = new ReflectionProperty($extractor, 'processors');
-        $reflection->setAccessible(true);
 
         $processors = $reflection->getValue($extractor);
 
         $method = new ReflectionMethod($extractor, 'normalizeUndefinedTagOffsets');
-        $method->setAccessible(true);
 
         /** @var array<string, mixed> $normalized */
         $normalized = $method->invoke($extractor, $exif);

@@ -16,6 +16,9 @@ use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
+use IntlDateFormatter;
+use IntlException;
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Http\Request;
@@ -23,23 +26,22 @@ use MagicSunday\Memories\Http\Response\BinaryFileResponse;
 use MagicSunday\Memories\Http\Response\JsonResponse;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Repository\MediaRepository;
-use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\AlgorithmLabelProvider;
+use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
-use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
 use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferenceStorage;
+use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\NotificationPlanner;
 use MagicSunday\Memories\Service\Feed\StoryboardTextGenerator;
 use MagicSunday\Memories\Service\Feed\ThumbnailPathResolver;
-use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManagerInterface;
-use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
+use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Service\Thumbnail\ThumbnailServiceInterface;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use RuntimeException;
-use IntlDateFormatter;
-use IntlException;
+use Stringable;
 
 use function array_fill_keys;
 use function array_filter;
@@ -51,9 +53,9 @@ use function array_map;
 use function array_replace;
 use function array_slice;
 use function array_unique;
-use function explode;
 use function array_values;
 use function count;
+use function explode;
 use function hash;
 use function implode;
 use function in_array;
@@ -63,17 +65,18 @@ use function is_int;
 use function is_iterable;
 use function is_numeric;
 use function is_string;
-use function max;
 use function krsort;
+use function max;
 use function min;
 use function preg_split;
 use function round;
 use function sort;
-use function usort;
+use function sprintf;
 use function str_ends_with;
 use function strtolower;
-use function sprintf;
 use function trim;
+use function usort;
+
 use const SORT_STRING;
 
 /**
@@ -81,7 +84,7 @@ use const SORT_STRING;
  */
 final class FeedController
 {
-    private const DEFAULT_ITEM_FIELD_GROUPS = [
+    private const array DEFAULT_ITEM_FIELD_GROUPS = [
         'basis',
         'zeit',
         'galerie',
@@ -92,7 +95,7 @@ final class FeedController
         'benachrichtigungen',
     ];
 
-    private const DEFAULT_META_FIELD_GROUPS = [
+    private const array DEFAULT_META_FIELD_GROUPS = [
         'basis',
         'pagination',
         'filter',
@@ -100,7 +103,7 @@ final class FeedController
         'strategien',
     ];
 
-    private const META_FIELD_KEY_MAP = [
+    private const array META_FIELD_KEY_MAP = [
         'basis'            => ['erstelltAm', 'erstelltAmText', 'hinweisErstelltAm', 'gesamtVerfuegbar', 'anzahlGeliefert'],
         'pagination'       => ['pagination'],
         'filter'           => ['filter', 'filterKonfiguration'],
@@ -127,7 +130,7 @@ final class FeedController
         private readonly StoryboardTextGenerator $storyboardTextGenerator,
         private readonly NotificationPlanner $notificationPlanner,
         private readonly AlgorithmLabelProvider $algorithmLabelProvider,
-        private float $hiddenAlgorithmPenalty = 1.0,
+        private readonly float $hiddenAlgorithmPenalty = 1.0,
         private int $defaultFeedLimit = 24,
         private int $maxFeedLimit = 120,
         private int $previewImageCount = 8,
@@ -290,7 +293,7 @@ final class FeedController
         ];
 
         return new JsonResponse([
-            'meta'       => [
+            'meta' => [
                 'erstelltAm' => $result['meta']['erstelltAm'] ?? $result['now']->format(DateTimeInterface::ATOM),
                 'locale'     => $result['locale'],
             ],
@@ -353,18 +356,17 @@ final class FeedController
         Request $request,
         ?DateTimeImmutable $filterDate,
         ?array $fieldSelection = null,
-    ): array
-    {
+    ): array {
         $limit    = $this->normalizeLimit($request->getQueryParam('limit'));
         $minScore = $this->normalizeFloat($request->getQueryParam('score'));
         $strategy = $this->normalizeString($request->getQueryParam('strategie'));
         $cursor   = $this->normalizeString($request->getQueryParam('cursor'));
 
-        $profileKey = $this->normalizeString($request->getQueryParam('profil'));
-        $userId     = $this->normalizeString($request->getQueryParam('nutzer')) ?? 'standard';
-        $profile    = $this->profileProvider->getProfile($profileKey);
-        $preferences = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
-        $locale      = $this->resolveLocale($request);
+        $profileKey       = $this->normalizeString($request->getQueryParam('profil'));
+        $userId           = $this->normalizeString($request->getQueryParam('nutzer')) ?? 'standard';
+        $profile          = $this->profileProvider->getProfile($profileKey);
+        $preferences      = $this->preferenceStorage->getPreferences($userId, $profile->getKey());
+        $locale           = $this->resolveLocale($request);
         $visibilityFilter = $this->createVisibilityFilter($preferences);
 
         $clusterLimit = max($limit * $this->clusterFetchMultiplier, $limit);
@@ -385,15 +387,12 @@ final class FeedController
                     return false;
                 }
 
-                if ($filterDate !== null && !$this->matchesDate($item, $filterDate)) {
-                    return false;
-                }
-
-                return true;
+                return !$filterDate instanceof DateTimeImmutable || $this->matchesDate($item, $filterDate);
             }
         ));
 
-        $filtered      = $this->applyCursor($filtered, $cursor);
+        $filtered = $this->applyCursor($filtered, $cursor);
+
         $matchingItems = $filtered;
         $matchingCount = count($matchingItems);
         $pagedItems    = array_slice($matchingItems, 0, $limit);
@@ -434,16 +433,16 @@ final class FeedController
                 'limitEmpfehlung' => $this->defaultFeedLimit,
                 'cursor'          => $cursor,
             ],
-            'personalisierung'      => [
-                'nutzer'             => $userId,
-                'profil'             => $profile->getKey(),
-                'verfuegbareProfile' => $this->profileProvider->listProfiles(),
-                'schwellenwerte'     => $profile->describe(),
-                'favoriten'          => $preferences->getFavourites(),
-                'optOutAlgorithmen'  => $preferences->getHiddenAlgorithms(),
+            'personalisierung' => [
+                'nutzer'                => $userId,
+                'profil'                => $profile->getKey(),
+                'verfuegbareProfile'    => $this->profileProvider->listProfiles(),
+                'schwellenwerte'        => $profile->describe(),
+                'favoriten'             => $preferences->getFavourites(),
+                'optOutAlgorithmen'     => $preferences->getHiddenAlgorithms(),
                 'blockierteAlgorithmen' => $preferences->getBlockedAlgorithms(),
             ],
-            'filter'                => [
+            'filter' => [
                 'score'     => $minScore,
                 'strategie' => $strategy,
                 'datum'     => $filterDate?->format('Y-m-d'),
@@ -452,7 +451,7 @@ final class FeedController
                 'nutzer'    => $userId,
                 'cursor'    => $cursor,
             ],
-            'filterKonfiguration'   => [
+            'filterKonfiguration' => [
                 'unterstuetzt' => ['score', 'strategie', 'datum', 'profil', 'nutzer', 'cursor'],
                 'cursor'       => [
                     'aktiv'  => $cursor,
@@ -464,13 +463,13 @@ final class FeedController
         $meta = $this->filterMetaPayload($meta, $fieldSelection['metaGroups']);
 
         return [
-            'items'         => $data,
-            'meta'          => $meta,
-            'matchingItems' => $matchingItems,
-            'preferences'   => $preferences,
-            'locale'        => $locale,
-            'now'           => $now,
-            'fieldSelection'=> $fieldSelection,
+            'items'          => $data,
+            'meta'           => $meta,
+            'matchingItems'  => $matchingItems,
+            'preferences'    => $preferences,
+            'locale'         => $locale,
+            'now'            => $now,
+            'fieldSelection' => $fieldSelection,
         ];
     }
 
@@ -530,11 +529,16 @@ final class FeedController
         if ($tokens === false) {
             $tokens = [];
         }
+
         $result = [];
 
         foreach ($tokens as $token) {
             $trimmed = $this->normalizeScalarString($token);
-            if ($trimmed === null || !in_array($trimmed, $allowed, true)) {
+            if ($trimmed === null) {
+                continue;
+            }
+
+            if (!in_array($trimmed, $allowed, true)) {
                 continue;
             }
 
@@ -684,7 +688,7 @@ final class FeedController
         return $response;
     }
 
-    private function normalizeBoolean(null|string|int|float|\Stringable $value): ?bool
+    private function normalizeBoolean(string|int|float|Stringable|null $value): ?bool
     {
         $normalized = $this->normalizeScalarString($value);
         if ($normalized === null) {
@@ -692,9 +696,9 @@ final class FeedController
         }
 
         return match (strtolower($normalized)) {
-            '1', 'true', 'yes', 'ja', 'on' => true,
+            '1', 'true', 'yes', 'ja', 'on'    => true,
             '0', 'false', 'no', 'nein', 'off' => false,
-            default => null,
+            default                           => null,
         };
     }
 
@@ -725,7 +729,7 @@ final class FeedController
         return (float) $value;
     }
 
-    private function normalizeString(null|string|int|float|\Stringable $value): ?string
+    private function normalizeString(string|int|float|Stringable|null $value): ?string
     {
         return $this->normalizeScalarString($value);
     }
@@ -788,7 +792,11 @@ final class FeedController
 
         if (is_array($existing) && $existing !== []) {
             foreach ($existing as $path) {
-                if (!is_string($path) || $path === '') {
+                if (!is_string($path)) {
+                    continue;
+                }
+
+                if ($path === '') {
                     continue;
                 }
 
@@ -931,23 +939,21 @@ final class FeedController
             }
         }
 
-        $coverMedia    = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
-        $itemId        = $this->createItemId($item);
-        $slideshow     = null;
-        $timeRange     = isset($groupSelection['zeit']) ? $this->extractTimeRange($item, $reference) : null;
-        $coverAltText  = null;
+        $coverMedia   = $coverId !== null ? ($memberMediaMap[$coverId] ?? null) : null;
+        $itemId       = $this->createItemId($item);
+        $slideshow    = null;
+        $timeRange    = isset($groupSelection['zeit']) ? $this->extractTimeRange($item, $reference) : null;
+        $coverAltText = null;
 
         if (isset($groupSelection['slideshow'])) {
             $slideshow = $this->slideshowManager->getStatusForItem($itemId);
         }
 
-        if ($memberPayload !== []) {
-            foreach ($memberPayload as $entry) {
-                if (($entry['mediaId'] ?? null) === $coverId) {
-                    $coverAltText = $entry['altText'] ?? null;
+        foreach ($memberPayload as $entry) {
+            if (($entry['mediaId'] ?? null) === $coverId) {
+                $coverAltText = $entry['altText'] ?? null;
 
-                    break;
-                }
+                break;
             }
         }
 
@@ -957,21 +963,21 @@ final class FeedController
         }
 
         $payload = [
-            'id'                 => $itemId,
-            'algorithmus'        => $item->getAlgorithm(),
-            'algorithmusLabel'   => $this->algorithmLabelProvider->getLabel($item->getAlgorithm()),
-            'gruppe'             => $this->extractGroup($item),
-            'titel'              => $item->getTitle(),
-            'untertitel'         => $item->getSubtitle(),
-            'score'              => $item->getScore(),
-            'favorit'            => $preferences->isFavourite($itemId),
-            'coverMediaId'       => $coverId,
-            'cover'              => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth, $baseUrl) : null,
-            'coverAufgenommenAm' => $this->formatTakenAt($coverMedia),
-            'coverAufgenommenAmText' => $this->formatMediaDateText($coverMedia),
+            'id'                        => $itemId,
+            'algorithmus'               => $item->getAlgorithm(),
+            'algorithmusLabel'          => $this->algorithmLabelProvider->getLabel($item->getAlgorithm()),
+            'gruppe'                    => $this->extractGroup($item),
+            'titel'                     => $item->getTitle(),
+            'untertitel'                => $item->getSubtitle(),
+            'score'                     => $item->getScore(),
+            'favorit'                   => $preferences->isFavourite($itemId),
+            'coverMediaId'              => $coverId,
+            'cover'                     => $coverId !== null ? $this->buildThumbnailUrl($coverId, $this->defaultCoverWidth, $baseUrl) : null,
+            'coverAufgenommenAm'        => $this->formatTakenAt($coverMedia),
+            'coverAufgenommenAmText'    => $this->formatMediaDateText($coverMedia),
             'coverHinweisAufgenommenAm' => $this->formatRelativeTakenAt($coverMedia, $reference),
-            'coverAbmessungen'   => $this->extractDimensions($coverMedia),
-            'mitglieder'         => $includeAllGalleryMembers ? $members : $selectedMembers,
+            'coverAbmessungen'          => $this->extractDimensions($coverMedia),
+            'mitglieder'                => $includeAllGalleryMembers ? $members : $selectedMembers,
         ];
 
         if ($coverAltText !== null) {
@@ -1020,7 +1026,7 @@ final class FeedController
 
         $slides = [];
 
-        $mediaIds = [];
+        $mediaIds   = [];
         $imagePaths = [];
         foreach ($memberPayload as $entry) {
             $mediaId = $entry['mediaId'] ?? null;
@@ -1038,8 +1044,8 @@ final class FeedController
             return null;
         }
 
-        $texts = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
-        $title = $this->normalizeStoryboardText($texts['title'] ?? null);
+        $texts       = $this->storyboardTextGenerator->generate($memberPayload, $clusterParams, $locale);
+        $title       = $this->normalizeStoryboardText($texts['title'] ?? null);
         $description = $this->normalizeStoryboardText($texts['description'] ?? null);
 
         $transitionSequence = TransitionSequenceGenerator::generate(
@@ -1059,10 +1065,10 @@ final class FeedController
             }
 
             $slide = [
-                'mediaId'        => $mediaId,
-                'dauerSekunden'  => $this->slideshowImageDuration,
-                'thumbnail'      => $entry['thumbnail'] ?? null,
-                'uebergang'      => $this->resolveStoryboardTransition($transitionSequence[$transitionIndex] ?? null),
+                'mediaId'       => $mediaId,
+                'dauerSekunden' => $this->slideshowImageDuration,
+                'thumbnail'     => $entry['thumbnail'] ?? null,
+                'uebergang'     => $this->resolveStoryboardTransition($transitionSequence[$transitionIndex] ?? null),
             ];
 
             ++$transitionIndex;
@@ -1106,9 +1112,9 @@ final class FeedController
         }
 
         $payload = [
-            'dauerSekunden'        => $this->slideshowImageDuration,
-            'uebergangSekunden'    => $this->slideshowTransitionDuration,
-            'folien'               => $slides,
+            'dauerSekunden'     => $this->slideshowImageDuration,
+            'uebergangSekunden' => $this->slideshowTransitionDuration,
+            'folien'            => $slides,
         ];
 
         if ($this->slideshowTransitions !== []) {
@@ -1166,13 +1172,13 @@ final class FeedController
         array $clusterParams,
     ): array {
         $entry = [
-            'mediaId'           => $mediaId,
-            'thumbnail'         => $this->buildThumbnailUrl($mediaId, $this->defaultMemberWidth, $baseUrl),
-            'lightbox'          => $this->buildThumbnailUrl($mediaId, $this->resolveLightboxWidth(), $baseUrl),
-            'aufgenommenAm'     => $this->formatTakenAt($media),
-            'aufgenommenAmText' => $this->formatMediaDateText($media),
+            'mediaId'              => $mediaId,
+            'thumbnail'            => $this->buildThumbnailUrl($mediaId, $this->defaultMemberWidth, $baseUrl),
+            'lightbox'             => $this->buildThumbnailUrl($mediaId, $this->resolveLightboxWidth(), $baseUrl),
+            'aufgenommenAm'        => $this->formatTakenAt($media),
+            'aufgenommenAmText'    => $this->formatMediaDateText($media),
             'hinweisAufgenommenAm' => $this->formatRelativeTakenAt($media, $reference),
-            'abmessungen'       => $this->extractDimensions($media),
+            'abmessungen'          => $this->extractDimensions($media),
         ];
 
         $context = $this->buildMediaContext($media, $clusterParams);
@@ -1215,8 +1221,8 @@ final class FeedController
      */
     private function generateAltText(?Media $media, array $context): ?string
     {
-        $segments = [];
-        $typeLabel = $media instanceof Media && $media->isVideo() ? 'Video' : 'Foto';
+        $segments   = [];
+        $typeLabel  = $media instanceof Media && $media->isVideo() ? 'Video' : 'Foto';
         $segments[] = $typeLabel;
 
         $description = $context['beschreibung'];
@@ -1299,7 +1305,7 @@ final class FeedController
         $location = null;
         if ($media instanceof Media) {
             $loc = $media->getLocation();
-            if ($loc !== null) {
+            if ($loc instanceof Location) {
                 $label = trim($loc->getDisplayName());
                 if ($label !== '') {
                     $location = $label;
@@ -1355,7 +1361,11 @@ final class FeedController
 
         foreach ($values as $value) {
             $trimmed = $this->normalizeScalarString($value);
-            if ($trimmed === null || in_array($trimmed, $result, true)) {
+            if ($trimmed === null) {
+                continue;
+            }
+
+            if (in_array($trimmed, $result, true)) {
                 continue;
             }
 
@@ -1386,7 +1396,11 @@ final class FeedController
             }
 
             $trimmed = $this->normalizeScalarString($tag['label'] ?? null);
-            if ($trimmed === null || in_array($trimmed, $labels, true)) {
+            if ($trimmed === null) {
+                continue;
+            }
+
+            if (in_array($trimmed, $labels, true)) {
                 continue;
             }
 
@@ -1399,7 +1413,6 @@ final class FeedController
 
         return $labels;
     }
-
 
     private function createItemId(MemoryFeedItem $item): string
     {
@@ -1448,19 +1461,19 @@ final class FeedController
             $toDate = $this->timestampToDate((int) $to);
         }
 
-        if ($fromDate === null && $toDate === null) {
+        if (!$fromDate instanceof DateTimeImmutable && !$toDate instanceof DateTimeImmutable) {
             return null;
         }
 
         $result = [];
 
-        if ($fromDate !== null) {
+        if ($fromDate instanceof DateTimeImmutable) {
             $result['von']        = $fromDate->format(DateTimeInterface::ATOM);
             $result['vonText']    = $this->formatDateOnly($fromDate);
             $result['hinweisVon'] = $this->formatRelativeTime($fromDate, $reference);
         }
 
-        if ($toDate !== null) {
+        if ($toDate instanceof DateTimeImmutable) {
             $result['bis']        = $toDate->format(DateTimeInterface::ATOM);
             $result['bisText']    = $this->formatDateOnly($toDate);
             $result['hinweisBis'] = $this->formatRelativeTime($toDate, $reference);
@@ -1488,7 +1501,7 @@ final class FeedController
             return null;
         }
 
-        $exifOrientation = $media->getOrientation();
+        $exifOrientation  = $media->getOrientation();
         $requiresRotation = $media->needsRotation();
 
         if (is_int($exifOrientation) && $exifOrientation >= 5 && $exifOrientation <= 8) {
@@ -1563,7 +1576,7 @@ final class FeedController
             $context['orte'] = $placeParts;
         }
 
-        $poiLabel = $params['poi_label'] ?? null;
+        $poiLabel           = $params['poi_label'] ?? null;
         $normalizedPoiLabel = $this->normalizeScalarString($poiLabel);
         if ($normalizedPoiLabel !== null) {
             $context['poi'] = $normalizedPoiLabel;
@@ -1620,8 +1633,8 @@ final class FeedController
 
     private function enrichSlideshowStatus(SlideshowVideoStatus $status): array
     {
-        $payload = $status->toArray();
-        $payload['hinweis'] = $payload['meldung'];
+        $payload                = $status->toArray();
+        $payload['hinweis']     = $payload['meldung'];
         $payload['fortschritt'] = $status->status() === SlideshowVideoStatus::STATUS_READY ? 1.0 : 0.0;
 
         return $payload;
@@ -1634,19 +1647,15 @@ final class FeedController
 
     private function describeTimeRange(?DateTimeImmutable $from, ?DateTimeImmutable $to): string
     {
-        if ($from === null && $to === null) {
+        if (!$from instanceof DateTimeImmutable && !$to instanceof DateTimeImmutable) {
             return '';
         }
 
-        if ($from === null && $to !== null) {
+        if (!$from instanceof DateTimeImmutable && $to instanceof DateTimeImmutable) {
             return 'am ' . $this->formatDateOnly($to);
         }
 
-        if ($from === null) {
-            return '';
-        }
-
-        if ($to === null || $from->format('Y-m-d') === $to->format('Y-m-d')) {
+        if (!$to instanceof DateTimeImmutable || $from->format('Y-m-d') === $to->format('Y-m-d')) {
             return 'am ' . $this->formatDateOnly($from);
         }
 
@@ -1785,7 +1794,7 @@ final class FeedController
         if ($diffSeconds <= 2700) {
             $minutes = (int) round($diffSeconds / 60);
 
-            return 'vor ' . (string) max($minutes, 2) . ' Minuten';
+            return 'vor ' . max($minutes, 2) . ' Minuten';
         }
 
         if ($diffSeconds <= 5400) {
@@ -1795,7 +1804,7 @@ final class FeedController
         if ($diffSeconds <= 86400) {
             $hours = (int) round($diffSeconds / 3600);
 
-            return 'vor ' . (string) max($hours, 2) . ' Stunden';
+            return 'vor ' . max($hours, 2) . ' Stunden';
         }
 
         if ($diffSeconds <= 172800) {
@@ -1805,7 +1814,7 @@ final class FeedController
         if ($diffSeconds <= 604800) {
             $days = (int) round($diffSeconds / 86400);
 
-            return 'vor ' . (string) max($days, 2) . ' Tagen';
+            return 'vor ' . max($days, 2) . ' Tagen';
         }
 
         if ($diffSeconds <= 2419200) {
@@ -1814,7 +1823,7 @@ final class FeedController
                 return 'vor einer Woche';
             }
 
-            return 'vor ' . (string) $weeks . ' Wochen';
+            return 'vor ' . $weeks . ' Wochen';
         }
 
         if ($diffSeconds <= 29030400) {
@@ -1823,7 +1832,7 @@ final class FeedController
                 return 'vor einem Monat';
             }
 
-            return 'vor ' . (string) $months . ' Monaten';
+            return 'vor ' . $months . ' Monaten';
         }
 
         $years = (int) round($diffSeconds / 29030400);
@@ -1831,7 +1840,7 @@ final class FeedController
             return 'vor einem Jahr';
         }
 
-        return 'vor ' . (string) $years . ' Jahren';
+        return 'vor ' . $years . ' Jahren';
     }
 
     private function buildLabelMapping(): array
@@ -1859,16 +1868,16 @@ final class FeedController
             return null;
         }
 
-        $last = $items[$count - 1];
+        $last  = $items[$count - 1];
         $range = $last->getParams()['time_range'] ?? null;
         if (is_array($range) && isset($range['from']) && is_numeric($range['from'])) {
-            return 'time:' . (string) $range['from'];
+            return 'time:' . $range['from'];
         }
 
-        $members = $last->getMemberIds();
+        $members     = $last->getMemberIds();
         $memberCount = count($members);
         if ($memberCount > 0) {
-            return 'media:' . (string) $members[$memberCount - 1];
+            return 'media:' . $members[$memberCount - 1];
         }
 
         return null;
@@ -1881,13 +1890,13 @@ final class FeedController
     private function buildFuerDichComponent(array $items, array $meta): array
     {
         return [
-            'items'                => $items,
-            'pagination'           => $meta['pagination'] ?? [],
-            'filter'               => $meta['filter'] ?? [],
-            'filterKonfiguration'  => $meta['filterKonfiguration'] ?? [],
-            'personalisierung'     => $meta['personalisierung'] ?? [],
-            'animationen'          => $this->spaAnimationConfig['feed'] ?? [],
-            'gesten'               => $this->spaGestureConfig['feed'] ?? [],
+            'items'               => $items,
+            'pagination'          => $meta['pagination'] ?? [],
+            'filter'              => $meta['filter'] ?? [],
+            'filterKonfiguration' => $meta['filterKonfiguration'] ?? [],
+            'personalisierung'    => $meta['personalisierung'] ?? [],
+            'animationen'         => $this->spaAnimationConfig['feed'] ?? [],
+            'gesten'              => $this->spaGestureConfig['feed'] ?? [],
         ];
     }
 
@@ -1926,9 +1935,9 @@ final class FeedController
 
         if ($groups === []) {
             return [
-                'gruppen'    => [],
-                'gesten'     => $this->spaGestureConfig['timeline'] ?? [],
-                'animationen'=> $this->spaAnimationConfig['timeline'] ?? [],
+                'gruppen'     => [],
+                'gesten'      => $this->spaGestureConfig['timeline'] ?? [],
+                'animationen' => $this->spaAnimationConfig['timeline'] ?? [],
             ];
         }
 
@@ -1940,9 +1949,9 @@ final class FeedController
         }
 
         return [
-            'gruppen'    => array_values($groups),
-            'gesten'     => $this->spaGestureConfig['timeline'] ?? [],
-            'animationen'=> $this->spaAnimationConfig['timeline'] ?? [],
+            'gruppen'     => array_values($groups),
+            'gesten'      => $this->spaGestureConfig['timeline'] ?? [],
+            'animationen' => $this->spaAnimationConfig['timeline'] ?? [],
         ];
     }
 
@@ -1980,7 +1989,11 @@ final class FeedController
             }
 
             $slides = $storyboard['folien'] ?? null;
-            if (!is_array($slides) || $slides === []) {
+            if (!is_array($slides)) {
+                continue;
+            }
+
+            if ($slides === []) {
                 continue;
             }
 
@@ -1995,9 +2008,9 @@ final class FeedController
         }
 
         return [
-            'stories'    => $stories,
-            'gesten'     => $this->spaGestureConfig['story_viewer'] ?? [],
-            'animationen'=> $this->mergeStoryViewerAnimations(),
+            'stories'     => $stories,
+            'gesten'      => $this->spaGestureConfig['story_viewer'] ?? [],
+            'animationen' => $this->mergeStoryViewerAnimations(),
         ];
     }
 
@@ -2010,7 +2023,11 @@ final class FeedController
 
         $config = $this->spaAnimationConfig['story_viewer'] ?? [];
         foreach ($config as $key => $value) {
-            if (!is_string($key) || !is_numeric($value)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (!is_numeric($value)) {
                 continue;
             }
 
@@ -2062,13 +2079,13 @@ final class FeedController
 
                 /** @var array<string, mixed> $adjustments */
                 $adjustments = $params['score_preference'] ?? [
-                    'base' => $item->getScore(),
-                    'multiplier' => 1.0,
+                    'base'              => $item->getScore(),
+                    'multiplier'        => 1.0,
                     'favourite_persons' => [],
-                    'favourite_places' => [],
-                    'hidden_persons' => [],
-                    'hidden_places' => [],
-                    'hidden_dates' => [],
+                    'favourite_places'  => [],
+                    'hidden_persons'    => [],
+                    'hidden_places'     => [],
+                    'hidden_dates'      => [],
                     'hidden_algorithms' => [],
                 ];
 
@@ -2081,7 +2098,7 @@ final class FeedController
                     $hiddenAlgorithms[] = $item->getAlgorithm();
                 }
 
-                $adjustments['multiplier'] = $multiplier;
+                $adjustments['multiplier']        = $multiplier;
                 $adjustments['hidden_algorithms'] = $hiddenAlgorithms;
                 $adjustments['algorithm_penalty'] = $penalty;
 
@@ -2167,7 +2184,7 @@ final class FeedController
 
         if (is_string($value)) {
             $trimmed = trim($value);
-        } elseif ($value instanceof \Stringable) {
+        } elseif ($value instanceof Stringable) {
             $trimmed = trim((string) $value);
         } elseif (is_int($value) || is_float($value)) {
             $trimmed = trim((string) $value);
@@ -2186,9 +2203,9 @@ final class FeedController
     private function buildOfflineComponent(DateTimeImmutable $reference, FeedUserPreferences $preferences): array
     {
         $serviceWorker = [
-            'pfad'      => $this->spaOfflineConfig['service_worker'] ?? '/app/service-worker.js',
-            'scope'     => $this->spaOfflineConfig['scope'] ?? '/',
-            'precache'  => $this->spaOfflineConfig['precache'] ?? ['/api/feed'],
+            'pfad'     => $this->spaOfflineConfig['service_worker'] ?? '/app/service-worker.js',
+            'scope'    => $this->spaOfflineConfig['scope'] ?? '/',
+            'precache' => $this->spaOfflineConfig['precache'] ?? ['/api/feed'],
         ];
 
         if (isset($this->spaOfflineConfig['runtime'])) {
@@ -2200,12 +2217,12 @@ final class FeedController
         }
 
         return [
-            'serviceWorker'       => $serviceWorker,
-            'gesten'              => $this->spaGestureConfig,
-            'animationen'         => $this->spaAnimationConfig,
-            'favoriten'           => $preferences->getFavourites(),
-            'precacheItems'       => $preferences->getFavourites(),
-            'letzteAktualisierung'=> $reference->format(DateTimeInterface::ATOM),
+            'serviceWorker'        => $serviceWorker,
+            'gesten'               => $this->spaGestureConfig,
+            'animationen'          => $this->spaAnimationConfig,
+            'favoriten'            => $preferences->getFavourites(),
+            'precacheItems'        => $preferences->getFavourites(),
+            'letzteAktualisierung' => $reference->format(DateTimeInterface::ATOM),
         ];
     }
 
@@ -2244,7 +2261,11 @@ final class FeedController
         $result = [];
 
         foreach ($config as $section => $gestures) {
-            if (!is_string($section) || !is_array($gestures)) {
+            if (!is_string($section)) {
+                continue;
+            }
+
+            if (!is_array($gestures)) {
                 continue;
             }
 
@@ -2279,13 +2300,13 @@ final class FeedController
     {
         $result = [];
 
-        $serviceWorker = $config['service_worker'] ?? null;
+        $serviceWorker           = $config['service_worker'] ?? null;
         $normalizedServiceWorker = $this->normalizeScalarString($serviceWorker);
         if ($normalizedServiceWorker !== null) {
             $result['service_worker'] = $normalizedServiceWorker;
         }
 
-        $scope = $config['scope'] ?? null;
+        $scope           = $config['scope'] ?? null;
         $normalizedScope = $this->normalizeScalarString($scope);
         if ($normalizedScope !== null) {
             $result['scope'] = $normalizedScope;
@@ -2309,9 +2330,14 @@ final class FeedController
 
                 $pattern  = $this->normalizeScalarString($entry['pattern'] ?? null);
                 $strategy = $this->normalizeScalarString($entry['strategy'] ?? null);
-                if ($pattern === null || $strategy === null) {
+                if ($pattern === null) {
                     continue;
                 }
+
+                if ($strategy === null) {
+                    continue;
+                }
+
                 $entries[] = [
                     'pattern'  => $pattern,
                     'strategy' => $strategy,
@@ -2323,7 +2349,7 @@ final class FeedController
             }
         }
 
-        $fallback = $config['fallback'] ?? null;
+        $fallback           = $config['fallback'] ?? null;
         $normalizedFallback = $this->normalizeScalarString($fallback);
         if ($normalizedFallback !== null) {
             $result['fallback'] = $normalizedFallback;

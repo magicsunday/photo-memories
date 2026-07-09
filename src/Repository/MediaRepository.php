@@ -278,7 +278,11 @@ SQL;
                 continue;
             }
 
-            if ($candidate->getPath() === $path || $candidate->isNoShow()) {
+            if ($candidate->getPath() === $path) {
+                continue;
+            }
+
+            if ($candidate->isNoShow()) {
                 continue;
             }
 

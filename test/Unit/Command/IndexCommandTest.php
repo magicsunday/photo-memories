@@ -15,6 +15,7 @@ use MagicSunday\Memories\Command\IndexCommand;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Indexing\MediaFileLocatorInterface;
 use MagicSunday\Memories\Service\Indexing\MediaIngestionPipelineInterface;
+use MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector;
 use MagicSunday\Memories\Test\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use RecursiveDirectoryIterator;
@@ -61,9 +62,9 @@ final class IndexCommandTest extends TestCase
         $pipeline->expects(self::never())->method('process');
         $pipeline->expects(self::never())->method('finalize');
 
-        $qaCollector = new \MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector();
-        $command = new IndexCommand($locator, $pipeline, $qaCollector, sys_get_temp_dir());
-        $tester  = new CommandTester($command);
+        $qaCollector = new MetadataQaReportCollector();
+        $command     = new IndexCommand($locator, $pipeline, $qaCollector, sys_get_temp_dir());
+        $tester      = new CommandTester($command);
 
         $status = $tester->execute([
             'path' => '/does/not/exist',
@@ -121,9 +122,9 @@ final class IndexCommandTest extends TestCase
             ->method('finalize')
             ->with(false);
 
-        $qaCollector = new \MagicSunday\Memories\Service\Metadata\MetadataQaReportCollector();
-        $command = new IndexCommand($locator, $pipeline, $qaCollector, $baseDir);
-        $tester  = new CommandTester($command);
+        $qaCollector = new MetadataQaReportCollector();
+        $command     = new IndexCommand($locator, $pipeline, $qaCollector, $baseDir);
+        $tester      = new CommandTester($command);
 
         $tester->execute([
             'path'          => $baseDir,

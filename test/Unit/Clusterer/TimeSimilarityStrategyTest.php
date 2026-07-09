@@ -11,9 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\TimeSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -69,7 +69,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         ];
         self::assertSame($expectedMorningRange, $morningParams['time_range']);
 
-        $morningCentroid = $morning->getCentroid();
+        $morningCentroid     = $morning->getCentroid();
         $expectedMorningCell = GeoCell::fromPoint($morningCentroid['lat'], $morningCentroid['lon'], 7);
         self::assertSame($expectedMorningCell, $morningParams['centroid_cell7']);
 
@@ -175,7 +175,7 @@ final class TimeSimilarityStrategyTest extends TestCase
         $params = $cluster->getParams();
         self::assertSame(2, $params['members_count']);
 
-        $centroid = $cluster->getCentroid();
+        $centroid     = $cluster->getCentroid();
         $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
         self::assertSame($expectedCell, $params['centroid_cell7']);
     }

@@ -25,13 +25,13 @@ final class VacationDebugContextTest extends TestCase
         $context->reset();
 
         $context->recordSegment([
-            'start_date' => '2024-05-01',
-            'end_date' => '2024-05-03',
-            'away_days' => 3,
-            'members' => 42,
+            'start_date'   => '2024-05-01',
+            'end_date'     => '2024-05-03',
+            'away_days'    => 3,
+            'members'      => 42,
             'center_count' => 2,
-            'radius_km' => 12.5,
-            'density' => 0.8,
+            'radius_km'    => 12.5,
+            'density'      => 0.8,
         ]);
 
         self::assertTrue($context->isEnabled());

@@ -39,7 +39,7 @@ final class ClusterEntityToDraftMapper
     /**
      * Provides the fallback group name when no explicit mapping exists.
      */
-    private string $defaultAlgorithmGroup;
+    private readonly string $defaultAlgorithmGroup;
 
     /**
      * @param array<string, string> $algorithmGroups configuration that maps the algorithm identifier
@@ -55,7 +55,11 @@ final class ClusterEntityToDraftMapper
 
         // Build a normalized lookup table that only contains non-empty string values.
         foreach ($algorithmGroups as $algorithm => $group) {
-            if (!is_string($group) || $group === '') {
+            if (!is_string($group)) {
+                continue;
+            }
+
+            if ($group === '') {
                 continue;
             }
 

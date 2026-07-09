@@ -157,7 +157,7 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
 
     private function emitMonitoring(string $job, string $status, array $context = []): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

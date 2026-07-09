@@ -144,19 +144,19 @@ final class TransportDayExtenderTest extends TestCase
     private function makeLeanSummary(float $lat, float $lon, array $overrides = []): array
     {
         $summary = [
-            'dominantStaypoints' => [],
-            'photoCount'         => 1,
-            'hasAirportPoi'      => false,
-            'hasHighSpeedTransit'=> false,
-            'transitRatio'       => 0.0,
-            'avgSpeedKmh'        => 0.0,
-            'maxSpeedKmh'        => 0.0,
-            'baseLocation'       => [
+            'dominantStaypoints'  => [],
+            'photoCount'          => 1,
+            'hasAirportPoi'       => false,
+            'hasHighSpeedTransit' => false,
+            'transitRatio'        => 0.0,
+            'avgSpeedKmh'         => 0.0,
+            'maxSpeedKmh'         => 0.0,
+            'baseLocation'        => [
                 'lat' => $lat,
                 'lon' => $lon,
             ],
-            'gpsMembers'         => [],
-            'isSynthetic'        => false,
+            'gpsMembers'  => [],
+            'isSynthetic' => false,
         ];
 
         return array_replace_recursive($summary, $overrides);
@@ -173,18 +173,18 @@ final class TransportDayExtenderTest extends TestCase
                 'dwellSeconds' => 3600,
                 'memberCount'  => 5,
             ]],
-            'photoCount'         => 5,
-            'hasAirportPoi'      => false,
-            'hasHighSpeedTransit'=> false,
-            'transitRatio'       => 0.0,
-            'avgSpeedKmh'        => 20.0,
-            'maxSpeedKmh'        => 25.0,
-            'baseLocation'       => [
+            'photoCount'          => 5,
+            'hasAirportPoi'       => false,
+            'hasHighSpeedTransit' => false,
+            'transitRatio'        => 0.0,
+            'avgSpeedKmh'         => 20.0,
+            'maxSpeedKmh'         => 25.0,
+            'baseLocation'        => [
                 'lat' => $lat,
                 'lon' => $lon,
             ],
-            'gpsMembers'         => [],
-            'isSynthetic'        => false,
+            'gpsMembers'  => [],
+            'isSynthetic' => false,
         ];
 
         return array_replace_recursive($summary, $overrides);

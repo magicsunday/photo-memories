@@ -22,13 +22,12 @@ use RuntimeException;
 use function array_fill_keys;
 use function array_map;
 use function array_search;
-use function chmod;
 use function base64_decode;
+use function chmod;
 use function count;
 use function explode;
-use function fmod;
 use function file_put_contents;
-use function implode;
+use function fmod;
 use function preg_match;
 use function preg_match_all;
 use function round;
@@ -37,7 +36,6 @@ use function strpos;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
-use function pi;
 
 /**
  * @covers \MagicSunday\Memories\Service\Slideshow\SlideshowVideoGenerator
@@ -50,7 +48,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('appendAudioOptions');
-        $method->setAccessible(true);
 
         $command = $method->invoke(
             $generator,
@@ -85,7 +82,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('appendAudioOptions');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke(
@@ -148,7 +144,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -218,15 +213,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -278,15 +270,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             0.65,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(beatGridStep: 0.5);
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -298,8 +287,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $visibleMatches);
         preg_match_all('/xfade=transition=[^:]+:duration=([0-9.]+)/', $filterComplex, $transitionMatches);
 
-        $visibleDurations     = array_map('floatval', $visibleMatches[1]);
-        $transitionDurations  = array_map('floatval', $transitionMatches[1]);
+        $visibleDurations    = array_map(floatval(...), $visibleMatches[1]);
+        $transitionDurations = array_map(floatval(...), $transitionMatches[1]);
 
         self::assertNotEmpty($transitionDurations);
         foreach ($transitionDurations as $index => $transitionDuration) {
@@ -316,7 +305,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildBlurredSlideFilter');
-        $method->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -352,7 +340,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildBlurredSlideFilter');
-        $method->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -383,7 +370,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
-        $method->setAccessible(true);
 
         /** @var string $filters */
         $filters = $method->invoke($generator, 'Rückblick', '01.01.2024 – 31.01.2024');
@@ -417,7 +403,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
-        $method->setAccessible(true);
 
         /** @var string $filters */
         $filters = $method->invoke($generator, 'Rückblick', null);
@@ -438,12 +423,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $reflector = new ReflectionClass($generator);
 
         $method = $reflector->getMethod('buildIntroTextOverlayFilterChain');
-        $method->setAccessible(true);
 
         $escapeMethod = $reflector->getMethod('escapeDrawTextValue');
-        $escapeMethod->setAccessible(true);
+
         $fontMethod = $reflector->getMethod('resolveFontDirective');
-        $fontMethod->setAccessible(true);
 
         $title    = "Sommer's Rückblick";
         $subtitle = 'Intro: 01%';
@@ -452,10 +435,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filters = $method->invoke($generator, $title, $subtitle);
 
         /** @var string $escapedSubtitle */
-        $escapedSubtitle = trim($escapeMethod->invoke($generator, $subtitle));
+        $escapedSubtitle = trim((string) $escapeMethod->invoke($generator, $subtitle));
 
         /** @var string $escapedTitle */
-        $escapedTitle = trim($escapeMethod->invoke($generator, $title));
+        $escapedTitle = trim((string) $escapeMethod->invoke($generator, $title));
 
         /** @var string $fontDirective */
         $fontDirective = $fontMethod->invoke($generator);
@@ -484,7 +467,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('resolveFontDirective');
-        $method->setAccessible(true);
 
         /** @var string $directive */
         $directive = $method->invoke($generator);
@@ -516,7 +498,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('resolveFontDirective');
-        $method->setAccessible(true);
 
         /** @var string $directive */
         $directive = $method->invoke($generator);
@@ -544,7 +525,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('escapeDrawTextValue');
-        $method->setAccessible(true);
 
         $value   = "Rückblick\n2024\r\nAbspann";
         $escaped = $method->invoke($generator, $value);
@@ -578,15 +558,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -601,7 +578,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
     public function testBackgroundBlurEnableExpressionCoversNarrowLandscapeSlides(): void
     {
-        $portraitImage       = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
+        $portraitImage        = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAADklEQVR4nGP4z8DAAMQACf4B/4PiLjgAAAAASUVORK5CYII=');
         $narrowLandscapeImage = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAADElEQVQImWNgIAoAAAAnAAGfWjwcAAAAAElFTkSuQmCC');
         $wideLandscapeImage   = $this->createTemporaryImage('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAADUlEQVR4nGNgYPgPRAAFAgH/wSuWnwAAAABJRU5ErkJggg==');
 
@@ -638,15 +615,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 [],
                 null,
                 null,
-                null,
-                null,
             );
 
             $generator = new SlideshowVideoGenerator();
 
             $reflector = new ReflectionClass($generator);
             $method    = $reflector->getMethod('buildCommand');
-            $method->setAccessible(true);
 
             /** @var list<string> $command */
             $command = $method->invoke($generator, $job, $job->slides());
@@ -723,8 +697,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
                 [],
                 null,
                 null,
-                null,
-                null,
             );
 
             $generator = new SlideshowVideoGenerator(
@@ -733,7 +705,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
             $reflector = new ReflectionClass($generator);
             $method    = $reflector->getMethod('buildCommand');
-            $method->setAccessible(true);
 
             /** @var list<string> $command */
             $command = $method->invoke($generator, $job, $job->slides());
@@ -787,7 +758,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('resolveKenBurnsParameters');
-        $method->setAccessible(true);
 
         $firstSlide = [
             'image'      => '/tmp/first.jpg',
@@ -836,7 +806,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('resolveKenBurnsParameters');
-        $method->setAccessible(true);
 
         $title    = 'Abenteuerurlaub';
         $subtitle = 'Kapitel 3';
@@ -918,15 +887,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             '/tmp/music.mp3',
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -986,15 +952,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             '/tmp/music.mp3',
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1053,15 +1016,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
             $customTransitions,
             $transitionDuration,
             '/tmp/music.mp3',
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator();
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1075,12 +1035,10 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $filterComplex = $command[$filterComplexIndex];
 
         $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
-        $resolveTransitionDurationMethod->setAccessible(true);
         /** @var float $resolvedDefaultDuration */
         $resolvedDefaultDuration = $resolveTransitionDurationMethod->invoke($generator, $job->transitionDuration());
 
         $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
-        $resolvedTransitionsMethod->setAccessible(true);
         /** @var list<float> $resolvedTransitions */
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
@@ -1090,10 +1048,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         );
 
         $resolveCoverDurationMethod = $reflector->getMethod('resolveCoverDuration');
-        $resolveCoverDurationMethod->setAccessible(true);
 
         $resolveSlideDurationMethod = $reflector->getMethod('resolveSlideDuration');
-        $resolveSlideDurationMethod->setAccessible(true);
 
         $loopDurations = [];
         for ($index = 0; $index < $filterIndex; ++$index) {
@@ -1114,13 +1070,13 @@ final class SlideshowVideoGeneratorTest extends TestCase
         foreach ($slides as $index => $slide) {
             if ($index === 0) {
                 /** @var float $coverDuration */
-                $coverDuration = $resolveCoverDurationMethod->invoke($generator, $slide);
+                $coverDuration              = $resolveCoverDurationMethod->invoke($generator, $slide);
                 $expectedVisibleDurations[] = $coverDuration;
                 continue;
             }
 
             /** @var float $resolvedDuration */
-            $resolvedDuration = $resolveSlideDurationMethod->invoke($generator, $slide['duration']);
+            $resolvedDuration           = $resolveSlideDurationMethod->invoke($generator, $slide['duration']);
             $expectedVisibleDurations[] = $resolvedDuration;
         }
 
@@ -1131,7 +1087,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $trimMatchCount = preg_match_all('/trim=duration=([0-9.]+)/', $filterComplex, $trimMatches);
         self::assertSame($expectedLoopCount, $trimMatchCount);
-        $trimDurations = array_map('floatval', $trimMatches[1]);
+        $trimDurations = array_map(floatval(...), $trimMatches[1]);
         foreach ($expectedVisibleDurations as $index => $expectedDuration) {
             self::assertArrayHasKey($index, $trimDurations);
             self::assertEqualsWithDelta($expectedDuration, $trimDurations[$index], 0.001);
@@ -1139,12 +1095,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $matchCount = preg_match_all('/xfade=[^:]+:duration=([0-9.]+):offset=([0-9.]+)/', $filterComplex, $matches);
         self::assertSame(count($resolvedTransitions), $matchCount);
-        $transitionDurations = array_map('floatval', $matches[1]);
+        $transitionDurations = array_map(floatval(...), $matches[1]);
         foreach ($transitionDurations as $index => $duration) {
             self::assertEqualsWithDelta($resolvedTransitions[$index], $duration, 0.001);
         }
 
-        $offsets = array_map('floatval', $matches[2]);
+        $offsets = array_map(floatval(...), $matches[2]);
         self::assertCount(count($resolvedTransitions), $offsets);
 
         $expectedTimeline = $expectedVisibleDurations[0];
@@ -1152,7 +1108,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $slideCount       = count($slides);
 
         for ($index = 1; $index < $slideCount; ++$index) {
-            $overlap          = $resolvedTransitions[$index - 1] ?? $transitionDuration;
+            $overlap           = $resolvedTransitions[$index - 1] ?? $transitionDuration;
             $expectedOffsets[] = $expectedTimeline - $overlap;
             $expectedTimeline += $expectedVisibleDurations[$index] - $overlap;
         }
@@ -1161,7 +1117,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
             self::assertEqualsWithDelta($expectedOffsets[$index], $offset, 0.001);
         }
 
-        $lastOffset = $offsets[count($offsets) - 1];
+        $lastOffset     = $offsets[count($offsets) - 1];
         $lastSlideIndex = $expectedLoopCount - 1;
         self::assertEqualsWithDelta($expectedTimeline, $lastOffset + $expectedVisibleDurations[$lastSlideIndex], 0.001);
 
@@ -1203,14 +1159,12 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $generator = new SlideshowVideoGenerator();
 
-        $reflector = new ReflectionClass($generator);
+        $reflector                       = new ReflectionClass($generator);
         $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
-        $resolveTransitionDurationMethod->setAccessible(true);
         /** @var float $resolvedDefault */
         $resolvedDefault = $resolveTransitionDurationMethod->invoke($generator, null);
 
         $method = $reflector->getMethod('resolveTransitionDurationsForSlides');
-        $method->setAccessible(true);
 
         /** @var list<float> $first */
         $first = $method->invoke($generator, $slides, $resolvedDefault, []);
@@ -1247,8 +1201,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [$missingImage],
             $slides,
             [],
-            null,
-            null,
             null,
             null,
         );
@@ -1289,8 +1241,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(
@@ -1301,7 +1251,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1384,18 +1333,14 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [0.75, 0.75],
             0.75,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(transitions: ['wiperight']);
 
-        $reflector = new ReflectionClass($generator);
+        $reflector   = new ReflectionClass($generator);
         $cacheMethod = $reflector->getMethod('transitionCache');
-        $cacheMethod->setAccessible(true);
 
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
-        $cacheKeyMethod->setAccessible(true);
 
         /** @var SlideshowTransitionCache $cache */
         $cache = $cacheMethod->invoke(null);
@@ -1403,12 +1348,11 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $cacheKey = $cacheKeyMethod->invoke($generator);
 
         /** @var list<string> $whitelist */
-        $whitelist = $reflector->getConstant('TRANSITION_WHITELIST');
+        $whitelist                    = $reflector->getConstant('TRANSITION_WHITELIST');
         $cache->whitelists[$cacheKey] = $whitelist;
         $cache->lookups[$cacheKey]    = array_fill_keys($whitelist, true);
 
-        $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
+        $method = $reflector->getMethod('buildCommand');
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1443,8 +1387,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
             [],
             null,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(
@@ -1454,7 +1396,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1508,7 +1449,6 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1523,9 +1463,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
 
     public function testDiscoveredTransitionsAreFilteredAgainstWhitelist(): void
     {
-        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+        $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
         $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-        $resetCacheMethod->setAccessible(true);
         $resetCacheMethod->invoke(null);
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
@@ -1543,7 +1482,7 @@ OUTPUT;
         $scriptContent = <<<BASH
 #!/usr/bin/env bash
 cat <<'EOF'
-$helpOutput
+{$helpOutput}
 EOF
 BASH;
 
@@ -1553,10 +1492,8 @@ BASH;
         $generator = new SlideshowVideoGenerator(ffmpegBinary: $script);
 
         $whitelistMethod = $reflector->getMethod('getTransitionWhitelist');
-        $whitelistMethod->setAccessible(true);
 
         $lookupMethod = $reflector->getMethod('getTransitionLookup');
-        $lookupMethod->setAccessible(true);
 
         try {
             /** @var list<string> $whitelist */
@@ -1572,9 +1509,9 @@ BASH;
 
             self::assertSame(
                 [
-                    'fade' => true,
+                    'fade'     => true,
                     'wipeleft' => true,
-                    'zoom' => true,
+                    'zoom'     => true,
                 ],
                 $lookup,
             );
@@ -1586,9 +1523,8 @@ BASH;
 
     public function testExperimentalTransitionsRequireExplicitOptIn(): void
     {
-        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+        $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
         $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-        $resetCacheMethod->setAccessible(true);
         $resetCacheMethod->invoke(null);
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
@@ -1605,7 +1541,7 @@ OUTPUT;
         $scriptContent = <<<BASH
 #!/usr/bin/env bash
 cat <<'EOF'
-$helpOutput
+{$helpOutput}
 EOF
 BASH;
 
@@ -1613,7 +1549,6 @@ BASH;
         chmod($script, 0755);
 
         $whitelistMethod = $reflector->getMethod('getTransitionWhitelist');
-        $whitelistMethod->setAccessible(true);
 
         try {
             $defaultGenerator = new SlideshowVideoGenerator(ffmpegBinary: $script);
@@ -1645,7 +1580,6 @@ BASH;
         $reflector = new ReflectionClass($generator);
 
         $defaultsProperty = $reflector->getProperty('transitions');
-        $defaultsProperty->setAccessible(true);
 
         /** @var list<string> $defaults */
         $defaults = $defaultsProperty->getValue($generator);
@@ -1679,13 +1613,10 @@ BASH;
         self::assertSame($whitelist, $defaults);
 
         $cacheMethod = $reflector->getMethod('transitionCache');
-        $cacheMethod->setAccessible(true);
 
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
-        $cacheKeyMethod->setAccessible(true);
 
         $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-        $resetCacheMethod->setAccessible(true);
 
         /** @var SlideshowTransitionCache $cache */
         $cache = $cacheMethod->invoke(null);
@@ -1697,7 +1628,6 @@ BASH;
 
         try {
             $filterMethod = $reflector->getMethod('filterAllowedTransitions');
-            $filterMethod->setAccessible(true);
 
             /** @var list<string> $filtered */
             $filtered = $filterMethod->invoke(
@@ -1708,58 +1638,57 @@ BASH;
             self::assertSame(['fade', 'zoom', 'wipedown', 'slideup', 'pushleft', 'pushdown'], $filtered);
 
             $buildMethod = $reflector->getMethod('buildDeterministicTransitionSequence');
-            $buildMethod->setAccessible(true);
 
-        $slidesForTransitions = [
-            [
-                'image'      => '/tmp/a.jpg',
-                'mediaId'    => 101,
-                'clusterId'  => 7,
-                'duration'   => 4.0,
-                'transition' => null,
-            ],
-            [
-                'image'      => '/tmp/b.jpg',
-                'mediaId'    => 102,
-                'clusterId'  => 7,
-                'duration'   => 4.0,
-                'transition' => null,
-            ],
-            [
-                'image'      => '/tmp/c.jpg',
-                'mediaId'    => 103,
-                'clusterId'  => 8,
-                'duration'   => 4.0,
-                'transition' => null,
-            ],
-            [
-                'image'      => '/tmp/d.jpg',
-                'mediaId'    => 104,
-                'clusterId'  => 8,
-                'duration'   => 4.0,
-                'transition' => null,
-            ],
-        ];
+            $slidesForTransitions = [
+                [
+                    'image'      => '/tmp/a.jpg',
+                    'mediaId'    => 101,
+                    'clusterId'  => 7,
+                    'duration'   => 4.0,
+                    'transition' => null,
+                ],
+                [
+                    'image'      => '/tmp/b.jpg',
+                    'mediaId'    => 102,
+                    'clusterId'  => 7,
+                    'duration'   => 4.0,
+                    'transition' => null,
+                ],
+                [
+                    'image'      => '/tmp/c.jpg',
+                    'mediaId'    => 103,
+                    'clusterId'  => 8,
+                    'duration'   => 4.0,
+                    'transition' => null,
+                ],
+                [
+                    'image'      => '/tmp/d.jpg',
+                    'mediaId'    => 104,
+                    'clusterId'  => 8,
+                    'duration'   => 4.0,
+                    'transition' => null,
+                ],
+            ];
 
-        /** @var list<string> $first */
-        $first = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
-        /** @var list<string> $second */
-        $second = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
-        /** @var list<string> $different */
-        $different = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Charlie', 3);
+            /** @var list<string> $first */
+            $first = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
+            /** @var list<string> $second */
+            $second = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Bravo', 3);
+            /** @var list<string> $different */
+            $different = $buildMethod->invoke($generator, $slidesForTransitions, $filtered, 'Alpha', 'Charlie', 3);
 
-        self::assertSame($first, $second);
-        self::assertCount(3, $first);
+            self::assertSame($first, $second);
+            self::assertCount(3, $first);
 
-        foreach ($first as $index => $transition) {
-            self::assertContains($transition, $filtered);
+            foreach ($first as $index => $transition) {
+                self::assertContains($transition, $filtered);
 
-            if ($index > 0 && count($filtered) > 1) {
-                self::assertNotSame($first[$index - 1], $transition);
+                if ($index > 0 && count($filtered) > 1) {
+                    self::assertNotSame($first[$index - 1], $transition);
+                }
             }
-        }
 
-        self::assertNotSame($first, $different);
+            self::assertNotSame($first, $different);
 
             /** @var list<string> $weighted */
             $weighted = $buildMethod->invoke($generator, $slidesForTransitions, ['fade', 'zoom'], 'Alpha', 'Bravo', 5);
@@ -1824,7 +1753,6 @@ BASH;
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $method->invoke($generator, $job, $job->slides());
@@ -1832,12 +1760,10 @@ BASH;
         $parsed = $this->parseTransitionsFromCommand($command);
 
         $resolveTransitionDurationMethod = $reflector->getMethod('resolveTransitionDuration');
-        $resolveTransitionDurationMethod->setAccessible(true);
         /** @var float $resolvedDefaultDuration */
         $resolvedDefaultDuration = $resolveTransitionDurationMethod->invoke($generator, $job->transitionDuration());
 
         $resolvedTransitionsMethod = $reflector->getMethod('resolveTransitionDurationsForSlides');
-        $resolvedTransitionsMethod->setAccessible(true);
         /** @var list<float> $resolvedTransitions */
         $resolvedTransitions = $resolvedTransitionsMethod->invoke(
             $generator,
@@ -1869,7 +1795,6 @@ BASH;
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('escapeFilterExpression');
-        $method->setAccessible(true);
 
         $expression = 'if(gte(iw/ih,1.778),1+(1.08-1)*min(t/4.3,1),1)';
 
@@ -1914,7 +1839,6 @@ HELP;
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('parseXfadeHelpOutput');
-        $method->setAccessible(true);
 
         /** @var list<string> $transitions */
         $transitions = $method->invoke($generator, $helpOutput);
@@ -1934,10 +1858,8 @@ HELP;
         $reflector = new ReflectionClass($generator);
 
         $cacheMethod = $reflector->getMethod('transitionCache');
-        $cacheMethod->setAccessible(true);
 
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
-        $cacheKeyMethod->setAccessible(true);
 
         /** @var SlideshowTransitionCache $cache */
         $cache = $cacheMethod->invoke(null);
@@ -1951,7 +1873,6 @@ HELP;
         $cache->lookups[$cacheKey]    = array_fill_keys($initialWhitelist, true);
 
         $lookupMethod = $reflector->getMethod('getTransitionLookup');
-        $lookupMethod->setAccessible(true);
 
         /** @var array<string, bool> $initialLookup */
         $initialLookup = $lookupMethod->invoke($generator);
@@ -2019,15 +1940,12 @@ BASH;
             [],
             null,
             null,
-            null,
-            null,
         );
 
         $generator = new SlideshowVideoGenerator(ffmpegBinary: $script);
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildCommand');
-        $method->setAccessible(true);
 
         try {
             /** @var list<string> $command */
@@ -2052,7 +1970,6 @@ BASH;
         $reflector = new ReflectionClass($generator);
 
         $method = $reflector->getMethod('getTransitionWhitelist');
-        $method->setAccessible(true);
 
         /** @var list<string> $transitions */
         $transitions = $method->invoke($generator);
@@ -2077,7 +1994,6 @@ BASH;
 
         $reflector    = new ReflectionClass($generator);
         $appendMethod = $reflector->getMethod('appendAudioOptions');
-        $appendMethod->setAccessible(true);
 
         /** @var list<string> $command */
         $command = $appendMethod->invoke(
@@ -2100,7 +2016,6 @@ BASH;
         self::assertSame('48', $command[$gopIndex + 1]);
 
         $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
-        $blurMethod->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -2121,7 +2036,6 @@ BASH;
 
         $reflector = new ReflectionClass($generator);
         $method    = $reflector->getMethod('buildIntroTextOverlayFilterChain');
-        $method->setAccessible(true);
 
         /** @var string $filters */
         $filters = $method->invoke($generator, 'Rückblick', 'Untertitel');
@@ -2136,7 +2050,6 @@ BASH;
 
         $reflector  = new ReflectionClass($generator);
         $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
-        $blurMethod->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -2149,7 +2062,6 @@ BASH;
         $filter = $blurMethod->invoke($generator, 0, 3.0, 3.0, $slide, null, null);
 
         $formatMethod = $reflector->getMethod('formatFloat');
-        $formatMethod->setAccessible(true);
 
         /** @var string $expected */
         $expected = $formatMethod->invoke($generator, 0.5);
@@ -2163,7 +2075,6 @@ BASH;
 
         $reflector  = new ReflectionClass($generator);
         $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
-        $blurMethod->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -2176,7 +2087,6 @@ BASH;
         $filter = $blurMethod->invoke($generator, 0, 3.0, 3.0, $slide, null, null);
 
         $formatMethod = $reflector->getMethod('formatFloat');
-        $formatMethod->setAccessible(true);
 
         /** @var string $expected */
         $expected = $formatMethod->invoke($generator, 0.35);
@@ -2190,7 +2100,6 @@ BASH;
 
         $reflector  = new ReflectionClass($generator);
         $blurMethod = $reflector->getMethod('buildBlurredSlideFilter');
-        $blurMethod->setAccessible(true);
 
         $slide = [
             'image'      => '/tmp/example.jpg',
@@ -2244,7 +2153,6 @@ BASH;
         $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
 
         $method = $reflector->getMethod('resetTransitionCache');
-        $method->setAccessible(true);
         $method->invoke(null);
     }
 }

@@ -26,7 +26,7 @@ final class SeriesHighlightServiceTest extends TestCase
         $cluster = new ClusterDraft(
             'on_this_day_over_years',
             ['years' => [2021, 2018, '2020', 2018]],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3]
         );
 
@@ -51,14 +51,14 @@ final class SeriesHighlightServiceTest extends TestCase
         $cluster = new ClusterDraft(
             'season_over_years',
             ['years' => [2023]],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [10, 11]
         );
 
         $service = new SeriesHighlightService();
         $service->apply($cluster);
 
-        $params = $cluster->getParams();
+        $params    = $cluster->getParams();
         $highlight = $params['series_highlights'] ?? null;
 
         self::assertSame([2023], $params['years']);

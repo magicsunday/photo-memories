@@ -21,6 +21,7 @@ use function json_decode;
 use function json_encode;
 use function sys_get_temp_dir;
 use function uniqid;
+
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
 
@@ -101,7 +102,7 @@ final class FeedUserPreferenceStorageTest extends TestCase
                 'legacy-user' => [
                     'profiles' => [
                         'only' => [
-                            'favourites' => ['cluster-1'],
+                            'favourites'        => ['cluster-1'],
                             'hidden_algorithms' => ['algo'],
                         ],
                     ],

@@ -25,7 +25,7 @@ use function is_string;
  */
 final class SceneDiversityStage implements SelectionStageInterface
 {
-    private const DEFAULT_WEIGHTS = [
+    private const array DEFAULT_WEIGHTS = [
         'person_group' => 0.18,
         'landmark'     => 0.16,
         'food'         => 0.14,
@@ -46,9 +46,9 @@ final class SceneDiversityStage implements SelectionStageInterface
             return [];
         }
 
-        $weights = $this->normaliseWeights($policy->getSceneBucketWeights());
-        $ratios  = $this->computeRatios($weights);
-        $fallbackRatio = count($ratios) > 0 ? 1.0 / count($ratios) : 1.0;
+        $weights       = $this->normaliseWeights($policy->getSceneBucketWeights());
+        $ratios        = $this->computeRatios($weights);
+        $fallbackRatio = $ratios !== [] ? 1.0 / count($ratios) : 1.0;
 
         $selected      = [];
         $countByBucket = [];
@@ -70,7 +70,7 @@ final class SceneDiversityStage implements SelectionStageInterface
                 continue;
             }
 
-            $selected[] = $candidate;
+            $selected[]             = $candidate;
             $countByBucket[$bucket] = ($countByBucket[$bucket] ?? 0) + 1;
         }
 
@@ -128,9 +128,9 @@ final class SceneDiversityStage implements SelectionStageInterface
                 return [];
             }
 
-            $ratio   = 1.0 / $count;
+            $ratio  = 1.0 / $count;
             $ratios = [];
-            foreach ($weights as $bucket => $_weight) {
+            foreach (array_keys($weights) as $bucket) {
                 $ratios[$bucket] = $ratio;
             }
 
@@ -149,6 +149,6 @@ final class SceneDiversityStage implements SelectionStageInterface
     {
         $limit = (int) ceil($nextTotal * $ratio);
 
-        return $limit >= 1 ? $limit : 1;
+        return max($limit, 1);
     }
 }

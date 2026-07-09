@@ -18,8 +18,8 @@ use PHPUnit\Framework\Attributes\Test;
 
 use function file_put_contents;
 use function imagecolorallocate;
-use function imagecreatetruecolor;
 use function imagecreatefromjpeg;
+use function imagecreatetruecolor;
 use function imagedestroy;
 use function imagefilledrectangle;
 use function imagejpeg;
@@ -188,13 +188,13 @@ final class PerceptualHashExtractorTest extends TestCase
         $image = imagecreatetruecolor(64, 64);
         for ($y = 0; $y < 64; ++$y) {
             for ($x = 0; $x < 64; ++$x) {
-                $gray  = (int) (($x + $y) % 256);
+                $gray  = ($x + $y) % 256;
                 $color = imagecolorallocate($image, $gray, $gray, $gray);
                 imagefilledrectangle($image, $x, $y, $x, $y, $color);
             }
         }
 
-        if (imagejpeg($image, $path, 90) !== true) {
+        if (!imagejpeg($image, $path, 90)) {
             imagedestroy($image);
             self::fail('Unable to write gradient image.');
         }
@@ -227,7 +227,7 @@ final class PerceptualHashExtractorTest extends TestCase
         $path = $base . '.jpg';
         unlink($base);
 
-        if (imagejpeg($rotated, $path, 90) !== true) {
+        if (!imagejpeg($rotated, $path, 90)) {
             imagedestroy($rotated);
             self::fail('Unable to write rotated image.');
         }

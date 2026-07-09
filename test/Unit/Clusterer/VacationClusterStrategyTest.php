@@ -11,16 +11,15 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\HomeLocatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
-use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\AwayFlagStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\DensityStage;
 use MagicSunday\Memories\Clusterer\DaySummaryStage\GpsMetricsStage;
@@ -28,15 +27,17 @@ use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\DefaultDaySummaryBuilder;
 use MagicSunday\Memories\Clusterer\DefaultHomeLocator;
 use MagicSunday\Memories\Clusterer\DefaultVacationSegmentAssembler;
+use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\BaseLocationResolver;
 use MagicSunday\Memories\Clusterer\Service\PoiClassifier;
 use MagicSunday\Memories\Clusterer\Service\RunDetector;
 use MagicSunday\Memories\Clusterer\Service\StaypointDetector;
 use MagicSunday\Memories\Clusterer\Service\TimezoneResolver;
 use MagicSunday\Memories\Clusterer\Service\TransportDayExtender;
-use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
+use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Clusterer\VacationClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -49,18 +50,18 @@ use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterf
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionContext;
 use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
+use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
+use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
+use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Test\TestCase;
-use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\VacationTestMemberSelector;
+use MagicSunday\Memories\Utility\LocationHelper;
 use MagicSunday\Memories\Utility\MediaMath;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
-use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
-use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
-use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
-use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
+use Stringable;
 use Symfony\Component\Yaml\Yaml;
 
 final class VacationClusterStrategyTest extends TestCase
@@ -98,14 +99,14 @@ final class VacationClusterStrategyTest extends TestCase
         ];
 
         $home = [
-            'lat' => $homeLocation->getLat(),
-            'lon' => $homeLocation->getLon(),
-            'radius_km' => 5.0,
-            'country' => 'Germany',
+            'lat'             => $homeLocation->getLat(),
+            'lon'             => $homeLocation->getLon(),
+            'radius_km'       => 5.0,
+            'country'         => 'Germany',
             'timezone_offset' => 60,
         ];
 
-        $capturedOrder = [];
+        $capturedOrder   = [];
         $receivedMembers = [];
 
         $homeLocator = new class($home) implements HomeLocatorInterface {
@@ -116,16 +117,16 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function determineHome(array $items): ?array
+            public function determineHome(array $items): array
             {
                 return $this->home;
             }
 
-            public function getConfiguredHome(): ?array
+            public function getConfiguredHome(): array
             {
                 return [
-                    'lat' => $this->home['lat'],
-                    'lon' => $this->home['lon'],
+                    'lat'       => $this->home['lat'],
+                    'lon'       => $this->home['lon'],
                     'radius_km' => $this->home['radius_km'],
                 ];
             }
@@ -145,45 +146,45 @@ final class VacationClusterStrategyTest extends TestCase
 
                 return [
                     '2024-01-05' => [
-                        'date' => '2024-01-05',
-                        'members' => $items,
-                        'gpsMembers' => $items,
-                        'maxDistanceKm' => 0.0,
-                        'avgDistanceKm' => 0.0,
-                        'travelKm' => 0.0,
-                        'maxSpeedKmh' => 0.0,
-                        'avgSpeedKmh' => 0.0,
-                        'hasHighSpeedTransit' => false,
-                        'countryCodes' => [],
-                        'timezoneOffsets' => [],
+                        'date'                    => '2024-01-05',
+                        'members'                 => $items,
+                        'gpsMembers'              => $items,
+                        'maxDistanceKm'           => 0.0,
+                        'avgDistanceKm'           => 0.0,
+                        'travelKm'                => 0.0,
+                        'maxSpeedKmh'             => 0.0,
+                        'avgSpeedKmh'             => 0.0,
+                        'hasHighSpeedTransit'     => false,
+                        'countryCodes'            => [],
+                        'timezoneOffsets'         => [],
                         'localTimezoneIdentifier' => 'UTC',
-                        'localTimezoneOffset' => null,
-                        'tourismHits' => 0,
-                        'poiSamples' => 0,
-                        'tourismRatio' => 0.0,
-                        'hasAirportPoi' => false,
-                        'weekday' => 5,
-                        'photoCount' => count($items),
-                        'densityZ' => 0.0,
-                        'isAwayCandidate' => false,
-                        'sufficientSamples' => true,
-                        'spotClusters' => [],
-                        'spotNoise' => [],
-                        'spotCount' => 0,
-                        'spotNoiseSamples' => 0,
-                        'spotDwellSeconds' => 0,
-                        'staypoints' => [],
-                        'staypointIndex' => StaypointIndex::empty(),
-                        'staypointCounts' => [],
-                        'dominantStaypoints' => [],
-                        'transitRatio' => 0.0,
-                        'poiDensity' => 0.0,
-                        'baseLocation' => null,
-                        'baseAway' => false,
-                        'awayByDistance' => false,
-                        'firstGpsMedia' => null,
-                        'lastGpsMedia' => null,
-                        'isSynthetic' => false,
+                        'localTimezoneOffset'     => null,
+                        'tourismHits'             => 0,
+                        'poiSamples'              => 0,
+                        'tourismRatio'            => 0.0,
+                        'hasAirportPoi'           => false,
+                        'weekday'                 => 5,
+                        'photoCount'              => count($items),
+                        'densityZ'                => 0.0,
+                        'isAwayCandidate'         => false,
+                        'sufficientSamples'       => true,
+                        'spotClusters'            => [],
+                        'spotNoise'               => [],
+                        'spotCount'               => 0,
+                        'spotNoiseSamples'        => 0,
+                        'spotDwellSeconds'        => 0,
+                        'staypoints'              => [],
+                        'staypointIndex'          => StaypointIndex::empty(),
+                        'staypointCounts'         => [],
+                        'dominantStaypoints'      => [],
+                        'transitRatio'            => 0.0,
+                        'poiDensity'              => 0.0,
+                        'baseLocation'            => null,
+                        'baseAway'                => false,
+                        'awayByDistance'          => false,
+                        'firstGpsMedia'           => null,
+                        'lastGpsMedia'            => null,
+                        'isSynthetic'             => false,
                     ],
                 ];
             }
@@ -207,7 +208,7 @@ final class VacationClusterStrategyTest extends TestCase
                     new ClusterDraft(
                         'vacation',
                         ['stub' => true],
-                        ['lat' => 0.0, 'lon' => 0.0],
+                        ['lat'  => 0.0, 'lon' => 0.0],
                         $this->receivedMembers,
                     ),
                 ];
@@ -230,10 +231,10 @@ final class VacationClusterStrategyTest extends TestCase
     public function emitsWarningWhenConfiguredHomeDefaultsToZero(): void
     {
         $home = [
-            'lat' => 0.0,
-            'lon' => 0.0,
-            'radius_km' => 15.0,
-            'country' => null,
+            'lat'             => 0.0,
+            'lon'             => 0.0,
+            'radius_km'       => 15.0,
+            'country'         => null,
             'timezone_offset' => null,
         ];
 
@@ -242,16 +243,16 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function determineHome(array $items): ?array
+            public function determineHome(array $items): array
             {
                 return $this->home;
             }
 
-            public function getConfiguredHome(): ?array
+            public function getConfiguredHome(): array
             {
                 return [
-                    'lat' => $this->home['lat'],
-                    'lon' => $this->home['lon'],
+                    'lat'       => $this->home['lat'],
+                    'lon'       => $this->home['lon'],
                     'radius_km' => $this->home['radius_km'],
                 ];
             }
@@ -275,8 +276,8 @@ final class VacationClusterStrategyTest extends TestCase
         $emitter = new class($events) implements JobMonitoringEmitterInterface {
             /**
              * @param list<array{
-             *     job: \Stringable|string|int|float|bool,
-             *     status: \Stringable|string|int|float|bool,
+             *     job: Stringable|string|int|float|bool,
+             *     status: Stringable|string|int|float|bool,
              *     context: array<string, mixed>
              * }> $events
              */
@@ -284,11 +285,11 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function emit(\Stringable|string|int|float|bool $job, \Stringable|string|int|float|bool $status, array $context = []): void
+            public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
             {
                 $this->events[] = [
-                    'job' => $job,
-                    'status' => $status,
+                    'job'     => $job,
+                    'status'  => $status,
                     'context' => $context,
                 ];
             }
@@ -348,95 +349,95 @@ final class VacationClusterStrategyTest extends TestCase
         $items = [$mediaA, $mediaB];
 
         $home = [
-            'lat' => 48.1374,
-            'lon' => 11.5755,
-            'radius_km' => 7.5,
-            'country' => 'Germany',
+            'lat'             => 48.1374,
+            'lon'             => 11.5755,
+            'radius_km'       => 7.5,
+            'country'         => 'Germany',
             'timezone_offset' => 120,
         ];
 
         $days = [
             '2024-08-01' => [
-                'date' => '2024-08-01',
-                'members' => [$mediaA],
-                'gpsMembers' => [$mediaA],
-                'maxDistanceKm' => 140.0,
-                'avgDistanceKm' => 90.0,
-                'travelKm' => 160.5,
-                'maxSpeedKmh' => 110.0,
-                'avgSpeedKmh' => 75.0,
-                'hasHighSpeedTransit' => true,
-                'countryCodes' => ['de' => true],
-                'timezoneOffsets' => [120 => 1],
+                'date'                    => '2024-08-01',
+                'members'                 => [$mediaA],
+                'gpsMembers'              => [$mediaA],
+                'maxDistanceKm'           => 140.0,
+                'avgDistanceKm'           => 90.0,
+                'travelKm'                => 160.5,
+                'maxSpeedKmh'             => 110.0,
+                'avgSpeedKmh'             => 75.0,
+                'hasHighSpeedTransit'     => true,
+                'countryCodes'            => ['de' => true],
+                'timezoneOffsets'         => [120 => 1],
                 'localTimezoneIdentifier' => 'Europe/Berlin',
-                'localTimezoneOffset' => 120,
-                'tourismHits' => 5,
-                'poiSamples' => 6,
-                'tourismRatio' => 0.8,
-                'hasAirportPoi' => false,
-                'weekday' => 4,
-                'photoCount' => 1,
-                'densityZ' => 1.4,
-                'isAwayCandidate' => true,
-                'sufficientSamples' => true,
-                'spotClusters' => [],
-                'spotNoise' => [],
-                'spotCount' => 1,
-                'spotNoiseSamples' => 0,
-                'spotDwellSeconds' => 900,
-                'staypoints' => [],
-                'staypointIndex' => StaypointIndex::empty(),
-                'staypointCounts' => [],
-                'dominantStaypoints' => [],
-                'transitRatio' => 0.0,
-                'poiDensity' => 0.0,
-                'baseLocation' => null,
-                'baseAway' => true,
-                'awayByDistance' => true,
-                'firstGpsMedia' => $mediaA,
-                'lastGpsMedia' => $mediaA,
-                'isSynthetic' => false,
+                'localTimezoneOffset'     => 120,
+                'tourismHits'             => 5,
+                'poiSamples'              => 6,
+                'tourismRatio'            => 0.8,
+                'hasAirportPoi'           => false,
+                'weekday'                 => 4,
+                'photoCount'              => 1,
+                'densityZ'                => 1.4,
+                'isAwayCandidate'         => true,
+                'sufficientSamples'       => true,
+                'spotClusters'            => [],
+                'spotNoise'               => [],
+                'spotCount'               => 1,
+                'spotNoiseSamples'        => 0,
+                'spotDwellSeconds'        => 900,
+                'staypoints'              => [],
+                'staypointIndex'          => StaypointIndex::empty(),
+                'staypointCounts'         => [],
+                'dominantStaypoints'      => [],
+                'transitRatio'            => 0.0,
+                'poiDensity'              => 0.0,
+                'baseLocation'            => null,
+                'baseAway'                => true,
+                'awayByDistance'          => true,
+                'firstGpsMedia'           => $mediaA,
+                'lastGpsMedia'            => $mediaA,
+                'isSynthetic'             => false,
             ],
             '2024-08-02' => [
-                'date' => '2024-08-02',
-                'members' => [$mediaB],
-                'gpsMembers' => [$mediaB],
-                'maxDistanceKm' => 60.0,
-                'avgDistanceKm' => 35.0,
-                'travelKm' => 45.2,
-                'maxSpeedKmh' => 80.0,
-                'avgSpeedKmh' => 50.0,
-                'hasHighSpeedTransit' => false,
-                'countryCodes' => ['de' => true],
-                'timezoneOffsets' => [120 => 1],
+                'date'                    => '2024-08-02',
+                'members'                 => [$mediaB],
+                'gpsMembers'              => [$mediaB],
+                'maxDistanceKm'           => 60.0,
+                'avgDistanceKm'           => 35.0,
+                'travelKm'                => 45.2,
+                'maxSpeedKmh'             => 80.0,
+                'avgSpeedKmh'             => 50.0,
+                'hasHighSpeedTransit'     => false,
+                'countryCodes'            => ['de' => true],
+                'timezoneOffsets'         => [120 => 1],
                 'localTimezoneIdentifier' => 'Europe/Berlin',
-                'localTimezoneOffset' => 120,
-                'tourismHits' => 2,
-                'poiSamples' => 3,
-                'tourismRatio' => 0.4,
-                'hasAirportPoi' => false,
-                'weekday' => 5,
-                'photoCount' => 1,
-                'densityZ' => 0.8,
-                'isAwayCandidate' => false,
-                'sufficientSamples' => true,
-                'spotClusters' => [],
-                'spotNoise' => [],
-                'spotCount' => 0,
-                'spotNoiseSamples' => 0,
-                'spotDwellSeconds' => 600,
-                'staypoints' => [],
-                'staypointIndex' => StaypointIndex::empty(),
-                'staypointCounts' => [],
-                'dominantStaypoints' => [],
-                'transitRatio' => 0.0,
-                'poiDensity' => 0.0,
-                'baseLocation' => null,
-                'baseAway' => false,
-                'awayByDistance' => false,
-                'firstGpsMedia' => $mediaB,
-                'lastGpsMedia' => $mediaB,
-                'isSynthetic' => false,
+                'localTimezoneOffset'     => 120,
+                'tourismHits'             => 2,
+                'poiSamples'              => 3,
+                'tourismRatio'            => 0.4,
+                'hasAirportPoi'           => false,
+                'weekday'                 => 5,
+                'photoCount'              => 1,
+                'densityZ'                => 0.8,
+                'isAwayCandidate'         => false,
+                'sufficientSamples'       => true,
+                'spotClusters'            => [],
+                'spotNoise'               => [],
+                'spotCount'               => 0,
+                'spotNoiseSamples'        => 0,
+                'spotDwellSeconds'        => 600,
+                'staypoints'              => [],
+                'staypointIndex'          => StaypointIndex::empty(),
+                'staypointCounts'         => [],
+                'dominantStaypoints'      => [],
+                'transitRatio'            => 0.0,
+                'poiDensity'              => 0.0,
+                'baseLocation'            => null,
+                'baseAway'                => false,
+                'awayByDistance'          => false,
+                'firstGpsMedia'           => $mediaB,
+                'lastGpsMedia'            => $mediaB,
+                'isSynthetic'             => false,
             ],
         ];
 
@@ -444,7 +445,7 @@ final class VacationClusterStrategyTest extends TestCase
             new ClusterDraft(
                 'vacation',
                 ['classification' => 'vacation'],
-                ['lat' => 40.7128, 'lon' => -74.0060],
+                ['lat'            => 40.7128, 'lon' => -74.0060],
                 [$mediaA->getId(), $mediaB->getId()],
             ),
         ];
@@ -459,22 +460,22 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function determineHome(array $items): ?array
+            public function determineHome(array $items): array
             {
                 return $this->home;
             }
 
-            public function getConfiguredHome(): ?array
+            public function getConfiguredHome(): array
             {
                 return [
-                    'lat' => $this->home['lat'],
-                    'lon' => $this->home['lon'],
+                    'lat'       => $this->home['lat'],
+                    'lon'       => $this->home['lon'],
                     'radius_km' => $this->home['radius_km'],
                 ];
             }
         };
 
-        $daySummaryBuilder = new class($days) implements DaySummaryBuilderInterface {
+        $daySummaryBuilder = new readonly class($days) implements DaySummaryBuilderInterface {
             /**
              * @param array<string, array<string, mixed>> $days
              */
@@ -488,7 +489,7 @@ final class VacationClusterStrategyTest extends TestCase
             }
         };
 
-        $segmentAssembler = new class($segments) implements VacationSegmentAssemblerInterface {
+        $segmentAssembler = new readonly class($segments) implements VacationSegmentAssemblerInterface {
             /**
              * @param list<ClusterDraft> $segments
              */
@@ -505,8 +506,8 @@ final class VacationClusterStrategyTest extends TestCase
         $emitter = new class($events) implements JobMonitoringEmitterInterface {
             /**
              * @param list<array{
-             *     job: \Stringable|string|int|float|bool,
-             *     status: \Stringable|string|int|float|bool,
+             *     job: Stringable|string|int|float|bool,
+             *     status: Stringable|string|int|float|bool,
              *     context: array<string, mixed>
              * }> $events
              */
@@ -514,11 +515,11 @@ final class VacationClusterStrategyTest extends TestCase
             {
             }
 
-            public function emit(\Stringable|string|int|float|bool $job, \Stringable|string|int|float|bool $status, array $context = []): void
+            public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
             {
                 $this->events[] = [
-                    'job' => $job,
-                    'status' => $status,
+                    'job'     => $job,
+                    'status'  => $status,
                     'context' => $context,
                 ];
             }
@@ -839,11 +840,11 @@ final class VacationClusterStrategyTest extends TestCase
             }
         }
 
-        $lookup = new class($mediaById) implements MemberMediaLookupInterface {
+        $lookup = new readonly class($mediaById) implements MemberMediaLookupInterface {
             /**
              * @param array<int, Media> $map
              */
-            public function __construct(private readonly array $map)
+            public function __construct(private array $map)
             {
             }
 
@@ -881,7 +882,6 @@ final class VacationClusterStrategyTest extends TestCase
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $resolve    = $reflection->getMethod('resolveOrderedMembers');
-        $resolve->setAccessible(true);
 
         /** @var list<int> $resolved */
         $resolved = $resolve->invoke($service, $draft);
@@ -895,7 +895,6 @@ final class VacationClusterStrategyTest extends TestCase
         self::assertSame($draft->getMembers(), $resolved);
 
         $clamp = $reflection->getMethod('clampMembers');
-        $clamp->setAccessible(true);
 
         /** @var list<int> $clamped */
         $clamped = $clamp->invoke($service, $resolved);
@@ -943,8 +942,8 @@ final class VacationClusterStrategyTest extends TestCase
             'New York, USA',
             40.7128,
             -74.0060,
-            country: 'United States',
             city: 'New York',
+            country: 'United States',
         );
 
         $tokyo = $this->makeLocation(
@@ -952,8 +951,8 @@ final class VacationClusterStrategyTest extends TestCase
             'Tokyo, Japan',
             35.6762,
             139.6503,
-            country: 'Japan',
             city: 'Tokyo',
+            country: 'Japan',
         );
 
         $items = [];
@@ -993,7 +992,6 @@ final class VacationClusterStrategyTest extends TestCase
 
         $reflection = new ReflectionClass($strategy);
         $property   = $reflection->getProperty('daySummaryBuilder');
-        $property->setAccessible(true);
 
         $builder = $property->getValue($strategy);
 
@@ -1998,7 +1996,6 @@ final class VacationClusterStrategyTest extends TestCase
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
         $method     = $reflection->getMethod('clampMembers');
-        $method->setAccessible(true);
 
         /** @var list<int> $result */
         $result = $method->invoke($service, $memberIds);
@@ -2014,9 +2011,7 @@ final class VacationClusterStrategyTest extends TestCase
         $resolver = $this->createMock(HolidayResolverInterface::class);
         $resolver
             ->method('isHoliday')
-            ->willReturnCallback(static function (DateTimeImmutable $day) use ($holidayDates): bool {
-                return in_array($day->format('Y-m-d'), $holidayDates, true);
-            });
+            ->willReturnCallback(static fn (DateTimeImmutable $day): bool => in_array($day->format('Y-m-d'), $holidayDates, true));
 
         return $resolver;
     }
@@ -2050,7 +2045,7 @@ final class VacationClusterStrategyTest extends TestCase
 
     private function createPolicyProvider(): SelectionPolicyProvider
     {
-        $config = Yaml::parseFile(dirname(__DIR__, 3) . '/config/parameters/selection.yaml');
+        $config     = Yaml::parseFile(dirname(__DIR__, 3) . '/config/parameters/selection.yaml');
         $parameters = $config['parameters'] ?? [];
 
         return new SelectionPolicyProvider(

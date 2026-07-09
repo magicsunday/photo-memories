@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Metadata;
 
+use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\GeoHash;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -68,7 +69,7 @@ final readonly class GeoFeatureEnricher implements SingleMetadataExtractorInterf
         $media->setGeohash5(GeoHash::encode($lat, $lon, 5));
         $media->setS2CellId(S2CellId::tokenFromDegrees($lat, $lon, $this->s2Level));
 
-        $media->setNeedsGeocode($media->getLocation() === null);
+        $media->setNeedsGeocode(!$media->getLocation() instanceof Location);
 
         return $media;
     }

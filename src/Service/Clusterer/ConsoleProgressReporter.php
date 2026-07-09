@@ -52,9 +52,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
         $section = $this->output->section();
         $bar     = $this->makeBar($section, $max, $headline);
 
-        $factory = function (string $childSectionTitle, string $childHeadline, int $childMax): ProgressHandleInterface {
-            return $this->createHandle($childSectionTitle, $childHeadline, $childMax);
-        };
+        $factory = (fn (string $childSectionTitle, string $childHeadline, int $childMax): ProgressHandleInterface => $this->createHandle($childSectionTitle, $childHeadline, $childMax));
 
         return new ConsoleProgressHandle($section, $bar, $factory);
     }
@@ -90,7 +88,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
 }
 
 /** @internal */
-final class ConsoleProgressHandle implements ProgressHandleInterface
+final readonly class ConsoleProgressHandle implements ProgressHandleInterface
 {
     /**
      * @param callable(string,string,int):ProgressHandleInterface $factory

@@ -29,7 +29,7 @@ final class PersistenceBatchStageTest extends TestCase
     {
         $media = new Media('file', 'checksum', 1);
 
-        $tracker = new PersistedMediaTracker();
+        $tracker       = new PersistedMediaTracker();
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('persist')->with($media);
         $entityManager->expects(self::once())->method('flush')->with($media)->willReturnCallback(

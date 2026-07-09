@@ -11,17 +11,16 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterDeviceMetadataAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\GeoDbscanHelper;
 use MagicSunday\Memories\Clusterer\Support\GeoTemporalClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
@@ -167,9 +166,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         $out = [];
 
         foreach ($eligibleMonths as $ym => $list) {
-            $year  = (int) substr($ym, 0, 4);
-            $month = (int) substr($ym, 5, 2);
-            $label = $this->germanMonthLabel($month) . ' ' . $year;
+            $year        = (int) substr($ym, 0, 4);
+            $month       = (int) substr($ym, 5, 2);
+            $label       = $this->germanMonthLabel($month) . ' ' . $year;
             $monthBounds = $this->computeMonthBounds($ym, $tz);
 
             $events = $this->deriveMonthlyEvents($list, $tz);
@@ -314,7 +313,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
     }
 
     /**
-     * @param list<list<Media>> $events
+     * @param list<list<Media>>                                       $events
      * @param array{start: DateTimeImmutable, end: DateTimeImmutable} $monthBounds
      *
      * @return list<array{
@@ -346,13 +345,13 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             $score    = array_sum($scoreMix);
 
             $scored[] = [
-                'members'    => $members,
-                'centroid'   => $centroid,
-                'time_range' => $timeRange,
-                'quality'    => $quality,
-                'people'     => $people,
-                'score_mix'  => $scoreMix,
-                'score_total'=> $score,
+                'members'     => $members,
+                'centroid'    => $centroid,
+                'time_range'  => $timeRange,
+                'quality'     => $quality,
+                'people'      => $people,
+                'score_mix'   => $scoreMix,
+                'score_total' => $score,
             ];
         }
 
@@ -439,9 +438,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
     }
 
     /**
-     * @param list<Media> $members
-     * @param array{from:int,to:int} $timeRange
-     * @param array<string, mixed> $quality
+     * @param list<Media>                                                                                                      $members
+     * @param array{from:int,to:int}                                                                                           $timeRange
+     * @param array<string, mixed>                                                                                             $quality
      * @param array{people: float, people_count: int, people_unique: int, people_coverage: float, people_face_coverage: float} $people
      *
      * @return array<string, float>
@@ -454,18 +453,18 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         array $quality,
         array $people,
     ): array {
-        $membersCount = count($members);
+        $membersCount  = count($members);
         $quantityShare = min(1.0, $membersCount / max(1, (int) ($this->minItemsPerEvent * 1.5)));
 
-        $qualityAvg = (float) ($quality['quality_avg'] ?? 0.0);
+        $qualityAvg   = (float) ($quality['quality_avg'] ?? 0.0);
         $qualityShare = max(0.0, min(1.0, $qualityAvg));
 
         $peopleScore = (float) ($people['people'] ?? 0.0);
         $peopleShare = max(0.0, min(1.0, $peopleScore));
 
-        $startTs = $monthStart->getTimestamp();
-        $endTs   = $monthEnd->getTimestamp();
-        $midpoint = ($timeRange['from'] + $timeRange['to']) / 2;
+        $startTs      = $monthStart->getTimestamp();
+        $endTs        = $monthEnd->getTimestamp();
+        $midpoint     = ($timeRange['from'] + $timeRange['to']) / 2;
         $recencyShare = $this->normaliseRange($midpoint, $startTs, $endTs);
 
         return [
@@ -529,8 +528,9 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             default => 'Monat',
         };
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -544,5 +544,4 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

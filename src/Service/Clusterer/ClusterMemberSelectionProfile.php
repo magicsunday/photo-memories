@@ -18,15 +18,15 @@ use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
  *
  * @phpstan-type HomeDescriptor array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int}
  */
-final class ClusterMemberSelectionProfile
+final readonly class ClusterMemberSelectionProfile
 {
     /**
      * @param HomeDescriptor $home
      */
     public function __construct(
-        private readonly string $key,
-        private readonly VacationSelectionOptions $options,
-        private readonly array $home,
+        private string $key,
+        private VacationSelectionOptions $options,
+        private array $home,
     ) {
     }
 

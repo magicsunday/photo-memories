@@ -32,14 +32,14 @@ final class CanonicalTitleStageTest extends TestCase
         $vacation = new ClusterDraft(
             algorithm: 'vacation',
             params: [
-                'score'                          => 0.95,
-                'classification'                 => 'vacation',
-                'classification_label'           => 'Urlaub',
-                'away_days'                      => 5,
-                'time_range'                     => ['from' => $from, 'to' => $to],
-                'countries'                      => ['Spanien', 'Frankreich'],
-                'total_travel_km'                => 845.6,
-                'travel_waypoints'               => [
+                'score'                => 0.95,
+                'classification'       => 'vacation',
+                'classification_label' => 'Urlaub',
+                'away_days'            => 5,
+                'time_range'           => ['from' => $from, 'to' => $to],
+                'countries'            => ['Spanien', 'Frankreich'],
+                'total_travel_km'      => 845.6,
+                'travel_waypoints'     => [
                     [
                         'label'         => 'Barcelona',
                         'count'         => 3,
@@ -109,10 +109,10 @@ final class CanonicalTitleStageTest extends TestCase
         $vacation = new ClusterDraft(
             algorithm: 'vacation',
             params: [
-                'classification_label'           => 'Urlaub',
-                'away_days'                      => 10,
-                'time_range'                     => ['from' => $from, 'to' => $to],
-                'primaryStaypointLocationParts'  => ['Berlin'],
+                'classification_label'          => 'Urlaub',
+                'away_days'                     => 10,
+                'time_range'                    => ['from' => $from, 'to' => $to],
+                'primaryStaypointLocationParts' => ['Berlin'],
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
             members: [1, 2, 3],

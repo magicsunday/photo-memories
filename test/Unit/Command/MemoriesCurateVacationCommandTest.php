@@ -34,17 +34,17 @@ use function uniqid;
 
 final class MemoriesCurateVacationCommandTest extends TestCase
 {
-    private const CLUSTER_GROUP_MAP = [
-        'vacation' => 'travel_and_places',
+    private const array CLUSTER_GROUP_MAP = [
+        'vacation'       => 'travel_and_places',
         'year_in_review' => 'time_and_basics',
-        'person_cohort' => 'people_and_moments',
-        'holiday_event' => 'city_and_events',
+        'person_cohort'  => 'people_and_moments',
+        'holiday_event'  => 'city_and_events',
     ];
 
-    private const CLUSTER_GROUP_ALIAS_MAP = [
+    private const array CLUSTER_GROUP_ALIAS_MAP = [
         'vacation' => 'travel_and_places',
-        'people' => 'people_and_moments',
-        'events' => 'city_and_events',
+        'people'   => 'people_and_moments',
+        'events'   => 'city_and_events',
     ];
 
     #[Test]
@@ -102,10 +102,10 @@ final class MemoriesCurateVacationCommandTest extends TestCase
 
     private function createCurateCommand(): MemoriesCurateCommand
     {
-        $locator = $this->createMock(MediaFileLocatorInterface::class);
-        $pipeline = $this->createMock(MediaIngestionPipelineInterface::class);
+        $locator     = $this->createMock(MediaFileLocatorInterface::class);
+        $pipeline    = $this->createMock(MediaIngestionPipelineInterface::class);
         $qaCollector = new MetadataQaReportCollector();
-        $runner = $this->createMock(ClusterJobRunnerInterface::class);
+        $runner      = $this->createMock(ClusterJobRunnerInterface::class);
         $runner->method('run')->willReturn(new ClusterJobResult(0, 0, 0, 0, 0, 0, false, null, []));
         $export = $this->createMock(FeedExportServiceInterface::class);
         $export->method('export')->willReturn(new FeedExportResult(

@@ -19,7 +19,6 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionStageInterface;
 
-
 /**
  * Detects perceptually similar media and records their Hamming distance.
  */

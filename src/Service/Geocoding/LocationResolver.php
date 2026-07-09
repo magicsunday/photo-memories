@@ -146,7 +146,7 @@ final class LocationResolver implements PoiEnsurerInterface
      */
     public function ensurePois(Location $location, bool $refreshPois = false): void
     {
-        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
+        if (!$this->poiEnricher instanceof LocationPoiEnricher) {
             return;
         }
 
@@ -239,7 +239,7 @@ final class LocationResolver implements PoiEnsurerInterface
 
     private function enrichWithGeocode(Location $location, GeocodeResult $geocode): void
     {
-        if (!($this->poiEnricher instanceof LocationPoiEnricher)) {
+        if (!$this->poiEnricher instanceof LocationPoiEnricher) {
             return;
         }
 

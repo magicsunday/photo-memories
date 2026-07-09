@@ -22,9 +22,9 @@ use function file_put_contents;
 use function filesize;
 use function imagecolorallocate;
 use function imagecreatetruecolor;
+use function imagedestroy;
 use function imagejpeg;
 use function imagesetpixel;
-use function imagedestroy;
 use function ob_get_clean;
 use function ob_start;
 use function rename;
@@ -57,8 +57,8 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
             if (str_contains($binary, 'ffprobe')) {
                 return [
                     'exitCode' => 0,
-                    'stdout' => "5.0\n",
-                    'stderr' => '',
+                    'stdout'   => "5.0\n",
+                    'stderr'   => '',
                 ];
             }
 
@@ -68,15 +68,15 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
 
                 return [
                     'exitCode' => 0,
-                    'stdout' => '',
-                    'stderr' => '',
+                    'stdout'   => '',
+                    'stderr'   => '',
                 ];
             }
 
             return [
                 'exitCode' => 1,
-                'stdout' => '',
-                'stderr' => 'unsupported',
+                'stdout'   => '',
+                'stderr'   => 'unsupported',
             ];
         };
 
@@ -95,7 +95,7 @@ final class DeterministicImageQualityEstimatorTest extends TestCase
         self::assertTrue($this->wasCommandInvoked($commands, 'ffmpeg'));
 
         self::assertEqualsWithDelta($expected->sharpness, $score->sharpness, 0.02);
-       self::assertSame(0.0, $score->videoPenalty);
+        self::assertSame(0.0, $score->videoPenalty);
         self::assertEqualsWithDelta($expected->exposure, $score->exposure, 0.02);
         self::assertEqualsWithDelta($expected->contrast, $score->contrast, 0.02);
         self::assertEqualsWithDelta($expected->noise, $score->noise, 0.02);

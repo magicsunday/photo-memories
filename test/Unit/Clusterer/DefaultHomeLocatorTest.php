@@ -38,8 +38,8 @@ final class DefaultHomeLocatorTest extends TestCase
 
         self::assertSame(
             [
-                'lat' => 52.52,
-                'lon' => 13.405,
+                'lat'       => 52.52,
+                'lon'       => 13.405,
                 'radius_km' => 8.0,
             ],
             $locator->getConfiguredHome(),
@@ -232,7 +232,7 @@ final class DefaultHomeLocatorTest extends TestCase
 
         $berlinNightStart = new DateTimeImmutable('2024-01-02 23:15:00', $tz);
         for ($i = 0; $i < 5; ++$i) {
-            $night = $berlinNightStart->add(new DateInterval('P' . ($i * 2) . 'D'));
+            $night   = $berlinNightStart->add(new DateInterval('P' . ($i * 2) . 'D'));
             $items[] = $this->makeMediaFixture(
                 4100 + $i,
                 sprintf('berlin-night-%d.jpg', $i),

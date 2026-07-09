@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Http;
 
 use MagicSunday\Memories\Http\Request;
 use PHPUnit\Framework\TestCase;
+use Stringable;
 
 final class RequestTest extends TestCase
 {
@@ -34,7 +35,7 @@ final class RequestTest extends TestCase
     public function testCreateNormalizesStringableQueryValues(): void
     {
         $request = Request::create('/api/feed', 'GET', [
-            'cursor' => new class implements \Stringable {
+            'cursor' => new class implements Stringable {
                 public function __toString(): string
                 {
                     return 'time:123';

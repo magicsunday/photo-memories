@@ -17,9 +17,9 @@ namespace MagicSunday\Memories\Service\Metadata;
 final readonly class MetadataQaReport
 {
     /**
-     * @param array<string,int>        $featureCounts
-     * @param array<string,int>        $suggestionCounts
-     * @param array<string,int>        $contradictionCounts
+     * @param array<string,int>          $featureCounts
+     * @param array<string,int>          $suggestionCounts
+     * @param array<string,int>          $contradictionCounts
      * @param array<string,list<string>> $examples
      */
     public function __construct(

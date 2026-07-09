@@ -15,9 +15,9 @@ use DateTimeImmutable;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Entity\Cluster;
@@ -40,9 +40,10 @@ use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Metadata\MetadataFeatureVersion;
 use MagicSunday\Memories\Test\TestCase;
+use Override;
 use PHPUnit\Framework\Attributes\Test;
-use Symfony\Component\Yaml\Yaml;
 use RuntimeException;
+use Symfony\Component\Yaml\Yaml;
 
 final class DefaultClusterJobRunnerTest extends TestCase
 {
@@ -67,7 +68,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $countQuery->expects(self::once())->method('getSingleScalarResult')->willReturn('2');
         $countQb->method('getQuery')->willReturn($countQuery);
 
-        $listQb = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
+        $listQb    = $this->createQueryBuilderMock(['select', 'from', 'orderBy', 'addOrderBy', 'andWhere', 'setParameter', 'setMaxResults', 'getQuery']);
         $listQuery = $this->getMockBuilder(Query::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['toIterable'])
@@ -106,9 +107,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
             }
         );
         $clusterEntityManager->method('createQueryBuilder')->willReturnCallback(
-            static function (): object {
-                return new EmptyClusterQueryBuilder();
-            }
+            static fn (): object => new EmptyClusterQueryBuilder()
         );
         $clusterEntityManager->method('flush')->willReturnCallback(
             static function () use (&$pendingClusters, &$storedClusters, &$flushCalls): void {
@@ -122,10 +121,10 @@ final class DefaultClusterJobRunnerTest extends TestCase
             }
         );
 
-        $mediaLookup   = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect  = new FailingAfterFirstClusterMemberSelector();
-        $coverPicker   = new FirstCoverPicker();
-        $persistence   = new ClusterPersistenceService(
+        $mediaLookup  = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberSelect = new FailingAfterFirstClusterMemberSelector();
+        $coverPicker  = new FirstCoverPicker();
+        $persistence  = new ClusterPersistenceService(
             em: $clusterEntityManager,
             mediaLookup: $mediaLookup,
             memberSelector: $memberSelect,
@@ -158,7 +157,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager = $this->createSqliteEntityManager();
         $this->createClusterSchema($entityManager);
 
-        $mediaOne = new Media('/one.jpg', str_pad('1', 64, '0', STR_PAD_LEFT), 1024);
+        $mediaOne        = new Media('/one.jpg', str_pad('1', 64, '0', STR_PAD_LEFT), 1024);
         $mediaOneTakenAt = new DateTimeImmutable('2024-02-10T08:00:00+00:00');
         $mediaOne->setTakenAt($mediaOneTakenAt);
         $mediaOne->setCapturedLocal($mediaOneTakenAt);
@@ -166,7 +165,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $mediaOne->setMime('image/jpeg');
         $mediaOne->setIsVideo(false);
 
-        $mediaTwo = new Media('/two.jpg', str_pad('2', 64, '0', STR_PAD_LEFT), 1024);
+        $mediaTwo        = new Media('/two.jpg', str_pad('2', 64, '0', STR_PAD_LEFT), 1024);
         $mediaTwoTakenAt = new DateTimeImmutable('2024-02-10T09:00:00+00:00');
         $mediaTwo->setTakenAt($mediaTwoTakenAt);
         $mediaTwo->setCapturedLocal($mediaTwoTakenAt);
@@ -182,15 +181,15 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager->persist($existingCluster);
         $entityManager->flush();
 
-        $clusterer    = new SequenceHybridClusterer([
+        $clusterer = new SequenceHybridClusterer([
             new ClusterDraft('replacement', [], ['lat' => 1.0, 'lon' => 1.0], [$mediaOne->getId(), $mediaTwo->getId()]),
         ]);
         $consolidator = new PassthroughClusterConsolidator();
 
-        $memberLookup  = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
-        $memberSelect  = new IdentityClusterMemberSelector();
-        $coverPicker   = new NullCoverPicker();
-        $persistence   = new ClusterPersistenceService(
+        $memberLookup = new InMemoryMemberMediaLookup([$mediaOne, $mediaTwo]);
+        $memberSelect = new IdentityClusterMemberSelector();
+        $coverPicker  = new NullCoverPicker();
+        $persistence  = new ClusterPersistenceService(
             em: $entityManager,
             mediaLookup: $memberLookup,
             memberSelector: $memberSelect,
@@ -211,7 +210,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
             self::assertSame('Simulated persistence failure', $exception->getMessage());
         }
 
-        $connection = $entityManager->getConnection();
+        $connection   = $entityManager->getConnection();
         $clusterCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM cluster');
         self::assertSame(1, $clusterCount, 'Original clusters should be restored after rollback.');
         $algorithm = $connection->fetchOne('SELECT algorithm FROM cluster LIMIT 1');
@@ -249,10 +248,10 @@ final class DefaultClusterJobRunnerTest extends TestCase
             new ClusterDraft(
                 'algo-telemetry',
                 [
-                    'score' => 0.95,
+                    'score'      => 0.95,
                     'time_range' => [
                         'from' => $start->getTimestamp(),
-                        'to' => $end->getTimestamp(),
+                        'to'   => $end->getTimestamp(),
                     ],
                 ],
                 ['lat' => 10.0, 'lon' => 20.0],
@@ -306,7 +305,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
         $entityManager = $this->createSqliteEntityManager();
         $this->createClusterSchema($entityManager);
 
-        $first = new DateTimeImmutable('2024-04-05T06:00:00+00:00');
+        $first  = new DateTimeImmutable('2024-04-05T06:00:00+00:00');
         $second = new DateTimeImmutable('2024-04-06T06:00:00+00:00');
 
         $mediaA = new Media('/dry-a.jpg', str_pad('33', 64, '3', STR_PAD_RIGHT), 1024);
@@ -331,10 +330,10 @@ final class DefaultClusterJobRunnerTest extends TestCase
             new ClusterDraft(
                 'algo-high',
                 [
-                    'score' => 2.0,
+                    'score'      => 2.0,
                     'time_range' => [
                         'from' => $first->getTimestamp(),
-                        'to' => $first->getTimestamp(),
+                        'to'   => $first->getTimestamp(),
                     ],
                 ],
                 ['lat' => 0.0, 'lon' => 0.0],
@@ -344,10 +343,10 @@ final class DefaultClusterJobRunnerTest extends TestCase
             new ClusterDraft(
                 'algo-low',
                 [
-                    'score' => 0.5,
+                    'score'      => 0.5,
                     'time_range' => [
                         'from' => $second->getTimestamp(),
-                        'to' => $second->getTimestamp(),
+                        'to'   => $second->getTimestamp(),
                     ],
                 ],
                 ['lat' => 1.0, 'lon' => 1.0],
@@ -410,7 +409,7 @@ final class DefaultClusterJobRunnerTest extends TestCase
 
     private function createPolicyProvider(): SelectionPolicyProvider
     {
-        $config = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
+        $config     = Yaml::parseFile(dirname(__DIR__, 4) . '/config/parameters/selection.yaml');
         $parameters = $config['parameters'] ?? [];
 
         return new SelectionPolicyProvider(
@@ -457,12 +456,12 @@ final class DefaultClusterJobRunnerTest extends TestCase
 /**
  * @implements HybridClustererInterface
  */
-final class SequenceHybridClusterer implements HybridClustererInterface
+final readonly class SequenceHybridClusterer implements HybridClustererInterface
 {
     /**
      * @param list<ClusterDraft> $drafts
      */
-    public function __construct(private readonly array $drafts)
+    public function __construct(private array $drafts)
     {
     }
 
@@ -524,14 +523,13 @@ final class InMemoryMemberMediaLookup implements MemberMediaLookupInterface
     /**
      * @var array<int, Media>
      */
-    private array $mediaById;
+    private array $mediaById = [];
 
     /**
      * @param list<Media> $media
      */
     public function __construct(array $media)
     {
-        $this->mediaById = [];
         foreach ($media as $item) {
             $this->mediaById[$item->getId()] = $item;
         }
@@ -597,9 +595,9 @@ final class NullCoverPicker implements CoverPickerInterface
     }
 }
 
-final class ThrowingProgressReporter implements ProgressReporterInterface
+final readonly class ThrowingProgressReporter implements ProgressReporterInterface
 {
-    public function __construct(private readonly string $headlineToThrow)
+    public function __construct(private string $headlineToThrow)
     {
     }
 
@@ -662,6 +660,7 @@ final class ThrowingProgressHandle extends NoOpProgressHandle
         }
     }
 
+    #[Override]
     public function createChildHandle(string $sectionTitle, string $headline, int $max): ProgressHandleInterface
     {
         return new NoOpProgressHandle();
@@ -670,34 +669,34 @@ final class ThrowingProgressHandle extends NoOpProgressHandle
 
 final class EmptyClusterQueryBuilder
 {
-    public function select(mixed ...$args): self
+    public function select(): self
     {
         return $this;
     }
 
-    public function from(mixed ...$args): self
+    public function from(): self
     {
         return $this;
     }
 
-    public function where(mixed ...$args): self
+    public function where(): self
     {
         return $this;
     }
 
-    public function andWhere(mixed ...$args): self
+    public function andWhere(): self
     {
         return $this;
     }
 
-    public function setParameter(mixed ...$args): self
+    public function setParameter(): self
     {
         return $this;
     }
 
     public function getQuery(): object
     {
-        return new class() {
+        return new class {
             public function getResult(): array
             {
                 return [];

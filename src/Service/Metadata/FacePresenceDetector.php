@@ -105,7 +105,7 @@ final class FacePresenceDetector implements SingleMetadataExtractorInterface
             return $media;
         }
 
-        if ($media->getFacesCount() > 0 || $media->hasFaces()) {
+        if ($media->hasFaces()) {
             return $media;
         }
 

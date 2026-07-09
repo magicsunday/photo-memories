@@ -23,9 +23,9 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\FeedBuilderInterface;
-use MagicSunday\Memories\Service\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfileProvider;
+use MagicSunday\Memories\Service\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Support\ClusterEntityToDraftMapper;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -61,14 +61,16 @@ final class FeedPreviewCommand extends Command
 {
     use SelectionOverrideInputTrait;
 
-    private const STAGE_RAW     = 'raw';
-    private const STAGE_MERGED  = 'merged';
-    private const STAGE_CURATED = 'curated';
+    private const string STAGE_RAW = 'raw';
+
+    private const string STAGE_MERGED = 'merged';
+
+    private const string STAGE_CURATED = 'curated';
 
     /**
      * @var list<string>
      */
-    private const STAGE_OPTIONS = [
+    private const array STAGE_OPTIONS = [
         self::STAGE_RAW,
         self::STAGE_MERGED,
         self::STAGE_CURATED,
@@ -77,7 +79,7 @@ final class FeedPreviewCommand extends Command
     /**
      * @var array<string, string>
      */
-    private const STAGE_LABELS = [
+    private const array STAGE_LABELS = [
         self::STAGE_RAW     => 'Rohdaten',
         self::STAGE_MERGED  => 'Konsolidiert',
         self::STAGE_CURATED => 'Kuratiert',
@@ -86,7 +88,7 @@ final class FeedPreviewCommand extends Command
     /**
      * @var array<string, string>
      */
-    private const STAGE_EMOJIS = [
+    private const array STAGE_EMOJIS = [
         self::STAGE_RAW     => '🔰',
         self::STAGE_MERGED  => '🔀',
         self::STAGE_CURATED => '🪄',
@@ -253,7 +255,7 @@ final class FeedPreviewCommand extends Command
         }
 
         $io->section($this->formatStageTitle(self::STAGE_CURATED));
-        $items = $this->feedBuilder->build($consolidated, $profileOverride, null);
+        $items = $this->feedBuilder->build($consolidated, $profileOverride);
 
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
@@ -358,17 +360,17 @@ final class FeedPreviewCommand extends Command
         $from = $this->normaliseDateTime($timeRange['from'] ?? null);
         $to   = $this->normaliseDateTime($timeRange['to'] ?? null);
 
-        if ($from === null && $to === null) {
+        if (!$from instanceof DateTimeImmutable && !$to instanceof DateTimeImmutable) {
             return '–';
         }
 
         $timezone = new DateTimeZone('UTC');
 
-        if ($from !== null) {
+        if ($from instanceof DateTimeImmutable) {
             $from = $from->setTimezone($timezone);
         }
 
-        if ($to !== null) {
+        if ($to instanceof DateTimeImmutable) {
             $to = $to->setTimezone($timezone);
         }
 
@@ -495,7 +497,7 @@ final class FeedPreviewCommand extends Command
         $from = $draft->getStartAt();
         $to   = $draft->getEndAt();
 
-        if ($from === null && $to === null) {
+        if (!$from instanceof DateTimeImmutable && !$to instanceof DateTimeImmutable) {
             return null;
         }
 

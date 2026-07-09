@@ -15,14 +15,13 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Title\LocalizedDateFormatter;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummarizer;
 use MagicSunday\Memories\Service\Clusterer\Title\RouteSummary;
-use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
+use MagicSunday\Memories\Service\Clusterer\Title\TitleTemplateProvider;
 
 use function array_filter;
 use function array_map;
 use function explode;
 use function implode;
-use function is_array;
 use function is_scalar;
 use function is_string;
 use function mb_convert_case;
@@ -141,7 +140,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     private function normalizeLocationList(string $value): string
     {
         $parts = array_filter(array_map(
-            static fn (string $part): string => trim($part),
+            trim(...),
             explode(',', $value)
         ), static fn (string $part): bool => $part !== '');
 
@@ -150,7 +149,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         }
 
         $normalized = array_map(
-            fn (string $part): string => $this->normalizeLocationComponent($part),
+            $this->normalizeLocationComponent(...),
             $parts
         );
 
@@ -217,10 +216,10 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
                 $summary = null;
             }
 
-            $existingTitle = $params['vacation_title'] ?? null;
+            $existingTitle    = $params['vacation_title'] ?? null;
             $existingSubtitle = $params['vacation_subtitle'] ?? null;
 
-            $needsTitle = !is_string($existingTitle) || trim($existingTitle) === '';
+            $needsTitle    = !is_string($existingTitle) || trim($existingTitle) === '';
             $needsSubtitle = !is_string($existingSubtitle) || trim($existingSubtitle) === '';
 
             if ($needsTitle || $needsSubtitle) {
@@ -233,7 +232,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
                     $params['vacation_subtitle'] = $storyTitle['subtitle'];
                 }
             } else {
-                $params['vacation_title'] = $existingTitle;
+                $params['vacation_title']    = $existingTitle;
                 $params['vacation_subtitle'] = $existingSubtitle;
             }
         }
@@ -301,6 +300,6 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
             }
         }
 
-        return $filtered === [] ? '' : implode($separator, $filtered);
+        return implode($separator, $filtered);
     }
 }

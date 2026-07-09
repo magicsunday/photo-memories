@@ -62,7 +62,7 @@ final readonly class ClusterDeviceMetadataAggregator
 
         if ($model !== null) {
             if ($make !== null && stripos($model, $make) === 0) {
-                $suffix = trim((string) substr($model, strlen($make)));
+                $suffix = trim(substr($model, strlen($make)));
                 if ($suffix !== '') {
                     $labelParts[] = $suffix;
                 }
@@ -150,7 +150,7 @@ final readonly class ClusterDeviceMetadataAggregator
                 ];
             }
 
-            $descriptorCounts[$descriptor['key']]['count'] += 1;
+            ++$descriptorCounts[$descriptor['key']]['count'];
 
             if ($descriptor['make'] !== null) {
                 $makeCounts[$descriptor['make']] = ($makeCounts[$descriptor['make']] ?? 0) + 1;
@@ -181,9 +181,9 @@ final readonly class ClusterDeviceMetadataAggregator
 
         $totalItems = array_sum(array_map(static fn (array $entry): int => $entry['count'], $descriptorCounts));
 
-        $primaryKey    = null;
-        $primaryLabel  = null;
-        $primaryCount  = 0;
+        $primaryKey   = null;
+        $primaryLabel = null;
+        $primaryCount = 0;
         foreach ($descriptorCounts as $key => $entry) {
             $count = $entry['count'];
             if ($count > $primaryCount) {
@@ -193,12 +193,10 @@ final readonly class ClusterDeviceMetadataAggregator
                 continue;
             }
 
-            if ($count === $primaryCount && $primaryLabel !== null) {
-                if (strcasecmp($entry['label'], $primaryLabel) < 0) {
-                    $primaryKey   = $key;
-                    $primaryLabel = $entry['label'];
-                    $primaryCount = $count;
-                }
+            if ($count === $primaryCount && $primaryLabel !== null && strcasecmp($entry['label'], $primaryLabel) < 0) {
+                $primaryKey   = $key;
+                $primaryLabel = $entry['label'];
+                $primaryCount = $count;
             }
         }
 
@@ -210,7 +208,7 @@ final readonly class ClusterDeviceMetadataAggregator
         return [
             'device_primary_label' => $primaryLabel,
             'device_primary_share' => $primaryShare,
-            'device_variants'      => (int) count($descriptorCounts),
+            'device_variants'      => count($descriptorCounts),
             'device_make'          => $this->pickStableValue($makeCounts, $totalItems),
             'device_model'         => $this->pickStableValue($modelCounts, $totalItems),
             'device_owner'         => $this->pickStableValue($ownerCounts, $totalItems),
@@ -249,11 +247,9 @@ final readonly class ClusterDeviceMetadataAggregator
                 continue;
             }
 
-            if ($count === $dominantCount && $dominantValue !== null) {
-                if (strcasecmp($value, $dominantValue) < 0) {
-                    $dominantValue = $value;
-                    $dominantCount = $count;
-                }
+            if ($count === $dominantCount && $dominantValue !== null && strcasecmp($value, $dominantValue) < 0) {
+                $dominantValue = $value;
+                $dominantCount = $count;
             }
         }
 

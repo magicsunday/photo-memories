@@ -11,8 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer\Contract;
 
-use MagicSunday\Memories\Entity\Media;
-
 /**
  * Detects potential vacation runs using daily summaries.
  */

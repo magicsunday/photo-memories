@@ -27,9 +27,9 @@ use function sprintf;
 abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
     public function __construct(
-        private int $timeRangeMinSamples,
-        private float $timeRangeMinCoverage,
-        private int $minValidYear,
+        private readonly int $timeRangeMinSamples,
+        private readonly float $timeRangeMinCoverage,
+        private readonly int $minValidYear,
     ) {
     }
 
@@ -72,8 +72,8 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
             return false;
         }
 
-        $from = (int) $range['from'];
-        $to   = (int) $range['to'];
+        $from = $range['from'];
+        $to   = $range['to'];
         if ($from <= 0 || $to <= 0 || $to < $from) {
             return false;
         }

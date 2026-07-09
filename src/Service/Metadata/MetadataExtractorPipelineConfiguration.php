@@ -36,7 +36,7 @@ final readonly class MetadataExtractorPipelineConfiguration
         $configuration = $this->stepConfigurations[$extractor::class] ?? null;
 
         if (is_array($configuration) && array_key_exists('enabled', $configuration)) {
-            return $configuration['enabled'] === true;
+            return $configuration['enabled'];
         }
 
         return true;
@@ -47,7 +47,7 @@ final readonly class MetadataExtractorPipelineConfiguration
         $configuration = $this->stepConfigurations[$extractor::class] ?? null;
 
         if (is_array($configuration) && array_key_exists('telemetry', $configuration)) {
-            return $configuration['telemetry'] === true;
+            return $configuration['telemetry'];
         }
 
         return $this->telemetryEnabledByDefault;
@@ -70,7 +70,7 @@ final readonly class MetadataExtractorPipelineConfiguration
 
     public function describeExtractor(SingleMetadataExtractorInterface $extractor): string
     {
-        $class = $extractor::class;
+        $class             = $extractor::class;
         $separatorPosition = strrpos($class, '\\');
 
         if ($separatorPosition === false) {

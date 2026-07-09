@@ -11,12 +11,11 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -30,22 +29,22 @@ use function count;
 use function hexdec;
 use function is_string;
 use function min;
+use function sprintf;
 use function strlen;
 use function substr;
-use function sprintf;
 
 /**
  * Class PhashSimilarityStrategy.
  */
 final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface, ProgressAwareClusterStrategyInterface
 {
-    private const MAX_HAMMING_CEILING = 5;
-
     use ContextualClusterBridgeTrait;
     use ClusterBuildHelperTrait;
     use ClusterLocationMetadataTrait;
     use MediaFilterTrait;
     use ProgressAwareClusterTrait;
+
+    private const int MAX_HAMMING_CEILING = 5;
 
     public function __construct(
         private LocationHelper $locationHelper,
@@ -119,7 +118,7 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
                     $params['centroid_cell7'] = GeoCell::fromPoint($lat, $lon, 7);
                 }
 
-                $params = $this->appendLocationMetadata($comp, $params);
+                $params       = $this->appendLocationMetadata($comp, $params);
                 $peopleParams = $this->buildPeopleParams($comp);
                 $params       = [...$params, ...$peopleParams];
 
@@ -207,8 +206,9 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
 
         return $dist + $extra;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -222,5 +222,4 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

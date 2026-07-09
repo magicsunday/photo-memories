@@ -82,8 +82,8 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
                 $normalizedLeft  = $normalized[$i];
                 $normalizedRight = $normalized[$j];
 
-                $leftInsideRight  = $this->isSubset($normalizedLeft, $normalizedRight);
-                $rightInsideLeft  = $leftInsideRight ? false : $this->isSubset($normalizedRight, $normalizedLeft);
+                $leftInsideRight = $this->isSubset($normalizedLeft, $normalizedRight);
+                $rightInsideLeft = $leftInsideRight ? false : $this->isSubset($normalizedRight, $normalizedLeft);
 
                 if (!$leftInsideRight && !$rightInsideLeft) {
                     continue;
@@ -132,9 +132,9 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
         $subStoriesByParent = [];
 
         foreach ($parentByChild as $childIndex => $parentIndex) {
-            $child       = $drafts[$childIndex];
-            $parent      = $drafts[$parentIndex];
-            $childMember = $normalized[$childIndex];
+            $child         = $drafts[$childIndex];
+            $parent        = $drafts[$parentIndex];
+            $childMember   = $normalized[$childIndex];
             $parentMembers = $normalized[$parentIndex];
 
             $metadata = [

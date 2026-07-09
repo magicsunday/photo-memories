@@ -38,7 +38,6 @@ final class VisionSignatureExtractorTest extends TestCase
 
         $reflection = new ReflectionClass($extractor);
         $method     = $reflection->getMethod('motionBlurScore');
-        $method->setAccessible(true);
 
         $sharpMatrix   = $this->createCheckerboardMatrix(32, 32, 2);
         $blurredMatrix = $this->applyGaussianBlur($sharpMatrix, 6);
@@ -206,7 +205,7 @@ final class VisionSignatureExtractorTest extends TestCase
         $color = imagecolorallocate($image, 64, 128, 192);
         imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $color);
 
-        if (imagepng($image, $path) !== true) {
+        if (!imagepng($image, $path)) {
             imagedestroy($image);
             self::fail('Unable to write image fixture.');
         }
@@ -230,7 +229,7 @@ final class VisionSignatureExtractorTest extends TestCase
         $red   = imagecolorallocate($image, 255, 0, 0);
         imagefilledrectangle($image, 0, 0, 7, 7, $red);
 
-        if (imagepng($image, $path) !== true) {
+        if (!imagepng($image, $path)) {
             imagedestroy($image);
             self::fail('Unable to write saturated image fixture.');
         }
@@ -289,13 +288,21 @@ final class VisionSignatureExtractorTest extends TestCase
 
                     for ($ky = -1; $ky <= 1; ++$ky) {
                         $sampleY = $y + $ky;
-                        if ($sampleY < 0 || $sampleY >= $height) {
+                        if ($sampleY < 0) {
+                            continue;
+                        }
+
+                        if ($sampleY >= $height) {
                             continue;
                         }
 
                         for ($kx = -1; $kx <= 1; ++$kx) {
                             $sampleX = $x + $kx;
-                            if ($sampleX < 0 || $sampleX >= $width) {
+                            if ($sampleX < 0) {
+                                continue;
+                            }
+
+                            if ($sampleX >= $width) {
                                 continue;
                             }
 
@@ -305,11 +312,7 @@ final class VisionSignatureExtractorTest extends TestCase
                         }
                     }
 
-                    if ($weightTotal <= 0.0) {
-                        $row[] = $matrix[$y][$x];
-                    } else {
-                        $row[] = $weightedSum / $weightTotal;
-                    }
+                    $row[] = $weightTotal <= 0.0 ? $matrix[$y][$x] : $weightedSum / $weightTotal;
                 }
 
                 $result[] = $row;

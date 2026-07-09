@@ -232,7 +232,8 @@ trait MediaFilterTrait
 
             $labels[$i] = $clusterId;
             $queue      = $neighbors;
-            for ($queueIndex = 0; $queueIndex < count($queue); ++$queueIndex) {
+            $counter    = count($queue);
+            for ($queueIndex = 0; $queueIndex < $counter; ++$queueIndex) {
                 $neighborIndex = $queue[$queueIndex];
 
                 if ($labels[$neighborIndex] === -1) {

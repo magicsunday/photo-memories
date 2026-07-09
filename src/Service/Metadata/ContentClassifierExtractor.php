@@ -38,7 +38,7 @@ use function usort;
 /**
  * Classifies media into broad content categories to support downstream filtering.
  */
-final class ContentClassifierExtractor implements SingleMetadataExtractorInterface
+final readonly class ContentClassifierExtractor implements SingleMetadataExtractorInterface
 {
     private const array SCREENSHOT_KEYWORDS = [
         'screenshot',
@@ -94,7 +94,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
     ];
 
     private const array VISION_KEYWORDS = [
-        'screenshot'       => ['screenshot', 'screen'],
+        'screenshot'      => ['screenshot', 'screen'],
         'document'        => ['document', 'paper', 'receipt'],
         'map'             => ['map', 'navigation', 'atlas'],
         'screenRecording' => ['screen recording', 'screenrec', 'display capture'],
@@ -373,8 +373,8 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
      */
     private function tokensFromMedia(Media $media, string $filepath): array
     {
-        $tokens   = [];
-        $bag      = $media->getFeatureBag();
+        $tokens     = [];
+        $bag        = $media->getFeatureBag();
         $pathTokens = $bag->filePathTokens();
         if ($pathTokens !== null) {
             foreach ($this->relevantPathTokens($pathTokens) as $token) {
@@ -394,6 +394,7 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
         if ($extra === false) {
             $extra = [];
         }
+
         foreach ($extra as $token) {
             if ($token !== '') {
                 $tokens[] = strtolower($token);
@@ -457,20 +458,18 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
 
         return array_any(
             $keywords,
-            static function (string $keyword) use ($tokens): bool {
-                return array_any(
-                    $tokens,
-                    static function (string $token) use ($keyword): bool {
-                        if ($token === $keyword) {
-                            return true;
-                        }
-
-                        $pattern = '~\b' . preg_quote($keyword, '~') . '\b~';
-
-                        return preg_match($pattern, $token) === 1;
+            static fn (string $keyword): bool => array_any(
+                $tokens,
+                static function (string $token) use ($keyword): bool {
+                    if ($token === $keyword) {
+                        return true;
                     }
-                );
-            }
+
+                    $pattern = '~\b' . preg_quote($keyword, '~') . '\b~';
+
+                    return preg_match($pattern, $token) === 1;
+                }
+            )
         );
     }
 
@@ -492,7 +491,11 @@ final class ContentClassifierExtractor implements SingleMetadataExtractorInterfa
 
             $label = $tag['label'] ?? null;
             $score = $tag['score'] ?? null;
-            if (!is_string($label) || !is_float($score) && !is_int($score)) {
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if (!is_float($score) && !is_int($score)) {
                 continue;
             }
 

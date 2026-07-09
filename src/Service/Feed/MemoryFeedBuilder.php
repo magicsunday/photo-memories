@@ -18,7 +18,7 @@ use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
-use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
+use Stringable;
 
 use function array_filter;
 use function array_key_exists;
@@ -29,8 +29,8 @@ use function array_unique;
 use function array_values;
 use function arsort;
 use function count;
-use function in_array;
 use function floor;
+use function in_array;
 use function is_array;
 use function is_float;
 use function is_int;
@@ -39,8 +39,8 @@ use function is_numeric;
 use function is_string;
 use function mb_strtolower;
 use function sprintf;
-use function usort;
 use function trim;
+use function usort;
 
 /**
  * iOS-like feed selection:
@@ -110,7 +110,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     ): array {
         $profile ??= $this->defaultProfile;
 
-        if ($visibilityFilter !== null && !$visibilityFilter->isEmpty()) {
+        if ($visibilityFilter instanceof FeedVisibilityFilter && !$visibilityFilter->isEmpty()) {
             $clusters = array_values(array_filter(
                 $clusters,
                 fn (ClusterDraft $cluster): bool => !$this->isClusterHidden($cluster, $visibilityFilter),
@@ -147,11 +147,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                     return false;
                 }
 
-                if ($peopleMentions > 0 && $peopleCoverage < $profile->getPeopleCoverageThreshold()) {
-                    return false;
-                }
-
-                return true;
+                return $peopleMentions <= 0 || $peopleCoverage >= $profile->getPeopleCoverageThreshold();
             }
         ));
 
@@ -276,9 +272,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $members = $this->sortMembersByTakenAt($members, $coverId);
             }
 
-            $memberIds = array_map(static function (Media $media): int {
-                return $media->getId();
-            }, $members);
+            $memberIds = array_map(static fn (Media $media): int => $media->getId(), $members);
 
             if ($usedCurated && $coverId !== null && !in_array($coverId, $memberIds, true)) {
                 $cover   = $members[0] ?? null;
@@ -303,8 +297,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $params['personalisierungsProfil'] = $profile->getKey();
 
             $preferenceResult = $this->applyPreferenceAdjustments($params, $preferences, $members);
-            $params          = $preferenceResult['params'];
-            $adjustedScore   = $preferenceResult['score'];
+            $params           = $preferenceResult['params'];
+            $adjustedScore    = $preferenceResult['score'];
 
             $result[] = new MemoryFeedItem(
                 algorithm: $alg,
@@ -355,6 +349,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     /**
      * @param array<string, mixed> $params
      * @param list<Media>          $members
+     *
      * @return array{score: float, params: array<string, scalar|array|null>}
      */
     private function applyPreferenceAdjustments(
@@ -364,19 +359,19 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     ): array {
         $baseScore = (float) ($params['score'] ?? 0.0);
 
-        if ($preferences === null) {
+        if (!$preferences instanceof FeedUserPreferences) {
             return ['score' => $baseScore, 'params' => $params];
         }
 
-        $multiplier = 1.0;
+        $multiplier             = 1.0;
         $favouritePersonMatches = [];
         $favouritePlaceMatches  = [];
         $negativePersonMatches  = [];
         $negativePlaceMatches   = [];
         $negativeDateMatches    = [];
 
-        $clusterPersons = $this->normaliseIdList($params['persons'] ?? null);
-        $clusterPersonLookup = $this->normaliseMatchIndex($clusterPersons);
+        $clusterPersons             = $this->normaliseIdList($params['persons'] ?? null);
+        $clusterPersonLookup        = $this->normaliseMatchIndex($clusterPersons);
         $preferenceFavouritePersons = $this->normaliseMatchIndex($preferences->getFavouritePersons());
 
         foreach ($clusterPersons as $index => $person) {
@@ -482,13 +477,13 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         }
 
         $params['score_preference'] = [
-            'base' => $baseScore,
-            'multiplier' => $multiplier,
+            'base'              => $baseScore,
+            'multiplier'        => $multiplier,
             'favourite_persons' => $favouritePersonMatches,
-            'favourite_places' => $favouritePlaceMatches,
-            'hidden_persons' => $negativePersonMatches,
-            'hidden_places' => $negativePlaceMatches,
-            'hidden_dates' => $negativeDateMatches,
+            'favourite_places'  => $favouritePlaceMatches,
+            'hidden_persons'    => $negativePersonMatches,
+            'hidden_places'     => $negativePlaceMatches,
+            'hidden_dates'      => $negativeDateMatches,
             'hidden_algorithms' => [],
         ];
         $params['score'] = $adjustedScore;
@@ -501,8 +496,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param list<Media>       $members
-     * @param list<string>      $favourites
+     * @param list<Media>  $members
+     * @param list<string> $favourites
      */
     private function estimateFavouriteCoverage(array $members, array $favourites): float
     {
@@ -515,7 +510,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         foreach ($members as $media) {
             $persons = $media->getPersons();
-            if ($persons === null || $persons === []) {
+            if ($persons === null) {
+                continue;
+            }
+
+            if ($persons === []) {
                 continue;
             }
 
@@ -644,7 +643,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
 
         if (is_string($value)) {
             $trimmed = trim($value);
-        } elseif ($value instanceof \Stringable) {
+        } elseif ($value instanceof Stringable) {
             $trimmed = trim((string) $value);
         } elseif (is_int($value) || is_float($value)) {
             $trimmed = trim((string) $value);
@@ -847,7 +846,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param list<Media> $members
+     * @param list<Media>                             $members
      * @param array{ordered: list<int>, minimum: int} $overlay
      *
      * @return list<Media>|null
@@ -913,7 +912,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array|null>        $params
      * @param array{ordered: list<int>, minimum: int} $overlay
      */
     private function markFeedOverlayUsage(array $params, array $overlay, bool $used, int $appliedCount): array
@@ -943,7 +942,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
      *
      * @return list<int>
      */
-    private function normaliseMemberIdList(null|array $values): array
+    private function normaliseMemberIdList(?array $values): array
     {
         if (!is_array($values)) {
             return [];
@@ -960,7 +959,11 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $id = (int) $value;
             }
 
-            if ($id === null || $id <= 0) {
+            if ($id === null) {
+                continue;
+            }
+
+            if ($id <= 0) {
                 continue;
             }
 
@@ -968,7 +971,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            $result[]   = $id;
+            $result[]  = $id;
             $seen[$id] = true;
         }
 

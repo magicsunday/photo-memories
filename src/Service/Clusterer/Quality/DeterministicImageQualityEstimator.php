@@ -34,11 +34,11 @@ use function sqrt;
 /**
  * Deterministic estimator that approximates common perceptual quality metrics using GD operations.
  */
-final class DeterministicImageQualityEstimator implements ImageQualityEstimatorInterface
+final readonly class DeterministicImageQualityEstimator implements ImageQualityEstimatorInterface
 {
     private const int MAX_SAMPLE_DIMENSION = 512;
 
-    private readonly VideoFrameSamplerInterface $videoSampler;
+    private VideoFrameSamplerInterface $videoSampler;
 
     public function __construct(?VideoFrameSamplerInterface $videoSampler = null)
     {
@@ -62,7 +62,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
             ? $this->buildBaseScore($matrixData)
             : $this->neutralScore();
 
-        $bonus  = 0.0;
+        $bonus   = 0.0;
         $penalty = 0.0;
 
         $duration = $media->getVideoDurationS();
@@ -179,7 +179,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
 
         $width  = imagesx($resource);
         $height = imagesy($resource);
-        if ($width <= 0 || $height <= 0) {
+        if ($height <= 0) {
             imagedestroy($resource);
 
             return null;
@@ -187,8 +187,8 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
 
         $largest = max($width, $height);
         if ($largest > self::MAX_SAMPLE_DIMENSION && function_exists('imagescale')) {
-            $scale      = self::MAX_SAMPLE_DIMENSION / $largest;
-            $scaled     = imagescale(
+            $scale  = self::MAX_SAMPLE_DIMENSION / $largest;
+            $scaled = imagescale(
                 $resource,
                 max(1, (int) ($width * $scale)),
                 max(1, (int) ($height * $scale))
@@ -214,9 +214,9 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
                 } else {
                     $index = imagecolorat($resource, $x, $y);
                     $color = imagecolorsforindex($resource, $index);
-                    $r     = (int) ($color['red'] ?? 0);
-                    $g     = (int) ($color['green'] ?? 0);
-                    $b     = (int) ($color['blue'] ?? 0);
+                    $r     = $color['red'] ?? 0;
+                    $g     = $color['green'] ?? 0;
+                    $b     = $color['blue'] ?? 0;
                 }
 
                 $row[] = (($r * 0.2126) + ($g * 0.7152) + ($b * 0.0722)) / 255.0;
@@ -259,7 +259,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
                     - $luma[$y][$x - 1]
                     - $luma[$y][$x + 1];
 
-                $sum   += $lap;
+                $sum += $lap;
                 $sumSq += $lap * $lap;
                 ++$count;
             }
@@ -308,7 +308,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
 
         for ($y = 0; $y < $height; ++$y) {
             foreach ($luma[$y] as $value) {
-                $sum   += $value;
+                $sum += $value;
                 $sumSq += $value * $value;
             }
         }
@@ -344,7 +344,7 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
                 }
 
                 $average = $neighbourSum / 8.0;
-                $sum    += abs($luma[$y][$x] - $average);
+                $sum += abs($luma[$y][$x] - $average);
                 ++$count;
             }
         }
@@ -395,7 +395,6 @@ final class DeterministicImageQualityEstimator implements ImageQualityEstimatorI
             blockiness: 0.5,
             keyframeQuality: 0.5,
             clipping: 0.0,
-            rawMetrics: null,
         );
     }
 

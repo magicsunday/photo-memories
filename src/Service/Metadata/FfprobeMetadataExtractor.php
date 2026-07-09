@@ -87,7 +87,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         ];
 
         $out = $this->runCommand($media, $command, 'ffprobe.streams');
-        if ($this->telemetry !== null) {
+        if ($this->telemetry instanceof MediaIngestionTelemetryInterface) {
             $this->telemetry->recordFfprobeAvailability($filepath, $out !== null);
         }
 
@@ -155,7 +155,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         if ($this->shouldExtractQuickTimeMetadata($media)) {
             $this->applyQuickTimeMetadata($filepath, $media);
-            if ($this->telemetry !== null && $media->getTimeSource() === TimeSource::VIDEO_QUICKTIME) {
+            if ($this->telemetry instanceof MediaIngestionTelemetryInterface && $media->getTimeSource() === TimeSource::VIDEO_QUICKTIME) {
                 $this->telemetry->recordQuickTimeTimezoneHit($filepath);
             }
         }
@@ -171,7 +171,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         $runner = $this->processRunner;
 
         try {
-            if ($runner !== null) {
+            if ($runner instanceof Closure) {
                 $result = $runner($command, $this->processTimeout);
 
                 if (is_array($result)) {
@@ -186,7 +186,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                                 'process.failure',
                                 sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode, $stderr),
                                 [
-                                    'stage' => $component,
+                                    'stage'    => $component,
                                     'exitCode' => $exitCode,
                                 ],
                             ),
@@ -219,7 +219,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                         'process.failure',
                         sprintf('[%s] ffprobe exited with %d: %s', $component, $exitCode ?? -1, $stderr),
                         [
-                            'stage' => $component,
+                            'stage'    => $component,
                             'exitCode' => $exitCode ?? -1,
                         ],
                     ),
@@ -237,7 +237,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                     'process.timeout',
                     sprintf('[%s] ffprobe timeout after %.1fs', $component, $exception->getExceededTimeout()),
                     [
-                        'stage' => $component,
+                        'stage'          => $component,
                         'timeoutSeconds' => $exception->getExceededTimeout(),
                     ],
                 ),
@@ -458,7 +458,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             return (float) $value !== 0.0;
         }
 
-        $normalised = strtolower(trim((string) $value));
+        $normalised = strtolower(trim($value));
         if ($normalised === '') {
             return null;
         }
@@ -469,8 +469,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         return match ($normalised) {
             'true', 'yes', 'on', 'enabled', 'stabilized', 'stabilised' => true,
-            'false', 'no', 'off', 'disabled' => false,
-            default => null,
+            'false', 'no', 'off', 'disabled'                           => false,
+            default                                                    => null,
         };
     }
 
@@ -484,7 +484,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     private function applyQuickTimeMetadata(string $filepath, Media $media): void
     {
         $currentSource = $media->getTimeSource();
-        if ($currentSource !== null && $currentSource !== TimeSource::FILE_MTIME) {
+        if ($currentSource instanceof TimeSource && $currentSource !== TimeSource::FILE_MTIME) {
             return;
         }
 
@@ -510,7 +510,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
     private function parseFps(?string $v): ?float
     {
-        if ($v === null || $v === '0/0' || $v === '') {
+        if (in_array($v, [null, '0/0', ''], true)) {
             return null;
         }
 
@@ -621,7 +621,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         foreach ($candidates as $value) {
             $instant = $this->parseQuickTimeDate($value);
-            if ($instant === null) {
+            if (!$instant instanceof DateTimeImmutable) {
                 continue;
             }
 

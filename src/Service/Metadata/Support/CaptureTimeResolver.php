@@ -26,14 +26,14 @@ use function sprintf;
 /**
  * Resolves the best available local capture timestamp for media items.
  */
-final class CaptureTimeResolver
+final readonly class CaptureTimeResolver
 {
     /**
      * @param TimezoneResolverInterface                                                               $timezoneResolver
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      */
     public function __construct(
-        private readonly TimezoneResolverInterface $timezoneResolver,
+        private TimezoneResolverInterface $timezoneResolver,
         private array $home = [
             'lat'             => 0.0,
             'lon'             => 0.0,

@@ -18,13 +18,13 @@ use MagicSunday\Memories\Repository\MediaRepository;
 use MagicSunday\Memories\Service\Clusterer\TitleGeneratorInterface;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
 use MagicSunday\Memories\Service\Feed\FeedPersonalizationProfile;
+use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Service\Feed\FeedVisibilityFilter;
 use MagicSunday\Memories\Service\Feed\MemoryFeedBuilder;
 use MagicSunday\Memories\Service\Feed\SeriesHighlightService;
-use MagicSunday\Memories\Service\Feed\FeedUserPreferences;
 use MagicSunday\Memories\Test\TestCase;
-use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 
 final class MemoryFeedBuilderTest extends TestCase
 {
@@ -36,9 +36,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $visible = $this->buildMedia(1, false);
         $hidden  = $this->buildMedia(2, true);
@@ -91,9 +89,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -187,7 +183,7 @@ final class MemoryFeedBuilderTest extends TestCase
 
         $media->setNoShow($noShow);
 
-        if ($takenAt !== null) {
+        if ($takenAt instanceof DateTimeImmutable) {
             $media->setTakenAt($takenAt);
         }
 
@@ -202,9 +198,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -233,8 +227,8 @@ final class MemoryFeedBuilderTest extends TestCase
         );
 
         $params = [
-            'score'      => 0.8,
-            'time_range' => ['to' => time()],
+            'score'          => 0.8,
+            'time_range'     => ['to' => time()],
             'member_quality' => [
                 'ordered' => [3, 1, 4],
                 'summary' => [
@@ -274,9 +268,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -305,8 +297,8 @@ final class MemoryFeedBuilderTest extends TestCase
         );
 
         $params = [
-            'score'      => 0.75,
-            'time_range' => ['to' => time()],
+            'score'          => 0.75,
+            'time_range'     => ['to' => time()],
             'member_quality' => [
                 'ordered' => [4, 2],
                 'summary' => [
@@ -346,9 +338,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -377,8 +367,8 @@ final class MemoryFeedBuilderTest extends TestCase
         );
 
         $params = [
-            'score'      => 0.8,
-            'time_range' => ['to' => time()],
+            'score'          => 0.8,
+            'time_range'     => ['to' => time()],
             'member_quality' => [
                 'ordered' => [4, 2, 1],
                 'summary' => [
@@ -422,9 +412,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -472,11 +460,11 @@ final class MemoryFeedBuilderTest extends TestCase
         $discardLowCoverage = new ClusterDraft(
             algorithm: 'discard-low-coverage',
             params: [
-                'score'            => 0.7,
-                'time_range'       => ['to' => $now],
-                'quality_avg'      => 0.7,
-                'people_count'     => 2,
-                'people_coverage'  => 0.3,
+                'score'           => 0.7,
+                'time_range'      => ['to' => $now],
+                'quality_avg'     => 0.7,
+                'people_count'    => 2,
+                'people_coverage' => 0.3,
             ],
             centroid: ['lat' => 0.0, 'lon' => 0.0],
             members: [21, 22],
@@ -514,9 +502,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $mediaRepository = $this->createMock(MediaRepository::class);
         $mediaRepository
@@ -628,9 +614,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $media = $this->buildMedia(1, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
         $media->setPersons(['Alice']);
@@ -698,9 +682,7 @@ final class MemoryFeedBuilderTest extends TestCase
         $titleGen->method('makeSubtitle')->willReturn('Untertitel');
 
         $coverPicker = $this->createMock(CoverPickerInterface::class);
-        $coverPicker->method('pickCover')->willReturnCallback(static function (array $members): ?Media {
-            return $members[0] ?? null;
-        });
+        $coverPicker->method('pickCover')->willReturnCallback(static fn (array $members): ?Media => $members[0] ?? null);
 
         $media = $this->buildMedia(5, false, new DateTimeImmutable('2024-01-01T10:00:00Z'));
 

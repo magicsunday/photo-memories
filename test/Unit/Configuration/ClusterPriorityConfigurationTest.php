@@ -16,25 +16,24 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
 
 use function array_map;
-use function is_array;
 use function max;
 use function min;
 use function str_starts_with;
 
 final class ClusterPriorityConfigurationTest extends TestCase
 {
-    private const PARAMETERS_FILE = __DIR__ . '/../../../config/parameters.yaml';
+    private const string PARAMETERS_FILE = __DIR__ . '/../../../config/parameters.yaml';
 
     #[Test]
     public function requestedHighlightOrderIsRespected(): void
     {
-        $priorities       = $this->priorities();
-        $vacation         = $this->priorityFor($priorities, 'memories.cluster.priority.vacation_cluster_strategy');
-        $weekendOverYears = $this->priorityFor($priorities, 'memories.cluster.priority.weekend_getaways_over_years_cluster_strategy');
-        $yearInReview     = $this->priorityFor($priorities, 'memories.cluster.priority.year_in_review_cluster_strategy');
-        $monthlyHighlights = $this->priorityFor($priorities, 'memories.cluster.priority.monthly_highlights_cluster_strategy');
+        $priorities         = $this->priorities();
+        $vacation           = $this->priorityFor($priorities, 'memories.cluster.priority.vacation_cluster_strategy');
+        $weekendOverYears   = $this->priorityFor($priorities, 'memories.cluster.priority.weekend_getaways_over_years_cluster_strategy');
+        $yearInReview       = $this->priorityFor($priorities, 'memories.cluster.priority.year_in_review_cluster_strategy');
+        $monthlyHighlights  = $this->priorityFor($priorities, 'memories.cluster.priority.monthly_highlights_cluster_strategy');
         $thisMonthOverYears = $this->priorityFor($priorities, 'memories.cluster.priority.this_month_over_years_cluster_strategy');
-        $onThisDay        = $this->priorityFor($priorities, 'memories.cluster.priority.on_this_day_over_years_cluster_strategy');
+        $onThisDay          = $this->priorityFor($priorities, 'memories.cluster.priority.on_this_day_over_years_cluster_strategy');
 
         self::assertGreaterThan($weekendOverYears, $vacation);
         self::assertGreaterThan($yearInReview, $weekendOverYears);
@@ -124,7 +123,7 @@ final class ClusterPriorityConfigurationTest extends TestCase
             $deviceKeys,
         );
 
-        $lowestScene = min($sceneValues);
+        $lowestScene   = min($sceneValues);
         $highestDevice = max($deviceValues);
 
         self::assertGreaterThan($highestDevice, $lowestScene);
@@ -133,8 +132,8 @@ final class ClusterPriorityConfigurationTest extends TestCase
     #[Test]
     public function deviceSimilarityRemainsSpecialCasedDuringConsolidation(): void
     {
-        $parameters    = $this->parameters();
-        $annotateOnly  = $parameters['memories.cluster.consolidate.annotate_only'] ?? null;
+        $parameters     = $this->parameters();
+        $annotateOnly   = $parameters['memories.cluster.consolidate.annotate_only'] ?? null;
         $minUniqueShare = $parameters['memories.cluster.consolidate.min_unique_share'] ?? null;
 
         self::assertIsArray($annotateOnly);

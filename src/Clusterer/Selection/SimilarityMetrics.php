@@ -54,7 +54,7 @@ final class SimilarityMetrics
         $timeA = $this->resolveTimestamp($a);
         $timeB = $this->resolveTimestamp($b);
 
-        $delta = abs($timeA - $timeB);
+        $delta                 = abs($timeA - $timeB);
         $this->timeCache[$key] = $delta;
 
         return $delta;
@@ -71,8 +71,8 @@ final class SimilarityMetrics
         $hashB = $b->getPhash64();
 
         if ($hashA === null || $hashB === null) {
-            $hashA = $hashA ?? $a->getPhash();
-            $hashB = $hashB ?? $b->getPhash();
+            $hashA ??= $a->getPhash();
+            $hashB ??= $b->getPhash();
         }
 
         if ($hashA === null || $hashB === null) {
@@ -113,7 +113,7 @@ final class SimilarityMetrics
             return null;
         }
 
-        $distance = MediaMath::haversineDistanceInMeters($latA, $lonA, $latB, $lonB);
+        $distance                  = MediaMath::haversineDistanceInMeters($latA, $lonA, $latB, $lonB);
         $this->distanceCache[$key] = $distance;
 
         return $distance;

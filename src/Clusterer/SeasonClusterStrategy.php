@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -29,8 +28,8 @@ use function assert;
 use function count;
 use function explode;
 use function intdiv;
-use function mb_strtolower;
 use function max;
+use function mb_strtolower;
 use function sprintf;
 
 /**
@@ -45,7 +44,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
     use ClusterLocationMetadataTrait;
     use ProgressAwareClusterTrait;
 
-    private const PROGRESS_SEGMENTS = 25;
+    private const int PROGRESS_SEGMENTS = 25;
 
     private ClusterQualityAggregator $qualityAggregator;
 
@@ -125,11 +124,11 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
         $normalized = mb_strtolower($value);
 
         return match ($normalized) {
-            'winter' => 'Winter',
-            'spring', 'frühling' => 'Frühling',
-            'summer', 'sommer' => 'Sommer',
+            'winter'                   => 'Winter',
+            'spring', 'frühling'       => 'Frühling',
+            'summer', 'sommer'         => 'Sommer',
             'autumn', 'fall', 'herbst' => 'Herbst',
-            default => null,
+            default                    => null,
         };
     }
 
@@ -141,9 +140,10 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
 
         return mb_strtolower($value) === 'winter';
     }
+
     /**
-     * @param list<Media>                                 $items
-     * @param Context                                     $ctx
+     * @param list<Media>                                       $items
+     * @param Context                                           $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -154,8 +154,8 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
     }
 
     /**
-     * @param list<Media> $items
-     * @param Context $ctx
+     * @param list<Media>                                            $items
+     * @param Context                                                $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
@@ -163,7 +163,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
     private function clusterInternal(array $items, ?Context $ctx, ?callable $update): array
     {
         /** @var list<Media> $timestamped */
-        $timestamped = $this->filterTimestampedItems($items);
+        $timestamped      = $this->filterTimestampedItems($items);
         $timestampedCount = count($timestamped);
         $maxSteps         = max(1, $timestampedCount);
 
@@ -187,7 +187,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
 
         $drafts = $this->buildClustersFromGroups($eligibleGroups);
 
-        if ($ctx !== null) {
+        if ($ctx instanceof Context) {
             foreach ($drafts as $draft) {
                 $ctx->applyToDraft($draft);
             }
@@ -204,7 +204,7 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
     }
 
     /**
-     * @param list<Media>                                 $timestamped
+     * @param list<Media>                                            $timestamped
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return array{0: array<string, list<Media>>, 1: int}
@@ -296,5 +296,4 @@ final readonly class SeasonClusterStrategy implements ClusterStrategyInterface, 
 
         return $out;
     }
-
 }

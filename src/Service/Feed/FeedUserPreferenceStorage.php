@@ -34,21 +34,21 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Persists feed feedback such as favourites and opt-outs to a JSON document.
  */
-final class FeedUserPreferenceStorage
+final readonly class FeedUserPreferenceStorage
 {
-    private const PROFILE_DEFAULTS = [
-        'favourites' => [],
-        'hidden_algorithms' => [],
+    private const array PROFILE_DEFAULTS = [
+        'favourites'         => [],
+        'hidden_algorithms'  => [],
         'blocked_algorithms' => [],
-        'hidden_persons' => [],
-        'hidden_pets' => [],
-        'hidden_places' => [],
-        'hidden_dates' => [],
-        'favourite_persons' => [],
-        'favourite_places' => [],
+        'hidden_persons'     => [],
+        'hidden_pets'        => [],
+        'hidden_places'      => [],
+        'hidden_dates'       => [],
+        'favourite_persons'  => [],
+        'favourite_places'   => [],
     ];
 
-    public function __construct(private readonly string $storagePath)
+    public function __construct(private string $storagePath)
     {
     }
 
@@ -291,10 +291,10 @@ final class FeedUserPreferenceStorage
 
         if (!array_key_exists('users', $data) || !is_array($data['users'])) {
             $data['users'] = [];
-            $changed      = true;
+            $changed       = true;
         }
 
-        foreach ($data['users'] as $userId => &$userData) {
+        foreach ($data['users'] as &$userData) {
             if (!is_array($userData)) {
                 $userData = ['profiles' => []];
                 $changed  = true;
@@ -305,7 +305,7 @@ final class FeedUserPreferenceStorage
                 $changed              = true;
             }
 
-            foreach ($userData['profiles'] as $profileKey => &$profileData) {
+            foreach ($userData['profiles'] as &$profileData) {
                 if (!is_array($profileData)) {
                     $profileData = self::PROFILE_DEFAULTS;
                     $changed     = true;
@@ -319,16 +319,16 @@ final class FeedUserPreferenceStorage
                     }
                 }
             }
+
             unset($profileData);
         }
+
         unset($userData);
 
         return $changed;
     }
 
     /**
-     * @param mixed $value
-     *
      * @return list<string>
      */
     private function normaliseList(mixed $value): array

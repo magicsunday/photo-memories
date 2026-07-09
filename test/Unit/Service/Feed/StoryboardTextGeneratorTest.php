@@ -39,9 +39,9 @@ final class StoryboardTextGeneratorTest extends TestCase
             ],
         ];
         $params = [
-            'poi_label'    => 'Brandenburger Tor',
-            'place_city'   => 'Berlin',
-            'place_country'=> 'Deutschland',
+            'poi_label'     => 'Brandenburger Tor',
+            'place_city'    => 'Berlin',
+            'place_country' => 'Deutschland',
         ];
 
         $result = $generator->generate($entries, $params, 'de-DE');
@@ -65,8 +65,8 @@ final class StoryboardTextGeneratorTest extends TestCase
             ],
         ];
         $params = [
-            'poi_label'    => 'Central Park',
-            'place_country'=> 'USA',
+            'poi_label'     => 'Central Park',
+            'place_country' => 'USA',
         ];
 
         $result = $generator->generate($entries, $params, 'en-US');

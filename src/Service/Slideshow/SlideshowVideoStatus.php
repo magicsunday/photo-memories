@@ -27,10 +27,10 @@ final readonly class SlideshowVideoStatus
     public const string STATUS_UNAVAILABLE = 'nicht_verfuegbar';
 
     public function __construct(
-        private readonly string $status,
-        private readonly ?string $url,
-        private readonly ?string $message,
-        private readonly float $secondsPerImage,
+        private string $status,
+        private ?string $url,
+        private ?string $message,
+        private float $secondsPerImage,
     ) {
     }
 

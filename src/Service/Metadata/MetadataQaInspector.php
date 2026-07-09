@@ -13,8 +13,6 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Entity\Media;
-use MagicSunday\Memories\Service\Metadata\MetadataQaInspectionResult;
-use function array_key_exists;
 
 /**
  * Validates that mandatory time related metadata has been enriched.
@@ -30,8 +28,8 @@ final readonly class MetadataQaInspector
 
     public function inspect(string $filepath, Media $media): MetadataQaInspectionResult
     {
-        $bag = $media->getFeatureBag();
-        $missing  = [];
+        $bag         = $media->getFeatureBag();
+        $missing     = [];
         $suggestions = [];
 
         if ($this->daypartEnricher->supports($filepath, $media)

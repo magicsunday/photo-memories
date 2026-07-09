@@ -16,15 +16,15 @@ use MagicSunday\Memories\Entity\Media;
 /**
  * Value object representing the curated selection output together with telemetry.
  */
-final class SelectionResult
+final readonly class SelectionResult
 {
     /**
-     * @param list<Media> $members   curated media members in deterministic order
+     * @param list<Media>          $members   curated media members in deterministic order
      * @param array<string, mixed> $telemetry diagnostic counters about the selection process
      */
     public function __construct(
-        private readonly array $members,
-        private readonly array $telemetry,
+        private array $members,
+        private array $telemetry,
     ) {
     }
 

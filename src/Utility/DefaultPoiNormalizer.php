@@ -49,7 +49,19 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
         $rawTags = $poi['tags'] ?? null;
         if (is_array($rawTags)) {
             foreach ($rawTags as $tagKey => $tagValue) {
-                if (!is_string($tagKey) || $tagKey === '' || !is_string($tagValue) || $tagValue === '') {
+                if (!is_string($tagKey)) {
+                    continue;
+                }
+
+                if ($tagKey === '') {
+                    continue;
+                }
+
+                if (!is_string($tagValue)) {
+                    continue;
+                }
+
+                if ($tagValue === '') {
                     continue;
                 }
 
@@ -97,7 +109,11 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
                         continue;
                     }
 
-                    if (!is_string($value) || $value === '') {
+                    if (!is_string($value)) {
+                        continue;
+                    }
+
+                    if ($value === '') {
                         continue;
                     }
 
@@ -154,14 +170,9 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
             return $localized;
         }
 
-        $alternate = array_find(
+        return array_find(
             $names['alternates'],
             static fn (string $value): bool => $value !== ''
         );
-        if ($alternate !== null) {
-            return $alternate;
-        }
-
-        return null;
     }
 }

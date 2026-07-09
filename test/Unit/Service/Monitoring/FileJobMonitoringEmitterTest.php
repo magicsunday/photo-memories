@@ -55,7 +55,7 @@ final class FileJobMonitoringEmitterTest extends TestCase
             unlink($path);
         }
 
-        $clock = new class() implements ClockInterface {
+        $clock = new class implements ClockInterface {
             public function now(): DateTimeImmutable
             {
                 return new DateTimeImmutable('2024-01-01T12:00:00+00:00');

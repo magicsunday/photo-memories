@@ -14,8 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\PerMediaCapStage;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 
 final class PerMediaCapStageTest extends TestCase
@@ -155,9 +155,9 @@ final class PerMediaCapStageTest extends TestCase
             monitoringEmitter: $emitter,
         );
 
-        $initial  = $this->createDraft('primary', 0.95, [1]);
-        $cover    = $this->createDraft('secondary', 0.9, [1], 1);
-        $blocked  = $this->createDraft('secondary', 0.7, [1]);
+        $initial = $this->createDraft('primary', 0.95, [1]);
+        $cover   = $this->createDraft('secondary', 0.9, [1], 1);
+        $blocked = $this->createDraft('secondary', 0.7, [1]);
 
         $stage->process([
             $initial,

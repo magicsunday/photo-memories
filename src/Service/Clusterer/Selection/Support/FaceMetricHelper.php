@@ -16,9 +16,11 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection\Support;
  */
 final class FaceMetricHelper
 {
-    public const GROUP_FACE_COUNT_THRESHOLD = 3;
-    public const GROUP_FACE_MAX_DOMINANCE = 0.45;
-    public const CLOSE_UP_DOMINANCE_THRESHOLD = 0.55;
+    public const int GROUP_FACE_COUNT_THRESHOLD = 3;
+
+    public const float GROUP_FACE_MAX_DOMINANCE = 0.45;
+
+    public const float CLOSE_UP_DOMINANCE_THRESHOLD = 0.55;
 
     private function __construct()
     {

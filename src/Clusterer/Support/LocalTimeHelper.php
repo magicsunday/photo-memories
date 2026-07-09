@@ -40,7 +40,7 @@ final readonly class LocalTimeHelper
         }
 
         $takenAt = $media->getTakenAt();
-        if (!($takenAt instanceof DateTimeImmutable)) {
+        if (!$takenAt instanceof DateTimeImmutable) {
             return null;
         }
 

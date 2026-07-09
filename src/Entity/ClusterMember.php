@@ -27,7 +27,7 @@ use MagicSunday\Memories\Entity\Enum\ClusterMemberRole;
         new ORM\Index(name: 'idx_memories_cluster_member_media', columns: ['media_id']),
     ],
     uniqueConstraints: [
-        new ORM\UniqueConstraint(name: 'uniq_memories_cluster_member', columns: ['cluster_id', 'media_id'])
+        new ORM\UniqueConstraint(name: 'uniq_memories_cluster_member', columns: ['cluster_id', 'media_id']),
     ]
 )]
 #[ORM\HasLifecycleCallbacks]
@@ -89,7 +89,7 @@ class ClusterMember
 
     public function setCluster(?Cluster $cluster): void
     {
-        if ($cluster === null || $this->cluster === $cluster) {
+        if (!$cluster instanceof Cluster || $this->cluster === $cluster) {
             return;
         }
 
@@ -155,7 +155,7 @@ class ClusterMember
     public function onPrePersist(): void
     {
         $now = new DateTimeImmutable();
-        $this->createdAt = $this->createdAt ?? $now;
+        $this->createdAt ??= $now;
         $this->updatedAt = $now;
     }
 

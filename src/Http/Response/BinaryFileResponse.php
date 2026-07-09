@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Http\Response;
 
 use finfo;
+use Override;
 use RuntimeException;
 
 use function array_any;
@@ -79,6 +80,7 @@ final class BinaryFileResponse extends Response
         return $this->filePath;
     }
 
+    #[Override]
     public function send(): void
     {
         if ($this->contentLoaded) {
@@ -98,6 +100,7 @@ final class BinaryFileResponse extends Response
         $this->sendFile($this->filePath);
     }
 
+    #[Override]
     public function getContent(): string
     {
         if ($this->contentLoaded === false) {
@@ -114,6 +117,7 @@ final class BinaryFileResponse extends Response
         return parent::getContent();
     }
 
+    #[Override]
     public function setContent(string $content): void
     {
         $this->contentLoaded = true;
@@ -133,7 +137,7 @@ final class BinaryFileResponse extends Response
 
     private function resolveMimeType(string $filePath): string
     {
-        $extension = strtolower((string) pathinfo($filePath, PATHINFO_EXTENSION));
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         $map = [
             'css'   => 'text/css',

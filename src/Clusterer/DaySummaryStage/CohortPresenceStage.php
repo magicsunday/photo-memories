@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Clusterer\DaySummaryStage;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
-use MagicSunday\Memories\Entity\Media;
 
 use function array_keys;
 use function count;
@@ -24,7 +23,7 @@ use function ksort;
 /**
  * Aggregates important person appearances for each day summary.
  *
- * @phpstan-import-type DaySummary from \MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 final class CohortPresenceStage implements DaySummaryStageInterface
 {
@@ -38,10 +37,10 @@ final class CohortPresenceStage implements DaySummaryStageInterface
      */
     private array $aliasToCanonical = [];
 
-    private PersonSignatureHelper $personSignatureHelper;
+    private readonly PersonSignatureHelper $personSignatureHelper;
 
     /**
-     * @param list<int>            $importantPersonIds
+     * @param list<int>             $importantPersonIds
      * @param array<int, list<int>> $fallbackPersonIds
      */
     public function __construct(
@@ -66,7 +65,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
                         continue;
                     }
 
-                    $this->aliasToCanonical[$alias] = $canonical;
+                    $this->aliasToCanonical[$alias]     = $canonical;
                     $this->importantPersons[$canonical] = true;
                 }
 

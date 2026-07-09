@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateInvalidTimeZoneException;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -36,6 +35,7 @@ use function array_values;
 use function arsort;
 use function assert;
 use function count;
+use function floor;
 use function in_array;
 use function is_array;
 use function is_bool;
@@ -43,7 +43,6 @@ use function is_float;
 use function is_int;
 use function is_numeric;
 use function is_string;
-use function floor;
 use function sort;
 use function strcmp;
 use function strtolower;
@@ -79,7 +78,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         float $minAwayDistanceKm = 80.0,
         float $maxAwayDistanceKm = 400.0,
     ) {
-        $this->locHelper = $locHelper ?? LocationHelper::createDefault();
+        $this->locHelper         = $locHelper ?? LocationHelper::createDefault();
         $this->minAwayDistanceKm = $minAwayDistanceKm;
         $this->maxAwayDistanceKm = $maxAwayDistanceKm;
         if ($this->minNights < 1) {
@@ -244,11 +243,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                         return false;
                     }
 
-                    if (!$this->isRunBracketedByDifferentLocality($run, $allDays, $dayLocality)) {
-                        return false;
-                    }
-
-                    return true;
+                    return $this->isRunBracketedByDifferentLocality($run, $allDays, $dayLocality);
                 }
             ));
 
@@ -423,11 +418,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             return false;
         }
 
-        if ($median > $this->maxAwayDistanceKm) {
-            return false;
-        }
-
-        return true;
+        return $median <= $this->maxAwayDistanceKm;
     }
 
     /**
@@ -435,7 +426,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      */
     private function runHasVacationCoreTag(array $run): bool
     {
-        $hasCore = false;
+        $hasCore      = false;
         $scoreSamples = [];
 
         foreach ($run['items'] as $media) {
@@ -453,11 +444,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             return false;
         }
 
-        if ($scoreSamples === []) {
-            return false;
-        }
-
-        return true;
+        return $scoreSamples !== [];
     }
 
     /**
@@ -477,7 +464,11 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
                 if (is_array($dayContext)) {
                     foreach ($dayContext as $day => $context) {
-                        if (!is_string($day) || !in_array($day, $days, true)) {
+                        if (!is_string($day)) {
+                            continue;
+                        }
+
+                        if (!in_array($day, $days, true)) {
                             continue;
                         }
 
@@ -510,10 +501,10 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
      */
     private function extractDaySummary(Media $media): array
     {
-        $bag       = $media->getFeatureBag();
-        $payload   = $bag->toArray();
-        $summary   = $payload['day_summary'] ?? null;
-        $result    = [
+        $bag     = $media->getFeatureBag();
+        $payload = $bag->toArray();
+        $summary = $payload['day_summary'] ?? null;
+        $result  = [
             'distance_from_home_km' => null,
             'max_speed_kmh'         => null,
             'category'              => null,
@@ -548,12 +539,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             return $summary['distance_from_home_km'];
         }
 
-        $distance = $media->getDistanceKmFromHome();
-        if ($distance !== null) {
-            return $distance;
-        }
-
-        return null;
+        return $media->getDistanceKmFromHome();
     }
 
     /**
@@ -745,8 +731,9 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         return is_string($firstKey) ? $firstKey : null;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -760,5 +747,4 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

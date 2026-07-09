@@ -165,7 +165,11 @@ trait GeoTemporalClusterTrait
                 continue;
             }
 
-            if ($media->getGpsLat() === null || $media->getGpsLon() === null) {
+            if ($media->getGpsLat() === null) {
+                continue;
+            }
+
+            if ($media->getGpsLon() === null) {
                 continue;
             }
 
@@ -210,16 +214,19 @@ trait GeoTemporalClusterTrait
                     continue;
                 }
 
-                $first = $bucket[0]->getTakenAt();
+                $first     = $bucket[0]->getTakenAt();
                 $lastIndex = array_key_last($bucket);
                 $last      = $lastIndex !== null ? $bucket[$lastIndex]->getTakenAt() : null;
-
-                if (!$first instanceof DateTimeImmutable || !$last instanceof DateTimeImmutable) {
+                if (!$first instanceof DateTimeImmutable) {
                     continue;
                 }
 
-                $startTs = $first->getTimestamp();
-                $endTs   = $last->getTimestamp();
+                if (!$last instanceof DateTimeImmutable) {
+                    continue;
+                }
+
+                $startTs  = $first->getTimestamp();
+                $endTs    = $last->getTimestamp();
                 $attached = false;
 
                 foreach ($nonGps as $index => $candidate) {
@@ -229,7 +236,11 @@ trait GeoTemporalClusterTrait
                     }
 
                     $ts = $takenAt->getTimestamp();
-                    if ($ts < $startTs || $ts > $endTs) {
+                    if ($ts < $startTs) {
+                        continue;
+                    }
+
+                    if ($ts > $endTs) {
                         continue;
                     }
 
@@ -250,6 +261,7 @@ trait GeoTemporalClusterTrait
                     break;
                 }
             }
+
             unset($bucket);
         }
 
@@ -281,8 +293,8 @@ trait GeoTemporalClusterTrait
         /** @var list<list<Media>> $buckets */
         $buckets = [];
         /** @var list<Media> $bucket */
-        $bucket = [];
-        $startTs = null;
+        $bucket    = [];
+        $startTs   = null;
         $anchorLat = null;
         $anchorLon = null;
 

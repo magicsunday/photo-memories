@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\DominanceSelectionStage;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 
 final class DominanceSelectionStageTest extends TestCase
@@ -228,9 +228,9 @@ final class DominanceSelectionStageTest extends TestCase
             monitoringEmitter: $emitter,
         );
 
-        $primary = $this->createDraft('primary', 0.85, [1, 2, 3]);
+        $primary          = $this->createDraft('primary', 0.85, [1, 2, 3]);
         $secondaryOverlap = $this->createDraft('secondary', 0.9, [1, 2, 3]);
-        $subStory = $this->createDraft('secondary', 0.6, [4, 5]);
+        $subStory         = $this->createDraft('secondary', 0.6, [4, 5]);
         $subStory->setParam('is_sub_story', true);
         $subStory->setParam('sub_story_priority', 1);
         $subStory->setParam('sub_story_of', ['algorithm' => 'primary', 'fingerprint' => sha1('1,2,3'), 'priority' => 2]);

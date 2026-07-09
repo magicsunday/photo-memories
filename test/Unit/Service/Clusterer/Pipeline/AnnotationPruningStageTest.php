@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\AnnotationPruningStage;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 
 final class AnnotationPruningStageTest extends TestCase

@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Test\Unit\Service\Clusterer\Pipeline;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\OverlapResolverStage;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionMethod;
@@ -100,10 +100,10 @@ final class OverlapResolverStageTest extends TestCase
             0.82,
             'vacation',
             [
-                'time_range' => ['from' => 1_000, 'to' => 3_600],
+                'time_range'       => ['from' => 1_000, 'to' => 3_600],
                 'primaryStaypoint' => ['lat' => 48.13, 'lon' => 11.58],
                 'member_selection' => ['hash_samples' => ['abcd1234abcd1234', 'abcd1234ffff0000']],
-                'meta' => ['merges' => []],
+                'meta'             => ['merges' => []],
             ],
         );
 
@@ -113,7 +113,7 @@ final class OverlapResolverStageTest extends TestCase
             0.8,
             'vacation',
             [
-                'time_range' => ['from' => 1_600, 'to' => 3_800],
+                'time_range'       => ['from' => 1_600, 'to' => 3_800],
                 'primaryStaypoint' => ['lat' => 48.1301, 'lon' => 11.5802],
                 'member_selection' => ['hash_samples' => ['abcd1234aaaa0000']],
             ],
@@ -256,12 +256,12 @@ final class OverlapResolverStageTest extends TestCase
         $secondaryMembers = [1, 2, 3, 4, 5, 9, 10, 11];
 
         $primary = $this->createDraft('vacation', $primaryMembers, 1.1, 'vacation', [
-            'time_range'        => $timeRange,
-            'primaryStaypoint'  => ['lat' => 0.0, 'lon' => 0.0],
+            'time_range'       => $timeRange,
+            'primaryStaypoint' => ['lat' => 0.0, 'lon' => 0.0],
         ]);
         $secondary = $this->createDraft('vacation', $secondaryMembers, 0.95, 'vacation', [
-            'time_range'        => $timeRange,
-            'primaryStaypoint'  => ['lat' => 0.0, 'lon' => $loserLongitude],
+            'time_range'       => $timeRange,
+            'primaryStaypoint' => ['lat' => 0.0, 'lon' => $loserLongitude],
         ]);
 
         $metrics = $this->assertShouldMergeDecision($stage, $primary, $secondary, $expectMerge);
@@ -300,11 +300,11 @@ final class OverlapResolverStageTest extends TestCase
         $secondaryMembers = [1, 2, 3, 4, 7, 8];
 
         $primary = $this->createDraft('vacation', $primaryMembers, 1.2, 'vacation', [
-            'time_range'      => ['from' => 10, 'to' => 110],
+            'time_range'       => ['from' => 10, 'to' => 110],
             'member_selection' => ['summary' => ['core_members' => $winnerCore]],
         ]);
         $secondary = $this->createDraft('vacation', $secondaryMembers, 0.9, 'vacation', [
-            'time_range'      => ['from' => 10, 'to' => 110],
+            'time_range'       => ['from' => 10, 'to' => 110],
             'member_selection' => ['summary' => ['core_members' => $loserCore]],
         ]);
 
@@ -562,7 +562,6 @@ final class OverlapResolverStageTest extends TestCase
         $memberIou = $this->computeJaccardIndex($normalizedWinner, $normalizedLoser);
 
         $collectMetrics = new ReflectionMethod(OverlapResolverStage::class, 'collectMetrics');
-        $collectMetrics->setAccessible(true);
 
         /** @var array<string, float|int|bool|null> $metrics */
         $metrics = $collectMetrics->invoke($stage, $winner, $loser, $memberIou);
@@ -573,7 +572,6 @@ final class OverlapResolverStageTest extends TestCase
     private function invokeShouldMerge(OverlapResolverStage $stage, array $metrics): bool
     {
         $shouldMerge = new ReflectionMethod(OverlapResolverStage::class, 'shouldMerge');
-        $shouldMerge->setAccessible(true);
 
         /** @var bool $result */
         $result = $shouldMerge->invoke($stage, $metrics);
@@ -582,8 +580,8 @@ final class OverlapResolverStageTest extends TestCase
     }
 
     /**
-     * @param list<int> $primaryMembers
-     * @param list<int> $secondaryMembers
+     * @param list<int>          $primaryMembers
+     * @param list<int>          $secondaryMembers
      * @param list<ClusterDraft> $result
      */
     private function assertScenarioOutcome(

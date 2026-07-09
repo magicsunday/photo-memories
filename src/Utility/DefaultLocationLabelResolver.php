@@ -141,7 +141,7 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
     {
         $poiContext = $this->poiContextAnalyzer->majorityPoiContext($members);
         if ($poiContext !== null) {
-            $labelValue = $poiContext['label'] ?? null;
+            $labelValue      = $poiContext['label'] ?? null;
             $normalizedLabel = is_string($labelValue) ? trim($labelValue) : '';
             if ($normalizedLabel !== '') {
                 $categoryValue = $poiContext['categoryValue'];

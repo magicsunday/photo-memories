@@ -11,14 +11,13 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use DateTimeImmutable;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
@@ -29,7 +28,6 @@ use MagicSunday\Memories\Utility\LocationHelper;
 use function assert;
 use function ctype_digit;
 use function explode;
-use function is_string;
 use function mb_strtolower;
 use function strrpos;
 use function substr;
@@ -199,7 +197,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
         }
 
         $code = substr($holidayId, 0, $pos);
-        if (!is_string($code) || $code === '') {
+        if ($code === '') {
             return null;
         }
 
@@ -221,8 +219,9 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             default         => null,
         };
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -236,5 +235,4 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Clusterer\Support;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
+use MagicSunday\Memories\Entity\Media;
 
 /**
  * Provides a default implementation for the Context-aware draft() method.
@@ -20,7 +21,7 @@ use MagicSunday\Memories\Clusterer\Context;
 trait ContextualClusterBridgeTrait
 {
     /**
-     * @param list<\MagicSunday\Memories\Entity\Media> $scope
+     * @param list<Media> $scope
      *
      * @return list<ClusterDraft>
      */

@@ -82,7 +82,7 @@ final class GeoDbscanHelperTest extends TestCase
 
         $media   = [];
         $media[] = $this->makeMediaFixture(30, 'no-gps-a.jpg', '2024-07-03 11:00:00');
-        $media[] = $this->makeMediaFixture(31, 'no-gps-b.jpg', '2024-07-03 11:05:00', 40.4168, null);
+        $media[] = $this->makeMediaFixture(31, 'no-gps-b.jpg', '2024-07-03 11:05:00', 40.4168);
         $media[] = $this->makeMediaFixture(32, 'no-gps-c.jpg', '2024-07-03 11:10:00', null, -3.7038);
 
         $result = $helper->clusterMedia($media, 0.2, 3);

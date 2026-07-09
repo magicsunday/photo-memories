@@ -11,10 +11,10 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\NewYearEveClusterStrategy;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Location;
@@ -102,8 +102,8 @@ final class NewYearEveClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: 52.5,
             lon: 13.4,
-            size: 2048,
             location: $location,
+            size: 2048,
         );
     }
 }

@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Support\ConsecutiveDaysTrait;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
 
 use function array_reverse;
@@ -33,7 +34,7 @@ final class TransportDayExtender
 {
     use ConsecutiveDaysTrait;
 
-    private const MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
+    private const int MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
 
     public function __construct(
         private float $transitRatioThreshold = 0.65,
@@ -64,10 +65,10 @@ final class TransportDayExtender
     }
 
     /**
-     * @param list<string>                                              $run
-     * @param list<string>                                                      $orderedKeys
-     * @param array<string, int>                                                $indexByKey
-     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int,baseLocation?:array{lat:float|int,lon:float|int}|null,gpsMembers?:list<\MagicSunday\Memories\Entity\Media>}> $days
+     * @param list<string>                                                                                                                                                                                                                                                                                                                                                                                     $run
+     * @param list<string>                                                                                                                                                                                                                                                                                                                                                                                     $orderedKeys
+     * @param array<string, int>                                                                                                                                                                                                                                                                                                                                                                               $indexByKey
+     * @param array<string, array{hasAirportPoi: bool, hasHighSpeedTransit: bool, isSynthetic: bool, dominantStaypoints?: list<array{key: string, lat: float, lon: float, start: int, end: int, dwellSeconds: int, memberCount: int}>, transitRatio?: float, avgSpeedKmh?: float, maxSpeedKmh?: float, photoCount?: int, baseLocation?: array{lat: float|int, lon: float|int}|null, gpsMembers?: list<Media>}> $days
      *
      * @return list<string>
      */
@@ -150,22 +151,14 @@ final class TransportDayExtender
 
             $interDayDistance = $this->computeInterDayDistance($candidate, $anchor);
 
-            if ($interDayDistance === null || $interDayDistance <= $this->minLeanBridgeDistanceKm) {
-                return false;
-            }
-
-            return true;
+            return $interDayDistance !== null && $interDayDistance > $this->minLeanBridgeDistanceKm;
         }
 
         if (($candidate['hasAirportPoi'] ?? false) || ($candidate['hasHighSpeedTransit'] ?? false)) {
             return true;
         }
 
-        if ($this->isTransitHeavy($candidate)) {
-            return true;
-        }
-
-        return false;
+        return $this->isTransitHeavy($candidate);
     }
 
     /**
@@ -238,11 +231,8 @@ final class TransportDayExtender
         }
 
         $maxSpeed = (float) ($summary['maxSpeedKmh'] ?? 0.0);
-        if ($maxSpeed >= $this->transitSpeedThreshold) {
-            return true;
-        }
 
-        return false;
+        return $maxSpeed >= $this->transitSpeedThreshold;
     }
 
     /**
@@ -267,7 +257,7 @@ final class TransportDayExtender
             return 0;
         }
 
-        $keys = $fromStart ? $run : array_reverse($run);
+        $keys  = $fromStart ? $run : array_reverse($run);
         $count = 0;
 
         foreach ($keys as $key) {
@@ -287,8 +277,8 @@ final class TransportDayExtender
     }
 
     /**
-     * @param array{baseLocation?:array{lat:float|int,lon:float|int}|null,dominantStaypoints?:list<array{lat:float,lon:float}>,gpsMembers?:list<\MagicSunday\Memories\Entity\Media>} $candidate
-     * @param array{baseLocation?:array{lat:float|int,lon:float|int}|null,dominantStaypoints?:list<array{lat:float,lon:float}>,gpsMembers?:list<\MagicSunday\Memories\Entity\Media>} $anchor
+     * @param array{baseLocation?: array{lat: float|int, lon: float|int}|null, dominantStaypoints?: list<array{lat: float, lon: float}>, gpsMembers?: list<Media>} $candidate
+     * @param array{baseLocation?: array{lat: float|int, lon: float|int}|null, dominantStaypoints?: list<array{lat: float, lon: float}>, gpsMembers?: list<Media>} $anchor
      */
     private function computeInterDayDistance(array $candidate, array $anchor): ?float
     {
@@ -308,7 +298,7 @@ final class TransportDayExtender
     }
 
     /**
-     * @param array{baseLocation?:array{lat:float|int,lon:float|int}|null,dominantStaypoints?:list<array{lat:float,lon:float,start?:int,end?:int,dwellSeconds?:int,memberCount?:int}>,gpsMembers?:list<\MagicSunday\Memories\Entity\Media>} $summary
+     * @param array{baseLocation?: array{lat: float|int, lon: float|int}|null, dominantStaypoints?: list<array{lat: float, lon: float, start?: int, end?: int, dwellSeconds?: int, memberCount?: int}>, gpsMembers?: list<Media>} $summary
      */
     private function resolveReferenceCoordinate(array $summary): ?array
     {
@@ -326,8 +316,8 @@ final class TransportDayExtender
 
             if (isset($staypoint['lat'], $staypoint['lon'])) {
                 return [
-                    'lat' => (float) $staypoint['lat'],
-                    'lon' => (float) $staypoint['lon'],
+                    'lat' => $staypoint['lat'],
+                    'lon' => $staypoint['lon'],
                 ];
             }
         }

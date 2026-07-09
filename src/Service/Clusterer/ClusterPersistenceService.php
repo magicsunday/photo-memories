@@ -28,17 +28,14 @@ use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\ClusterMemberSelectorInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Feed\CoverPickerInterface;
-use MagicSunday\Memories\Service\Clusterer\TravelWaypointAnnotator;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Utility\GeoCell;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function array_chunk;
-use function array_map;
-use function array_find;
 use function array_is_list;
-use function array_key_exists;
 use function array_keys;
+use function array_map;
 use function array_slice;
 use function array_unique;
 use function array_values;
@@ -63,7 +60,9 @@ use function trim;
 final readonly class ClusterPersistenceService implements ClusterPersistenceInterface
 {
     private ClusterQualityAggregator $qualityAggregator;
+
     private ClusterPeopleAggregator $peopleAggregator;
+
     private TravelWaypointAnnotator $travelWaypointAnnotator;
 
     public function __construct(
@@ -80,10 +79,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         ?ClusterQualityAggregator $qualityAggregator = null,
         ?ClusterPeopleAggregator $peopleAggregator = null,
         ?TravelWaypointAnnotator $travelWaypointAnnotator = null,
-        private readonly ?JobMonitoringEmitterInterface $monitoringEmitter = null,
+        private ?JobMonitoringEmitterInterface $monitoringEmitter = null,
     ) {
-        $this->qualityAggregator = $qualityAggregator ?? new ClusterQualityAggregator();
-        $this->peopleAggregator  = $peopleAggregator ?? new ClusterPeopleAggregator();
+        $this->qualityAggregator       = $qualityAggregator ?? new ClusterQualityAggregator();
+        $this->peopleAggregator        = $peopleAggregator ?? new ClusterPeopleAggregator();
         $this->travelWaypointAnnotator = $travelWaypointAnnotator ?? new TravelWaypointAnnotator();
     }
 
@@ -108,6 +107,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $draft = $this->ensureCuratedDraft($draft);
             $this->persistSelectionTelemetryOnDraft($draft);
         }
+
         unset($draft);
 
         $pairs = $this->computePairs($drafts);
@@ -256,8 +256,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         ?string $key = null,
     ): ?Cluster {
         if ($members === null || $fingerprint === null || $key === null) {
-            $context    = $this->resolveDraftContext($draft);
-            $members    = $context['members'];
+            $context     = $this->resolveDraftContext($draft);
+            $members     = $context['members'];
             $fingerprint = $context['fingerprint'];
             $key         = $context['key'];
         }
@@ -294,8 +294,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     /**
      * @param list<array{draft:ClusterDraft, members:list<int>, fingerprint:string, key:string}> $batch
-     * @param array<string,bool>                                                                $existing
-     * @param array<string,bool>                                                                $seenThisRun
+     * @param array<string,bool>                                                                 $existing
+     * @param array<string,bool>                                                                 $seenThisRun
      */
     private function flushStreamingBatch(
         array $batch,
@@ -306,7 +306,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $pairs = [];
         foreach ($batch as $entry) {
             $key = $entry['key'];
-            if (isset($existing[$key]) || isset($seenThisRun[$key])) {
+            if (isset($existing[$key])) {
+                continue;
+            }
+
+            if (isset($seenThisRun[$key])) {
                 continue;
             }
 
@@ -507,7 +511,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param array<string, bool>               $existing
+     * @param array<string, bool>                $existing
      * @param list<array{alg:string, fp:string}> $rows
      *
      * @return array<string, bool>
@@ -640,10 +644,10 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $centroidCell = GeoCell::fromPoint($centroidLat, $centroidLon, 7);
         }
 
-        $boundingBox = $this->buildBoundingBox($media);
-        $overlay     = $this->normaliseMemberIdList($params['member_quality']['ordered'] ?? null);
+        $boundingBox  = $this->buildBoundingBox($media);
+        $overlay      = $this->normaliseMemberIdList($params['member_quality']['ordered'] ?? null);
         $memberScores = $this->extractMemberScores($params);
-        $type          = $this->resolveClusterType($draft, $params);
+        $type         = $this->resolveClusterType($draft, $params);
 
         $meta = [
             'params'     => $params,
@@ -767,11 +771,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 continue;
             }
 
-            if ($start === null || $taken < $start) {
+            if (!$start instanceof DateTimeImmutable || $taken < $start) {
                 $start = $taken;
             }
 
-            if ($end === null || $taken > $end) {
+            if (!$end instanceof DateTimeImmutable || $taken > $end) {
                 $end = $taken;
             }
         }
@@ -855,8 +859,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     /**
      * @param array<string, scalar|array|null> $params
      *
-     * @return string|null
-     *
      * @throws JsonException
      */
     private function computeConfigHash(array $params): ?string
@@ -920,8 +922,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         foreach ($media as $item) {
             $lat = $item->getGpsLat();
             $lon = $item->getGpsLon();
+            if ($lat === null) {
+                continue;
+            }
 
-            if ($lat === null || $lon === null) {
+            if ($lon === null) {
                 continue;
             }
 
@@ -969,9 +974,9 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param list<int>   $memberIds
-     * @param list<Media> $media
-     * @param list<int>   $overlay
+     * @param list<int>        $memberIds
+     * @param list<Media>      $media
+     * @param list<int>        $overlay
      * @param array<int,float> $memberScores
      */
     private function attachClusterMembers(Cluster $cluster, array $memberIds, array $media, array $overlay, array $memberScores): void
@@ -1012,8 +1017,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param mixed $values
-     *
      * @return list<int>
      */
     private function normaliseMemberIdList(mixed $values): array
@@ -1031,7 +1034,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
                 $id = (int) $value;
             }
 
-            if ($id === null || $id === 0) {
+            if ($id === null) {
+                continue;
+            }
+
+            if ($id === 0) {
                 continue;
             }
 
@@ -1160,7 +1167,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     private function persistSelectionTelemetryOnDraft(ClusterDraft $draft): void
     {
-        $params     = $draft->getParams();
+        $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? null;
         if (!is_array($memberQuality)) {
             return;
@@ -1191,7 +1198,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
         $persistedCount = count($draft->getMembers());
 
-        $summary['members_persisted'] = $persistedCount;
+        $summary['members_persisted']     = $persistedCount;
         $summary['curated_overlay_count'] = $overlayCount;
 
         $selectionCounts = $summary['selection_counts'] ?? [];
@@ -1213,14 +1220,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $draft->setParam('member_quality', $memberQuality);
 
         $this->emitPersistenceMetrics($draft, $persistedCount, $overlayCount);
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function resolveOrderedMembers(ClusterDraft $draft): array
-    {
-        return $draft->getMembers();
     }
 
     private function ensureCuratedDraft(ClusterDraft $draft): ClusterDraft
@@ -1269,11 +1268,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             return true;
         }
 
-        if (isset($summary['selection_telemetry']) && is_array($summary['selection_telemetry']) && $summary['selection_telemetry'] !== []) {
-            return true;
-        }
-
-        return false;
+        return isset($summary['selection_telemetry']) && is_array($summary['selection_telemetry']) && $summary['selection_telemetry'] !== [];
     }
 
     private function getMemberCurationStage(): MemberCurationStage
@@ -1288,7 +1283,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
 
     private function emitPersistenceMetrics(ClusterDraft $draft, int $persistedCount, int $overlayCount): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 
@@ -1323,8 +1318,8 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $curated = $this->ensureCuratedDraft($draft);
         $this->persistSelectionTelemetryOnDraft($curated);
 
-        $context = $this->resolveDraftContext($curated);
-        $media   = $this->hydrateMembers($context['members']);
+        $context  = $this->resolveDraftContext($curated);
+        $media    = $this->hydrateMembers($context['members']);
         $metadata = $this->buildMetadata($curated, $context['members'], $media);
 
         return [$curated, $metadata];

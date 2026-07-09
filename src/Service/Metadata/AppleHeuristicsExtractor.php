@@ -118,7 +118,11 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
         }
 
         foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
+            if ($entry === '.') {
+                continue;
+            }
+
+            if ($entry === '..') {
                 continue;
             }
 
@@ -129,7 +133,11 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
 
             $candidateBase = pathinfo($entry, PATHINFO_FILENAME);
             $candidateExt  = pathinfo($entry, PATHINFO_EXTENSION);
-            if ($candidateBase === '' || $candidateExt === '') {
+            if ($candidateBase === '') {
+                continue;
+            }
+
+            if ($candidateExt === '') {
                 continue;
             }
 

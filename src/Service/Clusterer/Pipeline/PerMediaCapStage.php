@@ -95,10 +95,10 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         $perMediaCap       = $this->getPerMediaCap();
 
         $this->emitMonitoring('selection_start', [
-            'pre_count'        => $total,
-            'per_media_cap'    => $perMediaCap,
-            'group_count'      => count($this->algorithmGroups),
-            'default_group'    => $this->defaultAlgorithmGroup,
+            'pre_count'     => $total,
+            'per_media_cap' => $perMediaCap,
+            'group_count'   => count($this->algorithmGroups),
+            'default_group' => $this->defaultAlgorithmGroup,
         ]);
 
         if ($perMediaCap <= 0 || $total === 0) {
@@ -164,7 +164,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         /** @var array<string,array<int,list<int>>> $assignments */
         $assignments = [];
         /** @var list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int, cover: int|null, removed: bool}> $accepted */
-        $accepted  = [];
+        $accepted = [];
         /** @var list<ClusterDraft> $result */
         $result    = [];
         $processed = 0;
@@ -177,12 +177,12 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
 
             $group = $item['group'];
             $assignments[$group] ??= [];
-            $allowed = true;
+            $allowed        = true;
             $blockedMembers = [];
             foreach ($item['members'] as $member) {
                 $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
                 if ($count >= $perMediaCap) {
-                    $allowed = false;
+                    $allowed          = false;
                     $blockedMembers[] = $member;
                     break;
                 }
@@ -196,7 +196,11 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                         $existingAssignments = $assignments[$group][$coverId];
                         foreach ($existingAssignments as $assignmentIndex) {
                             $assignedItem = $accepted[$assignmentIndex] ?? null;
-                            if ($assignedItem === null || $assignedItem['removed']) {
+                            if ($assignedItem === null) {
+                                continue;
+                            }
+
+                            if ($assignedItem['removed']) {
                                 continue;
                             }
 
@@ -216,7 +220,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                         foreach ($item['members'] as $member) {
                             $count = isset($assignments[$group][$member]) ? count($assignments[$group][$member]) : 0;
                             if ($count >= $perMediaCap) {
-                                $allowed = false;
+                                $allowed          = false;
                                 $blockedMembers[] = $member;
                                 break;
                             }
@@ -251,9 +255,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
         }
 
         if ($subStories !== []) {
-            usort($subStories, static function (array $a, array $b): int {
-                return $a['index'] <=> $b['index'];
-            });
+            usort($subStories, static fn (array $a, array $b): int => $a['index'] <=> $b['index']);
 
             foreach ($subStories as $subStory) {
                 $result[] = $subStory['draft'];
@@ -278,7 +280,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
     }
 
     /**
-     * @param array<string,array<int,list<int>>>                                                              $assignments
+     * @param array<string,array<int,list<int>>>                                                                                                                      $assignments
      * @param list<array{draft: ClusterDraft, members: list<int>, score: float, priority: int, size: int, group: string, index: int, cover: int|null, removed: bool}> $accepted
      */
     private function removeAssignment(array &$assignments, array &$accepted, int $index, int &$reassignments): void
@@ -317,7 +319,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
      */
     private function emitMonitoring(string $event, array $payload): void
     {
-        if ($this->monitoringEmitter === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
             return;
         }
 

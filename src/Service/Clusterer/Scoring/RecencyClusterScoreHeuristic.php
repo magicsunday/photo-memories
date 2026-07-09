@@ -34,7 +34,7 @@ final class RecencyClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHe
         ?callable $timeProvider = null,
     ) {
         parent::__construct($timeRangeMinSamples, $timeRangeMinCoverage, $minValidYear);
-        $this->timeProvider = $timeProvider ?? static fn (): int => time();
+        $this->timeProvider = $timeProvider ?? time(...);
     }
 
     public function prepare(array $clusters, array $mediaMap): void

@@ -14,19 +14,19 @@ namespace MagicSunday\Memories\Service\Clusterer\Quality;
 /**
  * Value object describing per-media quality metrics normalised to the 0..1 range.
  */
-final class ImageQualityScore
+final readonly class ImageQualityScore
 {
     public function __construct(
-        public readonly float $sharpness,
-        public readonly float $exposure,
-        public readonly float $contrast,
-        public readonly float $noise,
-        public readonly float $blockiness,
-        public readonly float $keyframeQuality,
-        public readonly float $clipping,
-        public readonly float $videoBonus = 0.0,
-        public readonly float $videoPenalty = 0.0,
-        public readonly ?ImageQualityRawMetrics $rawMetrics = null,
+        public float $sharpness,
+        public float $exposure,
+        public float $contrast,
+        public float $noise,
+        public float $blockiness,
+        public float $keyframeQuality,
+        public float $clipping,
+        public float $videoBonus = 0.0,
+        public float $videoPenalty = 0.0,
+        public ?ImageQualityRawMetrics $rawMetrics = null,
     ) {
     }
 }

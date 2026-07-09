@@ -11,18 +11,17 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateMalformedStringException;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
-use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
-use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
+use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
 
@@ -35,10 +34,10 @@ use function implode;
 use function is_array;
 use function is_string;
 use function ksort;
-use function mb_strtolower;
 use function max;
-use function sprintf;
+use function mb_strtolower;
 use function sort;
+use function sprintf;
 use function strcasecmp;
 use function trim;
 use function usort;
@@ -100,8 +99,8 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     }
 
     /**
-     * @param list<Media>                                 $items
-     * @param Context                                     $ctx
+     * @param list<Media>                                       $items
+     * @param Context                                           $ctx
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -114,8 +113,8 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
     }
 
     /**
-     * @param list<Media>                                 $items
-     * @param Context|null                                $ctx
+     * @param list<Media>                                            $items
+     * @param Context|null                                           $ctx
      * @param callable(int $done, int $max, string $stage):void|null $update
      *
      * @return list<ClusterDraft>
@@ -128,9 +127,9 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         $buckets    = [];
         $candidates = $this->filterTimestampedItems($items);
 
-        $totalCandidates     = count($candidates);
-        $progress            = 0;
-        $totalSteps          = 2 + $totalCandidates;
+        $totalCandidates = count($candidates);
+        $progress        = 0;
+        $totalSteps      = 2 + $totalCandidates;
 
         $this->notifyProgress(
             $update,
@@ -139,7 +138,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             sprintf('Kandidaten sammeln (%d Medien)', $totalCandidates)
         );
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress(
             $update,
             $progress,
@@ -211,7 +210,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         );
 
         $eligibleCount = count($eligibleBuckets);
-        $totalSteps   += 1 + $eligibleCount;
+        $totalSteps += 1 + $eligibleCount;
 
         $this->notifyProgress(
             $update,
@@ -220,7 +219,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             sprintf('%d Signaturen ermittelt', count($buckets))
         );
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, sprintf('%d Gruppen gültig', $eligibleCount));
 
         if ($eligibleBuckets === []) {
@@ -284,10 +283,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
 
         $progress = $groupBase + $eligibleCount;
 
-        $progress += 1;
+        ++$progress;
         $this->notifyProgress($update, $progress, $totalSteps, sprintf('%d Cluster erstellt', count($clusters)));
 
-        if ($ctx !== null) {
+        if ($ctx instanceof Context) {
             foreach ($clusters as $cluster) {
                 $ctx->applyToDraft($cluster);
             }
@@ -335,10 +334,10 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
         sort($persons);
 
         $personLabels = array_values($labelSet);
-        usort($personLabels, static fn (string $a, string $b): int => strcasecmp($a, $b));
+        usort($personLabels, strcasecmp(...));
 
         $params = [
-            'time_range' => $this->computeTimeRange($members),
+            'time_range'      => $this->computeTimeRange($members),
             'quality_profile' => 'group_portrait',
         ];
 

@@ -29,7 +29,7 @@ final class FileStatMetadataExtractor implements SingleMetadataExtractorInterfac
 {
     public function supports(string $filepath, Media $media): bool
     {
-        return $media->getTakenAt() === null && is_file($filepath);
+        return !$media->getTakenAt() instanceof DateTimeImmutable && is_file($filepath);
     }
 
     public function extract(string $filepath, Media $media): Media

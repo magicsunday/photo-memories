@@ -15,9 +15,9 @@ use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
+use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
 use MagicSunday\Memories\Service\Clusterer\Title\StoryTitleBuilder;
-use MagicSunday\Memories\Entity\Media;
 
 use function arsort;
 use function ceil;
@@ -26,7 +26,6 @@ use function floor;
 use function is_string;
 use function max;
 use function min;
-use function pi;
 use function round;
 use function sort;
 use function trim;
@@ -34,9 +33,9 @@ use function trim;
 /**
  * Coordinates vacation segment detection and scoring.
  */
-final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerInterface
+final readonly class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerInterface
 {
-    private const TRAVEL_TARGET_KM = 250.0;
+    private const float TRAVEL_TARGET_KM = 250.0;
 
     public function __construct(
         private VacationRunDetectorInterface $runDetector,
@@ -48,7 +47,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
 
     /**
      * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,maxSpeedKmh:float,avgSpeedKmh:float,hasHighSpeedTransit:bool,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDensity:float,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,staypointIndex:\MagicSunday\Memories\Clusterer\Support\StaypointIndex,staypointCounts:array<string,int>,dominantStaypoints:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int>>,transitRatio:float,poiDensity:float,cohortPresenceRatio:float,cohortMembers:array<int,int>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,isSynthetic:bool}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         $home
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return list<ClusterDraft>
      */
@@ -66,10 +65,10 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
             $dayContext = $this->classifyRunDays($run, $days);
             $draft      = $this->scoreCalculator->buildDraft($run, $days, $home, $dayContext);
             if ($draft instanceof ClusterDraft) {
-                $params = $draft->getParams();
-                $title = $params['vacation_title'] ?? null;
-                $subtitle = $params['vacation_subtitle'] ?? null;
-                $needsTitle = !is_string($title) || trim($title) === '';
+                $params        = $draft->getParams();
+                $title         = $params['vacation_title'] ?? null;
+                $subtitle      = $params['vacation_subtitle'] ?? null;
+                $needsTitle    = !is_string($title) || trim($title) === '';
                 $needsSubtitle = !is_string($subtitle) || trim($subtitle) === '';
 
                 if ($needsTitle || $needsSubtitle) {
@@ -110,11 +109,11 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
                 continue;
             }
 
-            $summary = $days[$key];
-            $score   = $this->calculateCoreScore($summary);
+            $summary  = $days[$key];
+            $score    = $this->calculateCoreScore($summary);
             $duration = $this->calculateDayDuration($summary['members']);
 
-            $scores[$key] = $score;
+            $scores[$key]   = $score;
             $metadata[$key] = [
                 'score'    => $score,
                 'duration' => $duration,
@@ -155,7 +154,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
         $classified = [];
         $assigned   = 0;
 
-        foreach ($scores as $dayKey => $score) {
+        foreach (array_keys($scores) as $dayKey) {
             $category = $assigned < $targetCore ? 'core' : 'peripheral';
             ++$assigned;
 
@@ -175,10 +174,10 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
      */
     private function calculateCoreScore(array $summary): float
     {
-        $members = $summary['members'];
+        $members     = $summary['members'];
         $memberCount = count($members);
 
-        $faceCount = 0;
+        $faceCount      = 0;
         $qualitySamples = [];
         foreach ($members as $media) {
             if ($media->hasFaces()) {
@@ -259,7 +258,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
 
         sort($timestamps, SORT_NUMERIC);
 
-        return (int) max(0, end($timestamps) - $timestamps[0]);
+        return max(0, end($timestamps) - $timestamps[0]);
     }
 
     /**
@@ -299,13 +298,13 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
     }
 
     /**
-     * @param list<string> $run
-     * @param array<string, array{date:string,members:list<Media>,baseAway:bool}> $days
+     * @param list<string>                                                                                                                                                        $run
+     * @param array<string, array{date:string,members:list<Media>,baseAway:bool}>                                                                                                 $days
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null,centers?:list<array{lat:float,lon:float,radius_km:float,member_count?:int}>} $home
      */
     private function recordDebugSegment(array $run, array $days, array $home): void
     {
-        if ($this->debugContext === null || !$this->debugContext->isEnabled() || $run === []) {
+        if (!$this->debugContext instanceof VacationDebugContext || !$this->debugContext->isEnabled() || $run === []) {
             return;
         }
 
@@ -343,7 +342,7 @@ final class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerI
         $radius         = (float) ($primary['radius_km'] ?? 0.0);
         $primaryMembers = (int) ($primary['member_count'] ?? 0);
 
-        $area    = $radius > 0.0 ? pi() * $radius * $radius : 0.0;
+        $area    = $radius > 0.0 ? M_PI * $radius * $radius : 0.0;
         $density = $area > 0.0 ? $primaryMembers / $area : 0.0;
 
         $this->debugContext->recordSegment([

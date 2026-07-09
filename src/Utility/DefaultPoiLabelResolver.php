@@ -17,7 +17,6 @@ use function array_find;
 use function array_key_exists;
 use function array_keys;
 use function explode;
-use function is_array;
 use function str_contains;
 use function str_replace;
 use function strtolower;
@@ -26,7 +25,7 @@ use function trim;
 /**
  * Resolves the preferred label for a POI based on locale preferences.
  */
-final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
+final readonly class DefaultPoiLabelResolver implements PoiLabelResolverInterface
 {
     /**
      * @var list<string>
@@ -91,13 +90,7 @@ final class DefaultPoiLabelResolver implements PoiLabelResolverInterface
             return $firstLocalized;
         }
 
-        $firstAlternate = array_find($names['alternates'], static fn (string $alternate): bool => $alternate !== '');
-
-        if ($firstAlternate !== null) {
-            return $firstAlternate;
-        }
-
-        return null;
+        return array_find($names['alternates'], static fn (string $alternate): bool => $alternate !== '');
     }
 
     /**

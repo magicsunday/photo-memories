@@ -43,12 +43,12 @@ final class Request
      * @param array<string,string> $server  server parameter map as provided by PHP
      */
     private function __construct(
-        private string $method,
-        private string $path,
+        private readonly string $method,
+        private readonly string $path,
         private array $query,
         private array $headers,
         private array $server,
-        private ?string $body,
+        private readonly ?string $body,
     ) {
     }
 
@@ -121,9 +121,9 @@ final class Request
     /**
      * Creates a synthetic request for testing purposes.
      *
-     * @param array<string,scalar|Stringable> $query request query parameters
-     * @param array<string,string> $headers HTTP headers
-     * @param array<string,string> $server  additional server parameters
+     * @param array<string,scalar|Stringable> $query   request query parameters
+     * @param array<string,string>            $headers HTTP headers
+     * @param array<string,string>            $server  additional server parameters
      *
      * @return self newly created request instance
      */
@@ -151,7 +151,11 @@ final class Request
 
         $normalizedHeaders = [];
         foreach ($headers as $key => $value) {
-            if (!is_string($key) || !is_string($value)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (!is_string($value)) {
                 continue;
             }
 
@@ -165,7 +169,11 @@ final class Request
         ];
 
         foreach ($server as $key => $value) {
-            if (!is_string($key) || !is_string($value)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if (!is_string($value)) {
                 continue;
             }
 

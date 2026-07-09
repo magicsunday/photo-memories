@@ -33,9 +33,9 @@ use function count;
 use function file_put_contents;
 use function implode;
 use function is_array;
+use function is_bool;
 use function is_dir;
 use function is_file;
-use function is_bool;
 use function is_float;
 use function is_int;
 use function is_numeric;
@@ -44,8 +44,8 @@ use function mkdir;
 use function number_format;
 use function sprintf;
 use function str_replace;
-use function trim;
 use function symlink;
+use function trim;
 use function ucwords;
 use function usort;
 
@@ -59,13 +59,13 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     private const string FEED_TITLE = 'Rückblick – Für dich';
 
     public function __construct(
-        private readonly ClusterRepository $clusters,
-        private readonly FeedBuilderInterface $feedBuilder,
-        private readonly ClusterConsolidatorInterface $consolidator,
-        private readonly ClusterEntityToDraftMapper $mapper,
-        private readonly MediaRepository $mediaRepository,
-        private readonly HtmlFeedRenderer $renderer,
-        private readonly ThumbnailPathResolver $thumbnailResolver,
+        private ClusterRepository $clusters,
+        private FeedBuilderInterface $feedBuilder,
+        private ClusterConsolidatorInterface $consolidator,
+        private ClusterEntityToDraftMapper $mapper,
+        private MediaRepository $mediaRepository,
+        private HtmlFeedRenderer $renderer,
+        private ThumbnailPathResolver $thumbnailResolver,
     ) {
     }
 
@@ -105,7 +105,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             $io->warning('Keine Cluster nach der Konsolidierung.');
         }
 
-        $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts, null, null);
+        $items = $mergedDrafts === [] ? [] : $this->feedBuilder->build($mergedDrafts);
         if ($items === []) {
             $io->warning('Der Feed ist leer (Filter/Score/Limit zu streng?).');
         }
@@ -117,8 +117,8 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         $copiedFileCount   = 0;
         $skippedThumbCount = 0;
 
-        $rawCards    = $this->buildDraftCards($rawDrafts, FeedExportStage::Raw, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
-        $mergedCards = $this->buildDraftCards($mergedDrafts, FeedExportStage::Merged, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+        $rawCards     = $this->buildDraftCards($rawDrafts, FeedExportStage::Raw, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
+        $mergedCards  = $this->buildDraftCards($mergedDrafts, FeedExportStage::Merged, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
         $curatedCards = $this->buildCuratedCards($items, $request, $imageDirectory, $copiedFileCount, $skippedThumbCount);
 
         if ($curatedCards === [] && $items !== []) {
@@ -182,6 +182,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
     /**
      * @param list<ClusterDraft> $drafts
+     *
      * @return list<array<string, mixed>>
      */
     private function buildDraftCards(
@@ -215,6 +216,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
     /**
      * @param list<MemoryFeedItem> $items
+     *
      * @return list<array<string, mixed>>
      */
     private function buildCuratedCards(
@@ -347,6 +349,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
     /**
      * @param list<int> $memberIds
+     *
      * @return list<Media>
      */
     private function fetchOrderedMedia(array $memberIds, bool $preferVideoStory): array
@@ -383,6 +386,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
     /**
      * @param list<Media> $mediaItems
+     *
      * @return list<array{href:string, alt:string}>
      */
     private function buildImageEntries(
@@ -447,11 +451,11 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
     private function formatTimeRange(?DateTimeImmutable $start, ?DateTimeImmutable $end): ?string
     {
-        if ($start === null && $end === null) {
+        if (!$start instanceof DateTimeImmutable && !$end instanceof DateTimeImmutable) {
             return null;
         }
 
-        if ($start !== null && $end !== null) {
+        if ($start instanceof DateTimeImmutable && $end instanceof DateTimeImmutable) {
             $startFormatted = $start->format('d.m.Y H:i');
             $endFormatted   = $end->format('d.m.Y H:i');
 
@@ -603,11 +607,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
             return false;
         }
 
-        if ($minimum > 0 && count($sequence) < $minimum) {
-            return false;
-        }
-
-        return true;
+        return $minimum <= 0 || count($sequence) >= $minimum;
     }
 
     /**
@@ -615,7 +615,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
      *
      * @return list<int>
      */
-    private function normaliseMemberIdList(null|array $values): array
+    private function normaliseMemberIdList(?array $values): array
     {
         if (!is_array($values)) {
             return [];
@@ -632,7 +632,11 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
                 $id = (int) $value;
             }
 
-            if ($id === null || $id <= 0) {
+            if ($id === null) {
+                continue;
+            }
+
+            if ($id <= 0) {
                 continue;
             }
 
@@ -640,7 +644,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
                 continue;
             }
 
-            $result[]   = $id;
+            $result[]  = $id;
             $seen[$id] = true;
         }
 
@@ -731,7 +735,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
                 $text = $label;
                 if (is_float($score) || is_int($score)) {
-                    $formatted = number_format((float) $score, 2, ',', '');
+                    $formatted = number_format($score, 2, ',', '');
                     $text      = sprintf('%s (%s)', $label, $formatted);
                 }
 

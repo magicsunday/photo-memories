@@ -14,9 +14,9 @@ namespace MagicSunday\Memories\Test\Integration\Clusterer;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
-use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
+use MagicSunday\Memories\Clusterer\Service\VacationScoreCalculator;
 use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Scoring\NullHolidayResolver;
@@ -98,16 +98,14 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         $locationHelper   = LocationHelper::createDefault();
         $emitter          = new RecordingMonitoringEmitter();
         $selectionOptions = new VacationSelectionOptions(targetTotal: 3, maxPerDay: 3);
-        $filter = static function (array $members): array {
-            return [
-                'members'   => [$members[0], $members[2]],
-                'telemetry' => [
-                    'near_duplicate_blocked'      => 1,
-                    'near_duplicate_replacements' => 0,
-                    'spacing_rejections'          => 2,
-                ],
-            ];
-        };
+        $filter           = (static fn (array $members): array => [
+            'members'   => [$members[0], $members[2]],
+            'telemetry' => [
+                'near_duplicate_blocked'      => 1,
+                'near_duplicate_replacements' => 0,
+                'spacing_rejections'          => 2,
+            ],
+        ]);
 
         $telemetryOverrides = [
             'relaxation_hints' => [
@@ -162,10 +160,10 @@ final class VacationScoreCalculatorIntegrationTest extends TestCase
         $draft = $calculator->buildDraft([$dayKey], $days, $home, $dayContext);
 
         self::assertNotNull($draft);
-        $params        = $draft->getParams();
-        $memberMetrics = $params['member_selection'];
+        $params         = $draft->getParams();
+        $memberMetrics  = $params['member_selection'];
         $qualitySummary = $params['member_quality']['summary'] ?? [];
-        $runMetrics    = $memberMetrics['run_metrics']
+        $runMetrics     = $memberMetrics['run_metrics']
             ?? ($qualitySummary['selection_run_metrics'] ?? null);
         self::assertEqualsWithDelta(1 / 3, $runMetrics['selection_dedupe_rate'], 0.001);
         self::assertGreaterThan(0.0, $runMetrics['selection_average_spacing_seconds']);

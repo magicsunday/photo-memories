@@ -11,23 +11,23 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Support\Memories;
 
-final class MemoryDataset
+final readonly class MemoryDataset
 {
     /**
-     * @param array<int, string>                     $themes
-     * @param array<int, string>                     $storyboardTransitions
-     * @param array<int, array<string, mixed>>       $clusters
-     * @param array<string, mixed>                   $expected
+     * @param array<int, string>               $themes
+     * @param array<int, string>               $storyboardTransitions
+     * @param array<int, array<string, mixed>> $clusters
+     * @param array<string, mixed>             $expected
      */
     public function __construct(
-        private readonly string $name,
-        private readonly string $title,
-        private readonly array $themes,
-        private readonly string $primaryClusterId,
-        private readonly array $storyboardTransitions,
-        private readonly array $clusters,
-        private readonly array $expected,
-        private readonly string $datasetPath,
+        private string $name,
+        private string $title,
+        private array $themes,
+        private string $primaryClusterId,
+        private array $storyboardTransitions,
+        private array $clusters,
+        private array $expected,
+        private string $datasetPath,
     ) {
     }
 

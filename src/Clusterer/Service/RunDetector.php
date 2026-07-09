@@ -28,7 +28,6 @@ use function is_float;
 use function is_int;
 use function is_string;
 use function max;
-use function pi;
 use function strtolower;
 
 /**
@@ -36,13 +35,15 @@ use function strtolower;
  */
 final class RunDetector implements VacationRunDetectorInterface
 {
-    private const TRANSIT_RATIO_THRESHOLD = 0.6;
-    private const TRANSIT_SPEED_THRESHOLD = 90.0;
-    private const MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
+    private const float TRANSIT_RATIO_THRESHOLD = 0.6;
+
+    private const float TRANSIT_SPEED_THRESHOLD = 90.0;
+
+    private const int MIN_STAYPOINT_BRIDGE_DWELL_SECONDS = 7200;
 
     /**
-     * @param float                                     $minAwayDistanceKm       minimum distance from home to count as away day
-     * @param int                                       $minItemsPerDay          minimum number of items required to bridge runs
+     * @param float $minAwayDistanceKm minimum distance from home to count as away day
+     * @param int   $minItemsPerDay    minimum number of items required to bridge runs
      * @param list<array{
      *     distance_km:float,
      *     min_center_count?:int,
@@ -53,9 +54,9 @@ final class RunDetector implements VacationRunDetectorInterface
      * }> $minAwayDistanceProfiles
      */
     public function __construct(
-        private TransportDayExtender $transportDayExtender,
-        private float $minAwayDistanceKm = 140.0,
-        private int $minItemsPerDay = 4,
+        private readonly TransportDayExtender $transportDayExtender,
+        private readonly float $minAwayDistanceKm = 140.0,
+        private readonly int $minItemsPerDay = 4,
         private array $minAwayDistanceProfiles = [],
     ) {
         if ($this->minAwayDistanceKm <= 0.0) {
@@ -133,16 +134,16 @@ final class RunDetector implements VacationRunDetectorInterface
             ];
         }
 
-        $isAwayCandidate = [];
+        $isAwayCandidate      = [];
         $softDistanceEligible = [];
         foreach ($keys as $key) {
             $features = $metadata[$key];
 
-            $distanceMetric       = $features['distanceMetricKm'];
-            $strictDistanceMatch  = $distanceMetric > $strictMinAwayDistanceKm;
-            $softDistanceMatch    = $distanceMetric > $softMinAwayDistanceKm;
+            $distanceMetric      = $features['distanceMetricKm'];
+            $strictDistanceMatch = $distanceMetric > $strictMinAwayDistanceKm;
+            $softDistanceMatch   = $distanceMetric > $softMinAwayDistanceKm;
 
-            if ($strictDistanceMatch === false && $softDistanceMatch === true) {
+            if ($strictDistanceMatch === false && $softDistanceMatch) {
                 $metadata[$key]['softDistanceEligible'] = true;
                 $softDistanceEligible[$key]             = true;
             }
@@ -157,10 +158,8 @@ final class RunDetector implements VacationRunDetectorInterface
             if ($candidate === false && $features['hasGpsAnchors']) {
                 $hasUsefulSamples = $features['sufficientSamples'] || $features['photoCount'] >= 2;
 
-                if ($hasUsefulSamples && $features['centroidDistanceKm'] !== null && $features['centroidRadiusKm'] !== null) {
-                    if ($features['centroidDistanceKm'] > $features['centroidRadiusKm']) {
-                        $candidate = true;
-                    }
+                if ($hasUsefulSamples && $features['centroidDistanceKm'] !== null && $features['centroidRadiusKm'] !== null && $features['centroidDistanceKm'] > $features['centroidRadiusKm']) {
+                    $candidate = true;
                 }
 
                 if ($candidate === false && $hasUsefulSamples && $strictDistanceMatch) {
@@ -220,8 +219,11 @@ final class RunDetector implements VacationRunDetectorInterface
         for ($i = 0; $i < $countKeys; ++$i) {
             $key      = $keys[$i];
             $features = $metadata[$key];
+            if ($isAwayCandidate[$key] ?? false) {
+                continue;
+            }
 
-            if (($isAwayCandidate[$key] ?? false) || $features['transitHeavy'] === false) {
+            if ($features['transitHeavy'] === false) {
                 continue;
             }
 
@@ -259,8 +261,11 @@ final class RunDetector implements VacationRunDetectorInterface
         $longRunMask = [];
         foreach ($initialRuns as $run) {
             $summary = $this->summarizeRun($run, $metadata);
+            if ($summary['awayDays'] < 10) {
+                continue;
+            }
 
-            if ($summary['awayDays'] < 10 || $summary['averagePhotoCount'] < 2.0) {
+            if ($summary['averagePhotoCount'] < 2.0) {
                 continue;
             }
 
@@ -270,8 +275,11 @@ final class RunDetector implements VacationRunDetectorInterface
 
             $startIndex = $indexByKey[$run[0]] ?? null;
             $endIndex   = $indexByKey[$run[count($run) - 1]] ?? null;
+            if ($startIndex === null) {
+                continue;
+            }
 
-            if ($startIndex === null || $endIndex === null) {
+            if ($endIndex === null) {
                 continue;
             }
 
@@ -285,8 +293,8 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         if ($longRunMask !== []) {
-            foreach ($longRunMask as $runKey => $_) {
-                if (($isAwayCandidate[$runKey] ?? false) === true) {
+            foreach (array_keys($longRunMask) as $runKey) {
+                if ($isAwayCandidate[$runKey] ?? false) {
                     continue;
                 }
 
@@ -314,9 +322,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 $isAwayCandidate,
                 $keys,
                 $metadata,
-                function (string $key) use ($longRunMask): int {
-                    return ($longRunMask[$key] ?? false) ? 2 : $this->minItemsPerDay;
-                },
+                fn (string $key): int => ($longRunMask[$key] ?? false) ? 2 : $this->minItemsPerDay,
             );
 
             $this->promoteTransitAdjacency($isAwayCandidate, $keys, $metadata);
@@ -362,10 +368,10 @@ final class RunDetector implements VacationRunDetectorInterface
             return [$this->minAwayDistanceKm, $this->minAwayDistanceKm];
         }
 
-        $centerCount   = count($centers);
-        $totalMembers  = 0;
-        $primary       = $centers[0];
-        $primaryRadius = (float) ($primary['radius_km'] ?? 0.0);
+        $centerCount    = count($centers);
+        $totalMembers   = 0;
+        $primary        = $centers[0];
+        $primaryRadius  = (float) ($primary['radius_km'] ?? 0.0);
         $primaryMembers = (int) ($primary['member_count'] ?? 0);
         $primaryCountry = null;
 
@@ -379,7 +385,7 @@ final class RunDetector implements VacationRunDetectorInterface
 
         $primaryDensity = 0.0;
         if ($primaryRadius > 0.0 && $primaryMembers > 0) {
-            $areaKm2       = pi() * $primaryRadius * $primaryRadius;
+            $areaKm2        = M_PI * $primaryRadius * $primaryRadius;
             $primaryDensity = $areaKm2 > 0.0 ? $primaryMembers / $areaKm2 : 0.0;
         }
 
@@ -401,7 +407,7 @@ final class RunDetector implements VacationRunDetectorInterface
 
     /**
      * @param array{distance_km:float,min_center_count?:int,min_total_member_count?:int,max_primary_radius_km?:float,min_primary_density?:float,countries?:list<string>} $profile
-     * @param bool                                                                                                                                   $ignoreMemberFloor
+     * @param bool                                                                                                                                                       $ignoreMemberFloor
      */
     private function matchesDistanceProfile(
         array $profile,
@@ -423,28 +429,26 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         $maxPrimaryRadius = $profile['max_primary_radius_km'] ?? null;
-        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && (float) $maxPrimaryRadius > 0.0 && $primaryRadius > (float) $maxPrimaryRadius) {
+        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && $maxPrimaryRadius > 0.0 && $primaryRadius > $maxPrimaryRadius) {
             return false;
         }
 
         $minPrimaryDensity = $profile['min_primary_density'] ?? null;
-        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && (float) $minPrimaryDensity > 0.0 && $primaryDensity < (float) $minPrimaryDensity) {
+        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && $minPrimaryDensity > 0.0 && $primaryDensity < $minPrimaryDensity) {
             return false;
         }
 
-        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== []) {
-            if ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true)) {
-                return false;
-            }
+        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== [] && ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true))) {
+            return false;
         }
 
         return true;
     }
 
     /**
-     * @param list<string> $keys
-     * @param array<string, bool> $isAwayCandidate
-     * @param array<string, int> $indexByKey
+     * @param list<string>                        $keys
+     * @param array<string, bool>                 $isAwayCandidate
+     * @param array<string, int>                  $indexByKey
      * @param array<string, array<string, mixed>> $days
      *
      * @return list<list<string>>
@@ -454,17 +458,7 @@ final class RunDetector implements VacationRunDetectorInterface
         $runs = [];
         $run  = [];
 
-        $flush = function () use (&$run, &$runs, $keys, $indexByKey, $days): void {
-            if ($run === []) {
-                return;
-            }
-
-            $extended = $this->transportDayExtender->extend($run, $keys, $indexByKey, $days);
-            if ($extended !== []) {
-                $runs[] = $extended;
-            }
-
-            $run = [];
+        $flush = function (): void {
         };
 
         foreach ($keys as $key) {
@@ -489,7 +483,7 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param list<string> $run
+     * @param list<string>                         $run
      * @param array<string, array{photoCount:int}> $metadata
      *
      * @return array{awayDays:int, averagePhotoCount:float}
@@ -504,16 +498,16 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         return [
-            'awayDays'           => $awayDays,
-            'averagePhotoCount'  => $awayDays > 0 ? $totalPhotos / $awayDays : 0.0,
+            'awayDays'          => $awayDays,
+            'averagePhotoCount' => $awayDays > 0 ? $totalPhotos / $awayDays : 0.0,
         ];
     }
 
     /**
-     * @param array<string, bool> $isAwayCandidate
-     * @param list<string>        $keys
+     * @param array<string, bool>                                                       $isAwayCandidate
+     * @param list<string>                                                              $keys
      * @param array<string, array{photoCount:int,hasGpsAnchors:bool,transitHeavy:bool}> $metadata
-     * @param callable(string, int):int $thresholdProvider
+     * @param callable(string, int):int                                                 $thresholdProvider
      */
     private function applyLowSampleBridging(
         array &$isAwayCandidate,
@@ -532,8 +526,11 @@ final class RunDetector implements VacationRunDetectorInterface
 
             $prevIsAway = $i > 0 && ($isAwayCandidate[$keys[$i - 1]] ?? false);
             $nextIsAway = $i + 1 < $countKeys && ($isAwayCandidate[$keys[$i + 1]] ?? false);
+            if ($prevIsAway === false) {
+                continue;
+            }
 
-            if ($prevIsAway === false || $nextIsAway === false) {
+            if ($nextIsAway === false) {
                 continue;
             }
 
@@ -603,8 +600,8 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array<string, bool>                                  $isAwayCandidate
-     * @param list<string>                                         $keys
+     * @param array<string, bool>                     $isAwayCandidate
+     * @param list<string>                            $keys
      * @param array<string, array{transitHeavy:bool}> $metadata
      */
     private function promoteTransitAdjacency(array &$isAwayCandidate, array $keys, array $metadata): void
@@ -614,8 +611,11 @@ final class RunDetector implements VacationRunDetectorInterface
         for ($i = 0; $i < $countKeys; ++$i) {
             $key      = $keys[$i];
             $features = $metadata[$key];
+            if ($isAwayCandidate[$key] ?? false) {
+                continue;
+            }
 
-            if (($isAwayCandidate[$key] ?? false) || $features['transitHeavy'] === false) {
+            if ($features['transitHeavy'] === false) {
                 continue;
             }
 
@@ -686,11 +686,7 @@ final class RunDetector implements VacationRunDetectorInterface
             return true;
         }
 
-        if ($features['baseAway']) {
-            return true;
-        }
-
-        return false;
+        return (bool) $features['baseAway'];
     }
 
     /**
@@ -744,11 +740,8 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         $poiDensity = (float) ($summary['poiDensity'] ?? 0.0);
-        if ($poiDensity >= 0.25) {
-            return true;
-        }
 
-        return false;
+        return $poiDensity >= 0.25;
     }
 
     private function summaryTimestamp(array $summary): ?int
@@ -829,14 +822,14 @@ final class RunDetector implements VacationRunDetectorInterface
             }
 
             if (isset($profile['max_primary_radius_km']) && (is_float($profile['max_primary_radius_km']) || is_int($profile['max_primary_radius_km']))) {
-                $radius = (float) $profile['max_primary_radius_km'];
+                $radius = $profile['max_primary_radius_km'];
                 if ($radius > 0.0) {
                     $entry['max_primary_radius_km'] = $radius;
                 }
             }
 
             if (isset($profile['min_primary_density']) && (is_float($profile['min_primary_density']) || is_int($profile['min_primary_density']))) {
-                $density = (float) $profile['min_primary_density'];
+                $density = $profile['min_primary_density'];
                 if ($density > 0.0) {
                     $entry['min_primary_density'] = $density;
                 }
@@ -845,7 +838,11 @@ final class RunDetector implements VacationRunDetectorInterface
             if (isset($profile['countries']) && is_array($profile['countries'])) {
                 $countries = [];
                 foreach ($profile['countries'] as $country) {
-                    if (!is_string($country) || $country === '') {
+                    if (!is_string($country)) {
+                        continue;
+                    }
+
+                    if ($country === '') {
                         continue;
                     }
 
@@ -864,7 +861,7 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array<string, mixed>                                         $summary
+     * @param array<string, mixed>                                                                                                                                                                                                                $summary
      * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      */
     private function isDominantStaypointOutsideHome(array $summary, array $home): bool
@@ -888,7 +885,7 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array<string, mixed>                                         $summary
+     * @param array<string, mixed>                                                                                                                                                                                                                $summary
      * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      */
     private function isDominantStaypointInsideHome(array $summary, array $home): bool
@@ -935,10 +932,7 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         $maxSpeed = (float) ($summary['maxSpeedKmh'] ?? 0.0);
-        if ($maxSpeed >= self::TRANSIT_SPEED_THRESHOLD) {
-            return true;
-        }
 
-        return false;
+        return $maxSpeed >= self::TRANSIT_SPEED_THRESHOLD;
     }
 }

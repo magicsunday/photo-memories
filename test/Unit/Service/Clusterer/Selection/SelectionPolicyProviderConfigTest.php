@@ -25,8 +25,8 @@ final class SelectionPolicyProviderConfigTest extends TestCase
 
         $provider = new SelectionPolicyProvider(
             profiles: $configuration['profiles'],
-            algorithmProfiles: $configuration['algorithm_profiles'],
             defaultProfile: $configuration['default_profile'],
+            algorithmProfiles: $configuration['algorithm_profiles'],
         );
 
         $policy = $provider->forAlgorithm('vacation');
@@ -83,11 +83,11 @@ final class SelectionPolicyProviderConfigTest extends TestCase
     #[Test]
     public function storylineSpecificProfileOverridesDefault(): void
     {
-        $configuration = $this->selectionConfiguration();
+        $configuration                                   = $this->selectionConfiguration();
         $configuration['algorithm_profiles']['vacation'] = [
-            'default' => 'vacation',
+            'default'          => 'vacation',
             'vacation.transit' => 'location',
-            'transit' => 'location',
+            'transit'          => 'location',
         ];
 
         $provider = new SelectionPolicyProvider(
@@ -112,9 +112,9 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         $parameters = $raw['parameters'];
 
         return [
-            'profiles' => $parameters['memories.selection.profiles'],
+            'profiles'           => $parameters['memories.selection.profiles'],
             'algorithm_profiles' => $parameters['memories.selection.algorithm_profiles'],
-            'default_profile' => $parameters['memories.selection.default_profile'],
+            'default_profile'    => $parameters['memories.selection.default_profile'],
         ];
     }
 }

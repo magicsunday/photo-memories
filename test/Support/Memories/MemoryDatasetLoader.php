@@ -32,9 +32,9 @@ use function usort;
 
 use const JSON_THROW_ON_ERROR;
 
-final class MemoryDatasetLoader
+final readonly class MemoryDatasetLoader
 {
-    public function __construct(private readonly string $fixturesBaseDir)
+    public function __construct(private string $fixturesBaseDir)
     {
     }
 
@@ -55,12 +55,12 @@ final class MemoryDatasetLoader
 
     public function load(string $dataset): MemoryDataset
     {
-        $datasetPath = rtrim($this->fixturesBaseDir, '/').'/'.$dataset;
+        $datasetPath = rtrim($this->fixturesBaseDir, '/') . '/' . $dataset;
         if (!is_dir($datasetPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" does not exist under "%s".', $dataset, $this->fixturesBaseDir));
         }
 
-        $metadataPath = $datasetPath.'/metadata.json';
+        $metadataPath = $datasetPath . '/metadata.json';
         if (!file_exists($metadataPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" is missing metadata.json.', $dataset));
         }
@@ -98,7 +98,7 @@ final class MemoryDatasetLoader
             throw new InvalidArgumentException(sprintf('Dataset "%s" must define a primary_cluster.', $dataset));
         }
 
-        $storyboard = $metadata['storyboard'] ?? [];
+        $storyboard  = $metadata['storyboard'] ?? [];
         $transitions = $storyboard['transitions'] ?? [];
         if (!is_array($transitions)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" storyboard transitions must be an array.', $dataset));
@@ -137,14 +137,14 @@ final class MemoryDatasetLoader
                     throw new InvalidArgumentException(sprintf('Dataset "%s" cluster "%s" item is missing a preview reference.', $dataset, (string) ($cluster['id'] ?? '?')));
                 }
 
-                $previewPath = $datasetPath.'/'.ltrim($preview, '/');
+                $previewPath = $datasetPath . '/' . ltrim($preview, '/');
                 if (!file_exists($previewPath)) {
                     throw new InvalidArgumentException(sprintf('Preview "%s" referenced by dataset "%s" does not exist.', $preview, $dataset));
                 }
             }
         }
 
-        $expectedPath = $datasetPath.'/expected.yaml';
+        $expectedPath = $datasetPath . '/expected.yaml';
         if (!file_exists($expectedPath)) {
             throw new InvalidArgumentException(sprintf('Dataset "%s" is missing expected.yaml.', $dataset));
         }

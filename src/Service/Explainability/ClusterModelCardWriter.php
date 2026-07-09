@@ -15,7 +15,6 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 
 use function array_map;
-use function array_sum;
 use function count;
 use function htmlspecialchars;
 use function implode;
@@ -41,20 +40,20 @@ use const JSON_UNESCAPED_UNICODE;
 /**
  * Generates lightweight HTML model cards for consolidated clusters.
  */
-final class ClusterModelCardWriter
+final readonly class ClusterModelCardWriter
 {
-    private const REJECTION_LABELS = [
-        SelectionTelemetry::REASON_TIME_GAP => 'Zeitabstand',
-        SelectionTelemetry::REASON_DAY_QUOTA => 'Tag-Limit',
-        SelectionTelemetry::REASON_TIME_SLOT => 'Zeitslot',
-        SelectionTelemetry::REASON_STAYPOINT => 'Aufenthaltsort-Limit',
-        SelectionTelemetry::REASON_PHASH => 'Ähnlichkeit (pHash)',
-        SelectionTelemetry::REASON_SCENE => 'Szenen-Balance',
+    private const array REJECTION_LABELS = [
+        SelectionTelemetry::REASON_TIME_GAP    => 'Zeitabstand',
+        SelectionTelemetry::REASON_DAY_QUOTA   => 'Tag-Limit',
+        SelectionTelemetry::REASON_TIME_SLOT   => 'Zeitslot',
+        SelectionTelemetry::REASON_STAYPOINT   => 'Aufenthaltsort-Limit',
+        SelectionTelemetry::REASON_PHASH       => 'Ähnlichkeit (pHash)',
+        SelectionTelemetry::REASON_SCENE       => 'Szenen-Balance',
         SelectionTelemetry::REASON_ORIENTATION => 'Ausrichtung',
-        SelectionTelemetry::REASON_PEOPLE => 'Personen-Balance',
+        SelectionTelemetry::REASON_PEOPLE      => 'Personen-Balance',
     ];
 
-    public function __construct(private readonly string $outputDirectory)
+    public function __construct(private string $outputDirectory)
     {
     }
 
@@ -101,35 +100,35 @@ final class ClusterModelCardWriter
 
     private function renderModelCard(ClusterDraft $draft, string $fingerprint): string
     {
-        $params           = $draft->getParams();
-        $memberSelection  = $this->normaliseArray($params['member_selection'] ?? null);
-        $memberQuality    = $this->normaliseArray($params['member_quality'] ?? null);
-        $selectionSummary = $this->normaliseArray($memberQuality['summary'] ?? null);
+        $params             = $draft->getParams();
+        $memberSelection    = $this->normaliseArray($params['member_selection'] ?? null);
+        $memberQuality      = $this->normaliseArray($params['member_quality'] ?? null);
+        $selectionSummary   = $this->normaliseArray($memberQuality['summary'] ?? null);
         $selectionTelemetry = $this->normaliseArray($selectionSummary['selection_telemetry'] ?? ($memberSelection['selection_telemetry'] ?? null));
-        $policyDetails    = $this->normaliseArray($memberSelection['policy'] ?? ($selectionTelemetry['policy'] ?? null));
-        $rejectionCounts  = $this->normaliseArray($selectionSummary['rejection_counts'] ?? ($selectionTelemetry['rejection_counts'] ?? ($memberSelection['rejection_counts'] ?? null)));
-        $drops            = $this->normaliseArray($selectionTelemetry['drops'] ?? []);
-        $merges           = $this->normaliseArray(($params['meta']['merges'] ?? []) ?? []);
-        $scores           = $this->collectScoreDetails($params, $selectionSummary);
-        $mmr              = $this->normaliseArray($selectionTelemetry['mmr'] ?? null);
+        $policyDetails      = $this->normaliseArray($memberSelection['policy'] ?? ($selectionTelemetry['policy'] ?? null));
+        $rejectionCounts    = $this->normaliseArray($selectionSummary['rejection_counts'] ?? ($selectionTelemetry['rejection_counts'] ?? ($memberSelection['rejection_counts'] ?? null)));
+        $drops              = $this->normaliseArray($selectionTelemetry['drops'] ?? []);
+        $merges             = $this->normaliseArray(($params['meta']['merges'] ?? []) ?? []);
+        $scores             = $this->collectScoreDetails($params, $selectionSummary);
+        $mmr                = $this->normaliseArray($selectionTelemetry['mmr'] ?? null);
 
         $header = [
-            'Fingerprint'             => $fingerprint,
-            'Algorithmus'             => $draft->getAlgorithm(),
-            'Storyline'               => $draft->getStoryline(),
-            'Gruppe'                  => $this->stringOrNull($params['group'] ?? null) ?? 'unbekannt',
-            'Mitglieder (kuratiert)'  => $selectionSummary['curated_count'] ?? ($memberSelection['counts']['curated'] ?? count($draft->getMembers())),
-            'Mitglieder (roh)'        => $selectionSummary['counts']['raw'] ?? ($memberSelection['counts']['raw'] ?? count($draft->getMembers())),
-            'Score'                   => $this->formatScore($params['score'] ?? null),
+            'Fingerprint'            => $fingerprint,
+            'Algorithmus'            => $draft->getAlgorithm(),
+            'Storyline'              => $draft->getStoryline(),
+            'Gruppe'                 => $this->stringOrNull($params['group'] ?? null) ?? 'unbekannt',
+            'Mitglieder (kuratiert)' => $selectionSummary['curated_count'] ?? ($memberSelection['counts']['curated'] ?? count($draft->getMembers())),
+            'Mitglieder (roh)'       => $selectionSummary['counts']['raw'] ?? ($memberSelection['counts']['raw'] ?? count($draft->getMembers())),
+            'Score'                  => $this->formatScore($params['score'] ?? null),
         ];
 
-        $strategies = $this->buildStrategiesSection($policyDetails, $params);
-        $mergeTable = $this->renderMergeTable($merges);
-        $scoreTable = $this->renderKeyValueTable($scores);
+        $strategies     = $this->buildStrategiesSection($policyDetails, $params);
+        $mergeTable     = $this->renderMergeTable($merges);
+        $scoreTable     = $this->renderKeyValueTable($scores);
         $rejectionTable = $this->renderRejectionTable($rejectionCounts, $drops);
-        $keyPhoto = $this->buildKeyPhotoNarrative($draft, $selectionSummary, $policyDetails);
-        $mmrSection = $this->renderMmrSection($mmr);
-        $featuresJson = $this->renderDecisionFeaturesJson($selectionTelemetry);
+        $keyPhoto       = $this->buildKeyPhotoNarrative($draft, $selectionSummary, $policyDetails);
+        $mmrSection     = $this->renderMmrSection($mmr);
+        $featuresJson   = $this->renderDecisionFeaturesJson($selectionTelemetry);
 
         $title = sprintf('Model Card – %s (%s)', $draft->getStoryline(), $fingerprint);
 
@@ -236,7 +235,11 @@ HTML;
             $rows = [];
             ksort($policyDetails);
             foreach ($policyDetails as $key => $value) {
-                if ($value === null || $value === '') {
+                if ($value === null) {
+                    continue;
+                }
+
+                if ($value === '') {
                     continue;
                 }
 
@@ -256,7 +259,11 @@ HTML;
         if (is_array($strategies) && $strategies !== []) {
             $rows = [];
             foreach ($strategies as $strategy) {
-                if (!is_string($strategy) || trim($strategy) === '') {
+                if (!is_string($strategy)) {
+                    continue;
+                }
+
+                if (trim($strategy) === '') {
                     continue;
                 }
 
@@ -287,10 +294,10 @@ HTML;
                 continue;
             }
 
-            $source = $this->stringOrNull($entry['source'] ?? null) ?? 'unbekannt';
+            $source   = $this->stringOrNull($entry['source'] ?? null) ?? 'unbekannt';
             $decision = $this->stringOrNull($entry['decision'] ?? null) ?? 'n/a';
-            $overlap = $this->stringOrNull($entry['overlap'] ?? null) ?? 'n/a';
-            $reason  = $this->stringOrNull($entry['reason'] ?? null) ?? '';
+            $overlap  = $this->stringOrNull($entry['overlap'] ?? null) ?? 'n/a';
+            $reason   = $this->stringOrNull($entry['reason'] ?? null) ?? '';
 
             if (is_numeric($overlap)) {
                 $overlap = number_format((float) $overlap, 2);
@@ -340,7 +347,7 @@ HTML;
         $memberQuality = $this->normaliseArray($params['member_quality']['summary'] ?? null);
         if ($memberQuality !== []) {
             $scores['Mitgliedsqualität'] = [
-                'ordered' => $memberQuality['ordered'] ?? [],
+                'ordered'          => $memberQuality['ordered'] ?? [],
                 'selection_policy' => $memberQuality['selection_policy'] ?? null,
             ];
         }
@@ -360,7 +367,7 @@ HTML;
                 continue;
             }
 
-            $label = self::REJECTION_LABELS[$reason] ?? (string) $reason;
+            $label  = self::REJECTION_LABELS[$reason] ?? (string) $reason;
             $rows[] = sprintf(
                 '<tr><td>%s</td><td>%s</td></tr>',
                 $this->escape($label),
@@ -368,18 +375,16 @@ HTML;
             );
         }
 
-        if ($drops !== []) {
-            foreach ($drops as $category => $value) {
-                if (!is_numeric($value)) {
-                    continue;
-                }
-
-                $rows[] = sprintf(
-                    '<tr><td>%s</td><td>%s</td></tr>',
-                    $this->escape('Drops: ' . (string) $category),
-                    $this->escape((string) $value)
-                );
+        foreach ($drops as $category => $value) {
+            if (!is_numeric($value)) {
+                continue;
             }
+
+            $rows[] = sprintf(
+                '<tr><td>%s</td><td>%s</td></tr>',
+                $this->escape('Drops: ' . $category),
+                $this->escape((string) $value)
+            );
         }
 
         if ($rows === []) {
@@ -420,7 +425,7 @@ HTML;
         }
 
         $summaryTable = $this->renderKeyValueTable([
-            'λ' => $mmr['lambda'] ?? 'n/a',
+            'λ'                   => $mmr['lambda'] ?? 'n/a',
             'Ähnlichkeit (Floor)' => $mmr['similarity_floor'] ?? 'n/a',
             'Ähnlichkeit (Cap)'   => $mmr['similarity_cap'] ?? 'n/a',
             'Max. Kandidaten'     => $mmr['max_considered'] ?? 'n/a',
@@ -439,8 +444,8 @@ HTML;
                 continue;
             }
 
-            $step     = $iteration['step'] ?? 'n/a';
-            $selected = $iteration['selected'] ?? 'n/a';
+            $step        = $iteration['step'] ?? 'n/a';
+            $selected    = $iteration['selected'] ?? 'n/a';
             $evaluations = $iteration['evaluations'] ?? [];
             if (is_array($evaluations)) {
                 $evaluations = json_encode($evaluations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

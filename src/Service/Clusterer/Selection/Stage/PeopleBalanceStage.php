@@ -27,15 +27,15 @@ use function max;
 /**
  * Balances person coverage while prioritising important cohorts.
  */
-final class PeopleBalanceStage implements SelectionStageInterface
+final readonly class PeopleBalanceStage implements SelectionStageInterface
 {
     /**
      * @param list<int> $importantPersonIds
      * @param list<int> $fallbackPersonIds
      */
     public function __construct(
-        private readonly array $importantPersonIds = [],
-        private readonly array $fallbackPersonIds = [],
+        private array $importantPersonIds = [],
+        private array $fallbackPersonIds = [],
     ) {
     }
 
@@ -50,8 +50,8 @@ final class PeopleBalanceStage implements SelectionStageInterface
             return [];
         }
 
-        $selected              = [];
-        $personCount           = [];
+        $selected               = [];
+        $personCount            = [];
         $hasImportantCandidates = $this->hasImportantCandidates($candidates);
 
         foreach ($candidates as $candidate) {
@@ -74,15 +74,7 @@ final class PeopleBalanceStage implements SelectionStageInterface
             $nextTotal = count($selected) + 1;
             $shareCap  = $hasImportantCandidates ? 0.5 : 0.4;
             $limit     = $this->personLimit($nextTotal, $shareCap);
-
-            $allowed = false;
-            foreach ($persons as $person) {
-                if (($personCount[$person] ?? 0) + 1 <= $limit) {
-                    $allowed = true;
-
-                    break;
-                }
-            }
+            $allowed   = array_any($persons, fn ($person): bool => ($personCount[$person] ?? 0) + 1 <= $limit);
 
             if (!$allowed && $this->contains($persons, $this->fallbackPersonIds)) {
                 $allowed = true;
@@ -168,11 +160,7 @@ final class PeopleBalanceStage implements SelectionStageInterface
 
         $count    = (int) ($metrics['count'] ?? 0);
         $coverage = $metrics['largest_coverage'] ?? null;
-        if (is_numeric($coverage)) {
-            $coverage = (float) $coverage;
-        } else {
-            $coverage = null;
-        }
+        $coverage = is_numeric($coverage) ? (float) $coverage : null;
 
         return FaceMetricHelper::isGroupShot($count, $coverage);
     }

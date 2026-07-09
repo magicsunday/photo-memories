@@ -81,4 +81,3 @@ final class PhashDiversityStageTest extends TestCase
         );
     }
 }
-

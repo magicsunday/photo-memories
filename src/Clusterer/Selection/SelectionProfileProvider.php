@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Selection;
 
 use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability;
+
 use function array_key_exists;
 use function array_merge;
 use function filter_var;
@@ -21,6 +22,7 @@ use function is_numeric;
 use function is_string;
 use function max;
 use function round;
+
 use const FILTER_NULL_ON_FAILURE;
 use const FILTER_VALIDATE_BOOLEAN;
 
@@ -97,7 +99,7 @@ final class SelectionProfileProvider
         /** @var array<string, int|float> $merged */
         $merged = array_merge($baseOverrides, $this->runtimeOverrides, $this->sanitizeOverrides($overrides));
 
-        $targetTotal   = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
+        $targetTotal  = $this->intValue($merged, 'target_total', $this->defaultOptions->targetTotal);
         $minimumTotal = $this->resolveMinimumTotal($merged, $targetTotal);
 
         $faceDetectionAvailable = $this->faceDetectionAvailability?->isAvailable() ?? true;
@@ -140,7 +142,15 @@ final class SelectionProfileProvider
         $result = [];
 
         foreach ($profiles as $key => $values) {
-            if (!is_string($key) || $key === '' || !is_array($values)) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($key === '') {
+                continue;
+            }
+
+            if (!is_array($values)) {
                 continue;
             }
 
@@ -164,7 +174,19 @@ final class SelectionProfileProvider
         $result = [];
 
         foreach ($algorithmProfiles as $algorithm => $profile) {
-            if (!is_string($algorithm) || $algorithm === '' || !is_string($profile) || $profile === '') {
+            if (!is_string($algorithm)) {
+                continue;
+            }
+
+            if ($algorithm === '') {
+                continue;
+            }
+
+            if (!is_string($profile)) {
+                continue;
+            }
+
+            if ($profile === '') {
                 continue;
             }
 

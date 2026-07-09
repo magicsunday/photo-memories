@@ -11,8 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\HolidayEventClusterStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -146,8 +146,8 @@ final class HolidayEventClusterStrategyTest extends TestCase
             takenAt: $takenAt,
             lat: $lat,
             lon: $lon,
-            size: 2048,
             location: $location,
+            size: 2048,
         );
     }
 

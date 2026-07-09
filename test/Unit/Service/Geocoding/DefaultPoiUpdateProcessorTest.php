@@ -19,6 +19,7 @@ use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterfa
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Stringable;
 use Symfony\Component\Console\Output\NullOutput;
 
 final class DefaultPoiUpdateProcessorTest extends TestCase
@@ -134,14 +135,14 @@ final class DefaultPoiUpdateProcessorTest extends TestCase
         $emitter = new class implements JobMonitoringEmitterInterface {
             /**
              * @var list<array{
-             *     job: \Stringable|string|int|float|bool,
-             *     status: \Stringable|string|int|float|bool,
+             *     job: Stringable|string|int|float|bool,
+             *     status: Stringable|string|int|float|bool,
              *     context: array<string, mixed>
              * }>
              */
             public array $events = [];
 
-            public function emit(\Stringable|string|int|float|bool $job, \Stringable|string|int|float|bool $status, array $context = []): void
+            public function emit(Stringable|string|int|float|bool $job, Stringable|string|int|float|bool $status, array $context = []): void
             {
                 $this->events[] = [
                     'job'     => $job,

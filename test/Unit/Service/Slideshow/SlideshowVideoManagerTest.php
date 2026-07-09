@@ -12,28 +12,30 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Service\Slideshow;
 
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Slideshow\SlideshowJob;
 use MagicSunday\Memories\Service\Slideshow\SlideshowStoryboardWriter;
-use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoGeneratorInterface;
-use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
+use MagicSunday\Memories\Service\Slideshow\SlideshowVideoManager;
 use MagicSunday\Memories\Service\Slideshow\SlideshowVideoStatus;
+use MagicSunday\Memories\Service\Slideshow\TransitionSequenceGenerator;
 use MagicSunday\Memories\Test\TestCase;
 use ReflectionClass;
+use RuntimeException;
 
 use function array_map;
 use function file_get_contents;
-use function json_decode;
 use function file_put_contents;
 use function is_dir;
 use function is_file;
+use function json_decode;
 use function mkdir;
 use function rmdir;
 use function scandir;
 use function sprintf;
+use function str_repeat;
 use function sys_get_temp_dir;
 use function uniqid;
 use function unlink;
-use function str_repeat;
 
 use const JSON_THROW_ON_ERROR;
 use const LOCK_EX;
@@ -62,9 +64,9 @@ final class SlideshowVideoManagerTest extends TestCase
         $mediaThree = new Media($imageThreePath, str_repeat('c', 64), 1024);
 
         $generator = new class implements SlideshowVideoGeneratorInterface {
-            public ?\MagicSunday\Memories\Service\Slideshow\SlideshowJob $capturedJob = null;
+            public ?SlideshowJob $capturedJob = null;
 
-            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            public function generate(SlideshowJob $job): void
             {
                 $this->capturedJob = $job;
                 file_put_contents($job->outputPath(), 'video-stub', LOCK_EX);
@@ -98,7 +100,7 @@ final class SlideshowVideoManagerTest extends TestCase
         );
 
         try {
-            $status    = $manager->ensureForItem(
+            $status = $manager->ensureForItem(
                 'memory',
                 [1, 2, 3],
                 [
@@ -171,7 +173,7 @@ final class SlideshowVideoManagerTest extends TestCase
         $generator = new class implements SlideshowVideoGeneratorInterface {
             public bool $called = false;
 
-            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            public function generate(SlideshowJob $job): void
             {
                 $this->called = true;
             }
@@ -228,7 +230,7 @@ final class SlideshowVideoManagerTest extends TestCase
     public function testStoryboardDurationsAreDeterministic(): void
     {
         $generator = new class implements SlideshowVideoGeneratorInterface {
-            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            public function generate(SlideshowJob $job): void
             {
             }
         };
@@ -250,7 +252,6 @@ final class SlideshowVideoManagerTest extends TestCase
 
         $reflection = new ReflectionClass($manager);
         $method     = $reflection->getMethod('buildStoryboard');
-        $method->setAccessible(true);
 
         $slides = [
             ['mediaId' => 10, 'path' => '/tmp/a.jpg'],
@@ -296,9 +297,9 @@ final class SlideshowVideoManagerTest extends TestCase
         $media = new Media($imagePath, str_repeat('c', 64), 2048);
 
         $generator = new class implements SlideshowVideoGeneratorInterface {
-            public function generate(\MagicSunday\Memories\Service\Slideshow\SlideshowJob $job): void
+            public function generate(SlideshowJob $job): void
             {
-                throw new \RuntimeException('ffmpeg failed');
+                throw new RuntimeException('ffmpeg failed');
             }
         };
 
@@ -310,8 +311,6 @@ final class SlideshowVideoManagerTest extends TestCase
             $generator,
             new SlideshowStoryboardWriter($storyboardDirectory),
             [],
-            null,
-            null,
         );
 
         try {
@@ -344,7 +343,11 @@ final class SlideshowVideoManagerTest extends TestCase
         }
 
         foreach ($items as $item) {
-            if ($item === '.' || $item === '..') {
+            if ($item === '.') {
+                continue;
+            }
+
+            if ($item === '..') {
                 continue;
             }
 

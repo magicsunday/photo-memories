@@ -12,9 +12,9 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Unit\Command;
 
 use DateTimeImmutable;
-use MagicSunday\Memories\Command\ClusterCommand;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
+use MagicSunday\Memories\Command\ClusterCommand;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobOptions;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobResult;
 use MagicSunday\Memories\Service\Clusterer\ClusterJobTelemetry;

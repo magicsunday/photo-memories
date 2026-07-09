@@ -23,8 +23,6 @@ use function array_values;
 use function count;
 use function implode;
 use function is_array;
-use function is_numeric;
-use function is_string;
 use function sha1;
 use function sort;
 use function trim;
@@ -222,16 +220,16 @@ class Cluster
      *
      * @var Collection<int, ClusterMember>
      */
-    #[ORM\OneToMany(mappedBy: 'cluster', targetEntity: ClusterMember::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ClusterMember::class, mappedBy: 'cluster', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['ordering' => 'ASC'])]
     private Collection $clusterMembers;
 
     /**
-     * @param string                        $type      logical cluster type
-     * @param string                        $strategy  algorithm used for clustering
-     * @param array<string, mixed>          $params    parameters for the clustering run
-     * @param array{lat: float, lon: float} $centroid  geographic centroid location
-     * @param list<int>                     $members   media identifiers comprising the cluster
+     * @param string                        $type     logical cluster type
+     * @param string                        $strategy algorithm used for clustering
+     * @param array<string, mixed>          $params   parameters for the clustering run
+     * @param array{lat: float, lon: float} $centroid geographic centroid location
+     * @param list<int>                     $members  media identifiers comprising the cluster
      */
     public function __construct(
         string $type,
@@ -240,10 +238,10 @@ class Cluster
         array $centroid,
         array $members,
     ) {
-        $this->type     = $type !== '' ? trim($type) : 'story';
-        $this->strategy = $strategy;
-        $this->createdAt = new DateTimeImmutable();
-        $this->updatedAt = $this->createdAt;
+        $this->type           = $type !== '' ? trim($type) : 'story';
+        $this->strategy       = $strategy;
+        $this->createdAt      = new DateTimeImmutable();
+        $this->updatedAt      = $this->createdAt;
         $this->clusterMembers = new ArrayCollection();
 
         $this->setParams($params);
@@ -258,8 +256,8 @@ class Cluster
      */
     private function synchroniseCentroid(array $centroid): void
     {
-        $this->centroidLat = isset($centroid['lat']) ? (float) $centroid['lat'] : null;
-        $this->centroidLon = isset($centroid['lon']) ? (float) $centroid['lon'] : null;
+        $this->centroidLat      = $centroid['lat'] ?? null;
+        $this->centroidLon      = $centroid['lon'] ?? null;
         $this->meta['centroid'] = [
             'lat' => $this->centroidLat,
             'lon' => $this->centroidLon,
@@ -307,7 +305,7 @@ class Cluster
      */
     public function setType(string $type): void
     {
-        $type = trim($type);
+        $type       = trim($type);
         $this->type = $type !== '' ? $type : 'story';
         $this->touch();
     }
@@ -608,7 +606,7 @@ class Cluster
      */
     public function setCentroidLat(?float $lat): void
     {
-        $this->centroidLat = $lat;
+        $this->centroidLat             = $lat;
         $this->meta['centroid']['lat'] = $lat;
         $this->updateCentroidCell();
         $this->touch();
@@ -627,7 +625,7 @@ class Cluster
      */
     public function setCentroidLon(?float $lon): void
     {
-        $this->centroidLon = $lon;
+        $this->centroidLon             = $lon;
         $this->meta['centroid']['lon'] = $lon;
         $this->updateCentroidCell();
         $this->touch();
@@ -758,12 +756,8 @@ class Cluster
     {
         $this->meta = $meta ?? [];
 
-        $params = $this->meta['params'] ?? [];
-        if (is_array($params)) {
-            $this->meta['params'] = $params;
-        } else {
-            $this->meta['params'] = [];
-        }
+        $params               = $this->meta['params'] ?? [];
+        $this->meta['params'] = is_array($params) ? $params : [];
 
         $members = $this->meta['member_ids'] ?? [];
         if (is_array($members)) {
@@ -783,7 +777,7 @@ class Cluster
      */
     public function setMembers(array $members): void
     {
-        $normalized = array_values(array_map(static fn (mixed $value): int => (int) $value, $members));
+        $normalized               = array_values(array_map(static fn (mixed $value): int => (int) $value, $members));
         $this->meta['member_ids'] = $normalized;
         $this->membersCount       = count($normalized);
         $this->fingerprint        = self::computeFingerprint($normalized);
@@ -840,7 +834,7 @@ class Cluster
     public function onPrePersist(): void
     {
         $now = new DateTimeImmutable();
-        $this->createdAt = $this->createdAt ?? $now;
+        $this->createdAt ??= $now;
         $this->updatedAt = $now;
     }
 

@@ -125,6 +125,7 @@ final class TimeNormalizerTest extends TestCase
         if (file_exists($filename)) {
             unlink($filename);
         }
+
         self::assertTrue(rename($tmp, $filename));
 
         $timestamp = strtotime('2020-02-03T04:05:06Z');
@@ -245,15 +246,7 @@ final class TimeNormalizerTest extends TestCase
         self::assertSame(TimeSource::EXIF, $result->getTimeSource());
         $entries = $this->decodeIndexLog($result->getIndexLog());
         self::assertGreaterThanOrEqual(2, count($entries));
-
-        $warning = null;
-        foreach ($entries as $entry) {
-            if (($entry['component'] ?? null) === 'metadata.time' && ($entry['event'] ?? null) === 'plausibility') {
-                $warning = $entry;
-
-                break;
-            }
-        }
+        $warning = array_find($entries, fn ($entry): bool => ($entry['component'] ?? null) === 'metadata.time' && ($entry['event'] ?? null) === 'plausibility');
 
         self::assertNotNull($warning, 'Expected plausibility warning log entry.');
         self::assertStringContainsString('Warnung: Aufnahmezeit weicht vom Dateisystem', (string) $warning['message']);
@@ -269,8 +262,8 @@ final class TimeNormalizerTest extends TestCase
         array $priority = ['filename', 'file_mtime'],
         int $maxOffsetMinutes = 720,
     ): TimeNormalizer {
-        $timezoneResolver = new class($resolvedTimezone) implements TimezoneResolverInterface {
-            public function __construct(private readonly ?DateTimeZone $timezone)
+        $timezoneResolver = new readonly class($resolvedTimezone) implements TimezoneResolverInterface {
+            public function __construct(private ?DateTimeZone $timezone)
             {
             }
 

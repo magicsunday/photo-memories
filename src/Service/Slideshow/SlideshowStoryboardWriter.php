@@ -14,8 +14,8 @@ namespace MagicSunday\Memories\Service\Slideshow;
 use Symfony\Component\Process\Exception\RuntimeException as ProcessRuntimeException;
 
 use function file_put_contents;
-use function json_encode;
 use function is_dir;
+use function json_encode;
 use function mkdir;
 use function rtrim;
 use function sprintf;

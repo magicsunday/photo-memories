@@ -212,7 +212,7 @@ class SignificantPlace
     public function onPrePersist(): void
     {
         $now = new DateTimeImmutable();
-        $this->createdAt = $this->createdAt ?? $now;
+        $this->createdAt ??= $now;
         $this->updatedAt = $now;
     }
 

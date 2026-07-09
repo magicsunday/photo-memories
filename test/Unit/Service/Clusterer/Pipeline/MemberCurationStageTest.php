@@ -21,8 +21,8 @@ use MagicSunday\Memories\Service\Clusterer\Selection\MemberSelectionResult;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicy;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionPolicyProvider;
 use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
-use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use MagicSunday\Memories\Test\TestCase;
+use MagicSunday\Memories\Test\Unit\Clusterer\Fixtures\RecordingMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
 
@@ -49,10 +49,6 @@ final class MemberCurationStageTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 2,
             peripheralDayPenalty: 0,
             phashPercentile: 0.35,
@@ -105,10 +101,6 @@ final class MemberCurationStageTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 1,
             peripheralDayPenalty: 0,
             phashPercentile: 0.35,
@@ -152,10 +144,6 @@ final class MemberCurationStageTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 2,
             peripheralDayPenalty: 0,
             phashPercentile: 0.35,
@@ -186,11 +174,11 @@ final class MemberCurationStageTest extends TestCase
         $mediaB = $this->createConfiguredMock(Media::class, ['getId' => 2, 'isVideo' => true]);
         $mediaC = $this->createConfiguredMock(Media::class, ['getId' => 3, 'isVideo' => false]);
 
-        $lookup = new class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -222,13 +210,13 @@ final class MemberCurationStageTest extends TestCase
                     memberIds: [1, 3],
                     telemetry: [
                         'distribution' => [
-                            'per_day'   => ['2024-07-01' => 2],
-                            'per_year'  => ['2024' => 2],
-                            'per_bucket'=> ['core' => 2],
+                            'per_day'    => ['2024-07-01' => 2],
+                            'per_year'   => ['2024' => 2],
+                            'per_bucket' => ['core' => 2],
                         ],
                         'metrics' => [
-                            'time_gaps'        => [120, 240],
-                            'phash_distances'  => [0.25, 0.35],
+                            'time_gaps'       => [120, 240],
+                            'phash_distances' => [0.25, 0.35],
                         ],
                         'rejections' => [
                             SelectionTelemetry::REASON_PHASH    => 1,
@@ -241,27 +229,27 @@ final class MemberCurationStageTest extends TestCase
 
         $profiles = [
             'default' => [
-                'target_total'            => 2,
-                'minimum_total'           => 1,
-                'max_per_day'             => null,
-                'time_slot_hours'         => null,
-                'min_spacing_seconds'     => 30,
-                'phash_min_hamming'       => 8,
-                'max_per_staypoint'       => null,
+                'target_total'              => 2,
+                'minimum_total'             => 1,
+                'max_per_day'               => null,
+                'time_slot_hours'           => null,
+                'min_spacing_seconds'       => 30,
+                'phash_min_hamming'         => 8,
+                'max_per_staypoint'         => null,
                 'max_per_staypoint_relaxed' => null,
-                'quality_floor'           => 0.0,
-                'video_bonus'             => 0.0,
-                'face_bonus'              => 0.0,
-                'selfie_penalty'          => 0.0,
-                'max_per_year'            => null,
-                'max_per_bucket'          => null,
-                'video_heavy_bonus'       => null,
-                'scene_bucket_weights'    => null,
-                'core_day_bonus'          => 1,
-                'peripheral_day_penalty'  => 0,
-                'phash_percentile'        => 0.35,
-                'spacing_progress_factor' => 0.5,
-                'cohort_repeat_penalty'   => 0.05,
+                'quality_floor'             => 0.0,
+                'video_bonus'               => 0.0,
+                'face_bonus'                => 0.0,
+                'selfie_penalty'            => 0.0,
+                'max_per_year'              => null,
+                'max_per_bucket'            => null,
+                'video_heavy_bonus'         => null,
+                'scene_bucket_weights'      => null,
+                'core_day_bonus'            => 1,
+                'peripheral_day_penalty'    => 0,
+                'phash_percentile'          => 0.35,
+                'spacing_progress_factor'   => 0.5,
+                'cohort_repeat_penalty'     => 0.05,
             ],
         ];
 
@@ -302,11 +290,11 @@ final class MemberCurationStageTest extends TestCase
         $mediaB = $this->createConfiguredMock(Media::class, ['getId' => 2, 'isVideo' => true]);
         $mediaC = $this->createConfiguredMock(Media::class, ['getId' => 3, 'isVideo' => false]);
 
-        $lookup = new class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
+        $lookup = new readonly class([$mediaA, $mediaB, $mediaC]) implements MemberMediaLookupInterface {
             /**
              * @param list<Media> $media
              */
-            public function __construct(private readonly array $media)
+            public function __construct(private array $media)
             {
             }
 
@@ -330,27 +318,27 @@ final class MemberCurationStageTest extends TestCase
 
         $profiles = [
             'default' => [
-                'target_total' => 4,
-                'minimum_total' => 1,
-                'max_per_day' => null,
-                'time_slot_hours' => null,
-                'min_spacing_seconds' => 1,
-                'phash_min_hamming' => 1,
-                'max_per_staypoint' => null,
+                'target_total'              => 4,
+                'minimum_total'             => 1,
+                'max_per_day'               => null,
+                'time_slot_hours'           => null,
+                'min_spacing_seconds'       => 1,
+                'phash_min_hamming'         => 1,
+                'max_per_staypoint'         => null,
                 'max_per_staypoint_relaxed' => null,
-                'quality_floor' => 0.0,
-                'video_bonus' => 0.0,
-                'face_bonus' => 0.0,
-                'selfie_penalty' => 0.0,
-                'max_per_year' => null,
-                'max_per_bucket' => null,
-                'video_heavy_bonus' => null,
-                'scene_bucket_weights' => null,
-                'core_day_bonus' => 0,
-                'peripheral_day_penalty' => 0,
-                'phash_percentile' => 0.35,
-                'spacing_progress_factor' => 0.5,
-                'cohort_repeat_penalty' => 0.05,
+                'quality_floor'             => 0.0,
+                'video_bonus'               => 0.0,
+                'face_bonus'                => 0.0,
+                'selfie_penalty'            => 0.0,
+                'max_per_year'              => null,
+                'max_per_bucket'            => null,
+                'video_heavy_bonus'         => null,
+                'scene_bucket_weights'      => null,
+                'core_day_bonus'            => 0,
+                'peripheral_day_penalty'    => 0,
+                'phash_percentile'          => 0.35,
+                'spacing_progress_factor'   => 0.5,
+                'cohort_repeat_penalty'     => 0.05,
             ],
         ];
 
@@ -402,10 +390,6 @@ final class MemberCurationStageTest extends TestCase
             videoBonus: 0.0,
             faceBonus: 0.0,
             selfiePenalty: 0.0,
-            maxPerYear: null,
-            maxPerBucket: null,
-            videoHeavyBonus: null,
-            sceneBucketWeights: null,
             coreDayBonus: 0,
             peripheralDayPenalty: 0,
             phashPercentile: 0.35,
@@ -424,7 +408,7 @@ final class MemberCurationStageTest extends TestCase
         $quotas       = $resultPolicy->getDayQuotas();
 
         self::assertSame(4, array_sum($quotas));
-        foreach ($daySegments as $day => $_) {
+        foreach (array_keys($daySegments) as $day) {
             self::assertSame(1, $quotas[$day]);
         }
     }
@@ -436,7 +420,6 @@ final class MemberCurationStageTest extends TestCase
     ): SelectionPolicy {
         $reflection = new ReflectionClass(MemberCurationStage::class);
         $method     = $reflection->getMethod('applyDayContext');
-        $method->setAccessible(true);
 
         /** @var SelectionPolicy $result */
         $result = $method->invoke($stage, $policy, $daySegments);
@@ -448,27 +431,27 @@ final class MemberCurationStageTest extends TestCase
     {
         $profiles = [
             'default' => [
-                'target_total' => 1,
-                'minimum_total' => 1,
-                'max_per_day' => null,
-                'time_slot_hours' => null,
-                'min_spacing_seconds' => 1,
-                'phash_min_hamming' => 1,
-                'max_per_staypoint' => null,
+                'target_total'              => 1,
+                'minimum_total'             => 1,
+                'max_per_day'               => null,
+                'time_slot_hours'           => null,
+                'min_spacing_seconds'       => 1,
+                'phash_min_hamming'         => 1,
+                'max_per_staypoint'         => null,
                 'max_per_staypoint_relaxed' => null,
-                'quality_floor' => 0.0,
-                'video_bonus' => 0.0,
-                'face_bonus' => 0.0,
-                'selfie_penalty' => 0.0,
-                'max_per_year' => null,
-                'max_per_bucket' => null,
-                'video_heavy_bonus' => null,
-                'scene_bucket_weights' => null,
-                'core_day_bonus' => 1,
-                'peripheral_day_penalty' => 1,
-                'phash_percentile' => 0.35,
-                'spacing_progress_factor' => 0.5,
-                'cohort_repeat_penalty' => 0.05,
+                'quality_floor'             => 0.0,
+                'video_bonus'               => 0.0,
+                'face_bonus'                => 0.0,
+                'selfie_penalty'            => 0.0,
+                'max_per_year'              => null,
+                'max_per_bucket'            => null,
+                'video_heavy_bonus'         => null,
+                'scene_bucket_weights'      => null,
+                'core_day_bonus'            => 1,
+                'peripheral_day_penalty'    => 1,
+                'phash_percentile'          => 0.35,
+                'spacing_progress_factor'   => 0.5,
+                'cohort_repeat_penalty'     => 0.05,
             ],
         ];
 

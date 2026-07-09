@@ -11,6 +11,8 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Indexing\Support;
 
+use function in_array;
+
 /**
  * Collects identifiers of media entities that have been persisted during an ingestion run.
  */
@@ -27,7 +29,7 @@ final class PersistedMediaTracker
             return;
         }
 
-        if (\in_array($id, $this->persistedIds, true)) {
+        if (in_array($id, $this->persistedIds, true)) {
             return;
         }
 
@@ -39,7 +41,7 @@ final class PersistedMediaTracker
      */
     public function drain(): array
     {
-        $ids = $this->persistedIds;
+        $ids                = $this->persistedIds;
         $this->persistedIds = [];
 
         return $ids;

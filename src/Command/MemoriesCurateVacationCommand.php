@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
+use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -23,11 +24,7 @@ use function is_array;
 /**
  * Deprecated alias for running the curation pipeline for vacation memories.
  */
-#[AsCommand(
-    name: 'memories:curate-vacation',
-    hidden: true,
-    description: 'Alias für memories:curate --types=vacation (veraltet).'
-)]
+#[AsCommand(name: 'memories:curate-vacation', description: 'Alias für memories:curate --types=vacation (veraltet).', hidden: true)]
 final class MemoriesCurateVacationCommand extends Command
 {
     /**
@@ -42,7 +39,7 @@ final class MemoriesCurateVacationCommand extends Command
         $this->initialiseDefinition();
     }
 
-    #[\Override]
+    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->initialiseDefinition();
@@ -110,10 +107,6 @@ final class MemoriesCurateVacationCommand extends Command
             return false;
         }
 
-        if (is_array($value) && $value === []) {
-            return false;
-        }
-
-        return true;
+        return !is_array($value) || $value !== [];
     }
 }

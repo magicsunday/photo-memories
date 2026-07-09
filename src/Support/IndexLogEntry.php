@@ -28,23 +28,26 @@ use const JSON_UNESCAPED_UNICODE;
 /**
  * Immutable representation of a structured index log entry.
  */
-final class IndexLogEntry
+final readonly class IndexLogEntry
 {
-    public const SEVERITY_INFO = 'info';
-    public const SEVERITY_WARNING = 'warning';
-    public const SEVERITY_ERROR = 'error';
-    public const SEVERITY_DEBUG = 'debug';
+    public const string SEVERITY_INFO = 'info';
+
+    public const string SEVERITY_WARNING = 'warning';
+
+    public const string SEVERITY_ERROR = 'error';
+
+    public const string SEVERITY_DEBUG = 'debug';
 
     /**
      * @param array<string, scalar|array<scalar>> $context
      */
     private function __construct(
-        private readonly string $component,
-        private readonly string $event,
-        private readonly string $message,
-        private readonly string $severity,
-        private readonly ?string $code,
-        private readonly array $context,
+        private string $component,
+        private string $event,
+        private string $message,
+        private string $severity,
+        private ?string $code,
+        private array $context,
     ) {
     }
 
@@ -79,9 +82,9 @@ final class IndexLogEntry
     {
         $payload = [
             'component' => $this->component,
-            'event' => $this->event,
-            'severity' => $this->severity,
-            'message' => $this->message,
+            'event'     => $this->event,
+            'severity'  => $this->severity,
+            'message'   => $this->message,
         ];
 
         if ($this->code !== null && $this->code !== '') {
@@ -167,9 +170,9 @@ final class IndexLogEntry
     {
         $data = [
             'component' => $this->component,
-            'event' => $this->event,
-            'severity' => $this->severity,
-            'message' => $this->message,
+            'event'     => $this->event,
+            'severity'  => $this->severity,
+            'message'   => $this->message,
         ];
 
         if ($this->code !== null && $this->code !== '') {

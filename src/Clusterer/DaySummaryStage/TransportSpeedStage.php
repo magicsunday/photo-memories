@@ -27,7 +27,7 @@ use function usort;
  */
 final readonly class TransportSpeedStage implements DaySummaryStageInterface
 {
-    private const HIGH_TRAVEL_THRESHOLD_KM = 150.0;
+    private const float HIGH_TRAVEL_THRESHOLD_KM = 150.0;
 
     public function __construct(
         private float $minLegDurationMinutes = 5.0,
@@ -64,7 +64,11 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             }
 
             $gpsMembers = $summary['gpsMembers'] ?? [];
-            if ($gpsMembers === [] || count($gpsMembers) < 2) {
+            if ($gpsMembers === []) {
+                continue;
+            }
+
+            if (count($gpsMembers) < 2) {
                 continue;
             }
 

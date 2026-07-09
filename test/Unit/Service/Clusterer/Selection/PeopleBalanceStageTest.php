@@ -98,7 +98,7 @@ final class PeopleBalanceStageTest extends TestCase
     }
 
     /**
-     * @param list<int> $personIds
+     * @param list<int>            $personIds
      * @param array<string, mixed> $faceMetrics
      *
      * @return array<string, mixed>
@@ -106,13 +106,13 @@ final class PeopleBalanceStageTest extends TestCase
     private function candidate(int $id, array $personIds, array $faceMetrics = []): array
     {
         return [
-            'id'            => $id,
-            'person_ids'    => $personIds,
-            'face_metrics'  => [
+            'id'           => $id,
+            'person_ids'   => $personIds,
+            'face_metrics' => [
                 'count'            => (int) ($faceMetrics['count'] ?? 0),
                 'largest_coverage' => $faceMetrics['largest_coverage'] ?? null,
             ],
-            'has_faces'     => ((int) ($faceMetrics['count'] ?? 0)) > 0,
+            'has_faces' => ((int) ($faceMetrics['count'] ?? 0)) > 0,
         ];
     }
 }

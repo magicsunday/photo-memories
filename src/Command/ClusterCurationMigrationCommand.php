@@ -11,7 +11,6 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Command;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Repository\ClusterRepository;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterCuratedOverlayRefresherInterface;
@@ -74,7 +73,7 @@ final class ClusterCurationMigrationCommand extends Command
         $io->title('🧠 Memories: Cluster-Kuration migrieren');
 
         $algorithmOption = $input->getOption('algorithm');
-        $algorithms = [];
+        $algorithms      = [];
         if (is_array($algorithmOption)) {
             $algorithms = array_values(array_filter(
                 $algorithmOption,
@@ -84,10 +83,11 @@ final class ClusterCurationMigrationCommand extends Command
 
         $batchSize = (int) $input->getOption('batch-size');
         $batchSize = max(1, $batchSize);
-        $dryRun    = (bool) $input->getOption('dry-run');
+
+        $dryRun = (bool) $input->getOption('dry-run');
 
         $algorithmFilter = $algorithms !== [] ? $algorithms : null;
-        $total            = $this->clusterRepository->countByAlgorithms($algorithmFilter);
+        $total           = $this->clusterRepository->countByAlgorithms($algorithmFilter);
 
         if ($total === 0) {
             $io->success('Keine Cluster zum Migrieren gefunden.');
@@ -105,23 +105,20 @@ final class ClusterCurationMigrationCommand extends Command
         $progress->start();
 
         $connection = $this->entityManager->getConnection();
-        if (!$connection instanceof Connection) {
-            throw new \RuntimeException('Datenbankverbindung konnte nicht initialisiert werden.');
-        }
 
         $connection->beginTransaction();
 
-        $processed      = 0;
-        $rawTotal       = 0;
-        $curatedTotal   = 0;
-        $overlayTotal   = 0;
+        $processed    = 0;
+        $rawTotal     = 0;
+        $curatedTotal = 0;
+        $overlayTotal = 0;
 
         try {
             foreach ($this->clusterRepository->iterateByAlgorithms($algorithmFilter) as $cluster) {
                 ++$processed;
 
                 $result = $this->overlayRefresher->refreshExistingCluster($cluster);
-                $rawTotal     += $result['raw_count'];
+                $rawTotal += $result['raw_count'];
                 $curatedTotal += $result['curated_count'];
                 $overlayTotal += $result['overlay_count'];
 

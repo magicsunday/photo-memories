@@ -15,6 +15,7 @@ use InvalidArgumentException;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Service\Metadata\Feature\MediaFeatureBag;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 
 final class MediaFeatureBagTest extends TestCase
 {
@@ -56,7 +57,7 @@ final class MediaFeatureBagTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         MediaFeatureBag::fromArray([
             'calendar' => [
-                'invalid' => new \stdClass(),
+                'invalid' => new stdClass(),
             ],
         ]);
     }
@@ -131,9 +132,9 @@ final class MediaFeatureBagTest extends TestCase
         $values = $bag->namespaceValues(MediaFeatureBag::NAMESPACE_CLASSIFICATION);
         self::assertSame(
             [
-                'kind'        => ContentKind::DOCUMENT->value,
-                'confidence'  => 0.75,
-                'shouldHide'  => true,
+                'kind'       => ContentKind::DOCUMENT->value,
+                'confidence' => 0.75,
+                'shouldHide' => true,
             ],
             $values
         );

@@ -35,14 +35,9 @@ final class PoiNameExtractor implements PoiNameExtractorInterface
             return $localized;
         }
 
-        $alternate = array_find(
+        return array_find(
             $names['alternates'],
             static fn ($alternate): bool => $alternate !== ''
         );
-        if ($alternate !== null) {
-            return $alternate;
-        }
-
-        return null;
     }
 }

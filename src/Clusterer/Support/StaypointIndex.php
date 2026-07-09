@@ -27,7 +27,7 @@ final class StaypointIndex
      */
     private function __construct(
         private array $mediaToKey,
-        private array $counts,
+        private readonly array $counts,
     ) {
     }
 
@@ -39,9 +39,9 @@ final class StaypointIndex
     /**
      * Builds a staypoint index for the provided day summary members.
      *
-     * @param string                                                   $date
+     * @param string                                                       $date
      * @param list<array{lat:float,lon:float,start:int,end:int,dwell:int}> $staypoints
-     * @param list<Media>                                               $members
+     * @param list<Media>                                                  $members
      */
     public static function build(string $date, array $staypoints, array $members): self
     {
@@ -61,8 +61,11 @@ final class StaypointIndex
             foreach ($staypoints as $staypoint) {
                 $start = (int) $staypoint['start'];
                 $end   = (int) $staypoint['end'];
+                if ($timestamp < $start) {
+                    continue;
+                }
 
-                if ($timestamp < $start || $timestamp > $end) {
+                if ($timestamp > $end) {
                     continue;
                 }
 

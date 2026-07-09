@@ -33,7 +33,7 @@ final class ComposerAutoload
      */
     public static function require(): void
     {
-        if (self::$autoloadLoaded === true) {
+        if (self::$autoloadLoaded) {
             return;
         }
 

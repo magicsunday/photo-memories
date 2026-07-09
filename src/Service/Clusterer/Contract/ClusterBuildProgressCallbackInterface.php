@@ -17,7 +17,9 @@ namespace MagicSunday\Memories\Service\Clusterer\Contract;
 interface ClusterBuildProgressCallbackInterface
 {
     public const STAGE_SCORING_MEDIA = 'scoring.media';
+
     public const STAGE_SCORING = 'scoring';
+
     public const STAGE_TITLES = 'titles';
 
     public function onStageStart(string $stage, int $total): void;

@@ -32,7 +32,7 @@ final class MetadataExtractorTelemetrySummary
 
     public function registerSuccess(?float $durationMs): void
     {
-        $this->runs++;
+        ++$this->runs;
 
         if ($durationMs !== null) {
             $this->totalDurationMs += $durationMs;
@@ -43,8 +43,8 @@ final class MetadataExtractorTelemetrySummary
 
     public function registerFailure(?float $durationMs, string $errorMessage): void
     {
-        $this->runs++;
-        $this->failures++;
+        ++$this->runs;
+        ++$this->failures;
 
         if ($durationMs !== null) {
             $this->totalDurationMs += $durationMs;
@@ -55,7 +55,7 @@ final class MetadataExtractorTelemetrySummary
 
     public function registerSkip(): void
     {
-        $this->skips++;
+        ++$this->skips;
     }
 
     public function getExtractorClass(): string

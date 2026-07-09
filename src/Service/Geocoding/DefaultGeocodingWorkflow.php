@@ -110,7 +110,7 @@ final readonly class DefaultGeocodingWorkflow
         $summary->render($io);
 
         $locationsForPoi = $summary->getLocationsForPoiUpdate();
-        if (count($locationsForPoi) > 0) {
+        if ($locationsForPoi !== []) {
             $io->section('📍 POI-Daten aktualisieren');
             if ($options->refreshPois()) {
                 $io->note('Bestehende POI-Daten werden neu abgerufen.');

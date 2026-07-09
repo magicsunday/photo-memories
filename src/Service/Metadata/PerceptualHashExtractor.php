@@ -56,6 +56,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     use VideoPosterFrameTrait;
 
     private string $ffmpegBinary;
+
     private string $ffprobeBinary;
 
     public function __construct(
@@ -188,7 +189,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         if ($this->isVideoMedia($media)) {
-            $matrix = $this->applyVideoRotationMatrix($matrix, $media->getVideoRotationDeg());
+            return $this->applyVideoRotationMatrix($matrix, $media->getVideoRotationDeg());
         }
 
         return $matrix;
@@ -206,13 +207,13 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         return match ($orientation) {
-            2 => $this->flipMatrixHorizontal($matrix),
-            3 => $this->rotateMatrix180($matrix),
-            4 => $this->flipMatrixVertical($matrix),
-            5 => $this->rotateMatrixCounterClockwise($this->flipMatrixHorizontal($matrix)),
-            6 => $this->rotateMatrixClockwise($matrix),
-            7 => $this->rotateMatrixClockwise($this->flipMatrixHorizontal($matrix)),
-            8 => $this->rotateMatrixCounterClockwise($matrix),
+            2       => $this->flipMatrixHorizontal($matrix),
+            3       => $this->rotateMatrix180($matrix),
+            4       => $this->flipMatrixVertical($matrix),
+            5       => $this->rotateMatrixCounterClockwise($this->flipMatrixHorizontal($matrix)),
+            6       => $this->rotateMatrixClockwise($matrix),
+            7       => $this->rotateMatrixClockwise($this->flipMatrixHorizontal($matrix)),
+            8       => $this->rotateMatrixCounterClockwise($matrix),
             default => $matrix,
         };
     }
@@ -239,9 +240,9 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         }
 
         return match ($steps) {
-            1 => $this->rotateMatrixClockwise($matrix),
-            2 => $this->rotateMatrix180($matrix),
-            3 => $this->rotateMatrixCounterClockwise($matrix),
+            1       => $this->rotateMatrixClockwise($matrix),
+            2       => $this->rotateMatrix180($matrix),
+            3       => $this->rotateMatrixCounterClockwise($matrix),
             default => $matrix,
         };
     }
@@ -411,7 +412,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
         if ($count > 0) {
             $mid = (int) floor($count / 2);
             if (($count % 2) === 1) {
-                $median = (float) $nonDc[$mid];
+                $median = $nonDc[$mid];
             } else {
                 $a      = (float) ($nonDc[$mid - 1] ?? 0.0);
                 $b      = (float) ($nonDc[$mid] ?? 0.0);

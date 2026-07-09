@@ -17,8 +17,8 @@ use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallbackInterface;
-use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
+use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Scoring\CompositeClusterScorer;
 
 use function array_merge;
@@ -50,10 +50,10 @@ final class HybridClusterer implements HybridClustererInterface
     /**
      * New API: lifecycle + per-strategy progress.
      *
-     * @param list<Media>                                                                         $items
-     * @param callable(string $strategy, int $index, int $total)|null                             $onStart
-     * @param callable(string $strategy, int $index, int $total)|null                             $onDone
-     * @param callable(string $strategy, int $index, int $total): ?ProgressHandleInterface|null   $makeProgressHandle
+     * @param list<Media>                                                                       $items
+     * @param callable(string $strategy, int $index, int $total)|null                           $onStart
+     * @param callable(string $strategy, int $index, int $total)|null                           $onDone
+     * @param callable(string $strategy, int $index, int $total): ?ProgressHandleInterface|null $makeProgressHandle
      *
      * @return list<ClusterDraft>
      */
@@ -132,7 +132,7 @@ final class HybridClusterer implements HybridClustererInterface
 
         $draftCount = count($drafts);
 
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageStart(ClusterBuildProgressCallbackInterface::STAGE_TITLES, $draftCount);
         }
 
@@ -140,7 +140,7 @@ final class HybridClusterer implements HybridClustererInterface
             $d->setParam('title', $this->titleGenerator->makeTitle($d));
             $d->setParam('subtitle', $this->titleGenerator->makeSubtitle($d));
 
-            if ($progressCallback !== null) {
+            if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
                 $progressCallback->onStageProgress(
                     ClusterBuildProgressCallbackInterface::STAGE_TITLES,
                     $index + 1,
@@ -150,7 +150,7 @@ final class HybridClusterer implements HybridClustererInterface
             }
         }
 
-        if ($progressCallback !== null) {
+        if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {
             $progressCallback->onStageFinish(ClusterBuildProgressCallbackInterface::STAGE_TITLES, $draftCount);
         }
 

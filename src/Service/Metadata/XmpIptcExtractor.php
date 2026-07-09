@@ -32,7 +32,7 @@ use function trim;
 /**
  * Reads IPTC APP13 + XMP keywords/persons.
  */
-final class XmpIptcExtractor implements SingleMetadataExtractorInterface
+final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterface
 {
     public function __construct(
         private ?MediaIngestionTelemetryInterface $telemetry = null,
@@ -145,7 +145,7 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
             $persons = array_values(array_unique($persons));
         }
 
-        if ($this->telemetry !== null && $this->containsTimezoneInformation($xml)) {
+        if ($this->telemetry instanceof MediaIngestionTelemetryInterface && $this->containsTimezoneInformation($xml)) {
             $this->telemetry->recordXmpTimezoneHit($filepath);
         }
     }
@@ -171,7 +171,7 @@ final class XmpIptcExtractor implements SingleMetadataExtractorInterface
                 continue;
             }
 
-            if (preg_match('/(?:[+-][0-9]{2}:[0-9]{2}|Z)$/', $candidate) === 1) {
+            if (preg_match('/(?:[+-]\d{2}:\d{2}|Z)$/', $candidate) === 1) {
                 return true;
             }
         }

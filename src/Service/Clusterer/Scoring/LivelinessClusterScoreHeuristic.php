@@ -23,7 +23,7 @@ use function min;
  */
 final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 {
-    private float $motionCoverageWeight;
+    private readonly float $motionCoverageWeight;
 
     public function __construct(
         private readonly float $videoShareWeight,
@@ -50,12 +50,12 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
     {
         $params = $cluster->getParams();
 
-        $score          = $this->floatOrNull($params['liveliness'] ?? null);
-        $videoShare     = $this->floatOrNull($params['liveliness_video_share'] ?? null);
-        $liveShare      = $this->floatOrNull($params['liveliness_live_share'] ?? null);
-        $motionShare    = $this->floatOrNull($params['liveliness_motion_share'] ?? null);
-        $motionScore    = $this->floatOrNull($params['liveliness_motion_score'] ?? null);
-        $motionBlurAvg  = $this->floatOrNull($params['liveliness_motion_blur_avg'] ?? null);
+        $score         = $this->floatOrNull($params['liveliness'] ?? null);
+        $videoShare    = $this->floatOrNull($params['liveliness_video_share'] ?? null);
+        $liveShare     = $this->floatOrNull($params['liveliness_live_share'] ?? null);
+        $motionShare   = $this->floatOrNull($params['liveliness_motion_share'] ?? null);
+        $motionScore   = $this->floatOrNull($params['liveliness_motion_score'] ?? null);
+        $motionBlurAvg = $this->floatOrNull($params['liveliness_motion_blur_avg'] ?? null);
 
         if (
             $score === null
@@ -64,7 +64,7 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
             || $motionShare === null
             || $motionScore === null
         ) {
-            $mediaItems = $this->collectMediaItems($cluster, $mediaMap);
+            $mediaItems  = $this->collectMediaItems($cluster, $mediaMap);
             $memberCount = count($cluster->getMembers());
 
             $videoCount       = 0;
@@ -93,9 +93,9 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
                 $slowMo        = $media->isSlowMo() ?? false;
                 $stabilised    = $media->getVideoHasStabilization() ?? false;
 
-                $motionBlurStrong = $motionBlur !== null && $motionBlur >= $this->motionBlurThreshold;
+                $motionBlurStrong    = $motionBlur !== null && $motionBlur >= $this->motionBlurThreshold;
                 $videoDurationStrong = $videoDuration !== null && $videoDuration >= $this->motionVideoDurationThreshold;
-                $videoFpsStrong = $videoFps !== null && $videoFps >= $this->motionVideoFpsThreshold;
+                $videoFpsStrong      = $videoFps !== null && $videoFps >= $this->motionVideoFpsThreshold;
 
                 if (
                     $isVideo
@@ -110,9 +110,9 @@ final class LivelinessClusterScoreHeuristic extends AbstractClusterScoreHeuristi
                 }
             }
 
-            $videoShare  = $memberCount > 0 ? $videoCount / $memberCount : 0.0;
-            $liveShare   = $memberCount > 0 ? $liveCount / $memberCount : 0.0;
-            $motionShare = $memberCount > 0 ? $motionCueCount / $memberCount : 0.0;
+            $videoShare    = $memberCount > 0 ? $videoCount / $memberCount : 0.0;
+            $liveShare     = $memberCount > 0 ? $liveCount / $memberCount : 0.0;
+            $motionShare   = $memberCount > 0 ? $motionCueCount / $memberCount : 0.0;
             $motionBlurAvg = $motionBlurValues !== []
                 ? array_sum($motionBlurValues) / count($motionBlurValues)
                 : null;

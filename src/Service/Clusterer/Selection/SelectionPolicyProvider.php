@@ -31,8 +31,9 @@ use function trim;
  */
 final class SelectionPolicyProvider
 {
-    private const DEFAULT_STORYLINE = 'default';
-    private const MAX_TARGET_TOTAL = 25;
+    private const string DEFAULT_STORYLINE = 'default';
+
+    private const int MAX_TARGET_TOTAL = 25;
 
     /**
      * @var array<string, int|float|null>
@@ -64,7 +65,7 @@ final class SelectionPolicyProvider
         array $algorithmProfiles = [],
         array $profileConstraints = [],
     ) {
-        $this->algorithmProfiles   = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
+        $this->algorithmProfiles  = $this->sanitizeAlgorithmProfiles($algorithmProfiles);
         $this->profileConstraints = $this->sanitizeProfileConstraints($profileConstraints);
     }
 
@@ -78,7 +79,7 @@ final class SelectionPolicyProvider
 
     public function forAlgorithm(string $algorithm, ?string $storyline = null): SelectionPolicy
     {
-        return $this->forAlgorithmWithRunLength($algorithm, $storyline, null);
+        return $this->forAlgorithmWithRunLength($algorithm, $storyline);
     }
 
     public function forAlgorithmWithRunLength(
@@ -180,7 +181,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|bool> $overrides
+     * @param array<string, int|float|bool>        $overrides
      * @param array<string, int|float|string|null> $config
      *
      * @return array<string, int|float|bool>
@@ -265,11 +266,11 @@ final class SelectionPolicyProvider
             return null;
         }
 
-        $shortMaxDays   = $runLengthConfig['short_run_max_days'] ?? null;
-        $shortTarget    = $runLengthConfig['short_run_target_total'] ?? $runLengthConfig['short_run_minimum_total'] ?? null;
-        $mediumMaxDays  = $runLengthConfig['medium_run_max_days'] ?? null;
-        $mediumTarget   = $runLengthConfig['medium_run_target_total'] ?? $runLengthConfig['medium_run_minimum_total'] ?? null;
-        $longTarget     = $runLengthConfig['long_run_target_total'] ?? $runLengthConfig['long_run_minimum_total'] ?? null;
+        $shortMaxDays  = $runLengthConfig['short_run_max_days'] ?? null;
+        $shortTarget   = $runLengthConfig['short_run_target_total'] ?? $runLengthConfig['short_run_minimum_total'] ?? null;
+        $mediumMaxDays = $runLengthConfig['medium_run_max_days'] ?? null;
+        $mediumTarget  = $runLengthConfig['medium_run_target_total'] ?? $runLengthConfig['medium_run_minimum_total'] ?? null;
+        $longTarget    = $runLengthConfig['long_run_target_total'] ?? $runLengthConfig['long_run_minimum_total'] ?? null;
 
         if (is_int($shortMaxDays) && $runLengthDays <= $shortMaxDays && is_int($shortTarget)) {
             return $this->clampTargetTotal($shortTarget);
@@ -292,7 +293,11 @@ final class SelectionPolicyProvider
         $result = [];
 
         foreach ($algorithmProfiles as $algorithm => $mapping) {
-            if (!is_string($algorithm) || $algorithm === '') {
+            if (!is_string($algorithm)) {
+                continue;
+            }
+
+            if ($algorithm === '') {
                 continue;
             }
 
@@ -312,7 +317,19 @@ final class SelectionPolicyProvider
 
             $sanitised = [];
             foreach ($mapping as $storyline => $profileKey) {
-                if (!is_string($storyline) || $storyline === '' || !is_string($profileKey) || $profileKey === '') {
+                if (!is_string($storyline)) {
+                    continue;
+                }
+
+                if ($storyline === '') {
+                    continue;
+                }
+
+                if (!is_string($profileKey)) {
+                    continue;
+                }
+
+                if ($profileKey === '') {
                     continue;
                 }
 
@@ -351,8 +368,8 @@ final class SelectionPolicyProvider
             return $this->defaultProfile;
         }
 
-        $mapping     = $this->algorithmProfiles[$algorithm];
-        $candidates  = $this->storylineCandidates($storyline);
+        $mapping      = $this->algorithmProfiles[$algorithm];
+        $candidates   = $this->storylineCandidates($storyline);
         $candidates[] = self::DEFAULT_STORYLINE;
 
         foreach ($candidates as $candidate) {
@@ -399,7 +416,7 @@ final class SelectionPolicyProvider
 
         $candidates = [$trimmed];
         if (str_contains($trimmed, '.')) {
-            $parts = explode('.', $trimmed);
+            $parts  = explode('.', $trimmed);
             $suffix = end($parts);
             if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;
@@ -460,7 +477,15 @@ final class SelectionPolicyProvider
         $result = [];
 
         foreach ($profileConstraints as $profileKey => $definition) {
-            if (!is_string($profileKey) || $profileKey === '' || !is_array($definition)) {
+            if (!is_string($profileKey)) {
+                continue;
+            }
+
+            if ($profileKey === '') {
+                continue;
+            }
+
+            if (!is_array($definition)) {
                 continue;
             }
 
@@ -473,9 +498,9 @@ final class SelectionPolicyProvider
             }
 
             $result[$profileKey] = [
-                'target_by_run_length' => $targetByRunLength,
+                'target_by_run_length'  => $targetByRunLength,
                 'minimum_by_run_length' => $minimumByRunLength,
-                'scalar_overrides' => $scalarOverrides,
+                'scalar_overrides'      => $scalarOverrides,
             ];
         }
 
@@ -483,8 +508,6 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param mixed $config
-     *
      * @return array<string, int>|null
      */
     private function sanitizeRunLengthConfig(mixed $config): ?array
@@ -618,7 +641,7 @@ final class SelectionPolicyProvider
 
         $weights = [];
         foreach ($value as $bucket => $weight) {
-            if (!is_string($bucket) || $bucket === '') {
+            if ($bucket === '') {
                 continue;
             }
 
@@ -631,8 +654,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>              $target
-     * @param array<string, int|float|string|null>       $source
+     * @param array<string, int|float|null>        $target
+     * @param array<string, int|float|string|null> $source
      */
     private function assignIntOverride(array &$target, array $source, string $key): void
     {
@@ -657,8 +680,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>              $target
-     * @param array<string, int|float|string|null>       $source
+     * @param array<string, int|float|null>        $target
+     * @param array<string, int|float|string|null> $source
      */
     private function assignIntOrNullOverride(array &$target, array $source, string $key): void
     {
@@ -685,8 +708,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>              $target
-     * @param array<string, int|float|string|null>       $source
+     * @param array<string, int|float|null>        $target
+     * @param array<string, int|float|string|null> $source
      */
     private function assignFloatOverride(array &$target, array $source, string $key): void
     {
@@ -705,14 +728,14 @@ final class SelectionPolicyProvider
             return;
         }
 
-        if (is_string($value) && is_numeric($value)) {
+        if (is_numeric($value)) {
             $target[$key] = (float) $value;
         }
     }
 
     /**
-     * @param array<string, int|float|null>              $target
-     * @param array<string, int|float|string|null>       $source
+     * @param array<string, int|float|null>        $target
+     * @param array<string, int|float|string|null> $source
      */
     private function assignFloatOrNullOverride(array &$target, array $source, string $key): void
     {
@@ -733,7 +756,7 @@ final class SelectionPolicyProvider
             return;
         }
 
-        if (is_string($value) && is_numeric($value)) {
+        if (is_numeric($value)) {
             $target[$key] = (float) $value;
         }
     }

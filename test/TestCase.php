@@ -16,9 +16,9 @@ use DateTimeInterface;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\PersonTaggedMediaInterface;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
-use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Test\Support\EntityIdAssignmentTrait;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use ReflectionClass;
 

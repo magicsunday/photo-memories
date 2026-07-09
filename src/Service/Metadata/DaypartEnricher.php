@@ -48,6 +48,7 @@ final readonly class DaypartEnricher implements SingleMetadataExtractorInterface
 
         $bag = $media->getFeatureBag();
         $bag->setCalendarDaypart($part);
+
         $media->setFeatureBag($bag);
 
         return $media;

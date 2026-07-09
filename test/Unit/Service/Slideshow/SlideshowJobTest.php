@@ -90,21 +90,21 @@ final class SlideshowJobTest extends TestCase
             'storyboard' => [
                 'slides' => [
                     [
-                        'image'    => '/images/a.jpg',
-                        'mediaId'  => '15',
-                        'duration' => 0,
+                        'image'      => '/images/a.jpg',
+                        'mediaId'    => '15',
+                        'duration'   => 0,
                         'transition' => '  ',
                     ],
                     [
                         'image' => '/images/b.jpg',
                     ],
                 ],
-                'transitionDuration' => 0,
+                'transitionDuration'  => 0,
                 'transitionDurations' => [0, '0.6', -1],
-                'music'              => ' ',
+                'music'               => ' ',
             ],
-            'title'     => '  ',
-            'subtitle'  => 'Erinnerungen ',
+            'title'    => '  ',
+            'subtitle' => 'Erinnerungen ',
         ];
 
         file_put_contents($temporary, json_encode($payload, JSON_THROW_ON_ERROR));
@@ -164,8 +164,6 @@ final class SlideshowJobTest extends TestCase
             $slides,
             [0.4, 0.6, 0.8],
             0.75,
-            null,
-            null,
             null,
         );
 

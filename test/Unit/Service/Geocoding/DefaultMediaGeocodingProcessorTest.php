@@ -55,8 +55,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
                 string $acceptLanguage = 'de',
                 bool $forceRefreshLocations = false,
                 bool $forceRefreshPois = false,
-            ): ?Location
-            {
+            ): ?Location {
                 Assert::assertSame('de', $acceptLanguage);
                 Assert::assertFalse($forceRefreshLocations);
                 Assert::assertFalse($forceRefreshPois);
@@ -104,6 +103,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
         $media = new Media('c.jpg', 'hash-c', 300);
         $media->setNeedsGeocode(true);
+
         $location = (new Location('nominatim', '2', 'Hamburg', 1.0, 2.0, 'cell'))->setPois([['name' => 'Alster']]);
 
         $linker = new class($media, $location) implements MediaLocationLinkerInterface {
@@ -120,8 +120,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
                 string $acceptLanguage = 'de',
                 bool $forceRefreshLocations = false,
                 bool $forceRefreshPois = false,
-            ): ?Location
-            {
+            ): Location {
                 Assert::assertSame($this->expectedMedia, $media);
                 Assert::assertSame('de', $acceptLanguage);
                 Assert::assertTrue($forceRefreshLocations);
@@ -162,13 +161,14 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
         $mediaA->setGpsLat(52.0);
         $mediaA->setGpsLon(13.0);
+
         $mediaB->setGpsLat(52.0);
         $mediaB->setGpsLon(13.0);
 
         $mediaA->setNeedsGeocode(true);
         $mediaB->setNeedsGeocode(true);
 
-        $linker = new class() implements MediaLocationLinkerInterface {
+        $linker = new class implements MediaLocationLinkerInterface {
             private ?Location $cached = null;
 
             private int $lastNetworkCalls = 0;
@@ -181,7 +181,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
                 string $acceptLanguage = 'de',
                 bool $forceRefreshLocations = false,
                 bool $forceRefreshPois = false,
-            ): ?Location {
+            ): Location {
                 $this->forcedFlags[] = $forceRefreshLocations;
 
                 if ($forceRefreshLocations) {
@@ -197,7 +197,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
                 }
 
                 $this->lastNetworkCalls = 1;
-                $location             = new Location(
+                $location               = new Location(
                     'nominatim',
                     'forced-' . spl_object_id($media),
                     'Berlin',
@@ -215,7 +215,7 @@ final class DefaultMediaGeocodingProcessorTest extends TestCase
 
             public function consumeLastNetworkCalls(): int
             {
-                $value                 = $this->lastNetworkCalls;
+                $value                  = $this->lastNetworkCalls;
                 $this->lastNetworkCalls = 0;
 
                 return $value;

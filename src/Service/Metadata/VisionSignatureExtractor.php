@@ -24,8 +24,8 @@ use MagicSunday\Memories\Support\FeatureFlagProviderInterface;
 
 use function array_fill;
 use function array_map;
-use function count;
 use function cos;
+use function count;
 use function imagecolorat;
 use function in_array;
 use function is_file;
@@ -33,7 +33,6 @@ use function is_string;
 use function log;
 use function max;
 use function min;
-use function pi;
 use function round;
 use function sin;
 use function sqrt;
@@ -103,7 +102,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
 
     public function extract(string $filepath, Media $media): Media
     {
-        if ($this->featureFlags !== null && !$this->featureFlags->isEnabled('saliency_cropping')) {
+        if ($this->featureFlags instanceof FeatureFlagProviderInterface && !$this->featureFlags->isEnabled('saliency_cropping')) {
             return $media;
         }
 
@@ -147,17 +146,14 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             $width  = $media->getWidth();
             $height = $media->getHeight();
 
-            if ($width !== null && $height !== null && $width > 0 && $height > 0) {
-                if ($media->isPortrait() === null || $media->isPanorama() === null) {
-                    [$isPortrait, $isPanorama] = $this->deriveAspectFlags($media, $width, $height);
+            if ($width !== null && $height !== null && $width > 0 && $height > 0 && ($media->isPortrait() === null || $media->isPanorama() === null)) {
+                [$isPortrait, $isPanorama] = $this->deriveAspectFlags($media, $width, $height);
+                if ($media->isPortrait() === null) {
+                    $media->setIsPortrait($isPortrait);
+                }
 
-                    if ($media->isPortrait() === null) {
-                        $media->setIsPortrait($isPortrait);
-                    }
-
-                    if ($media->isPanorama() === null) {
-                        $media->setIsPanorama($isPanorama);
-                    }
+                if ($media->isPanorama() === null) {
+                    $media->setIsPanorama($isPanorama);
                 }
             }
 
@@ -497,8 +493,8 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
         $normalized = [];
 
         for ($y = 0; $y < $height; ++$y) {
-            $row      = $lumaMatrix[$y];
-            $normRow  = [];
+            $row     = $lumaMatrix[$y];
+            $normRow = [];
             for ($x = 0; $x < $width; ++$x) {
                 $normRow[] = [($row[$x] - $mean) / 255.0, 0.0];
             }
@@ -611,8 +607,8 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
             return [];
         }
 
-        $output      = [];
-        $twoPiOverN  = 2.0 * pi() / (float) $length;
+        $output     = [];
+        $twoPiOverN = 2.0 * M_PI / (float) $length;
 
         for ($k = 0; $k < $length; ++$k) {
             $sumReal = 0.0;

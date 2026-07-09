@@ -36,17 +36,17 @@ use const PHP_INT_MAX;
 /**
  * Derives a compact travel route summary from cluster metadata.
  */
-final class RouteSummarizer
+final readonly class RouteSummarizer
 {
     public function __construct(
-        private readonly int $minStops = 3,
-        private readonly int $maxStops = 5,
+        private int $minStops = 3,
+        private int $maxStops = 5,
     ) {
     }
 
     public function summarize(ClusterDraft $cluster, string $locale = 'de'): ?RouteSummary
     {
-        $params = $cluster->getParams();
+        $params    = $cluster->getParams();
         $waypoints = $params['travel_waypoints'] ?? null;
         if (!is_array($waypoints) || $waypoints === []) {
             return null;
@@ -79,7 +79,7 @@ final class RouteSummarizer
             }
         );
 
-        $selected = [];
+        $selected     = [];
         $selectedKeys = [];
 
         $this->addStop($selected, $selectedKeys, $first);
@@ -115,7 +115,7 @@ final class RouteSummarizer
         $stops = array_map(static fn (array $stop): string => $stop['label'], $selected);
         $route = implode(' → ', $stops);
 
-        $distanceKm = $this->calculateDistance($selected);
+        $distanceKm    = $this->calculateDistance($selected);
         $distanceLabel = $this->formatDistanceLabel($distanceKm, $locale);
 
         $stopCount = count($selected);
@@ -160,7 +160,11 @@ final class RouteSummarizer
 
             $lat = $this->numericOrNull($entry['lat'] ?? null);
             $lon = $this->numericOrNull($entry['lon'] ?? null);
-            if ($lat === null || $lon === null) {
+            if ($lat === null) {
+                continue;
+            }
+
+            if ($lon === null) {
                 continue;
             }
 
@@ -184,7 +188,7 @@ final class RouteSummarizer
                 continue;
             }
 
-            $existing = $stops[$key];
+            $existing             = $stops[$key];
             $stops[$key]['count'] = $existing['count'] + $count;
             if ($firstSeen < $existing['first_seen_at']) {
                 $stops[$key]['first_seen_at'] = $firstSeen;
@@ -196,12 +200,12 @@ final class RouteSummarizer
 
     private function addStop(array &$selected, array &$selectedKeys, array $candidate): void
     {
-        $key = mb_strtolower($candidate['label'], 'UTF-8');
+        $key = mb_strtolower((string) $candidate['label'], 'UTF-8');
         if (in_array($key, $selectedKeys, true)) {
             return;
         }
 
-        $selected[]    = $candidate;
+        $selected[]     = $candidate;
         $selectedKeys[] = $key;
     }
 
@@ -255,15 +259,15 @@ final class RouteSummarizer
     private function approximateDistance(float $distanceKm): float
     {
         if ($distanceKm >= 100.0) {
-            return (float) (round($distanceKm / 10) * 10);
+            return round($distanceKm / 10) * 10;
         }
 
         if ($distanceKm >= 20.0) {
-            return (float) (round($distanceKm / 5) * 5);
+            return round($distanceKm / 5) * 5;
         }
 
         if ($distanceKm >= 5.0) {
-            return (float) round($distanceKm);
+            return round($distanceKm);
         }
 
         return round($distanceKm, 1);
@@ -298,10 +302,8 @@ final class RouteSummarizer
             return (float) $value;
         }
 
-        if (is_string($value) && $value !== '') {
-            if (is_numeric($value)) {
-                return (float) $value;
-            }
+        if (is_string($value) && $value !== '' && is_numeric($value)) {
+            return (float) $value;
         }
 
         return null;
@@ -359,6 +361,6 @@ final class RouteSummarizer
             }
         }
 
-        return $filtered === [] ? '' : implode(' • ', $filtered);
+        return implode(' • ', $filtered);
     }
 }

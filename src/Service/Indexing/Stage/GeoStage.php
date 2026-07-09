@@ -13,8 +13,8 @@ namespace MagicSunday\Memories\Service\Indexing\Stage;
 
 use MagicSunday\Memories\Service\Indexing\Contract\MediaIngestionContext;
 use MagicSunday\Memories\Service\Metadata\GeoFeatureEnricher;
-use MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic;
 use MagicSunday\Memories\Service\Metadata\SingleMetadataExtractorInterface;
+use MagicSunday\Memories\Service\Metadata\StaypointPlaceHeuristic;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**

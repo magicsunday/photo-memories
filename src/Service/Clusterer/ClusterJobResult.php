@@ -21,7 +21,7 @@ final readonly class ClusterJobResult
     private ClusterJobTelemetry $telemetry;
 
     /**
-     * @param list<\MagicSunday\Memories\Clusterer\ClusterDraft> $consolidatedDrafts
+     * @param list<ClusterDraft> $consolidatedDrafts
      */
     public function __construct(
         private int $totalMediaCount,
@@ -78,7 +78,7 @@ final readonly class ClusterJobResult
     }
 
     /**
-     * @return list<\MagicSunday\Memories\Clusterer\ClusterDraft>
+     * @return list<ClusterDraft>
      */
     public function getConsolidatedDrafts(): array
     {

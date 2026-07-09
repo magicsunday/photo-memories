@@ -11,17 +11,17 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
-use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use InvalidArgumentException;
-use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
+use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
-use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\ClusterLocationMetadataTrait;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
+use MagicSunday\Memories\Clusterer\Support\ContextualClusterBridgeTrait;
 use MagicSunday\Memories\Clusterer\Support\MediaFilterTrait;
 use MagicSunday\Memories\Clusterer\Support\ProgressAwareClusterTrait;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\LocationHelper;
+
 use function count;
 use function usort;
 
@@ -79,7 +79,7 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
                 if ($m->hasFaces() === false) {
                     $persons = $m->getPersons();
 
-                    if ($persons === null || count($persons) === 0) {
+                    if ($persons === null || $persons === []) {
                         return false;
                     }
                 }
@@ -179,8 +179,9 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
 
         return $out;
     }
+
     /**
-     * @param list<Media>                                 $items
+     * @param list<Media>                                       $items
      * @param callable(int $done, int $max, string $stage):void $update
      *
      * @return list<ClusterDraft>
@@ -194,5 +195,4 @@ final readonly class PortraitOrientationClusterStrategy implements ClusterStrate
             fn (array $payload, Context $context): array => $this->draft($payload, $context)
         );
     }
-
 }

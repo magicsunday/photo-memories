@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
+use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\Support\FaceMetricHelper;
@@ -37,9 +38,8 @@ use function is_string;
 use function max;
 use function min;
 use function str_contains;
-use function strtolower;
-use function substr;
 use function strlen;
+use function strtolower;
 use function trim;
 use function usort;
 
@@ -48,20 +48,7 @@ use function usort;
  */
 final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 {
-    private const STAYPOINT_MERGE_METERS = 120.0;
-
-    /**
-     * @var list<string>
-     */
-    private const MOTIF_BUCKETS = [
-        'person_group',
-        'landmark',
-        'food',
-        'indoor',
-        'outdoor',
-        'night',
-        'panorama',
-    ];
+    private const float STAYPOINT_MERGE_METERS = 120.0;
 
     /**
      * @var array<string, list<int>>
@@ -99,14 +86,14 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     public function select(string $algorithm, array $memberIds, ?MemberSelectionContext $context = null): MemberSelectionResult
     {
-        if ($context === null) {
+        if (!$context instanceof MemberSelectionContext) {
             throw new InvalidArgumentException('MemberSelectionContext is required for policy driven selection.');
         }
 
         if ($memberIds === []) {
             return new MemberSelectionResult([], [
                 'storyline' => $context->getDraft()->getStoryline(),
-                'counts' => [
+                'counts'    => [
                     'considered' => 0,
                     'eligible'   => 0,
                     'selected'   => 0,
@@ -135,23 +122,23 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $telemetry = [
             'storyline' => $draft->getStoryline(),
-            'counts' => [
+            'counts'    => [
                 'considered' => count($candidates['all']),
                 'eligible'   => count($candidates['eligible']),
                 'selected'   => 0,
             ],
             'rejections' => [
-                'no_show'             => $candidates['drops']['no_show'],
-                'quality'             => $candidates['drops']['quality'],
-                'burst'               => $candidates['drops']['burst'] ?? 0,
-                SelectionTelemetry::REASON_TIME_GAP       => 0,
-                SelectionTelemetry::REASON_DAY_QUOTA     => 0,
-                SelectionTelemetry::REASON_TIME_SLOT     => 0,
-                SelectionTelemetry::REASON_STAYPOINT      => 0,
-                SelectionTelemetry::REASON_PHASH          => 0,
-                SelectionTelemetry::REASON_SCENE          => 0,
-                SelectionTelemetry::REASON_ORIENTATION    => 0,
-                SelectionTelemetry::REASON_PEOPLE         => 0,
+                'no_show'                              => $candidates['drops']['no_show'],
+                'quality'                              => $candidates['drops']['quality'],
+                'burst'                                => $candidates['drops']['burst'] ?? 0,
+                SelectionTelemetry::REASON_TIME_GAP    => 0,
+                SelectionTelemetry::REASON_DAY_QUOTA   => 0,
+                SelectionTelemetry::REASON_TIME_SLOT   => 0,
+                SelectionTelemetry::REASON_STAYPOINT   => 0,
+                SelectionTelemetry::REASON_PHASH       => 0,
+                SelectionTelemetry::REASON_SCENE       => 0,
+                SelectionTelemetry::REASON_ORIENTATION => 0,
+                SelectionTelemetry::REASON_PEOPLE      => 0,
             ],
             'policy' => $this->policySnapshot($policy, $draft->getStoryline()),
             'stages' => [
@@ -247,8 +234,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                     continue;
                 }
 
-                $selected[]                     = $candidate;
-                $selectedIds[$candidate['id']]  = true;
+                $selected[]                    = $candidate;
+                $selectedIds[$candidate['id']] = true;
                 ++$paddingAdded;
 
                 if (count($selected) >= $minimumRequired) {
@@ -285,8 +272,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     }
 
     /**
-     * @param array<string, mixed>            $telemetry
-     * @param list<array<string, mixed>>      $selected
+     * @param array<string, mixed>       $telemetry
+     * @param list<array<string, mixed>> $selected
      */
     private function enrichSelectionTelemetry(array &$telemetry, array $selected): void
     {
@@ -314,8 +301,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
      */
     private function collectTimeGaps(array $selected): array
     {
-        $samples   = [];
-        $previous  = null;
+        $samples  = [];
+        $previous = null;
 
         foreach ($selected as $candidate) {
             $timestamp = $candidate['timestamp'] ?? null;
@@ -379,7 +366,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         $coverageSamples = 0;
 
         foreach ($selected as $candidate) {
-            $metrics = $candidate['face_metrics'] ?? null;
+            $metrics  = $candidate['face_metrics'] ?? null;
             $hasFaces = ($candidate['has_faces'] ?? false) === true;
 
             if (!is_array($metrics)) {
@@ -421,10 +408,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         return [
-            'with_faces'          => $withFaces,
-            'group_shots'         => $groupShots,
-            'closeups'            => $closeUps,
-            'average_count'       => $withFaces > 0 ? $sumFaces / $withFaces : 0.0,
+            'with_faces'           => $withFaces,
+            'group_shots'          => $groupShots,
+            'closeups'             => $closeUps,
+            'average_count'        => $withFaces > 0 ? $sumFaces / $withFaces : 0.0,
             'average_max_coverage' => $coverageSamples > 0 ? $coverageSum / $coverageSamples : null,
         ];
     }
@@ -549,7 +536,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             }
 
             $value = $candidate[$key];
-            if ($value === null || $value === '') {
+            if ($value === null) {
+                continue;
+            }
+
+            if ($value === '') {
                 continue;
             }
 
@@ -606,17 +597,17 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 continue;
             }
 
-            $day       = $this->formatDay($media, $timestamp);
-            $slot      = $this->resolveSlot($media, $timestamp, $policy);
-            $stayId    = $this->assignStaypoint($media, $staypointCenters);
-            $persons   = $this->personHelper->personIds($media);
+            $day         = $this->formatDay($media, $timestamp);
+            $slot        = $this->resolveSlot($media, $timestamp, $policy);
+            $stayId      = $this->assignStaypoint($media, $staypointCenters);
+            $persons     = $this->personHelper->personIds($media);
             $faceMetrics = $this->resolveFaceMetrics($media);
-            $facesCount = $faceMetrics['count'];
-            $hasFaces  = $media->hasFaces() || $facesCount > 0;
-            $isVideo   = $media->isVideo();
-            $bucket    = $this->deriveSceneBucket($draft, $media, $faceMetrics);
-            $year      = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
-            $orientation= $this->resolveOrientationType($media);
+            $facesCount  = $faceMetrics['count'];
+            $hasFaces    = $media->hasFaces() || $facesCount > 0;
+            $isVideo     = $media->isVideo();
+            $bucket      = $this->deriveSceneBucket($draft, $media, $faceMetrics);
+            $year        = (int) (new DateTimeImmutable('@' . $timestamp))->format('Y');
+            $orientation = $this->resolveOrientationType($media);
 
             $score = $quality;
             if ($isVideo) {
@@ -633,8 +624,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 $score += $groupBonus;
             }
 
-            $coverage        = $faceMetrics['largest_coverage'];
-            $closeUpPenalty  = 0.0;
+            $coverage       = $faceMetrics['largest_coverage'];
+            $closeUpPenalty = 0.0;
             if ($policy->getSelfiePenalty() > 0.0) {
                 $penaltyFactor = FaceMetricHelper::closeUpPenaltyFactor($coverage);
                 if ($penaltyFactor > 0.0) {
@@ -662,7 +653,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 }
             }
 
-            $dayInfo    = $daySegments[$day] ?? ['category' => 'peripheral', 'score' => 0.0, 'duration' => null];
+            $dayInfo     = $daySegments[$day] ?? ['category' => 'peripheral', 'score' => 0.0, 'duration' => null];
             $dayCategory = is_string($dayInfo['category'] ?? null) && $dayInfo['category'] !== ''
                 ? $dayInfo['category']
                 : 'peripheral';
@@ -682,27 +673,27 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             }
 
             $eligible[] = [
-                'id'         => $id,
-                'media'      => $media,
-                'timestamp'  => $timestamp,
-                'day'        => $day,
-                'slot'       => $slot,
-                'staypoint'  => $stayId,
-                'score'      => max(0.0, $score),
-                'is_video'   => $isVideo,
-                'persons'    => $media->getPersons() ?? [],
-                'person_ids' => $persons,
-                'has_faces'  => $hasFaces,
-                'hash_bits'  => $hashBits,
-                'year'       => $year,
-                'bucket'     => $bucket,
-                'orientation'=> $orientation,
-                'burst'      => $media->getBurstUuid(),
-                'day_category' => $dayCategory,
-                'day_score'    => (float) $dayScore,
-                'day_duration' => $dayDuration,
+                'id'             => $id,
+                'media'          => $media,
+                'timestamp'      => $timestamp,
+                'day'            => $day,
+                'slot'           => $slot,
+                'staypoint'      => $stayId,
+                'score'          => max(0.0, $score),
+                'is_video'       => $isVideo,
+                'persons'        => $media->getPersons() ?? [],
+                'person_ids'     => $persons,
+                'has_faces'      => $hasFaces,
+                'hash_bits'      => $hashBits,
+                'year'           => $year,
+                'bucket'         => $bucket,
+                'orientation'    => $orientation,
+                'burst'          => $media->getBurstUuid(),
+                'day_category'   => $dayCategory,
+                'day_score'      => (float) $dayScore,
+                'day_duration'   => $dayDuration,
                 'cohort_penalty' => $cohortPenalty,
-                'face_metrics' => [
+                'face_metrics'   => [
                     'count'            => $facesCount,
                     'largest_coverage' => $coverage,
                     'group_bonus'      => $groupBonus,
@@ -710,10 +701,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 ],
             ];
 
-            if ($persons !== []) {
-                foreach ($persons as $personId) {
-                    $personFrequency[$personId] = ($personFrequency[$personId] ?? 0) + 1;
-                }
+            foreach ($persons as $personId) {
+                $personFrequency[$personId] = ($personFrequency[$personId] ?? 0) + 1;
             }
         }
 
@@ -839,21 +828,19 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             $bestEvaluation = null;
 
             foreach ($remaining as $index => $candidate) {
-                $rawScore   = (float) ($candidate['score'] ?? 0.0);
-                $rawMaxSim  = 0.0;
+                $rawScore    = (float) ($candidate['score'] ?? 0.0);
+                $rawMaxSim   = 0.0;
                 $referenceId = null;
 
-                if ($selected !== []) {
-                    foreach ($selected as $chosen) {
-                        $similarity = $this->calculateSimilarityScore($candidate, $chosen);
-                        if ($similarity === null) {
-                            continue;
-                        }
+                foreach ($selected as $chosen) {
+                    $similarity = $this->calculateSimilarityScore($candidate, $chosen);
+                    if ($similarity === null) {
+                        continue;
+                    }
 
-                        if ($similarity > $rawMaxSim) {
-                            $rawMaxSim  = $similarity;
-                            $referenceId = $chosen['id'] ?? null;
-                        }
+                    if ($similarity > $rawMaxSim) {
+                        $rawMaxSim   = $similarity;
+                        $referenceId = $chosen['id'] ?? null;
                     }
                 }
 
@@ -871,13 +858,13 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                 $mmrScore = ($lambda * $rawScore) - $penalty;
 
                 $evaluation = [
-                    'id' => $candidate['id'],
-                    'score' => $rawScore,
-                    'raw_similarity' => $rawMaxSim,
+                    'id'                   => $candidate['id'],
+                    'score'                => $rawScore,
+                    'raw_similarity'       => $rawMaxSim,
                     'penalised_similarity' => $effectiveSim,
-                    'penalty' => $penalty,
-                    'mmr_score' => $mmrScore,
-                    'reference' => $referenceForPenalty,
+                    'penalty'              => $penalty,
+                    'mmr_score'            => $mmrScore,
+                    'reference'            => $referenceForPenalty,
                 ];
 
                 $evaluations[] = $evaluation;
@@ -914,11 +901,12 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             foreach ($evaluations as &$evaluation) {
                 $evaluation['selected'] = $evaluation['id'] === $bestEvaluation['id'];
             }
+
             unset($evaluation);
 
             $iterations[] = [
-                'step' => $step,
-                'selected' => $bestEvaluation['id'],
+                'step'        => $step,
+                'selected'    => $bestEvaluation['id'],
                 'evaluations' => $evaluations,
             ];
 
@@ -963,7 +951,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         foreach ($byBurst as $list) {
             usort($list, static fn (array $a, array $b): int => $b['score'] <=> $a['score']);
-            $singles[] = $list[0];
+            $singles[]      = $list[0];
             $drops['burst'] = ($drops['burst'] ?? 0) + (count($list) - 1);
         }
 
@@ -1006,7 +994,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         $takenAt = $media->getTakenAt();
-        $hour    = (int) (($takenAt instanceof DateTimeImmutable ? (int) $takenAt->format('H') : (int) (new DateTimeImmutable('@' . $timestamp))->format('H')));
+        $hour    = $takenAt instanceof DateTimeImmutable ? (int) $takenAt->format('H') : (int) (new DateTimeImmutable('@' . $timestamp))->format('H');
 
         return (int) floor($hour / $hours);
     }
@@ -1029,7 +1017,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             }
         }
 
-        $id = count($staypointCenters) + 1;
+        $id                    = count($staypointCenters) + 1;
         $staypointCenters[$id] = ['lat' => $lat, 'lon' => $lon];
 
         return $id;
@@ -1046,13 +1034,13 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return null;
         }
 
-        $hash = strtolower($hash);
+        $hash     = strtolower($hash);
         $cacheKey = $media->getId() . ':' . $hash;
         if (array_key_exists($cacheKey, $this->phashCache)) {
             return $this->phashCache[$cacheKey];
         }
 
-        $bits = [];
+        $bits   = [];
         $length = min(16, strlen($hash));
         for ($i = 0; $i < $length; ++$i) {
             $nibble = hexdec($hash[$i]);
@@ -1081,11 +1069,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         $params    = $draft->getParams();
         $faceCount = (int) ($faceMetrics['count'] ?? 0);
         $coverage  = $faceMetrics['largest_coverage'] ?? null;
-        if (is_numeric($coverage)) {
-            $coverage = (float) $coverage;
-        } else {
-            $coverage = null;
-        }
+        $coverage  = is_numeric($coverage) ? (float) $coverage : null;
 
         if ($this->isPanoramaScene($media)) {
             return 'panorama';
@@ -1193,13 +1177,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return true;
         }
 
-        $bag = $media->getFeatureBag();
+        $bag  = $media->getFeatureBag();
         $kind = $bag->classificationKind();
-        if ($kind !== null && $kind->value === 'food') {
-            return true;
-        }
 
-        return false;
+        return $kind instanceof ContentKind && $kind->value === 'food';
     }
 
     private function looksLikeLandmark(Media $media, array $params): bool
@@ -1249,7 +1230,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     private function isNightScene(Media $media): bool
     {
-        $bag = $media->getFeatureBag();
+        $bag     = $media->getFeatureBag();
         $daypart = $bag->calendarDaypart();
         if ($daypart === 'night') {
             return true;
@@ -1279,7 +1260,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             return true;
         }
 
-        if ($this->hasSceneTag($media, [
+        return $this->hasSceneTag($media, [
             'indoor',
             'interior',
             'room',
@@ -1295,11 +1276,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'shop',
             'gallery',
             'hall',
-        ])) {
-            return true;
-        }
-
-        return false;
+        ]);
     }
 
     private function hasSceneTag(Media $media, array $keywords): bool
@@ -1311,7 +1288,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         foreach ($tags as $tag) {
             $label = $tag['label'] ?? null;
-            if (!is_string($label) || $label === '') {
+            if (!is_string($label)) {
+                continue;
+            }
+
+            if ($label === '') {
                 continue;
             }
 
@@ -1321,7 +1302,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                     continue;
                 }
 
-                if (str_contains($normalised, strtolower($keyword))) {
+                if (str_contains($normalised, strtolower((string) $keyword))) {
                     return true;
                 }
             }
@@ -1400,8 +1381,6 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     }
 
     /**
-     * @param mixed $value
-     *
      * @return array<string, string>
      */
     private function stringMap(mixed $value): array
@@ -1412,7 +1391,11 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         $result = [];
         foreach ($value as $key => $entry) {
-            if (!is_string($key) || $key === '') {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($key === '') {
                 continue;
             }
 
@@ -1449,33 +1432,33 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     private function policySnapshot(SelectionPolicy $policy, string $storyline): array
     {
         return [
-            'profile'             => $policy->getProfileKey(),
-            'storyline'           => $storyline,
-            'target_total'        => $policy->getTargetTotal(),
-            'minimum_total'       => $policy->getMinimumTotal(),
-            'max_per_day'         => $policy->getMaxPerDay(),
-            'time_slot_hours'     => $policy->getTimeSlotHours(),
-            'min_spacing_seconds' => $policy->getMinSpacingSeconds(),
-            'phash_min_hamming'   => $policy->getPhashMinHamming(),
-            'max_per_staypoint'   => $policy->getMaxPerStaypoint(),
+            'profile'                   => $policy->getProfileKey(),
+            'storyline'                 => $storyline,
+            'target_total'              => $policy->getTargetTotal(),
+            'minimum_total'             => $policy->getMinimumTotal(),
+            'max_per_day'               => $policy->getMaxPerDay(),
+            'time_slot_hours'           => $policy->getTimeSlotHours(),
+            'min_spacing_seconds'       => $policy->getMinSpacingSeconds(),
+            'phash_min_hamming'         => $policy->getPhashMinHamming(),
+            'max_per_staypoint'         => $policy->getMaxPerStaypoint(),
             'relaxed_max_per_staypoint' => $policy->getRelaxedMaxPerStaypoint(),
-            'quality_floor'       => $policy->getQualityFloor(),
-            'video_bonus'         => $policy->getVideoBonus(),
-            'face_bonus'          => $policy->getFaceBonus(),
-            'selfie_penalty'      => $policy->getSelfiePenalty(),
-            'max_per_year'        => $policy->getMaxPerYear(),
-            'max_per_bucket'      => $policy->getMaxPerBucket(),
-            'video_heavy_bonus'   => $policy->getVideoHeavyBonus(),
-            'scene_bucket_weights'=> $policy->getSceneBucketWeights(),
-            'core_day_bonus'      => $policy->getCoreDayBonus(),
-            'peripheral_day_penalty' => $policy->getPeripheralDayPenalty(),
-            'peripheral_day_max_total' => $policy->getPeripheralDayMaxTotal(),
-            'peripheral_day_hard_cap' => $policy->getPeripheralDayHardCap(),
-            'phash_percentile'    => $policy->getPhashPercentile(),
-            'spacing_progress_factor' => $policy->getSpacingProgressFactor(),
-            'cohort_penalty'      => $policy->getCohortPenalty(),
-            'day_quotas'          => $policy->getDayQuotas(),
-            'day_context'         => $policy->getDayContext(),
+            'quality_floor'             => $policy->getQualityFloor(),
+            'video_bonus'               => $policy->getVideoBonus(),
+            'face_bonus'                => $policy->getFaceBonus(),
+            'selfie_penalty'            => $policy->getSelfiePenalty(),
+            'max_per_year'              => $policy->getMaxPerYear(),
+            'max_per_bucket'            => $policy->getMaxPerBucket(),
+            'video_heavy_bonus'         => $policy->getVideoHeavyBonus(),
+            'scene_bucket_weights'      => $policy->getSceneBucketWeights(),
+            'core_day_bonus'            => $policy->getCoreDayBonus(),
+            'peripheral_day_penalty'    => $policy->getPeripheralDayPenalty(),
+            'peripheral_day_max_total'  => $policy->getPeripheralDayMaxTotal(),
+            'peripheral_day_hard_cap'   => $policy->getPeripheralDayHardCap(),
+            'phash_percentile'          => $policy->getPhashPercentile(),
+            'spacing_progress_factor'   => $policy->getSpacingProgressFactor(),
+            'cohort_penalty'            => $policy->getCohortPenalty(),
+            'day_quotas'                => $policy->getDayQuotas(),
+            'day_context'               => $policy->getDayContext(),
         ];
     }
 }

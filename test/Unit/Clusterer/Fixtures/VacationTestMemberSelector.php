@@ -15,28 +15,27 @@ use Closure;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
-use MagicSunday\Memories\Entity\Media;
 
 use function array_keys;
 use function array_merge;
 use function count;
-use function sort;
 use function is_array;
+use function sort;
 
 use const SORT_STRING;
 
 /**
  * Lightweight member selector used in tests to control curated output deterministically.
  */
-final class VacationTestMemberSelector implements MemberSelectorInterface
+final readonly class VacationTestMemberSelector implements MemberSelectorInterface
 {
     /**
-     * @param Closure|null $curationFilter optional callback mutating the curated members and telemetry
+     * @param Closure|null         $curationFilter   optional callback mutating the curated members and telemetry
      * @param array<string, mixed> $defaultTelemetry telemetry overrides applied after selection
      */
     public function __construct(
-        private readonly ?Closure $curationFilter = null,
-        private readonly array $defaultTelemetry = [],
+        private ?Closure $curationFilter = null,
+        private array $defaultTelemetry = [],
     ) {
     }
 
@@ -50,10 +49,10 @@ final class VacationTestMemberSelector implements MemberSelectorInterface
         $dayOrder = array_keys($daySummaries);
         sort($dayOrder, SORT_STRING);
 
-        $members        = [];
-        $dayCounts      = [];
-        $targetTotal    = $options->targetTotal;
-        $perDayLimit    = $options->maxPerDay;
+        $members     = [];
+        $dayCounts   = [];
+        $targetTotal = $options->targetTotal;
+        $perDayLimit = $options->maxPerDay;
 
         foreach ($dayOrder as $day) {
             $summary = $daySummaries[$day];
@@ -72,15 +71,15 @@ final class VacationTestMemberSelector implements MemberSelectorInterface
 
         $telemetry = array_merge(
             [
-                'selected_total'            => count($members),
-                'near_duplicate_blocked'    => 0,
+                'selected_total'              => count($members),
+                'near_duplicate_blocked'      => 0,
                 'near_duplicate_replacements' => 0,
-                'spacing_rejections'        => 0,
+                'spacing_rejections'          => 0,
             ],
             $this->defaultTelemetry,
         );
 
-        if ($this->curationFilter !== null) {
+        if ($this->curationFilter instanceof Closure) {
             $result = ($this->curationFilter)($members, $daySummaries, $options);
             if (is_array($result)) {
                 $members = $result['members'] ?? $members;

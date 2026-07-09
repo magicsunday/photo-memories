@@ -174,8 +174,7 @@ final class AwayFlagStageTest extends TestCase
     {
         $timezone = new DateTimeZone('Europe/Berlin');
 
-        $timezoneResolver = new class($timezone) implements TimezoneResolverInterface
-        {
+        $timezoneResolver = new readonly class($timezone) implements TimezoneResolverInterface {
             public function __construct(private DateTimeZone $timezone)
             {
             }
@@ -190,7 +189,7 @@ final class AwayFlagStageTest extends TestCase
                 return $this->timezone;
             }
 
-            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
             {
                 return (int) ($home['timezone_offset'] ?? 0);
             }
@@ -201,8 +200,7 @@ final class AwayFlagStageTest extends TestCase
             }
         };
 
-        $baseLocationResolver = new class() implements BaseLocationResolverInterface
-        {
+        $baseLocationResolver = new class implements BaseLocationResolverInterface {
             public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): ?array
             {
                 return null;
@@ -232,15 +230,15 @@ final class AwayFlagStageTest extends TestCase
             ]],
         ];
 
-        $dayStayStart = new DateTimeImmutable('2024-08-01 08:00:00', $timezone);
-        $dayStayEnd   = new DateTimeImmutable('2024-08-01 21:30:00', $timezone);
+        $dayStayStart  = new DateTimeImmutable('2024-08-01 08:00:00', $timezone);
+        $dayStayEnd    = new DateTimeImmutable('2024-08-01 21:30:00', $timezone);
         $nextStayStart = new DateTimeImmutable('2024-08-02 07:00:00', $timezone);
         $nextStayEnd   = new DateTimeImmutable('2024-08-02 18:00:00', $timezone);
 
         $days = [
             '2024-08-01' => [
-                'date'            => '2024-08-01',
-                'staypoints'      => [[
+                'date'       => '2024-08-01',
+                'staypoints' => [[
                     'lat'   => 48.2082,
                     'lon'   => 16.3738,
                     'start' => $dayStayStart->getTimestamp(),
@@ -254,8 +252,8 @@ final class AwayFlagStageTest extends TestCase
                 'isSynthetic'        => false,
             ],
             '2024-08-02' => [
-                'date'            => '2024-08-02',
-                'staypoints'      => [[
+                'date'       => '2024-08-02',
+                'staypoints' => [[
                     'lat'   => 41.3851,
                     'lon'   => 2.1734,
                     'start' => $nextStayStart->getTimestamp(),
@@ -270,11 +268,11 @@ final class AwayFlagStageTest extends TestCase
                     'dwellSeconds' => 10800,
                     'memberCount'  => 3,
                 ]],
-                'gpsMembers'         => [],
-                'avgDistanceKm'      => 10.0,
-                'baseAway'           => false,
-                'awayByDistance'     => false,
-                'isSynthetic'        => false,
+                'gpsMembers'     => [],
+                'avgDistanceKm'  => 10.0,
+                'baseAway'       => false,
+                'awayByDistance' => false,
+                'isSynthetic'    => false,
             ],
         ];
 
@@ -289,8 +287,7 @@ final class AwayFlagStageTest extends TestCase
     {
         $timezone = new DateTimeZone('Europe/Berlin');
 
-        $timezoneResolver = new class($timezone) implements TimezoneResolverInterface
-        {
+        $timezoneResolver = new readonly class($timezone) implements TimezoneResolverInterface {
             public function __construct(private DateTimeZone $timezone)
             {
             }
@@ -305,7 +302,7 @@ final class AwayFlagStageTest extends TestCase
                 return $this->timezone;
             }
 
-            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
             {
                 return (int) ($home['timezone_offset'] ?? 0);
             }
@@ -316,8 +313,7 @@ final class AwayFlagStageTest extends TestCase
             }
         };
 
-        $baseLocationResolver = new class() implements BaseLocationResolverInterface
-        {
+        $baseLocationResolver = new class implements BaseLocationResolverInterface {
             public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): ?array
             {
                 return null;
@@ -362,8 +358,8 @@ final class AwayFlagStageTest extends TestCase
 
         $days = [
             '2024-07-10' => [
-                'date'                => '2024-07-10',
-                'staypoints'          => [[
+                'date'       => '2024-07-10',
+                'staypoints' => [[
                     'lat'   => 48.1371,
                     'lon'   => 11.5754,
                     'start' => $stayStart->getTimestamp(),
@@ -377,8 +373,8 @@ final class AwayFlagStageTest extends TestCase
                 'isSynthetic'        => false,
             ],
             '2024-07-11' => [
-                'date'                => '2024-07-11',
-                'staypoints'          => [[
+                'date'       => '2024-07-11',
+                'staypoints' => [[
                     'lat'   => 41.3851,
                     'lon'   => 2.1734,
                     'start' => $nextStayStart->getTimestamp(),
@@ -393,11 +389,11 @@ final class AwayFlagStageTest extends TestCase
                     'dwellSeconds' => $nextStayEnd->getTimestamp() - $nextStayStart->getTimestamp(),
                     'memberCount'  => 4,
                 ]],
-                'gpsMembers'         => [],
-                'avgDistanceKm'      => 10.0,
-                'baseAway'           => false,
-                'awayByDistance'     => false,
-                'isSynthetic'        => false,
+                'gpsMembers'     => [],
+                'avgDistanceKm'  => 10.0,
+                'baseAway'       => false,
+                'awayByDistance' => false,
+                'isSynthetic'    => false,
             ],
         ];
 
@@ -412,8 +408,7 @@ final class AwayFlagStageTest extends TestCase
     {
         $timezone = new DateTimeZone('Europe/Berlin');
 
-        $timezoneResolver = new class($timezone) implements TimezoneResolverInterface
-        {
+        $timezoneResolver = new readonly class($timezone) implements TimezoneResolverInterface {
             public function __construct(private DateTimeZone $timezone)
             {
             }
@@ -428,7 +423,7 @@ final class AwayFlagStageTest extends TestCase
                 return $this->timezone;
             }
 
-            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
             {
                 return (int) ($home['timezone_offset'] ?? 0);
             }
@@ -439,9 +434,8 @@ final class AwayFlagStageTest extends TestCase
             }
         };
 
-        $baseResolver = new class implements BaseLocationResolverInterface
-        {
-            public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): ?array
+        $baseResolver = new class implements BaseLocationResolverInterface {
+            public function resolve(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): array
             {
                 return [
                     'lat'         => 48.8566,
@@ -469,35 +463,35 @@ final class AwayFlagStageTest extends TestCase
 
         $days = [
             '2024-08-15' => [
-                'date'                 => '2024-08-15',
-                'gpsMembers'           => [],
-                'staypoints'           => [],
-                'avgDistanceKm'        => 0.0,
-                'baseAway'             => false,
-                'awayByDistance'       => false,
-                'isAwayCandidate'      => false,
-                'photoCount'           => 4,
-                'spotClusters'         => [],
-                'spotNoise'            => [],
-                'spotCount'            => 0,
-                'spotNoiseSamples'     => 0,
-                'spotDensity'          => 0.0,
-                'spotDwellSeconds'     => 0,
-                'sufficientSamples'    => true,
-                'staypointIndex'       => null,
-                'staypointCounts'      => [],
-                'staypointCount'       => 0,
-                'staypointDwellSeconds'=> 0,
-                'dominantStaypoints'   => [],
-                'primaryStaypointKey'  => null,
-                'transitRatio'         => 0.0,
-                'poiDensity'           => 0.0,
-                'cohortPresenceRatio'  => 0.0,
-                'cohortMembers'        => [],
-                'baseLocation'         => null,
-                'firstGpsMedia'        => null,
-                'lastGpsMedia'         => null,
-                'isSynthetic'          => false,
+                'date'                  => '2024-08-15',
+                'gpsMembers'            => [],
+                'staypoints'            => [],
+                'avgDistanceKm'         => 0.0,
+                'baseAway'              => false,
+                'awayByDistance'        => false,
+                'isAwayCandidate'       => false,
+                'photoCount'            => 4,
+                'spotClusters'          => [],
+                'spotNoise'             => [],
+                'spotCount'             => 0,
+                'spotNoiseSamples'      => 0,
+                'spotDensity'           => 0.0,
+                'spotDwellSeconds'      => 0,
+                'sufficientSamples'     => true,
+                'staypointIndex'        => null,
+                'staypointCounts'       => [],
+                'staypointCount'        => 0,
+                'staypointDwellSeconds' => 0,
+                'dominantStaypoints'    => [],
+                'primaryStaypointKey'   => null,
+                'transitRatio'          => 0.0,
+                'poiDensity'            => 0.0,
+                'cohortPresenceRatio'   => 0.0,
+                'cohortMembers'         => [],
+                'baseLocation'          => null,
+                'firstGpsMedia'         => null,
+                'lastGpsMedia'          => null,
+                'isSynthetic'           => false,
             ],
         ];
 

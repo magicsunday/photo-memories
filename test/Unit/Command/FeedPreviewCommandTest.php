@@ -14,8 +14,8 @@ namespace MagicSunday\Memories\Test\Unit\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-use MagicSunday\Memories\Command\FeedPreviewCommand;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
+use MagicSunday\Memories\Command\FeedPreviewCommand;
 use MagicSunday\Memories\Entity\Cluster as ClusterEntity;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
@@ -41,7 +41,7 @@ final class FeedPreviewCommandTest extends TestCase
         $clusterEntity = new ClusterEntity(
             'travel',
             ['score' => 0.82, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3, 4],
         );
 
@@ -72,7 +72,7 @@ final class FeedPreviewCommandTest extends TestCase
                 array $clusters,
                 ?FeedPersonalizationProfile $profile,
                 ?FeedVisibilityFilter $visibility,
-            ) use (&$capturedProfile) {
+            ) use (&$capturedProfile): array {
                 self::assertCount(1, $clusters);
                 $draft = $clusters[0];
                 self::assertInstanceOf(ClusterDraft::class, $draft);
@@ -87,8 +87,8 @@ final class FeedPreviewCommandTest extends TestCase
                 ];
             });
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
-        $profileProvider  = $this->createProfileProvider();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
+        $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
         $command = new FeedPreviewCommand(
@@ -124,7 +124,7 @@ final class FeedPreviewCommandTest extends TestCase
         $clusterEntity = new ClusterEntity(
             'travel',
             ['score' => 0.75, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3],
         );
 
@@ -137,7 +137,7 @@ final class FeedPreviewCommandTest extends TestCase
         $consolidator = $this->createMock(ClusterConsolidatorInterface::class);
         $consolidator->expects(self::once())
             ->method('consolidate')
-            ->willReturnCallback(function (array $clusters) use ($perMediaCapStage) {
+            ->willReturnCallback(function (array $clusters) use ($perMediaCapStage): array {
                 self::assertCount(1, $clusters);
                 self::assertInstanceOf(ClusterDraft::class, $clusters[0]);
                 self::assertSame(1, $perMediaCapStage->getPerMediaCap());
@@ -184,13 +184,13 @@ final class FeedPreviewCommandTest extends TestCase
         $clusterA = new ClusterEntity(
             'travel',
             ['score' => 0.82, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3, 4],
         );
         $clusterB = new ClusterEntity(
             'people',
             ['score' => 0.65, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [5, 6],
         );
 
@@ -219,7 +219,7 @@ final class FeedPreviewCommandTest extends TestCase
                 array $clusters,
                 ?FeedPersonalizationProfile $profile = null,
                 ?FeedVisibilityFilter $visibility = null,
-            ) {
+            ): array {
                 self::assertCount(2, $clusters);
                 self::assertNull($visibility);
 
@@ -235,10 +235,10 @@ final class FeedPreviewCommandTest extends TestCase
                             'storyline'      => 'sunny-days',
                             'member_quality' => [
                                 'summary' => [
-                                    'members_persisted'   => 7,
-                                    'selection_counts'    => [
-                                        'raw'      => 6,
-                                        'curated'  => 4,
+                                    'members_persisted' => 7,
+                                    'selection_counts'  => [
+                                        'raw'     => 6,
+                                        'curated' => 4,
                                     ],
                                     'selection_storyline' => 'ignored',
                                 ],
@@ -260,7 +260,7 @@ final class FeedPreviewCommandTest extends TestCase
                         [
                             'member_quality' => [
                                 'summary' => [
-                                    'selection_counts'    => [
+                                    'selection_counts' => [
                                         'raw' => 5,
                                     ],
                                     'selection_storyline' => 'from-summary',
@@ -276,7 +276,7 @@ final class FeedPreviewCommandTest extends TestCase
                 ];
             });
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
         $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
@@ -322,7 +322,7 @@ final class FeedPreviewCommandTest extends TestCase
         $cluster = new ClusterEntity(
             'travel',
             ['score' => 0.5, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2],
         );
 
@@ -367,7 +367,7 @@ final class FeedPreviewCommandTest extends TestCase
                 ),
             ]);
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
         $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
@@ -402,7 +402,7 @@ final class FeedPreviewCommandTest extends TestCase
         $clusterEntity = new ClusterEntity(
             'travel',
             ['score' => 0.6, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3],
         );
 
@@ -415,8 +415,8 @@ final class FeedPreviewCommandTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::never())->method('build');
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
-        $profileProvider  = $this->createProfileProvider();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
+        $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
         $command = new FeedPreviewCommand(
@@ -453,7 +453,7 @@ final class FeedPreviewCommandTest extends TestCase
         $clusterEntity = new ClusterEntity(
             'travel',
             ['score' => 0.7, 'group' => 'stories'],
-            ['lat' => 0.0, 'lon' => 0.0],
+            ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3, 4],
         );
 
@@ -468,8 +468,8 @@ final class FeedPreviewCommandTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::never())->method('build');
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
-        $profileProvider  = $this->createProfileProvider();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
+        $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
         $command = new FeedPreviewCommand(
@@ -512,9 +512,9 @@ final class FeedPreviewCommandTest extends TestCase
         $feedBuilder = $this->createMock(FeedBuilderInterface::class);
         $feedBuilder->expects(self::never())->method('build');
 
-        $perMediaCapStage = $this->createPerMediaCapStage();
-        $mapper           = new ClusterEntityToDraftMapper();
-        $profileProvider  = $this->createProfileProvider();
+        $perMediaCapStage  = $this->createPerMediaCapStage();
+        $mapper            = new ClusterEntityToDraftMapper();
+        $profileProvider   = $this->createProfileProvider();
         $selectionPolicies = new SelectionPolicyProvider(['default' => []], 'default');
 
         $command = new FeedPreviewCommand(
@@ -584,17 +584,17 @@ final class FeedPreviewCommandTest extends TestCase
     {
         return new FeedPersonalizationProfileProvider([
             'default' => [
-                'min_score'             => 0.35,
-                'min_members'           => 4,
-                'max_per_day'           => 6,
-                'max_total'             => 30,
-                'max_per_algorithm'     => 8,
-                'quality_floor'         => 0.3,
-                'people_coverage_min'   => 0.2,
-                'recent_days'           => 30,
-                'stale_days'            => 365,
-                'recent_score_bonus'    => 0.05,
-                'stale_score_penalty'   => 0.04,
+                'min_score'           => 0.35,
+                'min_members'         => 4,
+                'max_per_day'         => 6,
+                'max_total'           => 30,
+                'max_per_algorithm'   => 8,
+                'quality_floor'       => 0.3,
+                'people_coverage_min' => 0.2,
+                'recent_days'         => 30,
+                'stale_days'          => 365,
+                'recent_score_bonus'  => 0.05,
+                'stale_score_penalty' => 0.04,
             ],
         ]);
     }

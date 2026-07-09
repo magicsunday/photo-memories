@@ -11,9 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Test\Unit\Clusterer;
 
-use MagicSunday\Memories\Clusterer\Context;
 use DateTimeImmutable;
 use DateTimeZone;
+use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\LocationSimilarityStrategy;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
@@ -21,6 +21,7 @@ use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\GeoCell;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
+
 use function explode;
 use function sort;
 
@@ -72,7 +73,7 @@ final class LocationSimilarityStrategyTest extends TestCase
         sort($actualTokens);
         self::assertSame(['city:Berlin', 'country:Germany', 'suburb:Mitte'], $actualTokens);
 
-        $centroid = $cluster->getCentroid();
+        $centroid     = $cluster->getCentroid();
         $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
         self::assertSame($expectedCell, $params['centroid_cell7']);
     }
@@ -113,7 +114,7 @@ final class LocationSimilarityStrategyTest extends TestCase
         self::assertSame($expectedRange, $params['time_range']);
         self::assertSame($expectedRange, $params['window_bounds']);
 
-        $centroid = $cluster->getCentroid();
+        $centroid     = $cluster->getCentroid();
         $expectedCell = GeoCell::fromPoint($centroid['lat'], $centroid['lon'], 7);
         self::assertSame($expectedCell, $params['centroid_cell7']);
     }

@@ -115,7 +115,7 @@ final class MetadataQaInspectorTest extends TestCase
                 return new DateTimeZone('UTC');
             }
 
-            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): ?int
+            public function determineLocalTimezoneOffset(array $offsetVotes, array $home): int
             {
                 return 0;
             }

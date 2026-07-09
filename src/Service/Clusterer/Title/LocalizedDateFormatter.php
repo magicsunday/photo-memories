@@ -26,7 +26,7 @@ use function trim;
 /**
  * Formats date and range strings using locale aware short month representations.
  */
-final class LocalizedDateFormatter
+final readonly class LocalizedDateFormatter
 {
     /** @var array<int, string> */
     private const array DE_SHORT_MONTHS = [
@@ -44,7 +44,7 @@ final class LocalizedDateFormatter
         12 => 'Dez.',
     ];
 
-    public function __construct(private readonly string $timezone = 'Europe/Berlin')
+    public function __construct(private string $timezone = 'Europe/Berlin')
     {
     }
 
@@ -181,7 +181,7 @@ final class LocalizedDateFormatter
 
     private function createFormatter(string $locale, string $pattern): IntlDateFormatter
     {
-        $formatter = new IntlDateFormatter(
+        return new IntlDateFormatter(
             $this->normalizeLocale($locale),
             IntlDateFormatter::NONE,
             IntlDateFormatter::NONE,
@@ -189,8 +189,6 @@ final class LocalizedDateFormatter
             null,
             $pattern,
         );
-
-        return $formatter;
     }
 
     private function isGermanLocale(string $locale): bool
@@ -223,7 +221,7 @@ final class LocalizedDateFormatter
             return $lang;
         }
 
-        $lang = trim($segments[0]);
+        $lang   = trim($segments[0]);
         $region = trim($segments[1] ?? '');
 
         if ($region === '') {

@@ -17,11 +17,10 @@ use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
-use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterMemberSelectionServiceInterface;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
-use MagicSunday\Memories\Service\Clusterer\ClusterMemberSelectionProfile;
+use MagicSunday\Memories\Service\Clusterer\Selection\SelectionTelemetry;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
 use MagicSunday\Memories\Service\Monitoring\PhaseMetricsCollector;
 use MagicSunday\Memories\Utility\Phash;
@@ -75,7 +74,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return $draft;
         }
 
-        $phaseMetrics = $this->monitoringEmitter !== null ? new PhaseMetricsCollector() : null;
+        $phaseMetrics = $this->monitoringEmitter instanceof JobMonitoringEmitterInterface ? new PhaseMetricsCollector() : null;
         $initialCount = count($members);
 
         $this->resetCaches();
@@ -98,13 +97,14 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return $draft;
         }
 
-        $profile      = $this->profileProvider->resolve($draft);
+        $profile = $this->profileProvider->resolve($draft);
 
         $phaseMetrics?->begin('summarising');
         $daySummaries = $this->buildDaySummaries($media);
-        if ($phaseMetrics !== null) {
+        if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $this->recordSummaryMetrics($daySummaries, $phaseMetrics);
         }
+
         $phaseMetrics?->end('summarising');
 
         if ($daySummaries === []) {
@@ -123,7 +123,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $this->daySummaries = $daySummaries;
         $phaseMetrics?->begin('selecting');
         $result = $this->memberSelector->select($daySummaries, $profile->getHome(), $profile->getOptions());
-        if ($phaseMetrics !== null) {
+        if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $this->recordSelectionMetrics(
                 $result->getTelemetry(),
                 $phaseMetrics,
@@ -131,6 +131,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 count($media),
             );
         }
+
         $phaseMetrics?->end('selecting');
 
         $phaseMetrics?->begin('consolidating');
@@ -157,12 +158,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
      */
     private function loadMedia(array $memberIds): array
     {
-        $media = $this->mediaLookup->findByIds($memberIds);
-        if ($media === []) {
-            return [];
-        }
-
-        return $media;
+        return $this->mediaLookup->findByIds($memberIds);
     }
 
     /**
@@ -214,6 +210,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
             $summary['staypoints'] = $this->staypointDetector->detect($summary['gpsMembers']);
         }
+
         unset($summary);
 
         return $summaries;
@@ -224,7 +221,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
      */
     private function createSummarySkeleton(string $date, Media $media, int $timestamp): array
     {
-        $takenAt = $media->getTakenAt();
+        $takenAt            = $media->getTakenAt();
         $timezoneIdentifier = 'UTC';
         $weekday            = (int) gmdate('N', $timestamp);
 
@@ -234,42 +231,42 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         return [
-            'date'                   => $date,
-            'members'                => [],
-            'gpsMembers'             => [],
-            'maxDistanceKm'          => 0.0,
-            'avgDistanceKm'          => 0.0,
-            'travelKm'               => 0.0,
-            'maxSpeedKmh'            => 0.0,
-            'avgSpeedKmh'            => 0.0,
-            'hasHighSpeedTransit'    => false,
-            'countryCodes'           => [],
-            'timezoneOffsets'        => [],
-            'localTimezoneIdentifier'=> $timezoneIdentifier,
-            'localTimezoneOffset'    => null,
-            'tourismHits'            => 0,
-            'poiSamples'             => 0,
-            'tourismRatio'           => 0.0,
-            'hasAirportPoi'          => false,
-            'weekday'                => $weekday,
-            'photoCount'             => 0,
-            'videoCount'             => 0,
-            'densityZ'               => 0.0,
-            'isAwayCandidate'        => false,
-            'sufficientSamples'      => true,
-            'spotClusters'           => [],
-            'spotNoise'              => [],
-            'spotCount'              => 0,
-            'spotNoiseSamples'       => 0,
-            'spotDensity'            => 0.0,
-            'spotDwellSeconds'       => 0,
-            'staypoints'             => [],
-            'baseLocation'           => null,
-            'baseAway'               => false,
-            'awayByDistance'         => false,
-            'firstGpsMedia'          => null,
-            'lastGpsMedia'           => null,
-            'isSynthetic'            => false,
+            'date'                    => $date,
+            'members'                 => [],
+            'gpsMembers'              => [],
+            'maxDistanceKm'           => 0.0,
+            'avgDistanceKm'           => 0.0,
+            'travelKm'                => 0.0,
+            'maxSpeedKmh'             => 0.0,
+            'avgSpeedKmh'             => 0.0,
+            'hasHighSpeedTransit'     => false,
+            'countryCodes'            => [],
+            'timezoneOffsets'         => [],
+            'localTimezoneIdentifier' => $timezoneIdentifier,
+            'localTimezoneOffset'     => null,
+            'tourismHits'             => 0,
+            'poiSamples'              => 0,
+            'tourismRatio'            => 0.0,
+            'hasAirportPoi'           => false,
+            'weekday'                 => $weekday,
+            'photoCount'              => 0,
+            'videoCount'              => 0,
+            'densityZ'                => 0.0,
+            'isAwayCandidate'         => false,
+            'sufficientSamples'       => true,
+            'spotClusters'            => [],
+            'spotNoise'               => [],
+            'spotCount'               => 0,
+            'spotNoiseSamples'        => 0,
+            'spotDensity'             => 0.0,
+            'spotDwellSeconds'        => 0,
+            'staypoints'              => [],
+            'baseLocation'            => null,
+            'baseAway'                => false,
+            'awayByDistance'          => false,
+            'firstGpsMedia'           => null,
+            'lastGpsMedia'            => null,
+            'isSynthetic'             => false,
         ];
     }
 
@@ -284,7 +281,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $preCount       = count($media);
         $postCount      = count($curatedMembers);
 
-        if ($phaseMetrics !== null) {
+        if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $phaseMetrics->addCounts('consolidating', 'members', [
                 'pre'     => $preCount,
                 'post'    => $postCount,
@@ -336,7 +333,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             }
         }
 
-        if ($phaseMetrics !== null) {
+        if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $phaseMetrics->addCounts('consolidating', 'media_types', [
                 'photos' => $photoCount,
                 'videos' => $videoCount,
@@ -377,7 +374,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $storyline,
         );
 
-        if ($phaseMetrics !== null) {
+        if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $phaseMetrics->addSamples('consolidating', 'spacing_seconds', $spacing['samples']);
 
             $phashTelemetry = $telemetry['phash'] ?? null;
@@ -397,8 +394,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             $rejections = $this->normaliseCounts($telemetry['rejections']);
         }
 
-        $spacingRejections        = (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? ($telemetry['drops']['selection']['spacing_rejections'] ?? 0));
-        $nearDuplicateBlocked     = (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? ($telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0));
+        $spacingRejections         = (int) ($rejections[SelectionTelemetry::REASON_TIME_GAP] ?? ($telemetry['drops']['selection']['spacing_rejections'] ?? 0));
+        $nearDuplicateBlocked      = (int) ($rejections[SelectionTelemetry::REASON_PHASH] ?? ($telemetry['drops']['selection']['near_duplicate_blocked'] ?? 0));
         $nearDuplicateReplacements = (int) ($telemetry['drops']['selection']['near_duplicate_replacements'] ?? 0);
 
         $memberIds = array_map(
@@ -415,7 +412,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                     'post'    => $postCount,
                     'dropped' => $droppedCount,
                 ],
-                'spacing'   => [
+                'spacing' => [
                     'average_seconds' => $spacing['average'],
                     'rejections'      => $spacingRejections,
                 ],
@@ -424,17 +421,17 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                     'replacements' => $nearDuplicateReplacements,
                 ],
                 'options' => [
-                    'selector'            => $this->memberSelector::class,
-                    'target_total'        => $profile->getOptions()->targetTotal,
-                    'max_per_day'         => $profile->getOptions()->maxPerDay,
-                    'time_slot_hours'     => $profile->getOptions()->timeSlotHours,
-                    'min_spacing_seconds' => $profile->getOptions()->minSpacingSeconds,
-                    'phash_min_hamming'   => $profile->getOptions()->phashMinHamming,
-                    'max_per_staypoint'   => $profile->getOptions()->maxPerStaypoint,
-                    'video_bonus'         => $profile->getOptions()->videoBonus,
-                    'face_bonus'          => $profile->getOptions()->faceBonus,
-                    'selfie_penalty'      => $profile->getOptions()->selfiePenalty,
-                    'quality_floor'       => $profile->getOptions()->qualityFloor,
+                    'selector'              => $this->memberSelector::class,
+                    'target_total'          => $profile->getOptions()->targetTotal,
+                    'max_per_day'           => $profile->getOptions()->maxPerDay,
+                    'time_slot_hours'       => $profile->getOptions()->timeSlotHours,
+                    'min_spacing_seconds'   => $profile->getOptions()->minSpacingSeconds,
+                    'phash_min_hamming'     => $profile->getOptions()->phashMinHamming,
+                    'max_per_staypoint'     => $profile->getOptions()->maxPerStaypoint,
+                    'video_bonus'           => $profile->getOptions()->videoBonus,
+                    'face_bonus'            => $profile->getOptions()->faceBonus,
+                    'selfie_penalty'        => $profile->getOptions()->selfiePenalty,
+                    'quality_floor'         => $profile->getOptions()->qualityFloor,
                     'enable_people_balance' => $profile->getOptions()->enablePeopleBalance,
                     'people_balance_weight' => $profile->getOptions()->peopleBalanceWeight,
                     'repeat_penalty'        => $profile->getOptions()->repeatPenalty,
@@ -449,7 +446,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 ],
                 'selection_per_day_distribution'    => $perDayDistribution,
                 'selection_per_bucket_distribution' => $telemetry['distribution']['per_bucket'],
-                'selection_spacing' => [
+                'selection_spacing'                 => [
                     'average_seconds' => $spacing['average'],
                     'rejections'      => $spacingRejections,
                 ],
@@ -510,7 +507,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         int $selectedCount,
         int $eligibleFallback,
     ): void {
-        $counts = [];
+        $counts          = [];
         $telemetryCounts = $telemetry['counts'] ?? null;
         if (is_array($telemetryCounts)) {
             $counts = $this->normaliseCounts($telemetryCounts);
@@ -526,7 +523,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 $counts['eligible'] = $eligibleFallback;
             }
 
-            $counts['selected'] = $counts['selected'] ?? $selectedCount;
+            $counts['selected'] ??= $selectedCount;
         }
 
         $phaseMetrics->addCounts('selecting', 'members', $counts);
@@ -546,7 +543,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         string $status,
         array $context = [],
     ): void {
-        if ($this->monitoringEmitter === null || $phaseMetrics === null) {
+        if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface || !$phaseMetrics instanceof PhaseMetricsCollector) {
             return;
         }
 
@@ -579,7 +576,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     {
         $result = [];
         foreach ($values as $key => $value) {
-            if (!is_string($key) || $value === null) {
+            if (!is_string($key)) {
+                continue;
+            }
+
+            if ($value === null) {
                 continue;
             }
 
@@ -591,7 +592,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 $value = (float) $value;
             }
 
-            $result[$key] = is_float($value) ? $value : (int) $value;
+            $result[$key] = is_float($value) ? $value : $value;
         }
 
         return $result;
@@ -604,7 +605,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
      */
     private function computeSpacingSamples(array $members): array
     {
-        $samples          = [];
+        $samples           = [];
         $previousTimestamp = null;
 
         foreach ($members as $media) {
@@ -655,7 +656,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     {
         $hashes = [];
         foreach ($members as $media) {
-            $id      = $media->getId();
+            $id                                   = $media->getId();
             $hashes[$id ?? spl_object_id($media)] = $this->resolvePhashHex($media);
         }
 
@@ -664,7 +665,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
     private function resolveCuratedMemberCount(ClusterDraft $draft): int
     {
-        $params = $draft->getParams();
+        $params        = $draft->getParams();
         $memberQuality = $params['member_quality'] ?? null;
         if (!is_array($memberQuality)) {
             return 0;
@@ -692,15 +693,15 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     }
 
     /**
-     * @param ClusterMemberSelectionProfile $profile
-     * @param SelectionResult               $result
-     * @param int                           $preCount
-     * @param int                           $postCount
-     * @param int                           $droppedCount
+     * @param ClusterMemberSelectionProfile             $profile
+     * @param SelectionResult                           $result
+     * @param int                                       $preCount
+     * @param int                                       $postCount
+     * @param int                                       $droppedCount
      * @param array{average: float, samples: list<int>} $spacing
-     * @param array<string, int>                     $perDayDistribution
-     * @param array<int, string|null>                $hashSamples
-     * @param list<Media>                            $members
+     * @param array<string, int>                        $perDayDistribution
+     * @param array<int, string|null>                   $hashSamples
+     * @param list<Media>                               $members
      *
      * @return array<string, mixed>
      */
@@ -725,20 +726,20 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
         $drops = [
             'prefilter' => [
-                'total'             => (int) ($rawTelemetry['prefilter_total'] ?? 0),
-                'no_show'           => (int) ($rawTelemetry['prefilter_no_show'] ?? 0),
-                'low_quality'       => (int) ($rawTelemetry['prefilter_low_quality'] ?? 0),
-                'quality_floor'     => (int) ($rawTelemetry['prefilter_quality_floor'] ?? 0),
+                'total'         => (int) ($rawTelemetry['prefilter_total'] ?? 0),
+                'no_show'       => (int) ($rawTelemetry['prefilter_no_show'] ?? 0),
+                'low_quality'   => (int) ($rawTelemetry['prefilter_low_quality'] ?? 0),
+                'quality_floor' => (int) ($rawTelemetry['prefilter_quality_floor'] ?? 0),
             ],
             'selection' => [
-                'burst_collapsed'          => (int) ($rawTelemetry['burst_collapsed'] ?? 0),
-                'day_limit_rejections'     => (int) ($rawTelemetry['day_limit_rejections'] ?? 0),
-                'time_slot_rejections'     => (int) ($rawTelemetry['time_slot_rejections'] ?? 0),
-                'staypoint_rejections'     => (int) ($rawTelemetry['staypoint_rejections'] ?? 0),
-                'spacing_rejections'       => (int) ($rawTelemetry['spacing_rejections'] ?? 0),
-                'near_duplicate_blocked'   => (int) ($rawTelemetry['near_duplicate_blocked'] ?? 0),
-                'near_duplicate_replacements'=> (int) ($rawTelemetry['near_duplicate_replacements'] ?? 0),
-                'fallback_used'            => (int) ($rawTelemetry['fallback_used'] ?? 0),
+                'burst_collapsed'             => (int) ($rawTelemetry['burst_collapsed'] ?? 0),
+                'day_limit_rejections'        => (int) ($rawTelemetry['day_limit_rejections'] ?? 0),
+                'time_slot_rejections'        => (int) ($rawTelemetry['time_slot_rejections'] ?? 0),
+                'staypoint_rejections'        => (int) ($rawTelemetry['staypoint_rejections'] ?? 0),
+                'spacing_rejections'          => (int) ($rawTelemetry['spacing_rejections'] ?? 0),
+                'near_duplicate_blocked'      => (int) ($rawTelemetry['near_duplicate_blocked'] ?? 0),
+                'near_duplicate_replacements' => (int) ($rawTelemetry['near_duplicate_replacements'] ?? 0),
+                'fallback_used'               => (int) ($rawTelemetry['fallback_used'] ?? 0),
             ],
         ];
 
@@ -754,15 +755,15 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         ];
 
         foreach ($fallbacks as $reason => $fallback) {
-            $value = $rejections[$reason] ?? $fallback;
+            $value               = $rejections[$reason] ?? $fallback;
             $rejections[$reason] = (int) $value;
         }
 
-        $drops['selection']['spacing_rejections']      = $rejections[SelectionTelemetry::REASON_TIME_GAP];
-        $drops['selection']['near_duplicate_blocked']  = $rejections[SelectionTelemetry::REASON_PHASH];
-        $drops['selection']['staypoint_rejections']    = $rejections[SelectionTelemetry::REASON_STAYPOINT];
-        $drops['selection']['day_limit_rejections']    = $rejections[SelectionTelemetry::REASON_DAY_QUOTA];
-        $drops['selection']['time_slot_rejections']    = $rejections[SelectionTelemetry::REASON_TIME_SLOT];
+        $drops['selection']['spacing_rejections']     = $rejections[SelectionTelemetry::REASON_TIME_GAP];
+        $drops['selection']['near_duplicate_blocked'] = $rejections[SelectionTelemetry::REASON_PHASH];
+        $drops['selection']['staypoint_rejections']   = $rejections[SelectionTelemetry::REASON_STAYPOINT];
+        $drops['selection']['day_limit_rejections']   = $rejections[SelectionTelemetry::REASON_DAY_QUOTA];
+        $drops['selection']['time_slot_rejections']   = $rejections[SelectionTelemetry::REASON_TIME_SLOT];
 
         $perBucket = $this->countPerBucket($members, $profile);
         $phash     = $this->buildPhashTelemetry($members);
@@ -776,27 +777,27 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         );
         $hints = $this->buildRelaxationHints($profile, $drops, $averages, $preCount, $postCount);
 
-        $telemetry = $rawTelemetry;
+        $telemetry           = $rawTelemetry;
         $telemetry['counts'] = [
             'pre'     => $preCount,
             'post'    => $postCount,
             'dropped' => $droppedCount,
         ];
-        $telemetry['drops'] = $drops;
+        $telemetry['drops']   = $drops;
         $telemetry['spacing'] = [
             'average_seconds' => $spacing['average'],
             'samples'         => $spacing['samples'],
         ];
-        $telemetry['phash'] = $phash;
+        $telemetry['phash']        = $phash;
         $telemetry['distribution'] = [
             'per_day'    => $perDayDistribution,
             'per_bucket' => $perBucket,
         ];
-        $telemetry['hash_samples'] = $hashSamples;
-        $telemetry['averages'] = $averages;
+        $telemetry['hash_samples']     = $hashSamples;
+        $telemetry['averages']         = $averages;
         $telemetry['relaxation_hints'] = $hints;
-        $telemetry['storyline'] = $storyline;
-        $telemetry['rejections'] = $rejections;
+        $telemetry['storyline']        = $storyline;
+        $telemetry['rejections']       = $rejections;
 
         return $telemetry;
     }
@@ -883,8 +884,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $previous = null;
 
         foreach ($members as $media) {
-            $key      = $media->getId() ?? spl_object_id($media);
-            $hashHex  = $this->resolvePhashHex($media);
+            $key           = $media->getId() ?? spl_object_id($media);
+            $hashHex       = $this->resolvePhashHex($media);
             $samples[$key] = $hashHex;
 
             if ($hashHex === null || $previous === null) {
@@ -893,11 +894,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
                 continue;
             }
 
-            $distance   = Phash::hammingFromHex($previous, $hashHex);
+            $distance    = Phash::hammingFromHex($previous, $hashHex);
             $distances[] = $distance;
-            $sum        += $distance;
+            $sum += $distance;
             ++$count;
-            $previous    = $hashHex;
+            $previous = $hashHex;
         }
 
         $average = null;
@@ -913,8 +914,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     }
 
     /**
-     * @param array<string, int>                     $perDayDistribution
-     * @param array<string, int>                     $perBucket
+     * @param array<string, int>                        $perDayDistribution
+     * @param array<string, int>                        $perBucket
      * @param array{average: float, samples: list<int>} $spacing
      * @param array{
      *     samples: array<int, string|null>,
@@ -948,11 +949,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         }
 
         return [
-            'keep_ratio'                 => $keepRatio,
-            'per_day'                    => $averagePerDay,
-            'per_bucket'                 => $averagePerBucket,
-            'spacing_seconds'            => $spacing['average'],
-            'phash_hamming'              => $phash['average_consecutive_hamming'],
+            'keep_ratio'      => $keepRatio,
+            'per_day'         => $averagePerDay,
+            'per_bucket'      => $averagePerBucket,
+            'spacing_seconds' => $spacing['average'],
+            'phash_hamming'   => $phash['average_consecutive_hamming'],
         ];
     }
 
@@ -972,10 +973,10 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         int $preCount,
         int $postCount,
     ): array {
-        $hints      = [];
-        $selection  = $drops['selection'];
-        $prefilter  = $drops['prefilter'];
-        $options    = $profile->getOptions();
+        $hints     = [];
+        $selection = $drops['selection'];
+        $prefilter = $drops['prefilter'];
+        $options   = $profile->getOptions();
 
         if (($selection['day_limit_rejections'] ?? 0) > 0) {
             $hints[] = 'max_per_day erhöhen, um Tagesbegrenzungen zu lockern.';
@@ -1031,12 +1032,8 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             return $this->timestampCache[$key];
         }
 
-        $takenAt = $media->getTakenAt();
-        if ($takenAt instanceof DateTimeImmutable) {
-            $timestamp = $takenAt->getTimestamp();
-        } else {
-            $timestamp = $media->getCreatedAt()->getTimestamp();
-        }
+        $takenAt   = $media->getTakenAt();
+        $timestamp = $takenAt instanceof DateTimeImmutable ? $takenAt->getTimestamp() : $media->getCreatedAt()->getTimestamp();
 
         $this->timestampCache[$key] = $timestamp;
 
