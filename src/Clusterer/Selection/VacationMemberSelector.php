@@ -222,8 +222,8 @@ final class VacationMemberSelector implements MemberSelectorInterface
 
         $thresholds = $finalTelemetry['thresholds'] ?? null;
         if (is_array($thresholds)) {
-            $thresholds['spacing_relaxed_to_zero'] = ($thresholds['spacing_relaxed_to_zero'] ?? false) || $spacingRelaxedToZero;
-            $thresholds['phash_relaxed_to_zero']   = ($thresholds['phash_relaxed_to_zero'] ?? false) || $phashRelaxedToZero;
+            $thresholds['spacing_relaxed_to_zero'] = (bool) ($thresholds['spacing_relaxed_to_zero'] ?? false) || $spacingRelaxedToZero;
+            $thresholds['phash_relaxed_to_zero']   = (bool) ($thresholds['phash_relaxed_to_zero'] ?? false) || $phashRelaxedToZero;
             $finalTelemetry['thresholds']          = $thresholds;
         } else {
             $finalTelemetry['thresholds'] = [

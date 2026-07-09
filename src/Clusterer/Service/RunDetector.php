@@ -514,10 +514,10 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array<string, bool>                                                       $isAwayCandidate
-     * @param list<string>                                                              $keys
-     * @param array<string, array{photoCount:int,hasGpsAnchors:bool,transitHeavy:bool}> $metadata
-     * @param callable(string, int):int                                                 $thresholdProvider
+     * @param array<string, bool>                                                                              $isAwayCandidate
+     * @param list<string>                                                                                     $keys
+     * @param array<string, array{photoCount:int,hasGpsAnchors:bool,transitHeavy:bool,hasStaypointDwell:bool}> $metadata
+     * @param callable(string, int):int                                                                        $thresholdProvider
      */
     private function applyLowSampleBridging(
         array &$isAwayCandidate,
@@ -639,7 +639,7 @@ final class RunDetector implements VacationRunDetectorInterface
     }
 
     /**
-     * @param array<string, mixed> $features
+     * @param array{centroidBeyondHome:bool,centroidDistanceKm:float|null,centroidRadiusKm:float|null,transportSignal:bool,baseAway:bool,hotelPoiSignal:bool,hasStaypointDwell:bool,photoCount:int} $features
      */
     private function decideInitialAwayCandidate(
         array $features,
@@ -696,7 +696,7 @@ final class RunDetector implements VacationRunDetectorInterface
             return true;
         }
 
-        return (bool) $features['baseAway'];
+        return $features['baseAway'];
     }
 
     /**
