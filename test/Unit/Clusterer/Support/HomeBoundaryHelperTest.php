@@ -81,10 +81,13 @@ final class HomeBoundaryHelperTest extends TestCase
         $first = HomeBoundaryHelper::nearestCenter($home, 52.51, 13.41, 150);
         self::assertSame(0, $first['index']);
 
+        // At timestamp 300 only the second center is within its validity window; centers()
+        // filters and re-indexes, so assert on the selected center's identity rather than its
+        // position in the filtered list.
         $second = HomeBoundaryHelper::nearestCenter($home, 48.11, 11.51, 300);
-        self::assertSame(1, $second['index']);
+        self::assertSame(48.1, $second['center']['lat']);
 
         $fallback = HomeBoundaryHelper::nearestCenter($home, 48.11, 11.51, 50);
-        self::assertSame(1, $fallback['index']);
+        self::assertSame(48.1, $fallback['center']['lat']);
     }
 }
