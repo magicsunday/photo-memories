@@ -20,8 +20,8 @@ namespace MagicSunday\Memories\Feed;
 final readonly class MemoryFeedItem
 {
     /**
-     * @param list<int>                        $memberIds
-     * @param array<string, scalar|array|null> $params
+     * @param list<int>                                              $memberIds
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      */
     public function __construct(
         private string $algorithm,
@@ -65,14 +65,14 @@ final readonly class MemoryFeedItem
         return $this->score;
     }
 
-    /** @return array<string, scalar|array|null> */
+    /** @return array<string, int|float|string|bool|array<mixed>|null> */
     public function getParams(): array
     {
         return $this->params;
     }
 
     /**
-     * @param array<string, scalar|array|null>|null $params
+     * @param array<string, int|float|string|bool|array<mixed>|null>|null $params
      */
     public function withScore(float $score, ?array $params = null): self
     {

@@ -270,6 +270,9 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         ];
     }
 
+    /**
+     * @param list<Media> $media
+     */
     private function applySelection(
         ClusterDraft $draft,
         array $media,

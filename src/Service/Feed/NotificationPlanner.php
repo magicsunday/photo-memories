@@ -55,6 +55,12 @@ final readonly class NotificationPlanner
         $this->defaultTimezone = trim($defaultTimezone) !== '' ? $defaultTimezone : 'UTC';
     }
 
+    /**
+     * @param MemoryFeedItem    $item
+     * @param DateTimeImmutable $reference
+     *
+     * @return list<array{kanal: string, sendeZeitpunkt: string, vorlauf: string, triggerZeitpunkt: string, algorithmus: string, titel: string}>
+     */
     public function planForItem(MemoryFeedItem $item, DateTimeImmutable $reference): array
     {
         $targetUtc = $this->resolveTargetDate($item->getParams());
@@ -105,7 +111,7 @@ final readonly class NotificationPlanner
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array<mixed>|null> $params
      */
     private function resolveTargetDate(array $params): ?DateTimeImmutable
     {

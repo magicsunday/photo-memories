@@ -246,6 +246,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     /**
      * @param array<string, bool> $existing
      * @param array<string, bool> $seenThisRun
+     * @param list<int>|null      $members
      */
     private function buildEntityForDraft(
         ClusterDraft $draft,
@@ -839,7 +840,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array<mixed>|null> $params
      */
     private function resolveAlgorithmVersion(array $params): ?string
     {
@@ -857,7 +858,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array<mixed>|null> $params
      *
      * @throws JsonException
      */
@@ -1121,7 +1122,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
     }
 
     /**
-     * @param array|bool|float|int|string|null $value
+     * @param array<mixed>|bool|float|int|string|null $value
      */
     private function numericOrNull(array|bool|float|int|string|null $value): ?float
     {

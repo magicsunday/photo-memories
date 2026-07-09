@@ -341,7 +341,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     }
 
     /**
-     * @param array<string, float|int|bool|string|array|null> $metrics
+     * @param array<string, float|int|bool|string|array<mixed>|null> $metrics
      */
     private function shouldMerge(array $metrics): bool
     {
@@ -598,6 +598,11 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         return (int) (($left + $right) / 2.0);
     }
 
+    /**
+     * @param array<string, float|int|bool|string|array<mixed>|null> $metrics
+     *
+     * @return array<string, int|float|string|bool|array<mixed>|null>
+     */
     private function mergeParams(ClusterDraft $winner, ClusterDraft $loser, array $metrics): array
     {
         $winnerParams = $winner->getParams();
@@ -638,7 +643,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             }
         }
 
-        if (isset($loserParams['score']) && (!isset($merged['score']) || (float) $loserParams['score'] > (float) ($merged['score'] ?? 0.0))) {
+        if (isset($loserParams['score']) && (!isset($merged['score']) || (float) $loserParams['score'] > (float) $merged['score'])) {
             $merged['score'] = $loserParams['score'];
         }
 
@@ -648,8 +653,11 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
     }
 
     /**
-     * @param array<string, mixed>|null $primary
-     * @param array<string, mixed>|null $secondary
+     * @param array<string, mixed>|null                              $primary
+     * @param array<string, mixed>|null                              $secondary
+     * @param array<string, float|int|bool|string|array<mixed>|null> $metrics
+     *
+     * @return array<string, mixed>
      */
     private function mergeMetaParams(?array $primary, ?array $secondary, array $metrics): array
     {
@@ -787,6 +795,9 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $entry
+     */
     private function appendMergeMeta(ClusterDraft $draft, array $entry): ClusterDraft
     {
         $params = $draft->getParams();

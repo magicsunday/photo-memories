@@ -447,6 +447,9 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         return '~' . $formatted . "\u{202F}km";
     }
 
+    /**
+     * @param array<string, mixed> $params
+     */
     private function resolveLegLabel(array $params): string
     {
         $legCount = $this->determineLegCount($params);
@@ -457,6 +460,9 @@ final readonly class CanonicalTitleStage implements ClusterConsolidationStageInt
         return $legCount === 1 ? '1 Etappe' : $legCount . ' Etappen';
     }
 
+    /**
+     * @param array<string, mixed> $params
+     */
     private function determineLegCount(array $params): ?int
     {
         $segmentCount = $this->countSegments($params['travel_segments'] ?? null);

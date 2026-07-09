@@ -383,6 +383,9 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         return $summaries;
     }
 
+    /**
+     * @param array<string, int> $countries country code to occurrence count
+     */
     private function majorityCountry(array $countries): ?string
     {
         $bestCountry = null;
@@ -398,6 +401,9 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
         return $bestCountry;
     }
 
+    /**
+     * @param array<int, int> $offsets timezone offset to occurrence count
+     */
     private function majorityOffset(array $offsets): ?int
     {
         $bestOffset = null;
@@ -473,6 +479,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
     }
 
     /**
+     * @param array{lat: float, lon: float}    $centroid
      * @param list<array{lat:float,lon:float}> $nightSamples
      */
     private function radiusForCluster(

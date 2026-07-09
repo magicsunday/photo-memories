@@ -754,6 +754,9 @@ final class RunDetector implements VacationRunDetectorInterface
         return $poiDensity >= 0.25;
     }
 
+    /**
+     * @param array<string, mixed> $summary
+     */
     private function summaryTimestamp(array $summary): ?int
     {
         $members = $summary['gpsMembers'] ?? null;

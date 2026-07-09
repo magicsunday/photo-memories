@@ -499,6 +499,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         );
     }
 
+    /**
+     * @param array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null} $slide
+     */
     private function buildBlurredSlideFilter(
         int $index,
         float $clipDuration,
@@ -998,7 +1001,8 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     }
 
     /**
-     * @param list<string> $transitions
+     * @param list<array{image:string,mediaId:int|null,clusterId?:int|null,duration:float,transition:string|null}> $slides
+     * @param list<string>                                                                                         $transitions
      *
      * @return list<string>
      */
@@ -1592,6 +1596,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         return '';
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     private function emitMonitoring(string $status, array $context = []): void
     {
         if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {
@@ -1601,6 +1608,9 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $this->monitoringEmitter->emit('slideshow.generate', $status, $context);
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     private function emitMonitoringWarning(string $message, array $context = []): void
     {
         $this->emitMonitoring('warning', array_merge(['message' => $message], $context));

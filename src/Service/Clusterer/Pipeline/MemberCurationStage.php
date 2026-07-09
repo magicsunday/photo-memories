@@ -705,6 +705,11 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $this->monitoringEmitter->emit('member_curation', $event, $payload);
     }
 
+    /**
+     * @param SelectionPolicy $policy
+     *
+     * @return array<string, int|float|string|array<string, mixed>>
+     */
     private function summarizePolicy(SelectionPolicy $policy): array
     {
         $details = [

@@ -391,6 +391,8 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     /**
      * @param list<array{mediaId:int,path:string}> $slides
      * @param list<string>                         $imagePaths
+     *
+     * @return array<string, mixed>
      */
     private function buildStoryboard(
         string $itemId,
@@ -547,6 +549,9 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
         }
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     private function emitMonitoring(string $status, array $context = []): void
     {
         if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {

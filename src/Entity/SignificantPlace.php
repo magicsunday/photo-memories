@@ -65,6 +65,9 @@ class SignificantPlace
     #[ORM\Column(name: 'confidence', type: Types::FLOAT, nullable: true)]
     private ?float $confidence = null;
 
+    /**
+     * @var array<string, mixed>
+     */
     #[ORM\Column(name: 'meta', type: Types::JSON, nullable: true)]
     private array $meta = [];
 
@@ -74,6 +77,9 @@ class SignificantPlace
     #[ORM\Column(name: 'updated_at', type: Types::DATETIME_IMMUTABLE)]
     private DateTimeImmutable $updatedAt;
 
+    /**
+     * @param array<string, mixed> $geometry
+     */
     public function __construct(SignificantPlaceKind $kind, array $geometry)
     {
         $this->kind      = $kind;

@@ -261,9 +261,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $streams
      *
-     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>
+     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>
      */
     private function normaliseStreams(?array $streams): array
     {
@@ -285,9 +285,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $streams
      *
-     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>|null
+     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>|null
      */
     private function firstStream(?array $streams): ?array
     {
@@ -305,7 +305,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $stream
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $stream
      */
     private function parseStreamRotation(array $stream): ?float
     {
@@ -349,7 +349,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $sideData
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $sideData
      */
     private function parseStreamStabilisation(?array $sideData): ?bool
     {
@@ -368,7 +368,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $stream
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $stream
      */
     private function parseStreamDimension(array $stream, string $dimensionKey, string $fallbackKey): ?int
     {
@@ -381,7 +381,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $entry
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $entry
      */
     private function extractStabilisationFromEntry(?array $entry): ?bool
     {
@@ -421,9 +421,9 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null> $value
+     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $value
      *
-     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>
+     * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>
      */
     private function normaliseNestedArray(array $value): array
     {

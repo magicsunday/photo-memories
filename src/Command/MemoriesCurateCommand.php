@@ -437,6 +437,9 @@ final class MemoriesCurateCommand extends Command
         }
     }
 
+    /**
+     * @param list<string>|null $allowedGroups
+     */
     private function runClusteringStage(
         SymfonyStyle $io,
         OutputInterface $output,

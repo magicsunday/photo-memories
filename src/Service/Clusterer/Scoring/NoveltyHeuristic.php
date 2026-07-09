@@ -239,6 +239,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
             $this->weights['history'] * $historyScore;
     }
 
+    /**
+     * @param ClusterDraft         $cluster
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     */
     private function scoreStaypointRarity(ClusterDraft $cluster, array $stats): float
     {
         $keys = $this->staypointKeys($cluster);
@@ -277,6 +283,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return 0.5;
     }
 
+    /**
+     * @param ClusterDraft         $cluster
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     */
     private function scoreRareStaypoints(ClusterDraft $cluster, array $stats): float
     {
         $keys      = array_values($this->staypointKeys($cluster));
@@ -301,6 +313,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     }
 
     /**
+     * @param ClusterDraft         $cluster
+     * @param array<int, Media>    $mediaMap id => Media
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     *
      * @throws DateMalformedStringException
      */
     private function scoreTimeRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
@@ -320,6 +338,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return $acc / count($days);
     }
 
+    /**
+     * @param ClusterDraft         $cluster
+     * @param array<int, Media>    $mediaMap id => Media
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     */
     private function scoreDeviceRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         $majorDev = $this->majorityDevice($cluster, $mediaMap);
@@ -333,6 +358,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return $this->rarityFromCounts($cnt, $max);
     }
 
+    /**
+     * @param ClusterDraft         $cluster
+     * @param array<int, Media>    $mediaMap id => Media
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     */
     private function scoreContentRarity(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         $prefix = $this->majorityPhashPrefix($cluster, $mediaMap);
@@ -346,6 +378,13 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return $this->rarityFromCounts($cnt, $max);
     }
 
+    /**
+     * @param ClusterDraft         $cluster
+     * @param array<int, Media>    $mediaMap id => Media
+     * @param array<string, mixed> $stats
+     *
+     * @return float
+     */
     private function computeHistoryScore(ClusterDraft $cluster, array $mediaMap, array $stats): float
     {
         if (!$this->applyHistoryPenalty) {
@@ -454,6 +493,11 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return $filtered;
     }
 
+    /**
+     * @param array<array-key, int> $map
+     *
+     * @return int
+     */
     private function maxVal(array $map): int
     {
         $max = 0;
@@ -498,8 +542,8 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
     }
 
     /**
-     * @param ClusterDraft $c
-     * @param array        $mediaMap
+     * @param ClusterDraft      $c
+     * @param array<int, Media> $mediaMap id => Media
      *
      * @return list<int>
      *
@@ -558,6 +602,12 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return array_values(array_unique($out, SORT_NUMERIC));
     }
 
+    /**
+     * @param ClusterDraft      $cluster
+     * @param array<int, Media> $mediaMap id => Media
+     *
+     * @return list<string>
+     */
     private function collectHistoryWindows(ClusterDraft $cluster, array $mediaMap): array
     {
         $windows   = [];
@@ -584,6 +634,10 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return array_values(array_unique($windows));
     }
 
+    /**
+     * @param ClusterDraft      $c
+     * @param array<int, Media> $mediaMap id => Media
+     */
     private function majorityDevice(ClusterDraft $c, array $mediaMap): ?string
     {
         $cnt = [];
@@ -611,6 +665,10 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         return $best;
     }
 
+    /**
+     * @param ClusterDraft      $c
+     * @param array<int, Media> $mediaMap id => Media
+     */
     private function majorityPhashPrefix(ClusterDraft $c, array $mediaMap): ?string
     {
         $nibbles     = max(1, min(16, $this->phashPrefixNibbles));

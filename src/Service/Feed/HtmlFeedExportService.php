@@ -239,6 +239,9 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         return $cards;
     }
 
+    /**
+     * @return array{title: string, subtitle: string, chips: list<array{label: string, variant: string}>, images: list<array{href: string, alt: string}>, details: list<string>}|null
+     */
     private function createDraftCard(
         ClusterDraft $draft,
         FeedExportStage $stage,
@@ -294,6 +297,9 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
         ];
     }
 
+    /**
+     * @return array{title: string, subtitle: string, chips: list<array{label: string, variant: string}>, images: list<array{href: string, alt: string}>, details: list<string>}|null
+     */
     private function createCuratedCard(
         MemoryFeedItem $item,
         FeedExportRequest $request,
@@ -533,8 +539,8 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
-     * @param list<int>                        $memberIds
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     * @param list<int>                                              $memberIds
      *
      * @return list<string>
      */
@@ -751,7 +757,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     }
 
     /**
-     * @param array|bool|float|int|string|null $value
+     * @param array<mixed>|bool|float|int|string|null $value
      *
      * @return list<array{label: string, score: float}>
      */

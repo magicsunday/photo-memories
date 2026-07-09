@@ -50,7 +50,7 @@ use function usort;
  * @phpstan-type Candidate array{
  *     media: Media,
  *     day: string,
- *     summary: DaySummary,
+ *     summary: array<string, mixed>,
  *     timestamp: int,
  *     slot: int,
  *     score: float,
@@ -58,6 +58,7 @@ use function usort;
  *     staypointKey: string|null,
  *     burstId: string|null,
  *     origin: string,
+ *     persons?: list<string>,
  * }
  */
 final class VacationMemberSelector implements MemberSelectorInterface
@@ -799,7 +800,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         );
 
-        return array_values($candidates);
+        return $candidates;
     }
 
     /**
@@ -820,7 +821,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
             }
         );
 
-        return array_values($candidates);
+        return $candidates;
     }
 
     /**
@@ -1046,6 +1047,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
+     * @param Candidate          $candidate
      * @param list<Candidate>    $selected
      * @param array<string, int> $dayCounts
      * @param array<string, int> $staypointCounts
@@ -1134,7 +1136,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
-     * @param list<Candidate> $selected
+     * @param Candidate          $candidate
+     * @param list<Candidate>    $selected
+     * @param array<string, int> $dayCounts
+     * @param array<string, int> $staypointCounts
+     * @param array<string, int> $personCounts
      */
     private function replaceSelection(
         int $index,
@@ -1165,8 +1171,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
+     * @param Candidate          $candidate
      * @param list<Candidate>    $selected
      * @param array<string, int> $personCounts
+     *
+     * @return Candidate|null
      */
     private function applyPeopleBalancing(
         array $candidate,
@@ -1298,6 +1307,7 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
+     * @param Candidate       $candidate
      * @param list<Candidate> $selected
      */
     private function findDuplicate(array $candidate, array $selected, VacationSelectionOptions $options): ?int
@@ -1325,6 +1335,10 @@ final class VacationMemberSelector implements MemberSelectorInterface
         return null;
     }
 
+    /**
+     * @param Candidate $a
+     * @param Candidate $b
+     */
     private function compareCandidates(array $a, array $b): int
     {
         if ($a['timestamp'] !== $b['timestamp']) {
@@ -1371,6 +1385,11 @@ final class VacationMemberSelector implements MemberSelectorInterface
         return $best;
     }
 
+    /**
+     * @param array<string, mixed> $summary
+     *
+     * @return Candidate
+     */
     private function createCandidate(
         Media $media,
         string $date,
@@ -1409,6 +1428,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $summary
+     */
     private function computeSlot(Media $media, array $summary, VacationSelectionOptions $options, int $timestamp): int
     {
         $timezoneIdentifier = $summary['localTimezoneIdentifier'] ?? 'UTC';
@@ -1457,6 +1479,9 @@ final class VacationMemberSelector implements MemberSelectorInterface
         return $score;
     }
 
+    /**
+     * @param array<string, mixed> $summary
+     */
     private function staypointKey(int $timestamp, array $summary, string $date): ?string
     {
         foreach ($summary['staypoints'] as $staypoint) {

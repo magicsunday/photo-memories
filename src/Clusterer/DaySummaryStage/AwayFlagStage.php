@@ -28,6 +28,8 @@ use function min;
 
 /**
  * Post-processes away flags for day summaries.
+ *
+ * @phpstan-import-type HomeDescriptor from DaySummaryStageInterface
  */
 final readonly class AwayFlagStage implements DaySummaryStageInterface
 {
@@ -142,6 +144,11 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         return $days;
     }
 
+    /**
+     * @param array<string, mixed>      $summary
+     * @param array<string, mixed>|null $nextSummary
+     * @param HomeDescriptor            $home
+     */
     private function shouldFlagByNextDominantStaypoint(array $summary, ?array $nextSummary, array $home, DateTimeZone $timezone): bool
     {
         if ($nextSummary === null) {
@@ -190,6 +197,9 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         return !$this->hasHomeStaypointInWindow($nextSummary['staypoints'] ?? [], $window['start'], $window['end'], $home);
     }
 
+    /**
+     * @return array{start:DateTimeImmutable,end:DateTimeImmutable}|null
+     */
     private function createNightWindow(string $date, DateTimeZone $timezone): ?array
     {
         $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', sprintf('%s %02d:00:00', $date, $this->nightWindowStartHour), $timezone);
@@ -247,6 +257,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
     /**
      * @param list<array{lat:float,lon:float,start:int,end:int}> $staypoints
+     * @param HomeDescriptor                                     $home
      */
     private function hasHomeStaypointInWindow(array $staypoints, DateTimeImmutable $windowStart, DateTimeImmutable $windowEnd, array $home): bool
     {

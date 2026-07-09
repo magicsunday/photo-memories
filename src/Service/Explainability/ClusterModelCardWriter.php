@@ -205,6 +205,9 @@ HTML;
         return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
+    /**
+     * @param array<array-key, mixed> $data label/value pairs to render as table rows
+     */
     private function renderKeyValueTable(array $data): string
     {
         if ($data === []) {
@@ -227,6 +230,10 @@ HTML;
         return '<table><tbody>' . implode('', $rows) . '</tbody></table>';
     }
 
+    /**
+     * @param array<array-key, mixed>                                $policyDetails selection policy detail map
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params        cluster draft parameter map
+     */
     private function buildStrategiesSection(array $policyDetails, array $params): string
     {
         $items = [];
@@ -282,6 +289,9 @@ HTML;
         return implode('', $items);
     }
 
+    /**
+     * @param array<string, mixed> $merges recorded merge entries keyed by source
+     */
     private function renderMergeTable(array $merges): string
     {
         if ($merges === []) {
@@ -319,6 +329,12 @@ HTML;
         return '<table><thead><tr><th>Quelle</th><th>Entscheidung</th><th>Überlappung</th><th>Begründung</th></tr></thead><tbody>' . implode('', $rows) . '</tbody></table>';
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params           cluster draft parameter map
+     * @param array<string, mixed>                                   $selectionSummary member-selection summary map
+     *
+     * @return array<string, mixed>
+     */
     private function collectScoreDetails(array $params, array $selectionSummary): array
     {
         $scores = [];
@@ -355,6 +371,10 @@ HTML;
         return $scores;
     }
 
+    /**
+     * @param array<array-key, mixed> $rejectionCounts rejection reason counts keyed by reason
+     * @param array<string, mixed>    $drops           drop counts keyed by category
+     */
     private function renderRejectionTable(array $rejectionCounts, array $drops): string
     {
         if ($rejectionCounts === [] && $drops === []) {
@@ -394,6 +414,10 @@ HTML;
         return '<table><thead><tr><th>Grund</th><th>Anzahl</th></tr></thead><tbody>' . implode('', $rows) . '</tbody></table>';
     }
 
+    /**
+     * @param array<string, mixed> $selectionSummary member-selection summary map
+     * @param array<string, mixed> $policyDetails    selection policy detail map
+     */
     private function buildKeyPhotoNarrative(ClusterDraft $draft, array $selectionSummary, array $policyDetails): string
     {
         $cover = $draft->getCoverMediaId();
@@ -418,6 +442,9 @@ HTML;
         );
     }
 
+    /**
+     * @param array<string, mixed> $mmr MMR re-ranking telemetry map
+     */
     private function renderMmrSection(array $mmr): string
     {
         if ($mmr === []) {
@@ -470,6 +497,9 @@ HTML;
         return $summaryTable . $iterationTable;
     }
 
+    /**
+     * @param array<string, mixed> $selectionTelemetry decision-feature telemetry map
+     */
     private function renderDecisionFeaturesJson(array $selectionTelemetry): string
     {
         if ($selectionTelemetry === []) {

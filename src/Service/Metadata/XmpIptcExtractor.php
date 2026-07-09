@@ -92,7 +92,11 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         return $media;
     }
 
-    /** @param array|bool|float|int|string|null $v @return list<string> */
+    /**
+     * @param array<mixed>|bool|float|int|string|null $v
+     *
+     * @return list<string>
+     */
     private function fromIptcStrings(array|bool|float|int|string|null $v): array
     {
         if (is_array($v)) {
@@ -110,7 +114,10 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         return [];
     }
 
-    /** @param list<string> $keywords @param list<string> $persons */
+    /**
+     * @param list<string> $keywords
+     * @param list<string> $persons
+     */
     private function parseXmpXml(string $filepath, ?string $xml, array &$keywords, array &$persons): void
     {
         if (!is_string($xml) || $xml === '') {

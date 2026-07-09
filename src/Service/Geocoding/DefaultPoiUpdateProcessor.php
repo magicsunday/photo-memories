@@ -155,6 +155,9 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
         return 'Unbenannter Ort';
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     private function emitMonitoring(string $job, string $status, array $context = []): void
     {
         if (!$this->monitoringEmitter instanceof JobMonitoringEmitterInterface) {

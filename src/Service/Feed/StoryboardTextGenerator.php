@@ -239,8 +239,8 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param array<string, int>                        $scores
-     * @param array<array-key, scalar|null>|scalar|null $value
+     * @param array<string, int>                            $scores
+     * @param array<array-key, mixed>|int|float|string|null $value
      */
     private function registerLocationCandidate(array &$scores, array|int|float|string|null $value, int $weight): void
     {

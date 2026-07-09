@@ -44,6 +44,9 @@ final readonly class TimeNormalizer implements SingleMetadataExtractorInterface
      */
     private array $fallbackPriority;
 
+    /**
+     * @param list<string> $sourcePriority
+     */
     public function __construct(
         private CaptureTimeResolver $captureTimeResolver,
         private string $defaultTimezone,

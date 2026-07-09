@@ -456,6 +456,9 @@ final class FeedPreviewCommand extends Command
         $io->table($this->buildTableHeaders($showMembers), $rows);
     }
 
+    /**
+     * @return list<string>
+     */
     private function buildTableHeaders(bool $showMembers): array
     {
         $headers = ['#', 'Algorithmus', 'Storyline', 'Mitglieder (roh)', 'Mitglieder (kuratiert)', 'Zeitraum', 'Score'];
@@ -492,6 +495,9 @@ final class FeedPreviewCommand extends Command
         return '–';
     }
 
+    /**
+     * @return array{from: DateTimeImmutable|null, to: DateTimeImmutable|null}|null
+     */
     private function buildDraftTimeRange(ClusterDraft $draft): ?array
     {
         $from = $draft->getStartAt();

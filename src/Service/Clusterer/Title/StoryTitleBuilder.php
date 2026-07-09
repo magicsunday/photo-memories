@@ -75,6 +75,9 @@ final readonly class StoryTitleBuilder
         ];
     }
 
+    /**
+     * @return array{title: string, subtitle: string}
+     */
     private function buildDisabledStorylineResponse(ClusterDraft $cluster, ?string $locale): array
     {
         $resolvedLocale = $this->resolveLocale($locale);
@@ -97,6 +100,9 @@ final readonly class StoryTitleBuilder
         ];
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function buildTitle(array $params, ?RouteSummary $summary): string
     {
         $base = '';
@@ -124,6 +130,9 @@ final readonly class StoryTitleBuilder
         return $base;
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function buildSubtitle(array $params, ?RouteSummary $summary, string $locale): string
     {
         $parts = [];
@@ -160,6 +169,9 @@ final readonly class StoryTitleBuilder
         return 'Personenanteil: 0 %';
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function resolveDateLabel(array $params, string $locale): string
     {
         $explicit = $this->stringOrEmpty($params['date_range'] ?? null);
@@ -181,6 +193,9 @@ final readonly class StoryTitleBuilder
         return $this->joinParts([$start, $end], ' – ');
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function formatPeopleShare(array $params): string
     {
         $ratio = $this->numericOrNull($params['people_ratio'] ?? null);
@@ -205,6 +220,9 @@ final readonly class StoryTitleBuilder
         return sprintf('Personenanteil: %d %%', $percent);
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function formatCompanionNames(array $params): string
     {
         $names = $this->extractCompanionNames($params);
@@ -252,6 +270,8 @@ final readonly class StoryTitleBuilder
     }
 
     /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     *
      * @return list<string>
      */
     private function extractCompanionNames(array $params): array
@@ -415,6 +435,9 @@ final readonly class StoryTitleBuilder
         return mb_convert_case($trimmed, MB_CASE_TITLE, 'UTF-8');
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function resolvePrimaryLocationLabel(array $params): string
     {
         $candidates = [
@@ -441,15 +464,14 @@ final readonly class StoryTitleBuilder
         return '';
     }
 
+    /**
+     * @param list<string> $parts
+     */
     private function joinParts(array $parts, string $separator = ' • '): string
     {
         $filtered = [];
 
         foreach ($parts as $part) {
-            if (!is_string($part)) {
-                continue;
-            }
-
             $trimmed = trim($part);
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;

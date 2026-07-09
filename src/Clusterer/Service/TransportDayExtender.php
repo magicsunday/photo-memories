@@ -249,7 +249,8 @@ final class TransportDayExtender
     }
 
     /**
-     * @param list<string> $run
+     * @param list<string>                                                                                                                                                                                                                                                                    $run
+     * @param array<string, array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int}> $days
      */
     private function countLeanDaysAtBoundary(array $run, array $days, bool $fromStart): int
     {
@@ -299,6 +300,8 @@ final class TransportDayExtender
 
     /**
      * @param array{baseLocation?: array{lat: float|int, lon: float|int}|null, dominantStaypoints?: list<array{lat: float, lon: float, start?: int, end?: int, dwellSeconds?: int, memberCount?: int}>, gpsMembers?: list<Media>} $summary
+     *
+     * @return array{lat: float, lon: float}|null
      */
     private function resolveReferenceCoordinate(array $summary): ?array
     {

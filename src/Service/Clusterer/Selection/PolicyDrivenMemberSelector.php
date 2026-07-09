@@ -550,9 +550,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
     }
 
     /**
-     * @param list<int>              $memberIds
-     * @param array<int, Media>      $mediaMap
-     * @param array<int, float|null> $qualityScores
+     * @param list<int>                           $memberIds
+     * @param array<int, Media>                   $mediaMap
+     * @param array<int, float|null>              $qualityScores
+     * @param array<string, array<string, mixed>> $daySegments
      *
      * @return array{eligible: list<array<string, mixed>>, drops: array<string, int>, all: list<int>}
      */
@@ -716,6 +717,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     /**
      * @param list<array<string, mixed>> $candidates
+     *
+     * @return list<array<string, mixed>>
      */
     private function runPipeline(array $candidates, SelectionPolicy $policy, SelectionTelemetry $telemetry): array
     {
@@ -930,6 +933,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     /**
      * @param list<array<string, mixed>> $candidates
+     * @param array<string, int>         $drops
+     *
+     * @return list<array<string, mixed>>
      */
     private function collapseBursts(array $candidates, array &$drops): array
     {
@@ -1022,6 +1028,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return $id;
     }
 
+    /**
+     * @return list<int>|null
+     */
     private function decodeHash(Media $media): ?array
     {
         $hash = $media->getPhash64();
@@ -1063,6 +1072,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return count($persons) === 1 && $media->hasFaces();
     }
 
+    /**
+     * @param array<string, mixed> $faceMetrics
+     */
     private function deriveSceneBucket(ClusterDraft $draft, Media $media, array $faceMetrics): string
     {
         $params    = $draft->getParams();
@@ -1110,6 +1122,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return 'outdoor';
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function bucketFromPoi(array $params): ?string
     {
         $categoryKey   = $this->stringOrNull($params['poi_category_key'] ?? null);
@@ -1178,6 +1193,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         ]);
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function looksLikeLandmark(Media $media, array $params): bool
     {
         if ($this->hasSceneTag($media, [
@@ -1274,6 +1292,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         ]);
     }
 
+    /**
+     * @param list<string> $keywords
+     */
     private function hasSceneTag(Media $media, array $keywords): bool
     {
         $tags = $media->getSceneTags();
@@ -1297,7 +1318,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
                     continue;
                 }
 
-                if (str_contains($normalised, strtolower((string) $keyword))) {
+                if (str_contains($normalised, strtolower($keyword))) {
                     return true;
                 }
             }
@@ -1306,6 +1327,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return false;
     }
 
+    /**
+     * @param array<string, string> $tags
+     */
     private function poiMatchesFood(?string $categoryKey, ?string $categoryValue, array $tags, ?string $label): bool
     {
         $key   = $categoryKey !== null ? strtolower($categoryKey) : null;
@@ -1335,6 +1359,9 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return false;
     }
 
+    /**
+     * @param array<string, string> $tags
+     */
     private function poiMatchesLandmark(?string $categoryKey, ?string $categoryValue, array $tags, ?string $label): bool
     {
         $key   = $categoryKey !== null ? strtolower($categoryKey) : null;
@@ -1424,6 +1451,37 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         return in_array($orientation, [5, 6, 7, 8], true) ? 'portrait' : 'landscape';
     }
 
+    /**
+     * @return array{
+     *     profile: string,
+     *     storyline: string,
+     *     target_total: int,
+     *     minimum_total: int,
+     *     max_per_day: int|null,
+     *     time_slot_hours: float|null,
+     *     min_spacing_seconds: int,
+     *     phash_min_hamming: int,
+     *     max_per_staypoint: int|null,
+     *     relaxed_max_per_staypoint: int|null,
+     *     quality_floor: float,
+     *     video_bonus: float,
+     *     face_bonus: float,
+     *     selfie_penalty: float,
+     *     max_per_year: int|null,
+     *     max_per_bucket: int|null,
+     *     video_heavy_bonus: float|null,
+     *     scene_bucket_weights: array<string, float>,
+     *     core_day_bonus: int,
+     *     peripheral_day_penalty: int,
+     *     peripheral_day_max_total: int|null,
+     *     peripheral_day_hard_cap: int|null,
+     *     phash_percentile: float,
+     *     spacing_progress_factor: float,
+     *     cohort_penalty: float,
+     *     day_quotas: array<string, int>,
+     *     day_context: array<string, array{score:float,category:string,duration:int|null,metrics:array<string,float>}>
+     * }
+     */
     private function policySnapshot(SelectionPolicy $policy, string $storyline): array
     {
         return [

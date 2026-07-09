@@ -97,9 +97,9 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      *
-     * @return array<string, scalar|array|null>
+     * @return array<string, int|float|string|bool|array<mixed>|null>
      */
     private function normalizeLocationParameters(array $params): array
     {
@@ -157,7 +157,7 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     }
 
     /**
-     * @return array<string, scalar|array|null>
+     * @return array<string, int|float|string|bool|array<mixed>|null>
      */
     private function computeParameters(ClusterDraft $cluster, string $locale): array
     {
@@ -177,9 +177,9 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      *
-     * @return array<string, scalar|array|null>
+     * @return array<string, int|float|string|bool|array<mixed>|null>
      */
     private function applyAlgorithmEnhancements(
         ClusterDraft $cluster,
@@ -256,6 +256,9 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         return $params;
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function resolvePrimaryLocationLabel(array $params): string
     {
         $candidates = [

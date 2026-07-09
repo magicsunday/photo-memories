@@ -49,6 +49,11 @@ readonly class ClusterRepository
         return $clusters;
     }
 
+    /**
+     * @param list<string>|null $algorithms
+     *
+     * @return int
+     */
     public function countByAlgorithms(?array $algorithms = null): int
     {
         $qb = $this->em->createQueryBuilder()
@@ -64,6 +69,8 @@ readonly class ClusterRepository
     }
 
     /**
+     * @param list<string>|null $algorithms
+     *
      * @return iterable<Cluster>
      */
     public function iterateByAlgorithms(?array $algorithms = null): iterable

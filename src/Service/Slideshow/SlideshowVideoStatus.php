@@ -54,6 +54,9 @@ final readonly class SlideshowVideoStatus
         return new self(self::STATUS_ERROR, null, $message, $secondsPerImage);
     }
 
+    /**
+     * @return array{status: string, meldung: string|null, dauerProBildSekunden: float, url?: string}
+     */
     public function toArray(): array
     {
         $payload = [

@@ -37,7 +37,7 @@ final class ClusterDraft
     /**
      * Raw configuration parameters provided by the clustering strategy.
      *
-     * @var array<string, int|float|string|bool|array|null>
+     * @var array<string, int|float|string|bool|array<mixed>|null>
      */
     private array $params;
 
@@ -56,9 +56,9 @@ final class ClusterDraft
     private readonly array $members;
 
     /**
-     * @param array<string, int|float|string|bool|array|null> $params
-     * @param array{lat: float, lon: float}                   $centroid
-     * @param list<int>                                       $members
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     * @param array{lat: float, lon: float}                          $centroid
+     * @param list<int>                                              $members
      */
     public function __construct(
         string $algorithm,
@@ -166,7 +166,7 @@ final class ClusterDraft
     }
 
     /**
-     * @return array<string, int|float|string|bool|array|null>
+     * @return array<string, int|float|string|bool|array<mixed>|null>
      */
     public function getParams(): array
     {
@@ -176,8 +176,8 @@ final class ClusterDraft
     /**
      * Overrides a single configuration parameter on the draft.
      *
-     * @param string                           $key   name of the parameter to override
-     * @param int|float|string|bool|array|null $value updated parameter value
+     * @param string                                  $key   name of the parameter to override
+     * @param int|float|string|bool|array<mixed>|null $value updated parameter value
      */
     public function setParam(string $key, int|float|string|bool|array|null $value): void
     {
@@ -429,8 +429,8 @@ final class ClusterDraft
     /**
      * Creates a copy of the draft with a different member list and optional parameter overrides.
      *
-     * @param list<int>                                            $members
-     * @param array<string, int|float|string|bool|array|null>|null $params
+     * @param list<int>                                                   $members
+     * @param array<string, int|float|string|bool|array<mixed>|null>|null $params
      */
     public function withMembers(array $members, ?array $params = null): self
     {
@@ -468,7 +468,7 @@ final class ClusterDraft
     /**
      * Creates a copy of the draft with updated parameters while keeping the member list intact.
      *
-     * @param array<string, int|float|string|bool|array|null> $params
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      */
     public function withParams(array $params): self
     {

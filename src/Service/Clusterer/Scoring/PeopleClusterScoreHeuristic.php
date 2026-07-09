@@ -24,7 +24,7 @@ use function count;
 final class PeopleClusterScoreHeuristic extends AbstractClusterScoreHeuristic implements PreferenceAwareClusterScoreHeuristicInterface
 {
     /**
-     * @param list<int|string> $favouritePersonIds
+     * @param list<int|string> $defaultFavouritePersonIds
      * @param list<int|string> $fallbackPersonIds
      */
     public function __construct(

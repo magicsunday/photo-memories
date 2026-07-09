@@ -57,6 +57,9 @@ final readonly class ClusterQualityAggregator
 
     private int $topK;
 
+    /**
+     * @param array<string, float>|null $qualityWeights
+     */
     public function __construct(
         float $qualityBaselineMegapixels = 12.0,
         ?ImageQualityEstimatorInterface $estimator = null,

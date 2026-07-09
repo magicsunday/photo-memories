@@ -350,7 +350,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
      * @param array<string, mixed> $params
      * @param list<Media>          $members
      *
-     * @return array{score: float, params: array<string, scalar|array|null>}
+     * @return array{score: float, params: array<string, scalar|array<mixed>|null>}
      */
     private function applyPreferenceAdjustments(
         array $params,
@@ -880,7 +880,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, scalar|array<mixed>|null> $params
      *
      * @return array{ordered: list<int>, minimum: int}|null
      */
@@ -912,8 +912,10 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
     }
 
     /**
-     * @param array<string, scalar|array|null>        $params
+     * @param array<string, scalar|array<mixed>|null> $params
      * @param array{ordered: list<int>, minimum: int} $overlay
+     *
+     * @return array<string, scalar|array<mixed>|null>
      */
     private function markFeedOverlayUsage(array $params, array $overlay, bool $used, int $appliedCount): array
     {

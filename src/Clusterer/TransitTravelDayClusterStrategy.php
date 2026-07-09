@@ -60,6 +60,9 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
     /** @var array<string,array<string,float|int>> */
     private array $profileThresholds;
 
+    /**
+     * @param array<string, mixed> $profileThresholds
+     */
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
         private LocationHelper $locationHelper,

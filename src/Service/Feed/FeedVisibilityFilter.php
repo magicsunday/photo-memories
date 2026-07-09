@@ -92,6 +92,9 @@ final readonly class FeedVisibilityFilter
         return $this->hiddenDates !== [];
     }
 
+    /**
+     * @param iterable<int|string, mixed> $persons
+     */
     public function intersectsPersons(iterable $persons): bool
     {
         if ($this->hiddenPersons === []) {
@@ -108,6 +111,9 @@ final readonly class FeedVisibilityFilter
         return false;
     }
 
+    /**
+     * @param iterable<int|string, mixed> $pets
+     */
     public function intersectsPets(iterable $pets): bool
     {
         if ($this->hiddenPets === []) {
@@ -138,6 +144,9 @@ final readonly class FeedVisibilityFilter
         return array_key_exists($normalized, $this->hiddenPlaces);
     }
 
+    /**
+     * @param iterable<int|string, mixed> $places
+     */
     public function intersectsPlaces(iterable $places): bool
     {
         if ($this->hiddenPlaces === []) {
@@ -154,6 +163,9 @@ final readonly class FeedVisibilityFilter
         return false;
     }
 
+    /**
+     * @param iterable<int|string, mixed> $dates
+     */
     public function intersectsDates(iterable $dates): bool
     {
         if ($this->hiddenDates === []) {

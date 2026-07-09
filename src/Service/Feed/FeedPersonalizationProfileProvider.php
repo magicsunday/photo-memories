@@ -26,6 +26,9 @@ final class FeedPersonalizationProfileProvider
     /** @var array<string, FeedPersonalizationProfile> */
     private array $profiles = [];
 
+    /**
+     * @param array<array-key, mixed> $profiles raw personalisation profile configuration keyed by profile name
+     */
     public function __construct(
         array $profiles,
         private readonly string $defaultProfile = 'default',

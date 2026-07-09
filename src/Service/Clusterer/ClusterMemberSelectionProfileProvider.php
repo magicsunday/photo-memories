@@ -61,8 +61,8 @@ final readonly class ClusterMemberSelectionProfileProvider
     }
 
     /**
-     * @param array<string, int|float|string|bool|array|null> $draftParams
-     * @param array<string, mixed>                            $selectionConfig
+     * @param array<string, int|float|string|bool|array<mixed>|null> $draftParams
+     * @param array<string, mixed>                                   $selectionConfig
      *
      * @return array<string, int|bool>
      */
@@ -221,6 +221,9 @@ final readonly class ClusterMemberSelectionProfileProvider
         return null;
     }
 
+    /**
+     * @param array<string, mixed> $values
+     */
     private function floatValue(array $values, string $key, float $default): float
     {
         $value = $values[$key] ?? null;
@@ -235,6 +238,9 @@ final readonly class ClusterMemberSelectionProfileProvider
         return $default;
     }
 
+    /**
+     * @param array<string, mixed> $values
+     */
     private function stringValue(array $values, string $key): ?string
     {
         $value = $values[$key] ?? null;

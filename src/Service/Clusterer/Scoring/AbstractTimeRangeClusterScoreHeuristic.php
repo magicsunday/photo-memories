@@ -106,6 +106,9 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
         );
     }
 
+    /**
+     * @return array{from:int,to:int}|null
+     */
     protected function timeRangeFromParams(ClusterDraft $cluster): ?array
     {
         $params = $cluster->getParams();

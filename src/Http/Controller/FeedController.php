@@ -116,6 +116,12 @@ final class FeedController
      */
     private array $mediaCache = [];
 
+    /**
+     * @param list<string>                         $slideshowTransitions
+     * @param array<string, array<string, string>> $spaGestureConfig
+     * @param array<string, mixed>                 $spaOfflineConfig
+     * @param array<string, mixed>                 $spaAnimationConfig
+     */
     public function __construct(
         private readonly FeedBuilderInterface $feedBuilder,
         private readonly ClusterRepository $clusterRepository,
@@ -343,6 +349,8 @@ final class FeedController
     }
 
     /**
+     * @param array{itemGroups: list<string>, metaGroups: list<string>}|null $fieldSelection
+     *
      * @return array{
      *     items: list<array<string, mixed>>,
      *     meta: array<string, mixed>,
@@ -905,6 +913,11 @@ final class FeedController
         return $takenAt->format(DateTimeInterface::ATOM);
     }
 
+    /**
+     * @param list<string> $selectedGroups
+     *
+     * @return array<string, mixed>
+     */
     private function transformItem(
         MemoryFeedItem $item,
         string $baseUrl,
@@ -1020,7 +1033,10 @@ final class FeedController
     }
 
     /**
-     * @param list<array<string,mixed>> $memberPayload
+     * @param list<array<string,mixed>>                              $memberPayload
+     * @param array<string, int|float|string|bool|array<mixed>|null> $clusterParams
+     *
+     * @return array<string, mixed>|null
      */
     private function buildStoryboard(array $memberPayload, array $clusterParams, string $locale): ?array
     {
@@ -1164,7 +1180,7 @@ final class FeedController
     }
 
     /**
-     * @param array<string, scalar|array|null> $clusterParams
+     * @param array<string, int|float|string|bool|array<mixed>|null> $clusterParams
      *
      * @return array<string, mixed>
      */
@@ -1280,7 +1296,7 @@ final class FeedController
     }
 
     /**
-     * @param array<string, scalar|array|null> $clusterParams
+     * @param array<string, int|float|string|bool|array<mixed>|null> $clusterParams
      *
      * @return array{
      *     personen: list<string>,
@@ -1444,6 +1460,9 @@ final class FeedController
         return $group;
     }
 
+    /**
+     * @return array{von?: string, vonText?: string, hinweisVon?: string, bis?: string, bisText?: string, hinweisBis?: string, beschreibung: string}|null
+     */
     private function extractTimeRange(MemoryFeedItem $item, DateTimeImmutable $reference): ?array
     {
         $params = $item->getParams();
@@ -1488,6 +1507,9 @@ final class FeedController
         return $result;
     }
 
+    /**
+     * @return array{breite: int, hoehe: int, seitenverhaeltnis: float, ausrichtung: string}|null
+     */
     private function extractDimensions(?Media $media): ?array
     {
         if (!$media instanceof Media) {
@@ -1556,7 +1578,7 @@ final class FeedController
     }
 
     /**
-     * @param array<string, scalar|array|null> $params
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
      *
      * @return array<string, mixed>
      */
@@ -1635,6 +1657,9 @@ final class FeedController
         return $context;
     }
 
+    /**
+     * @return array{status: string, meldung: string|null, dauerProBildSekunden: float, url?: string, hinweis: string|null, fortschritt: float}
+     */
     private function enrichSlideshowStatus(SlideshowVideoStatus $status): array
     {
         $payload                = $status->toArray();
@@ -1847,6 +1872,9 @@ final class FeedController
         return 'vor ' . $years . ' Jahren';
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function buildLabelMapping(): array
     {
         return [
@@ -1890,6 +1918,8 @@ final class FeedController
     /**
      * @param list<array<string, mixed>> $items
      * @param array<string, mixed>       $meta
+     *
+     * @return array<string, mixed>
      */
     private function buildFuerDichComponent(array $items, array $meta): array
     {
@@ -1906,6 +1936,8 @@ final class FeedController
 
     /**
      * @param list<MemoryFeedItem> $items
+     *
+     * @return array<string, mixed>
      */
     private function buildTimelineComponent(array $items, string $locale): array
     {
@@ -1981,6 +2013,8 @@ final class FeedController
 
     /**
      * @param list<array<string, mixed>> $items
+     *
+     * @return array<string, mixed>
      */
     private function buildStoryViewerComponent(array $items): array
     {
@@ -2018,6 +2052,9 @@ final class FeedController
         ];
     }
 
+    /**
+     * @return array<string, int>
+     */
     private function mergeStoryViewerAnimations(): array
     {
         $animations = [
@@ -2204,6 +2241,9 @@ final class FeedController
         return $this->normalizeScalarString($value) ?? '';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildOfflineComponent(DateTimeImmutable $reference, FeedUserPreferences $preferences): array
     {
         $serviceWorker = [

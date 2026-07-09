@@ -134,7 +134,11 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
         return $drafts;
     }
 
-    /** @param list<Media> $items @return list<list<Media>> */
+    /**
+     * @param list<Media> $items
+     *
+     * @return list<list<Media>>
+     */
     private function components(array $items): array
     {
         $n = count($items);

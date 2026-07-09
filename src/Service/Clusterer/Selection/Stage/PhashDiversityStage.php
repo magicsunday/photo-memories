@@ -84,6 +84,10 @@ final class PhashDiversityStage implements SelectionStageInterface
         return $selected;
     }
 
+    /**
+     * @param array<string, mixed> $a
+     * @param array<string, mixed> $b
+     */
     private function hammingDistance(array $a, array $b): ?int
     {
         $hashA = $a['hash_bits'];

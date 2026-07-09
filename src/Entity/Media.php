@@ -443,7 +443,7 @@ class Media
     /**
      * Normalised ffprobe stream metadata for downstream consumers.
      *
-     * @var array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $videoStreams
+     * @var array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $videoStreams
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $videoStreams = null;
@@ -1846,7 +1846,7 @@ class Media
     /**
      * Provides the normalised ffprobe stream metadata.
      *
-     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null
+     * @return array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null
      */
     public function getVideoStreams(): ?array
     {
@@ -1856,7 +1856,7 @@ class Media
     /**
      * Stores the normalised ffprobe stream metadata.
      *
-     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array|null>|null>>|null $streams
+     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $streams
      */
     public function setVideoStreams(?array $streams): void
     {

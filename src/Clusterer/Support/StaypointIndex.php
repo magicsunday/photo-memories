@@ -81,6 +81,9 @@ final class StaypointIndex
         return new self($mediaToKey, $counts);
     }
 
+    /**
+     * @param array<string, mixed> $staypoint
+     */
     public static function createKeyFromStaypoint(string $date, array $staypoint): string
     {
         return self::createKey($date, (int) $staypoint['start'], (int) $staypoint['end']);

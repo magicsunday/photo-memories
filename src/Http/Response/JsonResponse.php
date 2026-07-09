@@ -26,7 +26,7 @@ final class JsonResponse extends Response
     /**
      * @param array<mixed>|scalar|null $data
      * @param int                      $statusCode
-     * @param array                    $headers
+     * @param array<string, string>    $headers
      *
      * @throws JsonException
      */

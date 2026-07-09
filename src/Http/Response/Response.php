@@ -32,6 +32,9 @@ class Response
     /** @var array<string,string> */
     private array $headers;
 
+    /**
+     * @param array<array-key, mixed> $headers
+     */
     public function __construct(
         private string $content = '',
         private int $statusCode = 200,

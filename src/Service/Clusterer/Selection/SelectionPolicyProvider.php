@@ -761,6 +761,9 @@ final class SelectionPolicyProvider
         }
     }
 
+    /**
+     * @param array<string, int|float|string|null> $config
+     */
     private function intOptional(array $config, string $key, int $default): int
     {
         if (!array_key_exists($key, $config)) {
@@ -779,6 +782,9 @@ final class SelectionPolicyProvider
         return $default;
     }
 
+    /**
+     * @param array<string, int|float|string|null> $config
+     */
     private function floatOptional(array $config, string $key, float $default): float
     {
         if (!array_key_exists($key, $config)) {

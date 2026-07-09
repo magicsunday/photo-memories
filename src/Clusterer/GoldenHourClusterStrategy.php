@@ -49,10 +49,13 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
     private ClusterQualityAggregator $qualityAggregator;
 
+    /**
+     * @param list<int> $morningHours inclusive local morning hours considered golden-hour candidates
+     * @param list<int> $eveningHours inclusive local evening hours considered golden-hour candidates
+     */
     public function __construct(
         private LocalTimeHelper $localTimeHelper,
         private LocationHelper $locationHelper,
-        /** Inclusive local hours considered golden-hour candidates. */
         private array $morningHours = [6, 7, 8],
         private array $eveningHours = [18, 19, 20],
         private int $sessionGapSeconds = 90 * 60,
@@ -65,7 +68,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
 
         foreach ([$this->morningHours, $this->eveningHours] as $hours) {
             foreach ($hours as $hour) {
-                if (!is_int($hour) || $hour < 0 || $hour > 23) {
+                if ($hour < 0 || $hour > 23) {
                     throw new InvalidArgumentException('Hour values must be integers within 0..23.');
                 }
             }

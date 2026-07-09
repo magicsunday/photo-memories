@@ -35,6 +35,8 @@ use const PHP_INT_MAX;
 
 /**
  * Derives a compact travel route summary from cluster metadata.
+ *
+ * @phpstan-type Stop array{label:string,lat:float,lon:float,count:int,first_seen_at:int}
  */
 final readonly class RouteSummarizer
 {
@@ -142,7 +144,7 @@ final readonly class RouteSummarizer
     /**
      * @param list<array<string, mixed>> $waypoints
      *
-     * @return list<array{label:string,lat:float,lon:float,count:int,first_seen_at:int}>
+     * @return list<Stop>
      */
     private function collectUniqueStops(array $waypoints): array
     {
@@ -198,9 +200,14 @@ final readonly class RouteSummarizer
         return array_values($stops);
     }
 
+    /**
+     * @param list<Stop>   $selected
+     * @param list<string> $selectedKeys
+     * @param Stop         $candidate
+     */
     private function addStop(array &$selected, array &$selectedKeys, array $candidate): void
     {
-        $key = mb_strtolower((string) $candidate['label'], 'UTF-8');
+        $key = mb_strtolower($candidate['label'], 'UTF-8');
         if (in_array($key, $selectedKeys, true)) {
             return;
         }
@@ -273,6 +280,9 @@ final readonly class RouteSummarizer
         return round($distanceKm, 1);
     }
 
+    /**
+     * @param array<string, mixed> $entry
+     */
     private function resolveLabel(array $entry): string
     {
         $candidates = ['label', 'city', 'region', 'country'];

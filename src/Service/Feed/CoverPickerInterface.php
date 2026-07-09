@@ -19,8 +19,8 @@ use MagicSunday\Memories\Entity\Media;
 interface CoverPickerInterface
 {
     /**
-     * @param list<Media>                     $members
-     * @param array<string,scalar|array|null> $clusterParams
+     * @param list<Media>                             $members
+     * @param array<string, scalar|array<mixed>|null> $clusterParams
      */
     public function pickCover(array $members, array $clusterParams): ?Media;
 }

@@ -14,6 +14,8 @@ namespace MagicSunday\Memories\Clusterer\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\Contract\BaseLocationResolverInterface;
+use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -23,6 +25,10 @@ use function usort;
 
 /**
  * Resolves a plausible base location for a vacation day summary.
+ *
+ * @phpstan-import-type Staypoint from InitializationStage
+ * @phpstan-import-type BaseLocation from InitializationStage
+ * @phpstan-import-type HomeDescriptor from DaySummaryStageInterface
  */
 final class BaseLocationResolver implements BaseLocationResolverInterface
 {
@@ -61,6 +67,13 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         );
     }
 
+    /**
+     * @param array{date:string,staypoints:list<Staypoint>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>} $summary
+     * @param array{date:string,staypoints:list<Staypoint>,firstGpsMedia:Media|null}|null                                           $nextSummary
+     * @param HomeDescriptor                                                                                                        $home
+     *
+     * @return BaseLocation|null
+     */
     private function selectStaypointBase(
         array $summary,
         ?array $nextSummary,
@@ -99,6 +112,9 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         return $this->formatBaseLocation($best['lat'], $best['lon'], 'staypoint', $home);
     }
 
+    /**
+     * @param Staypoint $staypoint
+     */
     private function staypointOverlapsWindow(
         array $staypoint,
         DateTimeImmutable $windowStart,
@@ -108,6 +124,13 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
             && $staypoint['start'] <= $windowEnd->getTimestamp();
     }
 
+    /**
+     * @param array{date:string,staypoints:list<Staypoint>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>} $summary
+     * @param array{date:string,staypoints:list<Staypoint>,firstGpsMedia:Media|null}|null                                           $nextSummary
+     * @param HomeDescriptor                                                                                                        $home
+     *
+     * @return BaseLocation|null
+     */
     private function computeSleepProxyLocation(array $summary, ?array $nextSummary, array $home): ?array
     {
         $last      = $summary['lastGpsMedia'];
@@ -158,6 +181,9 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         return null;
     }
 
+    /**
+     * @return array{lat:float,lon:float}
+     */
     private function mediaCoordinates(Media $media): array
     {
         $lat = $media->getGpsLat();
@@ -170,6 +196,12 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         ];
     }
 
+    /**
+     * @param list<Staypoint> $staypoints
+     * @param HomeDescriptor  $home
+     *
+     * @return BaseLocation|null
+     */
     private function selectLargestStaypoint(array $staypoints, array $home): ?array
     {
         if ($staypoints === []) {
@@ -182,6 +214,12 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         return $this->formatBaseLocation($best['lat'], $best['lon'], 'staypoint', $home);
     }
 
+    /**
+     * @param array{date:string,staypoints:list<Staypoint>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>} $summary
+     * @param HomeDescriptor                                                                                                        $home
+     *
+     * @return BaseLocation|null
+     */
     private function fallbackBaseLocation(array $summary, array $home): ?array
     {
         $gpsMembers = $summary['gpsMembers'];
@@ -194,6 +232,11 @@ final class BaseLocationResolver implements BaseLocationResolverInterface
         return $this->formatBaseLocation($centroid['lat'], $centroid['lon'], 'day_centroid', $home);
     }
 
+    /**
+     * @param HomeDescriptor $home
+     *
+     * @return BaseLocation
+     */
     private function formatBaseLocation(float $lat, float $lon, string $source, array $home): array
     {
         $nearest = HomeBoundaryHelper::nearestCenter($home, $lat, $lon);

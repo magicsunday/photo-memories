@@ -35,7 +35,7 @@ use function str_contains;
  * Provides a typed accessor facade for metadata feature payloads persisted on a media entity.
  *
  * @phpstan-type FeatureScalar bool|int|float|string
- * @phpstan-type FeatureArray array<int|string, FeatureScalar|FeatureArray|null>
+ * @phpstan-type FeatureArray array<int|string, mixed>
  * @phpstan-type FeatureValue FeatureScalar|FeatureArray|null
  */
 final class MediaFeatureBag
@@ -484,6 +484,11 @@ final class MediaFeatureBag
         return $values;
     }
 
+    /**
+     * @param string       $namespace
+     * @param string       $key
+     * @param FeatureValue $value
+     */
     private function set(string $namespace, string $key, bool|int|float|string|array|null $value): void
     {
         if ($value === null) {
@@ -509,6 +514,12 @@ final class MediaFeatureBag
         $this->values[$namespace][$key] = $value;
     }
 
+    /**
+     * @param string $namespace
+     * @param string $key
+     *
+     * @return FeatureValue
+     */
     private function get(string $namespace, string $key): bool|int|float|string|array|null
     {
         if (array_key_exists($namespace, $this->values) === false) {

@@ -168,7 +168,8 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
     }
 
     /**
-     * @param list<int> $personIds
+     * @param list<list<int>> $history
+     * @param list<int>       $personIds
      *
      * @return list<list<int>>
      */
@@ -177,10 +178,10 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
         $history[] = $personIds;
 
         if (count($history) > 2) {
-            $history = array_slice($history, -2);
+            return array_slice($history, -2);
         }
 
-        return array_values($history);
+        return $history;
     }
 
     /**

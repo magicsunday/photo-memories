@@ -428,9 +428,6 @@ final readonly class DefaultClusterJobRunner implements ClusterJobRunnerInterfac
      *
      * @return list<ClusterSummary>
      */
-    /**
-     * @param list<ClusterDraft> $drafts
-     */
     private function createTopClusterSummaries(array $drafts, int $limit): array
     {
         if ($drafts === [] || $limit <= 0) {

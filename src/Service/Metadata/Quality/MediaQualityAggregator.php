@@ -119,6 +119,9 @@ final readonly class MediaQualityAggregator
         );
     }
 
+    /**
+     * @param list<array{float|null, float}> $components
+     */
     private function weightedScore(array $components): ?float
     {
         $sum       = 0.0;

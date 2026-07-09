@@ -323,6 +323,11 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         return $labels;
     }
 
+    /**
+     * @param ClusterDraft $draft
+     *
+     * @return array{start: int, end: int, lat?: float, lon?: float}|null
+     */
     private function resolveStaypointSignature(ClusterDraft $draft): ?array
     {
         $params = $draft->getParams();
@@ -353,6 +358,11 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         return $signature;
     }
 
+    /**
+     * @param ClusterDraft $draft
+     *
+     * @return list<string>|null
+     */
     private function resolvePhashBucket(ClusterDraft $draft): ?array
     {
         $params    = $draft->getParams();
@@ -388,6 +398,11 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
         return $values;
     }
 
+    /**
+     * @param ClusterDraft $draft
+     *
+     * @return array{make?: string, model?: string, owner?: string, label?: string}|null
+     */
     private function resolveDeviceSignature(ClusterDraft $draft): ?array
     {
         $params = $draft->getParams();

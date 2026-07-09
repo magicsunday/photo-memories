@@ -216,6 +216,9 @@ final class MetaExportStage implements MediaIngestionStageInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     private function serialiseLocation(?Location $location): ?array
     {
         if (!$location instanceof Location) {

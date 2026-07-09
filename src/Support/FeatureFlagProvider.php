@@ -62,6 +62,9 @@ final class FeatureFlagProvider implements FeatureFlagProviderInterface
         return $this->cache[$normalized] = $enabled;
     }
 
+    /**
+     * @param array<mixed>|bool|string|int|float|UnitEnum|null $value
+     */
     private function normaliseToBool(array|bool|string|int|float|UnitEnum|null $value): bool
     {
         if (is_bool($value)) {

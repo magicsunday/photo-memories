@@ -155,6 +155,9 @@ final class LocationClusterScoreHeuristic extends AbstractClusterScoreHeuristic 
         ];
     }
 
+    /**
+     * @param array<string, int|float|string|bool|array<mixed>|null> $params
+     */
     private function isFavouritePlace(array $params): bool
     {
         if (!$this->preferences instanceof FeedUserPreferences) {

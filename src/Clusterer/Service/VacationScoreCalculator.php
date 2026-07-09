@@ -90,12 +90,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private ?string $weekendSelectionProfile;
 
     /**
-     * @param float $movementThresholdKm   minimum travel distance to count as move day
-     * @param int   $minAwayDays           minimum number of away days required to accept a vacation
-     * @param int   $minItemsPerDay        expected minimum number of items captured per away day
-     * @param int   $minimumMemberFloor    base floor applied to the adaptive member threshold
-     * @param int   $minMembers            minimum number of media required to accept a vacation
-     * @param bool  $enforceDynamicMinimum whether to enforce the dynamic minimum member floor
+     * @param float                $movementThresholdKm    minimum travel distance to count as move day
+     * @param int                  $minAwayDays            minimum number of away days required to accept a vacation
+     * @param int                  $minItemsPerDay         expected minimum number of items captured per away day
+     * @param int                  $minimumMemberFloor     base floor applied to the adaptive member threshold
+     * @param int                  $minMembers             minimum number of media required to accept a vacation
+     * @param array<string, mixed> $weekendExceptionConfig Raw weekend-exception configuration merged over the sanitised defaults
+     * @param bool                 $enforceDynamicMinimum  whether to enforce the dynamic minimum member floor
      */
     public function __construct(
         private LocationHelper $locationHelper,
@@ -301,13 +302,13 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 ++$avgSpeedKmhSamples;
             }
 
-            if ($summary['hasHighSpeedTransit']) {
+            if ((bool) $summary['hasHighSpeedTransit']) {
                 $highSpeedTransit = true;
                 ++$transitDays;
             }
 
             $avgDistanceSum += $summary['avgDistanceKm'];
-            if ($summary['baseAway']) {
+            if ((bool) $summary['baseAway']) {
                 $cohortRatioSum += (float) ($summary['cohortPresenceRatio'] ?? 0.0);
                 ++$cohortRatioSamples;
 
@@ -345,7 +346,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
             }
 
-            if ($summary['baseAway']) {
+            if ((bool) $summary['baseAway']) {
                 foreach ($summary['staypoints'] as $staypoint) {
                     if ($primaryStaypoint === null || $staypoint['dwell'] > $primaryStaypoint['dwell']) {
                         $primaryStaypoint = $staypoint;
@@ -353,12 +354,12 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
             }
 
-            if ($summary['baseAway']) {
+            if ((bool) $summary['baseAway']) {
                 if ($summary['weekday'] >= 1 && $summary['weekday'] <= 5 && $summary['tourismRatio'] < 0.2) {
                     ++$workDayPenalty;
                 }
 
-                if ($summary['sufficientSamples'] && $summary['gpsMembers'] !== []) {
+                if ((bool) $summary['sufficientSamples'] && $summary['gpsMembers'] !== []) {
                     ++$reliableDays;
                 }
 
@@ -375,7 +376,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $isWeekendOrHoliday        = $this->isWeekendOrHoliday($summary, $home);
             $weekendHolidayFlags[$key] = $isWeekendOrHoliday;
 
-            if ($summary['baseAway'] && $isWeekendOrHoliday) {
+            if ((bool) $summary['baseAway'] && $isWeekendOrHoliday) {
                 ++$weekendHolidayDays;
             }
         }
@@ -542,7 +543,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $firstDay    = $days[$dayKeys[0]];
         $lastDay     = $days[$dayKeys[$dayCount - 1]];
-        $airportFlag = $firstDay['hasAirportPoi'] || $lastDay['hasAirportPoi'];
+        $airportFlag = (bool) $firstDay['hasAirportPoi'] || (bool) $lastDay['hasAirportPoi'];
 
         $countryChange  = $countries !== [] && (count($countries) > 1 || ($home['country'] !== null && !in_array($home['country'], $countries, true)));
         $timezoneChange = $timezones !== [] && (count($timezones) > 1 || ($home['timezone_offset'] !== null && !in_array($home['timezone_offset'], $timezones, true)));
@@ -1484,6 +1485,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         ];
     }
 
+    /**
+     * @return array{profile_key:string,target_total:int,minimum_total:int,max_per_day:int,max_per_staypoint:int,min_spacing_seconds:int,time_slot_hours:int,phash_min_hamming:int,phash_percentile:float,core_day_bonus:int,peripheral_day_penalty:int,people_balance_weight:float,people_balance_enabled:bool,spacing_progress_factor:float,cohort_repeat_penalty:float,video_bonus:float,face_bonus:float,selfie_penalty:float,quality_floor:float,repeat_penalty:float}
+     */
     private function summariseSelectionProfile(string $profileKey, VacationSelectionOptions $options): array
     {
         return [
