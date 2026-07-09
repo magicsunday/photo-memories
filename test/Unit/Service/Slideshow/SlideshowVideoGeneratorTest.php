@@ -789,8 +789,8 @@ final class SlideshowVideoGeneratorTest extends TestCase
         self::assertSame(0.0, $first['panMagnitude']);
 
         self::assertTrue($second['enabled']);
-        self::assertContains($second['zoomStart'], [1.0, 1.08]);
-        self::assertContains($second['zoomEnd'], [1.0, 1.08]);
+        self::assertContains($second['zoomStart'], [1.03, 1.08]);
+        self::assertContains($second['zoomEnd'], [1.03, 1.08]);
         self::assertNotSame($second['zoomStart'], $second['zoomEnd']);
         self::assertContains($second['panAxis'], ['horizontal', 'vertical']);
         self::assertContains($second['panDirection'], [-1, 1]);
@@ -1343,7 +1343,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
 
         /** @var SlideshowTransitionCache $cache */
-        $cache = $cacheMethod->invoke(null);
+        $cache = $cacheMethod->invoke($generator);
         /** @var string $cacheKey */
         $cacheKey = $cacheKeyMethod->invoke($generator);
 
@@ -1464,8 +1464,7 @@ final class SlideshowVideoGeneratorTest extends TestCase
     public function testDiscoveredTransitionsAreFilteredAgainstWhitelist(): void
     {
         $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
-        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-        $resetCacheMethod->invoke(null);
+        $this->resetTransitionCache();
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
 
@@ -1516,7 +1515,7 @@ BASH;
                 $lookup,
             );
         } finally {
-            $resetCacheMethod->invoke(null);
+            $this->resetTransitionCache();
             unlink($script);
         }
     }
@@ -1524,8 +1523,7 @@ BASH;
     public function testExperimentalTransitionsRequireExplicitOptIn(): void
     {
         $reflector        = new ReflectionClass(SlideshowVideoGenerator::class);
-        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-        $resetCacheMethod->invoke(null);
+        $this->resetTransitionCache();
 
         $script = sprintf('%s/ffmpeg-%s', sys_get_temp_dir(), uniqid('slideshow-', true));
 
@@ -1568,7 +1566,7 @@ BASH;
 
             self::assertSame(['fade', 'zoom', 'circleopen', 'pixelize'], $optInWhitelist);
         } finally {
-            $resetCacheMethod->invoke(null);
+            $this->resetTransitionCache();
             unlink($script);
         }
     }
@@ -1616,10 +1614,8 @@ BASH;
 
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
 
-        $resetCacheMethod = $reflector->getMethod('resetTransitionCache');
-
         /** @var SlideshowTransitionCache $cache */
-        $cache = $cacheMethod->invoke(null);
+        $cache = $cacheMethod->invoke($generator);
         /** @var string $cacheKey */
         $cacheKey = $cacheKeyMethod->invoke($generator);
 
@@ -1699,7 +1695,7 @@ BASH;
             self::assertGreaterThan(0, $fadeCount, 'Fade should appear at least once.');
             self::assertGreaterThan(0, $zoomCount, 'Zoom should appear at least once.');
         } finally {
-            $resetCacheMethod->invoke(null);
+            $this->resetTransitionCache();
         }
     }
 
@@ -1862,7 +1858,7 @@ HELP;
         $cacheKeyMethod = $reflector->getMethod('getTransitionCacheKey');
 
         /** @var SlideshowTransitionCache $cache */
-        $cache = $cacheMethod->invoke(null);
+        $cache = $cacheMethod->invoke($generator);
 
         /** @var string $cacheKey */
         $cacheKey = $cacheKeyMethod->invoke($generator);
@@ -2150,9 +2146,15 @@ BASH;
 
     private function resetTransitionCache(): void
     {
-        $reflector = new ReflectionClass(SlideshowVideoGenerator::class);
+        $generator = new SlideshowVideoGenerator();
 
-        $method = $reflector->getMethod('resetTransitionCache');
-        $method->invoke(null);
+        $reflector   = new ReflectionClass(SlideshowVideoGenerator::class);
+        $cacheMethod = $reflector->getMethod('transitionCache');
+
+        /** @var SlideshowTransitionCache $cache */
+        $cache = $cacheMethod->invoke($generator);
+
+        $cache->whitelists = [];
+        $cache->lookups    = [];
     }
 }
