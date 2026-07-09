@@ -179,7 +179,7 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             $out[] = new ClusterDraft(
                 algorithm: 'golden_hour',
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: $this->toMemberIds($run)
             );
         }
@@ -226,8 +226,8 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
                     continue;
                 }
 
-                if (!isset($collected[$label]) || $collected[$label]['score'] < (float) $score) {
-                    $collected[$label] = ['label' => $label, 'score' => (float) $score];
+                if (!isset($collected[$label]) || $collected[$label]['score'] < $score) {
+                    $collected[$label] = ['label' => $label, 'score' => $score];
                 }
             }
         }

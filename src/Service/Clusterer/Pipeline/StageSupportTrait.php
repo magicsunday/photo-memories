@@ -71,7 +71,7 @@ trait StageSupportTrait
         $parts = [];
         foreach ($components as $key => $value) {
             $normalized = $this->normalizeComponentValue($value);
-            $parts[]    = strtolower((string) $key) . '=' . $normalized;
+            $parts[]    = strtolower($key) . '=' . $normalized;
         }
 
         return sha1(implode('|', $parts));

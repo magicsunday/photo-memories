@@ -192,7 +192,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
         $faceShare = $memberCount > 0 ? $faceCount / $memberCount : 0.0;
         if ($faceShare === 0.0) {
-            $faceShare = (float) $summary['cohortPresenceRatio'];
+            $faceShare = $summary['cohortPresenceRatio'];
         }
 
         $qualityMedian = $this->median($qualitySamples);
@@ -210,7 +210,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
 
         $poiBoost = max(0.0, min(1.0, $poiBoost));
 
-        $travelScore = $this->normalizeTravel((float) ($summary['travelKm'] ?? 0.0));
+        $travelScore = $this->normalizeTravel($summary['travelKm'] ?? 0.0);
 
         $weights = [
             $diversity * 0.3,
@@ -290,10 +290,10 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
     {
         return [
             'score'                 => $score,
-            'tourism_ratio'         => (float) $summary['tourismRatio'],
-            'poi_density'           => (float) $summary['poiDensity'],
-            'cohort_presence_ratio' => (float) $summary['cohortPresenceRatio'],
-            'travel_score'          => round($this->normalizeTravel((float) ($summary['travelKm'] ?? 0.0)), 3),
+            'tourism_ratio'         => $summary['tourismRatio'],
+            'poi_density'           => $summary['poiDensity'],
+            'cohort_presence_ratio' => $summary['cohortPresenceRatio'],
+            'travel_score'          => round($this->normalizeTravel($summary['travelKm'] ?? 0.0), 3),
         ];
     }
 
@@ -318,8 +318,8 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         $startSummary = $days[$startKey] ?? null;
         $endSummary   = $days[$endKey] ?? null;
 
-        $startDate = is_string($startSummary['date'] ?? null) ? $startSummary['date'] : (string) $startKey;
-        $endDate   = is_string($endSummary['date'] ?? null) ? $endSummary['date'] : (string) $endKey;
+        $startDate = is_string($startSummary['date'] ?? null) ? $startSummary['date'] : $startKey;
+        $endDate   = is_string($endSummary['date'] ?? null) ? $endSummary['date'] : $endKey;
 
         $members  = 0;
         $awayDays = 0;
@@ -339,8 +339,8 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         $centers        = HomeBoundaryHelper::centers($home);
         $centerCount    = count($centers);
         $primary        = $centers[0] ?? ['radius_km' => $home['radius_km'] ?? 0.0, 'member_count' => 0];
-        $radius         = (float) ($primary['radius_km'] ?? 0.0);
-        $primaryMembers = (int) ($primary['member_count'] ?? 0);
+        $radius         = ($primary['radius_km'] ?? 0.0);
+        $primaryMembers = ($primary['member_count'] ?? 0);
 
         $area    = $radius > 0.0 ? M_PI * $radius * $radius : 0.0;
         $density = $area > 0.0 ? $primaryMembers / $area : 0.0;

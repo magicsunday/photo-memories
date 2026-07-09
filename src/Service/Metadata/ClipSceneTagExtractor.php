@@ -122,7 +122,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
                 continue;
             }
 
-            $value = (float) $score;
+            $value = $score;
             if ($value < $this->minScore) {
                 continue;
             }

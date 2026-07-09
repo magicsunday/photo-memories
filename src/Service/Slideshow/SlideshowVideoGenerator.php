@@ -828,7 +828,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
                 continue;
             }
 
-            $overrides[(int) $index] = $this->clampTransitionDuration((float) $duration);
+            $overrides[$index] = $this->clampTransitionDuration($duration);
         }
 
         $durations = [];

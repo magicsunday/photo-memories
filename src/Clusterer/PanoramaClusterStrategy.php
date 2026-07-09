@@ -120,7 +120,7 @@ final readonly class PanoramaClusterStrategy implements ClusterStrategyInterface
                 params: [
                     'time_range' => $time,
                 ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $buf)
             );
             $buf = [];

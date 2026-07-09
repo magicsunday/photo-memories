@@ -110,7 +110,7 @@ final readonly class NewYearEveClusterStrategy implements ClusterStrategyInterfa
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $list)
             );
         }

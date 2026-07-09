@@ -112,7 +112,7 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
                 continue;
             }
 
-            $distance = (int) ($row['distance'] ?? 0);
+            $distance = ($row['distance'] ?? 0);
             if ($distance > 8) {
                 continue;
             }

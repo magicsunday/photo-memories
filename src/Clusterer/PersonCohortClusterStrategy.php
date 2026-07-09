@@ -259,7 +259,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                 }
 
                 $gapDays = (new DateTimeImmutable($day))->diff(new DateTimeImmutable($lastDay))->days;
-                $gapDays = $gapDays === false || $gapDays === null ? 0 : (int) $gapDays;
+                $gapDays = $gapDays === false || $gapDays === null ? 0 : $gapDays;
 
                 if ($gapDays <= $this->windowDays) {
                     /** @var list<Media> $current */
@@ -330,7 +330,7 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
         }
 
-        $persons = array_map(static fn (int|string $value): int => (int) $value, array_keys($personIdSet));
+        $persons = array_map(static fn (int|string $value): int => $value, array_keys($personIdSet));
         sort($persons);
 
         $personLabels = array_values($labelSet);

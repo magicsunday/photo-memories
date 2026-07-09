@@ -166,10 +166,10 @@ final readonly class Context
                     continue;
                 }
 
-                $cell = S2CellId::tokenFromDegrees((float) $lat, (float) $lon, 7);
+                $cell = S2CellId::tokenFromDegrees($lat, $lon, 7);
             }
 
-            $token          = (string) $cell;
+            $token          = $cell;
             $counts[$token] = ($counts[$token] ?? 0) + 1;
         }
 
@@ -222,14 +222,14 @@ final readonly class Context
         }
 
         $summary  = $aggregator->summarize($scope);
-        $variants = (int) ($summary['device_variants'] ?? 0);
+        $variants = ($summary['device_variants'] ?? 0);
         $share    = $summary['device_primary_share'] ?? null;
 
         if ($variants <= 1 || $share === null) {
             return null;
         }
 
-        $share = max(0.0, min(1.0, (float) $share));
+        $share = max(0.0, min(1.0, $share));
 
         return round(1.0 - $share, 4);
     }

@@ -168,7 +168,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 $dayLocal = (new DateTimeImmutable('@' . $time['from']))
                     ->setTimezone($tz)
                     ->format('Y-m-d');
-                $duration = max(0, (int) ($time['to'] - $time['from']));
+                $duration = max(0, $time['to'] - $time['from']);
 
                 $params = [
                     'grid_cell'  => $cell,
@@ -181,7 +181,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                 $draft = new ClusterDraft(
                     algorithm: 'first_visit_place',
                     params: $params,
-                    centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                    centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                     members: array_map(static fn (Media $m): int => $m->getId(), $members)
                 );
 

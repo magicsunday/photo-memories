@@ -203,7 +203,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
                 $imageDirectory,
                 $copiedFileCount,
                 $skippedThumbCount,
-                (int) $index,
+                $index,
             );
 
             if ($card !== null) {

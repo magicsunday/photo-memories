@@ -216,7 +216,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         }
 
         /** @var list<int> $memberIds */
-        $memberIds = array_values(array_map(static fn (mixed $value): int => (int) $value, $memberIds));
+        $memberIds = array_values(array_map(static fn (mixed $value): int => $value, $memberIds));
         $media     = $this->hydrateMembers($memberIds);
 
         $this->attachClusterMembers($cluster, $memberIds, $media, $metadata['overlay'], $metadata['memberScores']);

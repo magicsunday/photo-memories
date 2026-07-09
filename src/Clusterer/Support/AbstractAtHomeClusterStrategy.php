@@ -90,7 +90,6 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
         $lookup = [];
         foreach ($allowedWeekdays as $dow) {
-            $dow = (int) $dow;
             if ($dow >= 1 && $dow <= 7) {
                 $lookup[$dow] = true;
             }
@@ -248,7 +247,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
             $clusters[] = new ClusterDraft(
                 algorithm: $this->algorithm,
                 params: $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: $this->toMemberIds($members),
             );
 

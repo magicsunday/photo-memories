@@ -56,7 +56,7 @@ final readonly class TimezoneResolver implements TimezoneResolverInterface
             foreach ($offsetVotes as $offset => $count) {
                 if ($count > $bestCount) {
                     $bestCount  = $count;
-                    $bestOffset = (int) $offset;
+                    $bestOffset = $offset;
                 }
             }
 

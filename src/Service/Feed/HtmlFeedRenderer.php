@@ -88,7 +88,7 @@ HTML;
 
         foreach (FeedExportStage::cases() as $stage) {
             $payload = $stages[$stage->value] ?? ['summary' => '0'];
-            $summary = htmlspecialchars((string) ($payload['summary'] ?? '0'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $summary = htmlspecialchars($payload['summary'] ?? '0', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $label   = htmlspecialchars($stage->label(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $anchor  = htmlspecialchars($stage->anchor(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $classes = ['stage-nav__item'];
@@ -122,7 +122,7 @@ HTML;
         foreach (FeedExportStage::cases() as $stage) {
             $payload      = $stages[$stage->value] ?? ['cards' => [], 'emptyMessage' => 'Keine Inhalte für diese Stufe.'];
             $cards        = $payload['cards'] ?? [];
-            $emptyMessage = (string) ($payload['emptyMessage'] ?? 'Keine Inhalte für diese Stufe.');
+            $emptyMessage = ($payload['emptyMessage'] ?? 'Keine Inhalte für diese Stufe.');
 
             $content = $cards !== []
                 ? $this->renderCards($cards)

@@ -245,7 +245,7 @@ final class TransportDayExtender
             return false;
         }
 
-        return (int) ($summary['photoCount'] ?? 0) <= $this->leanPhotoThreshold;
+        return ($summary['photoCount'] ?? 0) <= $this->leanPhotoThreshold;
     }
 
     /**

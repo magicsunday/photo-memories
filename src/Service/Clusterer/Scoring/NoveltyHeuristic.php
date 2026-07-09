@@ -364,7 +364,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         if ($phashHistory !== []) {
             $prefix = $this->majorityPhashPrefix($cluster, $mediaMap);
             if ($prefix !== null) {
-                $cnt = (int) ($phashHistory[$prefix] ?? 0);
+                $cnt = ($phashHistory[$prefix] ?? 0);
                 $max = $this->maxVal($phashHistory);
                 if ($max <= 0) {
                     $max = max(1, count($phashHistory));
@@ -385,7 +385,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
 
                 $acc = 0.0;
                 foreach ($windows as $window) {
-                    $acc += $this->rarityFromCounts((int) ($windowHistory[$window] ?? 0), $max);
+                    $acc += $this->rarityFromCounts($windowHistory[$window] ?? 0, $max);
                 }
 
                 $components[] = $acc / count($windows);

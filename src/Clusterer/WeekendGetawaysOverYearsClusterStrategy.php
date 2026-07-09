@@ -292,7 +292,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
                     'years'      => array_values(array_keys($yearsPicked)),
                     'time_range' => $time,
                 ],
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: array_map(static fn (Media $m): int => $m->getId(), $membersAllYears)
             ),
         ];

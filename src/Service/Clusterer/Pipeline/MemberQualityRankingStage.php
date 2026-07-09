@@ -88,7 +88,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
         $memberIds = [];
         foreach ($drafts as $draft) {
             foreach ($draft->getMembers() as $id) {
-                $memberIds[(int) $id] = true;
+                $memberIds[$id] = true;
             }
         }
 
@@ -126,13 +126,13 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
             $visibleMembers = [];
             foreach ($members as $idx => $memberId) {
-                $media = $mediaMap[(int) $memberId] ?? null;
+                $media = $mediaMap[$memberId] ?? null;
                 if (!$media instanceof Media) {
                     continue;
                 }
 
-                $visibleMembers[]           = (int) $memberId;
-                $positions[(int) $memberId] = $idx;
+                $visibleMembers[]     = $memberId;
+                $positions[$memberId] = $idx;
 
                 $qualityScore    = $this->computeQualityComponent($media, $avgQuality, $avgResolution, $avgSharpness, $avgIso);
                 $aestheticScore  = $this->computeAestheticComponent($media, $avgAesthetics);

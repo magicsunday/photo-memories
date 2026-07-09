@@ -59,8 +59,8 @@ final class StaypointIndex
             }
 
             foreach ($staypoints as $staypoint) {
-                $start = (int) $staypoint['start'];
-                $end   = (int) $staypoint['end'];
+                $start = $staypoint['start'];
+                $end   = $staypoint['end'];
                 if ($timestamp < $start) {
                     continue;
                 }

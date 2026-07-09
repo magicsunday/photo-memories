@@ -401,7 +401,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
     ): array {
         $storySlides = [];
 
-        $mediaIds = array_map(static fn (array $slide): int => (int) $slide['mediaId'], $slides);
+        $mediaIds = array_map(static fn (array $slide): int => $slide['mediaId'], $slides);
         $seed     = $this->hashSeed($itemId . '|' . implode(',', $mediaIds));
 
         $randomizer = new Randomizer(new Xoshiro256StarStar($seed));

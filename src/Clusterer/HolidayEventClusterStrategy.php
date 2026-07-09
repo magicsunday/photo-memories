@@ -125,7 +125,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             $out[] = new ClusterDraft(
                 algorithm: $this->name(),
                 params   : $params,
-                centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+                centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
                 members: $this->toMemberIds($members)
             );
         }

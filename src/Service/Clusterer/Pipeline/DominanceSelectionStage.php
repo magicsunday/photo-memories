@@ -174,8 +174,8 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
                     return $scoreA < $scoreB ? 1 : -1;
                 }
 
-                $priorityA = (int) ($this->priorityMap[$draftA->getAlgorithm()] ?? 0);
-                $priorityB = (int) ($this->priorityMap[$draftB->getAlgorithm()] ?? 0);
+                $priorityA = ($this->priorityMap[$draftA->getAlgorithm()] ?? 0);
+                $priorityB = ($this->priorityMap[$draftB->getAlgorithm()] ?? 0);
                 if ($priorityA !== $priorityB) {
                     return $priorityA < $priorityB ? 1 : -1;
                 }
@@ -273,7 +273,7 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
             return 0;
         }
 
-        return (int) ($map[$classification] ?? 0);
+        return $map[$classification] ?? 0;
     }
 
     /**

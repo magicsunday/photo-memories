@@ -139,7 +139,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
 
             $metadata = [
                 'algorithm'    => $child->getAlgorithm(),
-                'priority'     => (int) ($this->priorityMap[$child->getAlgorithm()] ?? 0),
+                'priority'     => ($this->priorityMap[$child->getAlgorithm()] ?? 0),
                 'score'        => $this->computeScore($child, $childMember),
                 'member_count' => count($childMember),
                 'fingerprint'  => $this->fingerprint($childMember),
@@ -158,7 +158,7 @@ final class NestingResolverStage implements ClusterConsolidationStageInterface
             $child->setParam('sub_story_of', [
                 'algorithm'   => $parent->getAlgorithm(),
                 'fingerprint' => $this->fingerprint($parentMembers),
-                'priority'    => (int) ($this->priorityMap[$parent->getAlgorithm()] ?? 0),
+                'priority'    => ($this->priorityMap[$parent->getAlgorithm()] ?? 0),
             ]);
         }
 

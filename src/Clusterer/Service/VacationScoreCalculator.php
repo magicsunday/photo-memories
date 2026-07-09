@@ -1182,7 +1182,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         $draft = new ClusterDraft(
             algorithm: 'vacation',
             params: $params,
-            centroid: ['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']],
+            centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
             members: $rawMemberIds,
             storyline: $storyline,
         );
@@ -1620,7 +1620,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             if ($index instanceof StaypointIndex) {
                 $dayIndexCounts = $index->getCounts();
                 foreach ($dayIndexCounts as $key => $count) {
-                    $counts[$key] = ($counts[$key] ?? 0) + (int) $count;
+                    $counts[$key] = ($counts[$key] ?? 0) + $count;
                 }
 
                 foreach ($summary['members'] as $media) {
@@ -1666,8 +1666,8 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                             continue;
                         }
 
-                        $normalizedCount = (int) $count;
-                        $baseCount       = (int) ($dayIndexCounts[$key] ?? 0);
+                        $normalizedCount = $count;
+                        $baseCount       = ($dayIndexCounts[$key] ?? 0);
                         if ($normalizedCount <= $baseCount) {
                             continue;
                         }
@@ -1686,7 +1686,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                         continue;
                     }
 
-                    $counts[$key] = ($counts[$key] ?? 0) + (int) $count;
+                    $counts[$key] = ($counts[$key] ?? 0) + $count;
                 }
             }
         }

@@ -90,8 +90,8 @@ final class HomeBoundaryHelper
             $distance = MediaMath::haversineDistanceInMeters(
                 $lat,
                 $lon,
-                (float) $center['lat'],
-                (float) $center['lon'],
+                $center['lat'],
+                $center['lon'],
             ) / 1000.0;
 
             if ($distance < $bestDist) {
@@ -103,7 +103,7 @@ final class HomeBoundaryHelper
 
         return [
             'distance_km' => $bestDist,
-            'radius_km'   => (float) $bestCenter['radius_km'],
+            'radius_km'   => $bestCenter['radius_km'],
             'center'      => $bestCenter,
             'index'       => $bestIndex,
         ];
@@ -127,8 +127,8 @@ final class HomeBoundaryHelper
             }
 
             $center       = $nearest['center'];
-            $memberCount  = (int) ($center['member_count'] ?? 0);
-            $dwellSeconds = (int) ($center['dwell_seconds'] ?? 0);
+            $memberCount  = ($center['member_count'] ?? 0);
+            $dwellSeconds = ($center['dwell_seconds'] ?? 0);
 
             if ($memberCount > 0 || $dwellSeconds > 0) {
                 return true;
@@ -145,7 +145,7 @@ final class HomeBoundaryHelper
     {
         $centers = self::centers($home, $timestamp);
 
-        return (float) $centers[0]['radius_km'];
+        return $centers[0]['radius_km'];
     }
 
     /**

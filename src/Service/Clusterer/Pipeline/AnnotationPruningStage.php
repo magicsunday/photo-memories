@@ -132,14 +132,14 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
 
             $unique = 0;
             foreach ($members as $member) {
-                $usage = (int) ($memberUse[$member] ?? 0);
+                $usage = ($memberUse[$member] ?? 0);
                 if ($usage === 0) {
                     ++$unique;
                 }
             }
 
             $share      = $unique / (float) $size;
-            $minAllowed = (float) ($this->minUniqueShare[$draft->getAlgorithm()] ?? 0.0);
+            $minAllowed = ($this->minUniqueShare[$draft->getAlgorithm()] ?? 0.0);
             if ($share < $minAllowed) {
                 ++$droppedAnnotations;
                 continue;

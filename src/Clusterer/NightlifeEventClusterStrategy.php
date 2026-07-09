@@ -284,8 +284,8 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
                     continue;
                 }
 
-                if (!isset($collected[$label]) || $collected[$label]['score'] < (float) $score) {
-                    $collected[$label] = ['label' => $label, 'score' => (float) $score];
+                if (!isset($collected[$label]) || $collected[$label]['score'] < $score) {
+                    $collected[$label] = ['label' => $label, 'score' => $score];
                 }
             }
         }

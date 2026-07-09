@@ -226,8 +226,8 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
                     algorithm: $this->name(),
                     params: $params,
                     centroid: [
-                        'lat' => (float) $candidate['centroid']['lat'],
-                        'lon' => (float) $candidate['centroid']['lon'],
+                        'lat' => $candidate['centroid']['lat'],
+                        'lon' => $candidate['centroid']['lon'],
                     ],
                     members: $this->toMemberIds($members)
                 );
@@ -459,7 +459,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
         $qualityAvg   = (float) ($quality['quality_avg'] ?? 0.0);
         $qualityShare = max(0.0, min(1.0, $qualityAvg));
 
-        $peopleScore = (float) ($people['people'] ?? 0.0);
+        $peopleScore = ($people['people'] ?? 0.0);
         $peopleShare = max(0.0, min(1.0, $peopleScore));
 
         $startTs      = $monthStart->getTimestamp();

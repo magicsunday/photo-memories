@@ -192,7 +192,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            $cap = (int) ($dayCount[$dayKey] ?? 0);
+            $cap = ($dayCount[$dayKey] ?? 0);
             if ($cap >= $maxPerDay) {
                 continue;
             }
@@ -814,7 +814,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                     continue;
                 }
 
-                $value = (float) $score;
+                $value = $score;
                 if ($value < 0.0) {
                     $value = 0.0;
                 }

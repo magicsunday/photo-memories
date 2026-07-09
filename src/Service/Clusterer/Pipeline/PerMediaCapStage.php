@@ -137,7 +137,7 @@ final class PerMediaCapStage implements ClusterConsolidationStageInterface
                 'draft'    => $draft,
                 'members'  => $members,
                 'score'    => $this->computeScore($draft, $members),
-                'priority' => (int) ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
+                'priority' => ($this->priorityMap[$draft->getAlgorithm()] ?? 0),
                 'size'     => count($members),
                 'group'    => $this->resolveGroup($draft->getAlgorithm(), $this->algorithmGroups, $this->defaultAlgorithmGroup),
                 'index'    => $index,

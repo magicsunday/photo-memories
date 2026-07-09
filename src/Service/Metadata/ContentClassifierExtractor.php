@@ -502,7 +502,7 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
             $labelLower = strtolower($label);
             foreach ($keywords as $keyword) {
                 if (str_contains($labelLower, $keyword)) {
-                    $maxScore = max($maxScore, (float) $score);
+                    $maxScore = max($maxScore, $score);
                 }
             }
         }

@@ -198,9 +198,9 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
             return null;
         }
 
-        $output = trim((string) ($result['stdout'] ?? ''));
+        $output = trim($result['stdout'] ?? '');
         if ($output === '') {
-            $output = trim((string) ($result['stderr'] ?? ''));
+            $output = trim($result['stderr'] ?? '');
         }
 
         if ($output === '') {

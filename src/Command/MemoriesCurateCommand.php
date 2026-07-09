@@ -270,7 +270,7 @@ final class MemoriesCurateCommand extends Command
 
         $normalised = [];
         foreach ($values as $value) {
-            foreach (explode(',', (string) $value) as $fragment) {
+            foreach (explode(',', $value) as $fragment) {
                 $trimmed = trim($fragment);
                 if ($trimmed === '') {
                     continue;

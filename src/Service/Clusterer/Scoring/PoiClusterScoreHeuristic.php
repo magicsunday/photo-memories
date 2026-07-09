@@ -133,15 +133,15 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $boost = 0.0;
 
         if ($categoryKey !== null) {
-            $boost += (float) ($this->poiCategoryBoosts[$categoryKey . '/*'] ?? 0.0);
+            $boost += ($this->poiCategoryBoosts[$categoryKey . '/*'] ?? 0.0);
         }
 
         if ($categoryValue !== null) {
-            $boost += (float) ($this->poiCategoryBoosts['*/' . $categoryValue] ?? 0.0);
+            $boost += ($this->poiCategoryBoosts['*/' . $categoryValue] ?? 0.0);
         }
 
         if ($categoryKey !== null && $categoryValue !== null) {
-            $boost += (float) ($this->poiCategoryBoosts[$categoryKey . '/' . $categoryValue] ?? 0.0);
+            $boost += ($this->poiCategoryBoosts[$categoryKey . '/' . $categoryValue] ?? 0.0);
         }
 
         return $boost;
@@ -268,7 +268,7 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             $distance += $this->bitCount(hexdec($hashA[$i]) ^ hexdec($hashB[$i]));
         }
 
-        $distance += (int) (abs(strlen($hashA) - strlen($hashB)) * 4);
+        $distance += (abs(strlen($hashA) - strlen($hashB)) * 4);
 
         $maxBits    = max(1, $len * 4);
         $similarity = 1.0 - ($distance / $maxBits);

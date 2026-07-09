@@ -219,7 +219,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
     private function calibrateParameters(array $gpsMembers, array $context): array
     {
         $travelKm = $context['travelKm'] ?? $this->estimateTravelKm($gpsMembers);
-        $travelKm = max(0.0, (float) $travelKm);
+        $travelKm = max(0.0, $travelKm);
 
         $spotCount   = isset($context['spotCount']) ? max(0, $context['spotCount']) : null;
         $spotDensity = $context['spotDensity'] ?? null;

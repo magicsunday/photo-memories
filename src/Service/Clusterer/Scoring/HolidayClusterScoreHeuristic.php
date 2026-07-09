@@ -40,7 +40,7 @@ final class HolidayClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHe
         $holiday   = $this->floatOrNull($params['holiday'] ?? null) ?? 0.0;
 
         if ($timeRange !== null && !isset($params['holiday'])) {
-            $holiday = $this->computeHolidayScore((int) $timeRange['from'], (int) $timeRange['to']);
+            $holiday = $this->computeHolidayScore($timeRange['from'], $timeRange['to']);
         }
 
         if ($timeRange !== null || isset($params['holiday'])) {

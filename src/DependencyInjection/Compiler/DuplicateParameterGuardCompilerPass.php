@@ -221,7 +221,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
 
         foreach ($duplicateLines as $name => $linesForKey) {
             $normalizedLines = array_map(
-                static fn (int|string $line): int => (int) $line,
+                static fn (int|string $line): int => $line,
                 array_unique($linesForKey),
             );
 

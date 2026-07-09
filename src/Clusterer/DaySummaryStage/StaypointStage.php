@@ -90,11 +90,11 @@ final readonly class StaypointStage implements DaySummaryStageInterface
 
             $dominant[] = [
                 'key'          => $key,
-                'lat'          => (float) $staypoint['lat'],
-                'lon'          => (float) $staypoint['lon'],
-                'start'        => (int) $staypoint['start'],
-                'end'          => (int) $staypoint['end'],
-                'dwellSeconds' => (int) $staypoint['dwell'],
+                'lat'          => $staypoint['lat'],
+                'lon'          => $staypoint['lon'],
+                'start'        => $staypoint['start'],
+                'end'          => $staypoint['end'],
+                'dwellSeconds' => $staypoint['dwell'],
                 'memberCount'  => $counts[$key] ?? 0,
             ];
         }
@@ -203,7 +203,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
         $total = 0;
 
         foreach ($staypoints as $staypoint) {
-            $total += (int) $staypoint['dwell'];
+            $total += $staypoint['dwell'];
         }
 
         return $total;

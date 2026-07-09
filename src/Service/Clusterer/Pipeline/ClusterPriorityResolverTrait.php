@@ -35,8 +35,8 @@ trait ClusterPriorityResolverTrait
         array $rightMembers,
         array $priorityMap,
     ): bool {
-        $priorityLeft  = (int) ($priorityMap[$left->getAlgorithm()] ?? 0);
-        $priorityRight = (int) ($priorityMap[$right->getAlgorithm()] ?? 0);
+        $priorityLeft  = ($priorityMap[$left->getAlgorithm()] ?? 0);
+        $priorityRight = ($priorityMap[$right->getAlgorithm()] ?? 0);
         if ($priorityLeft !== $priorityRight) {
             return $priorityLeft > $priorityRight;
         }

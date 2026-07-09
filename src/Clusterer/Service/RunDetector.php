@@ -371,8 +371,8 @@ final class RunDetector implements VacationRunDetectorInterface
         $centerCount    = count($centers);
         $totalMembers   = 0;
         $primary        = $centers[0];
-        $primaryRadius  = (float) ($primary['radius_km'] ?? 0.0);
-        $primaryMembers = (int) ($primary['member_count'] ?? 0);
+        $primaryRadius  = ($primary['radius_km'] ?? 0.0);
+        $primaryMembers = ($primary['member_count'] ?? 0);
         $primaryCountry = null;
 
         if (isset($primary['country']) && is_string($primary['country']) && $primary['country'] !== '') {
@@ -380,7 +380,7 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         foreach ($centers as $center) {
-            $totalMembers += (int) ($center['member_count'] ?? 0);
+            $totalMembers += ($center['member_count'] ?? 0);
         }
 
         $primaryDensity = 0.0;
@@ -816,7 +816,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 continue;
             }
 
-            $distanceValue = (float) $distance;
+            $distanceValue = $distance;
             if ($distanceValue <= 0.0) {
                 continue;
             }

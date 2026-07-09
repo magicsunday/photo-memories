@@ -414,8 +414,8 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
             if (($count % 2) === 1) {
                 $median = $nonDc[$mid];
             } else {
-                $a      = (float) ($nonDc[$mid - 1] ?? 0.0);
-                $b      = (float) ($nonDc[$mid] ?? 0.0);
+                $a      = ($nonDc[$mid - 1] ?? 0.0);
+                $b      = ($nonDc[$mid] ?? 0.0);
                 $median = ($a + $b) / 2.0;
             }
         }

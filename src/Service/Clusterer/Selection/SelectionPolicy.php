@@ -142,7 +142,7 @@ final readonly class SelectionPolicy
                     throw new InvalidArgumentException('Scene bucket weights must be numeric.');
                 }
 
-                if ((float) $weight < 0.0) {
+                if ($weight < 0.0) {
                     throw new InvalidArgumentException('Scene bucket weights must not be negative.');
                 }
             }
@@ -280,7 +280,7 @@ final readonly class SelectionPolicy
 
         $weights = [];
         foreach ($this->sceneBucketWeights as $bucket => $weight) {
-            $weights[$bucket] = (float) $weight;
+            $weights[$bucket] = $weight;
         }
 
         return $weights;

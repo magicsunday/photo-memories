@@ -88,7 +88,7 @@ final class SimilarityMetrics
             $dist += $this->bitCount(hexdec($hashA[$i]) ^ hexdec($hashB[$i]));
         }
 
-        $dist += (int) (abs(strlen($hashA) - strlen($hashB)) * 4);
+        $dist += (abs(strlen($hashA) - strlen($hashB)) * 4);
 
         $this->phashCache[$key] = $dist;
 

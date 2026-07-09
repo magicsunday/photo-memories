@@ -387,7 +387,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
                     $quota = min($quota, $peripheralHardCap);
                 }
 
-                $peripheralQuotas[$day] = (int) $quota;
+                $peripheralQuotas[$day] = $quota;
                 $minimumPerDay[$day]    = 0;
             } else {
                 if ($quota < 1) {
@@ -397,7 +397,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
                 $minimumPerDay[$day] = 1;
             }
 
-            $dayQuotas[$day] = (int) $quota;
+            $dayQuotas[$day] = $quota;
         }
 
         if ($peripheralQuotaLimit !== null && $peripheralQuotas !== []) {
@@ -436,7 +436,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
             }
 
             foreach ($peripheralQuotas as $day => $quota) {
-                $dayQuotas[$day] = (int) $quota;
+                $dayQuotas[$day] = $quota;
             }
         }
 
@@ -487,8 +487,8 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $peripheralDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'peripheral'));
         usort($peripheralDays, static function (string $a, string $b) use ($daySegments): int {
-            $scoreA = (float) ($daySegments[$a]['score'] ?? 0.0);
-            $scoreB = (float) ($daySegments[$b]['score'] ?? 0.0);
+            $scoreA = ($daySegments[$a]['score'] ?? 0.0);
+            $scoreB = ($daySegments[$b]['score'] ?? 0.0);
 
             if ($scoreA === $scoreB) {
                 return strcmp($a, $b);
@@ -520,8 +520,8 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $coreDays = array_keys(array_filter($daySegments, static fn (array $info): bool => ($info['category'] ?? 'peripheral') === 'core'));
         usort($coreDays, static function (string $a, string $b) use ($daySegments): int {
-            $scoreA = (float) ($daySegments[$a]['score'] ?? 0.0);
-            $scoreB = (float) ($daySegments[$b]['score'] ?? 0.0);
+            $scoreA = ($daySegments[$a]['score'] ?? 0.0);
+            $scoreB = ($daySegments[$b]['score'] ?? 0.0);
 
             if ($scoreA === $scoreB) {
                 return strcmp($a, $b);

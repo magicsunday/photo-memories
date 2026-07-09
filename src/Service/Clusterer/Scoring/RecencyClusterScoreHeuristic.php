@@ -54,7 +54,7 @@ final class RecencyClusterScoreHeuristic extends AbstractTimeRangeClusterScoreHe
         $recency   = $this->floatOrNull($params['recency'] ?? null) ?? 0.0;
 
         if ($timeRange !== null && !isset($params['recency'])) {
-            $ageDays = max(0.0, ($this->now - (int) $timeRange['to']) / 86400.0);
+            $ageDays = max(0.0, ($this->now - $timeRange['to']) / 86400.0);
             $recency = max(0.0, 1.0 - min(1.0, $ageDays / 365.0));
         }
 

@@ -190,8 +190,8 @@ final class DuplicateCollapseStage implements ClusterConsolidationStageInterface
             return $scoreA > $scoreB;
         }
 
-        $priorityA = (int) ($this->priorityMap[$a->getAlgorithm()] ?? 0);
-        $priorityB = (int) ($this->priorityMap[$b->getAlgorithm()] ?? 0);
+        $priorityA = ($this->priorityMap[$a->getAlgorithm()] ?? 0);
+        $priorityB = ($this->priorityMap[$b->getAlgorithm()] ?? 0);
         if ($priorityA !== $priorityB) {
             return $priorityA > $priorityB;
         }

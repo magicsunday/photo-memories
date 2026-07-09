@@ -108,7 +108,7 @@ trait ClusterBuildHelperTrait
 
             foreach ($tags as $tag) {
                 $label = $tag['label'];
-                $value = (float) $tag['score'];
+                $value = $tag['score'];
 
                 if ($value < 0.0) {
                     $value = 0.0;

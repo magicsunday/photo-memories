@@ -75,7 +75,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
             $duration = max(0, $timeRange['to'] - $timeRange['from']);
         }
 
-        $duration = $duration !== null ? max(0, (int) $duration) : 0;
+        $duration = $duration !== null ? max(0, $duration) : 0;
 
         $coverage = $cached['coverage'] ?? null;
         if ($coverage === null) {
