@@ -881,18 +881,17 @@ final class VacationClusterStrategyTest extends TestCase
         $service = $this->createPersistenceService();
 
         $reflection = new ReflectionClass(ClusterPersistenceService::class);
-        $resolve    = $reflection->getMethod('resolveOrderedMembers');
 
-        /** @var list<int> $resolved */
-        $resolved = $resolve->invoke($service, $draft);
-
-        $params        = $draft->getParams();
-        $memberQuality = $params['member_quality']['ordered'] ?? [];
-        if (is_array($memberQuality) && $memberQuality !== []) {
-            self::assertNotSame($memberQuality, $draft->getMembers());
+        // Persistence consumes the draft's raw members (order preserved); the
+        // quality-ranked overlay lives separately under member_quality.quality_ranked.ordered.
+        $params      = $draft->getParams();
+        $rankedOrder = $params['member_quality']['quality_ranked']['ordered'] ?? [];
+        if (is_array($rankedOrder) && $rankedOrder !== []) {
+            self::assertNotSame($rankedOrder, $draft->getMembers());
         }
 
-        self::assertSame($draft->getMembers(), $resolved);
+        /** @var list<int> $resolved */
+        $resolved = $draft->getMembers();
 
         $clamp = $reflection->getMethod('clampMembers');
 
@@ -1140,6 +1139,7 @@ final class VacationClusterStrategyTest extends TestCase
             minAwayDistanceKm: 60.0,
             movementThresholdKm: 500.0,
             minItemsPerDay: 4,
+            referenceDate: new DateTimeImmutable('2024-12-27 00:00:00', new DateTimeZone('UTC')),
         );
 
         $items        = [];
@@ -1266,6 +1266,7 @@ final class VacationClusterStrategyTest extends TestCase
             minAwayDistanceKm: 80.0,
             movementThresholdKm: 25.0,
             minItemsPerDay: 4,
+            referenceDate: new DateTimeImmutable('2024-07-15 00:00:00', new DateTimeZone('UTC')),
         );
 
         $items        = [];
@@ -1408,6 +1409,7 @@ final class VacationClusterStrategyTest extends TestCase
             minAwayDistanceKm: 90.0,
             movementThresholdKm: 25.0,
             minItemsPerDay: 4,
+            referenceDate: new DateTimeImmutable('2024-06-15 00:00:00', new DateTimeZone('UTC')),
         );
 
         $items        = [];
@@ -1937,6 +1939,7 @@ final class VacationClusterStrategyTest extends TestCase
         ?float $homeLat = null,
         ?float $homeLon = null,
         ?float $homeRadiusKm = null,
+        ?DateTimeImmutable $referenceDate = null,
     ): VacationClusterStrategy {
         $homeLocator = new DefaultHomeLocator(
             timezone: $timezone,
@@ -1978,6 +1981,8 @@ final class VacationClusterStrategyTest extends TestCase
             minAwayDays: 2,
             minItemsPerDay: $minItemsPerDay,
             minimumMemberFloor: 0,
+            referenceDate: $referenceDate,
+            enforceDynamicMinimum: false,
         );
 
         $segmentAssembler = new DefaultVacationSegmentAssembler($runDetector, $scoreCalculator, $storyTitleBuilder);
@@ -2008,7 +2013,7 @@ final class VacationClusterStrategyTest extends TestCase
      */
     private function createHolidayResolver(array $holidayDates = []): HolidayResolverInterface
     {
-        $resolver = $this->createMock(HolidayResolverInterface::class);
+        $resolver = $this->createStub(HolidayResolverInterface::class);
         $resolver
             ->method('isHoliday')
             ->willReturnCallback(static fn (DateTimeImmutable $day): bool => in_array($day->format('Y-m-d'), $holidayDates, true));

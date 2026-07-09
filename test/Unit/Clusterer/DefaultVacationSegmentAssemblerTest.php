@@ -93,6 +93,7 @@ final class DefaultVacationSegmentAssemblerTest extends TestCase
             minAwayDays: 2,
             minItemsPerDay: 4,
             minimumMemberFloor: 0,
+            referenceDate: new DateTimeImmutable('2024-08-15 00:00:00', new DateTimeZone('Europe/Berlin')),
             enforceDynamicMinimum: false,
         );
 
