@@ -15,7 +15,6 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Support\PersonSignatureHelper;
-use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Selection\Stage\SelectionStageInterface;
 use MagicSunday\Memories\Service\Clusterer\Selection\Support\FaceMetricHelper;
@@ -1158,7 +1157,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
     private function looksLikeFood(Media $media): bool
     {
-        if ($this->hasSceneTag($media, [
+        // ContentKind classifies the content type (photo, screenshot, document, …),
+        // never a subject such as food, therefore food detection relies solely on
+        // the scene tags evaluated here.
+        return $this->hasSceneTag($media, [
             'food',
             'meal',
             'cuisine',
@@ -1173,14 +1175,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
             'lunch',
             'dinner',
             'brunch',
-        ])) {
-            return true;
-        }
-
-        $bag  = $media->getFeatureBag();
-        $kind = $bag->classificationKind();
-
-        return $kind instanceof ContentKind && $kind->value === 'food';
+        ]);
     }
 
     private function looksLikeLandmark(Media $media, array $params): bool
