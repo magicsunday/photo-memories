@@ -17,7 +17,6 @@ use MagicSunday\Memories\Utility\MediaMath;
 use function array_filter;
 use function array_values;
 use function is_array;
-use function is_int;
 
 /**
  * Utility helpers for evaluating proximity to configured home centers.
@@ -44,11 +43,11 @@ final class HomeBoundaryHelper
                     $from  = $center['valid_from'] ?? null;
                     $until = $center['valid_until'] ?? null;
 
-                    if ($from !== null && is_int($from) && $timestamp < $from) {
+                    if ($from !== null && $timestamp < $from) {
                         return false;
                     }
 
-                    if ($until !== null && is_int($until) && $timestamp > $until) {
+                    if ($until !== null && $timestamp > $until) {
                         return false;
                     }
 

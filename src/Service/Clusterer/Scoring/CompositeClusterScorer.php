@@ -392,15 +392,7 @@ final class CompositeClusterScorer
         $result = [];
 
         foreach ($overrides as $algorithm => $mapping) {
-            if (!is_string($algorithm)) {
-                continue;
-            }
-
             if ($algorithm === '') {
-                continue;
-            }
-
-            if (!is_array($mapping)) {
                 continue;
             }
 
@@ -417,10 +409,6 @@ final class CompositeClusterScorer
 
             $storylines = [];
             foreach ($mapping as $storyline => $storylineOverrides) {
-                if (!is_string($storyline)) {
-                    continue;
-                }
-
                 if ($storyline === '') {
                     continue;
                 }
@@ -439,7 +427,7 @@ final class CompositeClusterScorer
 
             if (!isset($storylines[self::DEFAULT_STORYLINE])) {
                 $first = reset($storylines);
-                if (is_array($first) && $first !== []) {
+                if ($first !== []) {
                     $storylines[self::DEFAULT_STORYLINE] = $first;
                 }
             }
@@ -499,7 +487,7 @@ final class CompositeClusterScorer
         if (str_contains($trimmed, '.')) {
             $parts  = explode('.', $trimmed);
             $suffix = end($parts);
-            if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
+            if ($suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;
             }
         }

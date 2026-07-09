@@ -348,15 +348,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
 
         if (is_array($profile)) {
             foreach ($profile as $key => $value) {
-                if (!is_string($key)) {
-                    continue;
-                }
-
                 if (!array_key_exists($key, $base)) {
-                    continue;
-                }
-
-                if (!is_numeric($value)) {
                     continue;
                 }
 
@@ -385,10 +377,6 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
         $result = [];
 
         foreach ($profiles as $profileName => $values) {
-            if (!is_string($profileName)) {
-                continue;
-            }
-
             if ($profileName === '') {
                 continue;
             }

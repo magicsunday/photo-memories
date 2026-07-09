@@ -34,7 +34,7 @@ trait VacationTimezoneTrait
     private function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
     {
         $identifier = $summary['localTimezoneIdentifier'] ?? null;
-        if (is_string($identifier) && $identifier !== '') {
+        if ($identifier !== '') {
             try {
                 return new DateTimeZone($identifier);
             } catch (Exception) {
@@ -111,10 +111,6 @@ trait VacationTimezoneTrait
         }
 
         foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
             $direct = $poi['timezone'] ?? null;
             if (is_string($direct) && $direct !== '') {
                 return $direct;

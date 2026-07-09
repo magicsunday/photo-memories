@@ -727,9 +727,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
 
         arsort($counts, SORT_NUMERIC);
 
-        $firstKey = array_key_first($counts);
-
-        return is_string($firstKey) ? $firstKey : null;
+        return array_key_first($counts);
     }
 
     /**

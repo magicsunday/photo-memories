@@ -74,8 +74,8 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         iterable $hardStages,
         iterable $softStages,
     ) {
-        $this->hardStages   = array_values(is_iterable($hardStages) ? [...$hardStages] : []);
-        $this->softStages   = array_values(is_iterable($softStages) ? [...$softStages] : []);
+        $this->hardStages   = array_values([...$hardStages]);
+        $this->softStages   = array_values([...$softStages]);
         $this->personHelper = new PersonSignatureHelper();
 
         if ($this->hardStages === []) {
@@ -1304,10 +1304,6 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
         foreach ($tags as $tag) {
             $label = $tag['label'] ?? null;
-            if (!is_string($label)) {
-                continue;
-            }
-
             if ($label === '') {
                 continue;
             }

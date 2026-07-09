@@ -242,10 +242,6 @@ final readonly class TravelWaypointAnnotator
         }
 
         foreach ($pois as $poi) {
-            if (!is_array($poi)) {
-                continue;
-            }
-
             $tags = $poi['tags'] ?? null;
             if (!is_array($tags)) {
                 continue;
@@ -328,10 +324,6 @@ final readonly class TravelWaypointAnnotator
     {
         $events = [];
         foreach ($eventCounters as $label => $count) {
-            if (!is_string($label)) {
-                continue;
-            }
-
             if ($label === '') {
                 continue;
             }

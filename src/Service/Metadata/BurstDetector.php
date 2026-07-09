@@ -109,9 +109,6 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
         $candidates = $this->mediaRepository->findNearestByPhash($phash, 8, 16);
         foreach ($candidates as $candidateRow) {
             $candidate = $candidateRow['media'];
-            if (!$candidate instanceof Media) {
-                continue;
-            }
 
             $path = $candidate->getPath();
             if (isset($seenPaths[$path])) {
@@ -146,10 +143,6 @@ final readonly class BurstDetector implements SingleMetadataExtractorInterface
         $members = [$media];
 
         foreach ($this->mediaRepository->findBurstMembers($burstUuid, $media->getPath()) as $sibling) {
-            if (!$sibling instanceof Media) {
-                continue;
-            }
-
             $members[] = $sibling;
         }
 

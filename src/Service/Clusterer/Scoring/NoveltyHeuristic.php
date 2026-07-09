@@ -23,7 +23,6 @@ use function array_values;
 use function count;
 use function floor;
 use function is_array;
-use function is_float;
 use function is_int;
 use function is_string;
 use function max;
@@ -272,7 +271,7 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
         }
 
         $centroid = $cluster->getCentroid();
-        if (isset($centroid['lat'], $centroid['lon']) && is_float($centroid['lat']) && is_float($centroid['lon'])) {
+        if (isset($centroid['lat'], $centroid['lon'])) {
             $cell = $this->gridCell($centroid['lat'], $centroid['lon']);
             $cnt  = (int) ($stats['grid'][$cell] ?? 0);
             $max  = (int) ($stats['max']['grid'] ?? 0);

@@ -375,7 +375,7 @@ final class RunDetector implements VacationRunDetectorInterface
         $primaryMembers = ($primary['member_count'] ?? 0);
         $primaryCountry = null;
 
-        if (isset($primary['country']) && is_string($primary['country']) && $primary['country'] !== '') {
+        if (isset($primary['country']) && $primary['country'] !== '') {
             $primaryCountry = strtolower($primary['country']);
         }
 
@@ -438,7 +438,7 @@ final class RunDetector implements VacationRunDetectorInterface
             return false;
         }
 
-        if (isset($profile['countries']) && is_array($profile['countries']) && $profile['countries'] !== [] && ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true))) {
+        if (isset($profile['countries']) && $profile['countries'] !== [] && ($primaryCountry === null || !in_array($primaryCountry, $profile['countries'], true))) {
             return false;
         }
 
@@ -810,15 +810,7 @@ final class RunDetector implements VacationRunDetectorInterface
         $result = [];
 
         foreach ($profiles as $profile) {
-            if (!is_array($profile)) {
-                continue;
-            }
-
-            $distance = $profile['distance_km'] ?? null;
-            if (!is_float($distance) && !is_int($distance)) {
-                continue;
-            }
-
+            $distance      = $profile['distance_km'] ?? null;
             $distanceValue = $distance;
             if ($distanceValue <= 0.0) {
                 continue;
@@ -826,11 +818,11 @@ final class RunDetector implements VacationRunDetectorInterface
 
             $entry = ['distance_km' => $distanceValue];
 
-            if (isset($profile['min_center_count']) && is_int($profile['min_center_count']) && $profile['min_center_count'] > 0) {
+            if (isset($profile['min_center_count']) && $profile['min_center_count'] > 0) {
                 $entry['min_center_count'] = $profile['min_center_count'];
             }
 
-            if (isset($profile['min_total_member_count']) && is_int($profile['min_total_member_count']) && $profile['min_total_member_count'] > 0) {
+            if (isset($profile['min_total_member_count']) && $profile['min_total_member_count'] > 0) {
                 $entry['min_total_member_count'] = $profile['min_total_member_count'];
             }
 
@@ -848,13 +840,9 @@ final class RunDetector implements VacationRunDetectorInterface
                 }
             }
 
-            if (isset($profile['countries']) && is_array($profile['countries'])) {
+            if (isset($profile['countries'])) {
                 $countries = [];
                 foreach ($profile['countries'] as $country) {
-                    if (!is_string($country)) {
-                        continue;
-                    }
-
                     if ($country === '') {
                         continue;
                     }

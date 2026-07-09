@@ -143,10 +143,6 @@ final readonly class NotificationPlanner
         $normalised = [];
 
         foreach ($config as $channel => $options) {
-            if (!is_string($channel)) {
-                continue;
-            }
-
             $channelName = trim($channel);
             if ($channelName === '') {
                 continue;
@@ -156,10 +152,6 @@ final readonly class NotificationPlanner
             $rawLead   = $options['lead_times'] ?? null;
             if (is_array($rawLead)) {
                 foreach ($rawLead as $candidate) {
-                    if (!is_string($candidate)) {
-                        continue;
-                    }
-
                     $spec = trim($candidate);
                     if ($spec === '') {
                         continue;

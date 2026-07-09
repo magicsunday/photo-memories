@@ -55,10 +55,6 @@ final class ClusterEntityToDraftMapper
 
         // Build a normalized lookup table that only contains non-empty string values.
         foreach ($algorithmGroups as $algorithm => $group) {
-            if (!is_string($group)) {
-                continue;
-            }
-
             if ($group === '') {
                 continue;
             }

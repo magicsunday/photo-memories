@@ -579,10 +579,6 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
     {
         $result = [];
         foreach ($values as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if ($value === null) {
                 continue;
             }

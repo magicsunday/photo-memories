@@ -293,10 +293,6 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
         $filtered = [];
 
         foreach ($parts as $part) {
-            if (!is_string($part)) {
-                continue;
-            }
-
             $trimmed = trim($part);
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;

@@ -501,10 +501,6 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         }
 
         foreach ($params as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if (!is_string($value)) {
                 continue;
             }
@@ -716,7 +712,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $result = $primary;
 
         foreach ($secondary as $value) {
-            if (is_string($value) && $value !== '' && !in_array($value, $result, true)) {
+            if ($value !== '' && !in_array($value, $result, true)) {
                 $result[] = $value;
             }
         }

@@ -112,10 +112,6 @@ final readonly class IndexLogEntry
         $normalised = [];
 
         foreach ($context as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if ($value instanceof DateTimeInterface) {
                 $normalised[$key] = $value->format(DateTimeInterface::ATOM);
 

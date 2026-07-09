@@ -99,9 +99,6 @@ final class CalendarFeatureEnricher implements SingleMetadataExtractorInterface
         ];
         foreach ($rel as $off => $code) {
             $target = $origin->modify(sprintf('%+d day', $off));
-            if (!$target instanceof DateTimeImmutable) {
-                continue;
-            }
 
             $ymd = $target->format('Y-m-d');
             if ($ymd === sprintf('%04d-%02d-%02d', $y, $m, $d)) {

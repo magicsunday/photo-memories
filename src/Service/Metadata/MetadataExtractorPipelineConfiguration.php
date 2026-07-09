@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use function array_key_exists;
 use function is_array;
-use function is_string;
 use function strrpos;
 use function substr;
 
@@ -60,7 +59,7 @@ final readonly class MetadataExtractorPipelineConfiguration
         if (is_array($configuration) && array_key_exists('reason', $configuration)) {
             $reason = $configuration['reason'];
 
-            if (is_string($reason) && $reason !== '') {
+            if ($reason !== '') {
                 return $reason;
             }
         }

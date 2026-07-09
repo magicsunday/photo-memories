@@ -13,10 +13,6 @@ namespace MagicSunday\Memories\Service\Clusterer\Selection;
 
 use InvalidArgumentException;
 
-use function is_float;
-use function is_int;
-use function is_string;
-
 /**
  * Immutable value object describing the tunable knobs of the selector.
  */
@@ -134,12 +130,8 @@ final readonly class SelectionPolicy
 
         if ($sceneBucketWeights !== null) {
             foreach ($sceneBucketWeights as $bucket => $weight) {
-                if (!is_string($bucket) || $bucket === '') {
+                if ($bucket === '') {
                     throw new InvalidArgumentException('Scene bucket weights must use non-empty string keys.');
-                }
-
-                if (!is_float($weight) && !is_int($weight)) {
-                    throw new InvalidArgumentException('Scene bucket weights must be numeric.');
                 }
 
                 if ($weight < 0.0) {

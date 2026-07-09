@@ -86,10 +86,6 @@ final readonly class OverpassTagSelector implements OverpassTagSelectorInterface
         /** @var array<string,string> $localized */
         $localized = [];
         foreach ($tags as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if (!str_starts_with($key, 'name:')) {
                 continue;
             }

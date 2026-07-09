@@ -34,7 +34,6 @@ use function implode;
 use function is_dir;
 use function is_file;
 use function is_finite;
-use function is_float;
 use function is_int;
 use function is_readable;
 use function is_string;
@@ -827,10 +826,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
 
         $overrides = [];
         foreach ($requestedDurations as $index => $duration) {
-            if (!is_float($duration) && !is_int($duration)) {
-                continue;
-            }
-
             $overrides[$index] = $this->clampTransitionDuration($duration);
         }
 
@@ -955,10 +950,6 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $lookup   = $this->getTransitionLookup();
 
         foreach ($transitions as $transition) {
-            if (!is_string($transition)) {
-                continue;
-            }
-
             $normalised = $this->normaliseTransitionName($transition);
             if ($normalised === null) {
                 continue;

@@ -200,10 +200,6 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             $place = $c->getParams()['place'] ?? null;
             $alg   = $c->getAlgorithm();
 
-            if (!is_string($alg)) {
-                continue;
-            }
-
             if (($algCount[$alg] ?? 0) >= $maxPerAlgorithm) {
                 continue;
             }
@@ -542,10 +538,6 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
         $index = [];
 
         foreach ($values as $value) {
-            if (!is_string($value)) {
-                continue;
-            }
-
             $normalized = mb_strtolower(trim($value));
             if ($normalized === '') {
                 continue;
@@ -799,20 +791,8 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
             }
 
             foreach ($tags as $tag) {
-                if (!is_array($tag)) {
-                    continue;
-                }
-
                 $label = $tag['label'] ?? null;
                 $score = $tag['score'] ?? null;
-
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                if (!is_float($score) && !is_int($score)) {
-                    continue;
-                }
 
                 $value = $score;
                 if ($value < 0.0) {

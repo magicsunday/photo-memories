@@ -592,10 +592,6 @@ final class DefaultCoverPicker implements CoverPickerInterface
 
                 if (is_array($persons)) {
                     foreach ($persons as $person) {
-                        if (!is_string($person)) {
-                            continue;
-                        }
-
                         $personId = strtolower(trim($person));
                         if ($personId === '') {
                             continue;

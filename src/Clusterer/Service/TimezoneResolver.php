@@ -18,8 +18,6 @@ use MagicSunday\Memories\Clusterer\Contract\TimezoneResolverInterface;
 use MagicSunday\Memories\Clusterer\Support\VacationTimezoneTrait;
 use MagicSunday\Memories\Entity\Media;
 
-use function is_string;
-
 /**
  * Default timezone resolver used by the vacation clustering pipeline.
  */
@@ -74,7 +72,7 @@ final readonly class TimezoneResolver implements TimezoneResolverInterface
             $bestIdentifier = null;
             $bestCount      = -1;
             foreach ($identifierVotes as $identifier => $count) {
-                if ($count > $bestCount && is_string($identifier) && $identifier !== '') {
+                if ($count > $bestCount && $identifier !== '') {
                     $bestCount      = $count;
                     $bestIdentifier = $identifier;
                 }

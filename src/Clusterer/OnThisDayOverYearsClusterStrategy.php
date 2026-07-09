@@ -30,7 +30,6 @@ use function array_keys;
 use function array_values;
 use function assert;
 use function count;
-use function is_int;
 use function sprintf;
 use function usort;
 
@@ -171,13 +170,8 @@ final readonly class OnThisDayOverYearsClusterStrategy implements ClusterStrateg
         }
 
         $interval = $date->diff($ref);
-        $days     = $interval->days;
 
-        if (!is_int($days)) {
-            return 9999;
-        }
-
-        return $days;
+        return $interval->days;
     }
 
     /**

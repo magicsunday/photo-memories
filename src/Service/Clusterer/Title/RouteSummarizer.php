@@ -151,10 +151,6 @@ final readonly class RouteSummarizer
         $stops = [];
 
         foreach ($waypoints as $entry) {
-            if (!is_array($entry)) {
-                continue;
-            }
-
             $label = $this->resolveLabel($entry);
             if ($label === '') {
                 continue;
@@ -361,10 +357,6 @@ final readonly class RouteSummarizer
         $filtered = [];
 
         foreach ($parts as $part) {
-            if (!is_string($part)) {
-                continue;
-            }
-
             $trimmed = trim($part);
             if ($trimmed !== '') {
                 $filtered[] = $trimmed;

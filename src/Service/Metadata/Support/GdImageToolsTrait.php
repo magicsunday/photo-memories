@@ -19,7 +19,6 @@ use function bindec;
 use function dechex;
 use function is_array;
 use function is_file;
-use function is_string;
 use function sort;
 use function str_repeat;
 use function strlen;
@@ -43,7 +42,7 @@ trait GdImageToolsTrait
             $paths = array_values($thumbs);
             sort($paths, SORT_STRING);
             $p = $paths[0];
-            if (is_string($p) && is_file($p)) {
+            if (is_file($p)) {
                 return $p;
             }
         }

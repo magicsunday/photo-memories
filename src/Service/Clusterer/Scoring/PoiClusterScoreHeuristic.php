@@ -111,14 +111,12 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
         $score += $this->lookupPoiCategoryBoost($categoryKey, $categoryValue);
 
-        if (is_array($tags)) {
-            if ($this->stringOrNull($tags['wikidata'] ?? null) !== null) {
-                $score += 0.15;
-            }
+        if ($this->stringOrNull($tags['wikidata'] ?? null) !== null) {
+            $score += 0.15;
+        }
 
-            if ($this->stringOrNull($tags['website'] ?? null) !== null) {
-                $score += 0.05;
-            }
+        if ($this->stringOrNull($tags['website'] ?? null) !== null) {
+            $score += 0.05;
         }
 
         return $this->clamp01($score);
@@ -185,7 +183,7 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
         $dominantHash  = array_key_first($hashCounts);
         $dominantCount = $dominantHash !== null ? $hashCounts[$dominantHash] : 0;
         $totalSamples  = array_sum($hashCounts);
-        $ratio         = $totalSamples > 0 ? $dominantCount / $totalSamples : 0.0;
+        $ratio         = $dominantCount / $totalSamples;
 
         $signatureMatch = $dominantHash !== null ? $this->matchIconicSignature($dominantHash) : null;
 

@@ -32,7 +32,6 @@ use function array_values;
 use function count;
 use function implode;
 use function is_array;
-use function is_string;
 use function ksort;
 use function max;
 use function mb_strtolower;
@@ -316,10 +315,6 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
             }
 
             foreach ($labels as $label) {
-                if (!is_string($label)) {
-                    continue;
-                }
-
                 $normalized = trim($label);
                 if ($normalized === '') {
                     continue;

@@ -804,10 +804,6 @@ final class FeedController
 
         if (is_array($existing) && $existing !== []) {
             foreach ($existing as $path) {
-                if (!is_string($path)) {
-                    continue;
-                }
-
                 if ($path === '') {
                     continue;
                 }
@@ -1680,7 +1676,7 @@ final class FeedController
             return '';
         }
 
-        if (!$from instanceof DateTimeImmutable && $to instanceof DateTimeImmutable) {
+        if (!$from instanceof DateTimeImmutable) {
             return 'am ' . $this->formatDateOnly($to);
         }
 
@@ -2412,10 +2408,6 @@ final class FeedController
         $result = [];
 
         foreach ($config as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if (is_array($value)) {
                 $nested = $this->sanitizeAnimationConfig($value);
                 if ($nested !== []) {

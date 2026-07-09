@@ -274,10 +274,6 @@ SQL;
         $candidates = $repo->findBy(['livePairChecksum' => $checksum], ['id' => 'ASC'], 8);
 
         foreach ($candidates as $candidate) {
-            if (!$candidate instanceof Media) {
-                continue;
-            }
-
             if ($candidate->getPath() === $path) {
                 continue;
             }

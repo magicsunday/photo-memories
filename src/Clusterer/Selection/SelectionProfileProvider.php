@@ -16,7 +16,6 @@ use MagicSunday\Memories\Service\Metadata\Support\FaceDetectionAvailability;
 use function array_key_exists;
 use function array_merge;
 use function filter_var;
-use function is_array;
 use function is_bool;
 use function is_numeric;
 use function is_string;
@@ -75,7 +74,7 @@ final class SelectionProfileProvider
         }
 
         $profile = $this->algorithmProfiles[$algorithm] ?? $this->defaultProfile;
-        if (!is_string($profile) || $profile === '') {
+        if ($profile === '') {
             $profile = $this->defaultProfile;
         }
 
@@ -142,15 +141,7 @@ final class SelectionProfileProvider
         $result = [];
 
         foreach ($profiles as $key => $values) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if ($key === '') {
-                continue;
-            }
-
-            if (!is_array($values)) {
                 continue;
             }
 
@@ -174,15 +165,7 @@ final class SelectionProfileProvider
         $result = [];
 
         foreach ($algorithmProfiles as $algorithm => $profile) {
-            if (!is_string($algorithm)) {
-                continue;
-            }
-
             if ($algorithm === '') {
-                continue;
-            }
-
-            if (!is_string($profile)) {
                 continue;
             }
 

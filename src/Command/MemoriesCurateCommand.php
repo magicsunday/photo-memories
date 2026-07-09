@@ -102,20 +102,12 @@ final class MemoriesCurateCommand extends Command
         parent::__construct();
 
         $groups = array_values($this->clusterGroupMap);
-        $groups = array_map(static fn (mixed $value): ?string => is_string($value) ? $value : null, $groups);
+        $groups = array_map(static fn (mixed $value): ?string => $value, $groups);
 
         $this->allowedGroups = array_values(array_unique(array_filter($groups))); // keep deterministic order
 
         $aliases = [];
         foreach ($this->clusterGroupAliasMap as $alias => $group) {
-            if (!is_string($alias)) {
-                continue;
-            }
-
-            if (!is_string($group)) {
-                continue;
-            }
-
             $aliasKey = strtolower(trim($alias));
             if ($aliasKey === '') {
                 continue;

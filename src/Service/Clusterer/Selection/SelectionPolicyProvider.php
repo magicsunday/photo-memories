@@ -293,10 +293,6 @@ final class SelectionPolicyProvider
         $result = [];
 
         foreach ($algorithmProfiles as $algorithm => $mapping) {
-            if (!is_string($algorithm)) {
-                continue;
-            }
-
             if ($algorithm === '') {
                 continue;
             }
@@ -311,21 +307,9 @@ final class SelectionPolicyProvider
                 continue;
             }
 
-            if (!is_array($mapping)) {
-                continue;
-            }
-
             $sanitised = [];
             foreach ($mapping as $storyline => $profileKey) {
-                if (!is_string($storyline)) {
-                    continue;
-                }
-
                 if ($storyline === '') {
-                    continue;
-                }
-
-                if (!is_string($profileKey)) {
                     continue;
                 }
 
@@ -336,7 +320,7 @@ final class SelectionPolicyProvider
                 $sanitised[$storyline] = $profileKey;
             }
 
-            if (isset($mapping[self::DEFAULT_STORYLINE]) && is_string($mapping[self::DEFAULT_STORYLINE])) {
+            if (isset($mapping[self::DEFAULT_STORYLINE])) {
                 $defaultProfile = $mapping[self::DEFAULT_STORYLINE];
                 if ($defaultProfile !== '') {
                     $sanitised[self::DEFAULT_STORYLINE] = $defaultProfile;
@@ -349,7 +333,7 @@ final class SelectionPolicyProvider
 
             if (!isset($sanitised[self::DEFAULT_STORYLINE])) {
                 $first = reset($sanitised);
-                if (is_string($first) && $first !== '') {
+                if ($first !== '') {
                     $sanitised[self::DEFAULT_STORYLINE] = $first;
                 }
             }
@@ -418,7 +402,7 @@ final class SelectionPolicyProvider
         if (str_contains($trimmed, '.')) {
             $parts  = explode('.', $trimmed);
             $suffix = end($parts);
-            if (is_string($suffix) && $suffix !== '' && $suffix !== $trimmed) {
+            if ($suffix !== '' && $suffix !== $trimmed) {
                 $candidates[] = $suffix;
             }
         }
@@ -477,15 +461,7 @@ final class SelectionPolicyProvider
         $result = [];
 
         foreach ($profileConstraints as $profileKey => $definition) {
-            if (!is_string($profileKey)) {
-                continue;
-            }
-
             if ($profileKey === '') {
-                continue;
-            }
-
-            if (!is_array($definition)) {
                 continue;
             }
 
@@ -674,7 +650,7 @@ final class SelectionPolicyProvider
             return;
         }
 
-        if (is_float($value) || (is_string($value) && is_numeric($value))) {
+        if (is_float($value) || is_numeric($value)) {
             $target[$key] = (int) $value;
         }
     }
@@ -702,7 +678,7 @@ final class SelectionPolicyProvider
             return;
         }
 
-        if (is_float($value) || (is_string($value) && is_numeric($value))) {
+        if (is_float($value) || is_numeric($value)) {
             $target[$key] = (int) $value;
         }
     }

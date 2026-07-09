@@ -17,7 +17,6 @@ use function basename;
 use function ctype_digit;
 use function is_array;
 use function is_file;
-use function is_string;
 use function ksort;
 use function reset;
 
@@ -42,10 +41,6 @@ final class ThumbnailPathResolver
         $fallbackPaths = [];
 
         foreach ($thumbs as $key => $path) {
-            if (!is_string($path)) {
-                continue;
-            }
-
             if ($path === '') {
                 continue;
             }

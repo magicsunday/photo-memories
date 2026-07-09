@@ -61,7 +61,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
 
         if ($uniqueDays === [] && $dayQuotas !== []) {
             foreach (array_keys($dayQuotas) as $day) {
-                if (is_string($day) && $day !== '') {
+                if ($day !== '') {
                     $uniqueDays[$day] = true;
                 }
             }
@@ -69,7 +69,7 @@ final class TimeSlotDiversificationStage implements SelectionStageInterface
 
         if ($uniqueDays === [] && $dayContext !== []) {
             foreach (array_keys($dayContext) as $day) {
-                if (is_string($day) && $day !== '') {
+                if ($day !== '') {
                     $uniqueDays[$day] = true;
                 }
             }

@@ -21,7 +21,6 @@ use function array_merge;
 use function dirname;
 use function is_array;
 use function is_dir;
-use function is_string;
 use function json_encode;
 use function mkdir;
 use function rtrim;
@@ -105,10 +104,6 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
 
         $extra = [];
         foreach ($context as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             $normalizedKey = trim($key);
             if ($normalizedKey === '') {
                 continue;
@@ -171,10 +166,6 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
         ];
 
         foreach ($payload as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             if (isset($metaKeys[$key])) {
                 continue;
             }

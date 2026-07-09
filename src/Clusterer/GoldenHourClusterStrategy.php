@@ -29,9 +29,6 @@ use function assert;
 use function count;
 use function in_array;
 use function is_array;
-use function is_float;
-use function is_int;
-use function is_string;
 use function str_contains;
 use function strtolower;
 use function usort;
@@ -207,20 +204,8 @@ final readonly class GoldenHourClusterStrategy implements ClusterStrategyInterfa
             }
 
             foreach ($tags as $tag) {
-                if (!is_array($tag)) {
-                    continue;
-                }
-
                 $label = $tag['label'] ?? null;
                 $score = $tag['score'] ?? null;
-
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                if (!is_float($score) && !is_int($score)) {
-                    continue;
-                }
 
                 $normalized = strtolower($label);
                 $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));

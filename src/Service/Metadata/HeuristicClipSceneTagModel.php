@@ -69,7 +69,7 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
 
         $count = 0;
         foreach ($persons as $person) {
-            if (is_string($person) && $person !== '') {
+            if ($person !== '') {
                 ++$count;
             }
         }
@@ -220,10 +220,6 @@ final class HeuristicClipSceneTagModel implements VisionSceneTagModelInterface
         }
 
         foreach ($keywords as $keyword) {
-            if (!is_string($keyword)) {
-                continue;
-            }
-
             if ($keyword === '') {
                 continue;
             }

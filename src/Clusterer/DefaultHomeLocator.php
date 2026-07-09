@@ -27,7 +27,6 @@ use function ceil;
 use function count;
 use function intdiv;
 use function is_array;
-use function is_string;
 use function max;
 use function min;
 use function round;
@@ -126,7 +125,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             $locationInfo = $tz->getLocation();
             if (is_array($locationInfo)) {
                 $countryCode = $locationInfo['country_code'] ?? null;
-                if (is_string($countryCode) && $countryCode !== '') {
+                if ($countryCode !== '') {
                     $country = strtolower($countryCode);
                 }
             }

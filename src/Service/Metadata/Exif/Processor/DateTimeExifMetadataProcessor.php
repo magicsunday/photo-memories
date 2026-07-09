@@ -54,7 +54,7 @@ final readonly class DateTimeExifMetadataProcessor implements ExifMetadataProces
             $media->setCapturedLocal($takenAt);
             $media->setTimeSource(TimeSource::EXIF);
 
-            if ($timezone instanceof DateTimeZone && ($offset !== null || $media->getTzId() === null)) {
+            if ($offset !== null || $media->getTzId() === null) {
                 $media->setTzId($timezone->getName());
             }
         }

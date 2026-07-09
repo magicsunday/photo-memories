@@ -79,7 +79,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     }
 
     /**
-     * @param array{default:string|null,localized?:array<string,string>|null,alternates?:list<string>|null}|null $raw
+     * @param array<string,mixed>|null $raw
      *
      * @return array{default:string|null,localized:array<string,string>,alternates:list<string>}
      */

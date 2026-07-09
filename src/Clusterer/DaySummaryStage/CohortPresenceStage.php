@@ -55,25 +55,18 @@ final class CohortPresenceStage implements DaySummaryStageInterface
         }
 
         foreach ($fallbackPersonIds as $canonicalId => $aliases) {
-            if (is_int($canonicalId) && is_array($aliases)) {
-                $canonical = $this->normalizePersonId($canonicalId);
-                $this->registerCanonical($canonical);
+            $canonical = $this->normalizePersonId($canonicalId);
+            $this->registerCanonical($canonical);
 
-                foreach ($aliases as $aliasId) {
-                    $alias = $this->normalizePersonId($aliasId);
-                    if ($alias === $canonical) {
-                        continue;
-                    }
-
-                    $this->aliasToCanonical[$alias]     = $canonical;
-                    $this->importantPersons[$canonical] = true;
+            foreach ($aliases as $aliasId) {
+                $alias = $this->normalizePersonId($aliasId);
+                if ($alias === $canonical) {
+                    continue;
                 }
 
-                continue;
+                $this->aliasToCanonical[$alias]     = $canonical;
+                $this->importantPersons[$canonical] = true;
             }
-
-            $personId = $this->normalizePersonId($aliases);
-            $this->registerCanonical($personId);
         }
     }
 
@@ -138,7 +131,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
                 ksort($frequency);
             }
 
-            $ratio = $totalImportant > 0 ? (float) count($present) / $totalImportant : 0.0;
+            $ratio = (float) count($present) / $totalImportant;
             if ($ratio > 1.0) {
                 $ratio = 1.0;
             }

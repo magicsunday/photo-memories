@@ -334,10 +334,6 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
         $peripheralCount = 0;
         foreach ($daySegments as $day => $info) {
-            if (!is_array($info)) {
-                continue;
-            }
-
             if (($info['category'] ?? 'peripheral') === 'peripheral') {
                 ++$peripheralCount;
             }
@@ -346,7 +342,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $peripheralQuotaLimit = null;
         $peripheralHardCap    = null;
         if ($peripheralCount > 0) {
-            $peripheralShare = $dayCount > 0 ? $peripheralCount / $dayCount : 0.0;
+            $peripheralShare = $peripheralCount / $dayCount;
             $peripheralRatio = 0.35;
             if ($peripheralShare >= 0.6) {
                 $peripheralRatio = 0.4;
@@ -680,10 +676,8 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
         $count = 0;
 
         foreach ($samples as $sample) {
-            if (is_int($sample) || is_float($sample)) {
-                $total += (float) $sample;
-                ++$count;
-            }
+            $total += (float) $sample;
+            ++$count;
         }
 
         if ($count === 0) {

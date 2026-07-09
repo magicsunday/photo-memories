@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Service\Metadata;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Metadata\Support\ImageOrVideoSupportTrait;
 
-use function is_string;
 use function ltrim;
 use function pathinfo;
 use function preg_match;
@@ -57,7 +56,7 @@ final class BurstIndexExtractor implements SingleMetadataExtractorInterface
         }
 
         $filename = pathinfo($media->getPath(), PATHINFO_FILENAME);
-        if (!is_string($filename) || $filename === '') {
+        if ($filename === '') {
             return null;
         }
 

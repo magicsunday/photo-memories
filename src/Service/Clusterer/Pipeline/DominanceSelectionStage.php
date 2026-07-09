@@ -67,10 +67,6 @@ final class DominanceSelectionStage implements ClusterConsolidationStageInterfac
 
             $priorityMap = [];
             foreach ($classifications as $index => $classification) {
-                if (!is_string($classification)) {
-                    continue;
-                }
-
                 if ($classification === '') {
                     continue;
                 }

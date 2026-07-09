@@ -22,7 +22,6 @@ use function count;
 use function hash;
 use function implode;
 use function is_int;
-use function is_string;
 use function trim;
 
 /**
@@ -52,10 +51,6 @@ final class TransitionSequenceGenerator
 
         $pool = [];
         foreach ($transitions as $transition) {
-            if (!is_string($transition)) {
-                continue;
-            }
-
             $trimmed = trim($transition);
             if ($trimmed === '') {
                 continue;
@@ -131,7 +126,7 @@ final class TransitionSequenceGenerator
 
         $filteredPaths = array_values(array_filter(
             $imagePaths,
-            static fn (mixed $path): bool => is_string($path) && trim($path) !== ''
+            static fn (string $path): bool => trim($path) !== ''
         ));
 
         $normalisedPaths = array_map(

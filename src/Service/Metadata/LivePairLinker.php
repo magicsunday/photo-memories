@@ -82,9 +82,6 @@ final readonly class LivePairLinker implements SingleMetadataExtractorInterface
 
         foreach ($candidates as $row) {
             $candidate = $row['media'];
-            if (!$candidate instanceof Media) {
-                continue;
-            }
 
             if ($candidate->getPath() === $media->getPath()) {
                 continue;

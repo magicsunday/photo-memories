@@ -23,7 +23,6 @@ use function extension_loaded;
 use function file_exists;
 use function function_exists;
 use function is_int;
-use function method_exists;
 use function sprintf;
 
 /**
@@ -573,7 +572,7 @@ class ThumbnailService implements ThumbnailServiceInterface
      */
     protected function canAutoOrientImagick(Imagick $imagick): bool
     {
-        return method_exists($imagick, 'autoOrient');
+        return true;
     }
 
     /**

@@ -65,7 +65,6 @@ final class TitleTemplateProvider
             throw new RuntimeException('Title-templates YAML missing: ' . implode(', ', $searchedPaths));
         }
 
-        /** @var array<string,mixed> $data */
         $data = Yaml::parseFile($resolvedPath) ?? [];
         if (!is_array($data)) {
             $data = [];

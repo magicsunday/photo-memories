@@ -21,9 +21,6 @@ use function array_map;
 use function array_slice;
 use function arsort;
 use function implode;
-use function is_float;
-use function is_int;
-use function is_string;
 use function sprintf;
 use function str_starts_with;
 
@@ -110,15 +107,7 @@ final readonly class ClipSceneTagExtractor implements SingleMetadataExtractorInt
         $filtered = [];
 
         foreach ($predictions as $label => $score) {
-            if (!is_string($label)) {
-                continue;
-            }
-
             if ($label === '') {
-                continue;
-            }
-
-            if (!is_float($score) && !is_int($score)) {
                 continue;
             }
 

@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Service\Feed;
 
 use function array_key_exists;
-use function is_string;
 use function mb_convert_case;
 use function str_replace;
 use function trim;
@@ -35,15 +34,7 @@ final class AlgorithmLabelProvider
     public function __construct(array $labels = [])
     {
         foreach ($labels as $algorithm => $label) {
-            if (!is_string($algorithm)) {
-                continue;
-            }
-
             if ($algorithm === '') {
-                continue;
-            }
-
-            if (!is_string($label)) {
                 continue;
             }
 

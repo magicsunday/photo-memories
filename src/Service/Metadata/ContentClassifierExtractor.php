@@ -22,9 +22,6 @@ use function array_values;
 use function basename;
 use function in_array;
 use function is_array;
-use function is_float;
-use function is_int;
-use function is_string;
 use function max;
 use function min;
 use function preg_quote;
@@ -485,19 +482,8 @@ final readonly class ContentClassifierExtractor implements SingleMetadataExtract
 
         $maxScore = 0.0;
         foreach ($tags as $tag) {
-            if (!is_array($tag)) {
-                continue;
-            }
-
             $label = $tag['label'] ?? null;
             $score = $tag['score'] ?? null;
-            if (!is_string($label)) {
-                continue;
-            }
-
-            if (!is_float($score) && !is_int($score)) {
-                continue;
-            }
 
             $labelLower = strtolower($label);
             foreach ($keywords as $keyword) {

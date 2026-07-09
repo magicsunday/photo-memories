@@ -201,7 +201,7 @@ final readonly class ClusterDeviceMetadataAggregator
         }
 
         $primaryShare = null;
-        if ($primaryKey !== null && $totalItems > 0) {
+        if ($primaryKey !== null) {
             $primaryShare = (float) $primaryCount / (float) $totalItems;
         }
 

@@ -16,7 +16,6 @@ use MagicSunday\Memories\Entity\Media;
 
 use function count;
 use function is_array;
-use function is_string;
 use function mb_strtolower;
 use function min;
 
@@ -96,10 +95,6 @@ final class ContentClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
             ++$itemsWithKeywords;
             foreach ($keywords as $keyword) {
-                if (!is_string($keyword)) {
-                    continue;
-                }
-
                 if ($keyword === '') {
                     continue;
                 }

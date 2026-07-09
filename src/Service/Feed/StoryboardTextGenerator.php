@@ -228,14 +228,10 @@ final readonly class StoryboardTextGenerator
         }
 
         arsort($scores);
+
         $firstKey = array_key_first($scores);
-        if (!is_string($firstKey)) {
-            $keys = array_keys($scores);
 
-            return is_string($keys[0] ?? null) ? $keys[0] : null;
-        }
-
-        return $firstKey;
+        return is_string($firstKey) ? $firstKey : null;
     }
 
     /**

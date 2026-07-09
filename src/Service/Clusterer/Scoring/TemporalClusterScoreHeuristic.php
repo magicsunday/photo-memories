@@ -87,7 +87,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
                     }
                 }
 
-                $coverage = $members > 0 ? $timestamped / $members : 0.0;
+                $coverage = $timestamped / $members;
             } else {
                 $coverage = 0.0;
             }

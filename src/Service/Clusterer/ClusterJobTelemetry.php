@@ -11,11 +11,9 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Service\Clusterer;
 
-use function is_array;
 use function is_float;
 use function is_int;
 use function is_numeric;
-use function is_string;
 
 /**
  * Captures telemetry emitted by a cluster job run.
@@ -76,15 +74,7 @@ final readonly class ClusterJobTelemetry
     {
         $normalized = [];
         foreach ($stageStats as $stage => $values) {
-            if (!is_string($stage)) {
-                continue;
-            }
-
             if ($stage === '') {
-                continue;
-            }
-
-            if (!is_array($values)) {
                 continue;
             }
 

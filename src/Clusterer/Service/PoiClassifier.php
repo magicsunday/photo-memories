@@ -57,10 +57,6 @@ final class PoiClassifier implements PoiClassifierInterface
         if (array_any(
             $pois,
             static function (mixed $poi): bool {
-                if (!is_array($poi)) {
-                    return false;
-                }
-
                 if (isset($poi['categoryKey']) && is_string($poi['categoryKey']) && $poi['categoryKey'] !== '') {
                     return true;
                 }
@@ -109,10 +105,6 @@ final class PoiClassifier implements PoiClassifierInterface
         return array_any(
             $pois,
             function (mixed $poi): bool {
-                if (!is_array($poi)) {
-                    return false;
-                }
-
                 $categoryKey   = $poi['categoryKey'] ?? null;
                 $categoryValue = $poi['categoryValue'] ?? null;
                 if ($this->matchesKeyword($categoryKey, self::TOURISM_KEYWORDS)) {
@@ -157,10 +149,6 @@ final class PoiClassifier implements PoiClassifierInterface
         return array_any(
             $pois,
             function (mixed $poi): bool {
-                if (!is_array($poi)) {
-                    return false;
-                }
-
                 $categoryKey   = $poi['categoryKey'] ?? null;
                 $categoryValue = $poi['categoryValue'] ?? null;
                 if ($this->matchesKeyword($categoryKey, self::TRANSPORT_KEYWORDS)) {

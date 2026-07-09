@@ -137,10 +137,6 @@ final class Request
     ): self {
         $normalizedQuery = [];
         foreach ($query as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
             $normalized = self::normalizeScalar($value);
             if ($normalized === null) {
                 continue;
@@ -151,14 +147,6 @@ final class Request
 
         $normalizedHeaders = [];
         foreach ($headers as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
-            if (!is_string($value)) {
-                continue;
-            }
-
             $normalizedHeaders[strtolower($key)] = trim($value);
         }
 
@@ -169,14 +157,6 @@ final class Request
         ];
 
         foreach ($server as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
-            if (!is_string($value)) {
-                continue;
-            }
-
             $serverData[$key] = $value;
         }
 
@@ -214,13 +194,6 @@ final class Request
         }
 
         $value = $this->query[$name];
-
-        if (!is_string($value)) {
-            $value = self::normalizeScalar($value);
-            if ($value === null) {
-                return $default;
-            }
-        }
 
         if ($value === '') {
             return $default;

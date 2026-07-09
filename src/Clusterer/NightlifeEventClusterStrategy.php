@@ -262,20 +262,8 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
             }
 
             foreach ($tags as $tag) {
-                if (!is_array($tag)) {
-                    continue;
-                }
-
                 $label = $tag['label'] ?? null;
                 $score = $tag['score'] ?? null;
-
-                if (!is_string($label)) {
-                    continue;
-                }
-
-                if (!is_float($score) && !is_int($score)) {
-                    continue;
-                }
 
                 $normalized = strtolower($label);
                 $matches    = array_any($keywords, fn (string $keyword): bool => str_contains($normalized, $keyword));
@@ -307,13 +295,11 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
 
         $nightKeywords = ['night', 'club', 'bar', 'pub', 'biergarten', 'lounge', 'casino'];
 
-        $label = $poi['label'] ?? null;
-        if (is_string($label)) {
-            $normalizedLabel = strtolower($label);
-            foreach ($nightKeywords as $keyword) {
-                if (str_contains($normalizedLabel, $keyword)) {
-                    return $poi;
-                }
+        $label           = $poi['label'] ?? null;
+        $normalizedLabel = strtolower($label);
+        foreach ($nightKeywords as $keyword) {
+            if (str_contains($normalizedLabel, $keyword)) {
+                return $poi;
             }
         }
 
@@ -339,17 +325,11 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         }
 
         $tags = $poi['tags'] ?? [];
-        if (is_array($tags)) {
-            foreach ($tags as $tagValue) {
-                if (!is_string($tagValue)) {
-                    continue;
-                }
-
-                $normalizedValue = strtolower($tagValue);
-                foreach ($nightKeywords as $keyword) {
-                    if (str_contains($normalizedValue, $keyword)) {
-                        return $poi;
-                    }
+        foreach ($tags as $tagValue) {
+            $normalizedValue = strtolower($tagValue);
+            foreach ($nightKeywords as $keyword) {
+                if (str_contains($normalizedValue, $keyword)) {
+                    return $poi;
                 }
             }
         }

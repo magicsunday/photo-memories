@@ -434,7 +434,7 @@ final class MediaFeatureBag
     }
 
     /**
-     * @param list<string>|null $tokens
+     * @param list<mixed>|null $tokens
      */
     public function setFilePathTokens(?array $tokens): void
     {

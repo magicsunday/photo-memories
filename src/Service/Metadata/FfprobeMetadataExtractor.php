@@ -13,7 +13,6 @@ namespace MagicSunday\Memories\Service\Metadata;
 
 use Closure;
 use DateTimeImmutable;
-use DateTimeZone;
 use Exception;
 use JsonException;
 use MagicSunday\Memories\Entity\Enum\TimeSource;
@@ -274,10 +273,6 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         $result = [];
 
         foreach ($streams as $stream) {
-            if (!is_array($stream)) {
-                continue;
-            }
-
             $result[] = $this->normaliseNestedArray($stream);
         }
 
@@ -296,9 +291,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         foreach ($streams as $stream) {
-            if (is_array($stream)) {
-                return $stream;
-            }
+            return $stream;
         }
 
         return null;
@@ -358,7 +351,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         foreach ($sideData as $entry) {
-            $value = $this->extractStabilisationFromEntry(is_array($entry) ? $entry : null);
+            $value = $this->extractStabilisationFromEntry($entry);
             if ($value !== null) {
                 return $value;
             }
@@ -625,8 +618,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                 continue;
             }
 
-            $timezone = $instant->getTimezone();
-            $tzName   = $timezone instanceof DateTimeZone ? $timezone->getName() : null;
+            $tzName = $instant->getTimezone()->getName();
 
             return [$instant, $tzName];
         }

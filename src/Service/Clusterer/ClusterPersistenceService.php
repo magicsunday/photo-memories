@@ -211,13 +211,11 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         $cluster->setPeopleScore($metadata['peopleScore']);
 
         $memberIds = $metadata['meta']['member_ids'] ?? $cluster->getMembers();
-        if (!is_array($memberIds)) {
-            $memberIds = $cluster->getMembers();
-        }
 
         /** @var list<int> $memberIds */
         $memberIds = array_values(array_map(static fn (mixed $value): int => $value, $memberIds));
-        $media     = $this->hydrateMembers($memberIds);
+
+        $media = $this->hydrateMembers($memberIds);
 
         $this->attachClusterMembers($cluster, $memberIds, $media, $metadata['overlay'], $metadata['memberScores']);
 
@@ -1069,7 +1067,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
         foreach ($details as $memberId => $detail) {
             if (is_int($memberId)) {
                 $id = $memberId;
-            } elseif (is_string($memberId) && is_numeric($memberId)) {
+            } elseif (is_numeric($memberId)) {
                 $id = (int) $memberId;
             } else {
                 continue;

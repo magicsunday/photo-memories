@@ -167,30 +167,18 @@ final class TransportDayExtender
     private function hasStrongStaypoint(array $summary): bool
     {
         $staypoints = $summary['staypoints'] ?? [];
-        if (is_array($staypoints)) {
-            foreach ($staypoints as $staypoint) {
-                if (!is_array($staypoint)) {
-                    continue;
-                }
-
-                $dwell = $this->extractDwellSeconds($staypoint);
-                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
-                    return true;
-                }
+        foreach ($staypoints as $staypoint) {
+            $dwell = $this->extractDwellSeconds($staypoint);
+            if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                return true;
             }
         }
 
         $dominantStaypoints = $summary['dominantStaypoints'] ?? [];
-        if (is_array($dominantStaypoints)) {
-            foreach ($dominantStaypoints as $staypoint) {
-                if (!is_array($staypoint)) {
-                    continue;
-                }
-
-                $dwell = $this->extractDwellSeconds($staypoint);
-                if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
-                    return true;
-                }
+        foreach ($dominantStaypoints as $staypoint) {
+            $dwell = $this->extractDwellSeconds($staypoint);
+            if ($dwell !== null && $dwell >= self::MIN_STAYPOINT_BRIDGE_DWELL_SECONDS) {
+                return true;
             }
         }
 
