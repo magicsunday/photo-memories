@@ -14,6 +14,8 @@ use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUnusedPrivateMethodParameterRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessParamTagRector;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUselessReturnTagRector;
+use Rector\DeadCode\Rector\Closure\RemoveUnusedClosureVariableUseRector;
+use Rector\DeadCode\Rector\If_\RemoveAlwaysTrueIfConditionRector;
 use Rector\DeadCode\Rector\Property\RemoveUselessVarTagRector;
 use Rector\Php80\Rector\Class_\ClassPropertyAssignToConstructorPromotionRector;
 use Rector\Php84\Rector\MethodCall\NewMethodCallWithoutParenthesesRector;
@@ -31,7 +33,7 @@ return static function (RectorConfig $rectorConfig): void {
         && !mkdir($concurrentDirectory, 0775, true)
         && !is_dir($concurrentDirectory)
     ) {
-        throw new \RuntimeException(
+        throw new RuntimeException(
             sprintf(
                 'Directory "%s" was not created',
                 $concurrentDirectory
@@ -44,7 +46,7 @@ return static function (RectorConfig $rectorConfig): void {
         && !mkdir($concurrentDirectory, 0775, true)
         && !is_dir($concurrentDirectory)
     ) {
-        throw new \RuntimeException(
+        throw new RuntimeException(
             sprintf(
                 'Directory "%s" was not created',
                 $concurrentDirectory
@@ -81,5 +83,18 @@ return static function (RectorConfig $rectorConfig): void {
         RemoveUselessReturnTagRector::class,
         RemoveUselessVarTagRector::class,
         RemoveUnusedPrivateMethodParameterRector::class,
+
+        // RunDetector::collectRuns() flushes completed runs through a closure that mutates
+        // $run/$runs by reference. Rector's flow analysis does not model the by-reference
+        // mutation performed via the $flush() calls in the following loop, so it wrongly
+        // treats the "if ($run === [])" guard as always-true and strips the closure body
+        // (and its now-"unused" use() captures), producing an empty no-op flush. Skip the
+        // triggering dead-code rules for this file to preserve the by-reference behaviour.
+        RemoveAlwaysTrueIfConditionRector::class => [
+            __DIR__ . '/../src/Clusterer/Service/RunDetector.php',
+        ],
+        RemoveUnusedClosureVariableUseRector::class => [
+            __DIR__ . '/../src/Clusterer/Service/RunDetector.php',
+        ],
     ]);
 };

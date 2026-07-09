@@ -458,7 +458,17 @@ final class RunDetector implements VacationRunDetectorInterface
         $runs = [];
         $run  = [];
 
-        $flush = function (): void {
+        $flush = function () use (&$run, &$runs, $keys, $indexByKey, $days): void {
+            if ($run === []) {
+                return;
+            }
+
+            $extended = $this->transportDayExtender->extend($run, $keys, $indexByKey, $days);
+            if ($extended !== []) {
+                $runs[] = $extended;
+            }
+
+            $run = [];
         };
 
         foreach ($keys as $key) {
