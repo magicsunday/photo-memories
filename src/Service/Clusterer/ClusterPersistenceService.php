@@ -872,9 +872,6 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $normalized,
             JSON_THROW_ON_ERROR
         );
-        if ($encoded === false) {
-            return null;
-        }
 
         return sha1($encoded);
     }

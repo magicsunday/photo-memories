@@ -124,10 +124,6 @@ final readonly class CameraExifMetadataProcessor implements ExifMetadataProcesso
             $max = $min;
         }
 
-        if ($min === null || $max === null) {
-            return null;
-        }
-
         if (abs($max - $min) < 0.01) {
             return sprintf('%smm', $this->formatNumber($min));
         }
@@ -150,10 +146,6 @@ final readonly class CameraExifMetadataProcessor implements ExifMetadataProcesso
 
         if ($max === null) {
             $max = $min;
-        }
-
-        if ($min === null || $max === null) {
-            return null;
         }
 
         if (abs($max - $min) < 0.01) {
