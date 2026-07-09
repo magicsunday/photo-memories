@@ -14,7 +14,6 @@ namespace MagicSunday\Memories\Service\Monitoring;
 use DateTimeImmutable;
 use JsonException;
 use MagicSunday\Memories\Service\Monitoring\Contract\JobMonitoringEmitterInterface;
-use Psr\Clock\ClockInterface;
 use Stringable;
 
 use function array_key_exists;
@@ -44,7 +43,7 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
     public function __construct(
         private string $logPath,
         private bool $enabled = true,
-        private ?ClockInterface $clock = null,
+        private ?DateTimeImmutable $now = null,
         private string $schemaVersion = '1.0',
     ) {
     }
@@ -86,7 +85,7 @@ final readonly class FileJobMonitoringEmitter implements JobMonitoringEmitterInt
      */
     private function buildPayload(string $job, string $status, array $context): array
     {
-        $timestamp = $this->clock?->now() ?? new DateTimeImmutable();
+        $timestamp = $this->now ?? new DateTimeImmutable();
 
         if (!array_key_exists('job', $context)) {
             $context = array_merge(['job' => $job], $context);

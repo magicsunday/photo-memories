@@ -9,17 +9,6 @@
 
 declare(strict_types=1);
 
-namespace Psr\Clock;
-
-use DateTimeImmutable;
-
-if (!interface_exists(ClockInterface::class)) {
-    interface ClockInterface
-    {
-        public function now(): DateTimeImmutable;
-    }
-}
-
 namespace MagicSunday\Memories\Test\Unit\Service\Monitoring;
 
 use DateTimeImmutable;
@@ -27,7 +16,6 @@ use JsonException;
 use MagicSunday\Memories\Service\Monitoring\FileJobMonitoringEmitter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Clock\ClockInterface;
 
 use function array_filter;
 use function explode;
@@ -55,14 +43,9 @@ final class FileJobMonitoringEmitterTest extends TestCase
             unlink($path);
         }
 
-        $clock = new class implements ClockInterface {
-            public function now(): DateTimeImmutable
-            {
-                return new DateTimeImmutable('2024-01-01T12:00:00+00:00');
-            }
-        };
+        $now = new DateTimeImmutable('2024-01-01T12:00:00+00:00');
 
-        $emitter = new FileJobMonitoringEmitter($path, true, $clock);
+        $emitter = new FileJobMonitoringEmitter($path, true, $now);
         $emitter->emit('geocoding.poi_update', 'started', ['foo' => 'bar']);
 
         self::assertFileExists($path);
