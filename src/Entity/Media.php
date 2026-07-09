@@ -23,6 +23,11 @@ use function count;
 use function max;
 use function min;
 
+/**
+ * Doctrine entity describing an imported photo or video including its metadata.
+ *
+ * @phpstan-import-type FeatureValue from MediaFeatureBag
+ */
 #[ORM\Entity]
 #[ORM\Table(
     name: 'media',
@@ -46,11 +51,6 @@ use function min;
         new ORM\Index(name: 'idx_media_candidate', columns: ['noShow', 'lowQuality', 'takenAt']),
     ]
 )]
-/**
- * Doctrine entity describing an imported photo or video including its metadata.
- *
- * @phpstan-import-type FeatureValue from MediaFeatureBag
- */
 class Media
 {
     /**

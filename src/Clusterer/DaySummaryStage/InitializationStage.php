@@ -33,6 +33,8 @@ use function strtolower;
 use const SORT_STRING;
 
 /**
+ * Initialises per-day summaries from media items.
+ *
  * @phpstan-type Staypoint array{lat:float,lon:float,start:int,end:int,dwell:int}
  * @phpstan-type BaseLocation array{lat:float,lon:float,distance_km:float,source:string}
  * @phpstan-type DaySummary array{
@@ -86,9 +88,6 @@ use const SORT_STRING;
  *     isSynthetic: bool,
  *     selectionContext?: array{category:string,score:float,duration:int|null,metrics:array<string,float>}|null,
  * }
- */
-/**
- * Initialises per-day summaries from media items.
  */
 final readonly class InitializationStage implements DaySummaryStageInterface
 {
@@ -336,6 +335,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             'spotNoise'               => [],
             'spotCount'               => 0,
             'spotNoiseSamples'        => 0,
+            'spotDensity'             => 0.0,
             'spotDwellSeconds'        => 0,
             'staypoints'              => [],
             'staypointIndex'          => StaypointIndex::empty(),
@@ -346,6 +346,8 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             'primaryStaypointKey'     => null,
             'transitRatio'            => 0.0,
             'poiDensity'              => 0.0,
+            'cohortPresenceRatio'     => 0.0,
+            'cohortMembers'           => [],
             'baseLocation'            => null,
             'baseAway'                => false,
             'awayByDistance'          => false,

@@ -16,12 +16,12 @@ use MagicSunday\Memories\Entity\Media;
 
 /**
  * Resolves the daily base location for vacation day summaries.
+ *
+ * @phpstan-import-type HomeDescriptor from DaySummaryStageInterface
  */
 interface BaseLocationResolverInterface
 {
     /**
-     * @phpstan-import-type HomeDescriptor from DaySummaryStageInterface
-     *
      * Determines the most plausible base location for the provided day summary.
      *
      * @param array{date:string,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,firstGpsMedia:Media|null,lastGpsMedia:Media|null,gpsMembers:list<Media>} $summary

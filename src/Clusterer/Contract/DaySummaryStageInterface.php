@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Contract;
 
 /**
+ * Contract for incremental day summary pipeline stages.
+ *
  * @phpstan-type HomeDescriptor array{
  *     lat:float,
  *     lon:float,
@@ -20,10 +22,6 @@ namespace MagicSunday\Memories\Clusterer\Contract;
  *     timezone_offset:int|null,
  *     centers?:list<array{lat:float,lon:float,radius_km:float,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>
  * }
- */
-
-/**
- * Contract for incremental day summary pipeline stages.
  */
 interface DaySummaryStageInterface
 {
