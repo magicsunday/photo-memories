@@ -13,10 +13,6 @@ namespace MagicSunday\Memories\Service\Monitoring;
 
 use function ceil;
 use function count;
-use function is_float;
-use function is_int;
-use function is_numeric;
-use function is_string;
 use function microtime;
 use function sort;
 
@@ -63,19 +59,7 @@ final class PhaseMetricsCollector
     public function addCounts(string $phase, string $group, array $values): void
     {
         foreach ($values as $key => $value) {
-            if (!is_string($key)) {
-                continue;
-            }
-
-            if (!is_int($value) && !is_float($value)) {
-                if (!is_numeric($value)) {
-                    continue;
-                }
-
-                $value = (float) $value;
-            }
-
-            $this->counts[$phase][$group][$key] = is_float($value) ? $value : $value;
+            $this->counts[$phase][$group][$key] = $value;
         }
     }
 
@@ -91,14 +75,6 @@ final class PhaseMetricsCollector
         }
 
         foreach ($values as $value) {
-            if (!is_int($value) && !is_float($value)) {
-                if (!is_numeric($value)) {
-                    continue;
-                }
-
-                $value = (float) $value;
-            }
-
             $this->samples[$phase][$metric][] = (float) $value;
         }
     }

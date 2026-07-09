@@ -14,3 +14,14 @@ parameters:
     excludePaths:
         - %currentWorkingDirectory%/test/
         - %currentWorkingDirectory%/.build/
+
+    ignoreErrors:
+        # PHP coerces the numeric S2 cell-token array keys to int, so the majority cell can be
+        # an int at runtime; the (string) cast is required for the ?string return under
+        # strict_types. PHPStan does not model array-key coercion and reports the cast as
+        # redundant. Scoped to the single call site.
+        -
+            identifier: cast.useless
+            message: '#^Casting to string something that''s already string\.$#'
+            path: %currentWorkingDirectory%/src/Clusterer/Context.php
+            count: 1

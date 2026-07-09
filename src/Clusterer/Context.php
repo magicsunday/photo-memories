@@ -187,7 +187,10 @@ final readonly class Context
             }
         }
 
-        return $majorityCell !== null ? (string) $majorityCell : null;
+        // $counts is non-empty here (guarded above) and every tally is >= 1, so a majority
+        // cell is always found. The (string) cast is required because PHP coerces numeric S2
+        // token keys to int array keys, which PHPStan does not model (see scoped ignore).
+        return (string) $majorityCell;
     }
 
     /**
