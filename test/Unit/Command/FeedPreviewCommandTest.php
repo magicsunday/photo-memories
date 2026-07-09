@@ -40,6 +40,7 @@ final class FeedPreviewCommandTest extends TestCase
     {
         $clusterEntity = new ClusterEntity(
             'travel',
+            'travel',
             ['score' => 0.82, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3, 4],
@@ -123,6 +124,7 @@ final class FeedPreviewCommandTest extends TestCase
     {
         $clusterEntity = new ClusterEntity(
             'travel',
+            'travel',
             ['score' => 0.75, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3],
@@ -183,11 +185,13 @@ final class FeedPreviewCommandTest extends TestCase
     {
         $clusterA = new ClusterEntity(
             'travel',
+            'travel',
             ['score' => 0.82, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3, 4],
         );
         $clusterB = new ClusterEntity(
+            'people',
             'people',
             ['score' => 0.65, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
@@ -321,6 +325,7 @@ final class FeedPreviewCommandTest extends TestCase
     {
         $cluster = new ClusterEntity(
             'travel',
+            'travel',
             ['score' => 0.5, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2],
@@ -401,6 +406,7 @@ final class FeedPreviewCommandTest extends TestCase
     {
         $clusterEntity = new ClusterEntity(
             'travel',
+            'travel',
             ['score' => 0.6, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],
             [1, 2, 3],
@@ -451,6 +457,7 @@ final class FeedPreviewCommandTest extends TestCase
     public function itSupportsMergedStageWithoutFeedBuild(): void
     {
         $clusterEntity = new ClusterEntity(
+            'travel',
             'travel',
             ['score' => 0.7, 'group' => 'stories'],
             ['lat'   => 0.0, 'lon' => 0.0],

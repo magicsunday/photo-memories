@@ -13,6 +13,7 @@ namespace MagicSunday\Memories\Test\Unit\Command;
 
 use DateTimeImmutable;
 use MagicSunday\Memories\Clusterer\Selection\SelectionProfileProvider;
+use MagicSunday\Memories\Clusterer\Selection\VacationSelectionOptions;
 use MagicSunday\Memories\Command\FeedExportHtmlCommand;
 use MagicSunday\Memories\Service\Feed\Contract\FeedExportServiceInterface;
 use MagicSunday\Memories\Service\Feed\FeedExportRequest;
@@ -36,7 +37,7 @@ final class FeedExportHtmlCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->selectionProfileProvider = new SelectionProfileProvider(['default' => []], 'default');
+        $this->selectionProfileProvider = new SelectionProfileProvider(new VacationSelectionOptions(), 'default', ['default' => []]);
     }
 
     #[Test]
