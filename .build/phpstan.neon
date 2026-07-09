@@ -25,3 +25,28 @@ parameters:
             message: '#^Casting to string something that''s already string\.$#'
             path: %currentWorkingDirectory%/src/Clusterer/Context.php
             count: 1
+
+        # is_string() guards that validate genuinely untyped runtime values PHPStan over-narrows:
+        # JSON DB columns (Media::getKeywords()), external POI label payloads, and PHP's coercion
+        # of numeric-string map keys to int (array_key_first). Each guard is load-bearing and
+        # pinned by a unit test; widening the shared accessors would cascade across many consumers.
+        -
+            identifier: function.alreadyNarrowedType
+            message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+            paths:
+                - %currentWorkingDirectory%/src/Clusterer/Support/ClusterBuildHelperTrait.php
+                - %currentWorkingDirectory%/src/Service/Feed/StoryboardTextGenerator.php
+                - %currentWorkingDirectory%/src/Utility/DefaultLocationLabelResolver.php
+
+        # DateTimeImmutable::getTimezone() is always a DateTimeZone, so the media-timezone home
+        # offset fallback is currently unreachable. The fallback is intentional (photos lacking
+        # timezone info should adopt the home offset) but needs an upstream "timezone unknown"
+        # signal to fire; keep the code and scope the two findings until that design decision.
+        -
+            identifier: instanceof.alwaysTrue
+            message: '#^Instanceof between DateTimeZone and DateTimeZone will always evaluate to true\.$#'
+            path: %currentWorkingDirectory%/src/Clusterer/Support/VacationTimezoneTrait.php
+        -
+            identifier: deadCode.unreachable
+            message: '#^Unreachable statement - code above always terminates\.$#'
+            path: %currentWorkingDirectory%/src/Clusterer/Support/VacationTimezoneTrait.php
