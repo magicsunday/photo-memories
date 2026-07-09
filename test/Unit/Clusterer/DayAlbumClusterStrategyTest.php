@@ -16,8 +16,11 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\DayAlbumClusterStrategy;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Clusterer\Support\LocalTimeHelper;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
+use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
@@ -159,10 +162,24 @@ final class DayAlbumClusterStrategyTest extends TestCase
     #[Test]
     public function addsCalendarFlagsAndQualityMetrics(): void
     {
+        // The quality estimator reads pixels from the media file path, which does not exist for
+        // these in-memory fixtures. Inject a stub returning a perfect (all 1.0) score so the day
+        // clears the quality gate and every aggregate metric resolves to 1.0.
+        $aggregator = $this->fixedQualityAggregator(new ImageQualityScore(
+            sharpness: 1.0,
+            exposure: 1.0,
+            contrast: 1.0,
+            noise: 1.0,
+            blockiness: 1.0,
+            keyframeQuality: 1.0,
+            clipping: 0.0,
+        ));
+
         $strategy = new DayAlbumClusterStrategy(
             localTimeHelper: new LocalTimeHelper('Europe/Berlin'),
             locationHelper: LocationHelper::createDefault(),
             minItemsPerDay: 2,
+            qualityAggregator: $aggregator,
         );
 
         $mediaItems = [
@@ -215,6 +232,27 @@ final class DayAlbumClusterStrategyTest extends TestCase
 
         self::assertArrayHasKey('keywords', $params);
         self::assertSame(['Strand', 'Meer'], $params['keywords']);
+    }
+
+    private function fixedQualityAggregator(ImageQualityScore $score): ClusterQualityAggregator
+    {
+        $estimator = new readonly class($score) implements ImageQualityEstimatorInterface {
+            public function __construct(private ImageQualityScore $score)
+            {
+            }
+
+            public function scoreStill(Media $media): ImageQualityScore
+            {
+                return $this->score;
+            }
+
+            public function scoreVideo(Media $media): ImageQualityScore
+            {
+                return $this->score;
+            }
+        };
+
+        return new ClusterQualityAggregator(estimator: $estimator);
     }
 
     private function createMedia(int $id, string $takenAt, float $lat, float $lon): Media

@@ -16,9 +16,12 @@ use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Context;
 use MagicSunday\Memories\Clusterer\DeviceSimilarityStrategy;
+use MagicSunday\Memories\Clusterer\Support\ClusterQualityAggregator;
 use MagicSunday\Memories\Entity\Enum\ContentKind;
 use MagicSunday\Memories\Entity\Location;
 use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityEstimatorInterface;
+use MagicSunday\Memories\Service\Clusterer\Quality\ImageQualityScore;
 use MagicSunday\Memories\Test\TestCase;
 use MagicSunday\Memories\Utility\LocationHelper;
 use PHPUnit\Framework\Attributes\Test;
@@ -80,7 +83,24 @@ final class DeviceSimilarityStrategyTest extends TestCase
     #[Test]
     public function aggregatesQualityMetricsIntoParams(): void
     {
-        $strategy = new DeviceSimilarityStrategy(LocationHelper::createDefault(), minItemsPerGroup: 2);
+        // The quality estimator reads pixels from the media file path, which does not exist for
+        // these in-memory fixtures. Inject a stub returning a fixed high-quality score so the
+        // aggregate values are derived deterministically from known per-metric inputs.
+        $aggregator = $this->fixedQualityAggregator(new ImageQualityScore(
+            sharpness: 0.8,
+            exposure: 0.7,
+            contrast: 0.7,
+            noise: 0.8,
+            blockiness: 0.8,
+            keyframeQuality: 0.8,
+            clipping: 0.0,
+        ));
+
+        $strategy = new DeviceSimilarityStrategy(
+            LocationHelper::createDefault(),
+            minItemsPerGroup: 2,
+            qualityAggregator: $aggregator,
+        );
 
         $location = $this->makeLocation(
             providerPlaceId: 'quality-berlin',
@@ -138,11 +158,18 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertArrayHasKey('quality_iso', $params);
         self::assertArrayHasKey('aesthetics_score', $params);
 
-        self::assertEqualsWithDelta(0.9014, $params['quality_avg'], 0.0005);
+        // Weights (DEFAULT_QUALITY_WEIGHTS, sum = 1.0): resolution 0.18, sharpness 0.24,
+        // exposure 0.18, contrast 0.16, noise 0.12, blockiness 0.07, keyframe 0.05.
+        // Resolution normalises to 1.0 (12 MP == the 12 MP baseline); all other metrics fall back
+        // to the stub's normalised scores because no raw metrics are supplied.
+        // quality_avg = 0.18*1.0 + 0.24*0.8 + 0.18*0.7 + 0.16*0.7 + 0.12*0.8 + 0.07*0.8 + 0.05*0.8 = 0.802
+        self::assertEqualsWithDelta(0.802, $params['quality_avg'], 0.0005);
         self::assertEqualsWithDelta(1.0, $params['quality_resolution'], 0.0005);
         self::assertEqualsWithDelta(0.8, $params['quality_sharpness'], 0.0005);
-        self::assertEqualsWithDelta(0.8571, $params['quality_iso'], 0.0005);
-        self::assertEqualsWithDelta(0.725, $params['aesthetics_score'], 0.0005);
+        // quality_iso mirrors the noise metric.
+        self::assertEqualsWithDelta(0.8, $params['quality_iso'], 0.0005);
+        // aesthetics = 0.45*exposure + 0.35*contrast + 0.20*sharpness = 0.45*0.7 + 0.35*0.7 + 0.20*0.8 = 0.72
+        self::assertEqualsWithDelta(0.72, $params['aesthetics_score'], 0.0005);
     }
 
     #[Test]
@@ -225,6 +252,27 @@ final class DeviceSimilarityStrategyTest extends TestCase
         self::assertSame([601, 602], $membersByDevice[$aliceFirstBody]);
         self::assertSame([603, 604], $membersByDevice[$aliceSecondBody]);
         self::assertSame([605, 606], $membersByDevice[$bobBody]);
+    }
+
+    private function fixedQualityAggregator(ImageQualityScore $score): ClusterQualityAggregator
+    {
+        $estimator = new readonly class($score) implements ImageQualityEstimatorInterface {
+            public function __construct(private ImageQualityScore $score)
+            {
+            }
+
+            public function scoreStill(Media $media): ImageQualityScore
+            {
+                return $this->score;
+            }
+
+            public function scoreVideo(Media $media): ImageQualityScore
+            {
+                return $this->score;
+            }
+        };
+
+        return new ClusterQualityAggregator(estimator: $estimator);
     }
 
     private function createMedia(
