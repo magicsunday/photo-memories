@@ -118,9 +118,24 @@ final class PipelineClusterConsolidatorTest extends TestCase
             $overlapChild,
         ]);
 
-        self::assertSame([
-            $overlapParent,
-        ], $overlapResult, 'Overlap resolver must drop nested child when metadata is missing.');
+        self::assertCount(1, $overlapResult, 'Overlap resolver must drop nested child when metadata is missing.');
+
+        // The resolver returns an immutable copy of the surviving parent that carries a
+        // params.meta.merges audit entry describing the dedupe decision.
+        $survivor = $overlapResult[0];
+        self::assertSame('vacation', $survivor->getAlgorithm());
+        self::assertSame([1, 2, 3, 4], $survivor->getMembers());
+
+        $survivorParams = $survivor->getParams();
+        self::assertArrayHasKey('meta', $survivorParams);
+        self::assertIsArray($survivorParams['meta']);
+        self::assertArrayHasKey('merges', $survivorParams['meta']);
+
+        $merges = $survivorParams['meta']['merges'];
+        self::assertIsArray($merges);
+        self::assertCount(1, $merges);
+        self::assertSame('winner', $merges[0]['role']);
+        self::assertSame('dedupe', $merges[0]['decision']);
     }
 
     /**

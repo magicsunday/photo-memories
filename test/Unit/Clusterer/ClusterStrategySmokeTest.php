@@ -215,7 +215,9 @@ final class ClusterStrategySmokeTest extends TestCase
         yield 'MonthlyHighlightsClusterStrategy' => [
             MonthlyHighlightsClusterStrategy::class,
             'monthly_highlights',
-            null,
+            static fn (): ClusterStrategyInterface => new MonthlyHighlightsClusterStrategy(
+                self::locationHelper()
+            ),
         ];
         yield 'NewYearEveClusterStrategy' => [
             NewYearEveClusterStrategy::class,

@@ -128,16 +128,11 @@ final class PeopleClusterScoreHeuristicTest extends TestCase
         ];
 
         $preferences = new FeedUserPreferences(
-            'user',
-            'default',
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            ['Alice'],
-            [],
+            userId: 'user',
+            profileKey: 'default',
+            favourites: [],
+            hiddenAlgorithms: [],
+            favouritePersons: ['Alice'],
         );
 
         $heuristic->setFeedUserPreferences($preferences);

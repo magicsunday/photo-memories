@@ -66,16 +66,11 @@ final class LocationClusterScoreHeuristicTest extends TestCase
         ];
 
         $preferences = new FeedUserPreferences(
-            'user',
-            'default',
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-            ['Berlin'],
+            userId: 'user',
+            profileKey: 'default',
+            favourites: [],
+            hiddenAlgorithms: [],
+            favouritePlaces: ['Berlin'],
         );
 
         $heuristic->setFeedUserPreferences($preferences);

@@ -29,7 +29,7 @@ final class LocalizedDateFormatterTest extends TestCase
 
         $sameDay = [
             'from' => (new DateTimeImmutable('2024-07-01 08:00:00'))->getTimestamp(),
-            'to'   => (new DateTimeImmutable('2024-07-01 22:00:00'))->getTimestamp(),
+            'to'   => (new DateTimeImmutable('2024-07-01 20:00:00'))->getTimestamp(),
         ];
         self::assertSame('1. Jul. 2024', $formatter->formatRange($sameDay));
 

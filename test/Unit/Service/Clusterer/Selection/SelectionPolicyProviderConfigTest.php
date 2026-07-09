@@ -32,8 +32,8 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         $policy = $provider->forAlgorithm('vacation');
 
         self::assertSame('vacation', $policy->getProfileKey());
-        self::assertSame(60, $policy->getTargetTotal());
-        self::assertSame(36, $policy->getMinimumTotal());
+        self::assertSame(25, $policy->getTargetTotal());
+        self::assertSame(15, $policy->getMinimumTotal());
         self::assertSame(6, $policy->getMaxPerDay());
         self::assertSame(4.0, $policy->getTimeSlotHours());
         self::assertSame(1800, $policy->getMinSpacingSeconds());
@@ -65,8 +65,8 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         $policy = $provider->forAlgorithm('highlights');
 
         self::assertSame('highlights', $policy->getProfileKey());
-        self::assertSame(30, $policy->getTargetTotal());
-        self::assertSame(18, $policy->getMinimumTotal());
+        self::assertSame(16, $policy->getTargetTotal());
+        self::assertSame(10, $policy->getMinimumTotal());
         self::assertSame(3, $policy->getMaxPerDay());
         self::assertSame(3.0, $policy->getTimeSlotHours());
         self::assertSame(3300, $policy->getMinSpacingSeconds());
@@ -99,7 +99,7 @@ final class SelectionPolicyProviderConfigTest extends TestCase
         $policy = $provider->forAlgorithm('vacation', 'vacation.transit');
 
         self::assertSame('location', $policy->getProfileKey());
-        self::assertSame(48, $policy->getTargetTotal());
+        self::assertSame(23, $policy->getTargetTotal());
     }
 
     /**
