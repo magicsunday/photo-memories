@@ -62,6 +62,13 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
     private const float MERGE_MAX_SCORE_GAP_RATIO = 0.35;
 
+    /**
+     * Absolute tolerance applied when comparing the score gap against its ceiling, so an
+     * IEEE-754 rounding artefact at the exact ratio boundary (e.g. 0.8 - 0.45 yielding
+     * 0.35000000000000003) does not spuriously reject an otherwise mergeable overlap.
+     */
+    private const float MERGE_SCORE_GAP_EPSILON = 1.0e-9;
+
     /** @var array<string, int> */
     private array $priorityMap = [];
 
@@ -361,7 +368,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $scoreGap    = (float) $metrics['score_gap'];
         $maxGap      = max(1.0, $winnerScore) * self::MERGE_MAX_SCORE_GAP_RATIO;
 
-        return $scoreGap <= $maxGap;
+        return $scoreGap <= ($maxGap + self::MERGE_SCORE_GAP_EPSILON);
     }
 
     private function computeTemporalIou(ClusterDraft $a, ClusterDraft $b): float
