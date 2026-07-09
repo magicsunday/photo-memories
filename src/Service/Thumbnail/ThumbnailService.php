@@ -528,6 +528,10 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $background = new ImagickPixel('none');
 
+        // Imagick::rotateImage() rotates clockwise for a positive angle, whereas GD's
+        // imagerotate() (see applyOrientationWithGd()) rotates counter-clockwise. The angles
+        // below are therefore the negation of the GD path so both backends produce the same
+        // upright result.
         switch ($orientation) {
             case self::ORIENTATION_TOPRIGHT:
                 $imagick->flopImage();
@@ -543,20 +547,20 @@ class ThumbnailService implements ThumbnailServiceInterface
                 break;
             case self::ORIENTATION_LEFTTOP:
                 $imagick->flopImage();
-                $imagick->rotateImage($background, 90);
+                $imagick->rotateImage($background, -90);
 
                 break;
             case self::ORIENTATION_RIGHTTOP:
-                $imagick->rotateImage($background, -90);
+                $imagick->rotateImage($background, 90);
 
                 break;
             case self::ORIENTATION_RIGHTBOTTOM:
                 $imagick->flopImage();
-                $imagick->rotateImage($background, -90);
+                $imagick->rotateImage($background, 90);
 
                 break;
             case self::ORIENTATION_LEFTBOTTOM:
-                $imagick->rotateImage($background, 90);
+                $imagick->rotateImage($background, -90);
 
                 break;
         }
