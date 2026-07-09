@@ -147,6 +147,7 @@ final class FeedController
         private array $spaGestureConfig = [],
         private array $spaOfflineConfig = [],
         private array $spaAnimationConfig = [],
+        private readonly ?DateTimeImmutable $referenceTime = null,
     ) {
         if ($this->defaultFeedLimit < 1) {
             $this->defaultFeedLimit = 24;
@@ -400,7 +401,10 @@ final class FeedController
         $availableStrategies = $this->collectStrategies($matchingItems);
         $availableGroups     = $this->collectGroups($matchingItems);
 
-        $now     = new DateTimeImmutable();
+        // In production the injected reference time is null, so a fresh
+        // DateTimeImmutable is evaluated per request (no frozen clock in a
+        // shared service); only tests pin it for deterministic relative times.
+        $now     = $this->referenceTime ?? new DateTimeImmutable();
         $baseUrl = rtrim($request->getBaseUrl(), '/');
 
         if ($fieldSelection === null) {

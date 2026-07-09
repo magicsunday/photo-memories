@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Test\Integration\Http;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\ORM\EntityManagerInterface;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Feed\MemoryFeedItem;
@@ -165,6 +166,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 'familienevent_story_3' => 'Familienevent (Teil 3)',
             ]),
             slideshowTransitions: $dataset->getStoryboardTransitions(),
+            referenceTime: new DateTimeImmutable('2026-03-15 12:00:00', new DateTimeZone('Europe/Berlin')),
         );
 
         $request = Request::create(
