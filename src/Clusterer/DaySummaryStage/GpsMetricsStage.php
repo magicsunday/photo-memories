@@ -58,6 +58,7 @@ final readonly class GpsMetricsStage implements DaySummaryStageInterface
             return [];
         }
 
+        /** @var array<string, mixed> $days */
         foreach ($days as &$summary) {
             $summary['gpsMembers'] = $this->filterGpsOutliers(
                 $summary['gpsMembers'],

@@ -200,7 +200,7 @@ final class TransportDayExtender
     }
 
     /**
-     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio:float,avgSpeedKmh:float,maxSpeedKmh:float,photoCount?:int} $summary
+     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int} $summary
      */
     private function isTransitHeavy(array $summary): bool
     {
@@ -208,17 +208,17 @@ final class TransportDayExtender
             return true;
         }
 
-        $ratio = $summary['transitRatio'];
+        $ratio = $summary['transitRatio'] ?? 0.0;
         if ($ratio >= $this->transitRatioThreshold) {
             return true;
         }
 
-        $avgSpeed = $summary['avgSpeedKmh'];
+        $avgSpeed = $summary['avgSpeedKmh'] ?? 0.0;
         if ($avgSpeed >= $this->transitSpeedThreshold) {
             return true;
         }
 
-        $maxSpeed = $summary['maxSpeedKmh'];
+        $maxSpeed = $summary['maxSpeedKmh'] ?? 0.0;
 
         return $maxSpeed >= $this->transitSpeedThreshold;
     }

@@ -109,10 +109,10 @@ trait ProgressAwareClusterTrait
     /**
      * Wraps a clustering run with coarse progress notifications.
      *
-     * @param list<Media>                                         $items
-     * @param Context                                             $ctx
-     * @param callable(int $done, int $max, string $stage):void   $update
-     * @param callable(array<Media>, Context):array<ClusterDraft> $cluster
+     * @param list<Media>                                       $items
+     * @param Context                                           $ctx
+     * @param callable(int $done, int $max, string $stage):void $update
+     * @param callable(list<Media>, Context):list<ClusterDraft> $cluster
      *
      * @return list<ClusterDraft>
      */

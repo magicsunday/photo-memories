@@ -107,7 +107,12 @@ final readonly class NightlifeEventClusterStrategy implements ClusterStrategyInt
         $lastTs = null;
 
         foreach ($night as $m) {
-            $ts = $m->getTakenAt()->getTimestamp();
+            $takenAt = $m->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $ts = $takenAt->getTimestamp();
             if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
                 $runs[] = $buf;
                 $buf    = [];

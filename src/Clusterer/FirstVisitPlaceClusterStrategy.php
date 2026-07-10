@@ -182,7 +182,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
                     algorithm: 'first_visit_place',
                     params: $params,
                     centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-                    members: array_map(static fn (Media $m): int => $m->getId(), $members)
+                    members: array_map(static fn (Media $m): int => (int) $m->getId(), $members)
                 );
 
                 if ($label !== null) {
@@ -252,7 +252,7 @@ final readonly class FirstVisitPlaceClusterStrategy implements ClusterStrategyIn
             }
         }
 
-        return $out;
+        return array_values($out);
     }
 
     private function cellKey(float $lat, float $lon): string

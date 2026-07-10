@@ -848,7 +848,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
             $durations[$index] = min($candidate, $maxOverlap);
         }
 
-        return $durations;
+        return array_values($durations);
     }
 
     private function clampTransitionDuration(float $duration): float
@@ -1455,7 +1455,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
         $command[] = 'vfr';
         $command[] = $output;
 
-        return $command;
+        return array_values($command);
     }
 
     private function buildVideoFadeChain(float $clipDuration): string

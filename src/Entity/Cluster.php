@@ -761,12 +761,12 @@ class Cluster
 
         $members = $this->meta['member_ids'] ?? [];
         if (is_array($members)) {
-            $this->setMembers($members);
+            $this->setMembers(array_values(array_map(static fn ($id): int => (int) $id, $members)));
         }
 
         $centroid = $this->meta['centroid'] ?? null;
-        if (is_array($centroid)) {
-            $this->synchroniseCentroid($centroid);
+        if (is_array($centroid) && isset($centroid['lat'], $centroid['lon'])) {
+            $this->synchroniseCentroid(['lat' => (float) $centroid['lat'], 'lon' => (float) $centroid['lon']]);
         }
 
         $this->touch();

@@ -68,6 +68,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             return [];
         }
 
+        /** @var array<string, mixed> $days */
         $keys           = array_keys($days);
         $nightAwayFlags = [];
         foreach ($keys as $index => $key) {
@@ -110,8 +111,8 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $distanceFlags = [];
         foreach ($keys as $key) {
             $summary             = $days[$key];
-            $baseFlags[$key]     = $summary['baseAway'];
-            $distanceFlags[$key] = $summary['awayByDistance'];
+            $baseFlags[$key]     = (bool) $summary['baseAway'];
+            $distanceFlags[$key] = (bool) $summary['awayByDistance'];
         }
 
         $baseFlags     = $this->applyMorphologicalClosing($baseFlags);
@@ -123,7 +124,7 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
 
         $combinedFlags = [];
         foreach ($keys as $key) {
-            $combinedFlags[$key] = $days[$key]['baseAway'];
+            $combinedFlags[$key] = (bool) $days[$key]['baseAway'];
         }
 
         $combinedFlags = $this->applyMorphologicalClosing($combinedFlags);
@@ -356,9 +357,9 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, bool>                    $flags
-     * @param list<string>                           $orderedKeys
-     * @param array<string, array{isSynthetic:bool}> $days
+     * @param array<string, bool>  $flags
+     * @param list<string>         $orderedKeys
+     * @param array<string, mixed> $days
      *
      * @return array<string, bool>
      */

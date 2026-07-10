@@ -71,7 +71,7 @@ class ThumbnailService implements ThumbnailServiceInterface
     public function __construct(string $thumbnailDir, array $sizes = [320, 1024], bool $applyOrientation = false)
     {
         $this->thumbnailDir     = $thumbnailDir;
-        $this->sizes            = $sizes;
+        $this->sizes            = array_values($sizes);
         $this->applyOrientation = $applyOrientation;
 
         // Ensure the output directory exists before thumbnails are generated.
@@ -503,6 +503,10 @@ class ThumbnailService implements ThumbnailServiceInterface
         if ($orientation === null || $orientation === self::ORIENTATION_TOPLEFT) {
             $imagick->setImageOrientation(self::ORIENTATION_TOPLEFT);
 
+            return;
+        }
+
+        if ($orientation < 2 || $orientation > 8) {
             return;
         }
 

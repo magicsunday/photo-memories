@@ -4,7 +4,7 @@ includes:
 
 parameters:
     # You can currently choose from 11 levels (0 is the loosest and 10 is the strictest).
-    level: 6
+    level: 8
 
     # Analyse against the project's supported PHP version (composer requires
     # ">=8.4.0 <8.5.0"), not the newer runtime the buildbox happens to ship, so

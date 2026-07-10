@@ -109,7 +109,7 @@ final readonly class TravelWaypointAnnotator
 
         $waypoints = array_map(
             static fn (array $entry): array => [
-                'label'         => $entry['label'],
+                'label'         => (string) $entry['label'],
                 'city'          => $entry['city'],
                 'region'        => $entry['region'],
                 'country'       => $entry['country'],
@@ -135,7 +135,7 @@ final readonly class TravelWaypointAnnotator
                     return $firstSeenComparison;
                 }
 
-                return strcmp((string) $left['label'], (string) $right['label']);
+                return strcmp($left['label'], $right['label']);
             }
         );
 

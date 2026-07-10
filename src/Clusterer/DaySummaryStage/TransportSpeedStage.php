@@ -53,6 +53,7 @@ final readonly class TransportSpeedStage implements DaySummaryStageInterface
             return [];
         }
 
+        /** @var array<string, mixed> $days */
         foreach ($days as &$summary) {
             $summary['maxSpeedKmh']         = 0.0;
             $summary['avgSpeedKmh']         = 0.0;

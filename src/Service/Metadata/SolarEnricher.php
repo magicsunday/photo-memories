@@ -89,6 +89,10 @@ final readonly class SolarEnricher implements SingleMetadataExtractorInterface
             $offsetSec = $media->getTimezoneOffsetMin() * 60;
         }
 
+        if ($sunEvents->sunriseUtc === null || $sunEvents->sunsetUtc === null) {
+            return $media;
+        }
+
         $sunriseLocal = $sunEvents->sunriseUtc + $offsetSec;
         $sunsetLocal  = $sunEvents->sunsetUtc + $offsetSec;
         $photoLocal   = $local->getTimestamp();

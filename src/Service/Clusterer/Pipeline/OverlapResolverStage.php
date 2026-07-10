@@ -632,17 +632,23 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
             $merged['score'] = $loserParams['score'];
         }
 
-        $merged['meta'] = $this->mergeMetaParams($winnerParams['meta'] ?? null, $loserParams['meta'] ?? null, $metrics);
+        $winnerMeta     = $winnerParams['meta'] ?? null;
+        $loserMeta      = $loserParams['meta'] ?? null;
+        $merged['meta'] = $this->mergeMetaParams(
+            is_array($winnerMeta) ? $winnerMeta : null,
+            is_array($loserMeta) ? $loserMeta : null,
+            $metrics,
+        );
 
         return $merged;
     }
 
     /**
-     * @param array<string, mixed>|null                              $primary
-     * @param array<string, mixed>|null                              $secondary
+     * @param array<int|string, mixed>|null                          $primary
+     * @param array<int|string, mixed>|null                          $secondary
      * @param array<string, float|int|bool|string|array<mixed>|null> $metrics
      *
-     * @return array<string, mixed>
+     * @return array<int|string, mixed>
      */
     private function mergeMetaParams(?array $primary, ?array $secondary, array $metrics): array
     {

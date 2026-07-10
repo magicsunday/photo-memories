@@ -131,7 +131,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                 $media->setVideoRotationDeg($rotation);
             }
 
-            $stabilised = $this->parseStreamStabilisation($primaryStream['side_data_list'] ?? null);
+            $sideDataList = $primaryStream['side_data_list'] ?? null;
+            $stabilised   = $this->parseStreamStabilisation(is_array($sideDataList) ? $sideDataList : null);
             $media->setVideoHasStabilization($stabilised);
 
             $width = $this->parseStreamDimension($primaryStream, 'width', 'coded_width');
@@ -237,7 +238,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
                     sprintf('[%s] ffprobe timeout after %.1fs', $component, $exception->getExceededTimeout()),
                     [
                         'stage'          => $component,
-                        'timeoutSeconds' => $exception->getExceededTimeout(),
+                        'timeoutSeconds' => $exception->getExceededTimeout() ?? 0.0,
                     ],
                 ),
             );
@@ -304,7 +305,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     {
         $tags = $stream['tags'] ?? null;
         if (is_array($tags)) {
-            $rotation = $this->parseFloat($tags['rotate'] ?? null);
+            $rotateRaw = $tags['rotate'] ?? null;
+            $rotation  = $this->parseFloat(is_scalar($rotateRaw) && !is_bool($rotateRaw) ? $rotateRaw : null);
             if ($rotation !== null) {
                 return $rotation;
             }
@@ -342,7 +344,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int, array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>>|null $sideData
+     * @param array<int|string, mixed>|null $sideData
      */
     private function parseStreamStabilisation(?array $sideData): ?bool
     {
@@ -351,6 +353,10 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
         }
 
         foreach ($sideData as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
             $value = $this->extractStabilisationFromEntry($entry);
             if ($value !== null) {
                 return $value;
@@ -370,18 +376,14 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
             $value = $stream[$fallbackKey];
         }
 
-        return $this->normalisePositiveInt($value);
+        return $this->normalisePositiveInt(is_scalar($value) && !is_bool($value) ? $value : null);
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $entry
+     * @param array<int|string, mixed> $entry
      */
-    private function extractStabilisationFromEntry(?array $entry): ?bool
+    private function extractStabilisationFromEntry(array $entry): ?bool
     {
-        if ($entry === null) {
-            return null;
-        }
-
         $type = $entry['side_data_type'] ?? null;
         if (is_string($type)) {
             $normalisedType = strtolower($type);
@@ -392,7 +394,8 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
 
         foreach (['stabilization', 'stabilisation', 'has_stabilization', 'hasStabilization'] as $key) {
             if (array_key_exists($key, $entry)) {
-                $value = $this->normaliseBoolean($entry[$key]);
+                $rawValue = $entry[$key];
+                $value    = $this->normaliseBoolean(is_scalar($rawValue) ? $rawValue : null);
                 if ($value !== null) {
                     return $value;
                 }

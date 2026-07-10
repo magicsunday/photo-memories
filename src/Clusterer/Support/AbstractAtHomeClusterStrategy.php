@@ -304,6 +304,10 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
 
     private function distanceKmFromHome(Media $media, float $lat, float $lon): float
     {
+        if ($this->homeLat === null || $this->homeLon === null) {
+            return 0.0;
+        }
+
         $cachedDistance = $media->getDistanceKmFromHome();
         if ($cachedDistance !== null && $this->isHomeConfigFresh($media)) {
             return $cachedDistance;

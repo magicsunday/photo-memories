@@ -869,7 +869,7 @@ final class FeedController
         if ($missing !== []) {
             $mediaItems = $this->mediaRepository->findByIds(array_keys($missing), $onlyVideos);
             foreach ($mediaItems as $media) {
-                $this->mediaCache[$media->getId()] = $media;
+                $this->mediaCache[(int) $media->getId()] = $media;
                 unset($missing[$media->getId()]);
             }
 

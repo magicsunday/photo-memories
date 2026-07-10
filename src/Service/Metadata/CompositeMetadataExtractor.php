@@ -86,7 +86,7 @@ final readonly class CompositeMetadataExtractor implements MetadataExtractorInte
             }
 
             $shouldCollectTelemetry = $this->configuration->shouldCollectTelemetry($extractor);
-            $startedAt              = $shouldCollectTelemetry ? hrtime(true) : null;
+            $startedAt              = $shouldCollectTelemetry ? (int) hrtime(true) : null;
 
             try {
                 if ($extractor->supports($filepath, $media) === false) {

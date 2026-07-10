@@ -574,7 +574,7 @@ final readonly class SlideshowVideoManager implements SlideshowVideoManagerInter
             return false;
         }
 
-        $lockAge = time() - max(filemtime($lockPath), filemtime($jobPath));
+        $lockAge = time() - (int) max(filemtime($lockPath), filemtime($jobPath));
 
         return $lockAge >= self::STALE_LOCK_THRESHOLD_SECONDS;
     }

@@ -227,7 +227,7 @@ final readonly class AnniversaryClusterStrategy implements ClusterStrategyInterf
             }
 
             $total = count($group);
-            /** @var list<int> $yearKeys */
+            /** @var non-empty-list<int> $yearKeys */
             $yearKeys  = array_keys($years);
             $spanYears = max($yearKeys) - min($yearKeys) + 1;
 

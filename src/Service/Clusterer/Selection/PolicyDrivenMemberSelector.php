@@ -388,10 +388,10 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
 
             if (is_numeric($coverage)) {
                 $normalised = FaceMetricHelper::normaliseCoverage((float) $coverage);
+                $coverage   = $normalised;
                 if ($normalised !== null) {
                     $coverageSum += $normalised;
                     ++$coverageSamples;
-                    $coverage = $normalised;
                 }
             } else {
                 $coverage = null;

@@ -52,8 +52,8 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
             return $media;
         }
 
-        $keywords = $media->getKeywords() ?? [];
-        $persons  = $media->getPersons() ?? [];
+        $keywords = array_values($media->getKeywords() ?? []);
+        $persons  = array_values($media->getPersons() ?? []);
 
         $info = [];
         @getimagesize($filepath, $info);
@@ -125,7 +125,7 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $kwMatches = [];
-        if (preg_match_all('~<rdf:li[^>]*>(.*?)</rdf:li>~si', $xml, $kwMatches)) {
+        if (preg_match_all('~<rdf:li[^>]*>(.*?)</rdf:li>~si', $xml, $kwMatches) > 0) {
             foreach ($kwMatches[1] as $w) {
                 $w = trim(strip_tags($w));
                 if ($w !== '') {
@@ -135,7 +135,7 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $pMatches = [];
-        if (preg_match_all('~<mwg-rs:Name[^>]*>(.*?)</mwg-rs:Name>~si', $xml, $pMatches)) {
+        if (preg_match_all('~<mwg-rs:Name[^>]*>(.*?)</mwg-rs:Name>~si', $xml, $pMatches) > 0) {
             foreach ($pMatches[1] as $p) {
                 $p = trim(strip_tags($p));
                 if ($p !== '') {
@@ -164,11 +164,11 @@ final readonly class XmpIptcExtractor implements SingleMetadataExtractorInterfac
         }
 
         $matches = [];
-        if (!preg_match_all(
+        if (preg_match_all(
             '~<(?:xmp:CreateDate|photoshop:DateCreated|exif:DateTimeOriginal)>([^<]+)</[^>]+>~i',
             $xml,
             $matches,
-        )) {
+        ) < 1) {
             return false;
         }
 

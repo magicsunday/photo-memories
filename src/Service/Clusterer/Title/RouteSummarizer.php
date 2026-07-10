@@ -142,7 +142,7 @@ final readonly class RouteSummarizer
     }
 
     /**
-     * @param list<array<string, mixed>> $waypoints
+     * @param array<int|string, mixed> $waypoints
      *
      * @return list<Stop>
      */
@@ -151,6 +151,10 @@ final readonly class RouteSummarizer
         $stops = [];
 
         foreach ($waypoints as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+
             $label = $this->resolveLabel($entry);
             if ($label === '') {
                 continue;

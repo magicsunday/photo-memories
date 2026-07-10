@@ -105,7 +105,7 @@ final readonly class MemberCurationStage implements ClusterConsolidationStageInt
 
             $mediaMap = [];
             foreach ($media as $entity) {
-                $mediaMap[$entity->getId()] = $entity;
+                $mediaMap[(int) $entity->getId()] = $entity;
             }
 
             $qualityScores = $this->extractQualityScores($draft);

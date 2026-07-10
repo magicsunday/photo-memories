@@ -120,7 +120,7 @@ final readonly class DefaultLocationRefreshProcessor implements LocationRefreshP
     private function normalizeIterable(iterable $locations): array
     {
         if (is_array($locations)) {
-            return $locations;
+            return array_values($locations);
         }
 
         return iterator_to_array($locations, false);

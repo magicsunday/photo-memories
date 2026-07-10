@@ -813,7 +813,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             $dayContext,
             $poiTypeSamples,
             $tourismHits,
-            $poiSamples,
+            (int) $poiSamples,
             $tourismRatio,
         );
         $profileSummary = $this->summariseSelectionProfile($selectionProfileKey, $selectionOptions);
@@ -905,7 +905,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $memberIds = array_map(
-            static fn (Media $media): int => $media->getId(),
+            static fn (Media $media): int => (int) $media->getId(),
             $curatedMembers
         );
 
@@ -1170,7 +1170,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $rawMemberIds = array_map(
-            static fn (Media $media): int => $media->getId(),
+            static fn (Media $media): int => (int) $media->getId(),
             $rawMembers,
         );
 
@@ -2072,7 +2072,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<array<string, mixed>> $staypoints
+     * @param array<int|string, mixed> $staypoints
      *
      * @return array{from:int,to:int}|null
      */

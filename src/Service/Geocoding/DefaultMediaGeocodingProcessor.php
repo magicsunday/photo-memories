@@ -111,7 +111,7 @@ final readonly class DefaultMediaGeocodingProcessor implements MediaGeocodingPro
     private function normalizeIterable(iterable $media): array
     {
         if (is_array($media)) {
-            return $media;
+            return array_values($media);
         }
 
         return iterator_to_array($media, false);

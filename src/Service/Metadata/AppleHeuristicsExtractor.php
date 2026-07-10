@@ -78,7 +78,7 @@ final class AppleHeuristicsExtractor implements SingleMetadataExtractorInterface
                 continue;
             }
 
-            if (preg_match('~(BurstUUID|Apple\:RunUUID)\s*["\']?[:=]\s*["\']?([0-9A-Fa-f\-]{8,})~', $blob, $m)) {
+            if (preg_match('~(BurstUUID|Apple\:RunUUID)\s*["\']?[:=]\s*["\']?([0-9A-Fa-f\-]{8,})~', $blob, $m) === 1) {
                 return $m[2];
             }
         }

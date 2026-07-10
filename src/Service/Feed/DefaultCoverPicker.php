@@ -78,7 +78,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *         summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *         weights: array{quality: float, aesthetics: float},
      *         duplicate: array{phash: float, dhash: float},
-     *         members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *         members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      *     },
      *     people: array{
      *         emphasis: float,
@@ -189,7 +189,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *         summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *         weights: array{quality: float, aesthetics: float},
      *         duplicate: array{phash: float, dhash: float},
-     *         members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *         members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      *     },
      *     people: array{
      *         emphasis: float,
@@ -248,7 +248,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *     summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *     weights: array{quality: float, aesthetics: float},
      *     duplicate: array{phash: float, dhash: float},
-     *     members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *     members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      * }
      */
     private function normaliseMemberQuality(array $memberQuality): array
@@ -459,7 +459,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *     summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *     weights: array{quality: float, aesthetics: float},
      *     duplicate: array{phash: float, dhash: float},
-     *     members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *     members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      * } $meta
      */
     private function qualityScore(Media $media, array $meta, float $areaMp): float
@@ -495,7 +495,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *     summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *     weights: array{quality: float, aesthetics: float},
      *     duplicate: array{phash: float, dhash: float},
-     *     members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *     members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      * } $meta
      */
     private function aestheticScore(Media $media, array $meta): float
@@ -738,7 +738,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
      *     summary: array{quality_avg: float|null, aesthetics_avg: float|null},
      *     weights: array{quality: float, aesthetics: float},
      *     duplicate: array{phash: float, dhash: float},
-     *     members: array<int, array{score?: float, quality?: float, aesthetics?: float, penalty?: float}>
+     *     members: array<int, array{score: float|null, quality: float|null, aesthetics: float|null, penalty: float|null}>
      * } $meta
      */
     private function duplicatePenalty(Media $media, array $fingerprints, array $meta): float

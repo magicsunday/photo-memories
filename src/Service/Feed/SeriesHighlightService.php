@@ -125,6 +125,10 @@ final class SeriesHighlightService
      */
     private function formatYearList(array $years): string
     {
+        if ($years === []) {
+            return '';
+        }
+
         $count = count($years);
         if ($count === 1) {
             return (string) $years[0];

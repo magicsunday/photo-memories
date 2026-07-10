@@ -180,8 +180,6 @@ HTML;
     }
 
     /**
-     * @param array<int|string, mixed>|null $value
-     *
      * @return array<string, mixed>
      */
     private function normaliseArray(mixed $value): array

@@ -143,7 +143,7 @@ final readonly class PanoramaOverYearsClusterStrategy implements ClusterStrategy
                     'time_range' => $time,
                 ],
                 centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $picked)
+                members: array_map(static fn (Media $m): int => (int) $m->getId(), $picked)
             ),
         ];
     }

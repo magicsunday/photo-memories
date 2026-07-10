@@ -170,7 +170,7 @@ final class HybridClusterer implements HybridClustererInterface
         }
 
         $this->strategiesCache = is_array($this->strategies)
-            ? $this->strategies
+            ? array_values($this->strategies)
             : iterator_to_array($this->strategies, false);
 
         return $this->strategiesCache;

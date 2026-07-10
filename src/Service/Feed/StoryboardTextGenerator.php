@@ -86,8 +86,8 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<array<string, mixed>>                                         $entries
-     * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
+     * @param list<array<string, mixed>>                             $entries
+     * @param array<string, int|float|string|bool|array<mixed>|null> $clusterParams
      *
      * @return array{title: string, description: string}
      */
@@ -196,8 +196,8 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param list<array<string, mixed>>                                         $entries
-     * @param array<string, int|float|string|array<array-key, scalar|null>|null> $clusterParams
+     * @param list<array<string, mixed>>                             $entries
+     * @param array<string, int|float|string|bool|array<mixed>|null> $clusterParams
      */
     private function resolveLocation(array $entries, array $clusterParams): ?string
     {
@@ -231,10 +231,10 @@ final readonly class StoryboardTextGenerator
     }
 
     /**
-     * @param array<string, int>                            $scores
-     * @param array<array-key, mixed>|int|float|string|null $value
+     * @param array<string, int>                                 $scores
+     * @param array<array-key, mixed>|bool|int|float|string|null $value
      */
-    private function registerLocationCandidate(array &$scores, array|int|float|string|null $value, int $weight): void
+    private function registerLocationCandidate(array &$scores, array|bool|int|float|string|null $value, int $weight): void
     {
         if (is_array($value)) {
             foreach ($value as $entry) {

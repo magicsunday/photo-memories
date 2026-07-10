@@ -47,7 +47,7 @@ final readonly class DefaultMediaIngestionPipeline implements MediaIngestionPipe
         ?MediaIngestionTelemetryInterface $telemetry = null,
         ?LoggerInterface $logger = null,
     ) {
-        $this->stages    = is_array($stages) ? $stages : iterator_to_array($stages);
+        $this->stages    = is_array($stages) ? array_values($stages) : iterator_to_array($stages, false);
         $this->telemetry = $telemetry ?? new MediaIngestionTelemetryCollector();
         $this->logger    = $logger ?? new NullLogger();
 

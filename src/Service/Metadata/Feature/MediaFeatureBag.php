@@ -173,7 +173,7 @@ final class MediaFeatureBag
     {
         $value = $this->get(self::NAMESPACE_CALENDAR, 'daypart');
 
-        return $value === null ? null : (string) $value;
+        return is_scalar($value) ? (string) $value : null;
     }
 
     public function setCalendarDaypart(?string $value): void
@@ -233,7 +233,7 @@ final class MediaFeatureBag
     {
         $value = $this->get(self::NAMESPACE_CALENDAR, 'season');
 
-        return $value === null ? null : (string) $value;
+        return is_scalar($value) ? (string) $value : null;
     }
 
     public function setCalendarSeason(?string $value): void
@@ -269,7 +269,7 @@ final class MediaFeatureBag
     {
         $value = $this->get(self::NAMESPACE_CALENDAR, 'holidayId');
 
-        return $value === null ? null : (string) $value;
+        return is_scalar($value) ? (string) $value : null;
     }
 
     public function setCalendarHolidayId(?string $value): void
@@ -456,7 +456,7 @@ final class MediaFeatureBag
     {
         $value = $this->get(self::NAMESPACE_FILE, 'filenameHint');
 
-        return $value === null ? null : (string) $value;
+        return is_scalar($value) ? (string) $value : null;
     }
 
     public function setFileNameHint(?string $value): void

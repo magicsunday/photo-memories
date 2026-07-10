@@ -47,7 +47,7 @@ trait ClusterBuildHelperTrait
      */
     private function toMemberIds(array $members): array
     {
-        return array_map(static fn (Media $member): int => $member->getId(), $members);
+        return array_map(static fn (Media $member): int => (int) $member->getId(), $members);
     }
 
     /**

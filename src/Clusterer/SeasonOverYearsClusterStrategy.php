@@ -247,7 +247,12 @@ final readonly class SeasonOverYearsClusterStrategy implements ClusterStrategyIn
             /** @var array<int,bool> $years */
             $years = [];
             foreach ($list as $m) {
-                $years[(int) $m->getTakenAt()->format('Y')] = true;
+                $takenAt = $m->getTakenAt();
+                if ($takenAt === null) {
+                    continue;
+                }
+
+                $years[(int) $takenAt->format('Y')] = true;
             }
 
             if (count($years) < $this->minYears) {

@@ -349,7 +349,7 @@ final class FeedPreviewCommand extends Command
     }
 
     /**
-     * @param array<string, mixed>|null $timeRange
+     * @param array<int|string, mixed>|null $timeRange
      */
     private function formatTimeRange(?array $timeRange): string
     {
@@ -386,6 +386,9 @@ final class FeedPreviewCommand extends Command
         }
 
         $single = $from ?? $to;
+        if ($single === null) {
+            return '–';
+        }
 
         return $single->format('Y-m-d');
     }
@@ -435,6 +438,7 @@ final class FeedPreviewCommand extends Command
             ++$idx;
             $params    = $item->getParams();
             $memberIds = $item->getMemberIds();
+            $timeRange = $params['time_range'] ?? null;
 
             $row = [
                 (string) $idx,
@@ -442,7 +446,7 @@ final class FeedPreviewCommand extends Command
                 $this->resolveStoryline($params),
                 (string) $this->resolveRawMemberCount($params),
                 $this->resolveCuratedMemberCountDisplay($memberIds, $params, true),
-                $this->formatTimeRange($params['time_range'] ?? null),
+                $this->formatTimeRange(is_array($timeRange) ? $timeRange : null),
                 number_format($item->getScore(), 3, ',', ''),
             ];
 

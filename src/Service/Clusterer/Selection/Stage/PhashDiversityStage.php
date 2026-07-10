@@ -133,7 +133,7 @@ final class PhashDiversityStage implements SelectionStageInterface
                     continue;
                 }
 
-                $distance    = $this->distanceFromBits($hashA, $hashB);
+                $distance    = $this->distanceFromBits(array_values($hashA), array_values($hashB));
                 $distances[] = $distance;
             }
         }
@@ -156,8 +156,8 @@ final class PhashDiversityStage implements SelectionStageInterface
     }
 
     /**
-     * @param list<int> $hashA
-     * @param list<int> $hashB
+     * @param list<mixed> $hashA
+     * @param list<mixed> $hashB
      */
     private function distanceFromBits(array $hashA, array $hashB): int
     {

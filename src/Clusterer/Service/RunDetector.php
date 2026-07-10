@@ -16,6 +16,7 @@ use DateTimeZone;
 use Exception;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Utility\MediaMath;
@@ -32,6 +33,8 @@ use function strtolower;
 
 /**
  * Detects vacation runs based on daily summaries.
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 final class RunDetector implements VacationRunDetectorInterface
 {
@@ -111,26 +114,25 @@ final class RunDetector implements VacationRunDetectorInterface
             }
 
             $metadata[$key] = [
-                'hasGpsAnchors'        => $this->hasGpsAnchors($summary),
-                'hasStaypointDwell'    => $hasStaypoint,
-                'dominantOutsideHome'  => $this->isDominantStaypointOutsideHome($summary, $home),
-                'dominantInsideHome'   => $this->isDominantStaypointInsideHome($summary, $home),
-                'transitHeavy'         => $transitHeavy,
-                'transportSignal'      => $transitHeavy || $hasAirportPoi || $hasHighSpeed,
-                'hotelPoiSignal'       => $this->hasHotelPoiSignal($summary),
-                'hasAirportPoi'        => $hasAirportPoi,
-                'hasHighSpeedTransit'  => $hasHighSpeed,
-                'sufficientSamples'    => (bool) ($summary['sufficientSamples'] ?? false),
-                'photoCount'           => (int) ($summary['photoCount'] ?? 0),
-                'maxDistanceKm'        => (float) ($summary['maxDistanceKm'] ?? 0.0),
-                'distanceMetricKm'     => $distanceMetric,
-                'centroidDistanceKm'   => $centroidDistance,
-                'centroidRadiusKm'     => $centroidRadius,
-                'centroidBeyondHome'   => $centroidBeyond,
-                'baseAway'             => (bool) ($summary['baseAway'] ?? false),
-                'gpsMembers'           => $summary['gpsMembers'] ?? [],
-                'timestamp'            => $timestamp,
-                'softDistanceEligible' => false,
+                'hasGpsAnchors'       => $this->hasGpsAnchors($summary),
+                'hasStaypointDwell'   => $hasStaypoint,
+                'dominantOutsideHome' => $this->isDominantStaypointOutsideHome($summary, $home),
+                'dominantInsideHome'  => $this->isDominantStaypointInsideHome($summary, $home),
+                'transitHeavy'        => $transitHeavy,
+                'transportSignal'     => $transitHeavy || $hasAirportPoi || $hasHighSpeed,
+                'hotelPoiSignal'      => $this->hasHotelPoiSignal($summary),
+                'hasAirportPoi'       => $hasAirportPoi,
+                'hasHighSpeedTransit' => $hasHighSpeed,
+                'sufficientSamples'   => (bool) ($summary['sufficientSamples'] ?? false),
+                'photoCount'          => (int) ($summary['photoCount'] ?? 0),
+                'maxDistanceKm'       => (float) ($summary['maxDistanceKm'] ?? 0.0),
+                'distanceMetricKm'    => $distanceMetric,
+                'centroidDistanceKm'  => $centroidDistance,
+                'centroidRadiusKm'    => $centroidRadius,
+                'centroidBeyondHome'  => $centroidBeyond,
+                'baseAway'            => (bool) ($summary['baseAway'] ?? false),
+                'gpsMembers'          => $summary['gpsMembers'] ?? [],
+                'timestamp'           => $timestamp,
             ];
         }
 
@@ -144,8 +146,7 @@ final class RunDetector implements VacationRunDetectorInterface
             $softDistanceMatch   = $distanceMetric > $softMinAwayDistanceKm;
 
             if ($strictDistanceMatch === false && $softDistanceMatch) {
-                $metadata[$key]['softDistanceEligible'] = true;
-                $softDistanceEligible[$key]             = true;
+                $softDistanceEligible[$key] = true;
             }
 
             $candidate = $this->decideInitialAwayCandidate(
@@ -455,6 +456,7 @@ final class RunDetector implements VacationRunDetectorInterface
      */
     private function collectRuns(array $keys, array $isAwayCandidate, array $indexByKey, array $days): array
     {
+        /** @var array<string, DaySummary> $days */
         /** @var list<list<string>> $runs */
         $runs = [];
         /** @var list<string> $run */
@@ -709,10 +711,13 @@ final class RunDetector implements VacationRunDetectorInterface
     private function resolveDayCentroid(array $summary): ?array
     {
         $members = $summary['gpsMembers'] ?? [];
-        if (is_array($members) && $members !== []) {
-            $centroid = MediaMath::centroid($members);
+        if (is_array($members)) {
+            $mediaMembers = array_values(array_filter($members, static fn ($member): bool => $member instanceof Media));
+            if ($mediaMembers !== []) {
+                $centroid = MediaMath::centroid($mediaMembers);
 
-            return ['lat' => $centroid['lat'], 'lon' => $centroid['lon']];
+                return ['lat' => $centroid['lat'], 'lon' => $centroid['lon']];
+            }
         }
 
         $dominantStaypoints = $summary['dominantStaypoints'] ?? [];

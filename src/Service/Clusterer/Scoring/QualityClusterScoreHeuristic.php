@@ -64,6 +64,7 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             || $iso === null
         ) {
             if (is_array($qualityMembers)) {
+                /** @var list<array<string, float|null>> $qualityMembers */
                 $metrics = $this->qualityAggregator->aggregateFromMembers($qualityMembers);
             } else {
                 $metrics        = $this->qualityAggregator->buildParams($mediaList);

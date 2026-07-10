@@ -268,7 +268,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
                 continue;
             }
 
-            $map[$media->getId()] = $media;
+            $map[(int) $media->getId()] = $media;
         }
 
         return $map;

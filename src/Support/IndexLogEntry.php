@@ -124,7 +124,7 @@ final readonly class IndexLogEntry
                 continue;
             }
 
-            if (is_bool($value) || is_int($value) || is_float($value) || $value === null) {
+            if (is_bool($value) || is_int($value) || is_float($value)) {
                 $normalised[$key] = $value;
 
                 continue;
@@ -139,7 +139,7 @@ final readonly class IndexLogEntry
             if (is_array($value)) {
                 $list = [];
                 foreach ($value as $entry) {
-                    if (is_bool($entry) || is_int($entry) || is_float($entry) || $entry === null) {
+                    if (is_bool($entry) || is_int($entry) || is_float($entry)) {
                         $list[] = $entry;
 
                         continue;

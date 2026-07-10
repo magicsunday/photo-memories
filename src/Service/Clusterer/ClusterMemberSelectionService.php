@@ -15,6 +15,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use MagicSunday\Memories\Clusterer\ClusterDraft;
 use MagicSunday\Memories\Clusterer\Contract\StaypointDetectorInterface;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Selection\MemberSelectorInterface;
 use MagicSunday\Memories\Clusterer\Selection\SelectionResult;
 use MagicSunday\Memories\Entity\Media;
@@ -43,6 +44,8 @@ use function usort;
 
 /**
  * Applies the curated member selection to raw cluster drafts.
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 final class ClusterMemberSelectionService implements ClusterMemberSelectionServiceInterface
 {
@@ -100,6 +103,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
         $profile = $this->profileProvider->resolve($draft);
 
         $phaseMetrics?->begin('summarising');
+        /** @var array<string, DaySummary> $daySummaries */
         $daySummaries = $this->buildDaySummaries($media);
         if ($phaseMetrics instanceof PhaseMetricsCollector) {
             $this->recordSummaryMetrics($daySummaries, $phaseMetrics);
@@ -385,7 +389,11 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
             if (is_array($phashTelemetry)) {
                 $values = $phashTelemetry['consecutive_hamming'] ?? null;
                 if (is_array($values)) {
-                    $consecutive = $values;
+                    foreach ($values as $sample) {
+                        if (is_int($sample) || is_float($sample)) {
+                            $consecutive[] = $sample;
+                        }
+                    }
                 }
             }
 

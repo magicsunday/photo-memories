@@ -97,7 +97,7 @@ trait GdImageToolsTrait
         $hex = '';
         for ($i = 0; $i < $len; $i += 4) {
             $chunk = substr($bits, $i, 4);
-            $hex .= dechex(bindec($chunk));
+            $hex .= dechex((int) bindec($chunk));
         }
 
         return $hex;

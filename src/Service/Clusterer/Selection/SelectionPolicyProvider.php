@@ -115,8 +115,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
-     * @param array<string, mixed>                 $metadata
+     * @param array<string, bool|int|float|string|null> $config
+     * @param array<string, mixed>                      $metadata
      */
     private function createPolicy(string $profileKey, array $config, array $metadata): SelectionPolicy
     {
@@ -152,9 +152,9 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      *
-     * @return array<string, int|float|string|null>
+     * @return array<string, bool|int|float|string|null>
      */
     private function finalizeConfig(array $config): array
     {
@@ -181,8 +181,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|bool>        $overrides
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, int|float|bool>             $overrides
+     * @param array<string, bool|int|float|string|null> $config
      *
      * @return array<string, int|float|bool>
      */
@@ -593,7 +593,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|array<string, int|float|string|null>|null> $config
+     * @param array<string, bool|int|float|string|array<string, int|float|string|null>|null> $config
      *
      * @return array<string, float>|null
      */
@@ -627,8 +627,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>        $target
-     * @param array<string, int|float|string|null> $source
+     * @param array<string, int|float|null>             $target
+     * @param array<string, bool|int|float|string|null> $source
      */
     private function assignIntOverride(array &$target, array $source, string $key): void
     {
@@ -653,8 +653,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>        $target
-     * @param array<string, int|float|string|null> $source
+     * @param array<string, int|float|null>             $target
+     * @param array<string, bool|int|float|string|null> $source
      */
     private function assignIntOrNullOverride(array &$target, array $source, string $key): void
     {
@@ -681,8 +681,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>        $target
-     * @param array<string, int|float|string|null> $source
+     * @param array<string, int|float|null>             $target
+     * @param array<string, bool|int|float|string|null> $source
      */
     private function assignFloatOverride(array &$target, array $source, string $key): void
     {
@@ -707,8 +707,8 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|null>        $target
-     * @param array<string, int|float|string|null> $source
+     * @param array<string, int|float|null>             $target
+     * @param array<string, bool|int|float|string|null> $source
      */
     private function assignFloatOrNullOverride(array &$target, array $source, string $key): void
     {
@@ -735,7 +735,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function intOptional(array $config, string $key, int $default): int
     {
@@ -756,7 +756,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function floatOptional(array $config, string $key, float $default): float
     {
@@ -777,7 +777,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function intValue(array $config, string $key): int
     {
@@ -790,7 +790,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function intOrNull(array $config, string $key): ?int
     {
@@ -807,7 +807,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function floatValue(array $config, string $key): float
     {
@@ -820,7 +820,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, bool|int|float|string|null> $config
      */
     private function floatOrNull(array $config, string $key): ?float
     {

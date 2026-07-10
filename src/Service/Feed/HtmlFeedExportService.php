@@ -183,7 +183,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     /**
      * @param list<ClusterDraft> $drafts
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{title: string, subtitle: string, chips: list<array{label: string, variant: string}>, images: list<array{href: string, alt: string}>, details: list<string>}>
      */
     private function buildDraftCards(
         array $drafts,
@@ -217,7 +217,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
     /**
      * @param list<MemoryFeedItem> $items
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{title: string, subtitle: string, chips: list<array{label: string, variant: string}>, images: list<array{href: string, alt: string}>, details: list<string>}>
      */
     private function buildCuratedCards(
         array $items,
@@ -373,7 +373,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         $members = array_values(array_filter(
             $members,
-            static fn (Media $media): bool => array_key_exists($media->getId(), $order),
+            static fn (Media $media): bool => array_key_exists((int) $media->getId(), $order),
         ));
 
         usort($members, static function (Media $a, Media $b) use ($order): int {

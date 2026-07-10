@@ -489,7 +489,28 @@ final class VacationMemberSelector implements MemberSelectorInterface
     }
 
     /**
-     * @param array<string, int|float|bool> $overrides
+     * @param array{
+     *     targetTotal?: int,
+     *     maxPerDay?: int,
+     *     timeSlotHours?: int,
+     *     minSpacingSeconds?: int,
+     *     phashMinHamming?: int,
+     *     maxPerStaypoint?: int,
+     *     videoBonus?: float,
+     *     faceBonus?: float,
+     *     selfiePenalty?: float,
+     *     qualityFloor?: float,
+     *     enablePeopleBalance?: bool,
+     *     peopleBalanceWeight?: float,
+     *     faceDetectionAvailable?: bool,
+     *     repeatPenalty?: float,
+     *     coreDayBonus?: int,
+     *     peripheralDayPenalty?: int,
+     *     phashPercentile?: float,
+     *     spacingProgressFactor?: float,
+     *     cohortRepeatPenalty?: float,
+     *     minimumTotal?: int,
+     * } $overrides
      */
     private function cloneOptions(VacationSelectionOptions $source, array $overrides): VacationSelectionOptions
     {

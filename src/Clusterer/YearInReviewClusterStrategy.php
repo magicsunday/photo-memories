@@ -93,7 +93,12 @@ final readonly class YearInReviewClusterStrategy implements ClusterStrategyInter
                 /** @var array<int,bool> $months */
                 $months = [];
                 foreach ($list as $m) {
-                    $months[(int) $m->getTakenAt()->format('n')] = true;
+                    $takenAt = $m->getTakenAt();
+                    if ($takenAt === null) {
+                        continue;
+                    }
+
+                    $months[(int) $takenAt->format('n')] = true;
                 }
 
                 $count = count($months);

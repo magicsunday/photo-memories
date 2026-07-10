@@ -316,7 +316,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                 algorithm: $this->name(),
                 params: $params,
                 centroid: ['lat' => $centroid['lat'], 'lon' => $centroid['lon']],
-                members: array_map(static fn (Media $m): int => $m->getId(), $list)
+                members: array_map(static fn (Media $m): int => (int) $m->getId(), $list)
             );
         }
 
@@ -395,7 +395,7 @@ final readonly class TransitTravelDayClusterStrategy implements ClusterStrategyI
                     continue;
                 }
 
-                $sanitized[$key] = $value;
+                $sanitized[$key] = (float) $value;
             }
 
             if ($sanitized === []) {

@@ -208,6 +208,10 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
                     $b     = $value & 0xFF;
                 } else {
                     $index = imagecolorat($resource, $x, $y);
+                    if ($index === false) {
+                        $index = 0;
+                    }
+
                     $color = imagecolorsforindex($resource, $index);
                     $r     = $color['red'];
                     $g     = $color['green'];

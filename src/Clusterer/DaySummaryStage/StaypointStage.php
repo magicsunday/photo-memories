@@ -40,6 +40,7 @@ final readonly class StaypointStage implements DaySummaryStageInterface
             return [];
         }
 
+        /** @var array<string, mixed> $days */
         foreach ($days as &$summary) {
             $staypoints = $summary['staypoints'];
 

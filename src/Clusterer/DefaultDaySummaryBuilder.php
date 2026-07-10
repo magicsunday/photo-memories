@@ -13,10 +13,13 @@ namespace MagicSunday\Memories\Clusterer;
 
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryBuilderInterface;
 use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Entity\Media;
 
 /**
  * Default implementation that prepares per-day vacation summaries.
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 final readonly class DefaultDaySummaryBuilder implements DaySummaryBuilderInterface
 {
@@ -44,6 +47,7 @@ final readonly class DefaultDaySummaryBuilder implements DaySummaryBuilderInterf
             }
         }
 
+        /** @var array<string, DaySummary> $days */
         return $days;
     }
 }

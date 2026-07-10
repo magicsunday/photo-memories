@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace MagicSunday\Memories\Clusterer;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use MagicSunday\Memories\Clusterer\Contract\ProgressAwareClusterStrategyInterface;
 use MagicSunday\Memories\Clusterer\Support\ClusterBuildHelperTrait;
@@ -87,7 +88,12 @@ final readonly class CrossDimensionClusterStrategy implements ClusterStrategyInt
         $lastTs = null;
 
         foreach ($withTime as $m) {
-            $ts = $m->getTakenAt()->getTimestamp();
+            $takenAt = $m->getTakenAt();
+            if (!$takenAt instanceof DateTimeImmutable) {
+                continue;
+            }
+
+            $ts = $takenAt->getTimestamp();
 
             if ($lastTs !== null && ($ts - $lastTs) > $this->timeGapSeconds) {
                 $runs[] = $buf;

@@ -242,7 +242,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             $offset                             = $this->timezoneResolver->determineLocalTimezoneOffset($summary['timezoneOffsets'], $home);
             $summary['localTimezoneOffset']     = $offset;
             $summary['localTimezoneIdentifier'] = $this->timezoneResolver->determineLocalTimezoneIdentifier(
-                $summary['timezoneIdentifierVotes'],
+                $summary['timezoneIdentifierVotes'] ?? [],
                 $home,
                 $offset,
             );

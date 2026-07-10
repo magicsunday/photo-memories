@@ -115,7 +115,7 @@ final readonly class DefaultPoiUpdateProcessor implements PoiUpdateProcessorInte
     private function normalizeIterable(iterable $locations): array
     {
         if (is_array($locations)) {
-            return $locations;
+            return array_values($locations);
         }
 
         return iterator_to_array($locations, false);

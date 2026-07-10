@@ -247,7 +247,7 @@ final class CompositeClusterScorer
             /** @var list<Media> $rows */
             $rows = $qb->getQuery()->getResult();
             foreach ($rows as $m) {
-                $map[$m->getId()] = $m;
+                $map[(int) $m->getId()] = $m;
             }
 
             if ($progressCallback instanceof ClusterBuildProgressCallbackInterface) {

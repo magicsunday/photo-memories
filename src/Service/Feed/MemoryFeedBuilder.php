@@ -268,7 +268,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $members = $this->sortMembersByTakenAt($members, $coverId);
             }
 
-            $memberIds = array_map(static fn (Media $media): int => $media->getId(), $members);
+            $memberIds = array_map(static fn (Media $media): int => (int) $media->getId(), $members);
 
             if ($usedCurated && $coverId !== null && !in_array($coverId, $memberIds, true)) {
                 $cover   = $members[0] ?? null;
@@ -514,7 +514,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 continue;
             }
 
-            $personLookup = $this->normaliseMatchIndex($persons);
+            $personLookup = $this->normaliseMatchIndex(array_values($persons));
             foreach ($personLookup as $normalized) {
                 if (in_array($normalized, $normalisedFavourites, true)) {
                     ++$withFavourites;

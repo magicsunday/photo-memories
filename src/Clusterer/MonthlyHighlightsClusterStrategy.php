@@ -368,15 +368,7 @@ final readonly class MonthlyHighlightsClusterStrategy implements ClusterStrategy
      *     score_total: float
      * }> $candidates
      *
-     * @return list<array{
-     *     members: list<Media>,
-     *     centroid: array{lat: float, lon: float},
-     *     time_range: array{from:int,to:int},
-     *     quality: array<string, mixed>,
-     *     people: array{people: float, people_count: int, people_unique: int, people_coverage: float, people_face_coverage: float},
-     *     score_mix: array<string, float>,
-     *     score_total: float
-     * }>
+     * @return list<array<string, mixed>>
      */
     private function selectEventCandidates(array $candidates): array
     {

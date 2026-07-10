@@ -15,6 +15,7 @@ use MagicSunday\Memories\Clusterer\Contract\DaySummaryStageInterface;
 
 use function array_map;
 use function array_sum;
+use function array_values;
 use function count;
 use function sqrt;
 
@@ -31,7 +32,8 @@ final class DensityStage implements DaySummaryStageInterface
             return [];
         }
 
-        $photoCounts = array_map(static fn (array $summary): int => $summary['photoCount'], $days);
+        /** @var array<string, mixed> $days */
+        $photoCounts = array_values(array_map(static fn (array $summary): int => $summary['photoCount'], $days));
 
         $stats = $this->computeMeanStd($photoCounts);
         foreach ($days as &$summary) {

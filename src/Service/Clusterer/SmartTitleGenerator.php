@@ -88,7 +88,9 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
 
     private function fallbackTitle(ClusterDraft $cluster): string
     {
-        return $cluster->getParams()['label'] ?? 'Rückblick';
+        $label = $cluster->getParams()['label'] ?? 'Rückblick';
+
+        return is_string($label) ? $label : 'Rückblick';
     }
 
     private function fallbackSubtitle(ClusterDraft $cluster, string $locale = 'de'): string
@@ -237,20 +239,23 @@ final readonly class SmartTitleGenerator implements TitleGeneratorInterface
             }
         }
 
+        $dateRangeParam = $params['date_range'] ?? '';
+        $dateRange      = is_string($dateRangeParam) ? $dateRangeParam : '';
+
         if ($algorithm === 'significant_place') {
-            $params['subtitle_special'] = $this->joinParts(['Lieblingsort', $locationLabel, $params['date_range'] ?? '']);
+            $params['subtitle_special'] = $this->joinParts(['Lieblingsort', $locationLabel, $dateRange]);
         }
 
         if ($algorithm === 'first_visit_place') {
-            $params['subtitle_special'] = $this->joinParts(['Erster Besuch', $locationLabel, $params['date_range'] ?? '']);
+            $params['subtitle_special'] = $this->joinParts(['Erster Besuch', $locationLabel, $dateRange]);
         }
 
         if ($algorithm === 'nightlife_event') {
-            $params['subtitle_special'] = $this->joinParts(['Nachtleben', $locationLabel, $params['date_range'] ?? '']);
+            $params['subtitle_special'] = $this->joinParts(['Nachtleben', $locationLabel, $dateRange]);
         }
 
         if ($algorithm === 'golden_hour') {
-            $params['subtitle_special'] = $this->joinParts(['Warmes Licht', $params['date_range'] ?? '']);
+            $params['subtitle_special'] = $this->joinParts(['Warmes Licht', $dateRange]);
         }
 
         return $params;

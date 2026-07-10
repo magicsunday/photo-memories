@@ -100,7 +100,7 @@ final readonly class GdImageAdapter implements ImageAdapterInterface
 
     public function resize(int $targetWidth, int $targetHeight): ImageAdapterInterface
     {
-        $dst = imagecreatetruecolor($targetWidth, $targetHeight);
+        $dst = imagecreatetruecolor(max(1, $targetWidth), max(1, $targetHeight));
         imagecopyresampled(
             $dst,
             $this->image,
