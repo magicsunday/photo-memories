@@ -110,7 +110,7 @@
             "@ci:test:php:cpd"
         ],
         "ci:test:php:cpd": [
-            "npx jscpd --config .jscpd.json --skip-comments --no-tips"
+            "npx jscpd --config .build/.jscpd.json --skip-comments --no-tips"
         ],
         "post-install-cmd": [
             "npm install jscpd@^5.0.11"

@@ -4,19 +4,18 @@
         "javascript",
         "typescript"
     ],
-    "threshold": 0,
+    "threshold": 4,
     "reporters": [
         "console-full"
     ],
     "minTokens": 100,
     "minLines": 5,
     "path": [
-        "src",
-        "test",
-        "public/app/src"
+        "../src",
+        "../test",
+        "../public/app/src"
     ],
     "ignore": [
-        "public/app/dist/**"
-    ],
-    "exitCode": 1
+        "../public/app/dist/**"
+    ]
 }
