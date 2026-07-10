@@ -68,3 +68,7 @@ jobs:
             - name: Copy-Paste Detection
               if: ${{ always() && steps.install.conclusion == 'success' }}
               run: composer ci:test:php:cpd
+
+            - name: Build SPA
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: npm run build
