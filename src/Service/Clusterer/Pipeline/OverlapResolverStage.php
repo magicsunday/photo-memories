@@ -405,7 +405,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         return $intersection / $union;
     }
 
-    private function computeSpatialDistance(ClusterDraft $a, ClusterDraft $b): ?float
+    private function computeSpatialDistance(ClusterDraft $a, ClusterDraft $b): float
     {
         $stayA = $this->extractPrimaryStaypoint($a);
         $stayB = $this->extractPrimaryStaypoint($b);
@@ -417,16 +417,12 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $centroidA = $a->getCentroid();
         $centroidB = $b->getCentroid();
 
-        if (isset($centroidA['lat'], $centroidA['lon'], $centroidB['lat'], $centroidB['lon'])) {
-            return $this->haversineDistance(
-                $centroidA['lat'],
-                $centroidA['lon'],
-                $centroidB['lat'],
-                $centroidB['lon'],
-            );
-        }
-
-        return null;
+        return $this->haversineDistance(
+            $centroidA['lat'],
+            $centroidA['lon'],
+            $centroidB['lat'],
+            $centroidB['lon'],
+        );
     }
 
     /**
@@ -462,10 +458,6 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
 
         $intersection = count(array_intersect($coreA, $coreB));
         $union        = count(array_unique(array_merge($coreA, $coreB)));
-
-        if ($union === 0) {
-            return null;
-        }
 
         return $intersection / $union;
     }
@@ -545,7 +537,7 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         return $difference / 0xFFFFFFFFFFFFFFFF;
     }
 
-    private function extractPhashMedian(ClusterDraft $draft): ?int
+    private function extractPhashMedian(ClusterDraft $draft): ?float
     {
         $params    = $draft->getParams();
         $selection = $params['member_selection'] ?? null;
@@ -582,13 +574,13 @@ final class OverlapResolverStage implements ClusterConsolidationStageInterface
         $middle = (int) floor($count / 2);
 
         if (($count % 2) === 1) {
-            return (int) $values[$middle];
+            return (float) $values[$middle];
         }
 
         $left  = (float) $values[$middle - 1];
         $right = (float) $values[$middle];
 
-        return (int) (($left + $right) / 2.0);
+        return ($left + $right) / 2.0;
     }
 
     /**
