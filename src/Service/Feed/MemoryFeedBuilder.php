@@ -975,7 +975,7 @@ final readonly class MemoryFeedBuilder implements FeedBuilderInterface
                 $value = $policyDetails['minimum_total'] ?? null;
                 $min   = $this->normalisePositiveInt($value);
                 if ($min !== null) {
-                    $policyMinimum = max($policyMinimum ?? 0, $min);
+                    $policyMinimum = $min;
                 }
             }
         }

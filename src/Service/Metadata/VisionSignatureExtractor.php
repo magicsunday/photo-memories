@@ -344,7 +344,7 @@ final readonly class VisionSignatureExtractor implements SingleMetadataExtractor
     {
         $h = count($m);
         $w = $h > 0 ? count($m[0]) : 0;
-        if ($w < 1 || $h < 1) {
+        if ($w < 1) {
             return [0.0, 0.0, 0.0];
         }
 

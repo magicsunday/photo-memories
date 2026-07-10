@@ -136,10 +136,6 @@ final class DayQuotaSelectionStage implements SelectionStageInterface
         $unique = array_values(array_unique($personIds));
         sort($unique);
 
-        if ($unique === []) {
-            return null;
-        }
-
         return implode('-', $unique);
     }
 

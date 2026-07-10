@@ -613,9 +613,9 @@ class Media
     private ?array $sceneTags = null;
 
     /**
-     * Generated thumbnails mapped by size identifier.
+     * Generated thumbnails mapped by size identifier (integer dimension) or label.
      *
-     * @var array<string, string>|null $thumbnails
+     * @var array<int|string, string>|null $thumbnails
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $thumbnails = null;
@@ -1002,7 +1002,7 @@ class Media
     /**
      * Returns the generated thumbnails mapping.
      *
-     * @return array<string, string>|null
+     * @return array<int|string, string>|null
      */
     public function getThumbnails(): ?array
     {
@@ -1012,7 +1012,7 @@ class Media
     /**
      * Sets the generated thumbnails mapping.
      *
-     * @param array<string, string>|null $thumbnails thumbnails indexed by label
+     * @param array<int|string, string>|null $thumbnails thumbnails indexed by integer dimension or label
      */
     public function setThumbnails(?array $thumbnails): void
     {

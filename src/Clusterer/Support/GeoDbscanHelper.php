@@ -171,9 +171,6 @@ final class GeoDbscanHelper
 
         while ($neighbors !== []) {
             $neighborIndex = array_pop($neighbors);
-            if ($neighborIndex === null) {
-                continue;
-            }
 
             if ($visited[$neighborIndex] === false) {
                 $visited[$neighborIndex] = true;

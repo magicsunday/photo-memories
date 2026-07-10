@@ -478,7 +478,7 @@ final readonly class HtmlFeedExportService implements FeedExportServiceInterface
 
         $single = $start ?? $end;
 
-        return $single?->format('d.m.Y H:i');
+        return $single->format('d.m.Y H:i');
     }
 
     private function formatCount(?int $count, string $singular, string $plural): ?string

@@ -265,7 +265,7 @@ final readonly class MediaQualityAggregator
 
         $takenAt = $media->getTakenAt();
         if ($takenAt instanceof DateTimeInterface) {
-            $context['takenAt'] = $takenAt;
+            $context['takenAt'] = $takenAt->format(DateTimeInterface::ATOM);
         }
 
         IndexLogHelper::appendEntry(

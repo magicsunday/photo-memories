@@ -59,10 +59,6 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
             $duration += 24;
         }
 
-        if ($duration <= 0) {
-            throw new InvalidArgumentException('night window duration must be positive.');
-        }
-
         $this->nightWindowDurationHours = $duration;
     }
 
@@ -269,17 +265,13 @@ final readonly class AwayFlagStage implements DaySummaryStageInterface
         $endTs   = $windowEnd->getTimestamp();
 
         foreach ($staypoints as $staypoint) {
-            $stayStart = ($staypoint['start'] ?? 0);
-            $stayEnd   = ($staypoint['end'] ?? 0);
+            $stayStart = $staypoint['start'];
+            $stayEnd   = $staypoint['end'];
             if ($stayEnd < $startTs) {
                 continue;
             }
 
             if ($stayStart > $endTs) {
-                continue;
-            }
-
-            if (!isset($staypoint['lat'], $staypoint['lon'])) {
                 continue;
             }
 

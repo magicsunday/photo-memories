@@ -33,7 +33,7 @@ trait VacationTimezoneTrait
      */
     private function resolveSummaryTimezone(array $summary, array $home): DateTimeZone
     {
-        $identifier = $summary['localTimezoneIdentifier'] ?? null;
+        $identifier = $summary['localTimezoneIdentifier'];
         if ($identifier !== '') {
             try {
                 return new DateTimeZone($identifier);

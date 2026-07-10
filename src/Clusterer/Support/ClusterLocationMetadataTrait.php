@@ -58,9 +58,7 @@ trait ClusterLocationMetadataTrait
                 $normalizedCity = $this->normalizeLocationComponent($city);
                 if ($normalizedCity !== '') {
                     $params['place_city'] = $normalizedCity;
-                    if ($locationParts === [] || !in_array($normalizedCity, $locationParts, true)) {
-                        $locationParts[] = $normalizedCity;
-                    }
+                    $locationParts[]      = $normalizedCity;
                 }
             }
 

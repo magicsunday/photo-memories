@@ -59,7 +59,7 @@ final class MediaIngestionTelemetryCollector implements MediaIngestionTelemetryI
             && str_starts_with($normalisedMime, 'image/');
 
         $facesDetected = $media->hasFaces()
-            || ($media->getFacesCount() !== null && $media->getFacesCount() > 0);
+            || $media->getFacesCount() > 0;
 
         $this->mediaRecords[$filepath] = [
             'isVideo'       => $isVideo,

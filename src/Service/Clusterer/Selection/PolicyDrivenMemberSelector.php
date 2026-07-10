@@ -1303,7 +1303,7 @@ final class PolicyDrivenMemberSelector implements ClusterMemberSelectorInterface
         }
 
         foreach ($tags as $tag) {
-            $label = $tag['label'] ?? null;
+            $label = $tag['label'];
             if ($label === '') {
                 continue;
             }

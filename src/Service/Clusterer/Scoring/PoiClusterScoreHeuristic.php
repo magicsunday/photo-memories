@@ -181,11 +181,11 @@ final class PoiClusterScoreHeuristic extends AbstractClusterScoreHeuristic
 
         arsort($hashCounts);
         $dominantHash  = array_key_first($hashCounts);
-        $dominantCount = $dominantHash !== null ? $hashCounts[$dominantHash] : 0;
+        $dominantCount = $hashCounts[$dominantHash];
         $totalSamples  = array_sum($hashCounts);
         $ratio         = $dominantCount / $totalSamples;
 
-        $signatureMatch = $dominantHash !== null ? $this->matchIconicSignature($dominantHash) : null;
+        $signatureMatch = $this->matchIconicSignature($dominantHash);
 
         $isDominant  = $dominantCount >= 2 && $ratio >= 0.5;
         $trigger     = null;

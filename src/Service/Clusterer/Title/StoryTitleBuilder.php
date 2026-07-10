@@ -123,10 +123,6 @@ final readonly class StoryTitleBuilder
             return $base . ' mit ' . $companions;
         }
 
-        if ($base === '') {
-            return 'Reise';
-        }
-
         return $base;
     }
 

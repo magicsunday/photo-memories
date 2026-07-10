@@ -151,7 +151,7 @@ final readonly class ClusterQualityAggregator
                 $blockinessSamples[] = $blockinessRaw;
             }
 
-            $clippingRaw       = $rawMetrics?->clippingShare ?? $score->clipping;
+            $clippingRaw       = $rawMetrics->clippingShare ?? $score->clipping;
             $clippingSamples[] = $clippingRaw;
 
             $keyframeRaw       = $score->keyframeQuality;

@@ -80,7 +80,7 @@ final class ThumbnailPathResolver
             }
 
             $first = reset($bySize);
-            if ($first !== false && is_file($first)) {
+            if (is_file($first)) {
                 return $first;
             }
 

@@ -51,7 +51,7 @@ final readonly class NotificationPlanner
         string $defaultTimezone = 'UTC',
     ) {
         $this->channelConfig   = $this->normaliseChannelConfig($channelConfig);
-        $this->defaultSendTime = $this->normaliseSendTimeString($defaultSendTime) ?? '09:00';
+        $this->defaultSendTime = $this->normaliseSendTimeString($defaultSendTime);
         $this->defaultTimezone = trim($defaultTimezone) !== '' ? $defaultTimezone : 'UTC';
     }
 
@@ -169,10 +169,7 @@ final readonly class NotificationPlanner
 
             $sendTime = null;
             if (array_key_exists('send_time', $options) && is_string($options['send_time'])) {
-                $normalisedSend = $this->normaliseSendTimeString($options['send_time']);
-                if ($normalisedSend !== null) {
-                    $sendTime = $normalisedSend;
-                }
+                $sendTime = $this->normaliseSendTimeString($options['send_time']);
             }
 
             $normalised[$channelName] = [
@@ -184,7 +181,7 @@ final readonly class NotificationPlanner
         return $normalised;
     }
 
-    private function normaliseSendTimeString(string $value): ?string
+    private function normaliseSendTimeString(string $value): string
     {
         $parsed = $this->parseSendTime($value);
 

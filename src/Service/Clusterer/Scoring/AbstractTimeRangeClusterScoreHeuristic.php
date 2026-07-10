@@ -60,7 +60,7 @@ abstract class AbstractTimeRangeClusterScoreHeuristic extends AbstractClusterSco
     }
 
     /**
-     * @param array{from:int,to:int}|null $range
+     * @param array{from?:int,to?:int}|null $range
      *
      * @return bool
      *

@@ -414,7 +414,7 @@ final readonly class FfprobeMetadataExtractor implements SingleMetadataExtractor
     }
 
     /**
-     * @param array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null> $value
+     * @param array<int|string, mixed> $value
      *
      * @return array<int|string, int|float|string|bool|array<int|string, int|float|string|bool|array<mixed>|null>|null>
      */

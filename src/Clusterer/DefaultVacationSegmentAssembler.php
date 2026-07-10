@@ -14,6 +14,7 @@ namespace MagicSunday\Memories\Clusterer;
 use MagicSunday\Memories\Clusterer\Contract\VacationRunDetectorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationScoreCalculatorInterface;
 use MagicSunday\Memories\Clusterer\Contract\VacationSegmentAssemblerInterface;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 use MagicSunday\Memories\Clusterer\Support\HomeBoundaryHelper;
 use MagicSunday\Memories\Entity\Media;
 use MagicSunday\Memories\Service\Clusterer\Debug\VacationDebugContext;
@@ -32,6 +33,8 @@ use function trim;
 
 /**
  * Coordinates vacation segment detection and scoring.
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 final readonly class DefaultVacationSegmentAssembler implements VacationSegmentAssemblerInterface
 {
@@ -46,8 +49,8 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
     }
 
     /**
-     * @param array<string, array{date:string,members:list<Media>,gpsMembers:list<Media>,maxDistanceKm:float,avgDistanceKm:float,travelKm:float,maxSpeedKmh:float,avgSpeedKmh:float,hasHighSpeedTransit:bool,countryCodes:array<string,true>,timezoneOffsets:array<int,int>,localTimezoneIdentifier:string,localTimezoneOffset:int|null,tourismHits:int,poiSamples:int,tourismRatio:float,hasAirportPoi:bool,weekday:int,photoCount:int,densityZ:float,isAwayCandidate:bool,sufficientSamples:bool,spotClusters:list<list<Media>>,spotNoise:list<Media>,spotCount:int,spotNoiseSamples:int,spotDensity:float,spotDwellSeconds:int,staypoints:list<array{lat:float,lon:float,start:int,end:int,dwell:int}>,staypointIndex:Support\StaypointIndex,staypointCounts:array<string,int>,dominantStaypoints:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio:float,poiDensity:float,cohortPresenceRatio:float,cohortMembers:array<int,int>,baseLocation:array{lat:float,lon:float,distance_km:float,source:string}|null,baseAway:bool,awayByDistance:bool,firstGpsMedia:Media|null,lastGpsMedia:Media|null,isSynthetic:bool}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             $home
+     * @param array<string, DaySummary>                                                               $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return list<ClusterDraft>
      */
@@ -170,7 +173,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
     }
 
     /**
-     * @param array{members:list<Media>,tourismRatio:float,poiDensity:float,staypointCount:int,spotCount:int,cohortPresenceRatio:float,isSynthetic:bool,travelKm:float|null} $summary
+     * @param array{members:list<Media>,tourismRatio:float,poiDensity:float,staypointCount?:int,spotCount?:int,cohortPresenceRatio:float,isSynthetic:bool,travelKm:float|null} $summary
      */
     private function calculateCoreScore(array $summary): float
     {
@@ -308,10 +311,10 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
             return;
         }
 
-        $startKey = $run[0] ?? null;
+        $startKey = $run[0];
         $endKey   = $run[count($run) - 1] ?? null;
 
-        if ($startKey === null || $endKey === null) {
+        if ($endKey === null) {
             return;
         }
 
@@ -330,16 +333,16 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
                 continue;
             }
 
-            $members += count($summary['members'] ?? []);
-            if (!empty($summary['baseAway'])) {
+            $members += count($summary['members']);
+            if ($summary['baseAway']) {
                 ++$awayDays;
             }
         }
 
         $centers        = HomeBoundaryHelper::centers($home);
         $centerCount    = count($centers);
-        $primary        = $centers[0] ?? ['radius_km' => $home['radius_km'] ?? 0.0, 'member_count' => 0];
-        $radius         = ($primary['radius_km'] ?? 0.0);
+        $primary        = $centers[0] ?? ['radius_km' => $home['radius_km'], 'member_count' => 0];
+        $radius         = $primary['radius_km'];
         $primaryMembers = ($primary['member_count'] ?? 0);
 
         $area    = $radius > 0.0 ? M_PI * $radius * $radius : 0.0;

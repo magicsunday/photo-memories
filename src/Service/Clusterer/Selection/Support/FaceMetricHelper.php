@@ -71,9 +71,6 @@ final class FaceMetricHelper
         }
 
         $range = 1.0 - self::CLOSE_UP_DOMINANCE_THRESHOLD;
-        if ($range <= 0.0) {
-            return 1.0;
-        }
 
         $excess = $coverage - self::CLOSE_UP_DOMINANCE_THRESHOLD;
         if ($excess <= 0.0) {

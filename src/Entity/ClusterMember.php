@@ -154,9 +154,7 @@ class ClusterMember
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new DateTimeImmutable();
-        $this->createdAt ??= $now;
-        $this->updatedAt = $now;
+        $this->updatedAt = new DateTimeImmutable();
     }
 
     #[ORM\PreUpdate]

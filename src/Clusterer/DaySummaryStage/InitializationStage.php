@@ -92,7 +92,7 @@ use const SORT_STRING;
 final readonly class InitializationStage implements DaySummaryStageInterface
 {
     /**
-     * @param non-empty-string $timezone
+     * @param string $timezone Time zone identifier; must not be empty (validated below)
      */
     public function __construct(
         private TimezoneResolverInterface $timezoneResolver,
@@ -105,7 +105,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param list<Media>                                                                     $days
+     * @param array<string, mixed>|list<mixed>                                                $days
      * @param array{lat:float,lon:float,radius_km:float,country:?string,timezone_offset:?int} $home
      *
      * @return array<string, DaySummary>
@@ -116,6 +116,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             return [];
         }
 
+        /** @var list<Media> $items */
         $items = $days;
 
         /** @var array<string, DaySummary> $summaries */

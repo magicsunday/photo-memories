@@ -108,7 +108,7 @@ final readonly class ClusterModelCardWriter
         $policyDetails      = $this->normaliseArray($memberSelection['policy'] ?? ($selectionTelemetry['policy'] ?? null));
         $rejectionCounts    = $this->normaliseArray($selectionSummary['rejection_counts'] ?? ($selectionTelemetry['rejection_counts'] ?? ($memberSelection['rejection_counts'] ?? null)));
         $drops              = $this->normaliseArray($selectionTelemetry['drops'] ?? []);
-        $merges             = $this->normaliseArray(($params['meta']['merges'] ?? []) ?? []);
+        $merges             = $this->normaliseArray($params['meta']['merges'] ?? []);
         $scores             = $this->collectScoreDetails($params, $selectionSummary);
         $mmr                = $this->normaliseArray($selectionTelemetry['mmr'] ?? null);
 

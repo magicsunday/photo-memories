@@ -19,8 +19,6 @@ use function class_exists;
 use function count;
 use function extension_loaded;
 use function is_file;
-use function is_float;
-use function round;
 
 /**
  * Imagick-based adapter, supports HEIC/AVIF (depends on delegates).
@@ -147,8 +145,7 @@ final readonly class ImagickImageAdapter implements ImageAdapterInterface
         $outLen = count($buf);
 
         for ($i = 0; $i < $outLen; ++$i) {
-            $v     = $buf[$i];
-            $out[] = (int) (is_float($v) ? round($v) : $v);
+            $out[] = $buf[$i];
         }
 
         /** @var list<int> $out */

@@ -257,7 +257,6 @@ final readonly class PersonCohortClusterStrategy implements ClusterStrategyInter
                 }
 
                 $gapDays = (new DateTimeImmutable($day))->diff(new DateTimeImmutable($lastDay))->days;
-                $gapDays = $gapDays === false || $gapDays === null ? 0 : $gapDays;
 
                 if ($gapDays <= $this->windowDays) {
                     /** @var list<Media> $current */

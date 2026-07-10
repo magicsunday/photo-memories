@@ -581,7 +581,7 @@ final readonly class PerceptualHashExtractor implements SingleMetadataExtractorI
     {
         $H = count($g);
         $W = $H > 0 ? count($g[0]) : 0;
-        if ($W < 1 || $H < 1) {
+        if ($W < 1) {
             return array_fill(0, $h, array_fill(0, $w, 0.0));
         }
 

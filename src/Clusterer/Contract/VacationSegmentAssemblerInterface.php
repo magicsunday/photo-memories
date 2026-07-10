@@ -12,17 +12,18 @@ declare(strict_types=1);
 namespace MagicSunday\Memories\Clusterer\Contract;
 
 use MagicSunday\Memories\Clusterer\ClusterDraft;
-use MagicSunday\Memories\Clusterer\Support\StaypointIndex;
-use MagicSunday\Memories\Entity\Media;
+use MagicSunday\Memories\Clusterer\DaySummaryStage\InitializationStage;
 
 /**
  * Assembles scored vacation segments from day summaries.
+ *
+ * @phpstan-import-type DaySummary from InitializationStage
  */
 interface VacationSegmentAssemblerInterface
 {
     /**
-     * @param array<string, array{date: string, members: list<Media>, gpsMembers: list<Media>, maxDistanceKm: float, avgDistanceKm: float, travelKm: float, maxSpeedKmh: float, avgSpeedKmh: float, hasHighSpeedTransit: bool, countryCodes: array<string, true>, timezoneOffsets: array<int, int>, localTimezoneIdentifier: string, localTimezoneOffset: int|null, tourismHits: int, poiSamples: int, tourismRatio: float, hasAirportPoi: bool, weekday: int, photoCount: int, densityZ: float, isAwayCandidate: bool, sufficientSamples: bool, spotClusters: list<list<Media>>, spotNoise: list<Media>, spotCount: int, spotNoiseSamples: int, spotDensity: float, spotDwellSeconds: int, staypoints: list<array{lat: float, lon: float, start: int, end: int, dwell: int}>, staypointIndex: StaypointIndex, staypointCounts: array<string, int>, dominantStaypoints: list<array{key: string, lat: float, lon: float, start: int, end: int, dwellSeconds: int, memberCount: int}>, transitRatio: float, poiDensity: float, baseLocation: array{lat: float, lon: float, distance_km: float, source: string}|null, baseAway: bool, awayByDistance: bool, firstGpsMedia: Media|null, lastGpsMedia: Media|null, isSynthetic: bool}> $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             $home
+     * @param array<string, DaySummary>                                                               $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return list<ClusterDraft>
      */

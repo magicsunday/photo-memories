@@ -90,13 +90,14 @@ final class CohortPresenceStage implements DaySummaryStageInterface
     }
 
     /**
-     * @param array<string, DaySummary>                                                               $days
+     * @param array<string, mixed>|list<mixed>                                                        $days
      * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
      *
      * @return array<string, DaySummary>
      */
     public function process(array $days, array $home): array
     {
+        /** @var array<string, DaySummary> $days */
         if ($days === [] || $this->importantPersons === []) {
             return $days;
         }

@@ -86,8 +86,6 @@ final class QualityClusterScoreHeuristic extends AbstractClusterScoreHeuristic
             $iso ??= $this->floatOrNull($metrics['quality_iso']);
         }
 
-        $quality ??= 0.0;
-
         $cluster->setParam('quality_avg', $quality);
         if ($aesthetics !== null) {
             $cluster->setParam('aesthetics_score', $aesthetics);

@@ -250,7 +250,7 @@ final class RunDetector implements VacationRunDetectorInterface
             if (
                 $features['hasGpsAnchors'] === false
                 && $features['transitHeavy'] === false
-                && ($features['hasStaypointDwell'] ?? false) === false
+                && $features['hasStaypointDwell'] === false
             ) {
                 $isAwayCandidate[$key] = false;
             }
@@ -310,7 +310,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 if (
                     $features['hasGpsAnchors'] === false
                     && $features['transitHeavy'] === false
-                    && ($features['hasStaypointDwell'] ?? false) === false
+                    && $features['hasStaypointDwell'] === false
                 ) {
                     continue;
                 }
@@ -342,7 +342,7 @@ final class RunDetector implements VacationRunDetectorInterface
                 if (
                     $features['hasGpsAnchors'] === false
                     && $features['transitHeavy'] === false
-                    && ($features['hasStaypointDwell'] ?? false) === false
+                    && $features['hasStaypointDwell'] === false
                 ) {
                     $isAwayCandidate[$key] = false;
                 }
@@ -355,7 +355,7 @@ final class RunDetector implements VacationRunDetectorInterface
     /**
      * @param array{lat:float,lon:float,radius_km:float,centers?:list<array{lat:float,lon:float,radius_km:float,country?:string|null,timezone_offset?:int|null,member_count?:int,dwell_seconds?:int,valid_from?:int|null,valid_until?:int|null}>} $home
      *
-     * @return array{strict: float, soft: float}
+     * @return array{0: float, 1: float}
      */
     private function determineEffectiveMinAwayDistanceBounds(array $home): array
     {
@@ -371,7 +371,7 @@ final class RunDetector implements VacationRunDetectorInterface
         $centerCount    = count($centers);
         $totalMembers   = 0;
         $primary        = $centers[0];
-        $primaryRadius  = ($primary['radius_km'] ?? 0.0);
+        $primaryRadius  = $primary['radius_km'];
         $primaryMembers = ($primary['member_count'] ?? 0);
         $primaryCountry = null;
 
@@ -429,12 +429,12 @@ final class RunDetector implements VacationRunDetectorInterface
         }
 
         $maxPrimaryRadius = $profile['max_primary_radius_km'] ?? null;
-        if ((is_float($maxPrimaryRadius) || is_int($maxPrimaryRadius)) && $maxPrimaryRadius > 0.0 && $primaryRadius > $maxPrimaryRadius) {
+        if (is_float($maxPrimaryRadius) && $maxPrimaryRadius > 0.0 && $primaryRadius > $maxPrimaryRadius) {
             return false;
         }
 
         $minPrimaryDensity = $profile['min_primary_density'] ?? null;
-        if ((is_float($minPrimaryDensity) || is_int($minPrimaryDensity)) && $minPrimaryDensity > 0.0 && $primaryDensity < $minPrimaryDensity) {
+        if (is_float($minPrimaryDensity) && $minPrimaryDensity > 0.0 && $primaryDensity < $minPrimaryDensity) {
             return false;
         }
 
@@ -455,8 +455,10 @@ final class RunDetector implements VacationRunDetectorInterface
      */
     private function collectRuns(array $keys, array $isAwayCandidate, array $indexByKey, array $days): array
     {
+        /** @var list<list<string>> $runs */
         $runs = [];
-        $run  = [];
+        /** @var list<string> $run */
+        $run = [];
 
         $flush = function () use (&$run, &$runs, $keys, $indexByKey, $days): void {
             if ($run === []) {
@@ -810,8 +812,7 @@ final class RunDetector implements VacationRunDetectorInterface
         $result = [];
 
         foreach ($profiles as $profile) {
-            $distance      = $profile['distance_km'] ?? null;
-            $distanceValue = $distance;
+            $distanceValue = $profile['distance_km'];
             if ($distanceValue <= 0.0) {
                 continue;
             }
@@ -826,14 +827,14 @@ final class RunDetector implements VacationRunDetectorInterface
                 $entry['min_total_member_count'] = $profile['min_total_member_count'];
             }
 
-            if (isset($profile['max_primary_radius_km']) && (is_float($profile['max_primary_radius_km']) || is_int($profile['max_primary_radius_km']))) {
+            if (isset($profile['max_primary_radius_km'])) {
                 $radius = $profile['max_primary_radius_km'];
                 if ($radius > 0.0) {
                     $entry['max_primary_radius_km'] = $radius;
                 }
             }
 
-            if (isset($profile['min_primary_density']) && (is_float($profile['min_primary_density']) || is_int($profile['min_primary_density']))) {
+            if (isset($profile['min_primary_density'])) {
                 $density = $profile['min_primary_density'];
                 if ($density > 0.0) {
                     $entry['min_primary_density'] = $density;

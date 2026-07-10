@@ -358,11 +358,7 @@ final readonly class WeekendGetawaysOverYearsClusterStrategy implements ClusterS
         }
 
         foreach ($run['items'] as $media) {
-            $summary = $this->extractDaySummary($media);
-            if ($summary === []) {
-                continue;
-            }
-
+            $summary     = $this->extractDaySummary($media);
             $dayCategory = $summary['category'] ?? null;
             if (is_string($dayCategory) && strtolower($dayCategory) === 'weekend') {
                 return true;

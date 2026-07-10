@@ -75,7 +75,7 @@ final class ClusterEntityToDraftMapper
     {
         return array_map(function (Cluster $entity): ClusterDraft {
             $algorithm = $entity->getAlgorithm();
-            $params    = $entity->getParams() ?? [];
+            $params    = $entity->getParams();
 
             // Ensure every cluster is assigned to a group even if the entity did not persist one.
             if (!isset($params['group']) || !is_string($params['group']) || $params['group'] === '') {

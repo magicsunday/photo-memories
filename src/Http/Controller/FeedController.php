@@ -1746,7 +1746,7 @@ final class FeedController
             return 'Sommer';
         }
 
-        if ($startMonth >= 9 && $endMonth <= 11) {
+        if ($startMonth >= 9) {
             return 'Herbst';
         }
 

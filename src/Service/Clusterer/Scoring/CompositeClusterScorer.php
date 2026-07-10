@@ -385,7 +385,7 @@ final class CompositeClusterScorer
     /**
      * @param array<string,array<string,float|int>> $overrides
      *
-     * @return array<string,array<string,float>>
+     * @return array<string,array<string,array<string,float>>>
      */
     private function sanitizeAlgorithmWeightOverrides(array $overrides): array
     {
@@ -426,10 +426,7 @@ final class CompositeClusterScorer
             }
 
             if (!isset($storylines[self::DEFAULT_STORYLINE])) {
-                $first = reset($storylines);
-                if ($first !== []) {
-                    $storylines[self::DEFAULT_STORYLINE] = $first;
-                }
+                $storylines[self::DEFAULT_STORYLINE] = reset($storylines);
             }
 
             $result[$algorithm] = $storylines;

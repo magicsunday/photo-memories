@@ -37,7 +37,6 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Throwable;
 
 use function array_filter;
-use function array_map;
 use function array_unique;
 use function array_values;
 use function count;
@@ -102,9 +101,12 @@ final class MemoriesCurateCommand extends Command
         parent::__construct();
 
         $groups = array_values($this->clusterGroupMap);
-        $groups = array_map(static fn (mixed $value): ?string => $value, $groups);
 
-        $this->allowedGroups = array_values(array_unique(array_filter($groups))); // keep deterministic order
+        // keep deterministic order
+        $this->allowedGroups = array_values(array_unique(array_filter(
+            $groups,
+            static fn (string $value): bool => $value !== ''
+        )));
 
         $aliases = [];
         foreach ($this->clusterGroupAliasMap as $alias => $group) {

@@ -83,7 +83,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     private DateTimeImmutable $referenceNow;
 
     /**
-     * @var array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool}
+     * @var array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool,max_gap_days:int}
      */
     private array $weekendExceptionConfig;
 
@@ -529,7 +529,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
             if ($primaryStaypointLocationParts !== []) {
                 $primaryStaypointLocation = implode(', ', $primaryStaypointLocationParts);
-            } elseif (isset($staypointMembers) && $staypointMembers !== []) {
+            } elseif ($staypointMembers !== []) {
                 $staypointLabel = $this->locationHelper->majorityLabel($staypointMembers);
                 if ($staypointLabel !== null && $staypointLabel !== '') {
                     $primaryStaypointLocation = $staypointLabel;
@@ -1691,7 +1691,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     /**
      * @param array<string, mixed> $config
      *
-     * @return array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool}
+     * @return array{enabled:bool,min_nights:int,max_nights:int,min_flagged_days:int,require_saturday:bool,require_sunday:bool,require_weekend_flag:bool,max_gap_days:int}
      */
     private function sanitizeWeekendExceptionConfig(array $config): array
     {
@@ -1814,10 +1814,10 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
     }
 
     /**
-     * @param list<string>                                                                            $dayKeys
-     * @param array<string, array{date:string}>                                                       $days
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
-     * @param array<string, bool>                                                                     $weekendHolidayFlags
+     * @param list<string>                                                                                                                             $dayKeys
+     * @param array<string, array{date:string,weekday:int,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>}> $days
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                                  $home
+     * @param array<string, bool>                                                                                                                      $weekendHolidayFlags
      */
     private function countAdjacentWeekendHolidayDays(array $dayKeys, array $days, array $home, array $weekendHolidayFlags): int
     {
@@ -1868,18 +1868,14 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
         $modifier  = $offset > 0 ? '+' . $offset . ' day' : $offset . ' day';
         $candidate = $date->modify($modifier);
-        if ($candidate === false) {
-            return null;
-        }
-
-        $key = $candidate->format('Y-m-d');
+        $key       = $candidate->format('Y-m-d');
 
         return array_key_exists($key, $days) ? $key : null;
     }
 
     /**
-     * @param array{weekday:int,date:string}                                                          $summary
-     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null} $home
+     * @param array{weekday:int,date:string,localTimezoneIdentifier:string,localTimezoneOffset:int|null,timezoneOffsets:array<int,int>} $summary
+     * @param array{lat:float,lon:float,radius_km:float,country:string|null,timezone_offset:int|null}                                   $home
      */
     private function isWeekendOrHoliday(array $summary, array $home): bool
     {
@@ -1915,12 +1911,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 }
 
                 $firstCharacter = mb_substr($word, 0, 1);
-                if ($firstCharacter === '') {
-                    continue;
-                }
 
                 $remainder         = mb_substr($word, 1);
-                $words[$wordIndex] = mb_strtoupper($firstCharacter) . ($remainder === false ? '' : $remainder);
+                $words[$wordIndex] = mb_strtoupper($firstCharacter) . $remainder;
             }
 
             $parts[$index] = implode(' ', $words);

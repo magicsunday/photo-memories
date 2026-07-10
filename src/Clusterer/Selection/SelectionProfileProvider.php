@@ -354,7 +354,7 @@ final class SelectionProfileProvider
     }
 
     /**
-     * @param array<string, int|float|bool> $values
+     * @param array<string, bool|float|int|string> $values
      */
     private function boolValue(array $values, string $key, bool $default): bool
     {

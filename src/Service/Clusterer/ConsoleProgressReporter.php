@@ -15,10 +15,12 @@ use Closure;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+use function assert;
 use function floor;
 use function max;
 use function microtime;
@@ -49,6 +51,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
     {
         $this->io->section($sectionTitle);
 
+        assert($this->output instanceof ConsoleOutputInterface);
         $section = $this->output->section();
         $bar     = $this->makeBar($section, $max, $headline);
 
@@ -91,7 +94,7 @@ final readonly class ConsoleProgressReporter implements ProgressReporterInterfac
 final readonly class ConsoleProgressHandle implements ProgressHandleInterface
 {
     /**
-     * @param callable(string,string,int):ProgressHandleInterface $factory
+     * @param Closure(string,string,int):ProgressHandleInterface $factory
      */
     public function __construct(
         private ConsoleSectionOutput $section,

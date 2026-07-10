@@ -116,7 +116,7 @@ abstract class AbstractAtHomeClusterStrategy implements ClusterStrategyInterface
      */
     public function cluster(array $items): array
     {
-        if ($this->homeLat === null || $this->homeLon === null || $this->allowedWeekdayLookup === []) {
+        if ($this->homeLat === null || $this->homeLon === null) {
             return [];
         }
 

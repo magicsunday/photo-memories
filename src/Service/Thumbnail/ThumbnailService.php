@@ -137,11 +137,7 @@ class ThumbnailService implements ThumbnailServiceInterface
             }
         }
 
-        if (!$requiresImagick) {
-            return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
-        }
-
-        throw new RuntimeException('No available image library (Imagick or GD) to create thumbnails');
+        return $this->generateThumbnailsWithGd($filepath, $orientation, $this->sizes, $checksum, $media->getMime());
     }
 
     /**
@@ -242,7 +238,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                     } finally {
                         try {
                             $clone->destroy();
-                        } catch (ImagickException|Throwable) {
+                        } catch (Throwable) {
                             // Ignore destruction errors on cloned instances.
                         } finally {
                             if (!$allowFallback && $isSameInstance) {
@@ -263,7 +259,7 @@ class ThumbnailService implements ThumbnailServiceInterface
                 } finally {
                     try {
                         $imagick->destroy();
-                    } catch (ImagickException|Throwable) {
+                    } catch (Throwable) {
                         // Ignore destruction errors during cleanup.
                     }
                 }
@@ -356,12 +352,6 @@ class ThumbnailService implements ThumbnailServiceInterface
 
         $width  = imagesx($src);
         $height = imagesy($src);
-
-        if ($height <= 0) {
-            imagedestroy($src);
-
-            return [];
-        }
 
         $maxSourceDimension = max($width, $height);
 

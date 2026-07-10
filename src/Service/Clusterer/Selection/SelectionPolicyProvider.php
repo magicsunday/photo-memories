@@ -332,10 +332,7 @@ final class SelectionPolicyProvider
             }
 
             if (!isset($sanitised[self::DEFAULT_STORYLINE])) {
-                $first = reset($sanitised);
-                if ($first !== '') {
-                    $sanitised[self::DEFAULT_STORYLINE] = $first;
-                }
+                $sanitised[self::DEFAULT_STORYLINE] = reset($sanitised);
             }
 
             $result[$algorithm] = $sanitised;
@@ -596,7 +593,7 @@ final class SelectionPolicyProvider
     }
 
     /**
-     * @param array<string, int|float|string|null> $config
+     * @param array<string, int|float|string|array<string, int|float|string|null>|null> $config
      *
      * @return array<string, float>|null
      */

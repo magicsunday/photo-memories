@@ -154,7 +154,7 @@ final class TransportDayExtender
             return $interDayDistance !== null && $interDayDistance > $this->minLeanBridgeDistanceKm;
         }
 
-        if (($candidate['hasAirportPoi'] ?? false) || ($candidate['hasHighSpeedTransit'] ?? false)) {
+        if ($candidate['hasAirportPoi'] || $candidate['hasHighSpeedTransit']) {
             return true;
         }
 
@@ -200,25 +200,25 @@ final class TransportDayExtender
     }
 
     /**
-     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio?:float,avgSpeedKmh?:float,maxSpeedKmh?:float,photoCount?:int} $summary
+     * @param array{hasAirportPoi:bool,hasHighSpeedTransit:bool,isSynthetic:bool,dominantStaypoints?:list<array{key:string,lat:float,lon:float,start:int,end:int,dwellSeconds:int,memberCount:int}>,transitRatio:float,avgSpeedKmh:float,maxSpeedKmh:float,photoCount?:int} $summary
      */
     private function isTransitHeavy(array $summary): bool
     {
-        if (($summary['hasHighSpeedTransit'] ?? false) === true) {
+        if ($summary['hasHighSpeedTransit'] === true) {
             return true;
         }
 
-        $ratio = (float) ($summary['transitRatio'] ?? 0.0);
+        $ratio = $summary['transitRatio'];
         if ($ratio >= $this->transitRatioThreshold) {
             return true;
         }
 
-        $avgSpeed = (float) ($summary['avgSpeedKmh'] ?? 0.0);
+        $avgSpeed = $summary['avgSpeedKmh'];
         if ($avgSpeed >= $this->transitSpeedThreshold) {
             return true;
         }
 
-        $maxSpeed = (float) ($summary['maxSpeedKmh'] ?? 0.0);
+        $maxSpeed = $summary['maxSpeedKmh'];
 
         return $maxSpeed >= $this->transitSpeedThreshold;
     }
@@ -294,7 +294,7 @@ final class TransportDayExtender
     private function resolveReferenceCoordinate(array $summary): ?array
     {
         $baseLocation = $summary['baseLocation'] ?? null;
-        if (is_array($baseLocation) && isset($baseLocation['lat'], $baseLocation['lon'])) {
+        if (is_array($baseLocation)) {
             return [
                 'lat' => (float) $baseLocation['lat'],
                 'lon' => (float) $baseLocation['lon'],
@@ -305,12 +305,10 @@ final class TransportDayExtender
         if ($dominantStaypoints !== []) {
             $staypoint = $dominantStaypoints[0];
 
-            if (isset($staypoint['lat'], $staypoint['lon'])) {
-                return [
-                    'lat' => $staypoint['lat'],
-                    'lon' => $staypoint['lon'],
-                ];
-            }
+            return [
+                'lat' => $staypoint['lat'],
+                'lon' => $staypoint['lon'],
+            ];
         }
 
         $gpsMembers = $summary['gpsMembers'] ?? [];
@@ -371,7 +369,7 @@ final class TransportDayExtender
                 return false;
             }
 
-            if (($summary['isSynthetic'] ?? false) === false) {
+            if ($summary['isSynthetic'] === false) {
                 return false;
             }
 

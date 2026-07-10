@@ -74,11 +74,11 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
             $parts[] = 'country:' . $country;
         }
 
-        if ($parts === [] && $cell !== null) {
+        if ($parts === []) {
             $parts[] = 'cell:' . $cell;
         }
 
-        return $parts !== [] ? implode('|', $parts) : null;
+        return implode('|', $parts);
     }
 
     public function displayLabel(?Location $location): ?string

@@ -172,9 +172,6 @@ final readonly class PhashSimilarityStrategy implements ClusterStrategyInterface
             $comp     = [];
             while ($queue !== []) {
                 $v = array_shift($queue);
-                if ($v === null) {
-                    break;
-                }
 
                 $comp[] = $items[$v];
                 foreach ($adj[$v] as $w) {

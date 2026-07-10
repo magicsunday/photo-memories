@@ -179,11 +179,6 @@ final readonly class DeterministicImageQualityEstimator implements ImageQualityE
 
         $width  = imagesx($resource);
         $height = imagesy($resource);
-        if ($height <= 0) {
-            imagedestroy($resource);
-
-            return null;
-        }
 
         $largest = max($width, $height);
         if ($largest > self::MAX_SAMPLE_DIMENSION && function_exists('imagescale')) {

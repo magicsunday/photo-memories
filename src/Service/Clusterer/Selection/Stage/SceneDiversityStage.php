@@ -124,9 +124,6 @@ final class SceneDiversityStage implements SelectionStageInterface
         $total = array_sum($weights);
         if ($total <= 0.0) {
             $count = count($weights);
-            if ($count === 0) {
-                return [];
-            }
 
             $ratio  = 1.0 / $count;
             $ratios = [];

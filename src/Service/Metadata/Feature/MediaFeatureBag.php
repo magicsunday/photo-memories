@@ -18,7 +18,6 @@ use ValueError;
 use function array_is_list;
 use function array_key_exists;
 use function array_values;
-use function count;
 use function explode;
 use function implode;
 use function in_array;
@@ -143,7 +142,7 @@ final class MediaFeatureBag
             if (is_string($key) && str_contains($key, '.')) {
                 $segments = explode('.', $key, 2);
 
-                if (count($segments) === 2 && $segments[0] !== '' && $segments[1] !== '') {
+                if ($segments[0] !== '' && $segments[1] !== '') {
                     [$namespace, $subKey] = $segments;
 
                     if (array_key_exists($namespace, $normalised) === false || !is_array($normalised[$namespace])) {

@@ -262,12 +262,10 @@ final class NoveltyHeuristic extends AbstractClusterScoreHeuristic
                 }
             }
 
-            if ($bestKey !== null) {
-                $globalCount = (int) ($stats['staypoint'][$bestKey] ?? 0);
-                $maxCount    = (int) ($stats['max']['staypoint'] ?? 0);
+            $globalCount = (int) ($stats['staypoint'][$bestKey] ?? 0);
+            $maxCount    = (int) ($stats['max']['staypoint'] ?? 0);
 
-                return $this->rarityFromCounts($globalCount, $maxCount);
-            }
+            return $this->rarityFromCounts($globalCount, $maxCount);
         }
 
         $centroid = $cluster->getCentroid();

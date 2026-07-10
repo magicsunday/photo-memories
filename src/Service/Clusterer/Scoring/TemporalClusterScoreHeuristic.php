@@ -63,7 +63,7 @@ final class TemporalClusterScoreHeuristic extends AbstractTimeRangeClusterScoreH
     /**
      * @param list<Media>                                                           $mediaItems
      * @param int                                                                   $members
-     * @param array{from:int,to:int}|null                                           $timeRange
+     * @param array{from?:int,to?:int}|null                                         $timeRange
      * @param array{score:float|null,coverage:float|null,duration_seconds:int|null} $cached
      *
      * @return array{score:float,coverage:float,duration_seconds:int}

@@ -502,10 +502,6 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             ) / 1000.0;
         }
 
-        if ($distances === []) {
-            return $this->adaptiveRadius($memberCount, $maxDistanceKm, $dwellSeconds);
-        }
-
         sort($distances, SORT_NUMERIC);
 
         $count = count($distances);

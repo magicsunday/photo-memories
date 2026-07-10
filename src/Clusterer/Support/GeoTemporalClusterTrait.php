@@ -215,7 +215,7 @@ trait GeoTemporalClusterTrait
 
                 $first     = $bucket[0]->getTakenAt();
                 $lastIndex = array_key_last($bucket);
-                $last      = $lastIndex !== null ? $bucket[$lastIndex]->getTakenAt() : null;
+                $last      = $bucket[$lastIndex]->getTakenAt();
                 if (!$first instanceof DateTimeImmutable) {
                     continue;
                 }
