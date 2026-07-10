@@ -85,9 +85,9 @@ final class PersistenceBatchStage implements FinalizableMediaIngestionStageInter
             return;
         }
 
-        foreach ($this->pendingMedia as $media) {
-            $this->entityManager->flush($media);
+        $this->entityManager->flush();
 
+        foreach ($this->pendingMedia as $media) {
             $id = $media->getId();
             if ($id !== null) {
                 $this->persistedMediaTracker->record($id);

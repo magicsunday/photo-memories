@@ -32,7 +32,7 @@ final class PersistenceBatchStageTest extends TestCase
         $tracker       = new PersistedMediaTracker();
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('persist')->with($media);
-        $entityManager->expects(self::once())->method('flush')->with($media)->willReturnCallback(
+        $entityManager->expects(self::once())->method('flush')->willReturnCallback(
             function () use ($media): void {
                 $this->assignId($media, 42);
             }
@@ -84,26 +84,27 @@ final class PersistenceBatchStageTest extends TestCase
     public function processFlushesAfterConfiguredBatchSize(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::exactly(3))->method('persist');
-        $nextId   = 1;
-        $assigned = [];
-        $entityManager->expects(self::exactly(3))->method('flush')->willReturnCallback(
-            function (?object $entity = null) use (&$counter, &$nextId, &$assigned): void {
-                if ($entity instanceof Media) {
-                    $objectId = spl_object_id($entity);
-                    if (!isset($assigned[$objectId])) {
+        $persisted     = [];
+        $entityManager->expects(self::exactly(3))->method('persist')->willReturnCallback(
+            function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            }
+        );
+        $nextId  = 1;
+        $counter = 0;
+        $entityManager->expects(self::exactly(2))->method('flush')->willReturnCallback(
+            function () use (&$persisted, &$nextId, &$counter): void {
+                ++$counter;
+                foreach ($persisted as $entity) {
+                    if ($entity instanceof Media && $entity->getId() === null) {
                         $this->assignId($entity, $nextId++);
-                        $assigned[$objectId] = true;
                     }
-
-                    ++$counter;
                 }
             }
         );
         $entityManager->expects(self::exactly(3))->method('detach');
 
         $tracker = new PersistedMediaTracker();
-        $counter = 0;
 
         $stage = new PersistenceBatchStage($entityManager, 2, $tracker);
 
@@ -122,7 +123,7 @@ final class PersistenceBatchStageTest extends TestCase
 
         $stage->finalize(MediaIngestionContext::create('', false, false, false, false, new NullOutput()));
 
-        self::assertSame(3, $counter);
+        self::assertSame(2, $counter);
         self::assertCount(3, $tracker->drain());
     }
 }

@@ -183,14 +183,19 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->method('getRepository')
             ->with(Media::class)
             ->willReturn($repository);
+        $persistedMedia = null;
         $entityManager->expects(self::once())
             ->method('persist')
-            ->with(self::isInstanceOf(Media::class));
+            ->with(self::isInstanceOf(Media::class))
+            ->willReturnCallback(function (Media $media) use (&$persistedMedia): void {
+                $persistedMedia = $media;
+            });
         $entityManager->expects(self::once())
             ->method('flush')
-            ->with(self::isInstanceOf(Media::class))
-            ->willReturnCallback(function (Media $media): void {
-                $this->assignId($media, 1);
+            ->willReturnCallback(function () use (&$persistedMedia): void {
+                if ($persistedMedia instanceof Media) {
+                    $this->assignId($persistedMedia, 1);
+                }
             });
         $entityManager->expects(self::never())
             ->method('clear');
@@ -257,12 +262,11 @@ final class DefaultMediaIngestionPipelineTest extends TestCase
             ->with($existing);
         $entityManager->expects(self::once())
             ->method('flush')
-            ->with($existing)
-            ->willReturnCallback(function (Media $media): void {
+            ->willReturnCallback(function () use ($existing): void {
                 static $assigned = false;
 
                 if (!$assigned) {
-                    $this->assignId($media, 1);
+                    $this->assignId($existing, 1);
                     $assigned = true;
                 }
             });
