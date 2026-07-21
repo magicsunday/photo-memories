@@ -43,18 +43,18 @@
 - Run dependency and static analysis checks before merging.
 
 ## PR/commit checklist
-- Use Conventional Commits with ticket IDs when available (e.g., `feat(core): ISSUE-123 add geocoding cache`).
+- Commit subjects and the PR title follow the shared `commit-convention` gate (see **Git flow** below); Conventional-Commit prefixes such as `feat:` are rejected.
 - Keep changesets small (≈≤300 net LOC) and atomic. Include tests/docs alongside code.
 - Note decisions in `docs/decision-log.md`.
 - Ensure `composer ci:test` and relevant npm/Playwright commands pass locally.
 
 ## Good vs bad examples
-- ✅ Good: “feat(feed): ISSUE-42 expose story ordering
+- ✅ Good: “Expose story ordering
   - add scoring service under `src/Service/Feed`
   - extend `config/services.yaml` tags
   - update docs/feed-controller-ui-ux-review.md with new weighting
   - recorded rationale in decision log”
-- ❌ Bad: “misc updates” with untested PHP changes, no documentation updates, and missing Conventional Commit prefix.
+- ❌ Bad: “misc updates” with untested PHP changes, no documentation updates, and a subject the `commit-convention` gate would reject.
 
 ## When stuck
 - Check `README.md`, architecture docs in `docs/`, and service wiring in `config/services.yaml`.
@@ -65,3 +65,10 @@
 ## House Rules
 - Global defaults from the canonical prompt apply (strict types, SOLID, DRY/KISS, SemVer, Docker-first, ≥80% coverage on touched code, WCAG 2.2 AA, etc.).
 - No additional global overrides beyond what’s listed above; rely on scoped guides for specifics.
+
+## Git flow
+
+- Commit subjects — and the pull-request title — are governed by the shared `commit-convention` gate; the normative rule and its full rationale live in `magicsunday/.github/.github/workflows/commit-convention.yml@main`, which self-tests a decision table before applying it. In short: a `GH-`-prefixed subject must match `^GH-\d+: [A-Z]`, every other subject `^[A-Z]` — a capitalised English imperative — and conventional-commit prefixes (`feat:`, `Fix:`, …) as well as path-like starts (`src/…: …`) are rejected whatever their case. It runs on every pull request via `.github/workflows/commit-lint.yml`, advisory until `commit-convention / Commit convention` is a required context in branch protection.
+- Branches for an issue are named exactly `GH-<N>`; the `GH-<N>: ` prefix marks work that belongs to that issue, so a drive-by fix on the branch keeps its own unprefixed subject.
+- The pull-request body closes the issue with `Closes #<N>` — the `GH-<N>: ` subject prefix is not a GitHub link and closes nothing.
+- Never add a `Co-Authored-By:` trailer or any other AI attribution.
