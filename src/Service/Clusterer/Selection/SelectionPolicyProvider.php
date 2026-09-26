@@ -43,7 +43,7 @@ final class SelectionPolicyProvider
     /**
      * @var array<string, array<string, string>>
      */
-    private array $algorithmProfiles = [];
+    private array $algorithmProfiles;
 
     /**
      * @var array<string, array{
@@ -52,7 +52,7 @@ final class SelectionPolicyProvider
      *     scalar_overrides: array<string, int|float|bool>,
      * }>
      */
-    private array $profileConstraints = [];
+    private array $profileConstraints;
 
     /**
      * @param array<string, array<string, int|float|string|null>> $profiles
@@ -331,9 +331,7 @@ final class SelectionPolicyProvider
                 continue;
             }
 
-            if (!isset($sanitised[self::DEFAULT_STORYLINE])) {
-                $sanitised[self::DEFAULT_STORYLINE] = reset($sanitised);
-            }
+            $sanitised[self::DEFAULT_STORYLINE] ??= reset($sanitised);
 
             $result[$algorithm] = $sanitised;
         }

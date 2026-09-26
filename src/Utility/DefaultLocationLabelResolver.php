@@ -273,12 +273,10 @@ final readonly class DefaultLocationLabelResolver implements LocationLabelResolv
 
         $normalized = mb_strtolower($trimmed, 'UTF-8');
 
-        if (!isset($bucket[$normalized])) {
-            $bucket[$normalized] = [
-                'count'    => 0,
-                'variants' => [],
-            ];
-        }
+        $bucket[$normalized] ??= [
+            'count'    => 0,
+            'variants' => [],
+        ];
 
         ++$bucket[$normalized]['count'];
         $bucket[$normalized]['variants'][$trimmed] = ($bucket[$normalized]['variants'][$trimmed] ?? 0) + 1;

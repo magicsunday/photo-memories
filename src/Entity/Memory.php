@@ -52,7 +52,7 @@ class Memory
      * Relevance score used to rank memory suggestions.
      */
     #[ORM\Column(type: Types::FLOAT)]
-    private float $score = 0.0;
+    private float $score;
 
     /**
      * Generated HTML snippet used for previews.

@@ -65,9 +65,7 @@ final readonly class DuplicateHandlingStage implements MediaIngestionStageInterf
             $existing = null;
         }
 
-        if ($existing === null) {
-            $existing = $repository->findOneBy(['checksum' => $checksum]);
-        }
+        $existing ??= $repository->findOneBy(['checksum' => $checksum]);
 
         if ($existing instanceof Media) {
             $existing->setFastChecksumXxhash64($fastChecksum);

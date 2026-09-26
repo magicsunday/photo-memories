@@ -186,9 +186,7 @@ final class ClusterMemberSelectionService implements ClusterMemberSelectionServi
 
             if ($item->getGpsLat() !== null && $item->getGpsLon() !== null) {
                 $summaries[$date]['gpsMembers'][] = $item;
-                if ($summaries[$date]['firstGpsMedia'] === null) {
-                    $summaries[$date]['firstGpsMedia'] = $item;
-                }
+                $summaries[$date]['firstGpsMedia'] ??= $item;
 
                 $summaries[$date]['lastGpsMedia'] = $item;
             }

@@ -38,7 +38,7 @@ final class ComposerAutoload
         }
 
         $autoloadPaths = [
-            dirname(__DIR__) . '/../vendor/autoload.php',
+            __DIR__ . '/../../vendor/autoload.php',
             dirname(__DIR__, 4) . '/autoload.php',
         ];
 

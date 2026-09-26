@@ -49,7 +49,7 @@ final class CompositeClusterScorer
     private array $algorithmGroups = [];
 
     /** @var array<string,array<string,array<string,float>>> */
-    private array $algorithmWeightOverrides = [];
+    private array $algorithmWeightOverrides;
 
     /**
      * @param iterable<ClusterScoreHeuristicInterface> $heuristics
@@ -425,9 +425,7 @@ final class CompositeClusterScorer
                 continue;
             }
 
-            if (!isset($storylines[self::DEFAULT_STORYLINE])) {
-                $storylines[self::DEFAULT_STORYLINE] = reset($storylines);
-            }
+            $storylines[self::DEFAULT_STORYLINE] ??= reset($storylines);
 
             $result[$algorithm] = $storylines;
         }

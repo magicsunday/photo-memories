@@ -195,13 +195,9 @@ final readonly class StoryTitleBuilder
     private function formatPeopleShare(array $params): string
     {
         $ratio = $this->numericOrNull($params['people_ratio'] ?? null);
-        if ($ratio === null) {
-            $ratio = $this->numericOrNull($params['cohort_presence_ratio'] ?? null);
-        }
+        $ratio ??= $this->numericOrNull($params['cohort_presence_ratio'] ?? null);
 
-        if ($ratio === null) {
-            $ratio = 0.0;
-        }
+        $ratio ??= 0.0;
 
         if ($ratio < 0.0) {
             $ratio = 0.0;

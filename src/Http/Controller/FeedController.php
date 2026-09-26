@@ -415,9 +415,7 @@ final class FeedController
         $now     = $this->referenceTime ?? new DateTimeImmutable();
         $baseUrl = rtrim($request->getBaseUrl(), '/');
 
-        if ($fieldSelection === null) {
-            $fieldSelection = $this->resolveFieldSelection($request);
-        }
+        $fieldSelection ??= $this->resolveFieldSelection($request);
 
         $itemGroups = $fieldSelection['itemGroups'];
 
@@ -1946,14 +1944,12 @@ final class FeedController
             }
 
             $key = $date->format('Y-m');
-            if (!isset($groups[$key])) {
-                $groups[$key] = [
-                    'monat'     => (int) $date->format('n'),
-                    'jahr'      => (int) $date->format('Y'),
-                    'titel'     => $this->formatMonthLabel($date, $locale),
-                    'eintraege' => [],
-                ];
-            }
+            $groups[$key] ??= [
+                'monat'     => (int) $date->format('n'),
+                'jahr'      => (int) $date->format('Y'),
+                'titel'     => $this->formatMonthLabel($date, $locale),
+                'eintraege' => [],
+            ];
 
             $groups[$key]['eintraege'][] = [
                 'id'          => $this->createItemId($item),

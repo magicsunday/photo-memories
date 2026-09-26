@@ -285,9 +285,7 @@ final class MemberQualityRankingStage extends AbstractClusterScoreHeuristic impl
 
         if ($score === null) {
             $resolution = $this->resolveResolutionScore($media);
-            if ($resolution === null) {
-                $resolution = $avgResolution;
-            }
+            $resolution ??= $avgResolution;
 
             $sharpness = $media->getSharpness();
             $sharpness = $sharpness !== null ? $this->clamp01($sharpness) : $avgSharpness;

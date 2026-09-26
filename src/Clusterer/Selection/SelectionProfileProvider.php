@@ -31,10 +31,10 @@ use const FILTER_VALIDATE_BOOLEAN;
 final class SelectionProfileProvider
 {
     /** @var array<string, array<string, int|float|bool>> */
-    private array $profiles = [];
+    private array $profiles;
 
     /** @var array<string, string> */
-    private array $algorithmProfiles = [];
+    private array $algorithmProfiles;
 
     /** @var array<string, int|float|bool> */
     private array $runtimeOverrides = [];

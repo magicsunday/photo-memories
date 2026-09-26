@@ -833,9 +833,7 @@ final readonly class ClusterPersistenceService implements ClusterPersistenceInte
             $id  = $location->getId();
             $key = $id !== null ? 'id_' . $id : 'obj_' . spl_object_id($location);
 
-            if (!isset($counts[$key])) {
-                $counts[$key] = ['location' => $location, 'count' => 0];
-            }
+            $counts[$key] ??= ['location' => $location, 'count' => 0];
 
             ++$counts[$key]['count'];
         }

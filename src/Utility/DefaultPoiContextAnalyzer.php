@@ -155,15 +155,13 @@ final readonly class DefaultPoiContextAnalyzer implements PoiContextAnalyzerInte
             $categoryValue = $poi['categoryValue'] ?? null;
             $key           = strtolower($label . '|' . ($categoryKey ?? '') . '|' . ($categoryValue ?? ''));
 
-            if (!isset($counts[$key])) {
-                $counts[$key] = [
-                    'label'         => $label,
-                    'categoryKey'   => $categoryKey,
-                    'categoryValue' => $categoryValue,
-                    'tags'          => [],
-                    'count'         => 0,
-                ];
-            }
+            $counts[$key] ??= [
+                'label'         => $label,
+                'categoryKey'   => $categoryKey,
+                'categoryValue' => $categoryValue,
+                'tags'          => [],
+                'count'         => 0,
+            ];
 
             ++$counts[$key]['count'];
 

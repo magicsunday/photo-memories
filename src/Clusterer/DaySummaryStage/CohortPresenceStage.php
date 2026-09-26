@@ -120,9 +120,7 @@ final class CohortPresenceStage implements DaySummaryStageInterface
                     }
 
                     $present[$canonicalId] = true;
-                    if (!isset($frequency[$canonicalId])) {
-                        $frequency[$canonicalId] = 0;
-                    }
+                    $frequency[$canonicalId] ??= 0;
 
                     ++$frequency[$canonicalId];
                 }

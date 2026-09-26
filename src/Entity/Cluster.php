@@ -113,7 +113,7 @@ class Cluster
      * Number of members contained in the cluster.
      */
     #[ORM\Column(name: 'members_count', type: Types::INTEGER, options: ['unsigned' => true])]
-    private int $membersCount = 0;
+    private int $membersCount;
 
     /**
      * Number of photo members contained in the cluster.

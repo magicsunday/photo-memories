@@ -146,9 +146,7 @@ final readonly class HolidayEventClusterStrategy implements ClusterStrategyInter
             $parsed = $this->parseHolidayId($calendarFeatures['holidayId']);
             if ($parsed !== null) {
                 $name = $this->holidayNameFromCode($parsed['code']);
-                if ($name === null) {
-                    $name = Calendar::germanFederalHolidayName($takenAt);
-                }
+                $name ??= Calendar::germanFederalHolidayName($takenAt);
 
                 if ($name !== null) {
                     return [

@@ -931,17 +931,11 @@ final class VacationMemberSelectorTest extends TestCase
 
         $summary['staypointCounts'] = $summary['staypointIndex']->getCounts();
 
-        if (!isset($summary['dominantStaypoints'])) {
-            $summary['dominantStaypoints'] = [];
-        }
+        $summary['dominantStaypoints'] ??= [];
 
-        if (!isset($summary['transitRatio'])) {
-            $summary['transitRatio'] = 0.0;
-        }
+        $summary['transitRatio'] ??= 0.0;
 
-        if (!isset($summary['poiDensity'])) {
-            $summary['poiDensity'] = 0.0;
-        }
+        $summary['poiDensity'] ??= 0.0;
 
         return $summary;
     }
