@@ -92,7 +92,7 @@ final class ClusterDraft
     /**
      * Cached count of members for quick read access without recalculating the array size.
      */
-    private int $membersCount = 0;
+    private int $membersCount;
 
     /**
      * Number of photos that belong to the cluster.
@@ -127,12 +127,12 @@ final class ClusterDraft
     /**
      * Latitude of the cluster centroid stored for quick access.
      */
-    private ?float $centroidLat = null;
+    private ?float $centroidLat;
 
     /**
      * Longitude of the cluster centroid stored for quick access.
      */
-    private ?float $centroidLon = null;
+    private ?float $centroidLon;
 
     /**
      * S2 cell identifier with level 7 precision representing the centroid.

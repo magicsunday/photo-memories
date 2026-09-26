@@ -185,16 +185,14 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
             }
 
             $key = $this->homeClusterKey($media, $lat, $lon);
-            if (!isset($clusters[$key])) {
-                $clusters[$key] = [
-                    'members'        => [],
-                    'nightSamples'   => [],
-                    'countryCounts'  => [],
-                    'offsets'        => [],
-                    'firstTimestamp' => null,
-                    'lastTimestamp'  => null,
-                ];
-            }
+            $clusters[$key] ??= [
+                'members'        => [],
+                'nightSamples'   => [],
+                'countryCounts'  => [],
+                'offsets'        => [],
+                'firstTimestamp' => null,
+                'lastTimestamp'  => null,
+            ];
 
             $timestamp = $local->getTimestamp();
             $first     = $clusters[$key]['firstTimestamp'];
@@ -225,9 +223,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
                 $country     = $countryCode ?? $location->getCountry();
                 if ($country !== null) {
                     $countryKey = strtolower($country);
-                    if (!isset($clusters[$key]['countryCounts'][$countryKey])) {
-                        $clusters[$key]['countryCounts'][$countryKey] = 0;
-                    }
+                    $clusters[$key]['countryCounts'][$countryKey] ??= 0;
 
                     ++$clusters[$key]['countryCounts'][$countryKey];
                 }
@@ -235,9 +231,7 @@ final readonly class DefaultHomeLocator implements HomeLocatorInterface
 
             $offset = $media->getTimezoneOffsetMin();
             if ($offset !== null) {
-                if (!isset($clusters[$key]['offsets'][$offset])) {
-                    $clusters[$key]['offsets'][$offset] = 0;
-                }
+                $clusters[$key]['offsets'][$offset] ??= 0;
 
                 ++$clusters[$key]['offsets'][$offset];
             }

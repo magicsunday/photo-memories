@@ -199,9 +199,7 @@ final readonly class DefaultVacationSegmentAssembler implements VacationSegmentA
         }
 
         $qualityMedian = $this->median($qualitySamples);
-        if ($qualityMedian === null) {
-            $qualityMedian = 0.5;
-        }
+        $qualityMedian ??= 0.5;
 
         $diversityBase = max(0, ($summary['staypointCount'] ?? 0) + ($summary['spotCount'] ?? 0));
         $diversity     = min(1.0, $diversityBase / 6.0);

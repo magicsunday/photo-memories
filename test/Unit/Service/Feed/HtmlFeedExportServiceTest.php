@@ -165,7 +165,7 @@ final class HtmlFeedExportServiceTest extends TestCase
             'story',
             'algo',
             ['group' => 'familie'],
-            ['lat'   => 0.0, 'lon' => 0.0],
+            ['lat' => 0.0, 'lon' => 0.0],
             [1, 2],
         );
 

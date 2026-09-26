@@ -511,7 +511,7 @@ final class ClusterPersistenceServiceTest extends TestCase
             'story',
             'demo',
             ['storyline' => 'default'],
-            ['lat'       => 48.123456, 'lon' => 11.654321],
+            ['lat' => 48.123456, 'lon' => 11.654321],
             [1, 2],
         );
 

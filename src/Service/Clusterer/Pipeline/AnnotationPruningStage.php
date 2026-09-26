@@ -29,7 +29,7 @@ final class AnnotationPruningStage implements ClusterConsolidationStageInterface
     use StageSupportTrait;
 
     /** @var array<string,bool> */
-    private array $annotateOnlySet = [];
+    private array $annotateOnlySet;
 
     /**
      * @param list<string>        $annotateOnly

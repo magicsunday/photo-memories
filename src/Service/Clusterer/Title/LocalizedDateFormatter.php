@@ -207,9 +207,7 @@ final readonly class LocalizedDateFormatter
     private function normalizeLocale(string $locale): string
     {
         $canonical = Locale::canonicalize($locale);
-        if ($canonical === null) {
-            $canonical = 'de_DE';
-        }
+        $canonical ??= 'de_DE';
 
         $segments = explode('_', str_replace('-', '_', $canonical));
         if (count($segments) === 1) {

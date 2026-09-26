@@ -201,8 +201,6 @@ trait SelectionOverrideInputTrait
             }
 
             $floatValue = (float) $rawValue;
-        } elseif (is_numeric($rawValue)) {
-            $floatValue = (float) $rawValue;
         } else {
             throw new InvalidArgumentException(
                 sprintf('Option "--%s" requires a numeric value.', $optionName)

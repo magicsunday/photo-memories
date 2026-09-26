@@ -314,9 +314,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
 
                 $cohortMembers = $summary['cohortMembers'] ?? [];
                 foreach ($cohortMembers as $personId => $count) {
-                    if (!isset($cohortMemberAggregate[$personId])) {
-                        $cohortMemberAggregate[$personId] = 0;
-                    }
+                    $cohortMemberAggregate[$personId] ??= 0;
 
                     $cohortMemberAggregate[$personId] += (int) $count;
                 }
@@ -333,9 +331,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
             }
 
             foreach ($summary['timezoneOffsets'] as $offset => $count) {
-                if (!isset($timezoneOffsets[$offset])) {
-                    $timezoneOffsets[$offset] = 0;
-                }
+                $timezoneOffsets[$offset] ??= 0;
 
                 $timezoneOffsets[$offset] += $count;
             }
@@ -885,9 +881,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 continue;
             }
 
-            if (!isset($perDayCounts[$dayKey])) {
-                $perDayCounts[$dayKey] = 0;
-            }
+            $perDayCounts[$dayKey] ??= 0;
 
             ++$perDayCounts[$dayKey];
         }
@@ -900,9 +894,7 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
         }
 
         $timeRange = $this->determineRunTimeRange($dayKeys, $days, $rawMembers);
-        if ($timeRange === null) {
-            $timeRange = MediaMath::timeRange($curatedMembers);
-        }
+        $timeRange ??= MediaMath::timeRange($curatedMembers);
 
         $memberIds = array_map(
             static fn (Media $media): int => (int) $media->getId(),
@@ -2115,13 +2107,9 @@ final class VacationScoreCalculator implements VacationScoreCalculatorInterface
                 continue;
             }
 
-            if ($startTs === null) {
-                $startTs = $endTs;
-            }
+            $startTs ??= $endTs;
 
-            if ($endTs === null) {
-                $endTs = $startTs;
-            }
+            $endTs ??= $startTs;
 
             if ($from === null || $startTs < $from) {
                 $from = $startTs;

@@ -50,7 +50,7 @@ class ClusterMember
     private ClusterMemberRole $role;
 
     #[ORM\Column(name: 'local_score', type: Types::FLOAT, nullable: true)]
-    private ?float $localScore = null;
+    private ?float $localScore;
 
     #[ORM\Column(name: 'ordering', type: Types::INTEGER, options: ['unsigned' => true])]
     private int $ordering;

@@ -153,9 +153,7 @@ final class VideoFrameSampler implements VideoFrameSamplerInterface
     private function resolvePosterTime(Media $media, string $videoPath): float
     {
         $duration = $media->getVideoDurationS();
-        if ($duration === null) {
-            $duration = $this->probeVideoDuration($videoPath);
-        }
+        $duration ??= $this->probeVideoDuration($videoPath);
 
         if ($duration !== null && $duration > 0.0) {
             $candidate = $duration * 0.25;
