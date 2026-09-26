@@ -34,9 +34,7 @@ final class DefaultPoiNormalizer implements PoiNormalizerInterface
     {
         $name  = is_string($poi['name'] ?? null) && $poi['name'] !== '' ? $poi['name'] : null;
         $names = $this->normaliseNames($poi['names'] ?? null, $name);
-        if ($name === null) {
-            $name = $this->coalesceName($names);
-        }
+        $name ??= $this->coalesceName($names);
 
         $categoryKey   = is_string($poi['categoryKey'] ?? null) && $poi['categoryKey'] !== '' ? $poi['categoryKey'] : null;
         $categoryValue = is_string($poi['categoryValue'] ?? null) && $poi['categoryValue'] !== '' ? $poi['categoryValue'] : null;

@@ -230,9 +230,7 @@ trait ClusterBuildHelperTrait
         /** @var ClusterPeopleAggregator|null $peopleAggregator */
         static $peopleAggregator = null;
 
-        if ($peopleAggregator === null) {
-            $peopleAggregator = new ClusterPeopleAggregator();
-        }
+        $peopleAggregator ??= new ClusterPeopleAggregator();
 
         return $peopleAggregator->buildParams($members);
     }

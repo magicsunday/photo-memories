@@ -1170,9 +1170,7 @@ final readonly class SlideshowVideoGenerator implements SlideshowVideoGeneratorI
     {
         static $cache = null;
 
-        if ($cache === null) {
-            $cache = new SlideshowTransitionCache();
-        }
+        $cache ??= new SlideshowTransitionCache();
 
         return $cache;
     }

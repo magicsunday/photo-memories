@@ -224,9 +224,7 @@ final readonly class StaypointDetector implements StaypointDetectorInterface
         $spotCount   = isset($context['spotCount']) ? max(0, $context['spotCount']) : null;
         $spotDensity = $context['spotDensity'] ?? null;
 
-        if ($spotDensity === null) {
-            $spotDensity = $this->estimateSpotDensity($gpsMembers, $spotCount, $travelKm);
-        }
+        $spotDensity ??= $this->estimateSpotDensity($gpsMembers, $spotCount, $travelKm);
 
         if ($gpsMembers === [] || ($travelKm === 0.0 && $spotDensity === 0.0)) {
             return [

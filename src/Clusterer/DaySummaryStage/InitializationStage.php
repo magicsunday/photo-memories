@@ -132,59 +132,57 @@ final readonly class InitializationStage implements DaySummaryStageInterface
             $offsetMinutes = intdiv($local->getOffset(), 60);
             $timezoneName  = $mediaTimezone->getName();
 
-            if (!isset($summaries[$date])) {
-                $summaries[$date] = [
-                    'date'                    => $date,
-                    'members'                 => [],
-                    'gpsMembers'              => [],
-                    'maxDistanceKm'           => 0.0,
-                    'distanceSum'             => 0.0,
-                    'distanceCount'           => 0,
-                    'avgDistanceKm'           => 0.0,
-                    'travelKm'                => 0.0,
-                    'maxSpeedKmh'             => 0.0,
-                    'avgSpeedKmh'             => 0.0,
-                    'hasHighSpeedTransit'     => false,
-                    'countryCodes'            => [],
-                    'timezoneOffsets'         => [],
-                    'localTimezoneIdentifier' => $timezoneName,
-                    'localTimezoneOffset'     => $offsetMinutes,
-                    'tourismHits'             => 0,
-                    'poiSamples'              => 0,
-                    'tourismRatio'            => 0.0,
-                    'hasAirportPoi'           => false,
-                    'weekday'                 => (int) $local->format('N'),
-                    'photoCount'              => 0,
-                    'densityZ'                => 0.0,
-                    'isAwayCandidate'         => false,
-                    'sufficientSamples'       => false,
-                    'spotClusters'            => [],
-                    'spotNoise'               => [],
-                    'spotCount'               => 0,
-                    'spotNoiseSamples'        => 0,
-                    'spotDensity'             => 0.0,
-                    'spotDwellSeconds'        => 0,
-                    'staypoints'              => [],
-                    'staypointIndex'          => StaypointIndex::empty(),
-                    'staypointCounts'         => [],
-                    'staypointCount'          => 0,
-                    'staypointDwellSeconds'   => 0,
-                    'dominantStaypoints'      => [],
-                    'primaryStaypointKey'     => null,
-                    'transitRatio'            => 0.0,
-                    'poiDensity'              => 0.0,
-                    'cohortPresenceRatio'     => 0.0,
-                    'cohortMembers'           => [],
-                    'baseLocation'            => null,
-                    'baseAway'                => false,
-                    'awayByDistance'          => false,
-                    'firstGpsMedia'           => null,
-                    'lastGpsMedia'            => null,
-                    'timezoneIdentifierVotes' => [],
-                    'isSynthetic'             => false,
-                    'selectionContext'        => null,
-                ];
-            }
+            $summaries[$date] ??= [
+                'date'                    => $date,
+                'members'                 => [],
+                'gpsMembers'              => [],
+                'maxDistanceKm'           => 0.0,
+                'distanceSum'             => 0.0,
+                'distanceCount'           => 0,
+                'avgDistanceKm'           => 0.0,
+                'travelKm'                => 0.0,
+                'maxSpeedKmh'             => 0.0,
+                'avgSpeedKmh'             => 0.0,
+                'hasHighSpeedTransit'     => false,
+                'countryCodes'            => [],
+                'timezoneOffsets'         => [],
+                'localTimezoneIdentifier' => $timezoneName,
+                'localTimezoneOffset'     => $offsetMinutes,
+                'tourismHits'             => 0,
+                'poiSamples'              => 0,
+                'tourismRatio'            => 0.0,
+                'hasAirportPoi'           => false,
+                'weekday'                 => (int) $local->format('N'),
+                'photoCount'              => 0,
+                'densityZ'                => 0.0,
+                'isAwayCandidate'         => false,
+                'sufficientSamples'       => false,
+                'spotClusters'            => [],
+                'spotNoise'               => [],
+                'spotCount'               => 0,
+                'spotNoiseSamples'        => 0,
+                'spotDensity'             => 0.0,
+                'spotDwellSeconds'        => 0,
+                'staypoints'              => [],
+                'staypointIndex'          => StaypointIndex::empty(),
+                'staypointCounts'         => [],
+                'staypointCount'          => 0,
+                'staypointDwellSeconds'   => 0,
+                'dominantStaypoints'      => [],
+                'primaryStaypointKey'     => null,
+                'transitRatio'            => 0.0,
+                'poiDensity'              => 0.0,
+                'cohortPresenceRatio'     => 0.0,
+                'cohortMembers'           => [],
+                'baseLocation'            => null,
+                'baseAway'                => false,
+                'awayByDistance'          => false,
+                'firstGpsMedia'           => null,
+                'lastGpsMedia'            => null,
+                'timezoneIdentifierVotes' => [],
+                'isSynthetic'             => false,
+                'selectionContext'        => null,
+            ];
 
             $summary              = &$summaries[$date];
             $summary['members'][] = $media;
@@ -196,15 +194,11 @@ final readonly class InitializationStage implements DaySummaryStageInterface
                 $summary['gpsMembers'][] = $media;
             }
 
-            if (!isset($summary['timezoneOffsets'][$offsetMinutes])) {
-                $summary['timezoneOffsets'][$offsetMinutes] = 0;
-            }
+            $summary['timezoneOffsets'][$offsetMinutes] ??= 0;
 
             ++$summary['timezoneOffsets'][$offsetMinutes];
 
-            if (!isset($summary['timezoneIdentifierVotes'][$timezoneName])) {
-                $summary['timezoneIdentifierVotes'][$timezoneName] = 0;
-            }
+            $summary['timezoneIdentifierVotes'][$timezoneName] ??= 0;
 
             ++$summary['timezoneIdentifierVotes'][$timezoneName];
 
@@ -284,9 +278,7 @@ final readonly class InitializationStage implements DaySummaryStageInterface
         $cursor = $first;
         while ($cursor <= $last) {
             $key = $cursor->format('Y-m-d');
-            if (!isset($days[$key])) {
-                $days[$key] = $this->createSyntheticDaySummary($key);
-            }
+            $days[$key] ??= $this->createSyntheticDaySummary($key);
 
             $cursor = $cursor->modify('+1 day');
         }

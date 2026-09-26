@@ -296,9 +296,7 @@ final class FeedStoryboardIntegrationTest extends TestCase
                 continue;
             }
 
-            if ($coverMediaId === null) {
-                $coverMediaId = $memberIds[0];
-            }
+            $coverMediaId ??= $memberIds[0];
 
             $uniqueTags = array_values(array_unique($clusterTags));
 

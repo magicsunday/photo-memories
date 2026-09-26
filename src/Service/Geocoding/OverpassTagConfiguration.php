@@ -31,8 +31,8 @@ final class OverpassTagConfiguration
         ['tourism' => ['attraction', 'viewpoint', 'museum', 'gallery']],
         ['historic' => ['monument', 'castle', 'memorial']],
         ['man_made' => ['tower', 'lighthouse']],
-        ['leisure'  => ['park', 'garden']],
-        ['natural'  => ['peak', 'cliff']],
+        ['leisure' => ['park', 'garden']],
+        ['natural' => ['peak', 'cliff']],
     ];
 
     /**
@@ -106,9 +106,7 @@ final class OverpassTagConfiguration
 
         foreach ($combinations as $combination) {
             foreach ($combination as $key => $values) {
-                if (!isset($flat[$key])) {
-                    $flat[$key] = [];
-                }
+                $flat[$key] ??= [];
 
                 $flat[$key] = array_values(array_unique(array_merge($flat[$key], $values)));
             }

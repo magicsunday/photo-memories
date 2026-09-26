@@ -212,9 +212,7 @@ final class DuplicateParameterGuardCompilerPass implements CompilerPassInterface
                 continue;
             }
 
-            if (!isset($duplicateLines[$parameterName])) {
-                $duplicateLines[$parameterName] = [$firstSeen[$parameterName]];
-            }
+            $duplicateLines[$parameterName] ??= [$firstSeen[$parameterName]];
 
             $duplicateLines[$parameterName][] = $lineNumber;
         }

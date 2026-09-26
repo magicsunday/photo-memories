@@ -63,10 +63,11 @@ final class MediaRepositoryTest extends TestCase
         $em
             ->expects(self::exactly(2))
             ->method('find')
-            ->willReturnMap([
-                [Media::class, 10, null, null, $mediaA],
-                [Media::class, 11, null, null, $mediaB],
-            ]);
+            ->willReturnCallback(static fn (string $className, mixed $id): ?Media => match ([$className, $id]) {
+                [Media::class, 10] => $mediaA,
+                [Media::class, 11] => $mediaB,
+                default            => null,
+            });
 
         $repository = new MediaRepository($em, 16);
 

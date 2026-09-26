@@ -473,9 +473,7 @@ final class DefaultCoverPicker implements CoverPickerInterface
             $score = max($score ?? 0.0, $detail['score']);
         }
 
-        if ($score === null) {
-            $score = min(1.0, $areaMp / 12.0);
-        }
+        $score ??= min(1.0, $areaMp / 12.0);
 
         if ($media->isLowQuality()) {
             $score *= 0.6;

@@ -208,7 +208,7 @@ final class VacationClusterStrategyTest extends TestCase
                     new ClusterDraft(
                         'vacation',
                         ['stub' => true],
-                        ['lat'  => 0.0, 'lon' => 0.0],
+                        ['lat' => 0.0, 'lon' => 0.0],
                         $this->receivedMembers,
                     ),
                 ];
@@ -445,7 +445,7 @@ final class VacationClusterStrategyTest extends TestCase
             new ClusterDraft(
                 'vacation',
                 ['classification' => 'vacation'],
-                ['lat'            => 40.7128, 'lon' => -74.0060],
+                ['lat' => 40.7128, 'lon' => -74.0060],
                 [$mediaA->getId(), $mediaB->getId()],
             ),
         ];

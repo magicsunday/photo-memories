@@ -73,7 +73,7 @@ final class TransitionSequenceGenerator
         $previousTransition = null;
         while (count($sequence) < $slideCount) {
             $shuffled = $randomizer->shuffleArray($pool);
-            if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled !== [] && $shuffled[0] === $previousTransition) {
+            if ($hasMultipleUniqueTransitions && $previousTransition !== null && $shuffled[0] === $previousTransition) {
                 $swapIndex     = null;
                 $shuffledCount = count($shuffled);
                 for ($index = 1; $index < $shuffledCount; ++$index) {
