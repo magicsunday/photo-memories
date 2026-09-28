@@ -12,7 +12,7 @@
     "minLines": 5,
     "path": [
         "../src",
-        "../test",
+        "../tests",
         "../public/app/src"
     ],
     "ignore": [

@@ -161,7 +161,7 @@ Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-O
 - Unter `fixtures/memories/<dataset>/` liegen kuratierte Datensätze inklusive `metadata.json`, SVG-Vorschaubildern (`*.svg`, viewBox 64×64)
   und einem YAML-Goldstandard (`expected.yaml`). Die Szenarien decken Wochenend-Kurztrips, Familienfeiern und Monatsmixe mit
   zeitlichen Lücken ab.
-- `test/Integration/Clusterer/MemoryDatasetClusterPipelineTest.php` lädt die Metadaten, führt die Test-Pipeline
+- `tests/Integration/Clusterer/MemoryDatasetClusterPipelineTest.php` lädt die Metadaten, führt die Test-Pipeline
   (`MemoryDatasetPipeline`) durch und vergleicht die Ausgabe mit dem Goldstandard. Der Test läuft automatisch mit
   `composer ci:test:php:unit`.
 - Neue Szenarien lassen sich anlegen, indem ein zusätzlicher Ordner erzeugt, die Metadaten ergänzt und die Erwartungsdatei
@@ -181,7 +181,7 @@ Mehrere Werte können wie bisher kommasepariert oder als wiederholte `--types`-O
 | `config/` | Symfony-Services, Parameter, Umgebungswerte. |
 | `public/` | HTTP-Einstiegspunkt, SPA-Quellen, ausgelieferte Videos. |
 | `docs/` | Vertiefende Dokumentation (Cluster-Strategien, Integrationsnotizen, Testergebnisse). |
-| `test/` | PHPUnit-Tests unter `MagicSunday\Memories\Test`. |
+| `tests/` | PHPUnit-Tests unter `MagicSunday\Memories\Test`, Playwright-E2E-Tests unter `tests/e2e`. |
 | `.build/`, `Make/`, `scripts/` | Build- und CI-Werkzeuge, Hilfsskripte, QA-Konfiguration. |
 
 ## Weiterführende Dokumente

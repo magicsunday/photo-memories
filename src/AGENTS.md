@@ -16,7 +16,7 @@
   - Static analysis: `composer ci:test:php:phpstan`
   - Refactoring safety: `composer ci:test:php:rector` and `composer ci:test:php:fractor`
   - Unit tests: `composer ci:test:php:unit`
-- For regression fixes, write a failing PHPUnit test in `test/Unit` or `test/Integration` before applying the fix.
+- For regression fixes, write a failing PHPUnit test in `tests/Unit` or `tests/Integration` before applying the fix.
 - Capture executed commands in PR descriptions.
 
 ## Code style
@@ -38,7 +38,7 @@
 - Log noteworthy design decisions in `docs/decision-log.md`.
 
 ## Good vs bad examples
-- ✅ Good: Add `Service/Metadata/LivePhotoEnricher` with constructor-injected dependencies, register via tag in `config/services.yaml`, and cover with a unit test under `test/Unit/Service/Metadata/LivePhotoEnricherTest.php`.
+- ✅ Good: Add `Service/Metadata/LivePhotoEnricher` with constructor-injected dependencies, register via tag in `config/services.yaml`, and cover with a unit test under `tests/Unit/Service/Metadata/LivePhotoEnricherTest.php`.
 - ❌ Bad: Instantiate new services inside commands via `new`, omit service registration, and leave behaviour undocumented and untested.
 
 ## When stuck

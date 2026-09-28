@@ -22,7 +22,7 @@
 
 ## PR/commit checklist
 - Add regression tests before fixing bugs. Remove obsolete fixtures cautiously and update docs when test coverage highlights behaviour changes.
-- Ensure new fixtures live under `test/Support` and are re-used rather than duplicated.
+- Ensure new fixtures live under `tests/Support` and are re-used rather than duplicated.
 
 ## Good vs bad examples
 - ✅ Good: Add a unit test for a metadata enricher that validates German console output and error handling.

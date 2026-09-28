@@ -16,6 +16,6 @@ return FractorConfiguration::configure()
         [
             __DIR__ . '/../config/',
             __DIR__ . '/../src/',
-            __DIR__ . '/../test/',
+            __DIR__ . '/../tests/',
         ]
     );

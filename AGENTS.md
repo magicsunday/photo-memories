@@ -7,7 +7,7 @@
   - `docs/AGENTS.md` – documentation, decision logs, and runbooks.
   - `public/app/AGENTS.md` – Vite SPA, branding tokens, and Playwright usage.
   - `src/AGENTS.md` – PHP source, DI container rules, and testing expectations.
-  - `test/AGENTS.md` – PHPUnit suites.
+  - `tests/AGENTS.md` – PHPUnit suites.
   - `tests/e2e/AGENTS.md` – Playwright end-to-end tests.
 - Decision Log: record noteworthy choices in `docs/decision-log.md` alongside related PRs or commits.
 - Sources merged: prior root `AGENTS.md`, `README.md`, `composer.json`, `Make/*.mk`, and `package.json`.

@@ -63,7 +63,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "MagicSunday\\Memories\\Test\\": "test/"
+            "MagicSunday\\Memories\\Test\\": "tests/"
         }
     },
     "scripts": {
