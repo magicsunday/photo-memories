@@ -7,32 +7,36 @@
   - `docs/AGENTS.md` – documentation, decision logs, and runbooks.
   - `public/app/AGENTS.md` – Vite SPA, branding tokens, and Playwright usage.
   - `src/AGENTS.md` – PHP source, DI container rules, and testing expectations.
-  - `test/AGENTS.md` – PHPUnit suites.
+  - `tests/AGENTS.md` – PHPUnit suites.
   - `tests/e2e/AGENTS.md` – Playwright end-to-end tests.
 - Decision Log: record noteworthy choices in `docs/decision-log.md` alongside related PRs or commits.
 - Sources merged: prior root `AGENTS.md`, `README.md`, `composer.json`, `Make/*.mk`, and `package.json`.
 
 ## Setup & env
-- Use PHP ≥8.4 with required extensions (`dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`). Run `composer install` to pull dependencies into `.build/vendor`.
+- Use PHP ≥8.4 with required extensions (`dom`, `exif`, `fileinfo`, `pdo`, `pdo_mysql`). Run `composer install` to pull dependencies into `vendor/`.
 - Node 20+ is recommended for Vite/Playwright tooling; install npm packages before running web targets.
 - Load project environment via direnv: `direnv allow` (see `.envrc`). Runtime configuration lives in `.env[.local]` and `config/parameters.yaml`.
 - Clear Symfony caches (e.g., delete `var/cache/DependencyContainer.php`) if service wiring changes.
 
 ## Build & tests
 - CLI help: `make help`.
-- Full PHP quality gate: `composer ci:test` (runs linting, static analysis, coding style, Rector/Fractor dry-runs, and PHPUnit).
-- Targeted PHP checks (see scoped guides for details):
-  - `composer ci:test:php:lint`
-  - `composer ci:test:php:phpstan`
-  - `composer ci:test:php:cgl`
-  - `composer ci:test:php:rector`
-  - `composer ci:test:php:fractor`
-  - `composer ci:test:php:unit`
+- The QA tooling comes from the shared `magicsunday/coding-standard` package (`require-dev`), which delivers php-cs-fixer, PHPStan with its rule packs, Rector, phplint, Deptrac and PHPUnit. The configs at the repository root import its shared parts from `vendor/magicsunday/coding-standard/…` (`.php-cs-fixer.dist.php`, `phpstan.neon`, `rector.php`, `deptrac.yaml`); `phpunit.xml`, `.phplint.yml`, `.jscpd.json`, `.editorconfig` and `.gitattributes` are adapted copies of its templates, kept in step by `composer ci:test:php:templates`. Adoption is tracked in #783: PHPStan runs on `level: 8` until the level-max typing work lands, and the Deptrac layer map is still open, so several gates are red until the follow-up work.
+- Full PHP quality gate: `composer ci:test` (runs every `ci:test:php:*` gate below).
+- Targeted PHP checks (see scoped guides for details); CI runs each as its own step:
+  - `composer ci:test:php:lint` – phplint
+  - `composer ci:test:php:cgl` – php-cs-fixer dry-run
+  - `composer ci:test:php:rector` – Rector dry-run
+  - `composer ci:test:php:fractor` – Fractor dry-run
+  - `composer ci:test:php:phpstan` – PHPStan
+  - `composer ci:test:php:deptrac` – Deptrac layers, unassigned classes and the layer-cycle gate
+  - `composer ci:test:php:templates` – template lockstep check against the shared canon
+  - `composer ci:test:php:unit` – PHPUnit (`phpunit.xml`, runs `tests/` except `tests/e2e`)
+  - `composer ci:test:php:cpd` – jscpd copy-paste detection (PHP, JavaScript, TypeScript)
 - Front-end tooling: `npm run dev`, `npm run build`, `npm run preview`, and `npm run test:e2e`. `make web-*` mirrors these commands.
 - Document the exact commands executed in PRs.
 
 ## Code style
-- Default PHP style is PSR-12 plus project rules enforced by `.build/.php-cs-fixer.dist.php`. Follow namespace `MagicSunday\Memories\…` and prefer constructor injection.
+- Default PHP style is PSR-12 plus project rules enforced by `.php-cs-fixer.dist.php` (shared `magicsunday/coding-standard` ruleset). Follow namespace `MagicSunday\Memories\…` and prefer constructor injection.
 - JavaScript/TypeScript follows Vite defaults with Prettier-friendly formatting; align with CSS tokens defined in the front-end scope.
 - Strings presented to end users default to German, while exceptions and errors stay in English.
 - Update docs/runbooks when behaviour, interfaces, or configuration change.

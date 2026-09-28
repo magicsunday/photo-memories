@@ -35,8 +35,8 @@ These tags keep the pipeline discoverable through the service locator defined in
 ## Writing PHPUnit and functional tests
 
 1. Start with fixture coverage. Reuse or extend datasets under `fixtures/memories/` as described in the [testing fixtures catalogue](./testing-fixtures.md). When new behaviour requires fresh expectations, duplicate the closest dataset and update `metadata.json` plus `expected.yaml`.
-2. Write unit tests in `test/Unit/...` for pure scoring heuristics, or `test/Integration/...` for end-to-end cluster pipeline checks. Follow the existing namespace conventions (`MagicSunday\Memories\Tests\...`).
-3. Use the pipeline helpers from `test/Integration/Clusterer/MemoryDatasetClusterPipelineTest.php` to execute a dataset against the new strategy. Update assertions to cover:
+2. Write unit tests in `tests/Unit/...` for pure scoring heuristics, or `tests/Integration/...` for end-to-end cluster pipeline checks. Follow the existing namespace conventions (`MagicSunday\Memories\Tests\...`).
+3. Use the pipeline helpers from `tests/Integration/Clusterer/MemoryDatasetClusterPipelineTest.php` to execute a dataset against the new strategy. Update assertions to cover:
    - cluster membership changes,
    - ranking adjustments, and
    - any new explainability annotations.

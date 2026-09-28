@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-09-28 – Adopt the shared magicsunday/coding-standard tooling
+- **Author:** Rico Sonntag
+- **Context:** The QA tool versions and configs were maintained per repository under `.build/`, while the sibling repositories share one ruleset through `magicsunday/coding-standard` (#783).
+- **Decision:** `magicsunday/coding-standard` ^3.0 replaces the individual QA tools in `require-dev`; the tool configs move to the repository root and import the shared php-cs-fixer, PHPStan (`base.neon`), Rector and Deptrac configs from `vendor/`; `phpunit.xml`, `.phplint.yml`, `.jscpd.json`, `.editorconfig` and `.gitattributes` are adapted template copies checked by `ci:test:php:templates`; `test/` is renamed to `tests/`. The dependencies stay in the default `vendor/` directory. PHPStan stays on `level: 8` for now, and `deptrac.yaml` imports only the shared layers.
+- **Alternatives considered:** Fixing every finding in the same change (rejected: the level-max typing work and the Deptrac layer map need their own decisions) or a PHPStan baseline (rejected: the level is raised per area instead).
+- **Follow-up actions:** Deptrac layer map and restructuring, `#[CoversClass]` metadata and the php-cs-fixer/Rector reformat, then the typing issues per area until PHPStan level max passes without a baseline; the gates stay red until then.
+
 ## 2025-10-31 – Deprecate vacation-specific curate alias
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators still relied on `memories:curate-vacation`, a legacy shortcut that bypassed new pipeline options and hid the recommended `memories:curate --types=vacation` workflow from release notes. The alias stayed undocumented and silently missed QA coverage for deprecation messaging.
@@ -122,7 +129,7 @@
 ## 2025-10-18 – Preference-aware feed scoring and telemetry
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Algorithm opt-outs were previously handled with a hard drop inside the feed controller, so the response payload lacked telemetry explaining why scores changed and blocked strategies silently disappeared from pagination. Cluster heuristics also consumed static favourite lists, preventing boosts/penalties from reflecting current user preferences.
-- **Decision:** Adjust feed scoring to apply a configurable penalty multiplier for opted-out algorithms while preserving telemetry that captures the applied multiplier and penalty context. Pass `FeedUserPreferences` into the feed builder and preference-aware heuristics so favourite persons/places provide score boosts and negative feedback applies penalties before pagination. Expose the enriched preference metadata (including algorithm penalties) in controller responses and cover the behaviour with unit tests.【F:src/Http/Controller/FeedController.php†L351-L430】【F:src/Service/Feed/MemoryFeedBuilder.php†L400-L474】【F:src/Service/Clusterer/Scoring/PeopleClusterScoreHeuristic.php†L17-L95】【F:src/Service/Clusterer/Scoring/LocationClusterScoreHeuristic.php†L1-L120】【F:test/Unit/Http/Controller/FeedControllerTest.php†L520-L706】
+- **Decision:** Adjust feed scoring to apply a configurable penalty multiplier for opted-out algorithms while preserving telemetry that captures the applied multiplier and penalty context. Pass `FeedUserPreferences` into the feed builder and preference-aware heuristics so favourite persons/places provide score boosts and negative feedback applies penalties before pagination. Expose the enriched preference metadata (including algorithm penalties) in controller responses and cover the behaviour with unit tests.【F:src/Http/Controller/FeedController.php†L351-L430】【F:src/Service/Feed/MemoryFeedBuilder.php†L400-L474】【F:src/Service/Clusterer/Scoring/PeopleClusterScoreHeuristic.php†L17-L95】【F:src/Service/Clusterer/Scoring/LocationClusterScoreHeuristic.php†L1-L120】【F:tests/Unit/Http/Controller/FeedControllerTest.php†L520-L706】
 - **Alternatives considered:** Keep removing opted-out algorithms entirely (rejected because it hid content shifts from telemetry consumers) or leave heuristics unaware of dynamic preferences (rejected as it required redeploying configuration to adapt boosts/penalties).
 - **Follow-up actions:** Monitor feed telemetry for large penalty multipliers to confirm penalties remain within acceptable ranges and extend integration coverage for the composite scorer preference path.
 

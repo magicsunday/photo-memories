@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copied from magicsunday/coding-standard templates/phpunit.xml.dist. The
+    strictness flags are the house standard and stay on: requireCoverageMetadata
+    forces #[CoversClass]/#[CoversNothing] on every test; the failOn* set turns
+    any risky test, warning, notice or deprecation into a red build.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         cacheDirectory=".build/cache/.phpunit.cache"
+         requireCoverageMetadata="true"
+         beStrictAboutCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         failOnNotice="true"
+         failOnDeprecation="true"
+         failOnPhpunitDeprecation="true"
+         failOnPhpunitNotice="true"
+         displayDetailsOnPhpunitDeprecations="true"
+         executionOrder="depends,defects"
+         colors="true"
+         columns="max">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests</directory>
+            <!-- tests/Architecture holds rule classes, never a PHPUnit test. -->
+            <exclude>tests/Architecture</exclude>
+            <!-- The Playwright suite, run by `npm run test:e2e`. -->
+            <exclude>tests/e2e</exclude>
+        </testsuite>
+    </testsuites>
+
+    <source restrictNotices="true"
+            restrictWarnings="true"
+            ignoreIndirectDeprecations="true">
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+
+    <php>
+        <env name="APP_ENV" value="test"/>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="memory_limit" value="4G"/>
+    </php>
+</phpunit>

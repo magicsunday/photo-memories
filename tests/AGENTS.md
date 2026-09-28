@@ -4,13 +4,13 @@
 - Mirrors the structure of `src/`; place tests alongside the functionality they validate.
 
 ## Setup & env
-- Install dev dependencies via `composer install`. PHPUnit config lives in `.build/phpunit.xml`.
+- Install dev dependencies via `composer install`. PHPUnit config lives in `phpunit.xml` at the repository root (strict flags from the shared `magicsunday/coding-standard` template, including `requireCoverageMetadata`: every test class needs `#[CoversClass]` or `#[CoversNothing]`). It runs `tests/` except the Playwright suite under `tests/e2e`.
 - Integration tests may require a configured database; use the same DSN parameters defined for the application and document any new fixtures.
 
 ## Build & tests
 - Run the suite with `composer ci:test:php:unit`.
-- For focused runs, execute `bin/php vendor/bin/phpunit --configuration .build/phpunit.xml --filter <TestName>`.
-- Generate coverage (≥80% on changed paths) using `XDEBUG_MODE=coverage bin/php vendor/bin/phpunit --configuration .build/UnitTests.xml --coverage-html .build/coverage/` when needed.
+- For focused runs, execute `vendor/bin/phpunit --configuration phpunit.xml --filter <TestName>`.
+- Generate coverage (≥80% on changed paths) using `composer ci:test:php:unit:coverage` (`XDEBUG_MODE=coverage`, HTML report in `.build/coverage/`) when needed.
 
 ## Code style
 - Follow Arrange-Act-Assert structure. Use data providers where helpful.
@@ -22,7 +22,7 @@
 
 ## PR/commit checklist
 - Add regression tests before fixing bugs. Remove obsolete fixtures cautiously and update docs when test coverage highlights behaviour changes.
-- Ensure new fixtures live under `test/Support` and are re-used rather than duplicated.
+- Ensure new fixtures live under `tests/Support` and are re-used rather than duplicated.
 
 ## Good vs bad examples
 - ✅ Good: Add a unit test for a metadata enricher that validates German console output and error handling.

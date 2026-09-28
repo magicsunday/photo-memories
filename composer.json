@@ -22,7 +22,8 @@
         "discard-changes": true,
         "sort-packages": true,
         "optimize-autoloader": true,
-        "platform-check": false
+        "platform-check": false,
+        "process-timeout": 0
     },
     "require": {
         "php": ">=8.4.0 <8.5.0",
@@ -44,16 +45,9 @@
         "doctrine/dbal": "^4.2"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.85",
-        "overtrue/phplint": "^9.0",
-        "phpdocumentor/reflection-docblock": "^6.0",
-        "phpstan/phpstan": "^2.0",
-        "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^12.0",
-        "rector/rector": "^2.0",
-        "a9f/fractor": "^1.0"
+        "a9f/fractor": "^1.0",
+        "magicsunday/coding-standard": "^3.0",
+        "phpdocumentor/reflection-docblock": "^6.0"
     },
     "autoload": {
         "psr-4": {
@@ -63,30 +57,24 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "MagicSunday\\Memories\\Test\\": "test/"
+            "MagicSunday\\Memories\\Test\\": "tests/"
         }
     },
     "scripts": {
         "ci:cgl": [
-            "bin/php vendor/bin/php-cs-fixer fix --config .build/.php-cs-fixer.dist.php --diff --verbose"
+            "php-cs-fixer fix --config .php-cs-fixer.dist.php --diff --verbose"
         ],
         "ci:rector": [
-            "bin/php vendor/bin/rector process --config .build/rector.php"
+            "rector process --config rector.php"
         ],
         "ci:fractor": [
-            "bin/php vendor/bin/fractor process --config .build/fractor.php"
+            "fractor process --config fractor.php"
+        ],
+        "ci:test:php:lint": [
+            "phplint --configuration .phplint.yml"
         ],
         "ci:test:php:cgl": [
             "@ci:cgl --dry-run"
-        ],
-        "ci:test:php:lint": [
-            "bin/php vendor/bin/phplint --configuration .build/.phplint.yml"
-        ],
-        "ci:test:php:phpstan": [
-            "bin/php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limit=-1"
-        ],
-        "ci:test:php:phpstan:baseline": [
-            "bin/php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limit=-1 --generate-baseline .build/phpstan-baseline.neon --allow-empty-baseline"
         ],
         "ci:test:php:rector": [
             "@ci:rector --dry-run"
@@ -94,23 +82,38 @@
         "ci:test:php:fractor": [
             "@ci:fractor --dry-run"
         ],
+        "ci:test:php:phpstan": [
+            "phpstan analyze --configuration phpstan.neon --memory-limit=-1"
+        ],
+        "ci:test:php:deptrac": [
+            "deptrac analyse --no-progress",
+            "deptrac debug:unassigned",
+            "@php -r \"is_dir('.build') || mkdir('.build', 0777, true);\"",
+            "deptrac analyse --no-progress --formatter=graphviz-dot --output=.build/deptrac-layers.dot",
+            "check-deptrac-cycles.php .build/deptrac-layers.dot"
+        ],
+        "ci:test:php:templates": [
+            "check-consumer-config.php ."
+        ],
         "ci:test:php:unit": [
-            "bin/php vendor/bin/phpunit --configuration .build/phpunit.xml"
+            "phpunit --configuration phpunit.xml"
         ],
         "ci:test:php:unit:coverage": [
-            "XDEBUG_MODE=coverage && bin/php vendor/bin/phpunit --configuration .build/UnitTests.xml --coverage-html .build/coverage/"
+            "XDEBUG_MODE=coverage phpunit --configuration phpunit.xml --coverage-html .build/coverage/"
+        ],
+        "ci:test:php:cpd": [
+            "npx jscpd --config .jscpd.json --skip-comments --no-tips"
         ],
         "ci:test": [
             "@ci:test:php:lint",
-            "@ci:test:php:phpstan",
+            "@ci:test:php:cgl",
             "@ci:test:php:rector",
             "@ci:test:php:fractor",
-            "@ci:test:php:cgl",
+            "@ci:test:php:phpstan",
+            "@ci:test:php:deptrac",
+            "@ci:test:php:templates",
             "@ci:test:php:unit",
             "@ci:test:php:cpd"
-        ],
-        "ci:test:php:cpd": [
-            "npx jscpd --config .build/.jscpd.json --skip-comments --no-tips"
         ],
         "post-install-cmd": [
             "npm install jscpd@^5.0.11"

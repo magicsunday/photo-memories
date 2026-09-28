@@ -43,28 +43,35 @@ jobs:
 
             - name: Lint
               if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  php vendor/bin/phplint --configuration .build/.phplint.yml
+              run: composer ci:test:php:lint
 
             - name: CGL
               if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  PHP_CS_FIXER_IGNORE_ENV=1 php vendor/bin/php-cs-fixer fix --config .build/.php-cs-fixer.dist.php --diff --verbose --cache-file .build/.php-cs-fixer.cache
-
-            - name: PHPStan
-              if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  php vendor/bin/phpstan analyze --configuration .build/phpstan.neon --memory-limit=-1 --error-format=github
+              run: composer ci:test:php:cgl
 
             - name: Rector
               if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  php vendor/bin/rector process --config .build/rector.php
+              run: composer ci:test:php:rector
+
+            - name: Fractor
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: composer ci:test:php:fractor
+
+            - name: PHPStan
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: composer ci:test:php:phpstan -- --error-format=github
+
+            - name: Deptrac
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: composer ci:test:php:deptrac
+
+            - name: Templates
+              if: ${{ always() && steps.install.conclusion == 'success' }}
+              run: composer ci:test:php:templates
 
             - name: PHPUnit
               if: ${{ always() && steps.install.conclusion == 'success' }}
-              run: |
-                  php vendor/bin/phpunit --configuration .build/phpunit.xml
+              run: composer ci:test:php:unit
 
             - name: Copy-Paste Detection
               if: ${{ always() && steps.install.conclusion == 'success' }}

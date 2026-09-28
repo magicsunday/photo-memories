@@ -1,0 +1,24 @@
+# Copied from magicsunday/coding-standard templates/gitattributes and adapted to
+# this repository's layout. Keeps the Composer dist archive lean by
+# export-ignoring dev-only tooling, tests and CI config.
+#
+# `/package.json` and `/package-lock.json` are deliberately NOT listed: a `github:`
+# git dependency receives GitHub's codeload archive with export-ignore applied,
+# and an archive without package.json is uninstallable for npm.
+/.build                     export-ignore
+# Export-ignoring /.github blinds OSSF Scorecard's file-based checks, which analyse
+# the export-ignored source tarball; zizmor and CodeQL cover the real checkout.
+/.github                    export-ignore
+/tests                      export-ignore
+/.editorconfig              export-ignore
+/.gitattributes             export-ignore
+/.gitignore                 export-ignore
+/.jscpd.json                export-ignore
+/.php-cs-fixer.dist.php     export-ignore
+/.phplint.yml               export-ignore
+/AGENTS.md                  export-ignore
+/deptrac.yaml               export-ignore
+/fractor.php                export-ignore
+/phpstan.neon               export-ignore
+/phpunit.xml                export-ignore
+/rector.php                 export-ignore
