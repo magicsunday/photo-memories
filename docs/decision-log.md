@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-09-28 – Adopt the shared magicsunday/coding-standard tooling
+- **Author:** Rico Sonntag
+- **Context:** The QA tool versions and configs were maintained per repository under `.build/`, while the sibling repositories share one ruleset through `magicsunday/coding-standard` (#783).
+- **Decision:** `magicsunday/coding-standard` ^3.0 replaces the individual QA tools in `require-dev`; the tool configs move to the repository root and import the shared php-cs-fixer, PHPStan (`base.neon`), Rector and Deptrac configs from `vendor/`; `phpunit.xml`, `.phplint.yml`, `.jscpd.json`, `.editorconfig` and `.gitattributes` are adapted template copies checked by `ci:test:php:templates`; `test/` is renamed to `tests/`. The dependencies stay in the default `vendor/` directory. PHPStan stays on `level: 8` for now, and `deptrac.yaml` imports only the shared layers.
+- **Alternatives considered:** Fixing every finding in the same change (rejected: the level-max typing work and the Deptrac layer map need their own decisions) or a PHPStan baseline (rejected: the level is raised per area instead).
+- **Follow-up actions:** Deptrac layer map and restructuring, `#[CoversClass]` metadata and the php-cs-fixer/Rector reformat, then the typing issues per area until PHPStan level max passes without a baseline; the gates stay red until then.
+
 ## 2025-10-31 – Deprecate vacation-specific curate alias
 - **Author:** ChatGPT (gpt-5-codex)
 - **Context:** Operators still relied on `memories:curate-vacation`, a legacy shortcut that bypassed new pipeline options and hid the recommended `memories:curate --types=vacation` workflow from release notes. The alias stayed undocumented and silently missed QA coverage for deprecation messaging.
