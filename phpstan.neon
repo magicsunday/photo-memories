@@ -1,9 +1,13 @@
 includes:
-    - %currentWorkingDirectory%/vendor/phpstan/phpstan-strict-rules/rules.neon
-    - %currentWorkingDirectory%/vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - %currentWorkingDirectory%/vendor/magicsunday/coding-standard/phpstan/base.neon
 
 parameters:
-    # You can currently choose from 11 levels (0 is the loosest and 10 is the strictest).
+    # The rule packs (strict, deprecation, phpunit) and checked exceptions come from the
+    # shared base, which sets `level: max`. This repository stays on level 8 for now: the
+    # level-max typing work (untyped array<string, mixed> data through the Clusterer
+    # pipeline, Feed, Indexing, tests) is tracked per area under
+    # https://github.com/magicsunday/photo-memories/issues/783 and raises the level until
+    # max passes without a baseline.
     level: 8
 
     # Analyse against the project's supported PHP version (composer requires
@@ -15,9 +19,9 @@ parameters:
 
     paths:
         - %currentWorkingDirectory%/src/
+        - %currentWorkingDirectory%/tests/
 
     excludePaths:
-        - %currentWorkingDirectory%/tests/
         - %currentWorkingDirectory%/.build/
 
     ignoreErrors:

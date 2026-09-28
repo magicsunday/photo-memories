@@ -13,6 +13,8 @@ composer.lock
 
 # Build stuff
 .build/*.cache
+.build/deptrac-layers.dot
+.deptrac.cache
 .build/build.phar/
 
 # Cache

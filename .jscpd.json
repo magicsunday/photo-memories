@@ -1,0 +1,25 @@
+{
+    "//": "Copied from magicsunday/coding-standard templates/jscpd.json. Zero-tolerance: any clone over the token/line threshold fails the build. `format` uses jscpd FORMAT names; this repository has PHP, the Vite SPA (JavaScript) and the Playwright suite (TypeScript).",
+    "threshold": 0,
+    "minTokens": 100,
+    "minLines": 5,
+    "exitCode": 1,
+    "reporters": [
+        "console-full"
+    ],
+    "absolute": true,
+    "gitignore": true,
+    "format": [
+        "php",
+        "javascript",
+        "typescript"
+    ],
+    "path": [
+        "src",
+        "tests",
+        "public/app/src"
+    ],
+    "ignore": [
+        "**/public/app/dist/**"
+    ]
+}

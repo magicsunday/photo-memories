@@ -1,0 +1,18 @@
+# Architecture layers for magicsunday/photo-memories.
+#
+# Only the shared layer ruleset from magicsunday/coding-standard is imported. This
+# repository's own layer map (the two clusterer roots src/Clusterer and
+# src/Service/Clusterer, the nested Contract/Support/Enum directories, and the
+# namespaces with no shared layer: Entity, Utility, Http, Command, Value, Doctrine,
+# Feed, Bootstrap) is an open decision in
+# https://github.com/magicsunday/photo-memories/issues/783, so `composer
+# ci:test:php:deptrac` reports violations and unassigned classes until it lands.
+#
+# The import path follows this application's Composer layout: the default `vendor/`
+# directory.
+imports:
+    - vendor/magicsunday/coding-standard/deptrac/layers.yaml
+
+deptrac:
+    paths:
+        - src

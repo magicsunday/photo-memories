@@ -14,8 +14,8 @@ use a9f\Fractor\Configuration\FractorConfiguration;
 return FractorConfiguration::configure()
     ->withPaths(
         [
-            __DIR__ . '/../config/',
-            __DIR__ . '/../src/',
-            __DIR__ . '/../tests/',
+            __DIR__ . '/config/',
+            __DIR__ . '/src/',
+            __DIR__ . '/tests/',
         ]
     );
