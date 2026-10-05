@@ -31,7 +31,7 @@
   - `composer ci:test:php:deptrac` – Deptrac layers, unassigned classes and the layer-cycle gate
   - `composer ci:test:php:templates` – template lockstep check against the shared canon
   - `composer ci:test:php:unit` – PHPUnit (`phpunit.xml`, runs `tests/` except `tests/e2e`)
-  - `composer ci:test:php:cpd` – jscpd copy-paste detection (PHP, JavaScript, TypeScript)
+  - `composer ci:test:php:cpd` – jscpd copy-paste detection (PHP, JavaScript, TypeScript). It runs the installed `node_modules/.bin/jscpd`, so the Node dependencies must be installed first (`make web-install` or `npm ci`). jscpd is pinned to an exact version in `package.json`. CI runs it as its own job through the shared `cpd.yml` workflow of the `.github` repository, reported as `cpd / Copy-paste detection`.
 - Front-end tooling: `npm run dev`, `npm run build`, `npm run preview`, and `npm run test:e2e`. `make web-*` mirrors these commands.
 - Document the exact commands executed in PRs.
 
