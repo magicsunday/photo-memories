@@ -112,7 +112,7 @@ the fix and watching the test fail is the way to show it.
 - Reach out via existing project communication channels or open a draft PR describing the issue.
 
 ## House Rules
-- Global defaults from the canonical prompt apply (strict types, SOLID, DRY/KISS, SemVer, Docker-first, ≥80% coverage on touched code, WCAG 2.2 AA, etc.).
+- Global defaults from the canonical prompt apply (strict types, SOLID, DRY/KISS, SemVer, Docker-first, WCAG 2.2 AA, etc.).
 - No additional global overrides beyond what’s listed above; rely on scoped guides for specifics.
 
 ## Git flow

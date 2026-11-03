@@ -10,7 +10,7 @@
 ## Build & tests
 - Run the suite with `composer ci:test:php:unit`.
 - For focused runs, execute `vendor/bin/phpunit --configuration phpunit.xml --filter <TestName>`.
-- Generate coverage (≥80% on changed paths) using `composer ci:test:php:unit:coverage` (`XDEBUG_MODE=coverage`, HTML report in `.build/coverage/`) when needed.
+- Generate a coverage report as a diagnostic, not as a target, using `composer ci:test:php:unit:coverage` (`XDEBUG_MODE=coverage`, HTML report in `.build/coverage/`) when needed.
 
 ## Code style
 - Follow Arrange-Act-Assert structure. Use data providers where helpful.
@@ -21,7 +21,7 @@
 - Avoid hard-coded credentials. Mask or anonymise sample data that could resemble PII.
 
 ## PR/commit checklist
-- Add regression tests before fixing bugs. Remove obsolete fixtures cautiously and update docs when test coverage highlights behaviour changes.
+- Add regression tests before fixing behavioral bugs, as the testing policy in the root `AGENTS.md` describes them. Remove obsolete fixtures cautiously and update docs when test coverage highlights behaviour changes.
 - Ensure new fixtures live under `tests/Support` and are re-used rather than duplicated.
 
 ## Good vs bad examples
