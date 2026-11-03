@@ -34,7 +34,7 @@
 
 ## PR/commit checklist
 - Update `config/services.yaml`, Doctrine mappings, and DTOs when introducing new services/entities.
-- Provide/adjust PHPUnit coverage for new code paths (aim ≥80% line coverage of touched classes).
+- Provide/adjust PHPUnit tests for new behavior as the testing policy in the root `AGENTS.md` describes it.
 - Update `docs/` (architecture notes, configuration guides) when behaviour or configuration changes.
 - Log noteworthy design decisions in `docs/decision-log.md`.
 
