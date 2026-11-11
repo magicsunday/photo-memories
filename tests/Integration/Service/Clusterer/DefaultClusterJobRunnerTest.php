@@ -30,6 +30,7 @@ use MagicSunday\Memories\Service\Clusterer\Contract\ClusterBuildProgressCallback
 use MagicSunday\Memories\Service\Clusterer\Contract\ClusterConsolidatorInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\HybridClustererInterface;
 use MagicSunday\Memories\Service\Clusterer\Contract\ProgressHandleInterface;
+use MagicSunday\Memories\Service\Clusterer\Contract\ProgressReporterInterface;
 use MagicSunday\Memories\Service\Clusterer\DefaultClusterJobRunner;
 use MagicSunday\Memories\Service\Clusterer\NullProgressReporter;
 use MagicSunday\Memories\Service\Clusterer\Pipeline\MemberMediaLookupInterface;
